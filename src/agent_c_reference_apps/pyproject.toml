@@ -1,0 +1,43 @@
+[project]
+name = "agent_c-reference-apps"
+version = "0.1.1"
+description = "Demo applications for written using Agent C"
+dependencies = [
+    "agent_c-core>=0.1.1",
+    "agent_c-tools>=0.1.1",
+    "agent_c-demo>=0.1.1",
+    "agent_c-voice>=0.1.1",
+    "agent_c-rag>=0.1.1",
+    "agent_c-vision>=0.1.1",
+    "agent_c-extraction>=0.1.1",
+    "gradio==5.5.0",
+    "rich==13.8.1",
+    "prompt_toolkit>=3.0.43"
+]
+
+requires-python = ">=3.10"
+authors = [
+    {name = "Donavan Stanley", email = "donavan.stanley@centricconsulting.com"},
+    {name = "Joe Ours", email = "joesph.ours@centricconsulting.com"},
+    {name = "Sushant Bhatnagar", email = "sushant.bhatnagar@centricconsulting.com"}
+]
+maintainers = [
+    {name = "Donavan Stanley", email = "donavan.stanley@centricconsulting.com"},
+]
+
+readme = "README.MD"
+license = { text = "commercial" }
+keywords = ["gpt", "claude", "agents", "ai", "centric"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python"
+]
+
+[project.urls]
+Homepage = "https://github.com/centricconsulting/agent_c"
+
+
+[project.scripts]
+agent_c-cli = "agent_c_reference_apps.agent_c_cli:main"
+agent_c-web = "agent_c_reference_apps.agent_c_gradio:main"
+agent_c-index = "agent_c_reference_apps.example_file_import:main"

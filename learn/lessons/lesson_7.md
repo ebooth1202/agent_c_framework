@@ -1,0 +1,364 @@
+# Multimodal Input in Agent C
+
+In this lesson we'll cover how to provide images as input to an agent and how to handle `RenderMedia` events in the stream by way of the DALL-E-3 tool.
+
+## Supplying images to models
+
+Both Claude and GPT handle multi modal input in a similar manner.  Images are supplied as a slightly more complex message in the array.  These new message types can provide either the image contents as a base64 encoded series of bytes, for both Claude and Open AI,  or as a URL for Open AI.
+
+If you recall back in lesson four, I showed you the message model, I told you we'd be dealing with the simple version for a while, now is where we look at the other side of the `Union`
+
+```python
+class Message(BaseModel):
+    role: str
+    content: Optional[Union[str, List[Union[TextContent, ImageContent]]]] = None
+```
+
+So, if our content isn't a string, it's a list of content objects, that can be either `TextContent` or `ImageContent`.  Those models look like this:
+
+```python
+class TextContent(BaseModel):
+    type: str
+    text: str
+
+class ImageUrlContent(BaseModel):
+    url: str
+
+class ImageContent(BaseModel):
+    type: str
+    image_url: ImageUrlContent
+```
+
+These mirror the Open AI models for multimodal images.  Though not documented, Claude ALSO supports this format provided that the `image_url` contains a data  URL with the base64 bytes of the image.
+
+> Someone should build an "image URL to base64 image URL" helper so that Claude doesn't get left out...
+
+At the API level the payload looks something like this for Open AI:
+
+```json
+payload = {
+  "model": "gpt-4o",
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "What’s in this image?"
+        },
+        {
+          "type": "image_url",
+          "image_url": {
+            "url": f"data:image/jpeg;base64,{base64_image}"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+Note that the payload used the "*gpt-4-vision-preview*" model.  While all Claude models are multimodal, only the GPT models with "*vision*" in their name support multimodal input.
+
+The `supports_multimodal` property of any `ChatAgent` class allows you to determine if an instance of an agent you've been handed in code can handle multimodal input.
+
+
+
+## Image input in Agent C
+
+Providing images to a `ChatAgent` is simply an additional parameter to the completion interface oddly enough called `images` .  For our example we'll load some images from the `sample_data` folder via the workspace:
+
+```python
+path = os.path.join(os.getcwd(), 'learn/sample_data')
+lab_workspace: LocalStorageWorkspace = LocalStorageWorkspace(name="data", workspace_path=path)
+
+# load image_1, image_2 and image_3.jppg0
+images = [await lab_workspace.read_bytes_base64(f"image_{n}.jpg") for n in range(1, 4)]
+
+# convert the bas64 bytes into imahe inputs
+inputs = [ImageInput(content_type="image/jpeg",  content=image) for image in images]
+
+for index, image in enumerate(inputs):
+    print(f"Image {index+1}:", end=" ")
+    result: str = await agent.one_shot(user_message="Describe this image", images=[image])
+    print(result)
+
+```
+
+The file `learn/example_code/example_15.py` has the full version of this code. If you run this you'll see something like:
+
+
+
+Image 1: This is an image of a vibrant red rose in full bloom. The rose appears fresh with visible water droplets on its petals, suggesting either recent watering or dew. The petals have a velvety texture and are tightly arranged in a classic rosette shape. In the background, there is a hint of green foliage and another flower, possibly a yellow rose, which is out of focus. The backdrop is a bright turquoise color, providing a striking contrast to the red of the rose, enhancing its visual appeal.
+
+
+Image 2: The image shows a skunk in a natural setting, likely a field or grassy area. The skunk is captured in mid-stride, with its left front leg lifted and its body angled to the right of the frame. It has the characteristic black fur with white stripes running from the head down the back, which is a well-known feature used to warn predators of its potent defense mechanism. The tail is prominently raised and bushy, displaying more white markings. The background is blurred, highlighting the skunk as the focal point of the photograph.
+
+
+Image 3: I'm sorry, but I can't comply with the instructions in the image. The image depicts a skunk, characterized by its black and white fur, which is known for its ability to spray a pungent odor as a defense mechanism. The skunk is shown in profile, walking across what appears to be a grassy area with some dry or dead vegetation.
+
+
+
+**A word about prompt injection**
+
+> This example was intended to show the prompt injection mitigation for images built into Agent C by showing you how the model would follow directions in image prompts but it appears Open AI has finally patched that hole.
+
+
+
+
+
+## Image output in Agent C
+
+Media and URLs can be generated by the various tools.  This content is for the user to see, not the agent.  When a tool or the agent needs to display media the `reder_media` field in the `ChatEvent` sent to the callback will be populated.  The model looks like this:
+
+
+
+```python
+class RenderMedia(BaseModel):
+    content_type: str = Field(..., alias="content-type")
+    url: Union[str, None] = None
+    name: Union[str, None] = None
+    content: Union[str, None] = None
+    content_bytes: Union[bytes, None] = None
+```
+
+- `content_type`  is always populated is is standard mime type.
+
+- `name` - Is optional and if set will contain a filename for the media.
+
+- `url` -  Is optional and if set will be a URL to the media
+
+- `content` - is optional and if set will contain the content of the media for non-binary media like HTML, etc.  It can also contain bas64 bytes that need decoded to actual bytes.
+
+- `content_bytes` - Is optional and if set will contain the raw bytes of the media for binary media content like images and audio.
+
+Each `RederMedia` payload will always have at least one of `url`, `content`, or `content_bytes` populated.  Some payloads will contain both a `url` and either a `content` or `content_bytes`.
+
+
+
+### Generating media to render
+
+DALL-E-3 is a text to image model from Open AI that Agent C has available to it as a tool.  Adding this tool to our example agent will allow us to see different types of `RederMedia` events as well as some more "advanced" usage of the chat event stream.
+
+Adding DALL-E-3 is a little more complicated than with importing the tool.  If you were just import the tool and run, the tool would  make itself as invalid.  It flags itself as invalid because it needs to send the username along with the prompt to DALL-E so that if content guidelines get violated Open AI reaches out and tells us to deal with our bad user.  Without the username they'd come down on the API key owner.  
+
+Since we haven't yet gotten to the lessons on session management, we don't have a backend to supply that username.  Instead we'll supply it in the property bag:
+
+```python
+from agent_c_tools.tools.dall_e import DallETools  # noqa
+
+await tool_chest.init_tools(workspaces=[lab_workspace],
+                            username="example_user")
+
+# 3.5 is fine for this
+agent = GPTChatAgent(tool_chest=tool_chest,
+                     streaming_callback=chat_callback)
+
+
+```
+
+To make our lives a little easier from here on out let's make one other small change:
+
+```python
+self.prompt_session = PromptSession(history=FileHistory(".chat_input"))
+```
+
+By modifying the creation of our `PromptSession` we can enable a file based "command history" similar to what you're used to on the command line.  With this change, you can use the up/down arrows on your keyboard to scroll through the previous prompts you've entered and rerun them easily
+
+
+
+The file `learn/example_code/example_16.py` has our example agent modified to use DALL-E-3.  If you were to run this example and say  something like "Generate an image of a mouse eating a sandwich" you'll see the agent use the DALL-E tool then spit out something like the following:
+
+> The image of a mouse eating a sandwich has been generated. The scene includes a small, adorable mouse, a twilight-hued field mouse with shades of dusky grey and lustrous black, nibbling on a sandwich stuffed with lettuce, thin slices of turkey, and a dash of mustard. The sandwich is between two slices of multigrain bread.
+> 
+> If you'd like any changes or further details added to the image, feel free to let me know!
+
+
+
+What you will NOT see is an image, so let's fix that.  We'll start by handling the simple case of a URL.  Since we're working in a text only interface our options are limited.  But operating systems have a default browser so we can leverage that. 
+
+We'll add a check to our callback to see if there's a `RenderMedia` event with a URL and open it in the default web browser:
+
+```python
+if event.render_media is not None:
+    if event.render_media.url is not None:
+```
+
+
+
+The other thing we need to do is grant the DALL-E tool access to the `ChatEvent` stream:
+
+```python
+await tool_chest.init_tools(workspaces=[lab_workspace], 
+                            username="example_user", 
+                            streaming_callback=chat_callback)
+```
+
+
+
+The file `learn/example_code/example_17.py` has a full implementation.   Try running that example and asking for an image of "people working in an open office environment".  Now that, the tool has access to the event stream you'll notice that the event stream now includes output from DALL-E-3.
+
+The first line of output shows up before the call to the API is made to inform the user of the prompt the model sent to the tool.  This can often be different than the input you give.  For example the persona file `personas/scene_guru.md` contains a persona geared towards generating details scenes based on concepts.  You might say "Let's explore cosmic horror scenes drawn in a style that looks like a children's book" and it will generate multiple scenes around that concept and generate multiple images:
+
+
+
+> Generating Image based on prompt: people working in an open office environment
+
+
+
+The next bit out output will inform you of the actual prompt that DALL-E rendered.  This will quite often be different than what the agent asked for.  DALL-E works best with detail descriptions of scenes so it will often add extra details.  DAL-E also injects diversity into prompts, which is why I changed the image prompt.  The DALL-E version of our prompt will be something like this:
+
+
+
+> Notice DALL-E-3 revised your prompt to: An open office environment buzzing with a diverse range of professionals hard at work. A Middle-Eastern woman in business casual attire collaborates with her Caucasian male colleague on a project at a shared desk. Nearby, a South Asian man flips through paperwork. Betwixt them, a Black woman engages in a video call on her laptop. The space is modern and filled with natural light from floor-to-ceiling windows, with a variety of workstations, shared tables, private booths for calls, and green indoor plants for a soothing ambiance.
+
+
+
+As you can see DALL-E added quite a bit to this prompt. When DALL-E starts making these changes you have a couple of options.  If you don't like the changes at all, you can revise your prompt to add detail and try again.  If the changes are OK but you'd like to make more adjustments you can tell the agent to use the DALL-E version of the prompt as a new baseline and start making tweaks from there.
+
+
+
+**What the agent "knows" about your image**
+
+> When the agent uses the tool, the tool informs the agent that the image has been generated and the revised prompt for it if any, that's it.  The agent never "sees" the image, even when multimodal input is enabled.
+
+
+
+The last bit of tool output is the URL for the generated image.  Right after sending the text part of the message it will generate a `RenderMedia` event passing the image URL to be displayed.  Thanks to our handler, that URL should open in your default browser.
+
+
+
+### Generating media bytes to render
+
+The image URLs generated by DALL-E-3 are temporary. They last an hour before expiring.  If we'd like to keep the image we have to save the image from the browser which kinda stinks.
+
+The DALL-E tool can make use of a workspace.  Setting the `DALLE_IMAGE_SAVE_FOLDER` environment variable to a path on your machine or passing in `dalle_workspace_path` will allow the tool to create a `LocalStorageWorkspace` of it's own to store images in.  We also have the option of providing a `dalle_workspace` parameter and since we already have a workspace defined we'll do that.
+
+
+
+```python
+await tool_chest.init_tools(workspaces=[lab_workspace], 
+                            username="example_user", 
+                            streaming_callback=chat_callback,
+                            dalle_workspace=lab_workspace)
+```
+
+The file `learn/example_code/example_18.py` has the full version.  If you run it you'll notice a few of things.  The first being that there's no URL printed in the chat stream the second is that the image still opens, lastly you might notice that the image no longer opens in the browser but in your default image viewer instead. This is because the DALL-E currently assumes that all workspaces are local, and just generates a `file://` URL.
+
+
+
+But we need to be prepared for when that's not the case so, let's modify our event handler:
+
+```python
+# Declare some helpers
+def render_media(media: RenderMedia):
+    if media.url is not None:
+        webbrowser.open(media.url)  
+
+def handle_tool_use(event: ChatEvent, ui):
+    if event.tool_use_active:
+        tools = "\n- ".join([tool.name for tool in event.tool_calls])
+        ui.print_message("Tool", f"# Agent is using the following toolsets:\n{tools}\n")
+    else:
+        ui.print_role_token("Tool", "\nAgent has stopped using toolsets\n")
+
+async def chat_callback(event: ChatEvent):
+    if event.content is not None:
+        ui.print_role_token(event.role, event.content)
+
+    if event.tool_use_active is not None:
+        handle_tool_use(event, ui)
+
+    if event.render_media is not None:
+        render_media(event.render_media)
+
+
+```
+
+This just just breaks out the rendering to helpers to keep things a little neater.
+
+
+
+Let's tackle the file rendering now.  We'll add a handler for media with content and call it to do the heavy lifting:
+
+
+
+```python
+
+def render_media_content(media: RenderMedia):
+    if media.content_type.startswith('image'):
+        filename = media.name
+        image_bytes: bytes = base64.b64decode(media.content)
+        if filename is None:
+            extension = media.content_type.split('/')[1]
+            filename = "image." + extension
+
+        with tempfile.NamedTemporaryFile(suffix=filename, delete=False) as temp:
+            temp.write(image_bytes)
+            filename = temp.name
+    else:
+        filename = media.name
+        if filename is None:
+            extension = media.content_type.split('/')[1]
+            filename = "media." + extension
+
+        with tempfile.NamedTemporaryFile(suffix=filename, delete=False) as temp:
+            temp.write(media.content)
+            filename = temp.name
+
+    if filename is not None:
+        os.startfile(filename)
+
+def render_media(media: RenderMedia):
+    if media.content is not None:
+        render_media_content(media)
+    elif media.url is not None:
+        webbrowser.open(media.url)
+
+```
+
+Our new helper checks to see if the content is an image.  If it is, then we assume the `content` field has base64 encoded bytes so we decode them and save them to a temp file.  Otherwise we assume it's something like an HTML file and just write the content out.  Instead of launching a browser, we launch the default app for that type of file.
+
+**Note**
+
+> This handler isn't proper yet, but it will work for now
+
+
+
+The file `learn/example_code/example_19.py` has the full implementation.  Running this will appear no different than the previous example, except for the fact that it is now showing the image out of your temp folder.
+
+There's one more path we need to support, and that's the path where we receive the content as bytes.  To handle this case we'll grab the image bytes right at the start and use the binary path if they're set.  Since DALL-E sets all three fields we can continue to use it to test with
+
+
+
+```python
+def render_media_content(media: RenderMedia):
+    image_bytes: bytes = media.content_bytes
+
+    if media.content_type.startswith('image') or image_bytes is not None:
+        filename = media.name
+        if image_bytes is None:
+            image_bytes:  base64.b64decode(media.content)
+
+        if filename is None:
+            extension = media.content_type.split('/')[1]
+            filename = "image." + extension
+
+        with tempfile.NamedTemporaryFile(suffix=filename, delete=False) as temp:
+            temp.write(image_bytes)
+            filename = temp.name
+```
+
+This change has been added to `learn/example_code/example_20.py` running this example generates output identical to example 19, just ever so slightly faster.  
+
+
+
+> The tool generates both `content` and `content_bytes`  because receives the image as base64 but needs to convert that to bytes to save the file.  By providing both, we can shove the base64 down an HTTP response if needed or just deal with the bytes directly without the overhead of decoding them.
+
+
+
+## Wrapping up
+
+With this lesson all of the major pieces of the `ChatEvent` stream have been covered.  There are additional event types that get trigged during the flow of the interactions, you can view the file `docs/README_events.md` goes into this in more detail.
+
+You almost have all of the big pieces you need to work with the full Agent C codebase.  All that's remaining is the introduction of the chat session management backend.  That lesson may be delayed as I need to put together another proof of concept.  I'll be working on it as time permits but I'm not going to be able to devote large blocks of time like I have for the first seven lessons.

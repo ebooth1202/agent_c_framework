@@ -1,0 +1,126 @@
+metadata:
+  exported_at: '2024-11-11T17:45:09.679284+00:00'
+  total_tasks: 4
+tasks:
+- id: 98b6b886-d372-489b-95f4-54a20a312a40
+  name: Perform final calculation
+  description: Add all numbers you receive and return a final answer.
+  priority: urgent
+  status: blocked
+  assigned_to: final_reporter
+  created_by: task_importer
+  created_at: '2024-11-11T17:43:37.768263+00:00'
+  updated_at: '2024-11-11T17:43:37.769253+00:00'
+  deadline: null
+  result: null
+  parent_task_id: null
+  child_tasks: &id001 []
+  prerequisite_tasks:
+  - task_id: 22339def-6046-4a92-8308-49ee832b7cb7
+  - task_id: 4f59672e-2b49-44b8-bd21-380972c0ba25
+  - task_id: 8ee71c57-a027-48ac-bf52-4f2978cd41fd
+  required_by_tasks: []
+  error: null
+  metadata: {}
+  retry_count: 0
+  max_retries: 1
+  last_execution: null
+  execution_time: null
+  relationships:
+    prerequisites:
+    - task_id: 22339def-6046-4a92-8308-49ee832b7cb7
+    - task_id: 4f59672e-2b49-44b8-bd21-380972c0ba25
+    - task_id: 8ee71c57-a027-48ac-bf52-4f2978cd41fd
+    required_by: []
+    parent_id: null
+    children: *id001
+- id: 22339def-6046-4a92-8308-49ee832b7cb7
+  name: Get first number
+  description: Get a random number from the random number tool
+  priority: high
+  status: pending
+  assigned_to: path1_fetcher
+  created_by: task_importer
+  created_at: '2024-11-11T17:43:37.767263+00:00'
+  updated_at: '2024-11-11T17:43:37.767263+00:00'
+  deadline: null
+  result: null
+  parent_task_id: null
+  child_tasks: &id003 []
+  prerequisite_tasks: []
+  required_by_tasks:
+  - task_id: 98b6b886-d372-489b-95f4-54a20a312a40
+  - task_id: 4f59672e-2b49-44b8-bd21-380972c0ba25
+  error: null
+  metadata: {}
+  retry_count: 0
+  max_retries: 1
+  last_execution: null
+  execution_time: null
+  relationships:
+    prerequisites: []
+    required_by:
+    - task_id: 98b6b886-d372-489b-95f4-54a20a312a40
+    - task_id: 4f59672e-2b49-44b8-bd21-380972c0ba25
+    parent_id: null
+    children: *id003
+- id: 4f59672e-2b49-44b8-bd21-380972c0ba25
+  name: Get a second number
+  description: Get a random number tool.
+  priority: high
+  status: pending
+  assigned_to: path1_fetcher
+  created_by: task_importer
+  created_at: '2024-11-11T17:43:37.767263+00:00'
+  updated_at: '2024-11-11T17:43:37.767263+00:00'
+  deadline: null
+  result: null
+  parent_task_id: null
+  child_tasks: &id004 []
+  prerequisite_tasks:
+  - task_id: 22339def-6046-4a92-8308-49ee832b7cb7
+  required_by_tasks:
+  - task_id: 98b6b886-d372-489b-95f4-54a20a312a40
+  error: null
+  metadata: {}
+  retry_count: 0
+  max_retries: 1
+  last_execution: null
+  execution_time: null
+  relationships:
+    prerequisites:
+    - task_id: 22339def-6046-4a92-8308-49ee832b7cb7
+    required_by:
+    - task_id: 98b6b886-d372-489b-95f4-54a20a312a40
+    parent_id: null
+    children: *id004
+- id: 8ee71c57-a027-48ac-bf52-4f2978cd41fd
+  name: Get a third number
+  description: Get a random number tool.
+  priority: high
+  status: pending
+  assigned_to: path1_fetcher
+  created_by: task_importer
+  created_at: '2024-11-11T17:43:37.768263+00:00'
+  updated_at: '2024-11-11T17:43:37.768263+00:00'
+  deadline: null
+  result: null
+  parent_task_id: null
+  child_tasks: &id007 []
+  prerequisite_tasks:
+  - task_id: 22339def-6046-4a92-8308-49ee832b7cb7
+  required_by_tasks:
+  - task_id: 98b6b886-d372-489b-95f4-54a20a312a40
+  error: null
+  metadata: {}
+  retry_count: 0
+  max_retries: 1
+  last_execution: null
+  execution_time: null
+  relationships:
+    prerequisites:
+    - task_id: 22339def-6046-4a92-8308-49ee832b7cb7
+    required_by:
+    - task_id: 98b6b886-d372-489b-95f4-54a20a312a40
+    parent_id: null
+    children: *id007

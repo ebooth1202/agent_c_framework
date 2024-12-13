@@ -1,0 +1,9 @@
+{
+     "local_workspaces": [
+        {
+            "name": "kao",
+            "workspace_path": "D:\\source\\agent_c\\temp\\kao",
+            "description": "A workspace holding data files for the KAO project."
+        }
+    ]
+}

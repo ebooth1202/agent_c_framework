@@ -1,0 +1,49 @@
+[project]
+name = "agent_c-tools"
+version = "0.1.1"
+description = "Reference tools / tool interfaces for Agent C"
+dependencies = [
+    "agent_c-core>=0.1.1",
+    "pandas==2.2.3",        # googletrends (overlap agent_c_demo)
+    "pyarrow==17.0.0",      # googletrends (overlap agent_c_demo)
+    "mermaid-py==0.6.0",    # mermaid
+    "feedparser==6.0.11",   # rss
+    # "pydantic==2.9.2",     # rss/user_preferences handled by agent_c_core
+    # "openai==1.47.0",      # dall-e handled by agent_c_core
+    "readability-lxml==0.8.1",# web
+    "markdownify==0.13.1",  # web
+    "selenium==4.25.0",     # web
+    "httpx>=0.27",          # weather, web
+    "duckduckgo_search==6.2.13",# web_search-duckduckgo
+    "google-search-results==2.4.2",# web_search-google_serp
+    "pytrends==4.9.2",      # web_search-google_trends
+    "requests==2.32.3",     # web_search-hacker_news, Youtube_Comments/Search
+    "newsapi-python==0.2.7",# web_search-news_api
+    "beautifulsoup4==4.12.3",# web_search-seeking_alpha
+    "aiohttp==3.10.10",# web_search-seeking_alpha
+    "tavily-python==0.5.0", # web_search-tavily
+    "wikipedia==1.4.0",    # web_search-wikipedia
+]
+
+requires-python = ">=3.10"
+authors = [
+    {name = "Donavan Stanley", email = "donavan.stanley@centricconsulting.com"},
+    {name = "Joe Ours", email = "joesph.ours@centricconsulting.com"},
+    {name = "Sushant Bhatnagar", email = "sushant.bhatnagar@centricconsulting.com"}
+]
+maintainers = [
+    {name = "Donavan Stanley", email = "donavan.stanley@centricconsulting.com"},
+]
+
+readme = "README.MD"
+license = { text = "commercial" }
+keywords = ["gpt", "claude", "agents", "ai", "centric"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python"
+]
+
+[project.urls]
+Homepage = "https://github.com/centricconsulting/agent_c"
+
+
