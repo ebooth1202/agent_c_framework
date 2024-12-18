@@ -5,14 +5,12 @@ description = "Demo applications for written using Agent C"
 dependencies = [
     "agent_c-core>=0.1.1",
     "agent_c-tools>=0.1.1",
-    "agent_c-demo>=0.1.1",
-    "agent_c-voice>=0.1.1",
-    "agent_c-rag>=0.1.1",
-    "agent_c-vision>=0.1.1",
-    "agent_c-extraction>=0.1.1",
     "gradio==5.5.0",
     "rich==13.8.1",
-    "prompt_toolkit>=3.0.43"
+    "prompt_toolkit>=3.0.43",
+    "python-dotenv",
+    "spacy==3.8.3",
+    "pyaudio"
 ]
 
 requires-python = ">=3.10"

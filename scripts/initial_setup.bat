@@ -9,12 +9,12 @@ if errorlevel 9009 (
 )
 
 :: Check if the virtual environment already exists
-if exist venv (
+if exist .venv (
     echo Virtual environment already exists. Skipping creation.
 ) else (
     :: Create a virtual environment
     echo Creating virtual environment.
-    python -m venv venv
+    python -m .venv venv
     if errorlevel 1 (
         echo Failed to create a virtual environment.
         exit /b 1
@@ -23,7 +23,7 @@ if exist venv (
 
 :: Activate the virtual environment
 echo Activating virtual environment.
-CALL venv\scripts\activate.bat
+CALL .venv\scripts\activate.bat
 if errorlevel 1 (
     echo Failed to activate the virtual environment.
     exit /b 1
@@ -40,5 +40,5 @@ if errorlevel 1 (
 
 
 echo Initial setup completed successfully.
-echo Remember to activate the virtual environment with 'venv\scripts\activate.bat' before you start working.
+echo Remember to activate the virtual environment with ',venv\scripts\activate.bat' before you start working.
 ENDLOCAL

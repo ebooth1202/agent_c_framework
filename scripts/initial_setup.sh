@@ -8,22 +8,22 @@ if ! command -v python &> /dev/null; then
 fi
 
 # Check if the virtual environment already exists
-if [ -d "venv" ]; then
+if [ -d ".venv" ]; then
     echo "Virtual environment already exists. Skipping creation."
 else
     echo "Creating virtual environment"
     # Create a virtual environment
-    python -m venv venv
+    python -m .venv venv
 fi
 
 # Activate the virtual environment
 echo "Activating virtual environment"
-source venv/bin/activate
+source .venv/bin/activate
 
 # Install the requirements
 echo "Installing deps"
 chmod a+x scripts/install_deps.sh
 ./scripts/install_deps.sh
-echo "Remember to activate the virtual environment with 'source venv/bin/activate' before you start working."
+echo "Remember to activate the virtual environment with 'source .venv/bin/activate' before you start working."
 
 # Exit from the script without deactivating (since it's a new shell instance)

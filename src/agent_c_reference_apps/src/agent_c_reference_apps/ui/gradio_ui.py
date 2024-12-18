@@ -28,7 +28,7 @@ from agent_c_reference_apps.ui.markdown_render import MarkdownTokenRenderer
 # Note: we load the env file here so that it's loaded when we start loading the libs that depend on API KEYs.   I'm looking at you Eleven Labs
 load_dotenv(override=True)
 
-from agent_c_voice import MPVPlayer, TTSElevenLabs
+#from agent_c_voice import MPVPlayer, TTSElevenLabs
 from agent_c_reference_apps.util.audio_cues import AudioCues
 from agent_c_reference_apps.util.chat_commands import CommandHandler
 
@@ -36,17 +36,17 @@ from agent_c_reference_apps.util.chat_commands import CommandHandler
 from agent_c import GPTChatAgent, ClaudeChatAgent, ChatEvent, ChatSessionManager, ToolChest, ToolCache
 
 # Vision support
-from agent_c_vision import CV2Feed
+#from agent_c_vision import CV2Feed
 
 from agent_c.util import debugger_is_active
 from agent_c_tools.tools.user_preferences import AssistantPersonalityPreference, AddressMeAsPreference, UserPreference
-from agent_c_voice.tools.voice_eleven_labs.preferences import DefaultVoicePreference
+#from agent_c_voice.tools.voice_eleven_labs.preferences import DefaultVoicePreference
 from agent_c.prompting import CoreInstructionSection, HelpfulInfoStartSection, EndOperatingGuideLinesSection, \
     EnvironmentInfoSection, PromptBuilder
 
 from agent_c_tools import LocalStorageWorkspace
 from agent_c_tools.tools.user_bio.prompt import UserBioSection
-from agent_c_voice.speech_to_text.speechmatics_transcriber import SpeechmaticsTranscriber
+#from agent_c_voice.speech_to_text.speechmatics_transcriber import SpeechmaticsTranscriber
 
 ENHANCED_DEBUG_INFO = os.getenv('ENHANCED_DEBUG_INFO', 'False').lower() in ('true', '1', 'yes')
 
@@ -108,11 +108,8 @@ class GradioChat:
         self.image_inputs = []
         self.last_role = "user"
         self.tts_roles = ['assistant']
-        self.__init_tts(**kwargs)
         self.__init_agent_params(**kwargs)
         self.__init_ui()
-        self.__init_camera(**kwargs)
-        self.__init_transcription(**kwargs)
         self.cmd_handler = CommandHandler()
         self.__init_workspaces()
 
@@ -144,36 +141,6 @@ class GradioChat:
         with open(persona_path, 'r') as file:
             return file.read()
 
-    def __init_tts(self, **kwargs):
-        """
-        Initializes the TTS engine and TTS player if voice mode is on.
-        """
-        self.logger.debug("Initializing TTS engine...")
-        self.voice_mode: bool = kwargs.get('voice', False)
-        self.tts_player: Union[None, MPVPlayer] = None
-        self.tts_engine: Union[None, TTSElevenLabs] = None
-        self.tts_model_id: str = "eleven_multilingual_v2"
-
-        if os.environ.get('ELEVEN_API_KEY', None) is None:
-            logging.error('You must have an ELEVEN_API_KEY to use TTS.  Disabling voice mode.')
-            self.voice_mode = False
-            return
-
-        if not self.voice_mode:
-            return
-
-        try:
-            self.tts_engine = TTSElevenLabs(exit_event=self.exit_event, debug_event=self.debug_event,
-                                            audio_cues=self.audio_cues)
-            self.mpv_cancel_event = threading.Event()
-            self.tts_player = MPVPlayer(self.exit_event, self.mpv_cancel_event, self.tts_engine.output_queue)
-            self.tts_player.start()
-
-        except Exception as e:
-            self.tts_engine = None
-            self.tts_player = None
-            self.voice_mode = False
-            self.logger.error(f"An error occurred while initializing the TTS engine: {e}")
 
     def __init_workspaces(self):
         self.logger.debug("Initializing Workspaces...")
@@ -229,15 +196,6 @@ class GradioChat:
         # Temporarily disabled due to new user issues
         # self.oi_tool: Union[OpenInterpreterTools, None] = None
 
-    def __init_transcription(self, **kwargs):
-        self.logger.debug("Initializing Transcription...")
-        self.can_transcribe = os.environ.get('SPEECHMATICS_API_KEY', None) is not None
-        self.stt_keybind = kwargs.get('stt_keybind', os.environ.get('STT_KEYBIND', 'c-pagedown'))
-        self.transcriber: Union[None, SpeechmaticsTranscriber] = None
-        if self.can_transcribe:
-            self.transcriber = SpeechmaticsTranscriber(exit_event=self.exit_event, audio_cues=self.audio_cues,
-                                                       ccv2_feed=self.ccv2_feed, partials=True,
-                                                       listen_event=self.input_active_event)
 
     @staticmethod
     def load_svg(svg_path):
@@ -252,12 +210,6 @@ class GradioChat:
                                </div>""")
 
     def add_user_input(self, history, message):
-        if self.tts_engine and self.tts_engine.tts_active.is_set():
-            self.tts_engine.cancel()
-
-        if self.transcriber is not None:
-            self.transcriber.shutdown()
-
         for filename in message["files"]:
             mime_type, _ = mimetypes.guess_type(filename)
             if 'image' in mime_type:
@@ -679,8 +631,7 @@ class GradioChat:
         try:
             # Initialize essential components first
             init_tasks = [
-                self.__init_session(),
-                self.__init_voice()
+                self.__init_session()
             ]
             await asyncio.gather(*init_tasks)
 
@@ -691,11 +642,6 @@ class GradioChat:
                 await self.__init_gpt_chat_agent()
 
             self.logger.debug("Core initialization complete, starting UI.")
-
-            # Initialize voice-specific features if needed
-            if self.voice_mode and self.tts_engine is not None:
-                voice_tool = self.tool_chest.active_tools.get('voice')
-                self.tts_engine.set_voice(voice_tool.voice, self.tts_model_id)
 
             self.__init_ui()
 
@@ -722,21 +668,6 @@ class GradioChat:
         except Exception as e:
             self.logger.error(f"Error during startup: {str(e)}")
             raise
-
-
-    async def __init_voice(self):
-        """
-        Initializes the voice toolsets if voice mode is on and the ELEVEN_API_KEY is set.
-        """
-        self.logger.debug("Initializing Voice toolsets...")
-
-        if not self.voice_mode:
-            self.voice_tools = None
-            return
-
-        self.user_prefs.append(DefaultVoicePreference())
-        from agent_c_voice.tools import VoiceTools
-        self.voice_tools = VoiceTools()
 
     async def __init_session(self):
         self.logger.debug("Initializing Session...")
@@ -872,9 +803,6 @@ class GradioChat:
         """
         role_name = " ".join(word.capitalize() for word in event.role.split("_"))
         if event.role != self.last_role:
-            if self.tts_engine is not None and event.role in self.tts_roles:
-                self.tts_engine.start()
-
             if event.role != 'assistant':
                 await self.queue.put(f"\n## From {role_name}:\n")
             elif self.last_role != 'user':
@@ -948,10 +876,7 @@ class GradioChat:
             self.current_chat_Log = event.messages
 
         if event.content is not None:
-            tts_str = self.token_renderer.render_token(event.content)
-            if tts_str is not None and self.tts_engine is not None and event.role in self.tts_roles:
-                self.tts_engine.input_queue.put(tts_str)
-
+            self.token_renderer.render_token(event.content)
             await self.queue.put(event.content)  # Put the content into the queue
 
     async def __build_prompt_metadata(self):
@@ -964,16 +889,8 @@ class GradioChat:
                 "current_user_name": self.session_manager.user.first_name,
                 "session_summary": self.session_manager.chat_session.active_memory.summary,
                 "persona_prompt": self.persona_prompt,
-                "voice_tools": self.voice_tools,  # Add voice tools to metadata
                 "timestamp": datetime.now().isoformat(),
                 "env_name": os.getenv('ENV_NAME', 'development'),
                 "session_info": self.session_manager.chat_session.session_id if self.session_manager else None
                 }
 
-    def __init_camera(self, **kwargs):
-        camera_no: int = kwargs.get('camera_no', -1)
-        self.ccv2_feed: Union[CV2Feed, None] = None
-        if camera_no > -1:
-            self.logger.debug(f"Initializing Camera...Camera number: {camera_no}")
-            self.ccv2_feed = CV2Feed(video_capture_device_id=camera_no, activate_event=self.input_active_event,
-                                     exit_event=self.exit_event, debug_event=self.debug_event)

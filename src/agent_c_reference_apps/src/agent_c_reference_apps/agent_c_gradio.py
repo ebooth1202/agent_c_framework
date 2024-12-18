@@ -9,10 +9,6 @@ load_dotenv(override=True)
 
 # Ensure all our toolsets get registered
 from agent_c_tools.tools import *  # noqa
-from agent_c_demo.tools import *  # noqa
-from agent_c_voice.tools import *  # noqa
-from agent_c_rag.tools import *  # noqa
-
 from agent_c_reference_apps.ui.gradio_ui import GradioChat
 
 
