@@ -61,16 +61,7 @@ If you do not all ready have an Open AI API Key, that's a HARD requirement for w
 
 After signing up, deposit $20 USD with them for usage credits.  **This is needed for GPT-4 and beyond access**
 
-### Get an Eleven Labs API Key (optional but cool)
-
-[Eleven Labs](https://elevenlabs.io/) provides the current state of the art in text to speech models. Nobody comes close to them in quality or capability, they know it and have priced their product appropriately. On top of how well their model mimics emotion and their massive voice library, they offer the ability to create new voices or clone a human voice.
-
-The reference app implements bi-directional-streaming TTS. Model responses are streamed as tokens to the app, which streams those tokens up to Eleven Labs, which streams chunks of MP3 audio back to the app which then streams them to the `mpv` process to play them (That's 3 for the price of 2 BTW.)  Side note: This is not meant to be an example of how to do playback in production, the support exists to test the tool...
-
-The reference toolbelt `VoiceTools` allows the model to work with the ElevenLabs API and the app itself to select the voice used for TTS output and to save the preference in their user preferences.
-
-If you plan on using voice output, install the player MPV from https://mpv.io/installation/ 
-
+#
 ### Set up your application environment
 
 In the root folder of the repo there's an `example.env` that you should copy to `.env` and complete similar to how you just finished doing above.
@@ -94,7 +85,6 @@ agent_c-web <opts>
 - `--model [model_name]` allows you to override the default model used by the agent.
 - `--prompt_file [/path/to/file]` allows you to supply a file to be used as the persona portion of the system prompt for the agent.
 - `--userid [user_id]` provide a user ID to be used for the user in the chat session.  Setting this will override the value from the `.env` file for `CLI_CHAT_USER_ID`
-- `--voice` turns on the streaming text to speech and enables the Eleven Labs voice tool for the agent.
 
 ### In app commands (CLI only)
 
