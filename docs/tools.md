@@ -314,22 +314,6 @@ The directions for use instruct the model to use the wbe tool for the full artic
 **Status**
 Mostly a demo tool
 
-### Centric RAG
-
-This tool give the model the ability to call the legacy RAG agent behind the "Ask Centric Docs" plugin. 
-
-**Status**
-This is a 100% throwaway tool made for a very specific demo. This will be replaced by the `Query Vector Store` tool not that `Agent C` exists and can leverage `centric_segmentation`.  
-
-### Query Vector Store
-
-This tool will give the model to formulate it's own queries of a vector store to find relevant segments. [This post](https://gist.github.com/Donavan/5f92837bfec473ed0f17265db0a0c522) was a quick write up I did on the approach right after I had a version of it working reliably.  But like all things "back then" it was slow and expensive.  
-
-**Status**
-The initial version of this tool will be a lift and shift of that code from a spike over to this framework.
-
-Long term this tool should be able to leverage the Weaviate hybrid search but even GPT-4 struggled. Progress made since 4.5 warrants another try at some point.
-
 ### `WeatherTools`
 
 This tool lets the model grab a weather forecast using a python library.

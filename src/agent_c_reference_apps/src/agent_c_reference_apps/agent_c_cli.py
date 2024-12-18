@@ -1,10 +1,8 @@
-import json
 import os
-import asyncio
 import logging
 import argparse
 import threading
-from typing import Union, List
+
 from dotenv import load_dotenv
 
 from agent_c.toolsets import Toolset
@@ -17,20 +15,15 @@ from agent_c_reference_apps.ui.markdown_render import MarkdownTokenRenderer
 # Note: we load the env file here so that it's loaded when we start loading the libs that depend on API KEYs.   I'm looking at you Eleven Labs
 load_dotenv(override=True)
 
-from agent_c_voice import MPVPlayer, TTSElevenLabs
 from agent_c_reference_apps.util.audio_cues import AudioCues
 from agent_c_reference_apps.util.chat_commands import CommandHandler
 
 # Without this none of the rest matter
 from agent_c import GPTChatAgent, ClaudeChatAgent, ChatEvent, ChatSessionManager, ToolChest, ToolCache
 
-# Vision support
-from agent_c_vision import CV2Feed
-
 
 from agent_c.util import debugger_is_active
-from agent_c_tools.tools.user_preferences import AssistantPersonalityPreference, AddressMeAsPreference, UserPreference
-from agent_c_voice.tools.voice_eleven_labs.preferences import DefaultVoicePreference
+from agent_c_tools.tools.user_preferences import AssistantPersonalityPreference, AddressMeAsPreference, UserPreference #noqa
 from agent_c.prompting import CoreInstructionSection, HelpfulInfoStartSection, EndOperatingGuideLinesSection, \
     EnvironmentInfoSection, PromptBuilder, PersonaSection
 
@@ -38,10 +31,8 @@ from agent_c.prompting import CoreInstructionSection, HelpfulInfoStartSection, E
 
 # Ensure all our toolsets get registered
 from agent_c_tools.tools import *  # noqa
-from agent_c_demo.tools import *  # noqa
-from agent_c_voice.tools import *  # noqa
 from agent_c_tools.tools.user_bio.prompt import UserBioSection
-from agent_c_voice.speech_to_text.speechmatics_transcriber import SpeechmaticsTranscriber
+
 
 # These are only for the CLI app.
 from agent_c_reference_apps.ui.console_chat_ui import ConsoleChatUI
@@ -70,14 +61,10 @@ class CLIChat:
         self.session_id: Union[str, None] = kwargs.get('session_id', None)
         self.audio_cues = AudioCues()
 
-        self.__init_tts(**kwargs)
         self.__init_agent_params(**kwargs)
-        self.__init_camera(**kwargs)
-        self.__init_transcription(**kwargs)
         self.cmd_handler = CommandHandler()
 
-        self.chat_ui = ConsoleChatUI(tts_engine=self.tts_engine, transcriber=self.transcriber, stt_keybind=self.stt_keybind,
-                                     audio_cues=self.audio_cues, tts_roles=['assistant'], debug_event=self.debug_event)
+        self.chat_ui = ConsoleChatUI(audio_cues=self.audio_cues, tts_roles=['assistant'], debug_event=self.debug_event)
         self.audio_cues.play_sound('app_start')
         self.__init_workspaces()
 
@@ -88,38 +75,8 @@ class CLIChat:
         # "Assistant Personality" allows the user to change the tone of the responses as long as the change doesn't conflict with rules in the
         #                         `Operating Guidelines` portion of the prompt. So "from not on talk like a pirate" works just fine.
         self.user_prefs: List[UserPreference] = [AddressMeAsPreference(), AssistantPersonalityPreference()]
-
+        self.current_chat_log: Union[list[dict], None] = None
         self.can_use_tools = True
-
-    def __init_tts(self, **kwargs):
-        """
-        Initializes the TTS engine and TTS player if voice mode is on.
-        """
-        self.logger.debug("Initializing TTS engine...")
-        self.voice_mode: bool = kwargs.get('voice', False)
-        self.tts_player: Union[None, MPVPlayer] = None
-        self.tts_engine: Union[None, TTSElevenLabs] = None
-        self.tts_model_id: str = "eleven_multilingual_v2"
-
-        if os.environ.get('ELEVEN_API_KEY', None) is None:
-            logging.error('You must have an ELEVEN_API_KEY to use TTS.  Disabling voice mode.')
-            self.voice_mode = False
-            return
-
-        if not self.voice_mode:
-            return
-
-        try:
-            self.tts_engine = TTSElevenLabs(exit_event=self.exit_event, debug_event=self.debug_event, audio_cues=self.audio_cues)
-            self.mpv_cancel_event = threading.Event()
-            self.tts_player = MPVPlayer(self.exit_event, self.mpv_cancel_event, self.tts_engine.output_queue)
-            self.tts_player.start()
-
-        except Exception as e:
-            self.tts_engine = None
-            self.tts_player = None
-            self.voice_mode = False
-            self.logger.error(f"An error occurred while initializing the TTS engine: {e}")
 
     def __init_workspaces(self):
         self.logger.debug("Initializing Workspaces...")
@@ -157,7 +114,7 @@ class CLIChat:
         # This needs to be made smarter before use in prod. By not allowing Zep to manage the message log
         # we could easily blow the context window.  This is a DEMO app being used in short bursts,
         # a tool call if the user asks a followup question.
-        self.current_chat_Log: Union[list[dict], None] = None
+        self.current_chat_log = None
 
         # The toolchest holds all the toolsets for the session
         self.tool_chest: Union[ToolChest, None] = None
@@ -166,26 +123,11 @@ class CLIChat:
         self.tool_cache_dir = kwargs.get("tool_cache_dir", ".tool_cache")
         self.tool_cache = ToolCache(cache_dir=self.tool_cache_dir)
 
-        # Experimental support for Open Interpreter
-        self.allow_oi = kwargs.get("allow_oi", False)
-        # Temporarily disabled due to new user issues
-        # self.oi_tool: Union[OpenInterpreterTools, None] = None
-
-    def __init_transcription(self, **kwargs):
-        self.logger.debug("Initializing Transcription...")
-        self.can_transcribe = os.environ.get('SPEECHMATICS_API_KEY', None) is not None
-        self.stt_keybind = kwargs.get('stt_keybind', os.environ.get('STT_KEYBIND', 'c-pagedown'))
-        self.transcriber: Union[None, SpeechmaticsTranscriber] = None
-        if self.can_transcribe:
-            self.transcriber = SpeechmaticsTranscriber(exit_event=self.exit_event, audio_cues=self.audio_cues,
-                                                       ccv2_feed=self.ccv2_feed, partials=True,
-                                                       listen_event=self.input_active_event)
 
     async def run(self):
         """
         Initializes the console and starts the input loop to interact with the user.
         """
-        await self.__init_voice()
         await self.__init_session()
 
         if self.backend == 'claude':
@@ -198,18 +140,6 @@ class CLIChat:
         self.__print_session_banner()
         await self.__show_welcome_message()
         await self.__core_input_loop()
-
-    async def __init_voice(self):
-        """
-        Initializes the voice toolsets if voice mode is on and the ELEVEN_API_KEY is set.
-        """
-        self.logger.debug("Initializing Voice toolsets...")
-
-        if not self.voice_mode: return
-
-        self.user_prefs.append(DefaultVoicePreference())
-
-        from agent_c_voice.tools import VoiceTools     # noqa
 
     async def __init_session(self):
         self.logger.debug("Initializing Session...")
@@ -328,7 +258,7 @@ class CLIChat:
         Called by the ChatAgent and toolsets to notify us of events as they happen.
         """
         if event.completed and event.role == 'assistant':
-            self.current_chat_Log = event.messages
+            self.current_chat_log = event.messages
 
         # Note we forward most events to the UI layer, if you want to see how to make a console UI feel free to dig in.
         # all this thing is doing is managing the output so that Markdown renders correctly.
@@ -362,19 +292,9 @@ class CLIChat:
         If any other exception occurs, it is logged.
         """
         self.logger.debug("Starting core input loop...")
-
-        if self.voice_mode and self.tts_engine is not None:
-            voice_tool = self.tool_chest.active_tools.get('voice')
-            self.tts_engine.set_voice(voice_tool.voice, self.tts_model_id)
-
         while not self.exit_event.is_set():
             try:
-                user_message, frame = await self.chat_ui.get_user_input()
-                if self.tts_engine and self.tts_engine.tts_active.is_set():
-                    self.tts_engine.cancel()
-
-                if self.transcriber is not None:
-                    self.transcriber.shutdown()
+                user_message = await self.chat_ui.get_user_input()
 
                 if await self.cmd_handler.handle_command(user_message, self):
                     continue
@@ -392,13 +312,10 @@ class CLIChat:
                 #   agent_iter yields a token of text which gets consumed by the TTS engine
                 #   the TTS engine send the token up to ElevenLabs via a websocket whenever it gets a response, it yields that response
                 #   The response from that websocket is a chunk of MP3 audio, which we then stream to the audio player.
-                if frame is not None and self.agent.supports_multimodal:
-                    image_inputs = [frame.to_image_input()]
-                else:
-                    image_inputs = None
+                image_inputs = None
 
                 await self.agent.chat(session_manager=self.session_manager, user_message=user_message, prompt_metadata=await self.__build_prompt_metadata(),
-                                      messages=self.current_chat_Log, output_format=self.agent_output_format, images=image_inputs)
+                                      messages=self.current_chat_log, output_format=self.agent_output_format, images=image_inputs)
 
                 await self.session_manager.flush()
             except (EOFError, KeyboardInterrupt):
@@ -426,28 +343,15 @@ class CLIChat:
             message = NEW_SESSION_WELCOME
         else:
             message = OLD_SESSION_WELCOME
-            messages = await self.session_manager.zep_client.message.aget_session_messages(self.session_manager.chat_session.session_id)
-            for msg in messages:
-                self.chat_ui.fake_role_message(msg.role, msg.content)
-        if self.tts_engine is None:
-            self.chat_ui.fake_role_message("assistant", message)
+            # TODO: Restore Zep
+            #messages = await self.session_manager.zep_client.message.aget_session_messages(self.session_manager.chat_session.session_id)
+            #for msg in messages:
+            #    self.chat_ui.fake_role_message(msg.role, msg.content)
+
+        self.chat_ui.fake_role_message("assistant", message)
 
         self.show_output_mode_hint()
 
-        if self.allow_oi:
-            self.chat_ui.fake_role_message("system",
-                                           ("OI support is enabled. You can ask Agent C to talk to [bold aquamarine1]Opi[/], the Open Interpreter Agent, "
-                                            "on your behalf, or you can speak to [bold aquamarine1]Opi[/] directly with the '[italic gold1]!opi [/]' prefix on your message.\n\n"
-                                            "The OI support is still in the [bold u]experimental[/] stage and should be used with caution as [bold gold3]it currently has unfettered access to your machine,"
-                                            "and can write and execute arbitrary Python code. [/]"
-                                            "[bold aquamarine1]Opi[/] [bold u]will[/] ask for permission before executing code it has written, but there's no guarantee that the code it writes will be bug free."))
-
-    def __init_camera(self, **kwargs):
-        camera_no: int = kwargs.get('camera_no', -1)
-        self.ccv2_feed: Union[CV2Feed, None] = None
-        if camera_no > -1:
-            self.logger.debug(f"Initializing Camera...Camera number: {camera_no}")
-            self.ccv2_feed = CV2Feed(video_capture_device_id=camera_no, activate_event=self.input_active_event, exit_event=self.exit_event, debug_event=self.debug_event)
 
 def main():
     parser = argparse.ArgumentParser(description="CLI Chat Interface")
@@ -455,10 +359,6 @@ def main():
     parser.add_argument('--model', type=str, help='The model name to use', default="gpt-4o")
     parser.add_argument('--prompt_file', type=str, help='Path to a file containing the system prompt to use.', default='personas/default.md')
     parser.add_argument('--userid', type=str, help='The userid for the session', default=os.environ.get("CLI_CHAT_USER_ID", "default"))
-    parser.add_argument('--voice', action='store_true', help='Enable text_iter to speech via ElevenLabs.  Requires ELEVEN_LABS_API_KEY be set.')
-    parser.add_argument('--oi', action='store_true', help='Enable experimental Open Interpreter support')
-    parser.add_argument('--vision', action='store_true', help='Enable vision support')
-    parser.add_argument('--camera', type=int, default=-1, help='What camera number to use for vision support.  Defaults to -1 which checks the env var, which defaults to 0.')
     parser.add_argument('--claude', action='store_true', help='Use Claude as the agent instead of GPT-4-1106-preview.  This is experimental.')
     args = parser.parse_args()
     load_dotenv(override=True)
@@ -480,16 +380,10 @@ def main():
     if args.claude and args.model == 'gpt-4o':
         model = 'claude-3-sonnet-20240229'
 
-    camera: int = args.camera
-    if args.vision:
-        if camera == -1:
-            camera = int(os.environ.get('VIDEO_CAPTURE_DEVICE_NUM', 0))
-
     if args.claude:
         backend = 'claude'
 
-    chat = CLIChat(user_id=args.userid, prompt=prompt, session_id=args.session, voice=args.voice, model_name=model, allow_oi=args.oi, backend=backend,
-                   camera_no=camera)
+    chat = CLIChat(user_id=args.userid, prompt=prompt, session_id=args.session, model_name=model, backend=backend)
     asyncio.run(chat.run())
 
 

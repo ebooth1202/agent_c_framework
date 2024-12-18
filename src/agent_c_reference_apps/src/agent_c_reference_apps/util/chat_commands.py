@@ -39,13 +39,13 @@ class KeepSessionCommand(Command):
 
 class CompactCommand(Command):
     async def execute(self, context):
-        context.current_chat_Log = None
+        context.current_chat_log = None
         context.chat_ui.system_message("Images, Tool calls and results have been removed from the message log.")
 
 class NewSessionCommand(Command):
     async def execute(self, context):
         await context.new_session()
-        context.current_chat_Log = None
+        context.current_chat_log = None
 
 
 class OpenInterpreterCommand(Command):
