@@ -13,7 +13,7 @@ if [ -d ".venv" ]; then
 else
     echo "Creating virtual environment"
     # Create a virtual environment
-    python -m .venv venv
+    python -m venv .venv
 fi
 
 # Activate the virtual environment
