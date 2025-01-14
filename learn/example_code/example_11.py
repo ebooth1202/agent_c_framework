@@ -1,4 +1,6 @@
 import asyncio
+from dotenv import load_dotenv
+load_dotenv(override=True)
 from typing import Any, List, Union
 
 from prompt_toolkit import PromptSession
