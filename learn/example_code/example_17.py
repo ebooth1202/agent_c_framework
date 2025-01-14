@@ -1,5 +1,8 @@
-import asyncio
 import os
+import asyncio
+from dotenv import load_dotenv
+load_dotenv(override=True)
+
 import webbrowser
 from typing import Any, List, Union
 

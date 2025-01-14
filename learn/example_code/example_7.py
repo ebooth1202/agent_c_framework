@@ -1,5 +1,7 @@
-import asyncio
 import time
+import asyncio
+from dotenv import load_dotenv
+load_dotenv(override=True)
 
 from agent_c.agents.gpt import GPTChatAgent
 

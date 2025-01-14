@@ -1,4 +1,7 @@
 import asyncio
+from dotenv import load_dotenv
+load_dotenv(override=True)
+
 from agent_c import GPTChatAgent, ToolChest
 from agent_c_tools.tools.weather import WeatherTools  # noqa
 

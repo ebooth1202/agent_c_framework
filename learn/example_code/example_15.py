@@ -1,5 +1,7 @@
-import asyncio
 import os
+import asyncio
+from dotenv import load_dotenv
+load_dotenv(override=True)
 
 from agent_c.agents.gpt import GPTChatAgent
 from agent_c_tools.tools.workspaces.local_storage import LocalStorageWorkspace

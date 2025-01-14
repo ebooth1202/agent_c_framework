@@ -17,6 +17,9 @@ There are many parameters involved in a completion call but between the vendors 
 ```python
 # Import the GPT Agent
 from agent_c import GPTChatAgent
+# Load out .env file.  (this should be in each example)
+from dotenv import load_dotenv
+load_dotenv(override=True)
 
 async def main():
     # Create an instance of the agent
