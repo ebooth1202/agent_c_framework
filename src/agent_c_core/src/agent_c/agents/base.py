@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 from asyncio import Semaphore
 from typing import Any, Dict, List, Union, Optional, Callable, Awaitable
 
@@ -55,6 +56,7 @@ class BaseAgent:
         self.can_use_tools: bool = False
         self.supports_multimodal: bool = False
         self.token_counter: TokenCounter = kwargs.get("token_counter", TokenCounter())
+        self.root_message_role: str =  kwargs.get( "root_message_role", os.environ.get("ROOT_MESSAGE_ROLE", "system"))
 
         if TokenCounter.counter() is None:
             TokenCounter.set_counter(self.token_counter)
@@ -213,7 +215,7 @@ class BaseAgent:
         message_array: List[dict[str, Any]] = []
 
         if sys_prompt is not None:
-            message_array.append({"role": "system", "content": sys_prompt})
+            message_array.append({"role": self.root_message_role, "content": sys_prompt})
 
         if messages is not None:
             message_array += messages

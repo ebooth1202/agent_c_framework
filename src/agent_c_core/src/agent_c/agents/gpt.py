@@ -61,6 +61,11 @@ class GPTChatAgent(BaseAgent):
         self.can_use_tools = True
         self.supports_multimodal = True
 
+        # Temporary until all the models support this
+        if self.model_name in ["gpt-o1", 'gpt-o1-mini']:
+            self.root_message_role = "developer"
+
+
     def _generate_multi_modal_user_message(self, user_input: str, images: List[ImageInput]) -> Union[List[dict[str, Any]], None]:
         if self.mitigate_image_prompt_injection:
             text = f"User: {user_input}{BaseAgent.IMAGE_PI_MITIGATION}"
@@ -129,6 +134,8 @@ class GPTChatAgent(BaseAgent):
         user = kwargs.get("user_name", None)
         if user is not None:
             completion_opts["user"] = user
+
+
 
         return {'completion_opts':completion_opts, 'callback_opts': self._callback_opts(**kwargs)}
 
