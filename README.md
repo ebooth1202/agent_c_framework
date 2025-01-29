@@ -10,6 +10,7 @@ The underlying agent handles things like streaming responses, parallel tool use,
 
 - A decent Python IDE like PyCharm.
 - Python 3.10 or higher.
+    - On mac you may need to use an earlier version than the system or homebrew provide. If so, [pyenv](https://github.com/pyenv/pyenv) is recommended. To use 3.11.11 for example, you would run `pyenv install 3.11.11; penv local 3.11.11` in this directory
 - On Windows you will need the Microsoft visual c++ build tools.  You can get them via `winget install Microsoft.VisualStudio.2022.BuildTools`
 
 ### Clone the repo

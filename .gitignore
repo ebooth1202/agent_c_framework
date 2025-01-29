@@ -171,3 +171,6 @@ config/*
 
 # But don't ignore the .gitkeep file
 !config/.gitkeep
+
+#pyenv
+.python-version
