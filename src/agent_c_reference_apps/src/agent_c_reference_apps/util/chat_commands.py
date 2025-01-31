@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import re
 
 
 class Command(ABC):
@@ -67,6 +68,11 @@ class UnrecognizedCommand(Command):
         context.chat_ui.fake_role_message("system", f"Unrecognized command. {self.message}")
 
 
+class HelpCommand(Command):
+    async def execute(self, context):
+        commands = "\n".join(CommandHandler().get_commands())
+        context.chat_ui.system_message("Command".ljust(15) + "Purpose\n" + ("=" * 30) + f"\n{commands}")
+
 class CommandHandler:
     def __init__(self):
         self.commands = {
@@ -79,8 +85,20 @@ class CommandHandler:
             '!!!!': KeepSessionCommand(),
             '!compact': CompactCommand(),
             '!purge': CompactCommand(),
-            '!new': NewSessionCommand()
+            '!new': NewSessionCommand(),
+            '!help': HelpCommand(),
+            '!?': HelpCommand()
         }
+
+    def strip_object_to_class(self, objname):
+        match = re.search(r"<.+\.([A-Za-z0-9_.]+)Command object at 0x[a-fA-F0-9]+>", str(objname))
+        if match:
+            return match.group(1)
+        else:
+            return objname
+
+    def get_commands(self):
+        return [f"{key}".ljust(15) + f"{self.strip_object_to_class(self.commands[key])}" for key in self.commands]
 
     async def handle_command(self, user_message, context) -> bool:
         user_message_lower = user_message.lower().strip()
