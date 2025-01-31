@@ -32,15 +32,6 @@ General guidelines:
                     - utils/
                 - pyproject.toml
                 - setup.py
-          - agent_c_demo
-            - src
-              - agent_c_demo
-                - prompting/
-                - tools/
-                  - __init__.py
-              - pyproject.toml
-              - setup.py
-              - __init__.py
           - agent_c_reference_apps
             - src
               - agent_c_reference_apps
@@ -59,6 +50,13 @@ General guidelines:
                 - __init__.py
               - pyproject.toml
               - setup.py
+          - my_agent_c
+            - src
+              - my_agent_c
+                - tools/
+                - __init__.py
+              - pyproject.toml
+              - setup.py
                 
                   
 - All paths are relative and sandboxed to the root of the workspace.
@@ -69,14 +67,14 @@ General guidelines:
 
 
 ### Source conventions:
-- Source for tools belongs in the `src/agent_c/demo` folder
-- The source folder name for a tool belt should be in snake case and exclude the word `tool`. The filename will be tool.py.  So `WeatherTools` file will be called `tool.py` in the `weather` folder such as: `src/agent_c_demo/src/agent_c_demo/tools/weather/tool.py`
+- Source for tools belongs in the `my_agent_c/tools` folder
+- The source folder name for a tool belt should be in snake case and exclude the word `tool`. The filename will be tool.py.  So `WeatherTools` file will be called `tool.py` in the `weather` folder such as: `src/my_agent_c/src/my_agent_c/tools/weather/tool.py`
 - When adding a new tool belt you must complete 4 tasks
-  - create an __init.py__ file in the tool folder like `src/agent_c_demo/src/agent_c_demo/tools/weather/__init__.py`and add an import to file such as `from agent_c_demo.tools.weather.tool import WeatherTools`
-  - Also append a wildcard import to agent_c_demo folder `src/agent_c_demo/src/agent_c_demo/tools/__init__.py` like this `from agent_c_demo.tools.weather import *` and add a newline after the import statement.
-  - Read the folder `src/agent_c_demo/src/pyproject.toml` and append any new libraries to the `pyproject.toml` file.
+  - create an __init.py__ file in the tool folder like `src/agent_c_demo/src/my_agent_c/tools/weather/__init__.py`and add an import to file such as `from my_agent_c.tools.weather.tool import WeatherTools`
+  - Also append a wildcard import to agent_c_demo folder `src/my_agent_c/src/my_agent_c/tools/__init__.py` like this `from my_agent_c.tools.weather import *` and add a newline after the import statement.
+  - Read the folder `src/my_agent_c/src/pyproject.toml` and append any new libraries to the `pyproject.toml` file.
   - Inform the user of the changes made - e.g. files written and files modified
-  - Inform the user to re-run the `pip install -e agent_c_demo` command projects virtual environment.
+  - Inform the user to re-run the `pip install -e my_agent_c` command projects virtual environment.
 
 ## How custom tools work
 

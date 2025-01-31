@@ -4,13 +4,7 @@ version = "0.1.1"
 description = "Your personal playground for Agent C stuff"
 dependencies = [
     "agent_c-core>=0.1.1",
-    "agent_c-tools>=0.1.1",
-    "agent_c-demo>=0.1.1",
-    "agent_c-voice>=0.1.1",
-    "agent_c-rag>=0.1.1",
-    "agent_c-vision>=0.1.1",
-    "agent_c-reference-apps>=0.1.1",
-    "agent_c-extraction>=0.1.1",
+    "agent_c-tools>=0.1.1"
 ]
 requires-python = ">=3.10"
 authors = [
