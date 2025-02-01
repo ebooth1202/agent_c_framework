@@ -62,7 +62,7 @@ class GPTChatAgent(BaseAgent):
         self.supports_multimodal = True
 
         # Temporary until all the models support this
-        if self.model_name in ["gpt-o1", 'gpt-o1-mini', 'gpt-o3', 'gpt-o3-mini']:
+        if self.model_name in ["o1", 'o1-mini', 'o3', 'o3-mini']:
             self.root_message_role = "developer"
 
 
