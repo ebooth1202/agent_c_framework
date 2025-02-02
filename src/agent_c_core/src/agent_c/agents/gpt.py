@@ -121,7 +121,11 @@ class GPTChatAgent(BaseAgent):
         messages = await self._construct_message_array(system_prompt=sys_prompt, **kwargs)
 
         functions: List[Dict[str, Any]] = self.tool_chest.active_open_ai_schemas
-        completion_opts = {"model": model_name, "temperature": temperature, "messages": messages, "stream": True}
+        if model_name in ["o1", 'o1-mini', 'o3', 'o3-mini']:
+            completion_opts = {"model": model_name, "messages": messages, "stream": True}
+        else:
+            completion_opts = {"model": model_name, "temperature": temperature, "messages": messages, "stream": True}
+
         if len(functions):
             completion_opts['tools'] = functions
 
@@ -134,6 +138,10 @@ class GPTChatAgent(BaseAgent):
         user = kwargs.get("user_name", None)
         if user is not None:
             completion_opts["user"] = user
+
+        reasoning_effort = kwargs.get("reasoning_effort", None)
+        if reasoning_effort is not None:
+            completion_opts["reasoning_effort"] = reasoning_effort
 
 
 
