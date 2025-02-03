@@ -1,9 +1,9 @@
 [project]
 name = "agent_c-tools"
-version = "0.1.1"
+version = "0.1.2"
 description = "Reference tools / tool interfaces for Agent C"
 dependencies = [
-    "agent_c-core>=0.1.1",
+    "agent_c-core>=0.1.2",
     "pandas==2.2.3",        # googletrends (overlap agent_c_demo)
     "pyarrow==17.0.0",      # googletrends (overlap agent_c_demo)
     "mermaid-py==0.6.0",    # mermaid
@@ -37,7 +37,7 @@ maintainers = [
 ]
 
 readme = "README.MD"
-license = { text = "commercial" }
+license = { text = "Business Source License 1.1" }
 keywords = ["gpt", "claude", "agents", "ai", "centric"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -45,6 +45,6 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/centricconsulting/agent_c"
+Homepage = "https://github.com/centricconsulting/agent_c_framework"
 
 
