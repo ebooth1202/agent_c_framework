@@ -145,26 +145,67 @@ class BaseAgent:
             logging.exception(f"Streaming callback exploded: {e}")
             return
 
+    async def _cb_completion_start(self, **kwargs):
+        """
+        Notify the client that the completion has started.
+        """
+        await self._callback(completion_running=True, **kwargs)
+
+    async def _cb_completion_stop(self, stop_reason: str, **kwargs):
+        """
+        Notify the client that the completion has stopped and why.
+        """
+        await self._callback(completion_running=False, stop_reason=stop_reason, **kwargs)
+
     async def _cb_completion(self, running: bool, **kwargs):
+        """
+        Notify the client that the completion is running or not.
+        TODO: This method is deprecated and should be removed once the GPTAgent is updated.
+        """
         await self._callback(completion_running=running, **kwargs)
 
-    async def _cb_start(self, start: bool, **kwargs):
+    async def _cb_int_start_end(self, start: bool, **kwargs):
+        """
+        Inform the client that an interaction is starting or stopping.
+        There may be multiple completions within an interaction.
+        """
         await self._callback(start=start, **kwargs)
 
+    async def _cb_block_start_end(self, start: bool, **kwargs):
+        """
+        Inform the client that a content_block is starting or stopping.
+        """
+        # TODO: we need to refactor this damn stream
+        # await self._callback(start=start, **kwargs)
+        pass
+
     async def _cb_token(self, token: str, completed: bool = False, **kwargs):
+        """
+        Notify the client of a token of text has been received.
+        """
         if token is not None and len(token) > 0:
             await self._callback(completed=completed, content=token, **kwargs)
 
     async def _cb_messages(self, messages: List[dict[str, Any]], **kwargs):
+        """
+        Notify the client that messages array has been updated.
+        """
         await self._callback(completed=True, messages=messages, **kwargs)
 
     async def _cb_tools(self, tool_calls=None, **kwargs):
+        """
+        Notify the client that a tool calls are being requested. / completed.
+        TODO: Add tool call results.
+        """
         if tool_calls is not None or kwargs.get("active", False):
             await self._callback(tool_use_active=True, tool_calls=tool_calls, **kwargs)
         else:
             await self._callback(tool_use_active=False, **kwargs)
 
     async def _cb_system(self, content: str, **kwargs):
+        """
+        Notify the client to display raw content as a system message.
+        """
         kwargs["role"] = "system"
         kwargs['output_format'] = 'raw'
         await self._callback(content=content, **kwargs)

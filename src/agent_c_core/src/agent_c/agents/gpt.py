@@ -246,7 +246,7 @@ class GPTChatAgent(BaseAgent):
                                 chunk_message: Union[str, None] = delta.content
                                 if chunk_message is not None:
                                     if len(collected_messages) == 0:
-                                        await self._cb_start(True, **opts['callback_opts'])
+                                        await self._cb_int_start_end(True, **opts['callback_opts'])
                                     collected_messages.append(chunk_message)
                                     await self._cb_token(chunk_message, **opts['callback_opts'])
 

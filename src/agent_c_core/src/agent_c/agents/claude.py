@@ -88,6 +88,8 @@ class ClaudeChatAgent(BaseAgent):
         session_manager: Union[ChatSessionManager, None] = kwargs.get("session_manager", None)
         messages = opts["completion_opts"]["messages"]
 
+        await self._cb_int_start_end(True, **callback_opts)
+
         delay = 1  # Initial delay between retries
         async with self.semaphore:
             while delay <= self.max_delay:
@@ -102,7 +104,7 @@ class ClaudeChatAgent(BaseAgent):
                         async for event in stream:
                             if event.type == "content_block_start":
                                 content_type = event.content_block.type
-                                await self._cb_start(True, **callback_opts)
+                                await self._cb_block_start_end(True, **callback_opts)
                                 if content_type == "text":
                                     content = event.content_block.text
                                     if len(content) > 0:
@@ -118,17 +120,20 @@ class ClaudeChatAgent(BaseAgent):
                                 collected_messages.append(event.delta.text)
                                 await self._cb_token(event.delta.text, **callback_opts)
                             elif event.type == "content_block_stop":
-                                await self._cb_start(False, **callback_opts)
+                                await self._cb_block_start_end(False, **callback_opts)
                             elif event.type == 'message_delta':
                                 stop_reason = event.delta.stop_reason
                             elif event.type == 'message_stop':
-                                await self._cb_completion(False, **callback_opts)
+                                await self._cb_completion_stop(stop_reason, **callback_opts)
                                 if stop_reason != 'tool_use':
                                     output_text = "".join(collected_messages)
                                     messages.append(await self._save_interaction_to_session(session_manager, output_text))
                                     await self._cb_messages(messages, **callback_opts)
+                                    await self._cb_int_start_end(False, **callback_opts)
                                     return messages
                                 else:
+                                    # TODO: We probably want to do something with the tool calls here
+                                    #       so wer standardize onf a schema for them
                                     await self._cb_tools(collected_tool_calls, **opts['callback_opts'])
                                     # make tool calls
                                     #tool calls to messages
