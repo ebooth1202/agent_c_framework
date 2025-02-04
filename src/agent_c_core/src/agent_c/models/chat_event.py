@@ -148,6 +148,9 @@ class ChatEvent(BaseModel):
     output_format: str = Field(default="markdown")
     render_media: Optional[RenderMedia] = None
     completion_running: Optional[bool] = None
+    stop_reason: Optional[str] = None
     tool_calls: Optional[List[CompletionToolCall]] = None
     messages: Optional[List[Message]] = None
     start: Optional[bool] = False
+    input_tokens: Optional[int] = None
+    output_tokens: Optional[int] = None

@@ -1,5 +1,8 @@
+import copy
 import logging
 from typing import Type, List, Union
+
+from pyarrow.ipc import new_stream
 
 from agent_c.prompting.basic_sections.tool_guidelines import EndToolGuideLinesSection, BeginToolGuideLinesSection
 from agent_c.prompting.prompt_section import PromptSection
@@ -67,14 +70,29 @@ class ToolChest:
     @property
     def active_open_ai_schemas(self) -> List[dict]:
         """
-        Property that returns the active tool instances.
-        Currently, all toolsets are the active toolsets but that will change.
+        Property that returns the active tool instances in Open AI format.
 
         Returns:
             dict[str, Toolset]: Dictionary of active tool instances.
         """
         return self.__active_open_ai_schemas
 
+    @property
+    def active_claude_schemas(self) -> List[dict]:
+        """
+        Property that returns the active tool instances in Claude format
+
+        Returns:
+            dict[str, Toolset]: Dictionary of active tool instances.
+        """
+        oai_schemas = self.__active_open_ai_schemas
+        claude_schemas = []
+        for schema in oai_schemas:
+            new_schema = copy.deepcopy(schema['function'])
+            new_schema['input_schema'] = new_schema.pop('parameters')
+            claude_schemas.append(new_schema)
+
+        return claude_schemas
 
 
     @property

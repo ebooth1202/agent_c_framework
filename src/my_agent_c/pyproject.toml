@@ -1,10 +1,10 @@
 [project]
 name = "my_agent_c"
-version = "0.1.1"
+version = "0.1.2"
 description = "Your personal playground for Agent C stuff"
 dependencies = [
-    "agent_c-core>=0.1.1",
-    "agent_c-tools>=0.1.1"
+    "agent_c-core>=0.1.2",
+    "agent_c-tools>=0.1.2"
 ]
 requires-python = ">=3.10"
 authors = [
@@ -15,7 +15,7 @@ maintainers = [
 ]
 
 readme = "README.MD"
-license = { text = "commercial" }
+license = { text = "Business Source License 1.1" }
 keywords = ["gpt", "claude", "agents", "ai", "centric"]
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -23,7 +23,7 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/centricconsulting/agent_c"
+Homepage = "https://github.com/centricconsulting/agent_c_framework"
 
 [project.scripts]
 my_agent_c = "my_agent_c.my_agent_c_app:main"

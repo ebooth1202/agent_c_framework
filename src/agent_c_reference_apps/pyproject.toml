@@ -1,10 +1,10 @@
 [project]
 name = "agent_c-reference-apps"
-version = "0.1.1"
-description = "Demo applications for written using Agent C"
+version = "0.1.2"
+description = "Reference applications for written using Agent C"
 dependencies = [
-    "agent_c-core>=0.1.1",
-    "agent_c-tools>=0.1.1",
+    "agent_c-core>=0.1.2",
+    "agent_c-tools>=0.1.2",
     "gradio==5.5.0",
     "rich==13.8.1",
     "prompt_toolkit>=3.0.43",
@@ -24,7 +24,7 @@ maintainers = [
 ]
 
 readme = "README.MD"
-license = { text = "commercial" }
+license = { text = "Business Source License 1.1" }
 keywords = ["gpt", "claude", "agents", "ai", "centric"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -32,7 +32,7 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/centricconsulting/agent_c"
+Homepage = "https://github.com/centricconsulting/agent_c_framework"
 
 
 [project.scripts]
