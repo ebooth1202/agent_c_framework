@@ -739,14 +739,11 @@ class GradioChat:
 
     async def __init_claude_chat_agent(self):
         self.logger.debug("Initializing Claude Chat Agent...")
-        operating_sections = [
-            CoreInstructionSection(template="<operating_guidelines>\n"),
-            DynamicPersonaSection(),
-            EndOperatingGuideLinesSection()
-        ]
-        self.can_use_tools = False
-        self.tool_chest = ToolChest()
-
+        self.can_use_tools = True
+        self.tool_chest = ToolChest(tool_classes=[
+            tool for tool in Toolset.tool_registry
+            if tool.__name__ in self.selected_tools
+        ])
         # These are the default and extra options for the various toolsets, since the toolsets all use kwargs
         # we can send them the whole bag of options without worry.
         tool_opts = {'tool_cache': self.tool_cache, 'session_manager': self.session_manager,
@@ -758,6 +755,14 @@ class GradioChat:
         active_tools = list(self.tool_chest.active_tools.keys())
         self.logger.info(f"Successfully initialized tools: {active_tools}")
 
+
+        operating_sections = [
+            CoreInstructionSection(template="<operating_guidelines>\n"),
+            DynamicPersonaSection(),
+            EndOperatingGuideLinesSection()
+        ]
+        operating_sections.extend(self.tool_chest.active_tool_sections)
+
         # These are demo sections that tell the model a little about the user as well as things like the current date / time.
         info_sections = [HelpfulInfoStartSection(),
                          EnvironmentInfoSection(session_manager=self.session_manager, voice_tools=None),
@@ -766,7 +771,7 @@ class GradioChat:
         # FINALLY we create the agent
         self.agent: ClaudeChatAgent = ClaudeChatAgent(
             prompt_builder=PromptBuilder(sections=operating_sections + info_sections), model_name=self.model_name,
-            streaming_callback=self.chat_callback, output_format=self.agent_output_format)
+            streaming_callback=self.chat_callback, output_format=self.agent_output_format, tool_chest=self.tool_chest)
 
     def __setup_logging(self) -> logging.Logger:
         """

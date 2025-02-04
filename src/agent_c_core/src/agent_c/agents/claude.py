@@ -1,3 +1,6 @@
+import asyncio
+import copy
+import json
 import logging
 
 from typing import Any, List, Union, Dict
@@ -40,7 +43,7 @@ class ClaudeChatAgent(BaseAgent):
         super().__init__(**kwargs)
         self.client: AsyncAnthropic = kwargs.get("client", AsyncAnthropic())
         self.supports_multimodal = True
-        self.can_use_tools = False
+        self.can_use_tools = True
 
 
 
@@ -56,7 +59,7 @@ class ClaudeChatAgent(BaseAgent):
 
         completion_opts = {"model": model_name, "messages": messages, "system": sys_prompt,  "max_tokens": max_tokens, 'temperature': temperature}
 
-        if len(functions) and False:
+        if len(functions):
             completion_opts['tools'] = functions
 
         session_manager: Union[ChatSessionManager, None] = kwargs.get("session_manager", None)
@@ -114,7 +117,6 @@ class ClaudeChatAgent(BaseAgent):
                         collected_messages = []
                         collected_tool_calls = []
                         input_tokens = 0
-                        output_tokens = 0
 
                         await self._cb_completion(False, **opts['callback_opts'])
                         async for event in stream:
@@ -134,8 +136,7 @@ class ClaudeChatAgent(BaseAgent):
                                     # TODO: We probably want to do something with the tool calls here
                                     #       so wer standardize onf a schema for them
                                     await self._cb_tools(collected_tool_calls, **opts['callback_opts'])
-                                    # make tool calls
-                                    #tool calls to messages
+                                    messages.extend(await self.__tool_calls_to_messages(collected_tool_calls))
 
 
                             elif event.type == "content_block_start":
@@ -147,14 +148,17 @@ class ClaudeChatAgent(BaseAgent):
                                         collected_messages.append(content)
                                         await self._cb_token(content, **callback_opts)
                                 elif content_type == "tool_use":
-                                    collected_tool_calls.append(event.content_block)
+                                    tool_call = event.content_block.model_dump()
+
+                                    collected_tool_calls.append(tool_call)
                                 else:
                                     await self._cb_system(content=f"content_block_start Unknown content type: {content_type}")
                             elif event.type == "input_json":
                                 collected_tool_calls[-1]['input'] = event.snapshot
-                            elif event.type == 'content_block_delta':
-                                collected_messages.append(event.delta.text)
-                                await self._cb_token(event.delta.text, **callback_opts)
+                            elif event.type == "text":
+                                collected_messages.append(event.text)
+                                await self._cb_token(event.text, **callback_opts)
+
                             elif event.type == "content_block_stop":
                                 await self._cb_block_start_end(False, **callback_opts)
                             elif event.type == 'message_delta':
@@ -220,3 +224,27 @@ class ClaudeChatAgent(BaseAgent):
         kwargs['output_format'] = kwargs.get('output_format', 'raw')
         messages = await self.chat(**kwargs)
         return messages[-1]['content']
+
+    async def __tool_calls_to_messages(self, tool_calls):
+        async def make_call(tool_call):
+            fn = tool_call['name']
+            args = tool_call['input']
+            ai_call = copy.deepcopy(tool_call)
+            try:
+                function_response = await self._call_function(fn, args)
+                call_resp = {"type": "tool_result", "tool_use_id": tool_call['id'],"content": function_response}
+            except Exception as e:
+                call_resp = {"role": "tool", "tool_call_id": tool_call['id'], "name": fn,
+                             "content": f"Exception: {e}"}
+
+            return ai_call, call_resp
+
+        # Schedule all the calls concurrently
+        tasks = [make_call(tool_call) for tool_call in tool_calls]
+        completed_calls = await asyncio.gather(*tasks)
+
+        # Unpack the resulting ai_calls and resp_calls
+        ai_calls, results = zip(*completed_calls)
+
+        return [{'role': 'assistant', 'content': list(ai_calls)},
+                {'role': 'user', 'content': list(results)}]

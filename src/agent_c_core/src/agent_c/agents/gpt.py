@@ -86,30 +86,7 @@ class GPTChatAgent(BaseAgent):
 
         return [{"role": "user", "content": contents}]
 
-    async def __call_function(self, function_id: str, function_args: Dict) -> Any:
-        """
-        Call a function asynchronously.
 
-        Parameters:
-        function_id: str
-            Identifies the function to be called.
-        function_args: Dict
-            Arguments for the function to be called.
-
-        Returns: The function call result.
-        """
-        toolset, function_name = function_id.split(Toolset.tool_sep, 1)
-        try:
-            src_obj: Toolset = self.tool_chest.active_tools[toolset]
-            if src_obj is None:
-                return f"{toolset} is not a valid toolset."
-
-            function_to_call: Any = getattr(src_obj, function_name)
-
-            return await function_to_call(**function_args)
-        except Exception as e:
-            logging.exception(f"Failed calling {function_name} on {toolset}. {e}")
-            return f"Important!  Tell the user an error occurred calling {function_name} on {toolset}. {e}"
 
     async def __interaction_setup(self, **kwargs) -> dict[str, Any]:
         json_mode: bool = kwargs.get("json_mode", False)
@@ -308,7 +285,7 @@ class GPTChatAgent(BaseAgent):
                        'type': 'function'
                        }
             try:
-                function_response = await self.__call_function(fn, args)
+                function_response = await self._call_function(fn, args)
 
                 call_resp = {"role": "tool", "tool_call_id": tool_call['id'], "name": fn,
                              "content": function_response}
