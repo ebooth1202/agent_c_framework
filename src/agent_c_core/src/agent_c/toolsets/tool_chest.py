@@ -67,14 +67,22 @@ class ToolChest:
     @property
     def active_open_ai_schemas(self) -> List[dict]:
         """
-        Property that returns the active tool instances.
-        Currently, all toolsets are the active toolsets but that will change.
+        Property that returns the active tool instances in Open AI format.
 
         Returns:
             dict[str, Toolset]: Dictionary of active tool instances.
         """
         return self.__active_open_ai_schemas
 
+    @property
+    def active_claude_schemas(self) -> List[dict]:
+        """
+        Property that returns the active tool instances in Claude format
+
+        Returns:
+            dict[str, Toolset]: Dictionary of active tool instances.
+        """
+        return self.__active_open_ai_schemas
 
 
     @property

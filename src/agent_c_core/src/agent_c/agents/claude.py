@@ -9,7 +9,7 @@ from agent_c.models.image_input import ImageInput
 from agent_c.util.token_counter import TokenCounter
 
 class ClaudeChatAgent(BaseAgent):
-    class TokenCounter(TokenCounter):
+    class ClaudeTokenCounter(TokenCounter):
 
         def __init__(self):
             self.anthropic: Anthropic = Anthropic()
@@ -35,10 +35,11 @@ class ClaudeChatAgent(BaseAgent):
         client: AsyncAnthropic, default is AsyncAnthropic()
             The client to use for making requests to the Anthropic API.
         """
-        kwargs['token_counter'] = kwargs.get('token_counter', ClaudeChatAgent.TokenCounter())
+        kwargs['token_counter'] = kwargs.get('token_counter', ClaudeChatAgent.ClaudeTokenCounter())
         super().__init__(**kwargs)
         self.client: AsyncAnthropic = kwargs.get("client", AsyncAnthropic())
         self.supports_multimodal = True
+        self.can_use_tools = True
 
 
 
