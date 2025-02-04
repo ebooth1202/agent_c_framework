@@ -207,6 +207,7 @@ class GPTChatAgent(BaseAgent):
         delay = 1  # Initial delay between retries
 
         async with self.semaphore:
+            await self._cb_int_start_end(True, **opts['callback_opts'])
             while interacting and delay < self.max_delay:
                 try:
                     tool_calls = []
@@ -241,8 +242,6 @@ class GPTChatAgent(BaseAgent):
                             else:
                                 chunk_message: Union[str, None] = delta.content
                                 if chunk_message is not None:
-                                    if len(collected_messages) == 0:
-                                        await self._cb_int_start_end(True, **opts['callback_opts'])
                                     collected_messages.append(chunk_message)
                                     await self._cb_token(chunk_message, **opts['callback_opts'])
 
@@ -250,6 +249,7 @@ class GPTChatAgent(BaseAgent):
                             output_text = "".join(collected_messages)
                             messages.append(await self._save_interaction_to_session(session_manager, output_text))
                             await self._cb_messages(messages, **opts['callback_opts'])
+                            await self._cb_int_start_end(True, **opts['callback_opts'])
                             interacting = False
 
                     except openai.APIError as e:
