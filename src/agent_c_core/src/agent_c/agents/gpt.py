@@ -35,6 +35,7 @@ class TikTokenTokenCounter(TokenCounter):
         return len(self.encoder.encode(text))
 
 class GPTChatAgent(BaseAgent):
+    REASONING_MODELS: List[str] = ["o1", 'o1-mini', 'o3', 'o3-mini']
 
     def __init__(self, **kwargs) -> None:
         """
@@ -62,7 +63,7 @@ class GPTChatAgent(BaseAgent):
         self.supports_multimodal = True
 
         # Temporary until all the models support this
-        if self.model_name in ["o1", 'o1-mini', 'o3', 'o3-mini']:
+        if self.model_name in self.__class__.REASONING_MODELS:
             self.root_message_role = "developer"
 
 
@@ -121,8 +122,9 @@ class GPTChatAgent(BaseAgent):
         messages = await self._construct_message_array(system_prompt=sys_prompt, **kwargs)
 
         functions: List[Dict[str, Any]] = self.tool_chest.active_open_ai_schemas
-        if model_name in ["o1", 'o1-mini', 'o3', 'o3-mini']:
-            completion_opts = {"model": model_name, "messages": messages, "stream": True}
+        if model_name in self.__class__.REASONING_MODELS:
+            reasoning_effort = kwargs.get("reasoning_effort", "medium")
+            completion_opts = {"model": model_name, "messages": messages, "stream": True, "reasoning_effort": reasoning_effort}
         else:
             completion_opts = {"model": model_name, "temperature": temperature, "messages": messages, "stream": True}
 
@@ -138,12 +140,6 @@ class GPTChatAgent(BaseAgent):
         user = kwargs.get("user_name", None)
         if user is not None:
             completion_opts["user"] = user
-
-        reasoning_effort = kwargs.get("reasoning_effort", None)
-        if reasoning_effort is not None:
-            completion_opts["reasoning_effort"] = reasoning_effort
-
-
 
         return {'completion_opts':completion_opts, 'callback_opts': self._callback_opts(**kwargs)}
 
