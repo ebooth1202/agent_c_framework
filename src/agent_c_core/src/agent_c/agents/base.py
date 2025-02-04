@@ -1,13 +1,14 @@
+import os
 import asyncio
 import logging
-import os
+
 from asyncio import Semaphore
 from typing import Any, Dict, List, Union, Optional, Callable, Awaitable
 
 from agent_c.chat import ChatSessionManager
 from agent_c.models import ChatEvent, ImageInput, MemoryMessage
 from agent_c.prompting import PromptBuilder
-from agent_c.toolsets import ToolChest
+from agent_c.toolsets import ToolChest, Toolset
 from agent_c.util.token_counter import TokenCounter
 
 
@@ -269,3 +270,27 @@ class BaseAgent:
 
         return message_array
 
+    async def _call_function(self, function_id: str, function_args: Dict) -> Any:
+        """
+        Call a function asynchronously.
+
+        Parameters:
+        function_id: str
+            Identifies the function to be called.
+        function_args: Dict
+            Arguments for the function to be called.
+
+        Returns: The function call result.
+        """
+        toolset, function_name = function_id.split(Toolset.tool_sep, 1)
+        try:
+            src_obj: Toolset = self.tool_chest.active_tools[toolset]
+            if src_obj is None:
+                return f"{toolset} is not a valid toolset."
+
+            function_to_call: Any = getattr(src_obj, function_name)
+
+            return await function_to_call(**function_args)
+        except Exception as e:
+            logging.exception(f"Failed calling {function_name} on {toolset}. {e}")
+            return f"Important!  Tell the user an error occurred calling {function_name} on {toolset}. {e}"
