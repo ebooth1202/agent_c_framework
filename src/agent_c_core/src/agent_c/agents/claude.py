@@ -90,11 +90,15 @@ class ClaudeChatAgent(BaseAgent):
 
         delay = 1  # Initial delay between retries
         async with self.semaphore:
-            await self._cb_completion(True, **callback_opts)
             while delay <= self.max_delay:
                 try:
+                    await self._cb_completion(True, **callback_opts)
                     async with self.client.messages.stream (**opts["completion_opts"]) as stream:
                         collected_messages = []
+                        collected_tool_calls = []
+                        current_tool_call = None
+
+                        await self._cb_completion(False, **opts['callback_opts'])
                         async for event in stream:
                             if event.type == "content_block_start":
                                 content_type = event.content_block.type
@@ -104,9 +108,12 @@ class ClaudeChatAgent(BaseAgent):
                                     if len(content) > 0:
                                         collected_messages.append(content)
                                         await self._cb_token(content, **callback_opts)
+                                elif content_type == "tool_use":
+                                    collected_tool_calls.append(event.content_block)
                                 else:
                                     await self._cb_system(content=f"content_block_start Unknown content type: {content_type}")
-
+                            elif event.type == "input_json":
+                                collected_tool_calls[-1]['input'] = event.snapshot
                             elif event.type == 'content_block_delta':
                                 collected_messages.append(event.delta.text)
                                 await self._cb_token(event.delta.text, **callback_opts)
@@ -115,9 +122,18 @@ class ClaudeChatAgent(BaseAgent):
                             elif event.type == 'message_delta':
                                 stop_reason = event.delta.stop_reason
                             elif event.type == 'message_stop':
-                                output_text = "".join(collected_messages)
-                                messages.append(await self._save_interaction_to_session(session_manager, output_text))
-                                await self._cb_messages(messages, **callback_opts)
+                                await self._cb_completion(False, **callback_opts)
+                                if stop_reason != 'tool_use':
+                                    output_text = "".join(collected_messages)
+                                    messages.append(await self._save_interaction_to_session(session_manager, output_text))
+                                    await self._cb_messages(messages, **callback_opts)
+                                    return messages
+                                else:
+                                    await self._cb_tools(collected_tool_calls, **opts['callback_opts'])
+                                    # make tool calls
+                                    #tool calls to messages
+
+
 
                 except APITimeoutError as e:
                     await self._cb_system(content=f"Timeout error calling `client.messages.create`. Delaying for {delay} seconds.\n")
@@ -128,8 +144,10 @@ class ClaudeChatAgent(BaseAgent):
                     await self._cb_completion(False, **callback_opts)
                     return []
 
-            await self._cb_completion(False, **callback_opts)
         return messages
+
+
+
 
     def _generate_multi_modal_user_message(self, user_input: str, images: List[ImageInput]) -> Union[List[dict[str, Any]], None]:
         contents = []
