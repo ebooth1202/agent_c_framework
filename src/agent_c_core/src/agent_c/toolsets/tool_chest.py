@@ -1,5 +1,8 @@
+import copy
 import logging
 from typing import Type, List, Union
+
+from pyarrow.ipc import new_stream
 
 from agent_c.prompting.basic_sections.tool_guidelines import EndToolGuideLinesSection, BeginToolGuideLinesSection
 from agent_c.prompting.prompt_section import PromptSection
@@ -82,7 +85,14 @@ class ToolChest:
         Returns:
             dict[str, Toolset]: Dictionary of active tool instances.
         """
-        return self.__active_open_ai_schemas
+        oai_schemas = self.__active_open_ai_schemas
+        claude_schemas = []
+        for schema in oai_schemas:
+            new_schema = copy.deepcopy(schema['function'])
+            new_schema['input_schema'] = new_schema.pop('parameters')
+            claude_schemas.append(new_schema)
+
+        return claude_schemas
 
 
     @property

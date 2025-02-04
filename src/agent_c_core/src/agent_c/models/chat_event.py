@@ -152,3 +152,5 @@ class ChatEvent(BaseModel):
     tool_calls: Optional[List[CompletionToolCall]] = None
     messages: Optional[List[Message]] = None
     start: Optional[bool] = False
+    input_tokens: Optional[int] = None
+    output_tokens: Optional[int] = None

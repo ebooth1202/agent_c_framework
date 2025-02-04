@@ -112,10 +112,15 @@ class ClaudeChatAgent(BaseAgent):
                     async with self.client.messages.stream (**opts["completion_opts"]) as stream:
                         collected_messages = []
                         collected_tool_calls = []
+                        input_tokens = 0
+                        output_tokens = 0
 
                         await self._cb_completion(False, **opts['callback_opts'])
                         async for event in stream:
-                            if event.type == "content_block_start":
+                            if event.type == "message_start":
+                                input_tokens = event.usage.input_tokens
+
+                            elif event.type == "content_block_start":
                                 content_type = event.content_block.type
                                 await self._cb_block_start_end(True, **callback_opts)
                                 if content_type == "text":
@@ -137,7 +142,8 @@ class ClaudeChatAgent(BaseAgent):
                             elif event.type == 'message_delta':
                                 stop_reason = event.delta.stop_reason
                             elif event.type == 'message_stop':
-                                await self._cb_completion_stop(stop_reason, **callback_opts)
+                                output_tokens = event.usage.output_tokens
+                                await self._cb_completion_stop(stop_reason, input_tokens=input_tokens, output_tokens=output_tokens, **callback_opts)
                                 if stop_reason != 'tool_use':
                                     output_text = "".join(collected_messages)
                                     messages.append(await self._save_interaction_to_session(session_manager, output_text))
