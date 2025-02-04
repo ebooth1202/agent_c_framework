@@ -1,6 +1,6 @@
 import logging
 
-from typing import Any, List, Union
+from typing import Any, List, Union, Dict
 from anthropic import AsyncAnthropic, APITimeoutError, Anthropic
 
 from agent_c.agents.base import BaseAgent
@@ -51,8 +51,12 @@ class ClaudeChatAgent(BaseAgent):
 
         messages = await self._construct_message_array(**kwargs)
         callback_opts = self._callback_opts(**kwargs)
+        functions: List[Dict[str, Any]] = self.tool_chest.active_open_ai_schemas
 
         completion_opts = {"model": model_name, "messages": messages, "system": sys_prompt, "stream": True, "max_tokens": max_tokens, 'temperature': temperature}
+
+        if len(functions):
+            completion_opts['tools'] = functions
 
         session_manager: Union[ChatSessionManager, None] = kwargs.get("session_manager", None)
         if session_manager is not None:
