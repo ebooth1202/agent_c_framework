@@ -15,7 +15,16 @@ class ClaudeChatAgent(BaseAgent):
             self.anthropic: Anthropic = Anthropic()
 
         def count_tokens(self, text: str) -> int:
-            return self.anthropic.count_tokens(text)
+            response = self.anthropic.messages.count_tokens(
+                model="claude-3-5-sonnet-20241022",
+                system="",
+                messages=[{
+                    "role": "user",
+                    "content": text
+                }],
+            )
+
+            return response.input_tokens
 
 
     def __init__(self, **kwargs) -> None:
@@ -98,7 +107,6 @@ class ClaudeChatAgent(BaseAgent):
                     async with self.client.messages.stream (**opts["completion_opts"]) as stream:
                         collected_messages = []
                         collected_tool_calls = []
-                        current_tool_call = None
 
                         await self._cb_completion(False, **opts['callback_opts'])
                         async for event in stream:
