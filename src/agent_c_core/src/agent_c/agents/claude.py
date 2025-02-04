@@ -9,6 +9,7 @@ from agent_c.models.image_input import ImageInput
 from agent_c.util.token_counter import TokenCounter
 
 class ClaudeChatAgent(BaseAgent):
+    CLAUDE_MAX_TOKENS: int = 8192
     class ClaudeTokenCounter(TokenCounter):
 
         def __init__(self):
@@ -39,7 +40,7 @@ class ClaudeChatAgent(BaseAgent):
         super().__init__(**kwargs)
         self.client: AsyncAnthropic = kwargs.get("client", AsyncAnthropic())
         self.supports_multimodal = True
-        self.can_use_tools = True
+        self.can_use_tools = False
 
 
 
@@ -47,15 +48,15 @@ class ClaudeChatAgent(BaseAgent):
         model_name: str = kwargs.get("model_name", self.model_name)
         sys_prompt: str = await self._render_system_prompt(**kwargs)
         temperature: float = kwargs.get("temperature", self.temperature)
-        max_tokens: int = kwargs.get("max_tokens", 4096)
+        max_tokens: int = kwargs.get("max_tokens", self.CLAUDE_MAX_TOKENS)
 
         messages = await self._construct_message_array(**kwargs)
         callback_opts = self._callback_opts(**kwargs)
-        functions: List[Dict[str, Any]] = self.tool_chest.active_open_ai_schemas
+        functions: List[Dict[str, Any]] = self.tool_chest.active_claude_schemas
 
-        completion_opts = {"model": model_name, "messages": messages, "system": sys_prompt, "stream": True, "max_tokens": max_tokens, 'temperature': temperature}
+        completion_opts = {"model": model_name, "messages": messages, "system": sys_prompt,  "max_tokens": max_tokens, 'temperature': temperature}
 
-        if len(functions):
+        if len(functions) and False:
             completion_opts['tools'] = functions
 
         session_manager: Union[ChatSessionManager, None] = kwargs.get("session_manager", None)
@@ -118,7 +119,24 @@ class ClaudeChatAgent(BaseAgent):
                         await self._cb_completion(False, **opts['callback_opts'])
                         async for event in stream:
                             if event.type == "message_start":
-                                input_tokens = event.usage.input_tokens
+                                input_tokens = event.message.usage.input_tokens
+
+                            elif event.type == 'message_stop':
+                                output_tokens = event.message.usage.output_tokens
+                                await self._cb_completion_stop(stop_reason, input_tokens=input_tokens, output_tokens=output_tokens, **callback_opts)
+                                if stop_reason != 'tool_use':
+                                    output_text = "".join(collected_messages)
+                                    messages.append(await self._save_interaction_to_session(session_manager, output_text))
+                                    await self._cb_messages(messages, **callback_opts)
+                                    await self._cb_int_start_end(False, **callback_opts)
+                                    return messages
+                                else:
+                                    # TODO: We probably want to do something with the tool calls here
+                                    #       so wer standardize onf a schema for them
+                                    await self._cb_tools(collected_tool_calls, **opts['callback_opts'])
+                                    # make tool calls
+                                    #tool calls to messages
+
 
                             elif event.type == "content_block_start":
                                 content_type = event.content_block.type
@@ -141,30 +159,14 @@ class ClaudeChatAgent(BaseAgent):
                                 await self._cb_block_start_end(False, **callback_opts)
                             elif event.type == 'message_delta':
                                 stop_reason = event.delta.stop_reason
-                            elif event.type == 'message_stop':
-                                output_tokens = event.usage.output_tokens
-                                await self._cb_completion_stop(stop_reason, input_tokens=input_tokens, output_tokens=output_tokens, **callback_opts)
-                                if stop_reason != 'tool_use':
-                                    output_text = "".join(collected_messages)
-                                    messages.append(await self._save_interaction_to_session(session_manager, output_text))
-                                    await self._cb_messages(messages, **callback_opts)
-                                    await self._cb_int_start_end(False, **callback_opts)
-                                    return messages
-                                else:
-                                    # TODO: We probably want to do something with the tool calls here
-                                    #       so wer standardize onf a schema for them
-                                    await self._cb_tools(collected_tool_calls, **opts['callback_opts'])
-                                    # make tool calls
-                                    #tool calls to messages
-
 
 
                 except APITimeoutError as e:
-                    await self._cb_system(content=f"Timeout error calling `client.messages.create`. Delaying for {delay} seconds.\n")
+                    await self._cb_system(content=f"Timeout error calling `client.messages.create`. Delaying for {delay} seconds.\n", **callback_opts)
                     await self._exponential_backoff(delay)
                     delay *= 2
                 except Exception as e:
-                    await self._cb_system(content=f"Exception calling `client.messages.create`.\n\n{e}\n")
+                    await self._cb_system(content=f"Exception calling `client.messages.create`.\n\n{e}\n", **callback_opts)
                     await self._cb_completion(False, **callback_opts)
                     return []
 
