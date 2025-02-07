@@ -1,3 +1,4 @@
+import base64
 import os
 import json
 from random import choice
@@ -19,6 +20,8 @@ from openai.types.chat import  ChatCompletionChunk
 from typing import Any, Dict, List, Union, Optional, Callable, AsyncGenerator
 
 from agent_c.chat.session_manager import ChatSessionManager
+from agent_c.models.events import RenderMediaEvent
+from agent_c.models.events.chat import AudioDeltaEvent
 from agent_c.models.image_input import ImageInput
 from agent_c.util.token_counter import TokenCounter
 from agent_c.agents.base import BaseAgent
@@ -96,8 +99,10 @@ class GPTChatAgent(BaseAgent):
         kwargs['prompt'] = kwargs.get('prompt', self.prompt)
         sys_prompt: str = await self._render_system_prompt(**kwargs)
         temperature: float = kwargs.get("temperature", self.temperature)
-        max_tokens: Union[int, None] = kwargs.get("max_tokens", None)
+        max_tokens: Optional[int] = kwargs.get("max_tokens", None)
         tool_choice: str = kwargs.get("tool_choice", "auto")
+        voice: Optional[str] = kwargs.get("voice", "alloy")
+
 
         messages = await self._construct_message_array(system_prompt=sys_prompt, **kwargs)
 
@@ -107,6 +112,9 @@ class GPTChatAgent(BaseAgent):
             completion_opts = {"model": model_name, "messages": messages, "stream": True, "reasoning_effort": reasoning_effort}
         else:
             completion_opts = {"model": model_name, "temperature": temperature, "messages": messages, "stream": True}
+            if voice is not None:
+                completion_opts['modalities'] = ["text", "audio"]
+                completion_opts['audio'] = {"voice": voice, "format": "pcm16"}
 
         completion_opts['stream_options'] = {"include_usage": True}
 
@@ -196,14 +204,17 @@ class GPTChatAgent(BaseAgent):
             while interacting and delay < self.max_delay:
                 try:
                     tool_calls = []
-                    stop_reason: Union[str, None] = None
-
+                    stop_reason: Optional[str] = None
+                    audio_id: Optional[str] = None
                     await self._raise_completion_start(opts["completion_opts"], **opts['callback_opts'])
                     response: AsyncStream[ChatCompletionChunk] = await self.client.chat.completions.create(**opts['completion_opts'])
 
                     collected_messages: List[str] = []
                     try:
                         async for chunk in response:
+
+                            if chunk.choices is None:
+                                continue
 
                             if len(chunk.choices) == 0:
                                 # If there are no choices, we're done receiving chunks
@@ -241,20 +252,35 @@ class GPTChatAgent(BaseAgent):
                                     await self._raise_interaction_end(id=interaction_id, **opts['callback_opts'])
                                     interacting = False
                             else:
-                                c = chunk.choices[0]
+                                first_choice = chunk.choices[0]
                                 # If we have a finish reason record it and break for the usage payload to be sent
                                 # before taking any real action
-                                if c.finish_reason is not None:
-                                    stop_reason = c.finish_reason
+                                if first_choice.finish_reason is not None:
+                                    stop_reason = first_choice.finish_reason
                                     continue
 
                                 # Anything else is either a delta for a tool call or a message
-                                if c.delta.tool_calls is not None:
-                                    self.__handle_tool_use_fragment(c.delta.tool_calls[0], tool_calls)
-                                elif c.delta.content is not None:
-                                    collected_messages.append(c.delta.content)
-                                    await self._raise_text_delta(c.delta.content, **opts['callback_opts'])
-                                # TODO: Handle audio
+                                if first_choice.delta.tool_calls is not None:
+                                    self.__handle_tool_use_fragment(first_choice.delta.tool_calls[0], tool_calls)
+                                elif first_choice.delta.content is not None:
+                                    collected_messages.append(first_choice.delta.content)
+                                    await self._raise_text_delta(first_choice.delta.content, **opts['callback_opts'])
+                                elif first_choice.delta.model_extra.get('audio', None) is not None:
+                                    aud = first_choice.delta.model_extra['audio']
+                                    if audio_id is None:
+                                        audio_id = aud.get('id', None)
+                                    transcript = aud.get('transcript', None)
+                                    if transcript is not None:
+                                        collected_messages.append(transcript)
+                                        await self._raise_text_delta(transcript, **opts['callback_opts'])
+
+                                    b64_audio = aud.get('data', None)
+                                    if b64_audio is not None:
+                                        await self._raise_event(AudioDeltaEvent(content_type="audio/L16", id=audio_id,
+                                                                                content=b64_audio, **opts['callback_opts']))
+                                    elif transcript is None:
+                                        logging.error("No audio data found in response")
+                                        continue
 
                     except openai.APIError as e:
                         logging.exception("OpenAIError occurred while streaming responses: %s", e)

@@ -51,7 +51,19 @@ class TextDeltaEvent(SessionEvent):
     content: str = Field(..., description="A chunk of content text.")
     format: str = Field("markdown", description="The format of the content, default is markdown")
 
-
+class AudioDeltaEvent(SessionEvent):
+    """
+    Sent to notify the UI that a chunk of audio has been received.
+    - Clients should handle this event by appending the audio to the current message,
+      for the role, within the current interaction.
+    - If there isn't a message for the role in the current interaction,
+      a new message should be created.
+    """
+    def __init__(self, **data):
+        super().__init__(type = "audio_delta", **data)
+    id: Optional[str] = Field(None, description="The audio ID the audio delta is part of")
+    content: str = Field(..., description="A base64s encoded chunk of audio data")
+    media_type: str = Field("audio/L16", description="The media type of the audio data")
 
 
 class HistoryEvent(SessionEvent):
