@@ -17,6 +17,8 @@ def main():
     parser = argparse.ArgumentParser(description="CLI Chat Interface")
     parser.add_argument('--session', type=str, help='Existing session ID to use', default=None)
     parser.add_argument('--model', type=str, help='The model name to use', default="gpt-4o")
+    parser.add_argument('--voice', type=str, help='The name of a voice to use for the agent, (enables voice output)')
+    parser.add_argument('--vmodel', type=str, help='The model name to use for voice output', default="gpt-4o-audio-preview")
     parser.add_argument('--persona', type=str,
                         help='The bare name of a markdown file in the personas folder to use. e.g. --persona toolman',
                         default='default')
@@ -35,7 +37,8 @@ def main():
     if args.claude:
         backend = 'claude'
 
-    chat = GradioChat(user_id=args.userid, persona=args.persona, session_id=args.session, model_name=model, backend=backend)
+    chat = GradioChat(user_id=args.userid, persona=args.persona, session_id=args.session,
+                      model_name=model, backend=backend, agent_voice=args.voice, voice_model_name=args.vmodel)
     asyncio.run(chat.run())
 
 

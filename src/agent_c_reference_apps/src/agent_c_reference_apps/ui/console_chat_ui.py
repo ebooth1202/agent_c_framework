@@ -1,3 +1,4 @@
+import base64
 import os
 import platform
 import tempfile
@@ -17,6 +18,7 @@ from rich.markdown import Markdown
 
 from prompt_toolkit import PromptSession
 
+from agent_c.util.oai_audio import OAIAudioPlayerAsync
 from agent_c_reference_apps.ui.audio_playback_worker import AudioPlaybackWorker
 from agent_c_reference_apps.util.audio_cues import AudioCues
 from agent_c import ChatEvent, RenderMedia
@@ -51,6 +53,8 @@ class ConsoleChatUI:
         history = FileHistory(".chat_input")
         self.audio_worker = AudioPlaybackWorker(sample_rate=48000, channels=1)
         self.system = platform.system()
+        self.audio_player = OAIAudioPlayerAsync()
+        self.last_audio_id = None
         self.audio_cues: AudioCues = kwargs.get("audio_cues")
         self.tts_roles: List[str] = kwargs.get("tts_roles", [])
         self.debug_event = kwargs.get("debug_event", threading.Event())
@@ -231,5 +235,9 @@ class ConsoleChatUI:
             return
 
         if event.type == 'audio_delta':
-            self.audio_worker.push_chunk(event.content)
-            return
+            if event.id != self.last_audio_id:
+                self.audio_player.reset_frame_count()
+                self.last_audio_id = event.id
+
+            bytes_data = base64.b64decode(event.content)
+            self.audio_player.add_data(bytes_data)

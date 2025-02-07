@@ -105,7 +105,7 @@ class GPTChatAgent(BaseAgent):
         temperature: float = kwargs.get("temperature", self.temperature)
         max_tokens: Optional[int] = kwargs.get("max_tokens", None)
         tool_choice: str = kwargs.get("tool_choice", "auto")
-        voice: Optional[str] = kwargs.get("voice", None)
+        voice: Optional[str] = kwargs.get("voice", "alloy")
 
         messages = await self._construct_message_array(system_prompt=sys_prompt, **kwargs)
 
@@ -167,6 +167,10 @@ class GPTChatAgent(BaseAgent):
         kwargs['output_format'] = kwargs.get('output_format', 'raw')
         messages = await self.chat(**kwargs)
         return messages[-1]['content']
+
+    async def _save_audio_interaction_to_session(self, mgr: ChatSessionManager, audio_id, transcript: str):
+        await self._save_message_to_session(mgr, transcript, "assistant")
+        return {"role": "assistant", "audio": {"id": audio_id}}
 
     async def chat(self, **kwargs) -> List[dict[str, Any]]:
         """
@@ -250,7 +254,10 @@ class GPTChatAgent(BaseAgent):
                                 else:
                                     # The model has finished, it's side of the interaction so it's time to exit
                                     output_text = "".join(collected_messages)
-                                    messages.append(await self._save_interaction_to_session(session_manager, output_text))
+                                    if audio_id is not None:
+                                        messages.append(await self._save_audio_interaction_to_session(session_manager, audio_id, output_text))
+                                    else:
+                                        messages.append(await self._save_interaction_to_session(session_manager, output_text))
                                     await self._raise_history_event(messages, **opts['callback_opts'])
                                     await self._raise_interaction_end(id=interaction_id, **opts['callback_opts'])
                                     interacting = False
@@ -269,20 +276,21 @@ class GPTChatAgent(BaseAgent):
                                     collected_messages.append(first_choice.delta.content)
                                     await self._raise_text_delta(first_choice.delta.content, **opts['callback_opts'])
                                 elif first_choice.delta.model_extra.get('audio', None) is not None:
-                                    aud = first_choice.delta.model_extra['audio']
+                                    audio_delta = first_choice.delta.model_extra['audio']
                                     if audio_id is None:
-                                        audio_id = aud.get('id', None)
-                                    transcript = aud.get('transcript', None)
+                                        audio_id = audio_delta.get('id', None)
+
+                                    transcript = audio_delta.get('transcript', None)
                                     if transcript is not None:
                                         collected_messages.append(transcript)
                                         await self._raise_text_delta(transcript, **opts['callback_opts'])
 
-                                    b64_audio = aud.get('data', None)
+                                    b64_audio = audio_delta.get('data', None)
                                     if b64_audio is not None:
                                         await self._raise_event(AudioDeltaEvent(content_type="audio/L16", id=audio_id,
                                                                                 content=b64_audio, **opts['callback_opts']))
                                     elif transcript is None:
-                                        logging.error("No audio data found in response")
+                                        #logging.error("No audio data found in response")
                                         continue
 
                     except openai.APIError as e:
