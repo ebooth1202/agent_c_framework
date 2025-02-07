@@ -8,6 +8,7 @@ from anthropic import AsyncAnthropic, APITimeoutError, Anthropic
 
 from agent_c.agents.base import BaseAgent
 from agent_c.chat.session_manager import ChatSessionManager
+from agent_c.models.audio_input import AudioInput
 from agent_c.models.image_input import ImageInput
 from agent_c.util.token_counter import TokenCounter
 
@@ -176,7 +177,7 @@ class ClaudeChatAgent(BaseAgent):
 
 
 
-    def _generate_multi_modal_user_message(self, user_input: str, images: List[ImageInput]) -> Union[List[dict[str, Any]], None]:
+    def _generate_multi_modal_user_message(self, user_input: str, images: List[ImageInput], audio: List[AudioInput]) -> Union[List[dict[str, Any]], None]:
         contents = []
         for image in images:
             if image.content is None and image.url is not None:

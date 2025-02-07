@@ -15,6 +15,7 @@ from typing import Union, List, AsyncGenerator
 from dotenv import load_dotenv
 from spacy.tokens.doc import defaultdict
 
+from agent_c.models.audio_input import AudioInput
 from agent_c.toolsets import Toolset
 
 from agent_c.models.image_input import ImageInput
@@ -22,6 +23,7 @@ from agent_c.prompting import DynamicPersonaSection
 
 from agent_c.util.response_format import align_tool_calls, question_response, system_prompt, \
     combine_debug_info, filtered_responses
+from agent_c_reference_apps.ui.audio_playback_worker import AudioPlaybackWorker
 
 from agent_c_reference_apps.ui.markdown_render import MarkdownTokenRenderer
 
@@ -83,7 +85,7 @@ class GradioChat:
     def __init__(self, **kwargs):
 
         self._agent_lock = asyncio.Lock()
-
+        self.audio_worker = AudioPlaybackWorker(sample_rate=16000, channels=1)
         self.available_tools = get_available_tools()
         self.selected_tools = [tool['name'] for tool in self.available_tools if
                                tool['essential'] or tool['name'] in ESSENTIAL_TOOLS]
@@ -107,6 +109,7 @@ class GradioChat:
         self.tool_names: str = ''
         self.user_message = ''
         self.image_inputs = []
+        self.audio_inputs = []
         self.last_role = "user"
         self.tts_roles = ['assistant']
         self.__init_agent_params(**kwargs)
@@ -214,10 +217,14 @@ class GradioChat:
         for filename in message["files"]:
             mime_type, _ = mimetypes.guess_type(filename)
             if 'image' in mime_type:
-                with open(filename, "rb") as file:
-                    file_contents = base64.b64encode(file.read()).decode("utf-8")
+                self.image_inputs.append(ImageInput.from_file(filename))
+            elif 'audio' in mime_type:
+                try:
+                    self.audio_inputs.append(AudioInput.from_file(filename))
+                except Exception as e:
+                    self.logger.error(f"Failed to load audio file {filename}: {e}")
 
-                self.image_inputs.append(ImageInput(content_type=mime_type, content=file_contents))
+
             history.append({"role": "user", "content": {"path": filename}})
 
         if history is None:
@@ -443,7 +450,7 @@ class GradioChat:
             chatbot = gr.Chatbot([], label="Agent C", show_copy_button=True, elem_id="chatbot",
                                  bubble_full_width=False, show_label=False,
                                  scale=1, sanitize_html=False, height=600, type='messages')
-            chat_input = gr.MultimodalTextbox(interactive=True, file_types=["image"],
+            chat_input = gr.MultimodalTextbox(interactive=True, file_types=["image", "audio"], # sources=["upload", "microphone"],
                                               placeholder="Enter message or upload file...", show_label=False)
 
             with gr.Accordion("Debug Information", open=False):
@@ -508,7 +515,6 @@ class GradioChat:
         async def producer():
             try:
                 await self.session_manager.update()
-                image_inputs = self.image_inputs if self.image_inputs else None
                 handled = await self.cmd_handler.handle_command(self.user_message, self)
                 if not handled:
                     self.debug_response = await self.agent.chat(
@@ -517,7 +523,8 @@ class GradioChat:
                         prompt_metadata=await self.__build_prompt_metadata(),
                         messages=self.current_chat_Log,
                         output_format='markdown',
-                        images=image_inputs,
+                        images=self.image_inputs if self.image_inputs else None,
+                        audio=self.audio_inputs if self.audio_inputs else None,
                         temperature=self.temperature
                     )
 
@@ -821,6 +828,8 @@ class GradioChat:
             await self._handle_render_media_event(event)
         elif event.type == 'history':
             await self._handle_history_event(event)
+        elif event.type == 'audio_delta':
+            await self.audio_worker.push_delta(event)
 
     async def _handle_text_delta(self, event: TextDeltaEvent):
         if event.content is not None:

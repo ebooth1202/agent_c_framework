@@ -1,7 +1,9 @@
+import mimetypes
 import os
 import base64
 import logging
 import tempfile
+from pathlib import Path
 from typing import Union
 from agent_c.models.base import BaseModel
 from pydantic import Field, ConfigDict
@@ -20,6 +22,24 @@ class ImageInput(BaseModel):
     content_type: str = Field(..., alias="content-type")
     url: Union[str, None] = None
     content: Union[str, None] = None
+
+    @classmethod
+    def from_file(cls, file_path: Union[str, Path]):
+        path = Path(file_path)
+        if not path.exists():
+            raise ValueError(f"File not found: {file_path}")
+
+        # Get the file format
+        mime_type = mimetypes.guess_type(path)[0]
+        try:
+            with path.open('rb') as f:
+                content = base64.b64encode(f.read()).decode('utf-8')
+        except IOError as e:
+            logging.error(f"Error reading audio file {file_path}: {str(e)}")
+            raise
+
+        return cls(content_type=mime_type, content=content)
+
 
     @classmethod
     def from_pil_image(cls, pil_image, filename: str = "image") -> 'ImageInput':
@@ -54,7 +74,7 @@ class ImageInput(BaseModel):
             # Encode the image bytes in base64
             base64_encoded_str: str = base64.b64encode(image_bytes).decode('utf-8')
 
-            return cls(content_type="image/png", content=base64_encoded_str, filename=f"{filename}.png")
+            return cls(content_type="image/png", content=base64_encoded_str)
 
         except Exception as e:
             logging.error(f"Failed to convert PIL image to base64: {e}")
