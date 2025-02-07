@@ -90,6 +90,7 @@ class Toolset:
             kwargs: The arguments to be passed to the render media event.
         """
         kwargs['role'] = kwargs.get('role', self.tool_role)
+        kwargs['session_id'] = kwargs.get('session_id', self.session_manager)
         await self.streaming_callback(RenderMediaEvent(**kwargs))
 
     async def _raise_message_event(self, **kwargs: Any) -> None:
@@ -101,6 +102,7 @@ class Toolset:
         """
         kwargs['role'] = kwargs.get('role', self.tool_role)
         kwargs['format'] = kwargs.get('format', self.output_format)
+        kwargs['session_id'] = kwargs.get('session_id', self.session_manager)
         await self.streaming_callback(MessageEvent(**kwargs))
 
     async def _raise_text_delta_event(self, **kwargs: Any) -> None:
@@ -112,6 +114,7 @@ class Toolset:
         """
         kwargs['role'] = kwargs.get('role', self.tool_role)
         kwargs['format'] = kwargs.get('format', self.output_format)
+        kwargs['session_id'] = kwargs.get('session_id', self.session_manager)
         await self.streaming_callback(TextDeltaEvent(**kwargs))
 
     async def post_init(self) -> None:

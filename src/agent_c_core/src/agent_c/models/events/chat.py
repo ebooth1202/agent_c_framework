@@ -63,7 +63,7 @@ class AudioDeltaEvent(SessionEvent):
         super().__init__(type = "audio_delta", **data)
     id: Optional[str] = Field(None, description="The audio ID the audio delta is part of")
     content: str = Field(..., description="A base64s encoded chunk of audio data")
-    media_type: str = Field("audio/L16", description="The media type of the audio data")
+    content_type: str = Field("audio/L16", description="The type of audio data")
 
 
 class HistoryEvent(SessionEvent):

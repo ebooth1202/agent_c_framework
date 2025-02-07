@@ -10,6 +10,7 @@ from requests import session
 
 from agent_c.chat import ChatSessionManager
 from agent_c.models import ChatEvent, ImageInput, MemoryMessage
+from agent_c.models.audio_input import AudioInput
 from agent_c.models.events import MessageEvent, ToolCallEvent, InteractionEvent, TextDeltaEvent, HistoryEvent, CompletionEvent, ToolCallDeltaEvent
 from agent_c.prompting import PromptBuilder
 from agent_c.toolsets import ToolChest, Toolset
@@ -217,7 +218,7 @@ class BaseAgent:
 
         return self.__construct_message_array(**kwargs)
 
-    def _generate_multi_modal_user_message(self, user_input: str,  images: List[ImageInput]) -> Union[List[dict[str, Any]], None]:
+    def _generate_multi_modal_user_message(self, user_input: str,  images: List[ImageInput], audio: List[AudioInput]) -> Union[List[dict[str, Any]], None]:
         """
         Subclasses will implement this method to generate a multimodal user message.
         """
@@ -238,7 +239,8 @@ class BaseAgent:
         user_message: str = kwargs.get("user_message")
         messages: Union[List[dict[str, str]], None] = kwargs.get("messages", None)
         sys_prompt: Union[str, None] = kwargs.get("system_prompt", None)
-        images: Union[List[ImageInput], None] = kwargs.get("images", None)
+        images: List[ImageInput] = kwargs.get("images") or []
+        audio_clips: List[AudioInput] = kwargs.get("audio") or []
 
         message_array: List[dict[str, Any]] = []
 
@@ -248,8 +250,8 @@ class BaseAgent:
         if messages is not None:
             message_array += messages
 
-        if images is not None and len(images) > 0:
-            multimodal_user_message = self._generate_multi_modal_user_message(user_message, images)
+        if len(images) > 0 or len(audio_clips) > 0:
+            multimodal_user_message = self._generate_multi_modal_user_message(user_message, images, audio_clips)
             message_array += multimodal_user_message
         else:
             message_array.append({"role": "user", "content": user_message})

@@ -20,6 +20,7 @@ from openai.types.chat import  ChatCompletionChunk
 from typing import Any, Dict, List, Union, Optional, Callable, AsyncGenerator
 
 from agent_c.chat.session_manager import ChatSessionManager
+from agent_c.models.audio_input import AudioInput
 from agent_c.models.events import RenderMediaEvent
 from agent_c.models.events.chat import AudioDeltaEvent
 from agent_c.models.image_input import ImageInput
@@ -72,7 +73,7 @@ class GPTChatAgent(BaseAgent):
             self.root_message_role = "developer"
 
 
-    def _generate_multi_modal_user_message(self, user_input: str, images: List[ImageInput]) -> Union[List[dict[str, Any]], None]:
+    def _generate_multi_modal_user_message(self, user_input: str, images: List[ImageInput], audio_clips: List[AudioInput]) -> Union[List[dict[str, Any]], None]:
         if self.mitigate_image_prompt_injection:
             text = f"User: {user_input}{BaseAgent.IMAGE_PI_MITIGATION}"
         else:
@@ -89,6 +90,9 @@ class GPTChatAgent(BaseAgent):
             if url is not None:
                 contents.append({"type": "image_url", "image_url": {"url": url}})
 
+        for clip in audio_clips:
+            contents.append({"type": "input_audio", "input_audio": {"data": clip.content, 'format': clip.format}})
+
         return [{"role": "user", "content": contents}]
 
 
@@ -101,8 +105,7 @@ class GPTChatAgent(BaseAgent):
         temperature: float = kwargs.get("temperature", self.temperature)
         max_tokens: Optional[int] = kwargs.get("max_tokens", None)
         tool_choice: str = kwargs.get("tool_choice", "auto")
-        voice: Optional[str] = kwargs.get("voice", "alloy")
-
+        voice: Optional[str] = kwargs.get("voice", None)
 
         messages = await self._construct_message_array(system_prompt=sys_prompt, **kwargs)
 

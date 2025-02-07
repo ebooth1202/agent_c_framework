@@ -16,6 +16,8 @@ from rich.console import Console
 from rich.markdown import Markdown
 
 from prompt_toolkit import PromptSession
+
+from agent_c_reference_apps.ui.audio_playback_worker import AudioPlaybackWorker
 from agent_c_reference_apps.util.audio_cues import AudioCues
 from agent_c import ChatEvent, RenderMedia
 from agent_c_reference_apps.ui.markdown_render import MarkdownTokenRenderer
@@ -29,7 +31,7 @@ USER_LABEL: str      = "[bold dark_magenta]You[/]"
 OPI_LABEL: str       = "[bold aquamarine1 u]Open Interpreter[/]"
 SYSTEM_LABEL: str    = "[bold orange1 u]System[/]"
 EXT_LABEL: str       = "[bold aquamarine1 u]Extraction[/]"
-DALLE_LABEL: str     = "[bold green_yellow u]DALL-E-3 Image Generation Tool[/]"
+DALLE_LABEL: str     = "[bold green_yellow u]DALL-E-3 Imagee Generation Tool[/]"
 
 SESSION_HELP: str    = "[italic]Use this with [bold]--session[/bold] to resume[/]."
 EXIT_INFO: str       = "    Send '[italic gold1]!exit[/]' to exit without saving or '[italic gold1]!!!![/]' to save and exit"
@@ -47,6 +49,7 @@ OUTPUT_TOOL_ARGS = os.getenv('OUTPUT_TOOL_ARGS', 'False').lower() in ('true', '1
 class ConsoleChatUI:
     def __init__(self, **kwargs):
         history = FileHistory(".chat_input")
+        self.audio_worker = AudioPlaybackWorker(sample_rate=48000, channels=1)
         self.system = platform.system()
         self.audio_cues: AudioCues = kwargs.get("audio_cues")
         self.tts_roles: List[str] = kwargs.get("tts_roles", [])
@@ -151,7 +154,8 @@ class ConsoleChatUI:
             self.rich_console.print()
             self.rich_console.print("[bold gold3]Completion running....[/]", end="")
         else:
-            self.rich_console.print(f"[bold gold3] Done![/] ({event.stop_reason})")
+            self.token_renderer.flush()
+            self.rich_console.print(f"\n[bold gold3] Done![/] ({event.stop_reason})")
 
     def _handle_tool_call_event(self, event: ToolCallEvent):
         if event.active:
@@ -174,6 +178,7 @@ class ConsoleChatUI:
         else:
             if self.last_role != 'system':
                 self.start_role_message("system")
+
             self.rich_console.print(f"Agent '[bold]{event.role}[/bold]' has completed tool use and is evaluating the results")
 
     def _handle_text_delta_event(self, event: TextDeltaEvent):
@@ -225,3 +230,6 @@ class ConsoleChatUI:
                 self.rich_console.print()
             return
 
+        if event.type == 'audio_delta':
+            self.audio_worker.push_chunk(event.content)
+            return
