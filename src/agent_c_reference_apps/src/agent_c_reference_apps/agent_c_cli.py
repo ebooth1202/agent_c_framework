@@ -253,11 +253,11 @@ class CLIChat:
 
         return logger
 
-    async def chat_callback(self, event: ChatEvent):
+    async def chat_callback(self, event):
         """
         Called by the ChatAgent and toolsets to notify us of events as they happen.
         """
-        if event.completed and event.role == 'assistant':
+        if event.type == 'history':
             self.current_chat_log = event.messages
 
         # Note we forward most events to the UI layer, if you want to see how to make a console UI feel free to dig in.

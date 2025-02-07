@@ -82,7 +82,7 @@ class DallETools(Toolset):
         if self.workspace is not None:
             response_format = "b64_json"
 
-        await self.chat_callback(content=f"### Generating image from prompt:\n> {prompt}\n\n", session_id=session_id)
+        await self._raise_text_delta_event(content=f"### Generating image from prompt:\n> {prompt}\n\n")
 
         if self.session_manager is not None:
             user = self.session_manager.user.user_id
@@ -94,20 +94,24 @@ class DallETools(Toolset):
                                                                                 model='dall-e-3', user=user,
                                                                                 response_format=response_format)
         except Exception as e:
+            await self._raise_text_delta_event(content=f"ERROR: {str(e)}")
             return str(e)
 
-        revised_prompt = ''
-
-        if self.workspace is None:
-            url: str = response.data[0].url
-            await self.chat_callback(content=f"\nGenerated Image: \"{url}\"\n", session_id=session_id)
-            await self.chat_callback(render_media={"content-type": "image/png", "url": url}, session_id=session_id)
-        else:
-            await self.handle_base64_response(response, prompt, quality, ratio, style, size, session_id)
 
         if len(response.data[0].revised_prompt) > 0:
             revised_prompt = f"\n### Notice DALL-E-3 revised your prompt to:\n> {response.data[0].revised_prompt}"
-            await self.chat_callback(content=f"\n{revised_prompt}\n\n", session_id=session_id)
+            await self._raise_text_delta_event(content=f"\n{revised_prompt}\n\n")
+        else:
+            revised_prompt = ''
+
+        if self.workspace is None:
+            url: str = response.data[0].url
+            await self._raise_text_delta_event(content=f"\nGenerated Image: \"{url}\"\n")
+            await self._raise_render_media(content_type="image/png", url=url)
+        else:
+            await self.handle_base64_response(response, prompt, quality, ratio, style, size, session_id)
+
+
 
         return f"Image generated, the client app has displayed it. Ask the user if they'd like to make any changes.{revised_prompt}"
 
@@ -128,9 +132,8 @@ class DallETools(Toolset):
         image_file_name = file_name_test + '.png'
         await self.workspace.write_bytes(image_file_name, 'write', image_bytes)
         fp = self.workspace.full_path(image_file_name)
-        await self.chat_callback(render_media={"content-type": "image/png", "url": f"file://{fp}",
-                                               "name": image_file_name, "content_bytes": image_bytes, "content": base64_json},
-                                 session_id=session_id)
+        await self._raise_render_media(content_type="image/png", url=f"file://{fp}", name=image_file_name,
+                                       content_bytes=image_bytes, content=base64_json)
 
         metadata = {
             'prompt': prompt,

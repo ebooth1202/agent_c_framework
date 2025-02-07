@@ -4,6 +4,7 @@ import inspect
 from typing import Union, List, Callable, Dict, Any
 
 from agent_c.models.chat_event import ChatEvent
+from agent_c.models.events import RenderMediaEvent, MessageEvent, TextDeltaEvent
 from agent_c.prompting.prompt_section import PromptSection
 from agent_c.toolsets.tool_cache import ToolCache
 from agent_c.chat.session_manager import ChatSessionManager
@@ -77,38 +78,41 @@ class Toolset:
         self.openai_schemas: List[Dict[str, Any]] = self.__openai_schemas()
 
         # Additional attributes
-        self.streaming_callback: Callable[..., None] = kwargs.get('streaming_callback')
+        self.streaming_callback = kwargs.get('streaming_callback')
         self.output_format: str = kwargs.get('output_format', 'raw')
         self.tool_role: str = kwargs.get('tool_role', 'tool')
 
-    async def chat_callback(self, **kwargs: Any) -> None:
+    async def _raise_render_media(self, **kwargs: Any) -> None:
         """
-        Callback function for chat events that sends events via the streaming_callback.
+        Raises a render media event.
 
         Args:
-            kwargs:
-                role (str): The role of the tool. If not supplied, defaults to `self.tool_role`.
-                output_format (str): The output format of the message. Defaults to `self.output_format`.
-                session_id (str | None): The session ID, either from kwargs or fetched from session_manager.
-                Other fields are passed to initialize the ChatEvent.
+            kwargs: The arguments to be passed to the render media event.
         """
-        if not self.streaming_callback:
-            return
-
-        # Ensure 'role' and 'output_format' exist in kwargs
         kwargs['role'] = kwargs.get('role', self.tool_role)
-        kwargs['output_format'] = kwargs.get('output_format', self.output_format)
+        await self.streaming_callback(RenderMediaEvent(**kwargs))
 
-        # Add session ID to kwargs if not provided
-        if kwargs.get('session_id') is None:
-            if self.session_manager is not None:
-                kwargs['session_id'] = self.session_manager.chat_session.session_id
-            else:
-                kwargs['session_id'] = 'None'
+    async def _raise_message_event(self, **kwargs: Any) -> None:
+        """
+        Raises a message event.
 
-        # Create a ChatEvent and invoke the callback
-        event = ChatEvent(**kwargs)
-        await self.streaming_callback(event)
+        Args:
+            kwargs: The arguments to be passed to the message event.
+        """
+        kwargs['role'] = kwargs.get('role', self.tool_role)
+        kwargs['format'] = kwargs.get('format', self.output_format)
+        await self.streaming_callback(MessageEvent(**kwargs))
+
+    async def _raise_text_delta_event(self, **kwargs: Any) -> None:
+        """
+        Raises a text delta event with additional text
+
+        Args:
+            kwargs: The arguments to be passed to the message event.
+        """
+        kwargs['role'] = kwargs.get('role', self.tool_role)
+        kwargs['format'] = kwargs.get('format', self.output_format)
+        await self.streaming_callback(TextDeltaEvent(**kwargs))
 
     async def post_init(self) -> None:
         """

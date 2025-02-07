@@ -19,6 +19,7 @@ from prompt_toolkit import PromptSession
 from agent_c_reference_apps.util.audio_cues import AudioCues
 from agent_c import ChatEvent, RenderMedia
 from agent_c_reference_apps.ui.markdown_render import MarkdownTokenRenderer
+from agent_c.models.events import MessageEvent, ToolCallEvent, InteractionEvent, TextDeltaEvent, HistoryEvent, CompletionEvent, ToolCallDeltaEvent, SessionEvent, RenderMediaEvent
 
 
 LINE_SEPARATOR: Markdown = Markdown("---\n")
@@ -128,7 +129,7 @@ class ConsoleChatUI:
         return user_input_task
 
 
-    async def render_media(self, opts: RenderMedia):
+    async def render_media(self, opts: RenderMediaEvent):
 
         if opts.url is not None:
             webbrowser.open(opts.url)
@@ -145,63 +146,82 @@ class ConsoleChatUI:
         else:
             self.rich_console.print(f"Unsupported media type: {opts.content_type}")
 
-    async def chat_event(self, event: ChatEvent):
+    def _handle_completion_event(self, event: CompletionEvent):
+        if event.running:
+            self.rich_console.print()
+            self.rich_console.print("[bold gold3]Completion running....[/]", end="")
+        else:
+            self.rich_console.print(f"[bold gold3] Done![/] ({event.stop_reason})")
 
-        if event.role != self.last_role:
-            self.token_renderer.flush()
+    def _handle_tool_call_event(self, event: ToolCallEvent):
+        if event.active:
+            tool_calls = event.tool_calls
+            # TODO Env check
 
-        if event.completion_running is not None:
-            if event.completion_running:
-                self.rich_console.print()
-                self.rich_console.print("[bold gold3]Completion running....[/]", end="")
+            # Joe for grabbing tool call information
+            tool_names = ", ".join([tool_call['name'] for tool_call in tool_calls])
+            # Create a formatted string for each tool call with its name and arguments
+            formatted_tool_info = ", ".join(
+                [f"{tool_call['name']} (Arguments: {tool_call.get("arguments", "")})\n" for tool_call in tool_calls])
+
+            self.start_role_message("system")
+            if OUTPUT_TOOL_ARGS:
+                self.rich_console.print(
+                    f"Agent '[bold]{event.role}[/bold]' is executing the following tools: {formatted_tool_info}.")
             else:
-                self.rich_console.print("[bold gold3] Done![/]")
-
-            return
-
-        if event.render_media is not None:
-            await self.render_media(event.render_media)
-            return
-
-        if event.tool_use_active is not None:
-            # Indicate tool usage status in the console.
-            if event.tool_use_active:
-                tool_calls = event.tool_calls
-                # TODO Env check
-
-                # Joe for grabbing tool call information
-                tool_names = ", ".join([tool_call.name for tool_call in tool_calls])
-                # Create a formatted string for each tool call with its name and arguments
-                formatted_tool_info = ", ".join(
-                    [f"{tool_call.name} (Arguments: {tool_call.arguments})\n" for tool_call in tool_calls])
-
+                self.rich_console.print(
+                    f"Agent '[bold]{event.role}[/bold]' is executing the following tools: {tool_names}.")
+        else:
+            if self.last_role != 'system':
                 self.start_role_message("system")
-                if OUTPUT_TOOL_ARGS:
-                    self.rich_console.print(
-                        f"Agent '[bold]{event.role}[/bold]' is executing the following tools: {formatted_tool_info}.")
-                else:
-                    self.rich_console.print(
-                        f"Agent '[bold]{event.role}[/bold]' is executing the following tools: {tool_names}.")
-            else:
-                if self.last_role != 'system':
-                    self.start_role_message("system")
-                self.rich_console.print(f"Agent '[bold]{event.role}[/bold]' has completed tool use and is evaluating the results")
+            self.rich_console.print(f"Agent '[bold]{event.role}[/bold]' has completed tool use and is evaluating the results")
 
-            return
-
+    def _handle_text_delta_event(self, event: TextDeltaEvent):
         if event.role != self.last_role:
             self.start_role_message(event.role)
 
-        if event.output_format == 'markdown':
-            if event.content is not None:
-                self.token_renderer.render_token(event.content)
-
-            if event.completed:
-                self.token_renderer.flush()
+        if event.format == 'markdown':
+            self.token_renderer.render_token(event.content)
         else:
-            if event.content is not None:
-                self.rich_console.print(event.content, end='')
+            self.rich_console.print(event.content, end='')
+
+    def _handle_message_event(self, event: MessageEvent):
+        if event.role != self.last_role:
+            self.start_role_message(event.role)
+
+        if event.format == 'markdown':
+            self.token_renderer.render_token(event.content)
+            self.token_renderer.flush()
+        else:
+            self.rich_console.print(event.content)
+
+    async def chat_event(self, event):
+        if event.role != self.last_role:
+            self.token_renderer.flush()
+
+        if event.type == 'completion':
+            self._handle_completion_event(event)
+            return
+
+        if event.type == 'message':
+            self._handle_message_event(event)
+            return
+
+        if event.type == 'text_delta':
+            self._handle_text_delta_event(event)
+            return
 
 
-            if event.completed:
+        if event.type == 'render_media':
+            await self.render_media(event)
+            return
+
+        if event.type == 'tool_call':
+            self._handle_tool_call_event(event)
+            return
+
+        if event.type == 'interaction':
+            if not event.started:
                 self.rich_console.print()
+            return
+

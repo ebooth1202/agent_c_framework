@@ -1,3 +1,4 @@
+import copy
 import os
 import asyncio
 import logging
@@ -5,10 +6,14 @@ import logging
 from asyncio import Semaphore
 from typing import Any, Dict, List, Union, Optional, Callable, Awaitable
 
+from requests import session
+
 from agent_c.chat import ChatSessionManager
 from agent_c.models import ChatEvent, ImageInput, MemoryMessage
+from agent_c.models.events import MessageEvent, ToolCallEvent, InteractionEvent, TextDeltaEvent, HistoryEvent, CompletionEvent, ToolCallDeltaEvent
 from agent_c.prompting import PromptBuilder
 from agent_c.toolsets import ToolChest, Toolset
+from agent_c.util import MnemonicSlugs
 from agent_c.util.token_counter import TokenCounter
 
 
@@ -123,22 +128,19 @@ class BaseAgent:
         Returns a dictionary of options for the callback method to be used by default..
         """
         agent_role: str = kwargs.get("agent_role", 'assistant')
-        output_format: str = kwargs.get('output_format', "markdown")
         session_manager: Union[ChatSessionManager, None] = kwargs.get("session_manager", None)
         if session_manager is not None:
             session_id = session_manager.chat_session.session_id
         else:
             session_id = "none"
 
-        return {'session_id': session_id, 'output_format': output_format, 'role': agent_role}
+        return {'session_id': session_id, 'role': agent_role}
 
-    async def _callback(self, **kwargs):
+    async def _raise_event(self, event):
+        """
+        Raise a chat event to the event stream.
+        """
         if not self.streaming_callback:
-            return
-        try:
-            event = ChatEvent(**kwargs)
-        except Exception as e:
-            logging.exception(f"Failed to create ChatEvent: {e}")
             return
         try:
             await self.streaming_callback(event)
@@ -146,70 +148,54 @@ class BaseAgent:
             logging.exception(f"Streaming callback exploded: {e}")
             return
 
-    async def _cb_completion_start(self, **kwargs):
+    async def _raise_system_event(self, content: str, **data):
         """
-        Notify the client that the completion has started.
+        Raise a system event to the event stream.
         """
-        await self._callback(completion_running=True, **kwargs)
 
-    async def _cb_completion_stop(self, stop_reason: str, **kwargs):
-        """
-        Notify the client that the completion has stopped and why.
-        """
-        await self._callback(completion_running=False, stop_reason=stop_reason, **kwargs)
+        await self._raise_event(MessageEvent(role="system", content=content, session_id=data.get("session_id", "none")))
 
-    async def _cb_completion(self, running: bool, **kwargs):
+    async def _raise_completion_start(self, comp_options, **data):
         """
-        Notify the client that the completion is running or not.
-        TODO: This method is deprecated and should be removed once the GPTAgent is updated.
+        Raise a completion start event to the event stream.
         """
-        await self._callback(completion_running=running, **kwargs)
+        completion_options: dict = copy.deepcopy(comp_options)
+        completion_options.pop("messages", None)
 
-    async def _cb_int_start_end(self, start: bool, **kwargs):
-        """
-        Inform the client that an interaction is starting or stopping.
-        There may be multiple completions within an interaction.
-        """
-        await self._callback(start=start, **kwargs)
+        await self._raise_event(CompletionEvent(running=True, completion_options=completion_options, **data))
 
-    async def _cb_block_start_end(self, start: bool, **kwargs):
+    async def _raise_completion_end(self, comp_options, **data):
         """
-        Inform the client that a content_block is starting or stopping.
+        Raise a completion start event to the event stream.
         """
-        # TODO: we need to refactor this damn stream
-        # await self._callback(start=start, **kwargs)
-        pass
+        completion_options: dict = copy.deepcopy(comp_options)
+        completion_options.pop("messages", None)
 
-    async def _cb_token(self, token: str, completed: bool = False, **kwargs):
-        """
-        Notify the client of a token of text has been received.
-        """
-        if token is not None and len(token) > 0:
-            await self._callback(completed=completed, content=token, **kwargs)
+        await self._raise_event(CompletionEvent(running=False, completion_options=completion_options, **data))
 
-    async def _cb_messages(self, messages: List[dict[str, Any]], **kwargs):
-        """
-        Notify the client that messages array has been updated.
-        """
-        await self._callback(completed=True, messages=messages, **kwargs)
+    async def _raise_tool_call_start(self, tool_calls, **data):
+        await self._raise_event(ToolCallEvent(active=True, tool_calls=tool_calls, **data))
 
-    async def _cb_tools(self, tool_calls=None, **kwargs):
-        """
-        Notify the client that a tool calls are being requested. / completed.
-        TODO: Add tool call results.
-        """
-        if tool_calls is not None or kwargs.get("active", False):
-            await self._callback(tool_use_active=True, tool_calls=tool_calls, **kwargs)
-        else:
-            await self._callback(tool_use_active=False, **kwargs)
+    async def _raise_tool_call_delta(self, tool_calls, **data):
+        await self._raise_event(ToolCallDeltaEvent(tool_calls=tool_calls, **data))
 
-    async def _cb_system(self, content: str, **kwargs):
-        """
-        Notify the client to display raw content as a system message.
-        """
-        kwargs["role"] = "system"
-        kwargs['output_format'] = 'raw'
-        await self._callback(content=content, **kwargs)
+    async def _raise_tool_call_end(self, tool_calls, tool_results, **data):
+        await self._raise_event(ToolCallEvent(active=False, tool_calls=tool_calls,
+                                              tool_results=tool_results,  **data))
+
+    async def _raise_interaction_start(self, **data):
+        iid = MnemonicSlugs.generate_slug(3)
+        await self._raise_event(InteractionEvent(started=True, id=iid, **data))
+        return iid
+
+    async def _raise_interaction_end(self, **data):
+        await self._raise_event(InteractionEvent(started=False, **data))
+
+    async def _raise_text_delta(self, content: str, **data):
+        await self._raise_event(TextDeltaEvent(content=content, **data))
+
+    async def _raise_history_event(self, messages: List[dict[str, Any]], **data):
+        await self._raise_event(HistoryEvent(messages=messages, **data))
 
     async def _exponential_backoff(self, delay: int) -> None:
         """

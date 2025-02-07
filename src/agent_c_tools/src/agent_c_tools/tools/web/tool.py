@@ -84,7 +84,7 @@ class WebTools(Toolset):
         if url is None:
             return 'url is required'
 
-        await self.chat_callback(render_media={"content-type": "text/html", "url": url})
+        await self._raise_render_media(content_type="text/html", url=url)
 
         return f"Client displaying web page: {url}"
 

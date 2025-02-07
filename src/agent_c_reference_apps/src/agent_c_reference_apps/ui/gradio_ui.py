@@ -33,7 +33,7 @@ from agent_c_reference_apps.util.audio_cues import AudioCues
 from agent_c_reference_apps.util.chat_commands import CommandHandler
 
 # Without this none of the rest matter
-from agent_c import GPTChatAgent, ClaudeChatAgent, ChatEvent, ChatSessionManager, ToolChest, ToolCache
+from agent_c import GPTChatAgent, ClaudeChatAgent, ChatSessionManager, ToolChest, ToolCache
 
 # Vision support
 #from agent_c_vision import CV2Feed
@@ -43,6 +43,7 @@ from agent_c_tools.tools.user_preferences import AssistantPersonalityPreference,
 #from agent_c_voice.tools.voice_eleven_labs.preferences import DefaultVoicePreference
 from agent_c.prompting import CoreInstructionSection, HelpfulInfoStartSection, EndOperatingGuideLinesSection, \
     EnvironmentInfoSection, PromptBuilder
+from agent_c.models.events import MessageEvent, ToolCallEvent, InteractionEvent, TextDeltaEvent, HistoryEvent, CompletionEvent, ToolCallDeltaEvent, SessionEvent, RenderMediaEvent
 
 from agent_c_tools import LocalStorageWorkspace
 from agent_c_tools.tools.user_bio.prompt import UserBioSection
@@ -802,10 +803,7 @@ class GradioChat:
     def get_tool_note(self) -> str:
         return self.tool_note
 
-    async def chat_callback(self, event: ChatEvent):
-        """
-        Called by the ChatAgent and toolsets to notify us of events as they happen.
-        """
+    async def chat_callback(self, event: SessionEvent):
         role_name = " ".join(word.capitalize() for word in event.role.split("_"))
         if event.role != self.last_role:
             if event.role != 'assistant':
@@ -815,74 +813,98 @@ class GradioChat:
 
             self.last_role = event.role
 
-        if event.render_media is not None:
-            if 'image' in event.render_media.content_type:
-                if event.render_media.content is not None:
-                    content = event.render_media.content
-                elif event.render_media.content_bytes is not None:
-                    content = base64.b64encode(event.render_media.content_bytes).decode('utf-8')
-                else:
-                    content = None
-                    src = event.render_media.url
+        if event.type == 'text_delta':
+            await self._handle_text_delta(event)
+        elif event.type == 'tool_call':
+            await self._handle_tool_call_event(event, role_name)
+        elif event.type == 'render_media':
+            await self._handle_render_media_event(event)
+        elif event.type == 'history':
+            await self._handle_history_event(event)
 
-                if 'svg' in event.render_media.content_type:
-                    if content:
-                        # For SVG, we can embed the content directly
-                        await self.queue.put(f"<br>\n{content}\n")
-                    else:
-                        # If we only have a URL, use an object tag
-                        await self.queue.put(f"<br>\n<object type='image/svg+xml' data='{src}'></object>\n")
-                else:
-                    # For other image types, use an img tag
-                    if content:
-                        src = f"data:{event.render_media.content_type};base64,{content}"
-                    await self.queue.put(f"<br>\n<img src='{src}' style='max-width: 60%; height: auto;' >\n")
-            elif 'text/html' in event.render_media.content_type:
-                # Handle HTML content
-                html_content = event.render_media.content
-                if html_content:
-                    # Sanitize the HTML content if necessary
-                    # You might want to use a library like bleach for this
-                    # sanitized_html = html_content  # Replace with actual sanitization if needed
-                    await self.queue.put(f"<br>\n{html_content}\n")
-                else:
-                    await self.queue.put("<br>\nEmpty HTML content received.\n")
-            else:
-                # Handle other content types or log unhandled types
-                await self.queue.put(f"<br>\nUnsupported content type: {event.render_media.content_type}\n")
-            return
-
-        if event.tool_use_active is not None:
-            if event.tool_use_active:
-                tool_calls = event.tool_calls
-                tc_hash = defaultdict(list)
-                for tool_call in tool_calls:
-                    (belt, tool) = tool_call.name.split(Toolset.tool_sep)
-                    belt_name = " ".join(word.capitalize() for word in belt.split("_"))
-                    tool_name = " ".join(word.capitalize() for word in tool.split("_"))
-                    tc_hash[belt_name].append(tool_name)
-
-                tool_lis = []
-                for belt, tools in tc_hash.items():
-                    tool_lis.append(f"<li>{belt}: {', '.join(tools)}</li")
-
-                self.tool_names = "\n".join([tool_li for tool_li in tool_lis])
-                self.tool_note = f"\n---\n## **{role_name}** is using: \n<ul>{self.tool_names}</ul>"
-                await self.queue.put('')
-            else:
-                await self.queue.put(f"<h5>{role_name} used:</h5>\n<ul>{self.tool_names}</ul><hr>")
-
-                self.tool_note = ''
-                self.tool_names = ''
-
-            return
-
-        if event.completed and event.role == 'assistant':
-            self.current_chat_Log = event.messages
-
+    async def _handle_text_delta(self, event: TextDeltaEvent):
         if event.content is not None:
             self.token_renderer.render_token(event.content)
             await self.queue.put(event.content)  # Put the content into the queue
+
+    async def _handle_message_event(self, event: MessageEvent):
+        if event.content is not None:
+            self.token_renderer.render_token(event.content)
+            await self.queue.put(event.content)  # Put the content into the queue
+
+    async def _handle_tool_call_delta(self, event: ToolCallDeltaEvent):
+        pass
+
+    async def _handle_tool_call_event(self, event: ToolCallEvent, role_name: str):
+        if event.active:
+            tool_calls = event.tool_calls
+            tc_hash = defaultdict(list)
+            for tool_call in tool_calls:
+                (belt, tool) = tool_call['name'].split(Toolset.tool_sep)
+                belt_name = " ".join(word.capitalize() for word in belt.split("_"))
+                tool_name = " ".join(word.capitalize() for word in tool.split("_"))
+                tc_hash[belt_name].append(tool_name)
+
+            tool_lis = []
+            for belt, tools in tc_hash.items():
+                tool_lis.append(f"<li>{belt}: {', '.join(tools)}</li")
+
+            self.tool_names = "\n".join([tool_li for tool_li in tool_lis])
+            self.tool_note = f"\n---\n## **{role_name}** is using: \n<ul>{self.tool_names}</ul>"
+            await self.queue.put('')
+        else:
+            await self.queue.put(f"<h5>{role_name} used:</h5>\n<ul>{self.tool_names}</ul><hr>")
+
+            self.tool_note = ''
+            self.tool_names = ''
+
+        return
+
+    async def _handle_interaction_event(self, event: InteractionEvent):
+        pass
+
+    async def _handle_history_event(self, event: HistoryEvent):
+        self.current_chat_Log = event.messages
+
+    async def _handle_completion_event(self, event: CompletionEvent):
+        pass
+
+    async def _handle_render_media_event(self, event: RenderMediaEvent):
+        if 'image' in event.content_type:
+            if event.content is not None:
+                content = event.content
+            elif event.content_bytes is not None:
+                content = base64.b64encode(event.content_bytes).decode('utf-8')
+            else:
+                content = None
+                src = event.url
+
+            if 'svg' in event.content_type:
+                if content:
+                    # For SVG, we can embed the content directly
+                    await self.queue.put(f"<br>\n{content}\n")
+                else:
+                    # If we only have a URL, use an object tag
+                    await self.queue.put(f"<br>\n<object type='image/svg+xml' data='{src}'></object>\n")
+            else:
+                # For other image types, use an img tag
+                if content:
+                    src = f"data:{event.content_type};base64,{content}"
+                await self.queue.put(f"<br>\n<img src='{src}' style='max-width: 60%; height: auto;' >\n")
+        elif 'text/html' in event.content_type:
+            # Handle HTML content
+            html_content = event.content
+            if html_content:
+                # Sanitize the HTML content if necessary
+                # You might want to use a library like bleach for this
+                # sanitized_html = html_content  # Replace with actual sanitization if needed
+                await self.queue.put(f"<br>\n{html_content}\n")
+            else:
+                await self.queue.put("<br>\nEmpty HTML content received.\n")
+        else:
+            # Handle other content types or log unhandled types
+            await self.queue.put(f"<br>\nUnsupported content type: {event.content_type}\n")
+
 
     async def __build_prompt_metadata(self):
         """
