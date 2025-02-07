@@ -11,7 +11,7 @@ from datetime import datetime
 
 import gradio as gr
 
-from typing import Union, List, AsyncGenerator
+from typing import Union, List, AsyncGenerator, Optional
 from dotenv import load_dotenv
 from spacy.tokens.doc import defaultdict
 
@@ -82,7 +82,10 @@ class GradioChat:
 
         self._agent_lock = asyncio.Lock()
         self.audio_player = OAIAudioPlayerAsync()
+        self.agent_voice: Optional[str] = kwargs.get('agent_voice', None)
+        self.voice_model: str = kwargs.get('voice_model_name', 'gpt-4o-audio-preview')
         self.last_audio_id = None
+
         self.available_tools = get_available_tools()
         self.selected_tools = [tool['name'] for tool in self.available_tools if
                                tool['essential'] or tool['name'] in ESSENTIAL_TOOLS]
@@ -172,7 +175,8 @@ class GradioChat:
         self.logger.debug("Initializing Agent parameters...")
         self.backend = kwargs.get('backend', 'openai')
         self.persona_prompt = self.load_persona(self.persona_name)
-        self.model_name = kwargs.get('model_name', os.environ.get('MODEL_NAME', 'gpt-4o'))
+        self.non_voice_model = kwargs.get('model_name', os.environ.get('MODEL_NAME', 'gpt-4o'))
+        self.model_name = self.voice_model if self.agent_voice else self.non_voice_model
         self.agent_output_format = kwargs.get('output_format', 'raw')
 
         # We keep the full message array resident in memory while the session is active
@@ -520,6 +524,7 @@ class GradioChat:
                         prompt_metadata=await self.__build_prompt_metadata(),
                         messages=self.current_chat_Log,
                         output_format='markdown',
+                        voice=self.agent_voice,
                         images=self.image_inputs if self.image_inputs else None,
                         audio=self.audio_inputs if self.audio_inputs else None,
                         temperature=self.temperature

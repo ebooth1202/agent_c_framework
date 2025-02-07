@@ -97,6 +97,7 @@ class BaseAgent:
     async def _save_interaction_to_session(self, mgr: ChatSessionManager, output_text: str):
         return await self._save_message_to_session(mgr, output_text, "assistant")
 
+
     async def _save_user_message_to_session(self, mgr: ChatSessionManager, user_message: str):
         return await self._save_message_to_session(mgr, user_message, "user")
 
@@ -245,7 +246,10 @@ class BaseAgent:
         message_array: List[dict[str, Any]] = []
 
         if sys_prompt is not None:
-            message_array.append({"role": self.root_message_role, "content": sys_prompt})
+            if messages is not None and len(messages) > 0 and messages[0]["role"] == self.root_message_role:
+                messages[0]["content"] = sys_prompt
+            else:
+                message_array.append({"role": self.root_message_role, "content": sys_prompt})
 
         if messages is not None:
             message_array += messages
