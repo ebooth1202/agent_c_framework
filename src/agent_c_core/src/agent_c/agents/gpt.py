@@ -1,5 +1,7 @@
 import os
 import json
+from random import choice
+
 import openai
 import tiktoken
 import asyncio
@@ -95,6 +97,7 @@ class GPTChatAgent(BaseAgent):
         sys_prompt: str = await self._render_system_prompt(**kwargs)
         temperature: float = kwargs.get("temperature", self.temperature)
         max_tokens: Union[int, None] = kwargs.get("max_tokens", None)
+        tool_choice: str = kwargs.get("tool_choice", "auto")
 
         messages = await self._construct_message_array(system_prompt=sys_prompt, **kwargs)
 
@@ -105,11 +108,16 @@ class GPTChatAgent(BaseAgent):
         else:
             completion_opts = {"model": model_name, "temperature": temperature, "messages": messages, "stream": True}
 
+        completion_opts['stream_options'] = {"include_usage": True}
+
         if len(functions):
             completion_opts['tools'] = functions
+            completion_opts['tool_choice'] = tool_choice
+        else:
+            completion_opts['tool_choice'] = 'none'
 
         if max_tokens is not None:
-            completion_opts['max_tokens'] = max_tokens
+            completion_opts['max_completion_tokens'] = max_tokens
 
         if json_mode:
             completion_opts['response_format'] = {"type": "json_object"}
@@ -184,54 +192,73 @@ class GPTChatAgent(BaseAgent):
         delay = 1  # Initial delay between retries
 
         async with self.semaphore:
-            await self._cb_int_start_end(True, **opts['callback_opts'])
+            interaction_id = await self._raise_interaction_start(**opts['callback_opts'])
             while interacting and delay < self.max_delay:
                 try:
                     tool_calls = []
                     stop_reason: Union[str, None] = None
-                    await self._cb_completion(True, **opts['callback_opts'])
+
+                    await self._raise_completion_start(opts["completion_opts"], **opts['callback_opts'])
                     response: AsyncStream[ChatCompletionChunk] = await self.client.chat.completions.create(**opts['completion_opts'])
-                    await self._cb_completion(False, **opts['callback_opts'])
 
                     collected_messages: List[str] = []
-
                     try:
                         async for chunk in response:
+
                             if len(chunk.choices) == 0:
-                                continue
-                            if stop_reason is None:
-                                stop_reason = chunk.choices[0].finish_reason
+                                # If there are no choices, we're done receiving chunks
+                                input_tokens = chunk.usage.prompt_tokens
+                                output_tokens = chunk.usage.completion_tokens
+                                await self._raise_completion_end(opts["completion_opts"], stop_reason=stop_reason,
+                                                                 input_tokens=input_tokens, output_tokens=output_tokens,
+                                                                 **opts['callback_opts'])
 
-                            delta = chunk.choices[0].delta
-                            if delta.tool_calls is not None:
-                                self.__handle_tool_use_fragment(delta.tool_calls[0], tool_calls)
-                                # await self._cb_tools(tool_calls, **opts['callback_opts'])
+                                if stop_reason == 'tool_calls':
+                                    # We have tool calls to make
+                                    await self._raise_tool_call_start(tool_calls, vendor="open_ai", **opts['callback_opts'])
 
-                            elif delta.content is None and chunk.choices[0].finish_reason == 'tool_calls':
-                                try:
-                                    await self._cb_tools(tool_calls, **opts['callback_opts'])
-                                    result_messages = await self.__tool_calls_to_messages(tool_calls)
-                                    await self._cb_tools(**opts['callback_opts'])
-                                except Exception as e:
-                                    logging.exception(f"Failed calling toolsets {e}")
-                                    result_messages = []
-                                messages.extend(result_messages)
+                                    try:
+                                        # Execute the tool calls
+                                        result_messages = await self.__tool_calls_to_messages(tool_calls)
+                                    except Exception as e:
+                                        logging.exception(f"Failed calling toolsets {e}")
+                                        result_messages = []
+                                        await self._raise_tool_call_end(tool_calls, result_messages,
+                                                                        vendor="open_ai", **opts['callback_opts'])
+
+                                        await self._raise_system_event(f"An error occurred while processing tool calls. {e}", )
+
+                                    if len(result_messages):
+                                        await self._raise_tool_call_end(tool_calls, result_messages[1:],
+                                                                        vendor="open_ai", **opts['callback_opts'])
+                                        messages.extend(result_messages)
+                                        await self._raise_history_event(messages, **opts['callback_opts'])
+                                else:
+                                    # The model has finished, it's side of the interaction so it's time to exit
+                                    output_text = "".join(collected_messages)
+                                    messages.append(await self._save_interaction_to_session(session_manager, output_text))
+                                    await self._raise_history_event(messages, **opts['callback_opts'])
+                                    await self._raise_interaction_end(id=interaction_id, **opts['callback_opts'])
+                                    interacting = False
                             else:
-                                chunk_message: Union[str, None] = delta.content
-                                if chunk_message is not None:
-                                    collected_messages.append(chunk_message)
-                                    await self._cb_token(chunk_message, **opts['callback_opts'])
+                                c = chunk.choices[0]
+                                # If we have a finish reason record it and break for the usage payload to be sent
+                                # before taking any real action
+                                if c.finish_reason is not None:
+                                    stop_reason = c.finish_reason
+                                    continue
 
-                        if stop_reason != 'tool_calls':
-                            output_text = "".join(collected_messages)
-                            messages.append(await self._save_interaction_to_session(session_manager, output_text))
-                            await self._cb_messages(messages, **opts['callback_opts'])
-                            await self._cb_int_start_end(True, **opts['callback_opts'])
-                            interacting = False
+                                # Anything else is either a delta for a tool call or a message
+                                if c.delta.tool_calls is not None:
+                                    self.__handle_tool_use_fragment(c.delta.tool_calls[0], tool_calls)
+                                elif c.delta.content is not None:
+                                    collected_messages.append(c.delta.content)
+                                    await self._raise_text_delta(c.delta.content, **opts['callback_opts'])
+                                # TODO: Handle audio
 
                     except openai.APIError as e:
                         logging.exception("OpenAIError occurred while streaming responses: %s", e)
-                        await self._cb_system(f"An error occurred while streaming responses. {e}\n. Backing off delay at {delay} seconds.",
+                        await self._raise_system_event(f"An error occurred while streaming responses. {e}\n. Backing off delay at {delay} seconds.",
                                               **opts['callback_opts'])
                         if delay >= self.max_delay:
                             raise
@@ -240,10 +267,13 @@ class GPTChatAgent(BaseAgent):
 
                 except openai.BadRequestError as e:
                     logging.exception("Invalid request occurred: %s", e)
+                    await self._raise_system_event(f"Invalid request error, see logs for details.", **opts['callback_opts'])
                     for message in messages:
                         print(json.dumps(message))
+                    await self._raise_completion_end(opts["completion_opts"], stop_reason="exception", **opts['callback_opts'])
                     raise
                 except openai.APITimeoutError as e:
+                    await self._raise_system_event(f"Open AI Timeout error.  Will retry in {delay} seconds", **opts['callback_opts'])
                     logging.exception("OpenAIError occurred: %s", e)
                     if delay >= self.max_delay:
                         raise
@@ -251,6 +281,7 @@ class GPTChatAgent(BaseAgent):
                     delay *= 2
                 except openai.InternalServerError as e:
                     logging.exception("Open AI InternalServerError occurred: %s", e)
+                    await self._raise_system_event(f"Open AI internal server error.  Will retry in {delay} seconds", **opts['callback_opts'])
                     if delay >= self.max_delay:
                         raise
                     await self._exponential_backoff(delay)
@@ -258,9 +289,12 @@ class GPTChatAgent(BaseAgent):
                 except Exception as e:
                     s = e.__str__()
                     logging.exception("Error occurred during chat completion: %s", e)
+                    await self._raise_system_event(f"Exception in chat completion {s}", **opts['callback_opts'])
+                    await self._raise_completion_end(opts["completion_opts"], stop_reason="exception", **opts['callback_opts'])
                     raise
 
         return messages
+
 
 
     @staticmethod

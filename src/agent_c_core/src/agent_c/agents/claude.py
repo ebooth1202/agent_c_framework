@@ -106,72 +106,69 @@ class ClaudeChatAgent(BaseAgent):
         session_manager: Union[ChatSessionManager, None] = kwargs.get("session_manager", None)
         messages = opts["completion_opts"]["messages"]
 
-        await self._cb_int_start_end(True, **callback_opts)
 
         delay = 1  # Initial delay between retries
         async with self.semaphore:
+            interaction_id = await self._raise_interaction_start(**callback_opts)
             while delay <= self.max_delay:
                 try:
-                    await self._cb_completion(True, **callback_opts)
+                    await self._raise_completion_start(opts["completion_opts"], **callback_opts)
                     async with self.client.messages.stream (**opts["completion_opts"]) as stream:
                         collected_messages = []
                         collected_tool_calls = []
                         input_tokens = 0
 
-                        await self._cb_completion(False, **opts['callback_opts'])
                         async for event in stream:
                             if event.type == "message_start":
                                 input_tokens = event.message.usage.input_tokens
 
                             elif event.type == 'message_stop':
                                 output_tokens = event.message.usage.output_tokens
-                                await self._cb_completion_stop(stop_reason, input_tokens=input_tokens, output_tokens=output_tokens, **callback_opts)
+                                await self._raise_completion_end(opts["completion_opts"], stop_reason=stop_reason, input_tokens=input_tokens, output_tokens=output_tokens, **callback_opts)
                                 if stop_reason != 'tool_use':
                                     output_text = "".join(collected_messages)
                                     messages.append(await self._save_interaction_to_session(session_manager, output_text))
-                                    await self._cb_messages(messages, **callback_opts)
-                                    await self._cb_int_start_end(False, **callback_opts)
+                                    await self._raise_history_event(messages, **callback_opts)
+                                    await self._raise_interaction_end(id=interaction_id, **callback_opts)
                                     return messages
                                 else:
-                                    # TODO: We probably want to do something with the tool calls here
-                                    #       so wer standardize onf a schema for them
-                                    await self._cb_tools(collected_tool_calls, **opts['callback_opts'])
+                                    await self._raise_tool_call_start(collected_tool_calls, vendor="anthropic",
+                                                                      **callback_opts)
                                     messages.extend(await self.__tool_calls_to_messages(collected_tool_calls))
-
+                                    await self._raise_tool_call_end(collected_tool_calls, messages[-1]['content'],
+                                                                    vendor="anthropic", **callback_opts)
+                                    await self._raise_history_event(messages, **callback_opts)
 
                             elif event.type == "content_block_start":
                                 content_type = event.content_block.type
-                                await self._cb_block_start_end(True, **callback_opts)
                                 if content_type == "text":
                                     content = event.content_block.text
                                     if len(content) > 0:
                                         collected_messages.append(content)
-                                        await self._cb_token(content, **callback_opts)
+                                        await self._raise_text_delta(content, **callback_opts)
                                 elif content_type == "tool_use":
                                     tool_call = event.content_block.model_dump()
-
                                     collected_tool_calls.append(tool_call)
+                                    await self._raise_tool_call_delta(collected_tool_calls, **callback_opts)
                                 else:
-                                    await self._cb_system(content=f"content_block_start Unknown content type: {content_type}")
+                                    await self._raise_system_event(f"content_block_start Unknown content type: {content_type}", callback_opts)
                             elif event.type == "input_json":
                                 collected_tool_calls[-1]['input'] = event.snapshot
                             elif event.type == "text":
                                 collected_messages.append(event.text)
-                                await self._cb_token(event.text, **callback_opts)
-
-                            elif event.type == "content_block_stop":
-                                await self._cb_block_start_end(False, **callback_opts)
+                                await self._raise_text_delta(event.text, **callback_opts)
                             elif event.type == 'message_delta':
                                 stop_reason = event.delta.stop_reason
 
 
                 except APITimeoutError as e:
-                    await self._cb_system(content=f"Timeout error calling `client.messages.create`. Delaying for {delay} seconds.\n", **callback_opts)
+                    await self._raise_system_event(f"Timeout error calling `client.messages.stream`. Delaying for {delay} seconds.\n", **callback_opts)
                     await self._exponential_backoff(delay)
                     delay *= 2
                 except Exception as e:
-                    await self._cb_system(content=f"Exception calling `client.messages.create`.\n\n{e}\n", **callback_opts)
-                    await self._cb_completion(False, **callback_opts)
+                    await self._raise_system_event(f"Exception calling `client.messages.create`.\n\n{e}\n", **callback_opts)
+                    await self._raise_completion_end(opts["completion_opts"], stop_reason="exception", **callback_opts)
+
                     return []
 
         return messages
