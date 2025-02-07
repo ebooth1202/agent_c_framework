@@ -74,12 +74,9 @@ class GPTChatAgent(BaseAgent):
 
 
     def _generate_multi_modal_user_message(self, user_input: str, images: List[ImageInput], audio_clips: List[AudioInput]) -> Union[List[dict[str, Any]], None]:
-        if self.mitigate_image_prompt_injection:
-            text = f"User: {user_input}{BaseAgent.IMAGE_PI_MITIGATION}"
-        else:
-            text = user_input
-
-        contents = [{"type": "text", "text": text}]
+        contents = []
+        if user_input is not None and len(user_input) > 0:
+            contents.append({"type": "text", "text": user_input})
 
         for image in images:
             url: Union[str, None] = image.url
@@ -105,7 +102,7 @@ class GPTChatAgent(BaseAgent):
         temperature: float = kwargs.get("temperature", self.temperature)
         max_tokens: Optional[int] = kwargs.get("max_tokens", None)
         tool_choice: str = kwargs.get("tool_choice", "auto")
-        voice: Optional[str] = kwargs.get("voice", "alloy")
+        voice: Optional[str] = kwargs.get("voice", None)
 
         messages = await self._construct_message_array(system_prompt=sys_prompt, **kwargs)
 
