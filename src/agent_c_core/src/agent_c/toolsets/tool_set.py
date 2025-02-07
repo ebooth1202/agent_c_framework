@@ -90,7 +90,7 @@ class Toolset:
             kwargs: The arguments to be passed to the render media event.
         """
         kwargs['role'] = kwargs.get('role', self.tool_role)
-        kwargs['session_id'] = kwargs.get('session_id', self.session_manager)
+        kwargs['session_id'] = kwargs.get('session_id', self.session_manager.session_id)
         await self.streaming_callback(RenderMediaEvent(**kwargs))
 
     async def _raise_message_event(self, **kwargs: Any) -> None:

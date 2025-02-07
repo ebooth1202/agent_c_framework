@@ -30,26 +30,22 @@ from agent_c_reference_apps.ui.markdown_render import MarkdownTokenRenderer
 # Note: we load the env file here so that it's loaded when we start loading the libs that depend on API KEYs.   I'm looking at you Eleven Labs
 load_dotenv(override=True)
 
-#from agent_c_voice import MPVPlayer, TTSElevenLabs
+
 from agent_c_reference_apps.util.audio_cues import AudioCues
 from agent_c_reference_apps.util.chat_commands import CommandHandler
 
 # Without this none of the rest matter
 from agent_c import GPTChatAgent, ClaudeChatAgent, ChatSessionManager, ToolChest, ToolCache
 
-# Vision support
-#from agent_c_vision import CV2Feed
-
 from agent_c.util import debugger_is_active
 from agent_c_tools.tools.user_preferences import AssistantPersonalityPreference, AddressMeAsPreference, UserPreference
-#from agent_c_voice.tools.voice_eleven_labs.preferences import DefaultVoicePreference
 from agent_c.prompting import CoreInstructionSection, HelpfulInfoStartSection, EndOperatingGuideLinesSection, \
     EnvironmentInfoSection, PromptBuilder
 from agent_c.models.events import MessageEvent, ToolCallEvent, InteractionEvent, TextDeltaEvent, HistoryEvent, CompletionEvent, ToolCallDeltaEvent, SessionEvent, RenderMediaEvent
 
 from agent_c_tools import LocalStorageWorkspace
 from agent_c_tools.tools.user_bio.prompt import UserBioSection
-#from agent_c_voice.speech_to_text.speechmatics_transcriber import SpeechmaticsTranscriber
+from agent_c.util.oai_audio import OAIAudioPlayerAsync
 
 ENHANCED_DEBUG_INFO = os.getenv('ENHANCED_DEBUG_INFO', 'False').lower() in ('true', '1', 'yes')
 
@@ -85,7 +81,8 @@ class GradioChat:
     def __init__(self, **kwargs):
 
         self._agent_lock = asyncio.Lock()
-        self.audio_worker = AudioPlaybackWorker(sample_rate=16000, channels=1)
+        self.audio_player = OAIAudioPlayerAsync()
+        self.last_audio_id = None
         self.available_tools = get_available_tools()
         self.selected_tools = [tool['name'] for tool in self.available_tools if
                                tool['essential'] or tool['name'] in ESSENTIAL_TOOLS]
@@ -829,7 +826,12 @@ class GradioChat:
         elif event.type == 'history':
             await self._handle_history_event(event)
         elif event.type == 'audio_delta':
-            await self.audio_worker.push_delta(event)
+            if event.id != self.last_audio_id:
+                self.audio_player.reset_frame_count()
+                self.last_audio_id = event.id
+
+            bytes_data = base64.b64decode(event.content)
+            self.audio_player.add_data(bytes_data)
 
     async def _handle_text_delta(self, event: TextDeltaEvent):
         if event.content is not None:

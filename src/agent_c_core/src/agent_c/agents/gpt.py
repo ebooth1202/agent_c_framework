@@ -105,7 +105,7 @@ class GPTChatAgent(BaseAgent):
         temperature: float = kwargs.get("temperature", self.temperature)
         max_tokens: Optional[int] = kwargs.get("max_tokens", None)
         tool_choice: str = kwargs.get("tool_choice", "auto")
-        voice: Optional[str] = kwargs.get("voice", None)
+        voice: Optional[str] = kwargs.get("voice", "alloy")
 
         messages = await self._construct_message_array(system_prompt=sys_prompt, **kwargs)
 
@@ -282,7 +282,7 @@ class GPTChatAgent(BaseAgent):
                                         await self._raise_event(AudioDeltaEvent(content_type="audio/L16", id=audio_id,
                                                                                 content=b64_audio, **opts['callback_opts']))
                                     elif transcript is None:
-                                        logging.error("No audio data found in response")
+                                        #logging.error("No audio data found in response")
                                         continue
 
                     except openai.APIError as e:
