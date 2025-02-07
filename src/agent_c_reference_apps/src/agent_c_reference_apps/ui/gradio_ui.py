@@ -215,6 +215,9 @@ class GradioChat:
                                </div>""")
 
     def add_user_input(self, history, message):
+        if history is None:
+            history = []
+
         for filename in message["files"]:
             mime_type, _ = mimetypes.guess_type(filename)
             if 'image' in mime_type:
@@ -227,9 +230,6 @@ class GradioChat:
 
 
             history.append({"role": "user", "content": {"path": filename}})
-
-        if history is None:
-            history = []
 
         if message["text"] is not None:
             self.user_message = message["text"]
@@ -451,7 +451,7 @@ class GradioChat:
             chatbot = gr.Chatbot([], label="Agent C", show_copy_button=True, elem_id="chatbot",
                                  bubble_full_width=False, show_label=False,
                                  scale=1, sanitize_html=False, height=600, type='messages')
-            chat_input = gr.MultimodalTextbox(interactive=True, file_types=["image", "audio"], # sources=["upload", "microphone"],
+            chat_input = gr.MultimodalTextbox(interactive=True, file_types=["image", "audio"], sources=["upload", "microphone"],
                                               placeholder="Enter message or upload file...", show_label=False)
 
             with gr.Accordion("Debug Information", open=False):

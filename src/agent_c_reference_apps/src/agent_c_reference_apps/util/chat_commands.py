@@ -103,7 +103,7 @@ class CommandHandler:
     async def handle_command(self, user_message, context) -> bool:
         user_message_lower = user_message.lower().strip()
 
-        if user_message_lower == "":
+        if user_message_lower == "" and not context.audio_inputs:
             return True
         elif user_message_lower in self.commands:
             await self.commands[user_message_lower].execute(context)
