@@ -1,6 +1,5 @@
 import asyncio
 import copy
-import json
 import logging
 
 from typing import Any, List, Union, Dict
@@ -8,8 +7,8 @@ from anthropic import AsyncAnthropic, APITimeoutError, Anthropic
 
 from agent_c.agents.base import BaseAgent
 from agent_c.chat.session_manager import ChatSessionManager
-from agent_c.models.audio_input import AudioInput
-from agent_c.models.image_input import ImageInput
+from agent_c.models.input.audio_input import AudioInput
+from agent_c.models.input.image_input import ImageInput
 from agent_c.util.token_counter import TokenCounter
 
 class ClaudeChatAgent(BaseAgent):
@@ -56,7 +55,10 @@ class ClaudeChatAgent(BaseAgent):
 
         messages = await self._construct_message_array(**kwargs)
         callback_opts = self._callback_opts(**kwargs)
-        functions: List[Dict[str, Any]] = self.tool_chest.active_claude_schemas
+
+        tool_chest = kwargs.get("tool_chest", self.tool_chest)
+
+        functions: List[Dict[str, Any]] = tool_chest.active_claude_schemas
 
         completion_opts = {"model": model_name, "messages": messages, "system": sys_prompt,  "max_tokens": max_tokens, 'temperature': temperature}
 
@@ -67,7 +69,7 @@ class ClaudeChatAgent(BaseAgent):
         if session_manager is not None:
             completion_opts["metadata"] = {'user_id': session_manager.user.user_id}
 
-        opts = {"callback_opts": callback_opts, "completion_opts": completion_opts}
+        opts = {"callback_opts": callback_opts, "completion_opts": completion_opts, 'tool_chest': tool_chest}
         return opts
 
     async def chat(self, **kwargs) -> List[dict[str, Any]]:
@@ -103,6 +105,7 @@ class ClaudeChatAgent(BaseAgent):
         """
         opts = await self.__interaction_setup(**kwargs)
         callback_opts = opts["callback_opts"]
+        tool_chest = opts['tool_chest']
 
         session_manager: Union[ChatSessionManager, None] = kwargs.get("session_manager", None)
         messages = opts["completion_opts"]["messages"]
@@ -135,7 +138,7 @@ class ClaudeChatAgent(BaseAgent):
                                 else:
                                     await self._raise_tool_call_start(collected_tool_calls, vendor="anthropic",
                                                                       **callback_opts)
-                                    messages.extend(await self.__tool_calls_to_messages(collected_tool_calls))
+                                    messages.extend(await self.__tool_calls_to_messages(collected_tool_calls, tool_chest))
                                     await self._raise_tool_call_end(collected_tool_calls, messages[-1]['content'],
                                                                     vendor="anthropic", **callback_opts)
                                     await self._raise_history_event(messages, **callback_opts)
@@ -223,13 +226,13 @@ class ClaudeChatAgent(BaseAgent):
         messages = await self.chat(**kwargs)
         return messages[-1]['content']
 
-    async def __tool_calls_to_messages(self, tool_calls):
+    async def __tool_calls_to_messages(self, tool_calls, tool_chest):
         async def make_call(tool_call):
             fn = tool_call['name']
             args = tool_call['input']
             ai_call = copy.deepcopy(tool_call)
             try:
-                function_response = await self._call_function(fn, args)
+                function_response = await self._call_function(tool_chest, fn, args)
                 call_resp = {"type": "tool_result", "tool_use_id": tool_call['id'],"content": function_response}
             except Exception as e:
                 call_resp = {"role": "tool", "tool_call_id": tool_call['id'], "name": fn,

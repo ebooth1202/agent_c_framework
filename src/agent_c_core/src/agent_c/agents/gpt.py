@@ -1,7 +1,5 @@
-import base64
 import os
 import json
-from random import choice
 
 import openai
 import tiktoken
@@ -17,16 +15,14 @@ from tiktoken import Encoding, encoding_for_model
 from openai.types.chat import  ChatCompletionChunk
 
 
-from typing import Any, Dict, List, Union, Optional, Callable, AsyncGenerator
+from typing import Any, Dict, List, Union, Optional
 
 from agent_c.chat.session_manager import ChatSessionManager
-from agent_c.models.audio_input import AudioInput
-from agent_c.models.events import RenderMediaEvent
-from agent_c.models.events.chat import AudioDeltaEvent
-from agent_c.models.image_input import ImageInput
+from agent_c.models.input.audio_input import AudioInput
+from agent_c.models.events.chat import ReceivedAudioDeltaEvent
+from agent_c.models.input.image_input import ImageInput
 from agent_c.util.token_counter import TokenCounter
 from agent_c.agents.base import BaseAgent
-from agent_c.toolsets.tool_set import Toolset
 
 
 class TikTokenTokenCounter(TokenCounter):
@@ -103,10 +99,12 @@ class GPTChatAgent(BaseAgent):
         max_tokens: Optional[int] = kwargs.get("max_tokens", None)
         tool_choice: str = kwargs.get("tool_choice", "auto")
         voice: Optional[str] = kwargs.get("voice", None)
+        tool_chest = kwargs.get("tool_chest", self.tool_chest)
 
         messages = await self._construct_message_array(system_prompt=sys_prompt, **kwargs)
 
-        functions: List[Dict[str, Any]] = self.tool_chest.active_open_ai_schemas
+        functions: List[Dict[str, Any]] = tool_chest.active_open_ai_schemas
+
         if model_name in self.__class__.REASONING_MODELS:
             reasoning_effort = kwargs.get("reasoning_effort", "medium")
             completion_opts = {"model": model_name, "messages": messages, "stream": True, "reasoning_effort": reasoning_effort}
@@ -134,7 +132,8 @@ class GPTChatAgent(BaseAgent):
         if user is not None:
             completion_opts["user"] = user
 
-        return {'completion_opts':completion_opts, 'callback_opts': self._callback_opts(**kwargs)}
+        return {'completion_opts':completion_opts, 'callback_opts': self._callback_opts(**kwargs),
+                'tool_chest': tool_chest}
 
     async def one_shot(self, **kwargs) -> str:
         """
@@ -199,6 +198,7 @@ class GPTChatAgent(BaseAgent):
         opts = await self.__interaction_setup(**kwargs)
         messages: List[dict[str, str]] = opts['completion_opts']['messages']
         session_manager: Union[ChatSessionManager, None] = kwargs.get("session_manager", None)
+        tool_chest = opts['tool_chest']
         interacting: bool = True
 
         delay = 1  # Initial delay between retries
@@ -234,7 +234,7 @@ class GPTChatAgent(BaseAgent):
 
                                     try:
                                         # Execute the tool calls
-                                        result_messages = await self.__tool_calls_to_messages(tool_calls)
+                                        result_messages = await self.__tool_calls_to_messages(tool_calls, tool_chest)
                                     except Exception as e:
                                         logging.exception(f"Failed calling toolsets {e}")
                                         result_messages = []
@@ -284,8 +284,8 @@ class GPTChatAgent(BaseAgent):
 
                                     b64_audio = audio_delta.get('data', None)
                                     if b64_audio is not None:
-                                        await self._raise_event(AudioDeltaEvent(content_type="audio/L16", id=audio_id,
-                                                                                content=b64_audio, **opts['callback_opts']))
+                                        await self._raise_event(ReceivedAudioDeltaEvent(content_type="audio/L16", id=audio_id,
+                                                                                        content=b64_audio, **opts['callback_opts']))
                                     elif transcript is None:
                                         #logging.error("No audio data found in response")
                                         continue
@@ -344,7 +344,7 @@ class GPTChatAgent(BaseAgent):
             if tool_call.function.arguments:
                 tool_calls[index]['arguments'] += (tool_call.function.arguments)
 
-    async def __tool_calls_to_messages(self, tool_calls):
+    async def __tool_calls_to_messages(self, tool_calls, tool_chest):
         async def make_call(tool_call):
             fn = tool_call['name'] #.replace(".", Toolset.tool_sep)  # The agent sometimes messes this up
             args = json.loads(tool_call['arguments'])
@@ -353,7 +353,7 @@ class GPTChatAgent(BaseAgent):
                        'type': 'function'
                        }
             try:
-                function_response = await self._call_function(fn, args)
+                function_response = await self._call_function(tool_chest, fn, args)
 
                 call_resp = {"role": "tool", "tool_call_id": tool_call['id'], "name": fn,
                              "content": function_response}

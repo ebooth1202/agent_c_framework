@@ -13,6 +13,25 @@ The underlying agent handles things like streaming responses, parallel tool use,
     - On mac you may need to use an earlier version than the system or homebrew provide. If so, [pyenv](https://github.com/pyenv/pyenv) is recommended. To use 3.11.11 for example, you would run `pyenv install 3.11.11; penv local 3.11.11` in this directory
 - On Windows you will need the Microsoft visual c++ build tools.  You can get them via `winget install Microsoft.VisualStudio.2022.BuildTools`
 
+## FFMPEG required for reference apps
+
+```# on Ubuntu or Debian
+sudo apt update && sudo apt install ffmpeg
+
+# on Arch Linux
+sudo pacman -S ffmpeg
+
+# on MacOS using Homebrew (https://brew.sh/)
+brew install ffmpeg
+
+# on Windows using Chocolatey (https://chocolatey.org/)
+choco install ffmpeg
+
+# on Windows using Scoop (https://scoop.sh/)
+scoop install ffmpeg
+```
+
+
 ### Clone the repo
 
 ```shell

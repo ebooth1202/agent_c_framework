@@ -1,30 +1,30 @@
-import base64
 import os
+import asyncio
+import base64
+import whisper
 import platform
 import tempfile
 import threading
 import webbrowser
+
 from queue import Queue
-from typing import List
-
-from prompt_toolkit.key_binding import KeyBindings
 from rich.rule import Rule
-
-from prompt_toolkit.history import FileHistory
 from rich.align import Align
+from typing import List, Union, Optional
 from rich.columns import Columns
 from rich.console import Console
 from rich.markdown import Markdown
-
 from prompt_toolkit import PromptSession
+from prompt_toolkit.history import FileHistory
+from prompt_toolkit.key_binding import KeyBindings
 
+from agent_c.models.input import TextInput
+from agent_c.models.input.audio_input import AudioInput
 from agent_c.util.oai_audio import OAIAudioPlayerAsync
-from agent_c_reference_apps.ui.audio_playback_worker import AudioPlaybackWorker
 from agent_c_reference_apps.util.audio_cues import AudioCues
-from agent_c import ChatEvent, RenderMedia
 from agent_c_reference_apps.ui.markdown_render import MarkdownTokenRenderer
-from agent_c.models.events import MessageEvent, ToolCallEvent, InteractionEvent, TextDeltaEvent, HistoryEvent, CompletionEvent, ToolCallDeltaEvent, SessionEvent, RenderMediaEvent
-
+from agent_c.models.events import MessageEvent, ToolCallEvent, TextDeltaEvent, CompletionEvent, RenderMediaEvent
+from agent_c_reference_apps.util.threaded_mic_input import MicInputThread
 
 LINE_SEPARATOR: Markdown = Markdown("---\n")
 
@@ -51,17 +51,24 @@ OUTPUT_TOOL_ARGS = os.getenv('OUTPUT_TOOL_ARGS', 'False').lower() in ('true', '1
 class ConsoleChatUI:
     def __init__(self, **kwargs):
         history = FileHistory(".chat_input")
-        self.audio_worker = AudioPlaybackWorker(sample_rate=48000, channels=1)
         self.system = platform.system()
         self.audio_player = OAIAudioPlayerAsync()
         self.last_audio_id = None
         self.audio_cues: AudioCues = kwargs.get("audio_cues")
-        self.tts_roles: List[str] = kwargs.get("tts_roles", [])
         self.debug_event = kwargs.get("debug_event", threading.Event())
+        self.input_active_event = kwargs.get("input_active_event", threading.Event())
+        self.allow_mic_input_event = kwargs.get("allow_mic_input_event", threading.Event())
+        self.model_accepts_audio_event = kwargs.get("model_accepts_audio_event", threading.Event())
+        self.whisper_size = kwargs.get("wisper_size", "base")
+        self.whisper_model = whisper.load_model(self.whisper_size)
+
+        self.exit_event = kwargs.get("exit_event", threading.Event())
+        self.mic_input_thread = MicInputThread(input_active=self.input_active_event, allow_mic_input=self.allow_mic_input_event,
+                                               exit_event=self.exit_event)
         self.rich_console: Console = Console(record=True)
         self.token_renderer = MarkdownTokenRenderer(self.rich_console)
         self.key_bindings = KeyBindings()
-
+        self.key_bindings.add(kwargs.get("ptt_keybind", 'c-pagedown'))(self._toggle_mic_input)
         self.key_bindings.add(kwargs.get("debug_keybind", 'c-d'))(self._toggle_debug)
         self.prompt_session = PromptSession(history=history, key_bindings=self.key_bindings)
 
@@ -70,6 +77,17 @@ class ConsoleChatUI:
         self.last_role = 'user'
         self.temp_dir: tempfile.TemporaryDirectory = tempfile.TemporaryDirectory()
         self.transcript_queue: Queue = kwargs.get("transcript_queue", Queue())
+
+        self.mic_input_thread.start()
+
+
+    def _toggle_mic_input(self, _):
+        if self.allow_mic_input_event.is_set():
+            self.allow_mic_input_event.clear()
+            self.system_message("[bold red]Microphone input disabled[/]")
+        else:
+            self.allow_mic_input_event.set()
+            self.system_message("[bold green]Microphone input enabled[/]")
 
     def _toggle_debug(self, _):
         if self.debug_event.is_set():
@@ -113,31 +131,67 @@ class ConsoleChatUI:
         # Print the columns to the console
         self.rich_console.print(columns)
 
-    async def _check_keyboard_input(self):
-        text_input = await self.prompt_session.prompt_async()
-        # Still not quite working
-        # self.rich_console.control(Control.move(0, -1))
-        # self.rich_console.print(Markdown(f"{text_input}"))
-        return text_input
+    async def _check_keyboard_input(self) -> TextInput:
+        return TextInput(content=await self.prompt_session.prompt_async())
 
-    async def get_user_input(self) -> str:
+
+    async def get_user_input(self) -> Union[TextInput, AudioInput]:
         """
-        Prompt the user for input or retrieve speech-to-text input from a queue.
+        Prompt the user for input or retrieve audio from the input queue
 
         Returns:
-            str: The user input as a string or the processed speech-to-text input.
+            Union[TextInput, AudioInput]: The user input.
         """
         self.start_role_message('user')
         self.rich_console.print(": ", end="")
 
-        # Start both the prompt and the queue checking concurrently
-        user_input_task = await self._check_keyboard_input()
+        # Start both the prompt and the output_queue checking concurrently
+        user_input_task = asyncio.create_task(self._check_keyboard_input())
+        queue_input_task = asyncio.create_task(self._check_queue())
 
-        return user_input_task
+        done, pending = await asyncio.wait({user_input_task, queue_input_task},
+                                           return_when=asyncio.FIRST_COMPLETED)
 
+        # Cancel any task that is still pending
+        for task in pending:
+            task.cancel()
+
+        # Return result from the task that finished first
+        if user_input_task in done:
+            return user_input_task.result()
+        else:
+            return queue_input_task.result()
+
+
+
+    async def _check_queue(self) -> Union[TextInput, AudioInput]:
+        """
+        Check the output queue from the microphone for chunks of audio.
+        Assemble them into a single wav file and then send it on.
+        """
+        byte_chunks: List[bytes] = []
+        start_event = None
+        while True:
+            if not self.mic_input_thread.output_queue.empty():
+                chunk = self.mic_input_thread.output_queue.get()
+                if chunk.type == "audio_input_begin":
+                    start_event = chunk
+                    byte_chunks.clear()
+                elif chunk.type == "audio_input_delta":
+                    byte_chunks.append(base64.b64decode(chunk.audio))
+                elif chunk.type == "audio_input_end":
+                    combined = b''.join(byte_chunks)
+                    audio_input = AudioInput.from_bytes_as_wav(combined, channels=start_event.channels, sample_rate=start_event.sample_rate,
+                                                               id=start_event.id)
+                    if self.model_accepts_audio_event.is_set():
+                        return audio_input
+
+                    result = self.whisper_model.transcribe(audio_input.as_nd_array())
+                    return TextInput(content=result["text"])
+
+            await asyncio.sleep(0.01)
 
     async def render_media(self, opts: RenderMediaEvent):
-
         if opts.url is not None:
             webbrowser.open(opts.url)
         elif opts.name is not None:

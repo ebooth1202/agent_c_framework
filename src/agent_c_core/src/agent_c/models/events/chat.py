@@ -1,5 +1,6 @@
 from pydantic import Field
 from typing import Optional, List
+
 from agent_c.models.events.session_event import SessionEvent
 
 class InteractionEvent(SessionEvent):
@@ -51,9 +52,9 @@ class TextDeltaEvent(SessionEvent):
     content: str = Field(..., description="A chunk of content text.")
     format: str = Field("markdown", description="The format of the content, default is markdown")
 
-class AudioDeltaEvent(SessionEvent):
+class ReceivedAudioDeltaEvent(SessionEvent):
     """
-    Sent to notify the UI that a chunk of audio has been received.
+    Sent to notify the UI that a chunk of audio has been received from the competion API.
     - Clients should handle this event by appending the audio to the current message,
       for the role, within the current interaction.
     - If there isn't a message for the role in the current interaction,
@@ -64,7 +65,6 @@ class AudioDeltaEvent(SessionEvent):
     id: Optional[str] = Field(None, description="The audio ID the audio delta is part of")
     content: str = Field(..., description="A base64s encoded chunk of audio data")
     content_type: str = Field("audio/L16", description="The type of audio data")
-
 
 class HistoryEvent(SessionEvent):
     """
