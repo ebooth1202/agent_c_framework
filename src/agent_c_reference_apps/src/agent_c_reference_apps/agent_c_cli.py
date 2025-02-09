@@ -1,16 +1,13 @@
 import os
+import queue
 import logging
 import argparse
 import threading
 
 from dotenv import load_dotenv
 
-from agent_c.toolsets import Toolset
-
-from agent_c.models.image_input import ImageInput
-from agent_c.prompting import DynamicPersonaSection
-from agent_c_reference_apps.ui.markdown_render import MarkdownTokenRenderer
-
+from agent_c.models.input import AudioInput
+from agent_c.models.input.image_input import ImageInput
 
 # Note: we load the env file here so that it's loaded when we start loading the libs that depend on API KEYs.   I'm looking at you Eleven Labs
 load_dotenv(override=True)
@@ -19,7 +16,7 @@ from agent_c_reference_apps.util.audio_cues import AudioCues
 from agent_c_reference_apps.util.chat_commands import CommandHandler
 
 # Without this none of the rest matter
-from agent_c import GPTChatAgent, ClaudeChatAgent, ChatEvent, ChatSessionManager, ToolChest, ToolCache
+from agent_c import GPTChatAgent, ClaudeChatAgent, ChatSessionManager, ToolChest, ToolCache
 
 
 from agent_c.util import debugger_is_active
@@ -41,6 +38,9 @@ from agent_c_reference_apps.ui.console_chat_ui import ConsoleChatUI
 NEW_SESSION_WELCOME: str = "New here?  Ask me about my toolsets."
 OLD_SESSION_WELCOME: str = "[bold]Welcome back![/] Remember, I have toolsets available feel free to ask me about them."
 
+# Temporary hack
+MODELS_THAT_ACCEPT_VOICE: list[str] = ["gpt-4o-audio-preview"]
+
 
 class CLIChat:
     """
@@ -60,11 +60,18 @@ class CLIChat:
         self.user_id = kwargs['user_id']
         self.session_id: Union[str, None] = kwargs.get('session_id', None)
         self.audio_cues = AudioCues()
+        self.agent_voice: Optional[str] = kwargs.get('agent_voice', None)
+        self.voice_model: str = kwargs.get('voice_model_name', 'gpt-4o-audio-preview')
+        self.image_inputs = []
+        self.audio_inputs = []
+
 
         self.__init_agent_params(**kwargs)
         self.cmd_handler = CommandHandler()
 
-        self.chat_ui = ConsoleChatUI(audio_cues=self.audio_cues, tts_roles=['assistant'], debug_event=self.debug_event)
+        self.chat_ui = ConsoleChatUI(audio_cues=self.audio_cues, debug_event=self.debug_event, input_active_event=self.input_active_event,
+                                     exit_event=self.exit_event, ptt_keybind=os.environ.get("PTT_KEYBIND", "c-pagedown"),
+                                     model_accepts_audio_event=self.model_accepts_audio_event)
         self.audio_cues.play_sound('app_start')
         self.__init_workspaces()
 
@@ -91,10 +98,10 @@ class CLIChat:
             pass
 
     def __init_events(self):
-        self.exit_event = threading.Event()
-        self.input_active_event = threading.Event()
-        self.cancel_tts_event = threading.Event()
-        self.debug_event = threading.Event()
+        self.exit_event: threading.Event = threading.Event()
+        self.input_active_event: threading.Event = threading.Event()
+        self.debug_event: threading.Event = threading.Event()
+        self.model_accepts_audio_event: threading.Event = threading.Event()
 
         if debugger_is_active():
             self.debug_event.set()
@@ -103,7 +110,13 @@ class CLIChat:
         self.logger.debug("Initializing Agent parameters...")
         self.backend = kwargs.get('backend', 'openai')
         self.prompt = kwargs['prompt']
-        self.model_name = kwargs.get('model_name', os.environ.get('MODEL_NAME', 'gpt-4o'))
+        self.non_voice_model = kwargs.get('model_name', os.environ.get('MODEL_NAME', 'gpt-4o'))
+        self.model_name = self.voice_model if self.agent_voice else self.non_voice_model
+        if self.model_name in MODELS_THAT_ACCEPT_VOICE:
+            self.model_accepts_audio_event.set()
+        else:
+            self.model_accepts_audio_event.clear()
+
         self.agent_output_format = kwargs.get('output_format', 'raw')
 
         # We keep the full message array resident in memory while the session is active
@@ -294,28 +307,37 @@ class CLIChat:
         self.logger.debug("Starting core input loop...")
         while not self.exit_event.is_set():
             try:
-                user_message = await self.chat_ui.get_user_input()
+                self.input_active_event.set()
+                user_input = await self.chat_ui.get_user_input()
+                self.input_active_event.clear()
+                user_message: Optional[str] = None
+                image_inputs: List[ImageInput] = []
+                audio_inputs: List[AudioInput] = []
 
-                if await self.cmd_handler.handle_command(user_message, self):
-                    continue
+                if user_input.type == 'text':
+                    if await self.cmd_handler.handle_command(user_input.content, self):
+                        continue
+                    user_message = user_input.content
+                elif user_input.type == 'audio':
+                    audio_inputs.append(user_input)
+                elif user_input.type == 'multimodal':
+                    for modal_content in user_input.content:
+                        if modal_content.type == 'text':
+                            user_message = modal_content.content
+                        elif modal_content.type == 'image':
+                            image_inputs.append(modal_content)
+                        elif modal_content.type == 'audio':
+                            audio_inputs.append(modal_content)
+
+                if user_message is None and len(image_inputs) > 0:
+                    user_message = "<admin_msg>If it's not clear from prior messages, ask the user what to do with this image.</admin_msg>"
 
                 # We wait till the last minute to refresh out data from Zep so we can allow it to summarize and whatnot in the background
                 await self.session_manager.update()
 
-                # Here's where we send agent the input from the user.
-                # We give it a zep cache to construct a message array from if the current_chat_log is None.
-                # We als pass it a property bag to be used in prompt templates.
-
-                # The output of the gen_chat method is an async iterator that yields content tokens only.
-                # This iterator can then be passed to our async TTS engine to minimize the latency between
-                # when the tokens start coming in and the agent starts speaking.
-                #   agent_iter yields a token of text which gets consumed by the TTS engine
-                #   the TTS engine send the token up to ElevenLabs via a websocket whenever it gets a response, it yields that response
-                #   The response from that websocket is a chunk of MP3 audio, which we then stream to the audio player.
-                image_inputs = None
-
                 await self.agent.chat(session_manager=self.session_manager, user_message=user_message, prompt_metadata=await self.__build_prompt_metadata(),
-                                      messages=self.current_chat_log, output_format=self.agent_output_format, images=image_inputs)
+                                      messages=self.current_chat_log, output_format=self.agent_output_format, images=image_inputs, audio=audio_inputs,
+                                      voice=self.agent_voice)
 
                 await self.session_manager.flush()
             except (EOFError, KeyboardInterrupt):
@@ -360,6 +382,7 @@ def main():
     parser.add_argument('--prompt_file', type=str, help='Path to a file containing the system prompt to use.', default='personas/default.md')
     parser.add_argument('--userid', type=str, help='The userid for the session', default=os.environ.get("CLI_CHAT_USER_ID", "default"))
     parser.add_argument('--claude', action='store_true', help='Use Claude as the agent instead of GPT-4-1106-preview.  This is experimental.')
+    parser.add_argument('--voice', type=str, help='The voice name to use')
     args = parser.parse_args()
     load_dotenv(override=True)
 
@@ -383,7 +406,8 @@ def main():
     if args.claude:
         backend = 'claude'
 
-    chat = CLIChat(user_id=args.userid, prompt=prompt, session_id=args.session, model_name=model, backend=backend)
+    chat = CLIChat(user_id=args.userid, prompt=prompt, session_id=args.session,
+                   model_name=model, backend=backend, agent_voice=args.voice)
     asyncio.run(chat.run())
 
 

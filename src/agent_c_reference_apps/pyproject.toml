@@ -10,7 +10,8 @@ dependencies = [
     "prompt_toolkit>=3.0.43",
     "python-dotenv",
     "spacy==3.8.3",
-    "pyaudio"
+    "pyaudio",
+    "openai-whisper"
 ]
 
 requires-python = ">=3.10"

@@ -1,9 +1,8 @@
 import os
 import copy
 import inspect
-from typing import Union, List, Callable, Dict, Any
+from typing import Union, List, Dict, Any
 
-from agent_c.models.chat_event import ChatEvent
 from agent_c.models.events import RenderMediaEvent, MessageEvent, TextDeltaEvent
 from agent_c.prompting.prompt_section import PromptSection
 from agent_c.toolsets.tool_cache import ToolCache

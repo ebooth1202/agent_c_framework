@@ -1,24 +1,16 @@
-from __future__ import annotations
-
 import io
-import base64
-import asyncio
-import threading
-from typing import Callable, Awaitable
-
-import numpy as np
 import pyaudio
+import threading
+import numpy as np
 import sounddevice as sd
-from pydub import AudioSegment
 
-from openai.resources.beta.realtime.realtime import AsyncRealtimeConnection
+from pydub import AudioSegment
 
 CHUNK_LENGTH_S = 0.05  # 100ms
 SAMPLE_RATE = 24000
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
 
-# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
 
 
 def audio_to_pcm16_base64(audio_bytes: bytes) -> bytes:
@@ -48,7 +40,7 @@ class OAIAudioPlayerAsync:
         with self.lock:
             data = np.empty(0, dtype=np.int16)
 
-            # get next item from queue if there is still space in the buffer
+            # get next item from output_queue if there is still space in the buffer
             while len(data) < frames and len(self.queue) > 0:
                 item = self.queue.pop(0)
                 frames_needed = frames - len(data)
@@ -92,51 +84,4 @@ class OAIAudioPlayerAsync:
         self.stream.close()
 
 
-async def send_audio_worker_sounddevice(
-    connection: AsyncRealtimeConnection,
-    should_send: Callable[[], bool] | None = None,
-    start_send: Callable[[], Awaitable[None]] | None = None,
-):
-    sent_audio = False
 
-    device_info = sd.query_devices()
-    print(device_info)
-
-    read_size = int(SAMPLE_RATE * 0.02)
-
-    stream = sd.InputStream(
-        channels=CHANNELS,
-        samplerate=SAMPLE_RATE,
-        dtype="int16",
-    )
-    stream.start()
-
-    try:
-        while True:
-            if stream.read_available < read_size:
-                await asyncio.sleep(0)
-                continue
-
-            data, _ = stream.read(read_size)
-
-            if should_send() if should_send else True:
-                if not sent_audio and start_send:
-                    await start_send()
-                await connection.send(
-                    {"type": "input_audio_buffer.append", "audio": base64.b64encode(data).decode("utf-8")}
-                )
-                sent_audio = True
-
-            elif sent_audio:
-                print("Done, triggering inference")
-                await connection.send({"type": "input_audio_buffer.commit"})
-                await connection.send({"type": "response.create", "response": {}})
-                sent_audio = False
-
-            await asyncio.sleep(0)
-
-    except KeyboardInterrupt:
-        pass
-    finally:
-        stream.stop()
-        stream.close()

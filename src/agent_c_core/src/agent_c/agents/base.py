@@ -6,11 +6,9 @@ import logging
 from asyncio import Semaphore
 from typing import Any, Dict, List, Union, Optional, Callable, Awaitable
 
-from requests import session
-
 from agent_c.chat import ChatSessionManager
 from agent_c.models import ChatEvent, ImageInput, MemoryMessage
-from agent_c.models.audio_input import AudioInput
+from agent_c.models.input.audio_input import AudioInput
 from agent_c.models.events import MessageEvent, ToolCallEvent, InteractionEvent, TextDeltaEvent, HistoryEvent, CompletionEvent, ToolCallDeltaEvent
 from agent_c.prompting import PromptBuilder
 from agent_c.toolsets import ToolChest, Toolset
@@ -262,7 +260,7 @@ class BaseAgent:
 
         return message_array
 
-    async def _call_function(self, function_id: str, function_args: Dict) -> Any:
+    async def _call_function(self, tool_chest, function_id: str, function_args: Dict) -> Any:
         """
         Call a function asynchronously.
 
@@ -276,7 +274,7 @@ class BaseAgent:
         """
         toolset, function_name = function_id.split(Toolset.tool_sep, 1)
         try:
-            src_obj: Toolset = self.tool_chest.active_tools[toolset]
+            src_obj: Toolset = tool_chest.active_tools[toolset]
             if src_obj is None:
                 return f"{toolset} is not a valid toolset."
 

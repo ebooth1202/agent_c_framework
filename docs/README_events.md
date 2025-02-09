@@ -1,64 +1,255 @@
-# Chat Events in Agent C
+# Understanding the chat event stream in Agent C
 
-Regardless of which completion method you're using on the agent, `ChatEvent`s via the `streaming_callback` you provide. It allows us to completely decouple the agent and tools from the UI.  The UI can consume events via direct callback like the reference client, or they can be shoved into a queue and processed by a separate thread or process.
+Note: This version of the document is 100% AI generated based off it reading the code for the chat method.  I'll apply some human editing at some point.  I really just wanted to document the event flow but it did such a nice job of breaking down the code itself I'm going to keep it around
 
-Another benefit is that the events can be used by tools to bypass the agent and provide data directly to the UI.  This is useful for tools that are token dense, need to render media, or want to stream data.  By bypassing the agent, for and presenting the data directly to the UI, we can both save tokens and allow the  agent to work with data indirectly. Fore example, a waveform tool could use `render_media` to present a waveform to the user, and return some much smaller string to the agent.
+# Overview
 
+The `chat` method orchestrates a chat interaction with an external language model (via an asynchronous stream of chunks) and raises a series of events along the way. These events notify client-side code about the progress of the interaction, partial outputs (such as text and audio deltas), tool calls that may be triggered, and error conditions. In addition, events are used to record the start and end of the overall interaction and to update the session history.
 
-## Overview
+The method performs the following high-level steps:
 
-`src/agent_c/modelrs/chat_event.py` contains the `ChatEvent` model and sub-models.
+1. **Setup and Initialization:** Prepare the options, messages, session, and synchronization primitives.
+2. **Interaction Start:** Signal the start of the interaction.
+3. **Completion Start:** Signal the start of receiving the completion (streaming) data.
+4. **Streaming Response Processing:** Process each incoming chunk, raising events as new text or audio data arrives.
+5. **Completion End and Finalization:** Once the stream ends, signal completion and (if necessary) process any tool calls; then update session history and signal the end of the interaction.
+6. **Error Handling:** In case of exceptions, signal system error events and (where applicable) complete the interaction with error notifications.
 
-## Models
+Below you’ll find a breakdown of each phase, including the events raised and their order.
 
-- `FunctionCall` - This is the same the Open AI model for function calls it will be part of `ToolCall`s 
-- `ToolCall` - This the the same an Open AI model for a `tool_call`. It may be part of a `Message`
-- `Message` - An individual message with a role and content. It can also include tool calls and other metadata. This model is used to represent messages that are sent or received in a chat.
-- `RenderMedia` - Defines the details for media rendering, mapping traditional HTTP-style 'content-type' to a model field. It allows the UI to render different types of media based on the content provided.
-- `ChatEvent` - The central model that represents a chat event.
+---
 
+# Detailed Flow and Event Sequence
 
-## Chat Events
-This model represents a chat event, which could be any number of things so most fields are optional.
+## 1. Setup and Initialization
 
-- `session_id` and `role` are mandatory fields and will always be present. Everything else is either optional, or dependent on something that it optional.
+- **Option Preparation:**  
+  The method begins by calling `self.__interaction_setup(**kwargs)` which prepares the options (e.g., `completion_opts`, `callback_opts`) needed for the request.
 
-### Fields
-- `session_id` - The ID of the chat session, which in the reference client comes from Zep.
-- `role` - The role that originated the event. `assistant`, `user`, `system`, and `tool` are predefined roles. Some tools may have their own roles, for example tools that are themselves agents might send their name as the role.
-- `completed` - A boolean indicating that the current interaction is complete. This is used to signal the end of a chat message so that any buffered content can be flushed. Note: This `start`, `completed` refer to the interaction i.e. Until `agent.chat` returns.  Any given interaction may have multiple completions and tool calls.
-- `completion_running` - A boolean indicating that a completion is currently running or not. If present and True, the client should display a message indicating that a completion is running. If present and False, the client should display a message indicating that the completion has completed. This, combined with the other flags can help identify if a performance problem exists at different points in the chain.
-- `content` - A chunk of of text content (if set).  This can be as small as a token or as large as a full chat message.
-- `output_format` - The format of the content.  This is used to signal the client how to interpret the content. The default is `markdown`, `raw` is also supported.
-    - Clients should interpret `raw` as plain text (that might still be in Markdown format), `raw` is essentially a flag that indicates: Display every token as it comes in even if that means fancy rendering doesn't happen.
-- `messages` - Populated by agents and the end of an interaction to provide the complete list of messages, including any tool calls and returns.
-    - This array can be passed to the agent during the next interaction so that it doesn't need to repeat a tool call to answer a follow-up question.  This ends up consuming more and more tokens over time, but it's a trade-off for not needing to re-run the tool calls.
-    - When you don't pass the message array, back around the loop the message array will be constructed from the Zep memory if a ZepCache has been provided.
-    - The reference client has the `!compact` command which takes advantage of this by resetting the copy of the message array it was holding onto and then caching it again after the next interaction.  But that could be made WAAAAY smarter.
-- `render_media` - If present, this field will contain details for media to be rendered in the client.
-    - The reference client just goes "it it has content and name, write it to a temp file and ask the OS to open it. If not and it has a URL ask the default browser to open it. Anything else complain."
-- `start` - A boolean indicating that an interaction in beginning. And would single a client to start displaying a response from the `event.role`.
+- **Session and Message Setup:**  
+  The messages to be sent and the session manager (if provided) are extracted from the options and keyword arguments.
 
-- `tool_use_active` - A boolean indicating that a tool is currently active.
-    - If present and `True`, an agent is executing tool calls and the client should display a message to that effect.
-    - If present and `False`, the client should display a message indicating that the tool has completed.
-- `tool_calls` - If `tool_use_active` is `True`, this field will contain a list of `ToolCall` models that are currently being executed.
+- **Concurrency Control:**  
+  An asynchronous semaphore (`async with self.semaphore`) is used to control concurrent access.
 
-## Rendering Media
-The RenderMedia event is used by tools to provide non-text content to the client. It's a fairly straightforward model with a few fields:
+---
 
-- `content_type` - The type of media to be rendered. In familiar HTTP content type syntax, for example `image/png` or `audio/wav`.
-- `url` - The URL of the media to be rendered. This will be set when a tool wants to show media or web content that has a URL already.
-- `name` - The name of the media to be rendered.  Tools SHOULD set this to a filename
-- `content` - The bytes of the media to be rendered. 
+## 2. Interaction Start
 
-A RenderMedia model will always have a content type, a URL, content or both a URL and content.  For example the Mermaid chart tool will give and SVG both as savable content and a share.
+- **Event: `interaction_start`**  
+  Before starting the actual chat completion request, the method calls:
+  ```python
+  interaction_id = await self._raise_interaction_start(**opts['callback_opts'])
+  ```
+  This event signals that an interaction has begun. It provides an identifier (`interaction_id`) that will later be used to mark the end of the interaction.
 
-The reference client handles this in the UI layer by either saving the content to a temp file and hav ing the OS open it,
-or by asking the default browser to open the URL if there's no content.
+---
 
-## Notes
+## 3. Completion Start
 
-- Clients should be prepared to handle any combination of fields, and should be prepared to handle role changes mid-interaction.
-  - Tools can and will send messages to the client directly, and the client should be prepared to handle them.
-  
+- **Event: `completion_start`**  
+  Just before sending the request to the language model, the method raises:
+  ```python
+  await self._raise_completion_start(opts["completion_opts"], **opts['callback_opts'])
+  ```
+  This notifies that the completion phase (the stream of responses) is starting.
+
+- **Initiating the Chat Completion Request:**  
+  The method then creates the chat completion stream:
+  ```python
+  response = await self.client.chat.completions.create(**opts['completion_opts'])
+  ```
+
+---
+
+## 4. Streaming Response Processing
+
+The method then enters a loop to process each chunk received from the asynchronous stream (`async for chunk in response:`).
+
+### A. Chunk Handling
+
+For every chunk received:
+
+- **Handling Missing or Empty Choices:**  
+  - If `chunk.choices` is `None`, the chunk is skipped.
+  - If `chunk.choices` is an empty list (i.e., `len(chunk.choices) == 0`), it signals that the stream has ended. Before leaving the streaming loop, several final events are raised (see below).
+
+### B. Processing Non-Empty Chunks
+
+For chunks that contain at least one choice:
+
+1. **Finish Reason Check:**  
+   - If the first choice (`first_choice = chunk.choices[0]`) has a `finish_reason` (i.e., it is not `None`), this value is stored in a local variable (`stop_reason`). The chunk itself is not processed further, but the finish reason is used later to determine the next steps.
+
+2. **Tool Call Fragments:**  
+   - If the choice’s delta contains a tool call fragment (`first_choice.delta.tool_calls is not None`), the method aggregates these fragments:
+     ```python
+     self.__handle_tool_use_fragment(first_choice.delta.tool_calls[0], tool_calls)
+     ```
+     The fragments are collected into the `tool_calls` list for later processing.
+
+3. **Text Content Deltas:**  
+   - If the delta contains text content (`first_choice.delta.content is not None`):
+     - The content is appended to a local accumulator (`collected_messages`).
+     - **Event: `text_delta`**  
+       An event is raised with the new text fragment:
+       ```python
+       await self._raise_text_delta(first_choice.delta.content, **opts['callback_opts'])
+       ```
+       This lets the client know about incremental text updates.
+
+4. **Audio Content Deltas:**  
+   - If the delta contains audio data (detected via `first_choice.delta.model_extra.get('audio', None)`):
+     - The method extracts an audio identifier (if not already set) and checks for:
+       - **Transcript:**  
+         If an audio transcript is available, it is treated like text and appended to `collected_messages`, and a `text_delta` event is raised.
+       - **Audio Data:**  
+         If binary (base64-encoded) audio data is provided, an event is raised with an audio delta:
+         ```python
+         await self._raise_event(AudioDeltaEvent(content_type="audio/L16", id=audio_id, content=b64_audio, **opts['callback_opts']))
+         ```
+
+### C. End of Stream
+
+When a chunk is received with an empty `choices` list, this signals the end of the streaming process. At this point, the method proceeds as follows:
+
+1. **Raising Completion End:**  
+   - **Event: `completion_end`**  
+     The method raises a completion end event to report that streaming has finished, along with token usage data:
+     ```python
+     await self._raise_completion_end(opts["completion_opts"], stop_reason=stop_reason, input_tokens=input_tokens, output_tokens=output_tokens, **opts['callback_opts'])
+     ```
+
+2. **Handling Tool Calls vs. Regular Completion:**  
+   The next steps depend on the `stop_reason` determined earlier:
+
+   - **A. If `stop_reason` Indicates Tool Calls (`'tool_calls'`):**
+     1. **Tool Call Start Event:**  
+        - **Event: `tool_call_start`**  
+          The method signals the start of tool call processing:
+          ```python
+          await self._raise_tool_call_start(tool_calls, vendor="open_ai", **opts['callback_opts'])
+          ```
+     2. **Processing Tool Calls:**  
+        The tool calls are executed via:
+        ```python
+        result_messages = await self.__tool_calls_to_messages(tool_calls)
+        ```
+        - If an error occurs during tool call execution, a system event is raised and tool call end is signaled with an empty result.
+     3. **Tool Call End Event:**  
+        - **Event: `tool_call_end`**  
+          After processing, the tool call end event is raised:
+          ```python
+          await self._raise_tool_call_end(tool_calls, result_messages[1:], vendor="open_ai", **opts['callback_opts'])
+          ```
+     4. **History Update:**  
+        - **Event: `history_event`**  
+          The resulting messages (from tool calls) are appended to the session history:
+          ```python
+          await self._raise_history_event(messages, **opts['callback_opts'])
+          ```
+
+   - **B. If the Interaction Is a Standard Chat Response (No Tool Calls):**
+     1. **Save the Final Message:**  
+        - The collected text (and possibly audio transcript) is combined into the final output message.
+        - Depending on whether audio was involved, the message is saved via the session manager:
+          ```python
+          messages.append(await self._save_audio_interaction_to_session(...))  # for audio
+          messages.append(await self._save_interaction_to_session(...))        # for text
+          ```
+     2. **History Update:**  
+        - **Event: `history_event`**  
+          The updated message history is broadcast:
+          ```python
+          await self._raise_history_event(messages, **opts['callback_opts'])
+          ```
+     3. **Ending the Interaction:**  
+        - **Event: `interaction_end`**  
+          Finally, the method signals that the interaction has ended:
+          ```python
+          await self._raise_interaction_end(id=interaction_id, **opts['callback_opts'])
+          ```
+        - The processing loop is terminated by setting `interacting` to `False`.
+
+---
+
+## 5. Error Handling and Retry Mechanism
+
+During the operation, if any errors occur, the code enters one of several exception handlers. In each case, relevant system events are raised to notify the client developers:
+
+- **API Errors (e.g., `openai.APIError`):**
+  - **Event: `system_event`**  
+    A system event is raised with details about the API error and the retry delay.
+  - **Exponential Backoff:**  
+    The method waits (using an exponential backoff strategy) before retrying.
+
+- **Bad Request Errors (`openai.BadRequestError`):**
+  - **Event: `system_event`**  
+    Raised with an "Invalid request" message.
+  - **Completion End:**  
+    The method raises a completion end event with a stop reason of `"exception"`.
+  - The error is then re-raised after logging.
+
+- **Timeout and Internal Server Errors:**
+  - Both error types raise a `system_event` notifying the client about the timeout or internal server error, along with the planned delay before a retry.
+
+- **Other Exceptions:**
+  - For any other exceptions, a system event is raised to signal an exception in chat completion.
+  - A completion end event is also raised with a stop reason of `"exception"`, and then the exception is re-raised.
+
+---
+
+# Summary of the Event Order
+
+Below is a simplified sequence diagram of the events raised during a typical chat operation:
+
+1. **Initialization:**
+   - *(No event)* Options are set up, and the semaphore is acquired.
+
+2. **Interaction Start:**
+   - **`interaction_start`**
+
+3. **Completion Start:**
+   - **`completion_start`**
+
+4. **During Streaming (for each chunk):**
+   - **`text_delta`** (for each text fragment received)
+   - **`AudioDeltaEvent`** (for audio data chunks, if any)
+
+5. **End of Streaming:**
+   - **`completion_end`**
+
+6. **If Tool Calls Are Detected:**
+   - **`tool_call_start`**
+   - *(Tool call execution occurs)*
+   - **`tool_call_end`**
+   - **`history_event`**
+
+7. **If Standard Completion:**
+   - Save final output to session.
+   - **`history_event`**
+   - **`interaction_end`**
+
+8. **Error Handling (if an error occurs at any point):**
+   - **`system_event`** (with details about the error)
+   - *(May also trigger a `completion_end` with stop reason `"exception"`)*
+
+---
+
+# Final Remarks
+
+This flow ensures that client developers receive real-time notifications for each significant phase of the chat interaction:
+
+- **Start and End of Interaction:**  
+  Clients know exactly when an interaction begins and finishes.
+
+- **Incremental Updates:**  
+  Text and audio deltas are streamed incrementally, allowing for a responsive UI.
+
+- **Tool Call Handling:**  
+  Special events signal when additional actions (tool calls) need to be processed.
+
+- **Robust Error Handling:**  
+  System events inform the client about any issues, with details that help in diagnosing problems and implementing retry logic.
+
+By following this documented event stream, client developers can build interfaces that respond to these events appropriately and provide users with a clear and timely view of the ongoing chat operation.

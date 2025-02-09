@@ -11,19 +11,18 @@ from datetime import datetime
 
 import gradio as gr
 
-from typing import Union, List, AsyncGenerator, Optional
+from typing import Union, List, Optional
 from dotenv import load_dotenv
 from spacy.tokens.doc import defaultdict
 
-from agent_c.models.audio_input import AudioInput
+from agent_c.models.input.audio_input import AudioInput
 from agent_c.toolsets import Toolset
 
-from agent_c.models.image_input import ImageInput
+from agent_c.models.input.image_input import ImageInput
 from agent_c.prompting import DynamicPersonaSection
 
 from agent_c.util.response_format import align_tool_calls, question_response, system_prompt, \
     combine_debug_info, filtered_responses
-from agent_c_reference_apps.ui.audio_playback_worker import AudioPlaybackWorker
 
 from agent_c_reference_apps.ui.markdown_render import MarkdownTokenRenderer
 
@@ -841,12 +840,12 @@ class GradioChat:
     async def _handle_text_delta(self, event: TextDeltaEvent):
         if event.content is not None:
             self.token_renderer.render_token(event.content)
-            await self.queue.put(event.content)  # Put the content into the queue
+            await self.queue.put(event.content)  # Put the content into the output_queue
 
     async def _handle_message_event(self, event: MessageEvent):
         if event.content is not None:
             self.token_renderer.render_token(event.content)
-            await self.queue.put(event.content)  # Put the content into the queue
+            await self.queue.put(event.content)  # Put the content into the output_queue
 
     async def _handle_tool_call_delta(self, event: ToolCallDeltaEvent):
         pass

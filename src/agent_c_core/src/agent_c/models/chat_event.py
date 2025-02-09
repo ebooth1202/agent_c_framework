@@ -6,7 +6,7 @@ from typing import Optional, List, Union
 These models along with the callbacks provided to agents and toolsets allows us 
 to completely decouple the agent and toolsets from the UI.  The UI can consume
 them via direct callback like the reference client, or they can be shoved into 
-a queue and processed by a separate thread or process.
+a output_queue and processed by a separate thread or process.
 
 Another benefit is that the models can be used by toolsets to bypass the agent
 and provide data directly to the UI.  This is useful for toolsets that are token dense, 
