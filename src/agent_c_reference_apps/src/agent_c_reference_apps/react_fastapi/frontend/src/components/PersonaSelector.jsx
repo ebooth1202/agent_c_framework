@@ -54,7 +54,7 @@ function PersonaSelector({
 
     // Sync local UI state with prop
     useEffect(() => {
-        if (isInitialized) {
+        if (isInitialized && persona) {
             setSelectedPersona(persona);
             setLocalCustomPrompt(customPrompt);
         }
@@ -65,13 +65,16 @@ function PersonaSelector({
      * @param {string} value - Selected persona identifier
      */
     const handlePersonaChange = useCallback((value) => {
-        setSelectedPersona(value);
         const selectedPersonaData = personas.find(p => p.name === value);
         if (selectedPersonaData) {
-            onUpdateSettings('SETTINGS_UPDATE', {
-                persona_name: value,
-                customPrompt: selectedPersonaData.content
-            });
+            setSelectedPersona(value); // Update local state immediately
+            // Delay the settings update slightly to ensure state consistency
+            setTimeout(() => {
+                onUpdateSettings('SETTINGS_UPDATE', {
+                    persona_name: value,
+                    customPrompt: selectedPersonaData.content
+                });
+            }, 0);
         }
     }, [personas, onUpdateSettings]);
 
@@ -132,7 +135,8 @@ function PersonaSelector({
                 {/* Persona Selection */}
                 <div className="space-y-2">
                     <Label htmlFor="persona-select">Load Persona Prompt</Label>
-                    <Select value={selectedPersona} onValueChange={handlePersonaChange}>
+                    <Select value={selectedPersona}
+                            onValueChange={handlePersonaChange}>
                         <SelectTrigger
                             id="persona-select"
                             className="rounded-xl border-gray-200 bg-white/50 backdrop-blur-sm transition-colors hover:bg-white/80 focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
