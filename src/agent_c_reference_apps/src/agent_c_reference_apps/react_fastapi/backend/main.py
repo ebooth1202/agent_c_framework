@@ -249,7 +249,7 @@ async def get_personas() -> List[Dict[str, str]]:
     """Get list of available personas from personas directory"""
     personas = []
     persona_dir = os.path.join(os.getcwd(), "personas")
-
+    # print(f"Persona directory: {persona_dir}")
     # Ensure directory exists
     if not os.path.isdir(persona_dir):
         logger.warning(f"Persona directory does not exist: {persona_dir}")
