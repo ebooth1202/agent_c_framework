@@ -22,7 +22,7 @@ export default function App() {
     const [settingsVersion, setSettingsVersion] = useState(0);
 
     // UI state
-    const [isOptionsOpen, setIsOptionsOpen] = useState(true);
+    const [isOptionsOpen, setIsOptionsOpen] = useState(false);
     const [isStreaming, setIsStreaming] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isInitialized, setIsInitialized] = useState(false);
