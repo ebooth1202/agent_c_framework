@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from agent_c import Toolset
 
 from agent_c_reference_apps.react_fastapi.backend.backend_app.agent_manager import AgentManager
+from agent_c_reference_apps.react_fastapi.backend.util.logging_utils import LoggingManager
 
 # Ensure all our toolsets get registered
 from agent_c_tools.tools import *  # noqa
@@ -25,6 +26,9 @@ CONFIG_DIR = os.getenv('CONFIG_DIR', BASE_DIR)
 MODEL_CONFIG_PATH = os.path.join(CONFIG_DIR, "model_configs.json")
 
 load_dotenv(override=True)
+
+logging_manager = LoggingManager("main")
+logger = logging_manager.get_logger()
 
 app = FastAPI(title="Agent C FastAPI Backend")
 

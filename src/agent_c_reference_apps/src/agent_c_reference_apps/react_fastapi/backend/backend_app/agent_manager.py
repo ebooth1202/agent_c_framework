@@ -8,20 +8,20 @@ from typing import Dict, Optional, List, Any, AsyncGenerator
 
 from agent_c import BaseAgent, Toolset, ChatEvent
 from agent_c_reference_apps.react_fastapi.backend.backend_app.reactjs_agent import ReactJSAgent
+from agent_c_reference_apps.react_fastapi.backend.backend_app.util.logging_utils import LoggingManager
 
 
-
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler('agent_manager.log')
-    ]
-)
-my_logger = logging.getLogger("httpx")
-my_logger.setLevel(logging.ERROR)
-
+# logging.basicConfig(
+#     level=logging.DEBUG,
+#     encoding='utf-8',
+#     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+#     handlers=[
+#         logging.StreamHandler(),
+#         logging.FileHandler('agent_manager.log'),
+#     ]
+# )
+# my_logger = logging.getLogger("httpx")
+# my_logger.setLevel(logging.ERROR)
 
 
 class AgentManager:
@@ -42,9 +42,13 @@ class AgentManager:
     ESSENTIAL_TOOLS = ['MemoryTools', 'WorkspaceTools', 'PreferenceTools', 'RandomNumberTools']
 
     def __init__(self):
-        self.logger: logging.Logger = logging.getLogger(__name__)
+        logging_manager = LoggingManager(__name__)
+        self.logger = logging_manager.get_logger()
+        # self.debug_event = LoggingManager.get_debug_event()
+
         self.sessions: Dict[str, Dict[str, Any]] = {}
         self._locks: Dict[str, asyncio.Lock] = {}
+
 
     def get_session_data(self, session_id: str) -> Dict[str, Any]:
         """
@@ -83,7 +87,6 @@ class AgentManager:
         # If updating existing session, use that ID, otherwise generate new one
         session_id = existing_session_id if existing_session_id else str(uuid.uuid4())
 
-
         # Create lock if it doesn't exist
         if session_id not in self._locks:
             self._locks[session_id] = asyncio.Lock()
@@ -102,13 +105,12 @@ class AgentManager:
                 persona_name=persona_name,
                 agent_name=f"Agent_{session_id}",
                 **kwargs
-                )
+            )
 
             # If updating existing session, transfer necessary state
             if existing_agent:
                 # Transfer session manager to maintain history - I need to pass this first
                 agent.session_manager = existing_agent.session_manager
-
 
             # Initialize the agent
             await agent.initialize()
@@ -146,10 +148,10 @@ class AgentManager:
                 session_data = self.sessions[session_id]
                 # agent: BaseAgent = session_data.get("agent")
                 # if agent:
-                    # if hasattr(agent, 'tool_chest') and agent.tool_chest:
-                    #     await agent.tool_chest.cleanup()
-                    # if hasattr(agent, 'session_manager') and agent.session_manager:
-                    #     await agent.session_manager.close()
+                # if hasattr(agent, 'tool_chest') and agent.tool_chest:
+                #     await agent.tool_chest.cleanup()
+                # if hasattr(agent, 'session_manager') and agent.session_manager:
+                #     await agent.session_manager.close()
 
                 # Remove session data and lock
                 del self.sessions[session_id]
@@ -198,4 +200,3 @@ class AgentManager:
         except Exception as e:
             self.logger.error(f"Error in stream_response: {e}")
             yield f"Error: {str(e)}"
-
