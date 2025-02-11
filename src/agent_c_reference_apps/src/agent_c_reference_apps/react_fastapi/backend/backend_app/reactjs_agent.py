@@ -14,6 +14,7 @@ from agent_c import DynamicPersonaSection, ChatEvent
 from agent_c.agents import GPTChatAgent
 from agent_c.agents.claude import ClaudeChatAgent
 from agent_c.models.events import SessionEvent
+from agent_c_reference_apps.react_fastapi.backend.backend_app.util.logging_utils import LoggingManager
 from agent_c_tools.tools.workspaces import LocalStorageWorkspace
 from agent_c.util import debugger_is_active
 from agent_c.toolsets import ToolChest, ToolCache, Toolset
@@ -62,11 +63,14 @@ class ReactJSAgent:
             additional_tools (List[str]): List of additional tools to add to the agent. Defaults to None.
             **kwargs: Additional optional keyword arguments.
         """
+
+
         # Agent events setup, must come first
         self.__init_events()
 
         # Debugging and Logging Setup
-        self.logger: logging.Logger = self.__setup_logging()
+        logging_manager = LoggingManager(__name__)
+        self.logger = logging_manager.get_logger()
         self.debug_event = None
 
         self.agent_name = kwargs.get('agent_name', None)  # Debugging only
@@ -136,36 +140,9 @@ class ReactJSAgent:
         self.exit_event = threading.Event()
         self.input_active_event = threading.Event()
         self.cancel_tts_event = threading.Event()
-        self.debug_event = threading.Event()
+        # going to get from shared logging manager
+        self.debug_event = LoggingManager.get_debug_event()
 
-        if debugger_is_active():
-            self.debug_event.set()
-
-    def __setup_logging(self) -> logging.Logger:
-        """
-        Set up a logger instance with specified logging configurations.
-
-        Returns:
-            logging.Logger: Configured logger instance.
-        """
-        logger = logging.getLogger(__name__)
-        other_loggers = ['httpx', 'LiteLLM', 'openai', 'httpcore', 'websockets', 'speechmatics', 'asyncio',
-                         'linkedin_api', 'httpcore', 'urllib3', 'gradio', ]
-
-        debug_other_loggers = ['agent_c_core', 'agent_c_tools', 'agent_c_tools.tools', 'agent_c_demo',
-                               'agent_c_demo.tools', 'agent_c_reference_apps.react_fastapi.backend']
-
-        if self.debug_event.is_set():
-            logger.setLevel(logging.DEBUG)
-            for log in debug_other_loggers:
-                logging.getLogger(log).setLevel(logging.DEBUG)
-        else:
-            logger.setLevel(logging.WARN)
-
-        for log in other_loggers:
-            logging.getLogger(log).setLevel(logging.WARN)
-
-        return logger
 
     def __load_persona(self, persona_name: str = None) -> str:
         """
