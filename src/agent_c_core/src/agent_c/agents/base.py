@@ -214,6 +214,10 @@ class BaseAgent:
 
         if messages is None and sess_mgr is not None:
            kwargs['messages'] = [{"role": d.role, "content": d.content} for d in sess_mgr.active_memory.messages]
+        mgr = kwargs.get("session_manager", None)
+        if mgr is not None:
+            # TODO: Add the user message but we need to take into account multimodal messages
+            await self._save_user_message_to_session(mgr, kwargs.get("user_message", ""))
 
         return self.__construct_message_array(**kwargs)
 
