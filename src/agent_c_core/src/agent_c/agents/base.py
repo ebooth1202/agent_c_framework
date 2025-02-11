@@ -87,7 +87,7 @@ class BaseAgent:
         if mgr is not None:
             msg = MemoryMessage(role=role, content=text)
 
-            await mgr.chat_session.add_message(msg)
+            await mgr.add_message(msg)
 
         return {"role": role, "content": text}
 
@@ -209,11 +209,11 @@ class BaseAgent:
         await asyncio.sleep(min(2 * delay, self.max_delay))
 
     async def _construct_message_array(self, **kwargs) -> List[dict[str, Any]]:
-        sess_mgr: Union[ChatSessionManager, None] = kwargs.get("session_manager", None)
-        messages: Union[List[Dict[str, Any]], None] = kwargs.get("messages", None)
+        sess_mgr: Optional[ChatSessionManager] = kwargs.get("session_manager", None)
+        messages: Optional[List[Dict[str, Any]]] = kwargs.get("messages", None)
 
         if messages is None and sess_mgr is not None:
-           kwargs['messages'] = sess_mgr.chat_session.active_memory.inference_messages
+           kwargs['messages'] = [{"role": d.role, "content": d.content} for d in sess_mgr.active_memory.messages]
 
         return self.__construct_message_array(**kwargs)
 
