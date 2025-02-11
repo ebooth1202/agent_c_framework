@@ -74,11 +74,21 @@ class EnvironmentInfoSection(PromptSection):
         session_meta_str = '\n'.join([f'{k}: {v}' for k, v in session_meta.items()])
 
         created_at = self.session_manager.chat_session.created_at.replace("UTC", "").replace("utc", "")
+        memory = self.session_manager.active_memory
+        memory_summary = "No summary available."
+        memory_context = "No context available."
+        if memory.summary is not None:
+            memory_summary = memory.summary.content
+        if memory.context is not None:
+            memory_context = memory.context
+
         return (
             f"### Session Info\n"
             f"Session ID: {self.session_manager.chat_session.session_id}\n"
             f"Session started: {created_at}\n"
-            f"#### Session Metadata\n{session_meta_str}"
+            f"#### Session Metadata\n{session_meta_str}\n"
+            f"#### Memory Summary\n{memory_summary}\n"
+            f"#### Memory Context\n{memory_context}\n"
         )
 
     @property_bag_item
