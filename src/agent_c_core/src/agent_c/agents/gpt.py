@@ -119,8 +119,7 @@ class GPTChatAgent(BaseAgent):
         if len(functions):
             completion_opts['tools'] = functions
             completion_opts['tool_choice'] = tool_choice
-        else:
-            completion_opts['tool_choice'] = 'none'
+
 
         if max_tokens is not None:
             completion_opts['max_completion_tokens'] = max_tokens
