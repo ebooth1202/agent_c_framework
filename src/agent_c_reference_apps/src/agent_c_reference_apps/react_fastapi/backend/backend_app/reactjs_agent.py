@@ -14,7 +14,7 @@ from agent_c import DynamicPersonaSection, ChatEvent
 from agent_c.agents import GPTChatAgent
 from agent_c.agents.claude import ClaudeChatAgent
 from agent_c.models.events import SessionEvent
-from agent_c_reference_apps.react_fastapi.backend.backend_app.util.logging_utils import LoggingManager
+from agent_c_reference_apps.react_fastapi.backend.util.logging_utils import LoggingManager
 from agent_c_tools.tools.workspaces import LocalStorageWorkspace
 from agent_c.util import debugger_is_active
 from agent_c.toolsets import ToolChest, ToolCache, Toolset

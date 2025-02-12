@@ -8,7 +8,7 @@ from typing import Dict, Optional, List, Any, AsyncGenerator
 
 from agent_c import BaseAgent, Toolset, ChatEvent
 from agent_c_reference_apps.react_fastapi.backend.backend_app.reactjs_agent import ReactJSAgent
-from agent_c_reference_apps.react_fastapi.backend.backend_app.util.logging_utils import LoggingManager
+from agent_c_reference_apps.react_fastapi.backend.util.logging_utils import LoggingManager
 
 
 # logging.basicConfig(
