@@ -217,7 +217,12 @@ class BaseAgent:
         mgr = kwargs.get("session_manager", None)
         if mgr is not None:
             # TODO: Add the user message but we need to take into account multimodal messages
-            await self._save_user_message_to_session(mgr, kwargs.get("user_message", ""))
+            user_message = kwargs.get("user_message")
+            if user_message is None:
+                audio_clips: List[AudioInput] = kwargs.get("audio") or []
+                if len(audio_clips) > 0:
+                    user_message = audio_clips[0].transcript or "audio input"
+                    await self._save_user_message_to_session(mgr, user_message)
 
         return self.__construct_message_array(**kwargs)
 
