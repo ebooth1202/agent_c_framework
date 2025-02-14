@@ -227,7 +227,7 @@ class GPTChatAgent(BaseAgent):
                                                                  input_tokens=input_tokens, output_tokens=output_tokens,
                                                                  **opts['callback_opts'])
 
-                                if stop_reason == 'tool_calls' or (stop_reason=='stop' and len(tool_calls)):
+                                if stop_reason == 'tool_calls' or ((stop_reason=='stop' or stop_reason is None) and len(tool_calls)):
                                     # We have tool calls to make
                                     await self._raise_tool_call_start(tool_calls, vendor="open_ai", **opts['callback_opts'])
 
