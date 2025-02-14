@@ -10,10 +10,10 @@ if "%CD:~-7%"=="scripts" (
 )
 
 :: Start the backend server (in a new window)
-start cmd /k ".venv\scripts\activate.bat && python -m uvicorn src.agent_c_reference_apps.src.agent_c_reference_apps.react_fastapi.backend.main:app --host 0.0.0.0 --port 8000 --log-level info"
+start cmd /k ".venv\scripts\activate.bat && python -m uvicorn agent_c_api.main:app --host 0.0.0.0 --port 8000 --log-level info"
 
 :: Start the frontend dev server (in a new window)
-start cmd /k "cd src\agent_c_reference_apps\src\agent_c_reference_apps\react_fastapi\frontend && npm run dev"
+start cmd /k "cd src\agent_c_api_ui\agent_c_react_client && npm run dev"
 
 :: Return to original directory
 popd
