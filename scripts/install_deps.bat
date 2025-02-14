@@ -11,6 +11,7 @@ pip install -e agent_c_core
 pip install -e agent_c_tools
 pip install -e my_agent_c
 pip install -e agent_c_reference_apps
+pip install -e agent_c_api_ui/agent_c_api
 
 
 if errorlevel 1 (
@@ -21,7 +22,7 @@ if errorlevel 1 (
 
 :: Install NPM packages
 echo Installing NPM dependencies...
-cd agent_c_reference_apps\src\agent_c_reference_apps\react_fastapi\frontend
+cd agent_c_api_ui\agent_c_react_client
 npm install
 
 if errorlevel 1 (
