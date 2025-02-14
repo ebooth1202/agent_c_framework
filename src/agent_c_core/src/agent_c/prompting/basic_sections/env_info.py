@@ -27,6 +27,7 @@ class EnvironmentInfoSection(PromptSection):
     session_manager: ChatSessionManager
     env_rules: Optional[Dict[str, str]] = None
     voice_tools: Optional[Any] = None
+    agent_voice: Optional[str]
 
     def __init__(self, **data: Any) -> None:
         """
@@ -151,6 +152,16 @@ class EnvironmentInfoSection(PromptSection):
                 f"Name: {self.voice_tools.voice.name}\n"
                 f"Labels: {label_str}\n"
                 f"Category: {self.voice_tools.voice.category}\n"
+            )
+        elif self.agent_voice is not None:
+            return (
+                "\nVoice mode: **Enabled**\n"
+                "Assistant instructions:\n"
+                "- Format your output for speech, not reading.\n"
+                "- Avoid Markdown formatting, and other tokens that a text-to-speech engine might struggle with.\n"
+                "- Do not output URLs or links in this mode. Offer to read them for the user instead."
+                "- Keep your responses brief and conversational, allows the user to 'drill down' from a higher level rather than info dumping\n\n"
+                f"Current speaking voice: {self.agent_voice}\n"
             )
         else:
             return (

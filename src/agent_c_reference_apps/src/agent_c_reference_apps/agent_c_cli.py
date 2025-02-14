@@ -202,7 +202,7 @@ class CLIChat:
         # Anything outside the operating guidelines is basically helpful information for the model to know.
         # These are demo sections that tell the model a little about the user as well as things like the current date / time.
         info_sections = [HelpfulInfoStartSection(),
-                         EnvironmentInfoSection(session_manager=self.session_manager, voice_tools=self.tool_chest.active_tools.get('voice')),
+                         EnvironmentInfoSection(session_manager=self.session_manager, voice_tools=self.tool_chest.active_tools.get('voice'), agent_voice=self.agent_voice),
                          UserBioSection(session_manager=self.session_manager)]
 
         self.logger.debug("Initializing Chat Agent... Initializing agent...")
@@ -267,7 +267,8 @@ class CLIChat:
                 "current_user_username": self.session_manager.user.user_id,
                 "current_user_name": self.session_manager.user.first_name,
                 "session_summary": memory_summary,
-                "session_context": memory_context}
+                "session_context": memory_context,
+                "agent_voice": self.agent_voice}
 
     async def __core_input_loop(self):
         """

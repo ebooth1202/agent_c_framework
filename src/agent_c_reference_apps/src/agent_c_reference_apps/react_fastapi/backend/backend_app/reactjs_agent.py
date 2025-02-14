@@ -346,7 +346,7 @@ class ReactJSAgent:
 
         info_sections = [
             HelpfulInfoStartSection(),
-            EnvironmentInfoSection(session_manager=self.session_manager, voice_tools=None),
+            EnvironmentInfoSection(session_manager=self.session_manager, voice_tools=None, agent_voice=None),
             UserBioSection(session_manager=self.session_manager)
         ]
 
