@@ -1,6 +1,15 @@
 import React, {createContext, useState, useEffect, useRef} from 'react';
 import {API_URL} from '@/config/config';
 
+if (!API_URL) {
+    console.error('API_URL is not defined! Environment variables may not be loading correctly.');
+    console.log('Current environment variables:', {
+        'import.meta.env.VITE_API_URL': import.meta.env.VITE_API_URL,
+        'process.env.VITE_API_URL': process.env?.VITE_API_URL,
+        'NODE_ENV': process.env?.NODE_ENV
+    });
+}
+
 export const SessionContext = createContext();
 
 export const SessionProvider = ({children}) => {
@@ -34,10 +43,47 @@ export const SessionProvider = ({children}) => {
     const [activeTools, setActiveTools] = useState([]);
 
     // --- Business Logic Functions ---
+    const checkResponse = async (response, endpoint) => {
+        const contentType = response.headers.get("content-type");
+        console.log(`Response from ${endpoint}:`, {
+            status: response.status,
+            contentType,
+            ok: response.ok
+        });
+
+        if (!response.ok) {
+            // Try to get error details
+            let errorText;
+            try {
+                errorText = await response.text();
+            } catch (e) {
+                errorText = 'Could not read error response';
+            }
+            throw new Error(`${endpoint} failed: ${response.status} - ${errorText}`);
+        }
+
+        if (!contentType?.includes('application/json')) {
+            throw new Error(`${endpoint} returned non-JSON content-type: ${contentType}`);
+        }
+
+        const text = await response.text();
+        console.log(`Raw response from ${endpoint}:`, text);
+
+        try {
+            return JSON.parse(text);
+        } catch (e) {
+            console.error(`Failed to parse JSON from ${endpoint}:`, text);
+            throw new Error(`Invalid JSON from ${endpoint}: ${e.message}`);
+        }
+    };
 
     // Fetch initial data (personas, tools, models)
     const fetchInitialData = async () => {
         try {
+            console.log('Starting fetchInitialData with API_URL:', API_URL);
+            if (!API_URL) {
+                throw new Error('API_URL is undefined. Please check your environment variables.');
+            }
             setIsLoading(true);
             setIsInitialized(false);
 
@@ -57,12 +103,14 @@ export const SessionProvider = ({children}) => {
                 toolsResponse.json(),
                 modelsResponse.json()
             ]);
-
+            // console.log('Fetched initial data:', {personasData, toolsData, modelsData});
             setPersonas(personasData);
             setAvailableTools(toolsData);
             setModelConfigs(modelsData.models);
 
+
             if (modelsData.models.length > 0) {
+                // console.log('Initializing session with model:', modelsData.models[0]);
                 const initialModel = modelsData.models[0];
                 setModelName(initialModel.id);
                 setSelectedModel(initialModel);
@@ -74,14 +122,11 @@ export const SessionProvider = ({children}) => {
                     reasoning_effort: initialReasoningEffort
                 };
 
-                // const initialParameters = {
-                //   temperature: initialModel.parameters?.temperature?.default ?? modelParameters.temperature,
-                //   reasoning_effort: initialModel.parameters?.reasoning_effort?.default ?? modelParameters.reasoning_effort
-                // };
                 setModelParameters(initialParameters);
 
                 // Choose a default persona (or fall back to the first)
                 if (personasData.length > 0) {
+                    // console.log('Setting initial persona:', personasData[0]);
                     const defaultPersona = personasData.find(p => p.name === 'default');
                     const initialPersona = defaultPersona || personasData[0];
                     setPersona(initialPersona.name);
@@ -89,6 +134,7 @@ export const SessionProvider = ({children}) => {
                 }
 
                 // Initialize a session with the initial model
+                // console.log('Initializing session with initial model:', initialModel);
                 await initializeSession(false, initialModel);
                 setIsInitialized(true);
             } else {

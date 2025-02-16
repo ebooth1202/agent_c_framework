@@ -9,5 +9,8 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
     extensions: ['.js', '.jsx', '.ts', '.tsx']
-  }
+  },
+    define: {
+    __API_URL__: JSON.stringify(process.env.VITE_API_URL),
+  },
 })
