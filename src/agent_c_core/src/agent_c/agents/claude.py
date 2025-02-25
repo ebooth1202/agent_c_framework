@@ -2,7 +2,7 @@ import asyncio
 import copy
 import logging
 
-from typing import Any, List, Union, Dict
+from typing import Any, List, Union, Dict, Optional
 from anthropic import AsyncAnthropic, APITimeoutError, Anthropic
 
 from agent_c.agents.base import BaseAgent
@@ -12,7 +12,7 @@ from agent_c.models.input.image_input import ImageInput
 from agent_c.util.token_counter import TokenCounter
 
 class ClaudeChatAgent(BaseAgent):
-    CLAUDE_MAX_TOKENS: int = 8192
+    CLAUDE_MAX_TOKENS: int = 64000
     class ClaudeTokenCounter(TokenCounter):
 
         def __init__(self):
@@ -61,6 +61,11 @@ class ClaudeChatAgent(BaseAgent):
         functions: List[Dict[str, Any]] = tool_chest.active_claude_schemas
 
         completion_opts = {"model": model_name, "messages": messages, "system": sys_prompt,  "max_tokens": max_tokens, 'temperature': temperature}
+        budget_tokens: int = kwargs.get("budget_tokens", 0)
+        if budget_tokens > 0:
+            completion_opts['thinking'] = {"budget_tokens": budget_tokens, "type": "enabled"}
+            completion_opts['temperature'] = 1
+
 
         if len(functions):
             completion_opts['tools'] = functions
@@ -109,7 +114,9 @@ class ClaudeChatAgent(BaseAgent):
 
         session_manager: Union[ChatSessionManager, None] = kwargs.get("session_manager", None)
         messages = opts["completion_opts"]["messages"]
-
+        current_block_type: Optional[str] = None
+        current_thought: Optional[dict[str, Any]] = None
+        current_agent_msg: Optional[dict[str, Any]] = None
 
         delay = 1  # Initial delay between retries
         async with self.semaphore:
@@ -121,46 +128,85 @@ class ClaudeChatAgent(BaseAgent):
                         collected_messages = []
                         collected_tool_calls = []
                         input_tokens = 0
+                        model_outputs = []
 
                         async for event in stream:
                             if event.type == "message_start":
                                 input_tokens = event.message.usage.input_tokens
 
+                            elif event.type == "content_block_delta":
+                                delta = event.delta
+                                if delta.type == "signature_delta":
+                                    current_thought['signature'] = delta.signature
+                                elif delta.type == "thinking_delta":
+                                    if current_block_type == "redacted_thinking":
+                                        current_thought['data'] = current_thought['data'] + delta.data
+                                    else:
+                                        current_thought['thinking'] = current_thought['thinking'] + delta.thinking
+                                        await self._raise_thought_delta(delta.thinking, **callback_opts)
                             elif event.type == 'message_stop':
                                 output_tokens = event.message.usage.output_tokens
                                 await self._raise_completion_end(opts["completion_opts"], stop_reason=stop_reason, input_tokens=input_tokens, output_tokens=output_tokens, **callback_opts)
+
+                                # TODO: This will need moved when I fix tool call messages
+                                messages.append({'role': 'assistant', 'content': model_outputs})
+
                                 if stop_reason != 'tool_use':
-                                    output_text = "".join(collected_messages)
-                                    messages.append(await self._save_interaction_to_session(session_manager, output_text))
                                     await self._raise_history_event(messages, **callback_opts)
                                     await self._raise_interaction_end(id=interaction_id, **callback_opts)
                                     return messages
                                 else:
+
                                     await self._raise_tool_call_start(collected_tool_calls, vendor="anthropic",
                                                                       **callback_opts)
+                                    # TODO: These should probably be part of the model output
                                     messages.extend(await self.__tool_calls_to_messages(collected_tool_calls, tool_chest))
                                     await self._raise_tool_call_end(collected_tool_calls, messages[-1]['content'],
                                                                     vendor="anthropic", **callback_opts)
                                     await self._raise_history_event(messages, **callback_opts)
 
                             elif event.type == "content_block_start":
-                                content_type = event.content_block.type
-                                if content_type == "text":
+                                current_block_type = event.content_block.type
+                                current_agent_msg = None
+                                current_thought = None
+
+                                if current_block_type == "text":
                                     content = event.content_block.text
+                                    current_agent_msg = copy.deepcopy(event.content_block.model_dump())
+                                    model_outputs.append(current_agent_msg)
                                     if len(content) > 0:
-                                        collected_messages.append(content)
                                         await self._raise_text_delta(content, **callback_opts)
-                                elif content_type == "tool_use":
+                                elif current_block_type == "tool_use":
                                     tool_call = event.content_block.model_dump()
                                     collected_tool_calls.append(tool_call)
                                     await self._raise_tool_call_delta(collected_tool_calls, **callback_opts)
+                                elif current_block_type == "thinking" or current_block_type == "redacted_thinking":
+                                    current_thought = copy.deepcopy(event.content_block.model_dump())
+                                    model_outputs.append(current_thought)
+
+                                    if current_block_type == "redacted_thinking":
+                                        content = "*redacted*"
+                                    else:
+                                        content = current_thought['thinking']
+
+                                    await self._raise_thought_delta(content, **callback_opts)
                                 else:
-                                    await self._raise_system_event(f"content_block_start Unknown content type: {content_type}", callback_opts)
+                                    await self._raise_system_event(f"content_block_start Unknown content type: {current_block_type}", **callback_opts)
                             elif event.type == "input_json":
                                 collected_tool_calls[-1]['input'] = event.snapshot
+
                             elif event.type == "text":
-                                collected_messages.append(event.text)
-                                await self._raise_text_delta(event.text, **callback_opts)
+                                if current_block_type == "text":
+                                    current_agent_msg['text'] = current_agent_msg['text'] + event.text
+                                    await self._raise_text_delta(event.text, **callback_opts)
+                                elif current_block_type == "thinking" or current_block_type == "redacted_thinking":
+                                    if current_block_type == "redacted_thinking":
+                                        current_thought['data'] = current_thought['data'] + event.data
+                                    else:
+                                        current_thought['thinking'] = current_thought['thinking'] + event.text
+                                        await self._raise_thought_delta(event.text, **callback_opts)
+
+
                             elif event.type == 'message_delta':
                                 stop_reason = event.delta.stop_reason
 
@@ -170,7 +216,7 @@ class ClaudeChatAgent(BaseAgent):
                     await self._exponential_backoff(delay)
                     delay *= 2
                 except Exception as e:
-                    await self._raise_system_event(f"Exception calling `client.messages.create`.\n\n{e}\n", **callback_opts)
+                    await self._raise_system_event(f"Exception calling `client.messages.stream`.\n\n{e}\n", **callback_opts)
                     await self._raise_completion_end(opts["completion_opts"], stop_reason="exception", **callback_opts)
 
                     return []

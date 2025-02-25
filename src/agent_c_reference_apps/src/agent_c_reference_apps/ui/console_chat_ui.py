@@ -279,6 +279,9 @@ class ConsoleChatUI:
             self._handle_text_delta_event(event)
             return
 
+        if event.type == 'thought_delta':
+            self._handle_text_delta_event(event)
+            return
 
         if event.type == 'render_media':
             await self.render_media(event)

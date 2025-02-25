@@ -47,10 +47,18 @@ class TextDeltaEvent(SessionEvent):
       a new message should be created.
     """
     def __init__(self, **data):
-        super().__init__(type = "text_delta", **data)
+        if data.get('type', None) == None:
+            data['type'] = "text_delta"
+
+        super().__init__( **data)
 
     content: str = Field(..., description="A chunk of content text.")
     format: str = Field("markdown", description="The format of the content, default is markdown")
+
+class ThoughtDeltaEvent(TextDeltaEvent):
+    def __init__(self, **data):
+        super().__init__(type = "thought_delta", **data)
+        self.role = self.role + " (thought)"
 
 class ReceivedAudioDeltaEvent(SessionEvent):
     """
