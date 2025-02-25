@@ -20,6 +20,9 @@ fi
 echo "Activating virtual environment"
 source .venv/bin/activate
 
+echo "Upgrading pip to the latest version"
+pip install --upgrade pip
+
 # Install the requirements
 echo "Installing deps"
 chmod a+x scripts/install_deps.sh
