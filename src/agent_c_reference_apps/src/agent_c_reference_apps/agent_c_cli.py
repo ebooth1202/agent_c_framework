@@ -314,7 +314,7 @@ class CLIChat:
 
                 await self.agent.chat(session_manager=self.session_manager, user_message=user_message, prompt_metadata=await self.__build_prompt_metadata(),
                                       messages=self.current_chat_log, output_format=self.agent_output_format, images=image_inputs, audio=audio_inputs,
-                                      voice=self.agent_voice)
+                                      voice=self.agent_voice, budget_tokens=10000)
 
                 await self.session_manager.flush()
             except (EOFError, KeyboardInterrupt):
@@ -378,7 +378,7 @@ def main():
     model: str = args.model
     backend: str = 'openai'
     if args.claude and args.model == 'gpt-4o':
-        model = 'claude-3-sonnet-20240229'
+        model = 'claude-3-7-sonnet-20250219'
 
     if args.claude:
         backend = 'claude'

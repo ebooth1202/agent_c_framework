@@ -221,8 +221,13 @@ class GPTChatAgent(BaseAgent):
 
                             if len(chunk.choices) == 0:
                                 # If there are no choices, we're done receiving chunks
-                                input_tokens = chunk.usage.prompt_tokens
-                                output_tokens = chunk.usage.completion_tokens
+                                if chunk.usage is not None:
+                                    input_tokens = chunk.usage.prompt_tokens
+                                    output_tokens = chunk.usage.completion_tokens
+                                else:
+                                    input_tokens = -1
+                                    output_tokens = -1
+
                                 await self._raise_completion_end(opts["completion_opts"], stop_reason=stop_reason,
                                                                  input_tokens=input_tokens, output_tokens=output_tokens,
                                                                  **opts['callback_opts'])

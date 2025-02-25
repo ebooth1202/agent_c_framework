@@ -32,7 +32,7 @@ def main():
     model: str = args.model
     backend: str = 'openai'
     if args.claude and args.model == 'gpt-4o':
-        model = 'claude-3-5-sonnet-20241022'
+        model = 'claude-3-7-sonnet-20250219'
 
     if args.claude:
         backend = 'claude'

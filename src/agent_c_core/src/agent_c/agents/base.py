@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Union, Optional, Callable, Awaitable
 
 from agent_c.chat import ChatSessionManager
 from agent_c.models import ChatEvent, ImageInput, MemoryMessage
+from agent_c.models.events.chat import ThoughtDeltaEvent
 from agent_c.models.input.audio_input import AudioInput
 from agent_c.models.events import MessageEvent, ToolCallEvent, InteractionEvent, TextDeltaEvent, HistoryEvent, CompletionEvent, ToolCallDeltaEvent
 from agent_c.prompting import PromptBuilder
@@ -193,6 +194,9 @@ class BaseAgent:
 
     async def _raise_text_delta(self, content: str, **data):
         await self._raise_event(TextDeltaEvent(content=content, **data))
+
+    async def _raise_thought_delta(self, content: str, **data):
+        await self._raise_event(ThoughtDeltaEvent(content=content, **data))
 
     async def _raise_history_event(self, messages: List[dict[str, Any]], **data):
         await self._raise_event(HistoryEvent(messages=messages, **data))
