@@ -526,7 +526,8 @@ class GradioChat:
                         voice=self.agent_voice,
                         images=self.image_inputs if self.image_inputs else None,
                         audio=self.audio_inputs if self.audio_inputs else None,
-                        temperature=self.temperature
+                        temperature=self.temperature,
+                        budget_tokens=10000
                     )
 
                     if isinstance(self.debug_response, list):
@@ -823,6 +824,8 @@ class GradioChat:
             self.last_role = event.role
 
         if event.type == 'text_delta':
+            await self._handle_text_delta(event)
+        elif event.type == 'thinking_delta':
             await self._handle_text_delta(event)
         elif event.type == 'tool_call':
             await self._handle_tool_call_event(event, role_name)
