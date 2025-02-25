@@ -4,45 +4,74 @@ This project contains a fairly minimalist framework for interactive tool-using A
 
 The underlying agent handles things like streaming responses, parallel tool use, parallel tool calls, etc and allows us to either receive events via a callback, or consume content tokens via an async generator.  Both the agent and agent tools are fully async and designed to be non-blocking. 
 
-## Getting started
+## Pre-Requisites
 
-### Before you begin you will need:
+### Windows:
 
-- A decent Python IDE like PyCharm.
-- Python 3.10 or higher.
-    - On mac you may need to use an earlier version than the system or homebrew provide. If so, [pyenv](https://github.com/pyenv/pyenv) is recommended. To use 3.11.11 for example, you would run `pyenv install 3.11.11; penv local 3.11.11` in this directory
-- On Windows you will need the Microsoft visual c++ build tools.  You can get them via `winget install Microsoft.VisualStudio.2022.BuildTools`
+- [Git](https://git-scm.com/downloads/win) 
+- A decent Python IDE like [PyCharm (scroll to bottom of the page)](https://www.jetbrains.com/pycharm/download/).
+- [Python 3.12](https://www.python.org/downloads/release/python-3129/) or higher.
+    - Be aware, if you using anaconda your environment may conflict with the virtualenv that the helper scripts in ./scripts tries to create
+- [pyenv](https://github.com/pyenv-win/pyenv-win) is optional
+- [Microsoft visual c++ build tools](https://visualstudio.microsoft.com/downloads/).  
+    - or run: ```winget install Microsoft.VisualStudio.2022.BuildTools```
+    - ***Be sure to check the C++ development Option***
+- [Rust](https://www.rust-lang.org/tools/install)
+- [Node](https://nodejs.org/en/download)
+- [ffmpeg](https://ffmpeg.org/download.html#build-windows)
 
-## FFMPEG required for reference apps
+### Mac OS: 
+1. install xcode command line tools (if not already installed)
 
-```# on Ubuntu or Debian
-sudo apt update && sudo apt install ffmpeg
-
-# on Arch Linux
-sudo pacman -S ffmpeg
-
-# on MacOS using Homebrew (https://brew.sh/)
-brew install ffmpeg
-
-# on Windows using Chocolatey (https://chocolatey.org/)
-choco install ffmpeg
-
-# on Windows using Scoop (https://scoop.sh/)
-scoop install ffmpeg
+```bash
+xcode-select --install
 ```
 
+2. install homebrew (if not installed)
 
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+3. install python 3.12, pyenv, rust, and node (with npm), ffmpeg
+
+```bash
+brew install python@3.12 pyenv rust node ffmpeg
+```
+
+4. optional editors (or your favorite programmers editor)
+
+```bash
+brew install visual-studio-code
+brew install --cask pycharm-ce
+```
 ### Clone the repo
 
 ```shell
 git clone https://github.com/centricconsulting/agent_c_framework.git
+cd agent_c_framework
 ```
 
 ### Setup your Python development environment
 
-The batch file/shell script `inital_setup` can be ran to set up an isolated Python development environment and install the dependencies required to run Agent C.  If you'd rather do it yourself the steps are below, otherwise continue on.
+#### Specify a python version (if needed)
+```shell
+pyenv install 3.12
+pyenv local 3.12
+```
 
-#### Create an Python virtual environment in the project root.
+#### Run setup script
+Windows:
+```shell
+.\scripts\initial_setup.bat
+```
+
+Mac OS: 
+```bash
+./scripts/initial_setup.sh
+```
+
+#### ***Or Manual steps if you do not want to use the script in the previous step***
 
 ```shell
 python -m venv venv
@@ -54,6 +83,8 @@ While still in that same command line you will want to activate the environment.
 
 - On Linux/MacOS/WSL run: `source venv/bin/activate`
 - If you're on Windows run: `venv\Scripts\activate.bat`
+
+Optional, for some 
 
 Still in that same command line run the following to pull down all the dependencies
 - On Linux/MacOS/WSL run: `scripts/install_deps.sh`
@@ -77,9 +108,13 @@ Each time you pull latest it's recommended to install the packages again to ensu
 
 If you do not all ready have an Open AI API Key, that's a HARD requirement for working with this code.  Visit the signup page for the [Open AI Platform](https://platform.openai.com/signup) to sign up. 
 
-- A ChatGPT Pro subscription is not sufficient.
+API Keys can be found [here](https://platform.openai.com/settings/organization/api-keys) after signing in.
 
-After signing up, deposit $20 USD with them for usage credits.  **This is needed for GPT-4 and beyond access**
+You will need to prepay/deposit an amount such as $20 USD with them for usage credits. 
+
+Please note: A ChatGPT Pro subscription is not sufficient.
+
+Create an environment variable named `OPEN_API_KEY` with your api key as the value. In Windows, this can be a user environment variable (rather than system, though system will work). In Mac OS / linux, you would create it in your shell's initialization scripts, such as `~/.bash_profile`.
 
 #
 ### Set up your application environment
@@ -114,6 +149,7 @@ There are a small number of commands available within the app available by typin
 - `!keep` - will mark a session to be kept after exiting. By default, sessions are ephemeral and are deleted on app exit.
 - `!!!!` - will exit the app and without deleting the session.
 - `!compact` - will compact the message array being used for the chat down to the contents of the zep memory.  This is handy for clearing out tool calls and results or reducing the overall token count of the session. 
+- `!?` - show all commands
 
 In addition the up/down arrows act as a "command history" allowing you easy access to anything you've submitted as input to the app. 
 

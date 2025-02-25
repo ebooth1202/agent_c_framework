@@ -29,6 +29,10 @@ if errorlevel 1 (
     exit /b 1
 )
 
+:: Upgrade pip to latest version
+echo Upgrading Pip to the latest version.
+pip install --upgrade pip
+
 :: Install the requirements
 echo Installing dependencies.
 call scripts/install_deps.bat
