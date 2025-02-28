@@ -14,22 +14,50 @@ from .core.setup import create_application
 
 load_dotenv(override=True)
 
-# Disable FastAPI's default logging
+# Configure root logger
+LoggingManager.configure_root_logger()
+
+# Configure external loggers
+# There are some loggers that we've configured to only show errors
+LoggingManager.configure_external_loggers()
+
+# Custom overrides for Logging
+# LoggingManager.configure_external_loggers({
+#     "httpx": "ERROR",  # Only show errors for httpx
+#     "my.custom.module": "DEBUG"  # But keep DEBUG for a specific module
+# })
+
+# Configure specific loggers for FastAPI components
+logging_manager = LoggingManager("agent_c_api")
+logger = logging_manager.get_logger()
+
+# Set FastAPI logger to use our configuration
+# This ensures FastAPI's own logs use our formatting
+fastapi_logger.handlers = []
+for handler in logger.handlers:
+    fastapi_logger.addHandler(handler)
+fastapi_logger.setLevel(logger.level)
+fastapi_logger.propagate = False
+
+# Also properly configure uvicorn's loggers
+uvicorn_logger = logging.getLogger("uvicorn")
+uvicorn_logger.handlers = []
+for handler in logger.handlers:
+    uvicorn_logger.addHandler(handler)
+uvicorn_logger.setLevel(logger.level)
+uvicorn_logger.propagate = False
+
+# Disable specific noisy loggers that might interfere
 logging.getLogger("uvicorn.access").handlers = []
 logging.getLogger("uvicorn.error").handlers = []
-fastapi_logger.handlers = []
-# Setup custom log handling
-logging_manager = LoggingManager("main")
-logger = logging_manager.get_logger()
-# Set FastAPI logger to use the same handlers as our custom logger
-fastapi_logger.handlers = logger.handlers
-fastapi_logger.setLevel(logger.level)
 
 
 app = create_application(router=router, settings=settings)
 for route in app.routes:
-    logger.debug(f"Registered route: {route.path}")
+    logger.info(f"Registered route: {route.path}")
 
 def run():
     """Entrypoint for the API"""
-    uvicorn.run("agent_c_api.main:app", host=settings.HOST, port=settings.PORT, reload=settings.RELOAD)
+    logger.info(f"Starting API server on {settings.HOST}:{settings.PORT}")
+    uvicorn.run("agent_c_api.main:app", host=settings.HOST, port=settings.PORT,
+                reload=settings.RELOAD, log_level=LoggingManager.LOG_LEVEL.lower())

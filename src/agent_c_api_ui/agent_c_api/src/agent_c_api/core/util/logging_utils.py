@@ -1,112 +1,146 @@
-# logging_utils.py
+# agent_c_api/core/util/logging_utils.py
 import logging
-import threading
 import os
-from pathlib import Path
-from agent_c.util import debugger_is_active
+import sys
+from typing import Optional, Dict, Any
+import threading
+
+# Global event for debug mode
+_debug_event = threading.Event()
+
+
+# ANSI color codes for terminal output
+class Colors:
+    RESET = "\033[0m"
+    BLACK = "\033[30m"
+    RED = "\033[31m"
+    GREEN = "\033[32m"
+    YELLOW = "\033[33m"
+    BLUE = "\033[34m"
+    MAGENTA = "\033[35m"
+    CYAN = "\033[36m"
+    WHITE = "\033[37m"
+    BOLD = "\033[1m"
+    UNDERLINE = "\033[4m"
+
+
+# Define a colored formatter
+class ColoredFormatter(logging.Formatter):
+    """
+    A formatter that adds colors to logs based on their level.
+    """
+    LEVEL_COLORS = {
+        logging.DEBUG: Colors.BLUE,
+        logging.INFO: Colors.GREEN,
+        logging.WARNING: Colors.YELLOW,
+        logging.ERROR: Colors.RED,
+        logging.CRITICAL: Colors.BOLD + Colors.RED,
+    }
+
+    def format(self, record):
+        # Get the original formatted message
+        formatted_message = super().format(record)
+
+        # Add color to the level name based on the level
+        level_color = self.LEVEL_COLORS.get(record.levelno, Colors.RESET)
+
+        # Color just the level name, keeping the rest of the formatting the same
+        parts = formatted_message.split(" - ", 2)  # Split on first two ' - ' sequences
+        if len(parts) >= 3:
+            # Format: timestamp - logger - level - message
+            timestamp, logger_name, rest = parts
+            level_end = rest.find(" - ")
+            if level_end > 0:
+                level = rest[:level_end]
+                message = rest[level_end:]
+                return f"{timestamp} - {logger_name} - {level_color}{level}{Colors.RESET}{message}"
+
+        # Fallback if the format doesn't match expected pattern
+        return formatted_message
 
 
 class LoggingManager:
-    _instance = None
-    _debug_event = None
-    _initialized_loggers = set() # Track which loggers have been created
+    """
+    Centralized logging manager for the application that ensures consistent
+    logging configuration across all modules.
 
-    def __new__(cls, logger_name: str, log_dir: str = "logs"):
-        """
-        Ensure we only create one debug event across all instances.
+    This class provides a unified approach to logging by:
+    1. Creating loggers with consistent formatting
+    2. Supporting different log levels based on environment
+    3. Managing debug mode through a shared event
+    4. Supporting both file and console logging
 
-        Args:
-            logger_name (str): Name for the logger instance
-            log_dir (str): Directory for log files. Defaults to "logs"
-        """
-        if cls._instance is None:
-            cls._instance = super(LoggingManager, cls).__new__(cls)
-            cls._debug_event = threading.Event()
-            if debugger_is_active():
-                cls._debug_event.set()
+    Attributes:
+        logger_name (str): Name of the logger to create/retrieve
+        _logger (logging.Logger): The configured logger instance
+    """
 
-            # Initialize instance attributes here
-            cls._instance.log_dir = log_dir
-            cls._instance._formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        return cls._instance
+    # Class variables for shared configuration
+    # LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    LOG_LEVEL = os.getenv('LOG_LEVEL', 'DEBUG').upper() # This is where we can change debug log levels.
+    FILE_LOG_ENABLED = os.getenv('FILE_LOG_ENABLED', 'true').lower() == 'true'
+    LOG_FILE = os.getenv('LOG_FILE', 'logs\\agent_c_api.log')
+
+    # Track created loggers to avoid duplicate handlers
+    _loggers: Dict[str, logging.Logger] = {}
 
     def __init__(self, logger_name: str):
         """
-        Initialize the logging manager.
+        Initialize the logging manager for a specific module.
 
         Args:
-            logger_name (str): Name for the logger instance
+            logger_name (str): Name of the logger, typically __name__ from the calling module
         """
-        if logger_name not in self._initialized_loggers:
-            self.logger_name = logger_name
-            self.logger = self.__setup_logging()
-            self._initialized_loggers.add(logger_name)
+        self.logger_name = logger_name
+        self._logger = self._get_or_create_logger()
 
-    def __ensure_log_directory(self):
-        """Create log directory if it doesn't exist."""
-        if not Path(self.log_dir).exists():
-            Path(self.log_dir).mkdir(parents=True)
-
-    def __setup_logging(self) -> logging.Logger:
+    def _get_or_create_logger(self) -> logging.Logger:
         """
-        Set up a logger instance with specified logging configurations.
+        Get an existing logger or create a new one with the proper configuration.
 
         Returns:
             logging.Logger: Configured logger instance
         """
+        # Return existing logger if already created
+        if self.logger_name in LoggingManager._loggers:
+            return LoggingManager._loggers[self.logger_name]
+
+        # Create new logger
         logger = logging.getLogger(self.logger_name)
 
-        # Only add handlers if they don't exist
-        if not logger.handlers and self.logger_name not in self._initialized_loggers:
-            # Create handlers
-            console_handler = logging.StreamHandler()
-            console_handler.setFormatter(self._formatter)
+        # Set log level
+        try:
+            logger.setLevel(getattr(logging, self.LOG_LEVEL))
+        except AttributeError:
+            logger.setLevel(logging.INFO)
+            print(f"Invalid LOG_LEVEL '{self.LOG_LEVEL}', defaulting to INFO")
 
-            if hasattr(console_handler.stream, 'reconfigure'):
-                console_handler.stream.reconfigure(encoding='utf-8')
+        # IMPORTANT: Remove existing handlers to prevent duplicates
+        if logger.handlers:
+            logger.handlers.clear()
 
-            self.__ensure_log_directory()
-            log_path = Path(self.log_dir) / f"{self.logger_name.replace('.', '_')}.log"
-            file_handler = logging.FileHandler(log_path, encoding='utf-8')
-            file_handler.setFormatter(self._formatter)
+        # Also disable propagation to prevent duplicate logs from parent loggers
+        logger.propagate = False
 
+        # Only add handlers if none exist to prevent duplicates
+        if not logger.handlers:
+            # Console handler
+            console_handler = logging.StreamHandler(sys.stdout)
+            console_handler.setFormatter(logging.Formatter(self.LOG_FORMAT))
             logger.addHandler(console_handler)
-            logger.addHandler(file_handler)
 
-            # Prevent the logger from propagating messages to the root logger
-            logger.propagate = False
+            # File handler (optional)
+            if self.FILE_LOG_ENABLED:
+                try:
+                    file_handler = logging.FileHandler(self.LOG_FILE, encoding='utf-8')
+                    file_handler.setFormatter(logging.Formatter(self.LOG_FORMAT))
+                    logger.addHandler(file_handler)
+                except (IOError, PermissionError) as e:
+                    print(f"Could not create log file {self.LOG_FILE}: {e}")
 
-        other_loggers = [
-            'httpx', 'LiteLLM', 'openai', 'httpcore', 'websockets',
-            'speechmatics', 'asyncio', 'linkedin_api', 'httpcore',
-            'urllib3', 'gradio'
-        ]
-
-        debug_other_loggers = [
-            'agent_c_core', 'agent_c_tools', 'agent_c_tools.tools',
-            'agent_c_demo', 'agent_c_demo.tools',
-            'agent_c_reference_apps.react_fastapi.backend'
-        ]
-
-        if self._debug_event.is_set():
-            logger.setLevel(logging.DEBUG)
-            for log in debug_other_loggers:
-                debug_logger = logging.getLogger(log)
-                debug_logger.setLevel(logging.DEBUG)
-                # Add file handler to debug loggers if they don't have one
-                if not any(isinstance(h, logging.FileHandler) for h in debug_logger.handlers):
-                    debug_file_handler = logging.FileHandler(
-                        os.path.join(self.log_dir, f"{log.replace('.', '_')}.log"),
-                        encoding='utf-8'
-                    )
-                    debug_file_handler.setFormatter(self._formatter)
-                    debug_logger.addHandler(debug_file_handler)
-        else:
-            logger.setLevel(logging.WARN)
-
-        for log in other_loggers:
-            logging.getLogger(log).setLevel(logging.WARN)
-
+        # Store logger for reuse
+        LoggingManager._loggers[self.logger_name] = logger
         return logger
 
     def get_logger(self) -> logging.Logger:
@@ -116,18 +150,97 @@ class LoggingManager:
         Returns:
             logging.Logger: The configured logger
         """
-        return self.logger
+        return self._logger
 
     @classmethod
-    def get_debug_event(cls) -> threading.Event:
+    def configure_root_logger(cls) -> None:
         """
-        Get the shared debug event instance.
+        Configure the root logger with consistent formatting.
+        This should be called once at application startup.
+        """
+        root_logger = logging.getLogger()
+
+        # Set the root logger level
+        try:
+            root_logger.setLevel(getattr(logging, cls.LOG_LEVEL))
+        except AttributeError:
+            root_logger.setLevel(logging.INFO)
+
+        # Only add handlers if none exist
+        if not root_logger.handlers:
+            # Console handler
+            console_handler = logging.StreamHandler(sys.stdout)
+            console_handler.setFormatter(logging.Formatter(cls.LOG_FORMAT))
+            root_logger.addHandler(console_handler)
+
+            # File handler (optional)
+            if cls.FILE_LOG_ENABLED:
+                try:
+                    file_handler = logging.FileHandler(cls.LOG_FILE, encoding='utf-8')
+                    file_handler.setFormatter(logging.Formatter(cls.LOG_FORMAT))
+                    root_logger.addHandler(file_handler)
+                except (IOError, PermissionError) as e:
+                    print(f"Could not create log file {cls.LOG_FILE}: {e}")
+
+    @classmethod
+    def configure_external_loggers(cls, logger_levels=None):
+        """
+        Configure external library loggers to appropriate levels.
+
+        Args:
+            logger_levels (dict, optional): Dictionary mapping logger names to their desired levels.
+                Example: {"httpx": "WARNING", "uvicorn.access": "ERROR"}
+        """
+        # Default configuration for common noisy loggers
+        default_levels = {
+            "httpx": "WARNING",
+            "urllib3": "WARNING",
+            "uvicorn.access": "WARNING",
+            "asyncio": "WARNING",
+            # Add others as needed
+        }
+
+        # Update with any custom settings
+        if logger_levels:
+            default_levels.update(logger_levels)
+
+        # Apply the configuration
+        for logger_name, level in default_levels.items():
+            try:
+                level_value = getattr(logging, level.upper())
+                logging.getLogger(logger_name).setLevel(level_value)
+            except (AttributeError, TypeError) as e:
+                print(f"Error setting log level for {logger_name}: {e}")
+
+    @staticmethod
+    def get_debug_event() -> threading.Event:
+        """
+        Get the shared debug event for coordination across modules.
 
         Returns:
             threading.Event: The debug event
         """
-        if cls._debug_event is None:
-            cls._debug_event = threading.Event()
-            if debugger_is_active():
-                cls._debug_event.set()
-        return cls._debug_event
+        return _debug_event
+
+    @staticmethod
+    def set_debug_mode(enabled: bool = True) -> None:
+        """
+        Set the debug mode state.
+
+        Args:
+            enabled (bool): Whether debug mode should be enabled
+        """
+        if enabled:
+            _debug_event.set()
+        else:
+            _debug_event.clear()
+
+    @staticmethod
+    def is_debug_mode() -> bool:
+        """
+        Check if debug mode is enabled.
+
+        Returns:
+            bool: True if debug mode is enabled, False otherwise
+        """
+        return _debug_event.is_set()
