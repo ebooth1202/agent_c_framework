@@ -151,11 +151,15 @@ const AgentConfigDisplay = ({sessionId, className = "", settingsVersion}) => {
             ? config.model_info.reasoning_effort
             : "undefined",
         "Extended Thinking": config.model_info?.extended_thinking != null
-            ? (config.model_info.extended_thinking ? "Enabled" : "Disabled")
+            ? (typeof config.model_info.extended_thinking === 'object'
+                ? (config.model_info.extended_thinking.enabled ? "Enabled" : "Disabled")
+                : (config.model_info.extended_thinking ? "Enabled" : "Disabled"))
             : "undefined",
-        "Thinking Budget": config.model_info?.budget_tokens != null
-            ? `${config.model_info.budget_tokens.toLocaleString()} tokens`
-            : "undefined",
+        "Thinking Budget": config.model_info?.extended_thinking?.budget_tokens != null
+            ? `${config.model_info.extended_thinking.budget_tokens.toLocaleString()} tokens`
+            : (config.model_info?.budget_tokens != null
+                ? `${config.model_info.budget_tokens.toLocaleString()} tokens`
+                : "undefined"),
         "Persona": config.persona_name ?? "undefined",
         "Active Tools": config.initialized_tools ? config.initialized_tools.length : "undefined",
         "Session ID": config.session_id ?? "undefined",

@@ -81,7 +81,7 @@ class AgentManager:
         Raises:
             Exception: If agent initialization fails
         """
-        self.logger.debug(f"Creating new session with kwargs: {kwargs}\n")
+        # self.logger.debug(f"Creating new session with kwargs: {kwargs}\n")
 
         # If updating existing session, use that ID, otherwise generate new one
         session_id = existing_session_id if existing_session_id else str(uuid.uuid4())

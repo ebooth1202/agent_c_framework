@@ -161,7 +161,7 @@ export const SessionProvider = ({children}) => {
     };
 
     // Initialize (or reinitialize) a session
-    // Improved initializeSession function with better fallback handling
+    // Modified initializeSession function to correctly handle passed parameters
     const initializeSession = async (forceNew = false, initialModel = null, modelConfigsData = null) => {
         setIsReady(false);
         try {
@@ -243,8 +243,57 @@ export const SessionProvider = ({children}) => {
                 console.log('Sending custom prompt to backend');
             }
 
-            // Add model parameters
-            addModelParameters(queryParams, currentModel);
+            // Use parameters directly from initialModel if provided, otherwise use model config
+            if (initialModel && typeof initialModel === 'object') {
+                // Add temperature if available from initialModel
+                if ('temperature' in initialModel) {
+                    queryParams.append('temperature', initialModel.temperature);
+                    console.log(`Setting temperature=${initialModel.temperature}`);
+                }
+
+                // Add reasoning_effort if available from initialModel
+                if ('reasoning_effort' in initialModel) {
+                    queryParams.append('reasoning_effort', initialModel.reasoning_effort);
+                    console.log(`Setting reasoning_effort=${initialModel.reasoning_effort}`);
+                }
+
+                // Handle extended_thinking (either as boolean or object)
+                if ('extended_thinking' in initialModel) {
+                    const extThinking = initialModel.extended_thinking;
+
+                    // Handle both object and boolean formats
+                    if (typeof extThinking === 'object') {
+                        // It's an object with enabled property
+                        queryParams.append('extended_thinking.enabled', extThinking.enabled.toString());
+
+                        // If enabled is true, add budget_tokens
+                        if (extThinking.enabled && ('budget_tokens' in initialModel)) {
+                            queryParams.append('extended_thinking.budget_tokens', initialModel.budget_tokens);
+                        } else if (extThinking.enabled && ('budget_tokens' in extThinking)) {
+                            queryParams.append('extended_thinking.budget_tokens', extThinking.budget_tokens);
+                        }
+
+                        console.log(`Setting extended_thinking as object with enabled=${extThinking.enabled}`);
+                    } else {
+                        // It's a boolean
+                        queryParams.append('extended_thinking.enabled', extThinking.toString());
+
+                        // If enabled is true, add budget_tokens
+                        if (extThinking && ('budget_tokens' in initialModel)) {
+                            queryParams.append('extended_thinking.budget_tokens', initialModel.budget_tokens);
+                        }
+
+                        console.log(`Setting extended_thinking=${extThinking}`);
+                    }
+                }
+                // Fallback to addModelParameters when no direct parameters were provided
+                else {
+                    addModelParameters(queryParams, currentModel);
+                }
+            } else {
+                // Use model config parameters
+                addModelParameters(queryParams, currentModel);
+            }
 
             // Send the initialize request
             const response = await fetch(`${API_URL}/initialize?${queryParams}`);
@@ -345,18 +394,6 @@ export const SessionProvider = ({children}) => {
                     setModelName(values.modelName);
                     setSelectedModel(newModel);
 
-                    // Create the model object with current persona and prompt
-                    // IMPORTANT: Make sure we're using the correct property names expected by the backend
-                    const modelWithPersona = {
-                        id: newModel.id,
-                        backend: newModel.backend,
-                        persona_name: persona,
-                        // Explicitly use custom_prompt (not customPrompt) for consistency with backend
-                        custom_prompt: customPrompt
-                    };
-
-                    console.log('Changing model with custom prompt:', customPrompt ?
-                        `${customPrompt.substring(0, 30)}...` : 'None');
 
                     // Determine extended thinking parameters based on new model
                     const hasExtendedThinking = !!newModel.parameters?.extended_thinking;
@@ -374,6 +411,21 @@ export const SessionProvider = ({children}) => {
                     };
 
                     setModelParameters(newParameters);
+
+                    // Create the model object with all the data
+                    const modelWithPersona = {
+                        id: newModel.id,
+                        backend: newModel.backend,
+                        persona_name: persona,
+                        custom_prompt: customPrompt,
+                        extended_thinking: extendedThinkingDefault,
+                        budget_tokens: budgetTokensDefault,
+                        reasoning_effort: newParameters.reasoning_effort,
+                        temperature: newParameters.temperature
+                    };
+
+                    // console.log('Changing model with custom prompt:', customPrompt ?
+                    //     `${customPrompt.substring(0, 10)}...` : 'None');
 
                     // Initialize new session with the custom prompt
                     await initializeSession(false, modelWithPersona);
