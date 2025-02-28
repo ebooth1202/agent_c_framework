@@ -157,23 +157,18 @@ def transform_flat_to_nested(params: Dict[str, Any], param_map: Dict[str, Dict])
     # Find all parent nodes in the parameter map
     parent_nodes = {k: v for k, v in param_map.items() if v.get("is_parent", False)}
 
-    # Identify flat parameters that should be nested
-    flat_to_nest = {}
-    for param in params:
-        # Check if this is a flattened nested param (e.g., "extended_thinking.budget_tokens")
-        if "." in param:
-            parent_param = param.split(".")[0]
-            if parent_param in parent_nodes:
-                flat_to_nest[param] = param
-        # Check if this is a top-level parent param with children
-        elif param in parent_nodes:
-            # If extended_thinking is boolean in the request but an object in the config
-            if parent_nodes[param]["is_parent"]:
-                flat_to_nest[param] = param
+    # Create a map of dot-notation keys to their parent paths
+    parent_for_child = {}
+    for parent_path in parent_nodes:
+        parent_name = parent_path.split(".")[-1]
+        for child_path in parent_nodes[parent_path].get("children", []):
+            child_key = child_path.split(".")[-1]
+            flat_key = f"{parent_name}.{child_key}"
+            parent_for_child[flat_key] = parent_name
 
     # Process simple (non-nested) parameters first
     for param, value in params.items():
-        if param not in flat_to_nest and "." not in param:
+        if "." not in param and param not in parent_nodes:
             # Direct parameter, add to result
             if param in param_map:
                 param_type = param_map[param].get("type", str)
@@ -183,77 +178,92 @@ def transform_flat_to_nested(params: Dict[str, Any], param_map: Dict[str, Dict])
                 result[param] = value
             processed_params.add(param)
 
+    # Track which parent objects need to be created
+    parents_to_create = set()
+    for param in params:
+        if "." in param:
+            parent, child = param.split(".", 1)
+            parents_to_create.add(parent)
+
     # Process nested parameters
     for parent_path, parent_info in parent_nodes.items():
-        parent_name = parent_path  # e.g., "extended_thinking"
+        parent_name = parent_path.split(".")[-1]  # e.g., "extended_thinking"
 
-        # Check if we have any parameters for this parent
-        has_child_params = False
-        for param in params:
-            if param.startswith(f"{parent_name}.") or param == parent_name:
-                has_child_params = True
-                break
+        # Skip if we don't need this parent
+        if parent_name not in parents_to_create and parent_name not in params:
+            # Check if this is a required parent for validation
+            if parent_info.get("required", True) and parent_name not in result:
+                # Add an empty object for required parents
+                logger.debug(f"Adding empty object for required parent: {parent_name}")
+                result[parent_name] = {"enabled": False}
+            continue
 
-        if has_child_params:
-            # Initialize nested object
-            nested_obj = {}
+        # Initialize nested object if any child param exists or parent itself exists
+        nested_obj = {}
+        needs_parent = False
 
-            # Process direct children
-            for child_path in parent_info.get("children", []):
-                child_name = child_path.split(".")[-1]  # e.g., "budget_tokens"
+        # Check for directly provided parent parameter (e.g., "extended_thinking=true")
+        if parent_name in params:
+            parent_value = params[parent_name]
+            processed_params.add(parent_name)
 
-                # Check if we have a flattened version
-                flat_key = f"{parent_name}.{child_name}"
+            # Check if any of the children is named "enabled"
+            has_enabled_child = any(
+                path.split(".")[-1] == "enabled" for path in parent_info.get("children", [])
+            )
 
-                if flat_key in params:
-                    # We have a flattened version (e.g., "extended_thinking.budget_tokens")
-                    child_type = param_map[child_path].get("type", str)
-                    nested_obj[child_name] = convert_value_to_type(params[flat_key], child_type)
-                    processed_params.add(flat_key)
-                elif child_name in params:
-                    # We have the child as a direct param
-                    child_type = param_map[child_path].get("type", str)
-                    nested_obj[child_name] = convert_value_to_type(params[child_name], child_type)
-                    processed_params.add(child_name)
+            if has_enabled_child:
+                # If we have an "enabled" child, set it from the parent value
+                nested_obj["enabled"] = convert_value_to_type(parent_value, bool)
+                needs_parent = True
+            else:
+                # Otherwise, try to parse as JSON if it's a string that looks like JSON
+                try:
+                    if isinstance(parent_value, str) and (
+                            parent_value.startswith("{") or parent_value.startswith("[")):
+                        import json
+                        json_value = json.loads(parent_value)
+                        nested_obj.update(json_value)
+                        needs_parent = True
+                except:
+                    # If we can't parse as JSON, treat as a direct value
+                    pass
 
-            # Special case: if parent itself is in params (e.g., "extended_thinking=true")
-            if parent_name in params:
-                # If it's a boolean value but should be an object with "enabled"
-                parent_value = params[parent_name]
+        # Process dot-notation parameters (e.g., "extended_thinking.enabled")
+        for param, value in params.items():
+            if "." in param:
+                parent, child = param.split(".", 1)
+                if parent == parent_name:
+                    # Find the child's path in the param_map
+                    child_type = None
+                    for child_path in parent_info.get("children", []):
+                        if child_path.split(".")[-1] == child:
+                            child_type = param_map[child_path].get("type", str)
+                            break
 
-                # Check if any of the children is named "enabled"
-                has_enabled_child = any(
-                    path.split(".")[-1] == "enabled" for path in parent_info.get("children", [])
-                )
+                    nested_obj[child] = convert_value_to_type(value, child_type or str)
+                    processed_params.add(param)
+                    needs_parent = True
 
-                if has_enabled_child:
-                    # If we have an "enabled" child, set it from the parent value
-                    nested_obj["enabled"] = convert_value_to_type(parent_value, bool)
-                else:
-                    # Otherwise, try to extract relevant info from the parent value
-                    # This handles cases where the parent might be a JSON string or similar
-                    try:
-                        if isinstance(parent_value, str) and (
-                                parent_value.startswith("{") or parent_value.startswith("[")):
-                            import json
-                            json_value = json.loads(parent_value)
-                            # Merge with existing nested_obj
-                            nested_obj.update(json_value)
-                    except:
-                        # If we can't parse as JSON, treat as a direct value
-                        pass
-
-                processed_params.add(parent_name)
-
-            # Add the constructed nested object to the result if not empty
-            if nested_obj:
-                result[parent_name] = nested_obj
+        # If parent is required and children have been processed, ensure parent exists
+        if parent_info.get("required", True) and needs_parent:
+            result[parent_name] = nested_obj
+        # If parent is not required but we have child values, add it
+        elif not parent_info.get("required", True) and needs_parent:
+            result[parent_name] = nested_obj
+        # If parent is required but no children were processed, create an empty object with defaults
+        elif parent_info.get("required", True) and parent_name not in result:
+            # For extended_thinking, provide a default of {enabled: false}
+            if parent_name == "extended_thinking":
+                result[parent_name] = {"enabled": False}
+            else:
+                result[parent_name] = {}
 
     # Add any remaining parameters that weren't processed
     for param, value in params.items():
         if param not in processed_params:
             result[param] = value
-
+    logger.debug(f"Transformed flat params: {result}")
     return result
 
 
@@ -313,21 +323,29 @@ async def get_dynamic_form_params(request: Request, agent_manager=Depends(get_ag
     form = await request.form()
     form_dict = dict(form)
 
+    logger.debug(f"RAW FORM DATA RECEIVED: {form_dict}")
+
     # Get model_name and backend from form
     model_name = form_dict.get("model_name")
     backend = form_dict.get("backend")
+
+    logger.debug(f"EXTRACTED model_name: {model_name}, backend: {backend}")
 
     # If both are provided, validate parameters normally
     if model_name and backend:
         try:
             # Retrieve allowed parameters from the configuration
             allowed_params = get_allowed_params(backend, model_name)
+            logger.debug(f"ALLOWED PARAMS: {allowed_params}")
 
             # Analyze the parameter structure
             param_map = analyze_config_structure(allowed_params)
+            logger.debug(f"PARAMETER STRUCTURE MAP: {param_map}")
 
             # Transform the form data to match expected nested structure
+            logger.debug(f"BEFORE TRANSFORM: {form_dict}")
             transformed_form = transform_flat_to_nested(form_dict, param_map)
+            logger.debug(f"AFTER TRANSFORM: {transformed_form}")
 
             # Debug the transformation
             logger.debug(f"Original form: {form_dict}")
@@ -337,7 +355,9 @@ async def get_dynamic_form_params(request: Request, agent_manager=Depends(get_ag
             DynamicFormParams = create_model("DynamicFormParams", **fields)
 
             try:
+                logger.debug(f"MODEL SCHEMA: {DynamicFormParams.model_json_schema()}")
                 validated_params = DynamicFormParams.parse_obj(transformed_form)
+                logger.debug(f"VALIDATED PARAMS: {validated_params}")
                 return {
                     "params": validated_params,
                     "original_form": form_dict,
@@ -346,9 +366,13 @@ async def get_dynamic_form_params(request: Request, agent_manager=Depends(get_ag
                 }
             except Exception as e:
                 logger.error(f"Form parameter validation error: {str(e)}")
+                import traceback
+                logger.error(f"VALIDATION ERROR DETAILS: {traceback.format_exc()}")
                 raise HTTPException(status_code=400, detail=f"Invalid parameters: {str(e)}")
         except Exception as e:
             logger.error(f"Error processing form parameters: {str(e)}")
+            import traceback
+            logger.error(f"PROCESSING ERROR DETAILS: {traceback.format_exc()}")
             raise HTTPException(status_code=400, detail=f"Error processing parameters: {str(e)}")
 
     # If we're missing model info, just return the form data

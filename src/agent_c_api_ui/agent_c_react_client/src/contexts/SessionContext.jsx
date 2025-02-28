@@ -461,6 +461,50 @@ export const SessionProvider = ({children}) => {
                         formData.append('session_id', sessionId);
                         const updatedParameters = {...modelParameters};
 
+                        // ALWAYS include model_name and backend for all parameter updates
+                        // This is critical for complex parameters like extended_thinking
+                        formData.append('model_name', modelName);
+                        formData.append('backend', selectedModel?.backend);
+
+                        // Handle extended thinking parameters - ORDER MATTERS!!!!
+                        if ('extended_thinking' in values) {
+                            const extendedThinking = values.extended_thinking;
+                            updatedParameters.extended_thinking = extendedThinking;
+
+                            // If extended thinking is disabled, set budget_tokens to 0
+                            if (extendedThinking === false) {
+                                updatedParameters.budget_tokens = 0;
+                                formData.append('extended_thinking.enabled', 'false');
+                                formData.append('extended_thinking.budget_tokens', '0');
+                            } else {
+                                // Get budget tokens (either from values or current state)
+                                const budgetTokens = 'budget_tokens' in values
+                                    ? values.budget_tokens
+                                    : (updatedParameters.budget_tokens || 5000);
+
+                                updatedParameters.budget_tokens = budgetTokens;
+                                formData.append('extended_thinking.enabled', 'true');
+                                formData.append('extended_thinking.budget_tokens', budgetTokens.toString());
+                            }
+                        }
+                        // Handle budget_tokens separately (only if extended_thinking wasn't updated)
+                        else if ('budget_tokens' in values) {
+                            const budgetTokens = values.budget_tokens;
+                            updatedParameters.budget_tokens = budgetTokens;
+
+                            // If budget_tokens is 0, also disable extended thinking
+                            if (budgetTokens === 0) {
+                                updatedParameters.extended_thinking = false;
+                                formData.append('extended_thinking.enabled', 'false');
+                                formData.append('extended_thinking.budget_tokens', '0');
+                            } else {
+                                // Make sure extended thinking is enabled if setting non-zero budget
+                                updatedParameters.extended_thinking = true;
+                                formData.append('extended_thinking.enabled', 'true');
+                                formData.append('extended_thinking.budget_tokens', budgetTokens.toString());
+                            }
+                        }
+
                         // non-reasoning model parameters
                         if ('temperature' in values) {
                             updatedParameters.temperature = values.temperature;
@@ -473,25 +517,37 @@ export const SessionProvider = ({children}) => {
                             formData.append('reasoning_effort', values.reasoning_effort);
                         }
                         // claude reasoning model parameters
-                        if ('extended_thinking' in values) {
-                            updatedParameters.extended_thinking = values.extended_thinking;
-                            formData.append('extended_thinking', values.extended_thinking);
-
-                            // If extended thinking is disabled, set budget tokens to 0
-                            if (!values.extended_thinking) {
-                                updatedParameters.budget_tokens = 0;
-                                formData.append('budget_tokens', '0');
-                            }
-                        }
-
-                        if ('budget_tokens' in values) {
-                            // Only update budget tokens if extended thinking is enabled
-                            if (updatedParameters.extended_thinking) {
-                                updatedParameters.budget_tokens = values.budget_tokens;
-                                formData.append('budget_tokens', values.budget_tokens);
-                            }
-                        }
-
+                        // if (selectedModel?.parameters?.extended_thinking) {
+                        //     const extendedThinking = 'extended_thinking' in values
+                        //         ? values.extended_thinking
+                        //         : updatedParameters.extended_thinking || false;
+                        //
+                        //     updatedParameters.extended_thinking = extendedThinking;
+                        //
+                        //     // Only use dot notation for nested fields
+                        //     formData.append('extended_thinking.enabled', extendedThinking.toString());
+                        //
+                        //     if (extendedThinking) {
+                        //         // If enabled, set budget tokens
+                        //         const budgetTokens = 'budget_tokens' in values
+                        //             ? values.budget_tokens
+                        //             : (updatedParameters.budget_tokens || 5000);
+                        //
+                        //         updatedParameters.budget_tokens = budgetTokens;
+                        //         formData.append('extended_thinking.budget_tokens', budgetTokens.toString());
+                        //     } else {
+                        //         // If disabled, set budget tokens to 0
+                        //         updatedParameters.budget_tokens = 0;
+                        //         formData.append('extended_thinking.budget_tokens', '0');
+                        //     }
+                        // }
+                        // // For backward compatibility - handle standalone budget_tokens update
+                        // else if ('budget_tokens' in values && updatedParameters.extended_thinking) {
+                        //     updatedParameters.budget_tokens = values.budget_tokens;
+                        //     formData.append('extended_thinking.enabled', 'true');
+                        //     formData.append('extended_thinking.budget_tokens', values.budget_tokens.toString());
+                        // }
+                        console.log('Form data being sent:', formData);
                         setModelParameters(updatedParameters);
                         await fetch(`${API_URL}/update_settings`, {
                             method: 'POST',

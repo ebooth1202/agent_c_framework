@@ -72,7 +72,10 @@ const ModelParameterControls = ({
      * @param {boolean} enabled - Whether extended thinking is enabled
      */
     const handleExtendedThinkingChange = (enabled) => {
+        // Update the UI state first
         setExtendedThinkingEnabled(enabled);
+
+        // Update the parent with the enabled state
         onParameterChange('extended_thinking', enabled);
 
         // If disabled, set budget_tokens to 0
@@ -102,8 +105,17 @@ const ModelParameterControls = ({
      */
     const handleBudgetTokensCommit = (value) => {
         const tokens = value[0];
-        setBudgetTokens(tokens);
-        onParameterChange('budget_tokens', tokens);
+        if (tokens === 0) {
+            setExtendedThinkingEnabled(false);
+            // Notify parent of both changes
+            onParameterChange('extended_thinking', false);
+            setBudgetTokens(0);
+            onParameterChange('budget_tokens', 0);
+        } else {
+            // Normal case - just update budget tokens
+            setBudgetTokens(tokens);
+            onParameterChange('budget_tokens', tokens);
+        }
     };
 
     useEffect(() => {

@@ -155,7 +155,7 @@
             "extended_thinking": {
               "enabled": true,
               "budget_tokens": {
-                "min":1,
+                "min": 0,
                 "max": 10000,
                 "default": 5000
               },
