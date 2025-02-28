@@ -101,6 +101,7 @@ class AgentManager:
                 additional_tools=additional_tools or [],
                 persona_name=persona_name,
                 agent_name=f"Agent_{session_id}",
+                custom_persona_text=kwargs.get('custom_persona_text', None),
                 **kwargs
             )
 
@@ -113,7 +114,7 @@ class AgentManager:
             await agent.initialize()
 
             # Transfer any other necessary state
-            if existing_agent:
+            if existing_agent and agent.custom_persona_text is None:
                 agent.custom_persona_text = existing_agent.custom_persona_text
 
             # Update sessions dictionary

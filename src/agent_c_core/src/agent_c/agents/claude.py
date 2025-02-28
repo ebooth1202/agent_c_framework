@@ -20,7 +20,7 @@ class ClaudeChatAgent(BaseAgent):
 
         def count_tokens(self, text: str) -> int:
             response = self.anthropic.messages.count_tokens(
-                model="claude-3-5-sonnet-20241022",
+                model="claude-3-5-sonnet-latest",
                 system="",
                 messages=[{
                     "role": "user",

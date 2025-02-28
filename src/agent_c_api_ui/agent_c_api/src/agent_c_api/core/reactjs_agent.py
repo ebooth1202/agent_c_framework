@@ -43,7 +43,7 @@ class ReactJSAgent:
 
     def __init__(self, user_id: str = 'default', session_manager: Union[ChatSessionManager, None] = None,
                  backend: str = 'openai', model_name: str = 'gpt-4o', persona_name: str = 'default',
-                 custom_persona_text: str = '',
+                 custom_persona_text: str = None,
                  essential_tools: List[str] = None,
                  additional_tools: List[str] = None,
                  **kwargs):
@@ -78,8 +78,16 @@ class ReactJSAgent:
         self.model_name = model_name
         self.agent = None
         self.agent_output_format = kwargs.get('output_format', 'raw')
-        self.temperature = kwargs.get('temperature', 0.5)
-        self.reasoning_effort = kwargs.get('reasoning_effort', 'medium')
+
+        # Non-Reasoning Models Parameters
+        self.temperature = kwargs.get('temperature')
+
+        # Open AI Reasoning model parameters
+        self.reasoning_effort = kwargs.get('reasoning_effort')
+
+        # Claude Reasoning model parameters
+        self.extended_thinking = kwargs.get('extended_thinking')
+        self.budget_tokens = kwargs.get('budget_tokens')
 
         # Agent "User" Management - these are used to keep agents and sessions separate in zep cache
         # - User ID: The user ID for the agent, this is used for user preference management, it is required.
@@ -95,11 +103,13 @@ class ReactJSAgent:
         self.custom_persona_text = custom_persona_text
         if self.persona_name is None or self.persona_name == '':
             self.persona_name = 'default'
-        try:
-            self.custom_persona_text = self.__load_persona(self.persona_name)
-            # self.logger.info(f"Loaded persona: {self.persona_name} for user_id: {self.user_id}")
-        except Exception as e:
-            self.logger.error(f"Error loading persona {self.persona_name}: {e}")
+
+        if self.custom_persona_text is None:
+            try:
+                self.custom_persona_text = self.__load_persona(self.persona_name)
+            except Exception as e:
+                self.logger.error(f"Error loading persona {self.persona_name}: {e}")
+
 
         # Chat Management, this is where the agent stores the chat history
         self.current_chat_Log: Union[List[Dict], None] = None
@@ -421,7 +431,9 @@ class ReactJSAgent:
             'reasoning_effort': self.reasoning_effort,
             'model_parameters': {
                 'temperature': getattr(self, 'temperature', None),
-                'reasoning_effort': getattr(self, 'reasoning_effort', None)
+                'reasoning_effort': getattr(self, 'reasoning_effort', None),
+                'extended_thinking': getattr(self, 'extended_thinking', False),
+                'budget_tokens': getattr(self, 'budget_tokens', 0)
             }
         }
 

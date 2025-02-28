@@ -131,7 +131,38 @@
               "required": true
             },
             "max_tokens": {
-              "default": 8192,
+              "default": 16000,
+              "required": true
+            }
+          },
+          "capabilities": {
+            "supports_tools": true,
+            "multi_modal": true
+          },
+          "allowed_inputs": {
+            "image": true,
+            "video": false,
+            "audio": false,
+            "file": false
+          }
+        },
+        {
+          "id": "claude-3-7-sonnet-latest",
+          "model_type": "chat",
+          "ui_name": "Claude 3.7 Sonnet Latest",
+          "description": "Latest Claude 3.7 Sonnet model for chat interactions.",
+          "parameters": {
+            "extended_thinking": {
+              "enabled": true,
+              "budget_tokens": {
+                "min":1,
+                "max": 10000,
+                "default": 5000
+              },
+              "required": true
+            },
+            "max_tokens": {
+              "default": 16000,
               "required": true
             }
           },

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 import logging
-from agent_c_api.api.dependencies import get_agent_manager
+from agent_c_api.api.dependencies import get_agent_manager, get_dynamic_params
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -8,11 +8,10 @@ logger = logging.getLogger(__name__)
 
 @router.get("/initialize")
 async def initialize_session(
-        temperature: float = 0.5,
         model_name: str = "gpt-4o",
         backend: str = "openai",
-        reasoning_effort: str = "medium",
         persona_name: str = "",
+        dynamic_params = Depends(get_dynamic_params),
         agent_manager=Depends(get_agent_manager)
 ):
     """
@@ -21,8 +20,10 @@ async def initialize_session(
     try:
         # Create a new session with both model and backend parameters
         logging.debug(f"Creating new session with model: {model_name}, backend: {backend}")
-        model_params = {"temperature": temperature, "reasoning_effort": reasoning_effort}
-        # we're passing both temp/reasoning_effort to create_session, but only one will be used based on the model. That's controlled in teh actual agent's init method.
+
+        # Conditionally pass model param
+        model_params = dynamic_params.dict()
+
         new_session_id = await agent_manager.create_session(
             llm_model=model_name,
             backend=backend,

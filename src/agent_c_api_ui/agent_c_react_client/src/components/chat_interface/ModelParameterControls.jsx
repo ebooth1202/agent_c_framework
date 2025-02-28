@@ -1,6 +1,7 @@
 import React, {useState, useEffect} from 'react';
 import {Label} from '@/components/ui/label';
 import {Slider} from '@/components/ui/slider';
+import {Switch} from '@/components/ui/switch';
 import {
     Select,
     SelectContent,
@@ -25,9 +26,25 @@ const ModelParameterControls = ({
                                     onParameterChange,
                                     currentParameters = {},
                                 }) => {
+    // For temperature settings - Used by non-reasoning models
     const [temperature, setTemperature] = useState(currentParameters?.temperature);
-    const [reasoningEffort, setReasoningEffort] = useState(currentParameters?.reasoning_effort);
     const [localTemperature, setLocalTemperature] = useState(currentParameters?.temperature);
+
+    // For reasoning effort settings - OpenAI
+    const [reasoningEffort, setReasoningEffort] = useState(currentParameters?.reasoning_effort);
+
+
+    // Extended thinking states for Anthropic
+    const [extendedThinkingEnabled, setExtendedThinkingEnabled] = useState(
+        currentParameters?.extended_thinking === true ||
+        (selectedModel?.parameters?.extended_thinking?.enabled === true &&
+            currentParameters?.extended_thinking !== false)
+    );
+    const [budgetTokens, setBudgetTokens] = useState(
+        (currentParameters?.extended_thinking && currentParameters?.budget_tokens) ||
+        (selectedModel?.parameters?.extended_thinking?.enabled === true ?
+            selectedModel?.parameters?.extended_thinking?.budget_tokens?.default : 0) || 0
+    );
 
     /**
      * Handles real-time temperature slider changes
@@ -50,16 +67,71 @@ const ModelParameterControls = ({
         onParameterChange('temperature', temp);
     };
 
+    /**
+     * Handles toggling the extended thinking feature
+     * @param {boolean} enabled - Whether extended thinking is enabled
+     */
+    const handleExtendedThinkingChange = (enabled) => {
+        setExtendedThinkingEnabled(enabled);
+        onParameterChange('extended_thinking', enabled);
+
+        // If disabled, set budget_tokens to 0
+        if (!enabled) {
+            setBudgetTokens(0);
+            onParameterChange('budget_tokens', 0);
+        } else {
+            // When enabling, set to default value
+            const defaultValue = selectedModel?.parameters?.extended_thinking?.budget_tokens?.default || 5000;
+            setBudgetTokens(defaultValue);
+            onParameterChange('budget_tokens', defaultValue);
+        }
+    };
+
+    /**
+     * Handles changes to the budget tokens slider
+     * @param {number[]} value - Array containing single budget tokens value
+     */
+    const handleBudgetTokensChange = (value) => {
+        const tokens = value[0];
+        setBudgetTokens(tokens);
+    };
+
+    /**
+     * Commits budget tokens changes to the backend
+     * @param {number[]} value - Array containing single budget tokens value
+     */
+    const handleBudgetTokensCommit = (value) => {
+        const tokens = value[0];
+        setBudgetTokens(tokens);
+        onParameterChange('budget_tokens', tokens);
+    };
+
     useEffect(() => {
         // console.log('Current Parameters:', currentParameters);
         // console.log('Selected Model Parameters:', selectedModel?.parameters);
         if (selectedModel?.parameters) {
+            // Set temperature based on current or default value
             const defaultTemp = selectedModel.parameters?.temperature?.default;
-            const defaultEffort = selectedModel.parameters?.reasoning_effort?.default;
             console.log('Default Temperature:', defaultTemp);
             setLocalTemperature(currentParameters?.temperature ?? defaultTemp);
-            // setTemperature(currentParameters?.temperature ?? defaultTemp);
+
+            // Set reasoning effort based on current or default value
+            const defaultEffort = selectedModel.parameters?.reasoning_effort?.default;
             setReasoningEffort(currentParameters?.reasoning_effort ?? defaultEffort);
+
+            // Set extended thinking parameters based on model config or default
+            if (selectedModel.parameters?.extended_thinking) {
+                const defaultEnabled = selectedModel.parameters.extended_thinking.enabled === true;
+                const currentEnabled = currentParameters?.extended_thinking;
+                setExtendedThinkingEnabled(currentEnabled !== undefined ? currentEnabled : defaultEnabled);
+
+                const defaultBudget = selectedModel.parameters.extended_thinking.budget_tokens?.default || 5000;
+                const currentBudget = currentParameters?.budget_tokens;
+                setBudgetTokens(currentEnabled === false ? 0 : (currentBudget !== undefined ? currentBudget : defaultBudget));
+            } else {
+                setExtendedThinkingEnabled(false);
+                setBudgetTokens(0);
+            }
         }
     }, [selectedModel, currentParameters]);
 
@@ -105,12 +177,28 @@ const ModelParameterControls = ({
     const reasoningEffortOptions = getReasoningEffortOptions();
 
     /**
-     * Handles changes to reasoning effort selection
+     * Handles changes to reasoning effort selection - OpenAI
      * @param {string} value - Selected reasoning effort level
      */
     const handleReasoningEffortChange = (value) => {
         setReasoningEffort(value);
         onParameterChange('reasoning_effort', value);
+    };
+
+
+    /**
+     * Budget tokens slider configuration
+     * @type {Object}
+     * @property {number} min - Minimum budget tokens value
+     * @property {number} max - Maximum budget tokens value
+     * @property {number} step - Budget tokens adjustment increment
+     * @property {number} default - Default budget tokens value
+     */
+    const budgetTokensConfig = {
+        min: selectedModel.parameters?.extended_thinking?.budget_tokens?.min,
+        max: selectedModel.parameters?.extended_thinking?.budget_tokens?.max,
+        step: 500,
+        default: selectedModel.parameters?.extended_thinking?.budget_tokens?.default
     };
 
     return (
@@ -178,6 +266,48 @@ const ModelParameterControls = ({
                             ))}
                         </SelectContent>
                     </Select>
+                </div>
+            )}
+
+            {selectedModel.parameters?.extended_thinking && (
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                        <Label htmlFor="extended-thinking" className="text-sm font-medium">
+                            Extended Thinking
+                        </Label>
+                        <Switch
+                            id="extended-thinking"
+                            checked={extendedThinkingEnabled}
+                            onCheckedChange={handleExtendedThinkingChange}
+                        />
+                    </div>
+                    <div className="text-xs text-muted-foreground italic">
+                        Enable deep reasoning for complex problems
+                    </div>
+
+                    {extendedThinkingEnabled && (
+                        <div className="mt-3 space-y-2">
+                            <div className="flex items-center justify-between">
+                                <Label className="text-sm font-medium">Thinking Budget</Label>
+                                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-xl text-sm font-medium">
+                                    {budgetTokens.toLocaleString()} tokens
+                                </span>
+                            </div>
+                            <Slider
+                                id="budget-tokens-slider"
+                                min={budgetTokensConfig.min}
+                                max={budgetTokensConfig.max}
+                                step={budgetTokensConfig.step}
+                                value={[budgetTokens]}
+                                onValueChange={handleBudgetTokensChange}
+                                onValueCommit={handleBudgetTokensCommit}
+                                className="w-full"
+                            />
+                            <div className="text-xs text-muted-foreground italic">
+                                Higher values allow more thorough analysis but may take longer
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

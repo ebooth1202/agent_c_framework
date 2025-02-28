@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, Depends
 import json
 import logging
 from agent_c_api.core.agent_manager import AgentManager
-from agent_c_api.config.env_config import settings
+from agent_c_api.config.config_loader import MODELS_CONFIG
 
 
 router = APIRouter()
@@ -15,17 +15,19 @@ async def list_models():
     """Get list of available models from model_configs.json"""
     try:
         # Ensure file exists
-        if not settings.MODEL_CONFIG_PATH.is_file():
-            logger.warning(f"Model config file does not exist: {settings.MODEL_CONFIG_PATH}")
+        if not MODELS_CONFIG:
+            logger.warning("Model config is empty or not loaded.")
             return {"models": []}
-
-        # Read and parse model config
-        with open(settings.MODEL_CONFIG_PATH, 'r', encoding='utf-8') as f:
-            config = json.load(f)
 
         # Transform the data for frontend consumption
         models = []
-        for vendor in config.get("vendors", []):
+        # May consider returning unaltered structure in future
+        # if not MODELS_CONFIG:
+        #     logger.warning("Model config is empty or not loaded.")
+        #     return {"models": []}
+
+        # For now, will flatten it abit for frontend consumption and UI control visiblity (on/off)
+        for vendor in MODELS_CONFIG.get("vendors", []):
             vendor_name = vendor.get("vendor")
             for model in vendor.get("models", []):
                 models.append({
