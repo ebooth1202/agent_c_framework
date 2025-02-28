@@ -4,6 +4,11 @@ import os
 import sys
 from typing import Optional, Dict, Any
 import threading
+#
+# import platform
+# if platform.system() == 'Windows':
+#     import colorama
+#     colorama.init()
 
 # Global event for debug mode
 _debug_event = threading.Event()
@@ -123,11 +128,13 @@ class LoggingManager:
         # Also disable propagation to prevent duplicate logs from parent loggers
         logger.propagate = False
 
+
         # Only add handlers if none exist to prevent duplicates
         if not logger.handlers:
             # Console handler
             console_handler = logging.StreamHandler(sys.stdout)
-            console_handler.setFormatter(logging.Formatter(self.LOG_FORMAT))
+            # console_handler.setFormatter(logging.Formatter(self.LOG_FORMAT))
+            console_handler.setFormatter(ColoredFormatter(self.LOG_FORMAT))
             logger.addHandler(console_handler)
 
             # File handler (optional)
@@ -170,7 +177,8 @@ class LoggingManager:
         if not root_logger.handlers:
             # Console handler
             console_handler = logging.StreamHandler(sys.stdout)
-            console_handler.setFormatter(logging.Formatter(cls.LOG_FORMAT))
+            # console_handler.setFormatter(logging.Formatter(cls.LOG_FORMAT))
+            console_handler.setFormatter(ColoredFormatter(cls.LOG_FORMAT))
             root_logger.addHandler(console_handler)
 
             # File handler (optional)
