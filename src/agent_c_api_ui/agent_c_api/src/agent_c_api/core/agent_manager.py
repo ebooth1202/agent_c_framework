@@ -81,8 +81,13 @@ class AgentManager:
         Raises:
             Exception: If agent initialization fails
         """
+        self.logger.debug(f"Creating new session with kwargs: {kwargs}\n")
+
         # If updating existing session, use that ID, otherwise generate new one
         session_id = existing_session_id if existing_session_id else str(uuid.uuid4())
+
+        # Extract custom_persona_text explicitly to avoid it being lost or overridden
+        custom_persona_text = kwargs.pop('custom_persona_text', None)
 
         # Create lock if it doesn't exist
         if session_id not in self._locks:
@@ -93,6 +98,13 @@ class AgentManager:
             existing_session = self.sessions.get(session_id, {})
             existing_agent: BaseAgent | None = existing_session.get("agent", None)
 
+            # IMPORTANT FIX: If we're changing models and no custom_persona_text was provided,
+            # but the existing agent has one, we need to preserve it
+            if existing_agent and custom_persona_text is None and existing_agent.custom_persona_text:
+                # this should work even if custom_persona_text==existing_agent.custom_persona_text - will be same value
+                custom_persona_text = existing_agent.custom_persona_text
+                self.logger.info(f"Preserving existing custom_persona_text: {custom_persona_text[:10]}...")
+
             # Initialize agent for this session
             agent = ReactJSAgent(
                 user_id=session_id,
@@ -101,7 +113,7 @@ class AgentManager:
                 additional_tools=additional_tools or [],
                 persona_name=persona_name,
                 agent_name=f"Agent_{session_id}",
-                custom_persona_text=kwargs.get('custom_persona_text', None),
+                custom_persona_text=custom_persona_text,
                 **kwargs
             )
 
@@ -113,10 +125,6 @@ class AgentManager:
             # Initialize the agent
             await agent.initialize()
 
-            # Transfer any other necessary state
-            if existing_agent and agent.custom_persona_text is None:
-                agent.custom_persona_text = existing_agent.custom_persona_text
-
             # Update sessions dictionary
             self.sessions[session_id] = {
                 "agent": agent,
@@ -126,6 +134,7 @@ class AgentManager:
                 "agent_c_session_id": agent.session_id,
             }
 
+            self.logger.info(f"Session {session_id} created with agent: {agent}")
             return session_id
 
     async def cleanup_session(self, session_id: str):

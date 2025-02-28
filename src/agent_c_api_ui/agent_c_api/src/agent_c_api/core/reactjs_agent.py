@@ -52,11 +52,21 @@ class ReactJSAgent:
 
         Args:
             user_id (str): Identifier for the user. Defaults to 'default'.
-            session_manager (Union[ChatSessionManager, None]): Session manager for chat sessions. Defaults to None.
-            backend (str): Backend to use for the agent (e.g., 'openai', 'claude'). Defaults to 'openai'.
-            model_name (str): Name of the AI model to use. Defaults to 'gpt-4o'.
-            additional_tools (List[str]): List of additional tools to add to the agent. Defaults to None.
-            **kwargs: Additional optional keyword arguments.
+        session_manager (Union[ChatSessionManager, None]): Session manager for chat sessions. Defaults to None.
+        backend (str): Backend to use for the agent (e.g., 'openai', 'claude'). Defaults to 'openai'.
+        model_name (str): Name of the AI model to use. Defaults to 'gpt-4o'.
+        persona_name (str): Name of the persona to use. Defaults to 'default'.
+        custom_persona_text (str): Custom text to use for the agent's persona. Defaults to None.
+        essential_tools (List[str]): List of essential tools the agent must have. Defaults to None.
+        additional_tools (List[str]): List of additional tools to add to the agent. Defaults to None.
+        **kwargs: Additional optional keyword arguments including:
+            temperature (float): Temperature parameter for non-reasoning models
+            reasoning_effort (float): Reasoning effort parameter for OpenAI models
+            extended_thinking (bool): Extended thinking parameter for Claude models
+            budget_tokens (int): Budget tokens parameter for Claude models
+            agent_name (str): Name for the agent (for debugging)
+            output_format (str): Output format for agent responses
+            tool_cache_dir (str): Directory for tool cache
         """
 
 
@@ -66,6 +76,7 @@ class ReactJSAgent:
         # Debugging and Logging Setup
         logging_manager = LoggingManager(__name__)
         self.logger = logging_manager.get_logger()
+
         self.debug_event = None
 
         self.agent_name = kwargs.get('agent_name', None)  # Debugging only
@@ -101,15 +112,18 @@ class ReactJSAgent:
         # we will pass in custom text later
         self.persona_name = persona_name
         self.custom_persona_text = custom_persona_text
+
         if self.persona_name is None or self.persona_name == '':
             self.persona_name = 'default'
 
         if self.custom_persona_text is None:
             try:
+                self.logger.info(f"Loading persona file for {self.persona_name} because custom_persona_text is None")
                 self.custom_persona_text = self.__load_persona(self.persona_name)
             except Exception as e:
                 self.logger.error(f"Error loading persona {self.persona_name}: {e}")
-
+        else:
+            self.logger.info(f"Using provided custom_persona_text: {self.custom_persona_text[:10]}...")
 
         # Chat Management, this is where the agent stores the chat history
         self.current_chat_Log: Union[List[Dict], None] = None
@@ -442,7 +456,7 @@ class ReactJSAgent:
                 'instance_name': instance_name,
                 'class_name': tool_instance.__class__.__name__,
                 'developer_tool_name': getattr(tool_instance, 'name', instance_name),
-                'description': tool_instance.__class__.__doc__
+                # 'description': tool_instance.__class__.__doc__
             } for instance_name, tool_instance in self.tool_chest.active_tools.items()]
 
         self.logger.debug(f"Agent {self.agent_name} reporting config: {config}")
@@ -613,6 +627,7 @@ class ReactJSAgent:
         await self.__init_session()
         await self.__init_tool_chest()
         await self.__init_agent()
+
 
     async def consolidated_streaming_callback(self, event: SessionEvent):
         """

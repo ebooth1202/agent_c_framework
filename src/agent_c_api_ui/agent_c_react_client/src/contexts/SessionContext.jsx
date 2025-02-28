@@ -147,7 +147,7 @@ export const SessionProvider = ({children}) => {
 
                 // Initialize a session with the initial model
                 // console.log('Initializing session with initial model:', initialModel);
-                await initializeSession(false, initialModel);
+                await initializeSession(false, initialModel, modelsData.models);
                 setIsInitialized(true);
             } else {
                 throw new Error('No models available');
@@ -161,28 +161,60 @@ export const SessionProvider = ({children}) => {
     };
 
     // Initialize (or reinitialize) a session
-    const initializeSession = async (forceNew = false, initialModel = null) => {
+    // Improved initializeSession function with better fallback handling
+    const initializeSession = async (forceNew = false, initialModel = null, modelConfigsData = null) => {
         setIsReady(false);
         try {
-            // When initialModel is passed as an object with custom fields, extract the real model
-            let currentModel;
+            // First, validate that we have model configurations available
+            const models = modelConfigsData || modelConfigs;
+            if (!models || models.length === 0) {
+                throw new Error("No model configurations available");
+            }
+
+            // Determine which model to use
+            let currentModel = null; // Initialize as null to ensure proper checking
+
             if (initialModel) {
-                // If initialModel has customPrompt/persona_name properties but not a proper model structure
-                if ('customPrompt' in initialModel || 'persona_name' in initialModel) {
-                    // Use the id from the passed model object
-                    currentModel = modelConfigs.find(model => model.id === initialModel.id);
-                    console.log('Using model from configs:', currentModel?.id);
+                // Find the model in modelConfigs when we have an initialModel with an id
+                if ('id' in initialModel && initialModel.id) {
+                    currentModel = models.find(model => model.id === initialModel.id);
+                    if (!currentModel) {
+                        console.warn(`Model with id ${initialModel.id} not found in configurations, falling back to first model`);
+                        // Fallback to the first model
+                        if (models.length > 0) {
+                            currentModel = models[0];
+                            setModelName(currentModel.id);
+                        }
+                    }
                 } else {
                     currentModel = initialModel;
                 }
+            } else if (modelName) {
+                // Find the model by the current modelName state
+                currentModel = models.find(model => model.id === modelName);
+                if (!currentModel) {
+                    console.warn(`Model with name ${modelName} not found in configurations. Falling back to first model`);
+                    // Fallback to the first model
+                    if (models.length > 0) {
+                        currentModel = models[0];
+                        setModelName(currentModel.id);
+                    }
+                }
             } else {
-                currentModel = modelConfigs.find(model => model.id === modelName);
+                // No model specified, use the first available model
+                if (models.length > 0) {
+                    currentModel = models[0];
+                    console.log('No model specified, using default:', currentModel.id);
+                    setModelName(currentModel.id);
+                }
             }
 
+            // Additional check to ensure we have a valid model before proceeding
             if (!currentModel) {
-                console.error('Invalid model configuration', {modelName, initialModel});
-                throw new Error('Invalid model configuration');
+                throw new Error('No valid model configuration available');
             }
+
+            console.log('Initializing session with model:', currentModel.id);
 
             // Start with the required parameters
             const queryParams = new URLSearchParams({
@@ -191,79 +223,30 @@ export const SessionProvider = ({children}) => {
                 persona_name: persona || 'default'
             });
 
-            // Add custom prompt if available
-            if (customPrompt) {
-                queryParams.append('custom_prompt', customPrompt);
+            // Determine which custom prompt to use (cleaner approach)
+            let promptToUse = null;
+
+            // First priority: custom prompt from initialModel if provided
+            if (initialModel && ('custom_prompt' in initialModel || 'customPrompt' in initialModel)) {
+                promptToUse = initialModel.custom_prompt || initialModel.customPrompt;
+                console.log('Using custom prompt from initialModel');
+            }
+            // Second priority: current state's custom prompt
+            else if (customPrompt) {
+                promptToUse = customPrompt;
+                console.log('Using current state custom prompt');
             }
 
-
-            // Conditionally add temperature if model supports it
-            if (currentModel.parameters?.temperature) {
-                const currentTemp = temperature ?? currentModel.parameters.temperature.default;
-                queryParams.append('temperature', currentTemp.toString());
-                console.log(`Initializing with temperature=${currentTemp}`);
+            // Always include custom prompt if available
+            if (promptToUse) {
+                queryParams.append('custom_prompt', promptToUse);
+                console.log('Sending custom prompt to backend');
             }
 
-            // Handle Claude extended thinking parameters
-            const hasExtendedThinking = !!currentModel.parameters?.extended_thinking;
-            if (hasExtendedThinking) {
-                // Determine if extended thinking should be enabled
-                const extendedThinkingDefault = Boolean(currentModel.parameters.extended_thinking.enabled) === true;
-                console.log(`Default extended_thinking from config: ${extendedThinkingDefault}`);
+            // Add model parameters
+            addModelParameters(queryParams, currentModel);
 
-                const extendedThinking = initialModel ?
-                    extendedThinkingDefault :
-                    (modelParameters.extended_thinking !== undefined ?
-                        modelParameters.extended_thinking : extendedThinkingDefault);
-
-                // Add extended_thinking parameter
-                queryParams.append('extended_thinking', extendedThinking.toString());
-
-                // Set budget tokens based on whether extended thinking is enabled
-                // Get budget tokens default
-                const defaultBudgetTokens = parseInt(
-                    currentModel.parameters.extended_thinking.budget_tokens?.default || 5000
-                );
-                console.log(`Default budget_tokens from config: ${defaultBudgetTokens}`);
-
-                const budgetTokens = initialModel ?
-                    (extendedThinking ? defaultBudgetTokens : 0) :
-                    (extendedThinking ?
-                        (modelParameters.budget_tokens !== undefined ?
-                            modelParameters.budget_tokens : defaultBudgetTokens) : 0);
-                1
-
-
-                // Add budget_tokens parameter
-                queryParams.append('budget_tokens', budgetTokens.toString());
-
-                // Update local state for UI consistency
-                setModelParameters(prev => ({
-                    ...prev,
-                    extended_thinking: extendedThinking,
-                    budget_tokens: budgetTokens
-                }));
-
-                console.log(`Initializing with extended_thinking=${extendedThinking}, budget_tokens=${budgetTokens}`);
-            }
-
-            // Handle OpenAI reasoning effort parameter if supported
-            if (currentModel.parameters?.reasoning_effort) {
-                const reasoningEffortDefault = currentModel.parameters.reasoning_effort.default;
-                const reasoningEffort = modelParameters.reasoning_effort !== undefined ?
-                    modelParameters.reasoning_effort : reasoningEffortDefault;
-
-                queryParams.append('reasoning_effort', reasoningEffort);
-
-                // Update local state
-                setModelParameters(prev => ({
-                    ...prev,
-                    reasoning_effort: reasoningEffort
-                }));
-
-                console.log(`Initializing with reasoning_effort=${reasoningEffort}`);
-            }
-
+            // Send the initialize request
             const response = await fetch(`${API_URL}/initialize?${queryParams}`);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
@@ -273,6 +256,10 @@ export const SessionProvider = ({children}) => {
                 setSessionId(data.session_id);
                 setIsReady(true);
                 setError(null);
+
+                // Update modelName state to reflect the current model
+                setModelName(currentModel.id);
+                setSelectedModel(currentModel);
             } else {
                 throw new Error("No session_id in response");
             }
@@ -280,6 +267,52 @@ export const SessionProvider = ({children}) => {
             console.error("Session initialization failed:", err);
             setIsReady(false);
             setError(`Session initialization failed: ${err.message}`);
+        }
+    };
+
+    // Helper function to add model parameters to query params
+    const addModelParameters = (queryParams, model) => {
+        // Add temperature if supported
+        if (model.parameters?.temperature) {
+            const currentTemp = temperature ?? model.parameters.temperature.default;
+            queryParams.append('temperature', currentTemp.toString());
+            console.log(`Setting temperature=${currentTemp}`);
+        }
+
+        // Handle Claude extended thinking parameters
+        const hasExtendedThinking = !!model.parameters?.extended_thinking;
+        if (hasExtendedThinking) {
+            // Determine if extended thinking should be enabled
+            const extendedThinkingDefault = Boolean(model.parameters.extended_thinking.enabled) === true;
+            const extendedThinking = modelParameters.extended_thinking !== undefined
+                ? modelParameters.extended_thinking
+                : extendedThinkingDefault;
+
+            queryParams.append('extended_thinking', extendedThinking.toString());
+
+            // Set budget tokens based on whether extended thinking is enabled
+            const defaultBudgetTokens = parseInt(
+                model.parameters.extended_thinking.budget_tokens?.default || 5000
+            );
+            const budgetTokens = extendedThinking
+                ? (modelParameters.budget_tokens !== undefined
+                    ? modelParameters.budget_tokens
+                    : defaultBudgetTokens)
+                : 0;
+
+            queryParams.append('budget_tokens', budgetTokens.toString());
+            console.log(`Setting extended_thinking=${extendedThinking}, budget_tokens=${budgetTokens}`);
+        }
+
+        // Handle OpenAI reasoning effort parameter if supported
+        if (model.parameters?.reasoning_effort) {
+            const reasoningEffortDefault = model.parameters.reasoning_effort.default;
+            const reasoningEffort = modelParameters.reasoning_effort !== undefined
+                ? modelParameters.reasoning_effort
+                : reasoningEffortDefault;
+
+            queryParams.append('reasoning_effort', reasoningEffort);
+            console.log(`Setting reasoning_effort=${reasoningEffort}`);
         }
     };
 
@@ -312,12 +345,18 @@ export const SessionProvider = ({children}) => {
                     setModelName(values.modelName);
                     setSelectedModel(newModel);
 
-                    // Create the persona/model object
+                    // Create the model object with current persona and prompt
+                    // IMPORTANT: Make sure we're using the correct property names expected by the backend
                     const modelWithPersona = {
-                        ...newModel,
+                        id: newModel.id,
+                        backend: newModel.backend,
                         persona_name: persona,
+                        // Explicitly use custom_prompt (not customPrompt) for consistency with backend
                         custom_prompt: customPrompt
                     };
+
+                    console.log('Changing model with custom prompt:', customPrompt ?
+                        `${customPrompt.substring(0, 30)}...` : 'None');
 
                     // Determine extended thinking parameters based on new model
                     const hasExtendedThinking = !!newModel.parameters?.extended_thinking;
@@ -335,9 +374,8 @@ export const SessionProvider = ({children}) => {
                     };
 
                     setModelParameters(newParameters);
-                    setSelectedModel(newModel);
 
-
+                    // Initialize new session with the custom prompt
                     await initializeSession(false, modelWithPersona);
                     setSettingsVersion(v => v + 1);
                     break;
@@ -450,6 +488,8 @@ export const SessionProvider = ({children}) => {
         setIsReady(false);
         setActiveTools([]);
         setError(null);
+        setModelName("");
+        setSelectedModel(null);
     };
 
     // --- Effects ---

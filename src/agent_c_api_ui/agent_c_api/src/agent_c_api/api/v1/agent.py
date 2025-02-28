@@ -5,10 +5,12 @@ from pydantic import create_model
 
 from agent_c_api.api.dependencies import get_agent_manager, get_dynamic_form_params, build_fields_from_config
 from agent_c_api.config.config_loader import get_allowed_params
-from agent_c_api.config.env_config import settings
+from agent_c_api.core.util.logging_utils import LoggingManager
+
+logging_manager = LoggingManager(__name__)
+logger = logging_manager.get_logger()
 
 router = APIRouter()
-logger = logging.getLogger(__name__)
 
 
 @router.post("/update_settings")
@@ -66,29 +68,16 @@ async def update_agent_settings(
 
         if model_explicitly_changed:
             logger.info(f"Model change requested for session {session_id}: {agent.model_name} -> {model_name}")
-
-            # Create kwargs dictionary with all parameters
-            session_kwargs = {}
-
-            # Add all dynamic parameters
-            if dynamic_params:
-                session_kwargs.update(dynamic_params.dict())
-
-            # Add custom_prompt with proper parameter name
-            if custom_prompt is not None:
-                session_kwargs['custom_persona_text'] = custom_prompt
-            elif agent.custom_persona_text is not None:
-                session_kwargs['custom_persona_text'] = agent.custom_persona_text
-
-            # Create a new session using the parameters
-            new_session_id = await agent_manager.create_session(
-                llm_model=model_name,
-                backend=backend,
-                persona_name=persona_name if persona_name is not None else agent.persona_name,
-                **session_kwargs
-            )
-            session_id = new_session_id  # Update session_id to the new session.
-            updates_made = True
+            #
+            # # Create a new session using the dynamic parameters
+            # new_session_id = await agent_manager.create_session(
+            #     llm_model=model_name,
+            #     backend=backend,
+            #     persona_name=persona_name if persona_name is not None else agent.persona_name,
+            #     **dynamic_params.dict()
+            # )
+            # session_id = new_session_id  # Update session_id to the new session.
+            # updates_made = True
         else:
             # Update existing agent settings using the dynamic parameters.
             # Process each parameter that was explicitly provided in the original form

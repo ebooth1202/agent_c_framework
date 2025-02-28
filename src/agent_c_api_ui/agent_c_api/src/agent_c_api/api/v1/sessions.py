@@ -10,7 +10,8 @@ logger = logging.getLogger(__name__)
 async def initialize_session(
         model_name: str = "gpt-4o",
         backend: str = "openai",
-        persona_name: str = "",
+        persona_name: str = None,
+        custom_prompt: str = None,
         dynamic_params = Depends(get_dynamic_params),
         agent_manager=Depends(get_agent_manager)
 ):
@@ -24,11 +25,18 @@ async def initialize_session(
         # Conditionally pass model param
         model_params = dynamic_params.dict()
 
+        additional_params = {}
+        if custom_prompt is not None:
+            logging.debug(f"Custom prompt provided: {custom_prompt}")
+            # this is the right kwarg for create_session
+            additional_params['custom_persona_text'] = custom_prompt
+
         new_session_id = await agent_manager.create_session(
             llm_model=model_name,
             backend=backend,
-            persona_name=persona_name,
-            **model_params
+            persona_name=persona_name if persona_name else 'default',
+            **model_params,
+            **additional_params
         )
 
         logger.debug(f"Current sessions in memory: {list(agent_manager.sessions.keys())}")
