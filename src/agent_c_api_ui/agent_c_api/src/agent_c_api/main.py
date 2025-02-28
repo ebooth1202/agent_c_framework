@@ -22,10 +22,10 @@ LoggingManager.configure_root_logger()
 LoggingManager.configure_external_loggers()
 
 # Custom overrides for Logging
-# LoggingManager.configure_external_loggers({
-#     "httpx": "ERROR",  # Only show errors for httpx
-#     "my.custom.module": "DEBUG"  # But keep DEBUG for a specific module
-# })
+LoggingManager.configure_external_loggers({
+    # "httpx": "ERROR",  # Only show errors for httpx
+    "agent_c_api.core.util.middleware_logging": "INFO"  # Show INFO logs for middleware_logging, debug is too noisy
+})
 
 # Configure specific loggers for FastAPI components
 logging_manager = LoggingManager("agent_c_api")

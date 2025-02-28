@@ -205,6 +205,8 @@ class LoggingManager:
             "urllib3": "WARNING",
             "uvicorn.access": "WARNING",
             "asyncio": "WARNING",
+            "httpcore": "WARNING",
+            "python_multipart": "WARNING",
             # Add others as needed
         }
 
