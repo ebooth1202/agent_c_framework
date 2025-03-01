@@ -26,13 +26,17 @@ class OAIAudioPlayerAsync:
     def __init__(self):
         self.queue = []
         self.lock = threading.Lock()
-        self.stream = sd.OutputStream(
-            callback=self.callback,
-            samplerate=SAMPLE_RATE,
-            channels=CHANNELS,
-            dtype=np.int16,
-            blocksize=int(CHUNK_LENGTH_S * SAMPLE_RATE),
-        )
+        try:
+            self.stream = sd.OutputStream(
+                callback=self.callback,
+                samplerate=SAMPLE_RATE,
+                channels=CHANNELS,
+                dtype=np.int16,
+                blocksize=int(CHUNK_LENGTH_S * SAMPLE_RATE),
+            )
+        except Exception as e:
+            self.stream = None
+
         self.playing = False
         self._frame_count = 0
 
@@ -71,10 +75,14 @@ class OAIAudioPlayerAsync:
                 self.start()
 
     def start(self):
+        if self.stream is None:
+            return
         self.playing = True
         self.stream.start()
 
     def stop(self):
+        if self.stream is None:
+            return
         self.playing = False
         self.stream.stop()
         with self.lock:
