@@ -162,8 +162,8 @@ const AgentConfigDisplay = ({sessionId, className = "", settingsVersion}) => {
                 : "undefined"),
         "Persona": config.persona_name ?? "undefined",
         "Active Tools": config.initialized_tools ? config.initialized_tools.length : "undefined",
-        "Session ID": config.session_id ?? "undefined",
-        "Agent_c_session_id": config.agent_c_session_id ?? "undefined",
+        "UI Session ID": config.ui_session_id ?? "undefined",
+        "Chat session_id": config.agent_c_session_id ?? "undefined",
         "initialized_tools": formattedTools || "undefined"
     };
 

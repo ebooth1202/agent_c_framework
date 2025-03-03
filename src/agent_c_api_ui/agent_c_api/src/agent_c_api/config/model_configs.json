@@ -16,7 +16,9 @@
               "required": true
             },
             "max_tokens": {
-              "default": 4096,
+              "min": 1000,
+              "max": 16384,
+              "default": 16384,
               "required": false
             }
           },
@@ -44,7 +46,9 @@
               "required": true
             },
             "max_tokens": {
-              "default": 4096,
+              "min": 1000,
+              "max": 16384,
+              "default": 16384,
               "required": false
             }
           },
@@ -67,11 +71,17 @@
           "parameters": {
             "reasoning_effort": {
               "default": "medium",
-              "values": ["low", "medium", "high"],
+              "values": [
+                "low",
+                "medium",
+                "high"
+              ],
               "required": true
             },
-            "max_tokens": {
-              "default": 4096,
+            "max_completion_tokens": {
+              "min": 1000,
+              "max": 100000,
+              "default": 100000,
               "required": false
             }
           },
@@ -94,11 +104,17 @@
           "parameters": {
             "reasoning_effort": {
               "default": "medium",
-              "values": ["low", "medium", "high"],
+              "values": [
+                "low",
+                "medium",
+                "high"
+              ],
               "required": true
             },
-            "max_tokens": {
-              "default": 4096,
+            "max_completion_tokens": {
+              "min": 1000,
+              "max": 100000,
+              "default": 100000,
               "required": false
             }
           },
@@ -131,7 +147,9 @@
               "required": true
             },
             "max_tokens": {
-              "default": 16000,
+              "min": 1000,
+              "max": 8192,
+              "default": 8192,
               "required": true
             }
           },
@@ -162,7 +180,14 @@
               "required": true
             },
             "max_tokens": {
-              "default": 16000,
+              "default": 8192,
+              "limits": {
+                "min": 1000,
+                "max": {
+                  "standard": 8192,
+                  "with_extended_thinking": 64000
+                }
+              },
               "required": true
             }
           },

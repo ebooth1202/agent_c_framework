@@ -1,10 +1,8 @@
 from fastapi import APIRouter, HTTPException, Form, Depends, Request
-import json
-import logging
-from pydantic import create_model
 
-from agent_c_api.api.dependencies import get_agent_manager, get_dynamic_form_params, build_fields_from_config
-from agent_c_api.config.config_loader import get_allowed_params
+from agent_c_api.api.dependencies import get_agent_manager
+from agent_c_api.api.v1.llm_models.agent_params import AgentUpdateParams
+from agent_c_api.api.v1.llm_models.tool_model import ToolUpdateRequest
 from agent_c_api.core.util.logging_utils import LoggingManager
 
 logging_manager = LoggingManager(__name__)
@@ -15,106 +13,96 @@ router = APIRouter()
 
 @router.post("/update_settings")
 async def update_agent_settings(
-        session_id: str = Form(...),
-        custom_prompt: str = Form(None),
-        persona_name: str = Form(None),
-        dynamic_form_data=Depends(get_dynamic_form_params),
+        update_params: AgentUpdateParams,
         agent_manager=Depends(get_agent_manager)
 ):
     """
     Update agent settings for a given session.
     """
     # Get current session and agent
-    session_data = agent_manager.get_session_data(session_id)
+    session_data = agent_manager.get_session_data(update_params.ui_session_id)
     if not session_data:
         return {"error": "Invalid session_id"}
 
+    # get agent object
     agent = session_data["agent"]
-    original_form = dynamic_form_data["original_form"]
-    updates_made = False
+
+    if not agent:
+        logger.warning(f"No agent found for session {update_params.ui_session_id}")
+        return {"error": "No agent found to update"}
+
+    logger.debug(f"Pydantic model received: {update_params}")
+    logger.debug(f"Model dump: {update_params.model_dump(exclude_unset=False)}")
+
+    # Helper function for safe string conversion and truncation
+    def safe_truncate(val, length=10):
+        if val is None:
+            return "None"
+        val_str = str(val)
+        return val_str[:length] + "..." if len(val_str) > length else val_str
 
     try:
-        # Get model info either from form or from current agent
-        model_name = dynamic_form_data["model_name"] or agent.model_name
-        backend = dynamic_form_data["backend"] or agent.backend
+        # Only process parameters that were actually provided in the form
+        updates = update_params.model_dump(exclude_unset=True)
+        logger.debug(f"Updates received: {updates}")
 
-        # Add defensive checks
-        if not model_name or not backend:
-            logger.error(f"Missing model_name or backend: {model_name}, {backend}")
-            return {"error": "Missing model name or backend information"}
+        # Update each parameter that exists in the update payload
+        changes_made = {}
+        failed_updates = []
+        needs_agent_reinitialization = False
 
-        # If we don't have validated params yet, create them now with agent's model info
-        dynamic_params = dynamic_form_data["params"]
-        if dynamic_params is None:
-            # Fill in model_name and backend in the form data
-            form_dict = original_form.copy()
-            form_dict["model_name"] = model_name
-            form_dict["backend"] = backend
+        for key, value in updates.items():
+            if key in ["temperature", "reasoning_effort", "extended_thinking", "budget_tokens", "custom_prompt",
+                       "persona_name"]:
+                # Only update if value is not None
+                if value is not None:
+                    # Record the change
+                    old_value = getattr(agent, key, None)
 
-            # Get parameter configuration for this model
-            allowed_params = get_allowed_params(backend, model_name)
-            fields = build_fields_from_config(allowed_params)
-            DynamicFormParams = create_model("DynamicFormParams", **fields)
+                    # Update only attributes that changed
+                    if old_value != value:
+                        setattr(agent, key, value)
+                        changes_made[key] = {
+                            "from": safe_truncate(old_value),
+                            "to": safe_truncate(value)
+                        }
+                        needs_agent_reinitialization = True
+                    logger.debug(f"Updated {key}: {safe_truncate(old_value)} -> {safe_truncate(value)}")
+                else:
+                    logger.debug(f"Skipped updating {key} because value is None")
+            else:
+                if key not in ["ui_session_id"]:
+                    failed_updates.append(key)
+                    logger.warning(f"Invalid key - {key} - does not exist on agent.")
 
-            # Parse the parameters
-            try:
-                dynamic_params = DynamicFormParams.parse_obj(form_dict)
-            except Exception as e:
-                logger.error(f"Parameter validation error: {e}")
-                return {"error": f"Invalid parameters: {str(e)}"}
+        if needs_agent_reinitialization:
+            # logger.info(f"Reinitializing agent for session {ui_} due to parameter changes")
+            # This is critical - reinitialize the internal agent when model parameters change
+            # This will NOT change the underlying agents chat session, because that's done in init_session above and
+            # passed in via reactjs_agent.stream_chat
+            await agent.initialize_agent_parameters()
 
-        # Check if this is an intentional model change
-        model_explicitly_changed = "model_name" in original_form and model_name != agent.model_name
+        logger.info(f"Settings updated for session {update_params.ui_session_id}: {changes_made}")
+        # logger.info(f"Skipped null values: {[k for k, v in updates.items() if v is None]}")
+        logger.info(f"Failed updates: {failed_updates}")
 
-        if model_explicitly_changed:
-            logger.info(f"Model change requested for session {session_id}: {agent.model_name} -> {model_name}")
-            #
-            # # Create a new session using the dynamic parameters
-            # new_session_id = await agent_manager.create_session(
-            #     llm_model=model_name,
-            #     backend=backend,
-            #     persona_name=persona_name if persona_name is not None else agent.persona_name,
-            #     **dynamic_params.dict()
-            # )
-            # session_id = new_session_id  # Update session_id to the new session.
-            # updates_made = True
-        else:
-            # Update existing agent settings using the dynamic parameters.
-            # Process each parameter that was explicitly provided in the original form
-            for param_name in original_form:
-                if param_name in ["temperature", "reasoning_effort", "extended_thinking", "budget_tokens"]:
-                    if hasattr(dynamic_params, param_name):
-                        setattr(agent, param_name, getattr(dynamic_params, param_name))
-                        updates_made = True
-
-            # Handle custom_prompt and persona_name separately
-            if custom_prompt is not None:
-                agent.custom_persona_text = custom_prompt
-                updates_made = True
-            if persona_name is not None:
-                agent.persona_name = persona_name
-                updates_made = True
-
-        if updates_made:
-            logger.info(f"Settings updated for session {session_id}")
-            return {
-                "status": "Settings updated successfully",
-                "changes": "Agent reinitialized" if model_explicitly_changed else "Settings modified",
-                "agent_c_session_id": agent_manager.get_session_data(session_id).get('agent_c_session_id', "Unknown")
-            }
-        else:
-            logger.info(f"No changes required for session {session_id}")
-            return {"status": "No changes required"}
+        return {
+            "status": "success",
+            "message": f"Settings updated successfully for Agent {update_params.ui_session_id}",
+            "changes_made": changes_made,
+            "skipped_null_values": [k for k, v in updates.items() if v is None],
+            "failed_updates": failed_updates
+        }
     except Exception as e:
-        logger.error(f"Error updating settings for session {session_id}: {str(e)}")
+        logger.error(f"Error updating settings for session {update_params.ui_session_id}: {str(e)}")
         return {"error": f"Failed to update settings: {str(e)}"}
 
 
-@router.get("/get_agent_config/{session_id}")
-async def get_agent_config(session_id: str, agent_manager=Depends(get_agent_manager)):
+@router.get("/get_agent_config/{ui_session_id}")
+async def get_agent_config(ui_session_id: str, agent_manager=Depends(get_agent_manager)):
     try:
-        # logger.info(f"get_agent_config called for session: {session_id}")
-        session_data = agent_manager.get_session_data(session_id)
+        # logger.info(f"get_agent_config called for session: {ui_session_id}")
+        session_data = agent_manager.get_session_data(ui_session_id)
         if not session_data:
             raise HTTPException(status_code=404, detail="Session not found")
 
@@ -125,7 +113,7 @@ async def get_agent_config(session_id: str, agent_manager=Depends(get_agent_mana
         config.update({
             "user_id": config["user_id"],
             "custom_prompt": config["custom_prompt"],
-            "session_id": session_id,
+            "session_id": ui_session_id,
             "agent_c_session_id": session_data.get("agent_c_session_id"),
             "backend": config["backend"],
             "model_info": {
@@ -138,28 +126,32 @@ async def get_agent_config(session_id: str, agent_manager=Depends(get_agent_mana
             "initialized_tools": config["initialized_tools"]
         })
 
-        logger.info(f"Session {session_id} requested agent config: {config}")
+        logger.info(f"Session {ui_session_id} requested agent config: {config}")
         return {
             "config": config,
             "status": "success"
         }
     except Exception as e:
-        logger.error(f"Session {session_id} - Error getting agent config: {e}")
+        logger.error(f"Session {ui_session_id} - Error getting agent config: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/update_tools")
 async def update_agent_tools(
-        session_id: str = Form(...),
-        tools: str = Form(...),  # JSON string of tool names
+        data: ToolUpdateRequest,
         agent_manager=Depends(get_agent_manager)
 ):
     try:
-        session_data = agent_manager.get_session_data(session_id)
+        ui_session_id = data.ui_session_id
+        session_data = agent_manager.get_session_data(ui_session_id)
         if not session_data:
             raise HTTPException(status_code=404, detail="Invalid session ID")
 
-        tool_list = json.loads(tools)
+        tool_list = data.tools
+        # Validate that tools is a list of strings
+        if not isinstance(data.tools, list):
+            raise HTTPException(status_code=400, detail="Tools must be an array")
+
         agent = session_data["agent"]
         await agent.update_tools(tool_list)
         session_data["active_tools"] = tool_list
@@ -168,7 +160,7 @@ async def update_agent_tools(
             "status": "success",
             "message": "Tools updated successfully",
             "active_tools": tool_list,
-            "session_id": session_id,
+            "session_id": ui_session_id,
             "agent_c_session_id": session_data.get('agent_c_session_id', "Unknown")
         }
     except Exception as e:
@@ -176,16 +168,16 @@ async def update_agent_tools(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/get_agent_tools/{session_id}")
-async def get_agent_tools(session_id: str, agent_manager=Depends(get_agent_manager)):
+@router.get("/get_agent_tools/{ui_session_id}")
+async def get_agent_tools(ui_session_id: str, agent_manager=Depends(get_agent_manager)):
     try:
-        session_data = agent_manager.get_session_data(session_id)
+        session_data = agent_manager.get_session_data(ui_session_id)
         if not session_data:
             raise HTTPException(status_code=404, detail="Session not found")
 
         agent = session_data["agent"]
         config = agent._get_agent_config()
-        logger.info(f"Session {session_id} requested tools config: {config['initialized_tools']}")
+        logger.info(f"Session {ui_session_id} requested tools config: {config['initialized_tools']}")
 
         return {
             "initialized_tools": config["initialized_tools"],
@@ -193,4 +185,45 @@ async def get_agent_tools(session_id: str, agent_manager=Depends(get_agent_manag
         }
     except Exception as e:
         logger.error(f"Error getting agent tools: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/debug_agent_state/{ui_session_id}")
+async def debug_agent_state(ui_session_id: str, agent_manager=Depends(get_agent_manager)):
+    """
+    Debug endpoint to check the state of an agent and its internal components.
+    """
+    try:
+        session_data = agent_manager.get_session_data(ui_session_id)
+        if not session_data:
+            raise HTTPException(status_code=404, detail="Session not found")
+
+        agent = session_data["agent"]
+
+        # Get ReactJSAgent parameters
+        reactjs_agent_params = {
+            "temperature": getattr(agent, "temperature", None),
+            "reasoning_effort": getattr(agent, "reasoning_effort", None),
+            "extended_thinking": getattr(agent, "extended_thinking", None),
+            "budget_tokens": getattr(agent, "budget_tokens", None),
+        }
+
+        # Get internal agent parameters
+        internal_agent_params = {}
+        if hasattr(agent, "agent") and agent.agent:
+            internal_agent = agent.agent
+            internal_agent_params = {
+                "type": type(internal_agent).__name__,
+                "temperature": getattr(internal_agent, "temperature", None),
+                "reasoning_effort": getattr(internal_agent, "reasoning_effort", None),
+                "budget_tokens": getattr(internal_agent, "budget_tokens", None),
+            }
+
+        return {
+            "status": "success",
+            "reactjs_agent_params": reactjs_agent_params,
+            "internal_agent_params": internal_agent_params,
+        }
+    except Exception as e:
+        logger.error(f"Error debugging agent state: {e}")
         raise HTTPException(status_code=500, detail=str(e))

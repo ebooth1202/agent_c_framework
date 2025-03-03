@@ -5,7 +5,7 @@ import logging
 import re
 from collections import defaultdict
 
-from agent_c_api.core.agent_manager import AgentManager
+from agent_c_api.core.agent_manager import UItoAgentBridgeManager
 from agent_c_api.config.config_loader import get_allowed_params
 from agent_c_api.core.util.logging_utils import LoggingManager
 
@@ -13,7 +13,7 @@ logging_manager = LoggingManager(__name__)
 logger = logging_manager.get_logger()
 
 
-def get_agent_manager(request: Request) -> AgentManager:
+def get_agent_manager(request: Request) -> UItoAgentBridgeManager:
     return request.app.state.agent_manager
 
 

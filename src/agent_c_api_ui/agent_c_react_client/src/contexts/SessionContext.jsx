@@ -216,12 +216,13 @@ export const SessionProvider = ({children}) => {
 
             console.log('Initializing session with model:', currentModel.id);
 
-            // Start with the required parameters
-            const queryParams = new URLSearchParams({
+            // Build JSON request body
+            const jsonData = {
                 model_name: currentModel.id,
                 backend: currentModel.backend,
                 persona_name: persona || 'default'
-            });
+            };
+
 
             // Determine which custom prompt to use (cleaner approach)
             let promptToUse = null;
@@ -239,7 +240,7 @@ export const SessionProvider = ({children}) => {
 
             // Always include custom prompt if available
             if (promptToUse) {
-                queryParams.append('custom_prompt', promptToUse);
+                jsonData.custom_prompt = promptToUse;
                 console.log('Sending custom prompt to backend');
             }
 
@@ -247,13 +248,13 @@ export const SessionProvider = ({children}) => {
             if (initialModel && typeof initialModel === 'object') {
                 // Add temperature if available from initialModel
                 if ('temperature' in initialModel) {
-                    queryParams.append('temperature', initialModel.temperature);
+                    jsonData.temperature = initialModel.temperature;
                     console.log(`Setting temperature=${initialModel.temperature}`);
                 }
 
                 // Add reasoning_effort if available from initialModel
                 if ('reasoning_effort' in initialModel) {
-                    queryParams.append('reasoning_effort', initialModel.reasoning_effort);
+                    jsonData.reasoning_effort = initialModel.reasoning_effort;
                     console.log(`Setting reasoning_effort=${initialModel.reasoning_effort}`);
                 }
 
@@ -264,23 +265,23 @@ export const SessionProvider = ({children}) => {
                     // Handle both object and boolean formats
                     if (typeof extThinking === 'object') {
                         // It's an object with enabled property
-                        queryParams.append('extended_thinking.enabled', extThinking.enabled.toString());
+                        jsonData.extended_thinking = extThinking.enabled;
 
                         // If enabled is true, add budget_tokens
                         if (extThinking.enabled && ('budget_tokens' in initialModel)) {
-                            queryParams.append('extended_thinking.budget_tokens', initialModel.budget_tokens);
+                            jsonData.budget_tokens = initialModel.budget_tokens;
                         } else if (extThinking.enabled && ('budget_tokens' in extThinking)) {
-                            queryParams.append('extended_thinking.budget_tokens', extThinking.budget_tokens);
+                            jsonData.budget_tokens = extThinking.budget_tokens;
                         }
 
                         console.log(`Setting extended_thinking as object with enabled=${extThinking.enabled}`);
                     } else {
                         // It's a boolean
-                        queryParams.append('extended_thinking.enabled', extThinking.toString());
+                        jsonData.extended_thinking = extThinking;
 
                         // If enabled is true, add budget_tokens
                         if (extThinking && ('budget_tokens' in initialModel)) {
-                            queryParams.append('extended_thinking.budget_tokens', initialModel.budget_tokens);
+                            jsonData.budget_tokens = initialModel.budget_tokens;
                         }
 
                         console.log(`Setting extended_thinking=${extThinking}`);
@@ -288,21 +289,29 @@ export const SessionProvider = ({children}) => {
                 }
                 // Fallback to addModelParameters when no direct parameters were provided
                 else {
-                    addModelParameters(queryParams, currentModel);
+                    addModelParameters(jsonData, currentModel);
                 }
             } else {
                 // Use model config parameters
-                addModelParameters(queryParams, currentModel);
+                addModelParameters(jsonData, currentModel);
             }
 
+            console.log('initializeSession data being sent:', jsonData);
+
             // Send the initialize request
-            const response = await fetch(`${API_URL}/initialize?${queryParams}`);
+            const response = await fetch(`${API_URL}/initialize`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(jsonData)
+            });
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
             const data = await response.json();
-            if (data.session_id) {
-                localStorage.setItem("session_id", data.session_id);
-                setSessionId(data.session_id);
+            if (data.ui_session_id) {
+                localStorage.setItem("ui_session_id", data.ui_session_id);
+                setSessionId(data.ui_session_id);
                 setIsReady(true);
                 setError(null);
 
@@ -310,7 +319,7 @@ export const SessionProvider = ({children}) => {
                 setModelName(currentModel.id);
                 setSelectedModel(currentModel);
             } else {
-                throw new Error("No session_id in response");
+                throw new Error("No ui_session_id in response");
             }
         } catch (err) {
             console.error("Session initialization failed:", err);
@@ -320,11 +329,11 @@ export const SessionProvider = ({children}) => {
     };
 
     // Helper function to add model parameters to query params
-    const addModelParameters = (queryParams, model) => {
+    const addModelParameters = (jsonData, model) => {
         // Add temperature if supported
         if (model.parameters?.temperature) {
             const currentTemp = temperature ?? model.parameters.temperature.default;
-            queryParams.append('temperature', currentTemp.toString());
+            jsonData.temperature = currentTemp;
             console.log(`Setting temperature=${currentTemp}`);
         }
 
@@ -337,7 +346,7 @@ export const SessionProvider = ({children}) => {
                 ? modelParameters.extended_thinking
                 : extendedThinkingDefault;
 
-            queryParams.append('extended_thinking', extendedThinking.toString());
+            jsonData.extended_thinking = extendedThinking;
 
             // Set budget tokens based on whether extended thinking is enabled
             const defaultBudgetTokens = parseInt(
@@ -349,7 +358,7 @@ export const SessionProvider = ({children}) => {
                     : defaultBudgetTokens)
                 : 0;
 
-            queryParams.append('budget_tokens', budgetTokens.toString());
+            jsonData.budget_tokens = budgetTokens;
             console.log(`Setting extended_thinking=${extendedThinking}, budget_tokens=${budgetTokens}`);
         }
 
@@ -360,7 +369,7 @@ export const SessionProvider = ({children}) => {
                 ? modelParameters.reasoning_effort
                 : reasoningEffortDefault;
 
-            queryParams.append('reasoning_effort', reasoningEffort);
+            jsonData.reasoning_effort = reasoningEffort;
             console.log(`Setting reasoning_effort=${reasoningEffort}`);
         }
     };
@@ -433,20 +442,27 @@ export const SessionProvider = ({children}) => {
                     break;
                 }
                 case 'SETTINGS_UPDATE': {
-                    const formData = new FormData();
-                    formData.append('session_id', sessionId);
-                    formData.append('model_name', modelName);
-                    formData.append('backend', selectedModel?.backend);
                     const updatedPersona = values.persona_name || persona;
                     const updatedPrompt = values.customPrompt || customPrompt;
                     setPersona(updatedPersona);
                     setCustomPrompt(updatedPrompt);
-                    formData.append('persona_name', updatedPersona);
-                    formData.append('custom_prompt', updatedPrompt);
+
+                    const jsonData = {
+                        ui_session_id: sessionId,
+                        model_name: modelName,
+                        backend: selectedModel?.backend,
+                        persona_name: updatedPersona,
+                        custom_prompt: updatedPrompt
+                    };
+
+                    console.log('json data being sent for settings update:', jsonData);
 
                     const response = await fetch(`${API_URL}/update_settings`, {
                         method: 'POST',
-                        body: formData
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(jsonData)
                     });
                     if (!response.ok) throw new Error('Failed to update settings');
                     setSettingsVersion(v => v + 1);
@@ -457,101 +473,66 @@ export const SessionProvider = ({children}) => {
                         clearTimeout(debouncedUpdateRef.current);
                     }
                     debouncedUpdateRef.current = setTimeout(async () => {
-                        const formData = new FormData();
-                        formData.append('session_id', sessionId);
                         const updatedParameters = {...modelParameters};
 
                         // ALWAYS include model_name and backend for all parameter updates
                         // This is critical for complex parameters like extended_thinking
-                        formData.append('model_name', modelName);
-                        formData.append('backend', selectedModel?.backend);
-
-                        // Handle extended thinking parameters - ORDER MATTERS!!!!
-                        if ('extended_thinking' in values) {
-                            const extendedThinking = values.extended_thinking;
-                            updatedParameters.extended_thinking = extendedThinking;
-
-                            // If extended thinking is disabled, set budget_tokens to 0
-                            if (extendedThinking === false) {
-                                updatedParameters.budget_tokens = 0;
-                                formData.append('extended_thinking.enabled', 'false');
-                                formData.append('extended_thinking.budget_tokens', '0');
-                            } else {
-                                // Get budget tokens (either from values or current state)
-                                const budgetTokens = 'budget_tokens' in values
-                                    ? values.budget_tokens
-                                    : (updatedParameters.budget_tokens || 5000);
-
-                                updatedParameters.budget_tokens = budgetTokens;
-                                formData.append('extended_thinking.enabled', 'true');
-                                formData.append('extended_thinking.budget_tokens', budgetTokens.toString());
-                            }
-                        }
-                        // Handle budget_tokens separately (only if extended_thinking wasn't updated)
-                        else if ('budget_tokens' in values) {
-                            const budgetTokens = values.budget_tokens;
-                            updatedParameters.budget_tokens = budgetTokens;
-
-                            // If budget_tokens is 0, also disable extended thinking
-                            if (budgetTokens === 0) {
-                                updatedParameters.extended_thinking = false;
-                                formData.append('extended_thinking.enabled', 'false');
-                                formData.append('extended_thinking.budget_tokens', '0');
-                            } else {
-                                // Make sure extended thinking is enabled if setting non-zero budget
-                                updatedParameters.extended_thinking = true;
-                                formData.append('extended_thinking.enabled', 'true');
-                                formData.append('extended_thinking.budget_tokens', budgetTokens.toString());
-                            }
-                        }
+                        const jsonData = {
+                            ui_session_id: sessionId,
+                            model_name: modelName,
+                            backend: selectedModel?.backend
+                        };
 
                         // non-reasoning model parameters
                         if ('temperature' in values) {
                             updatedParameters.temperature = values.temperature;
-                            formData.append('temperature', values.temperature);
+                            jsonData.temperature = values.temperature;
                         }
 
                         // openai reasoning model parameters
                         if ('reasoning_effort' in values) {
                             updatedParameters.reasoning_effort = values.reasoning_effort;
-                            formData.append('reasoning_effort', values.reasoning_effort);
+                            jsonData.reasoning_effort = values.reasoning_effort;
                         }
+
                         // claude reasoning model parameters
-                        // if (selectedModel?.parameters?.extended_thinking) {
-                        //     const extendedThinking = 'extended_thinking' in values
-                        //         ? values.extended_thinking
-                        //         : updatedParameters.extended_thinking || false;
-                        //
-                        //     updatedParameters.extended_thinking = extendedThinking;
-                        //
-                        //     // Only use dot notation for nested fields
-                        //     formData.append('extended_thinking.enabled', extendedThinking.toString());
-                        //
-                        //     if (extendedThinking) {
-                        //         // If enabled, set budget tokens
-                        //         const budgetTokens = 'budget_tokens' in values
-                        //             ? values.budget_tokens
-                        //             : (updatedParameters.budget_tokens || 5000);
-                        //
-                        //         updatedParameters.budget_tokens = budgetTokens;
-                        //         formData.append('extended_thinking.budget_tokens', budgetTokens.toString());
-                        //     } else {
-                        //         // If disabled, set budget tokens to 0
-                        //         updatedParameters.budget_tokens = 0;
-                        //         formData.append('extended_thinking.budget_tokens', '0');
-                        //     }
-                        // }
-                        // // For backward compatibility - handle standalone budget_tokens update
-                        // else if ('budget_tokens' in values && updatedParameters.extended_thinking) {
-                        //     updatedParameters.budget_tokens = values.budget_tokens;
-                        //     formData.append('extended_thinking.enabled', 'true');
-                        //     formData.append('extended_thinking.budget_tokens', values.budget_tokens.toString());
-                        // }
-                        console.log('Form data being sent:', formData);
+                        if (selectedModel?.parameters?.extended_thinking) {
+                            const extendedThinking = 'extended_thinking' in values
+                                ? values.extended_thinking
+                                : updatedParameters.extended_thinking || false;
+
+                            updatedParameters.extended_thinking = extendedThinking;
+                            jsonData.extended_thinking = extendedThinking;
+
+                            if (extendedThinking) {
+                                // If enabled, set budget tokens
+                                const budgetTokens = 'budget_tokens' in values
+                                    ? values.budget_tokens
+                                    : (updatedParameters.budget_tokens || 5000);
+
+                                updatedParameters.budget_tokens = budgetTokens;
+                                jsonData.budget_tokens = budgetTokens;
+                            } else {
+                                // If disabled, set budget tokens to 0
+                                updatedParameters.budget_tokens = 0;
+                                jsonData.budget_tokens = 0;
+                            }
+                        }
+                        // For backward compatibility - handle standalone budget_tokens update
+                        else if ('budget_tokens' in values && updatedParameters.extended_thinking) {
+                            updatedParameters.budget_tokens = values.budget_tokens;
+                            jsonData.extended_thinking = true;
+                            jsonData.budget_tokens = values.budget_tokens;
+                        }
+
+                        console.log('JSON data being sent:', jsonData);
                         setModelParameters(updatedParameters);
                         await fetch(`${API_URL}/update_settings`, {
                             method: 'POST',
-                            body: formData
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(jsonData)
                         });
                         setSettingsVersion(v => v + 1);
                     }, 300);
@@ -567,13 +548,17 @@ export const SessionProvider = ({children}) => {
 
     // Handle equipping tools
     const handleEquipTools = async (tools) => {
-        const formData = new FormData();
-        formData.append('session_id', sessionId);
-        formData.append('tools', JSON.stringify(tools));
+        const jsonData = {
+            ui_session_id: sessionId,
+            tools: tools
+        };
         try {
             const response = await fetch(`${API_URL}/update_tools`, {
                 method: 'POST',
-                body: formData
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(jsonData)
             });
             if (!response.ok) throw new Error("Failed to equip tools");
             await fetchAgentTools();
@@ -591,7 +576,7 @@ export const SessionProvider = ({children}) => {
 
     // Handle session deletion
     const handleSessionsDeleted = () => {
-        localStorage.removeItem("session_id");
+        localStorage.removeItem("ui_session_id");
         setSessionId(null);
         setIsReady(false);
         setActiveTools([]);

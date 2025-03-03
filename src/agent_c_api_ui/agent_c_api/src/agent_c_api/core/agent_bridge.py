@@ -24,7 +24,7 @@ from agent_c.prompting import PromptBuilder, CoreInstructionSection, HelpfulInfo
 from agent_c_tools.tools.user_bio.prompt import UserBioSection
 
 
-class ReactJSAgent:
+class AgentBridge:
     """
     A bridge interface between the agent_c library and ReactJS applications for chat functionality.
 
@@ -246,7 +246,7 @@ class ReactJSAgent:
         await self.__init_tool_chest()
 
         # Reinitialize the agent with new tools but keep the session
-        await self.__init_agent()
+        await self.initialize_agent_parameters()
 
         self.logger.info(f"Tools updated successfully. Current Active tools: {list(self.tool_chest.active_tools.keys())}")
 
@@ -325,7 +325,7 @@ class ReactJSAgent:
             print(f"Error initializing tools: {e}")
         return
 
-    async def __init_agent(self):
+    async def initialize_agent_parameters(self):
         """
         Initialize the internal agent with prompt builders, tools, and configurations.
 
@@ -371,23 +371,46 @@ class ReactJSAgent:
 
         prompt_builder = PromptBuilder(sections=operating_sections + info_sections)
 
+        # Prepare common parameters that apply to both backends
+        agent_params = {
+            "prompt_builder": prompt_builder,
+            "model_name": self.model_name,
+            "tool_chest": self.tool_chest,
+            "streaming_callback": self.consolidated_streaming_callback,
+            "output_format": self.agent_output_format
+        }
+
+        # Add temperature if it exists (applies to both Claude and GPT)
+        if self.temperature is not None:
+            self.logger.info(f"Setting agent temperature to {self.temperature}")
+            agent_params["temperature"] = self.temperature
+
         if self.backend == 'claude':
-            self.agent = ClaudeChatAgent(
-                prompt_builder=prompt_builder,
-                model_name=self.model_name,
-                tool_chest=self.tool_chest,
-                streaming_callback=self.consolidated_streaming_callback,
-                output_format=self.agent_output_format
-            )
+            # Add Claude-specific parameters
+            if self.extended_thinking:
+                if self.budget_tokens is not None and self.budget_tokens > 0:
+                    # any budget tokens >0 turns on extended thinking
+                    agent_params["budget_tokens"] = self.budget_tokens
+                else:
+                    # if they don't provide budget_tokens, we'll set a default to turn on extended thinking
+                    agent_params["budget_tokens"] = 2500
+            else:
+                # this in effect turns off extended thinking
+                agent_params["budget_tokens"] = 0
+
+            self.agent = ClaudeChatAgent(**agent_params)
         else:
-            self.agent = GPTChatAgent(
-                prompt_builder=prompt_builder,
-                model_name=self.model_name,
-                tool_chest=self.tool_chest,
-                streaming_callback=self.consolidated_streaming_callback,
-                output_format=self.agent_output_format
-            )
-        self.logger.info(f"Agent {self.agent_name} initialized successfully")
+            # Add OpenAI-specific parameters
+            # Only pass reasoning_effort if it's set and we're using a reasoning model
+            if self.reasoning_effort is not None and any(
+                    reasoning_model in self.model_name
+                    for reasoning_model in ["o1", "o1-mini", "o3", "o3-mini"]
+            ):
+                agent_params["reasoning_effort"] = self.reasoning_effort
+
+            self.agent = GPTChatAgent(**agent_params)
+
+        self.logger.info(f"Agent initialized using the following parameters: {agent_params}")
 
     async def __build_prompt_metadata(self) -> Dict[str, Any]:
         """
@@ -395,7 +418,7 @@ class ReactJSAgent:
 
         Returns:
             Dict[str, Any]: Metadata for prompts.
-            - session_id (str): Session ID for the chat session.
+            - session_id (str): Session ID for the chat session. Not the UI session ID!
             - current_user_username (str): Username of the current user.
             - current_user_name (str): Name of the current user.
             - session_summary (str): Summary of the current chat session.
@@ -437,7 +460,7 @@ class ReactJSAgent:
             'persona_name': self.persona_name,
             'initialized_tools': [],
             'agent_name': self.agent_name,
-            'session_id': self.session_id,
+            'agent_session_id': self.session_id,
             'custom_prompt': self.custom_persona_text,
             'output_format': self.agent_output_format,
             'created_time': self._current_timestamp(),
@@ -626,7 +649,7 @@ class ReactJSAgent:
         """
         await self.__init_session()
         await self.__init_tool_chest()
-        await self.__init_agent()
+        await self.initialize_agent_parameters()
 
 
     async def consolidated_streaming_callback(self, event: SessionEvent):
@@ -735,7 +758,6 @@ class ReactJSAgent:
                     prompt_metadata=prompt_metadata,
                     messages=self.current_chat_Log,
                     output_format='raw',
-                    temperature=self.temperature
                 )
             )
 

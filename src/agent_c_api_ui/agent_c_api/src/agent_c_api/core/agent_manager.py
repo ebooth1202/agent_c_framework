@@ -4,24 +4,11 @@ import uuid
 from typing import Dict, Optional, List, Any, AsyncGenerator
 
 from agent_c import BaseAgent
-from agent_c_api.core.reactjs_agent import ReactJSAgent
+from agent_c_api.core.agent_bridge import AgentBridge
 from agent_c_api.core.util.logging_utils import LoggingManager
 
 
-# logging.basicConfig(
-#     level=logging.DEBUG,
-#     encoding='utf-8',
-#     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-#     handlers=[
-#         logging.StreamHandler(),
-#         logging.FileHandler('agent_manager.log'),
-#     ]
-# )
-# my_logger = logging.getLogger("httpx")
-# my_logger.setLevel(logging.ERROR)
-
-
-class AgentManager:
+class UItoAgentBridgeManager:
     """
     Manages agent sessions in a multi-agent environment.
 
@@ -33,7 +20,7 @@ class AgentManager:
     Attributes:
         ESSENTIAL_TOOLS (List[str]): Required tool sets for all agents
         logger (logging.Logger): Instance logger
-        sessions (Dict[str, Dict[str, Any]]): Active session storage
+        ui_sessions (Dict[str, Dict[str, Any]]): Active session storage
         _locks (Dict[str, asyncio.Lock]): Session operation locks
     """
     ESSENTIAL_TOOLS = ['MemoryTools', 'WorkspaceTools', 'PreferenceTools', 'RandomNumberTools']
@@ -43,27 +30,29 @@ class AgentManager:
         self.logger = logging_manager.get_logger()
         # self.debug_event = LoggingManager.get_debug_event()
 
-        self.sessions: Dict[str, Dict[str, Any]] = {}
+        self.ui_sessions: Dict[str, Dict[str, Any]] = {}
         self._locks: Dict[str, asyncio.Lock] = {}
 
 
-    def get_session_data(self, session_id: str) -> Dict[str, Any]:
+    def get_session_data(self, ui_session_id: str) -> Dict[str, Any]:
         """
         Retrieve session data for a given session ID.
 
         Args:
-            session_id (str): The unique identifier for the session
+            ui_session_id (str): The unique identifier for the session
 
         Returns:
             Dict[str, Any]: Session data dictionary containing agent and configuration
                 information, or None if session doesn't exist
         """
-        return self.sessions.get(session_id)
+        return self.ui_sessions.get(ui_session_id)
 
-    async def create_session(self, llm_model: str = "gpt-4o", backend: str = 'openai',
-                             persona_name: str = 'default',
+    async def create_session(self,
+                             llm_model: str = None,
+                             backend: str = None,
+                             persona_name: str = None,
                              additional_tools: List[str] = None,
-                             existing_session_id: str = None, **kwargs) -> str:
+                             existing_ui_session_id: str = None, **kwargs) -> str:
         """
         Create a new session or update an existing session with a new agent.
 
@@ -71,7 +60,7 @@ class AgentManager:
             llm_model: The model to use
             backend: The backend provider ('openai' or 'claude')
             persona_name: The name of the persona to use
-            existing_session_id: If provided, updates existing session instead of creating new one
+            existing_ui_session_id: If provided, updates existing session instead of creating new one
             additional_tools: Additional tools to add to the agent - string names of tool class names
             **kwargs: Additional keyword arguments: currently passes kwargs to ReactJSAgent
 
@@ -84,18 +73,18 @@ class AgentManager:
         # self.logger.debug(f"Creating new session with kwargs: {kwargs}\n")
 
         # If updating existing session, use that ID, otherwise generate new one
-        session_id = existing_session_id if existing_session_id else str(uuid.uuid4())
+        ui_session_id = existing_ui_session_id if existing_ui_session_id else str(uuid.uuid4())
 
         # Extract custom_persona_text explicitly to avoid it being lost or overridden
         custom_persona_text = kwargs.pop('custom_persona_text', None)
 
         # Create lock if it doesn't exist
-        if session_id not in self._locks:
-            self._locks[session_id] = asyncio.Lock()
+        if ui_session_id not in self._locks:
+            self._locks[ui_session_id] = asyncio.Lock()
 
-        async with self._locks[session_id]:
+        async with self._locks[ui_session_id]:
             # Get existing session data if updating
-            existing_session = self.sessions.get(session_id, {})
+            existing_session = self.ui_sessions.get(ui_session_id, {})
             existing_agent: BaseAgent | None = existing_session.get("agent", None)
 
             # IMPORTANT FIX: If we're changing models and no custom_persona_text was provided,
@@ -105,14 +94,14 @@ class AgentManager:
                 custom_persona_text = existing_agent.custom_persona_text
                 self.logger.info(f"Preserving existing custom_persona_text: {custom_persona_text[:10]}...")
 
-            # Initialize agent for this session
-            agent = ReactJSAgent(
-                user_id=session_id,
+            # Initialize agent bridge for this session - this creates a session manager that will persist history
+            agent = AgentBridge(
+                user_id=ui_session_id,
                 backend=backend,
                 model_name=llm_model,
                 additional_tools=additional_tools or [],
                 persona_name=persona_name,
-                agent_name=f"Agent_{session_id}",
+                agent_name=f"Agent_{ui_session_id}",
                 custom_persona_text=custom_persona_text,
                 **kwargs
             )
@@ -122,22 +111,22 @@ class AgentManager:
                 # Transfer session manager to maintain history - I need to pass this first
                 agent.session_manager = existing_agent.session_manager
 
-            # Initialize the agent
+            # Initialize the agent bridge. This fully initializes the agent and its tools as well.
             await agent.initialize()
 
             # Update sessions dictionary
-            self.sessions[session_id] = {
+            self.ui_sessions[ui_session_id] = {
                 "agent": agent,
                 "llm_model": llm_model,
                 "created_at": agent._current_timestamp(),
-                "agent_name": f"Agent_{session_id}",
+                "agent_name": f"Agent_{ui_session_id}",
                 "agent_c_session_id": agent.session_id,
             }
 
-            self.logger.info(f"Session {session_id} created with agent: {agent}")
-            return session_id
+            self.logger.info(f"Session {ui_session_id} created with agent: {agent}")
+            return ui_session_id
 
-    async def cleanup_session(self, session_id: str):
+    async def cleanup_session(self, ui_session_id: str):
         """
         Clean up resources associated with a specific session.
 
@@ -145,14 +134,14 @@ class AgentManager:
         cleanup are logged but don't halt execution.
 
         Args:
-            session_id (str): The unique identifier of the session to clean up
+            ui_session_id (str): The unique identifier of the session to clean up
 
         Note:
             This method is safe to call multiple times on the same session ID
         """
-        if session_id in self.sessions:
+        if ui_session_id in self.ui_sessions:
             try:
-                session_data = self.sessions[session_id]
+                session_data = self.ui_sessions[ui_session_id]
                 # agent: BaseAgent = session_data.get("agent")
                 # if agent:
                 # if hasattr(agent, 'tool_chest') and agent.tool_chest:
@@ -161,16 +150,16 @@ class AgentManager:
                 #     await agent.session_manager.close()
 
                 # Remove session data and lock
-                del self.sessions[session_id]
-                if session_id in self._locks:
-                    del self._locks[session_id]
+                del self.ui_sessions[ui_session_id]
+                if ui_session_id in self._locks:
+                    del self._locks[ui_session_id]
 
             except Exception as e:
-                self.logger.error(f"Error cleaning up session {session_id}: {e}")
+                self.logger.error(f"Error cleaning up session {ui_session_id}: {e}")
 
     async def stream_response(
             self,
-            session_id: str,
+            ui_session_id: str,
             user_message: str,
             custom_prompt: Optional[str] = None,
     ) -> AsyncGenerator[str, None]:
@@ -179,7 +168,7 @@ class AgentManager:
         Uses ReactJSAgent's stream_chat method for proper streaming support.
 
         Args:
-            session_id: The session identifier
+            ui_session_id: The session identifier
             user_message: The user's message to process
             custom_prompt: Optional custom prompt to use
 
@@ -190,9 +179,9 @@ class AgentManager:
             ValueError: If the session ID is invalid
             Exception: If streaming fails
         """
-        session_data = self.get_session_data(session_id)
+        session_data = self.get_session_data(ui_session_id)
         if not session_data:
-            raise ValueError(f"Invalid session ID: {session_id}")
+            raise ValueError(f"Invalid session ID: {ui_session_id}")
 
         agent = session_data["agent"]
 

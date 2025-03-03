@@ -1,8 +1,6 @@
 import uvicorn
 import logging
 
-from fastapi import FastAPI
-from starlette.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from fastapi.logger import logger as fastapi_logger
 
@@ -24,7 +22,7 @@ LoggingManager.configure_external_loggers()
 # Custom overrides for Logging
 LoggingManager.configure_external_loggers({
     # "httpx": "ERROR",  # Only show errors for httpx
-    "agent_c_api.core.util.middleware_logging": "INFO"  # Show INFO logs for middleware_logging, debug is too noisy
+    "agent_c_api.core.util.middleware_logging": "WARNING"  # Show INFO logs for middleware_logging, debug is too noisy
 })
 
 # Configure specific loggers for FastAPI components
@@ -53,8 +51,10 @@ logging.getLogger("uvicorn.error").handlers = []
 
 
 app = create_application(router=router, settings=settings)
-for route in app.routes:
-    logger.info(f"Registered route: {route.path}")
+# for route in app.routes:
+#     logger.info(f"Registered route: {route.path}")
+
+logger.info(f"Registered {len(app.routes)} routes")
 
 def run():
     """Entrypoint for the API"""

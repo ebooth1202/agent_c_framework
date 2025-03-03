@@ -55,7 +55,7 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
         if (!fileInputRef.current?.files?.length) return;
 
         const formData = new FormData();
-        formData.append("session_id", sessionId);
+        formData.append("ui_session_id", sessionId);
         formData.append("file", fileInputRef.current.files[0]);
 
         try {
@@ -201,7 +201,7 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
             setInputText("");
 
             const formData = new FormData();
-            formData.append("session_id", sessionId);
+            formData.append("ui_session_id", sessionId);
             formData.append("message", userText);
             formData.append("custom_prompt", customPrompt || "");
 

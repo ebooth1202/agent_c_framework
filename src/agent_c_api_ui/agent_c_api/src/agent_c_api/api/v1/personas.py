@@ -42,5 +42,5 @@ async def list_personas() -> List[Dict[str, str]]:
             "file": os.path.basename(file_path)
         })
 
-    logger.info(f"Found {len(personas)} personas: {[p['name'] for p in personas]}")
+    logger.info(f"Found {len(personas)} personas")
     return personas

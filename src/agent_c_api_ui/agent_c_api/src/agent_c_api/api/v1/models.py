@@ -2,7 +2,7 @@ import os
 from fastapi import APIRouter, HTTPException, Depends
 import json
 import logging
-from agent_c_api.core.agent_manager import AgentManager
+from agent_c_api.core.agent_manager import UItoAgentBridgeManager
 from agent_c_api.config.config_loader import MODELS_CONFIG
 
 

@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 
 # Import your settings and AgentManager
 from agent_c_api.config.env_config import settings
-from agent_c_api.core.agent_manager import AgentManager
+from agent_c_api.core.agent_manager import UItoAgentBridgeManager
 from agent_c_api.core.util.logging_utils import LoggingManager
 from agent_c_api.core.util.middleware_logging import APILoggingMiddleware
 
@@ -26,7 +26,7 @@ def create_application(router: APIRouter, **kwargs) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         # Startup: Initialize your shared AgentManager instance.
-        app.state.agent_manager = AgentManager()
+        app.state.agent_manager = UItoAgentBridgeManager()
         yield
         # Shutdown: Optionally, perform any cleanup tasks.
         # For example: await app.state.agent_manager.cleanup_all_sessions()

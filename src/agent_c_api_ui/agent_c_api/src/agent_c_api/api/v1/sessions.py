@@ -1,48 +1,43 @@
 from fastapi import APIRouter, HTTPException, Depends
 import logging
-from agent_c_api.api.dependencies import get_agent_manager, get_dynamic_params
+from agent_c_api.api.dependencies import get_agent_manager
+from agent_c_api.api.v1.llm_models.agent_params import AgentInitializationParams
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.get("/initialize")
-async def initialize_session(
-        model_name: str = "gpt-4o",
-        backend: str = "openai",
-        persona_name: str = None,
-        custom_prompt: str = None,
-        dynamic_params = Depends(get_dynamic_params),
+@router.post("/initialize")
+async def initialize_agent(params: AgentInitializationParams,
         agent_manager=Depends(get_agent_manager)
 ):
     """
-    Creates a fresh session with the provided parameters.
+    Creates an agent session with the provided parameters.
     """
     try:
         # Create a new session with both model and backend parameters
-        logging.debug(f"Creating new session with model: {model_name}, backend: {backend}")
+        logging.debug(f"Creating new session with model: {params.model_name}, backend: {params.backend}")
 
-        # Conditionally pass model param
-        model_params = dynamic_params.dict()
+        # Get only the relevant model parameters using your filtering method.
+        model_params = params.to_agent_kwargs()
+        logging.debug(f"--->Model parameters: {model_params} identified")
 
-        additional_params = {}
-        if custom_prompt is not None:
-            logging.debug(f"Custom prompt provided: {custom_prompt}")
-            # this is the right kwarg for create_session
-            additional_params['custom_persona_text'] = custom_prompt
+        # Get the additional parameters (including persona_name and custom prompt).
+        additional_params = params.to_additional_params()
+        logging.debug(f"--->Additional parameters: {additional_params} identified")
+
 
         new_session_id = await agent_manager.create_session(
-            llm_model=model_name,
-            backend=backend,
-            persona_name=persona_name if persona_name else 'default',
+            llm_model=params.model_name,
+            backend=params.backend,
             **model_params,
             **additional_params
         )
 
-        logger.debug(f"Current sessions in memory: {list(agent_manager.sessions.keys())}")
+        logger.debug(f"Current sessions in memory: {list(agent_manager.ui_sessions.keys())}")
         logger.debug(
             f"User Session {new_session_id} with session details: {agent_manager.get_session_data(new_session_id)}")
-        return {"session_id": new_session_id,
+        return {"ui_session_id": new_session_id,
                 "agent_c_session_id": agent_manager.get_session_data(new_session_id).get('agent_c_session_id',
                                                                                          "Unknown")}
 
@@ -51,12 +46,12 @@ async def initialize_session(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/verify_session/{session_id}")
-async def verify_session(session_id: str, agent_manager=Depends(get_agent_manager)):
+@router.get("/verify_session/{ui_session_id}")
+async def verify_session(ui_session_id: str, agent_manager=Depends(get_agent_manager)):
     """
     Verifies if a session exists and is valid
     """
-    session_data = agent_manager.get_session_data(session_id)
+    session_data = agent_manager.get_session_data(ui_session_id)
     return {"valid": session_data is not None}
 
 
@@ -73,17 +68,17 @@ async def delete_all_sessions(agent_manager=Depends(get_agent_manager)):
     """
     try:
         # Get count of sessions before deletion
-        session_count = len(agent_manager.sessions)
+        session_count = len(agent_manager.ui_sessions)
 
         # Create list of session IDs to avoid modifying dict during iteration
-        session_ids = list(agent_manager.sessions.keys())
+        ui_session_ids = list(agent_manager.ui_sessions.keys())
 
         # Clean up each session
-        for session_id in session_ids:
-            await agent_manager.cleanup_session(session_id)
+        for ui_session_id in ui_session_ids:
+            await agent_manager.cleanup_session(ui_session_id)
 
         logger.debug(
-            f"Deleted {session_count} sessions. Hanging sessions from deletion: {list(agent_manager.sessions.keys())}")
+            f"Deleted {session_count} sessions. Hanging sessions from deletion: {list(agent_manager.ui_sessions.keys())}")
 
         return {
             "status": "success",
