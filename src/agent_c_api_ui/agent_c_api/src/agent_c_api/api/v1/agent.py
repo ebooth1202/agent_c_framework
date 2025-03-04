@@ -189,6 +189,7 @@ async def get_agent_tools(ui_session_id: str, agent_manager=Depends(get_agent_ma
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# http://localhost:8000/api/v1/debug_agent_state/2971f215-a631-4177-852e-c3595b6d256a
 @router.get("/debug_agent_state/{ui_session_id}")
 async def debug_agent_state(ui_session_id: str, agent_manager=Depends(get_agent_manager)):
     """
@@ -230,3 +231,14 @@ async def debug_agent_state(ui_session_id: str, agent_manager=Depends(get_agent_
     except Exception as e:
         logger.error(f"Error debugging agent state: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# http://localhost:8000/api/v1/chat_session_debug/2971f215-a631-4177-852e-c3595b6d256a
+@router.get("/chat_session_debug/{ui_session_id}")
+async def debug_chat_session(ui_session_id: str, agent_manager=Depends(get_agent_manager)):
+    try:
+        debug_info = await agent_manager.debug_session(ui_session_id)
+        return debug_info
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error debugging session: {str(e)}")
