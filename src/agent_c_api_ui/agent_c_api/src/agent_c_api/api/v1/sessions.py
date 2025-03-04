@@ -26,12 +26,20 @@ async def initialize_agent(params: AgentInitializationParams,
         additional_params = params.to_additional_params()
         logging.debug(f"--->Additional parameters: {additional_params} identified")
 
+        # Use ui_session_id if provided (for model changes) - this allows us to transfer chat history
+        session_params = {}
+        existing_ui_session_id = getattr(params, 'ui_session_id', None)
+        if existing_ui_session_id:
+            session_params['existing_ui_session_id'] = existing_ui_session_id
+        logger.debug(f"Existing session ID (if passed): {existing_ui_session_id}")
+
 
         new_session_id = await agent_manager.create_session(
             llm_model=params.model_name,
             backend=params.backend,
             **model_params,
-            **additional_params
+            **additional_params,
+            **session_params
         )
 
         logger.debug(f"Current sessions in memory: {list(agent_manager.ui_sessions.keys())}")

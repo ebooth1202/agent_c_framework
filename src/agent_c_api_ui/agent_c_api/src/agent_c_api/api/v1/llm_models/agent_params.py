@@ -20,7 +20,7 @@ class AgentInitializationParams(AgentCommonParams):
     model_name: str = Field(..., description="The model name to use")
     backend: Optional[str] = Field("openai", description="Backend provider (e.g., 'openai', 'claude')")
     max_tokens: Optional[int] = Field(None, description="Maximum tokens for the model output")
-
+    ui_session_id: Optional[str] = Field(None, description="Existing UI session ID - this enables us to transfer chat sessions. If None or not passed, a new session will be created.")
 
     @model_validator(mode="before")
     def validate_and_set_defaults(cls, values):
