@@ -76,7 +76,7 @@ const ModelParameterControls = ({
         setExtendedThinkingEnabled(enabled);
 
         // Update the parent with the enabled state
-        onParameterChange('extended_thinking', enabled);
+        // onParameterChange('extended_thinking', enabled);
 
         // If disabled, set budget_tokens to 0
         if (!enabled) {
@@ -108,7 +108,7 @@ const ModelParameterControls = ({
         if (tokens === 0) {
             setExtendedThinkingEnabled(false);
             // Notify parent of both changes
-            onParameterChange('extended_thinking', false);
+            // onParameterChange('extended_thinking', false);
             setBudgetTokens(0);
             onParameterChange('budget_tokens', 0);
         } else {

@@ -214,7 +214,7 @@ export const SessionProvider = ({children}) => {
                 throw new Error('No valid model configuration available');
             }
 
-            console.log('Initializing session with model:', currentModel.id);
+            console.log('Initializing session with model:', currentModel);
 
             // Build JSON request body
             const jsonData = {
@@ -241,13 +241,13 @@ export const SessionProvider = ({children}) => {
             // Second priority: current state's custom prompt
             else if (customPrompt) {
                 promptToUse = customPrompt;
-                console.log('Using current state custom prompt');
+                // console.log('Using current state custom prompt');
             }
 
             // Always include custom prompt if available
             if (promptToUse) {
                 jsonData.custom_prompt = promptToUse;
-                console.log('Sending custom prompt to backend');
+                // console.log('Sending custom prompt to backend');
             }
 
             // Use parameters directly from initialModel if provided, otherwise use model config
@@ -255,13 +255,13 @@ export const SessionProvider = ({children}) => {
                 // Add temperature if available from initialModel
                 if ('temperature' in initialModel) {
                     jsonData.temperature = initialModel.temperature;
-                    console.log(`Setting temperature=${initialModel.temperature}`);
+                    // console.log(`Setting initial temperature=${initialModel.temperature}`);
                 }
 
                 // Add reasoning_effort if available from initialModel
                 if ('reasoning_effort' in initialModel) {
                     jsonData.reasoning_effort = initialModel.reasoning_effort;
-                    console.log(`Setting reasoning_effort=${initialModel.reasoning_effort}`);
+                    // console.log(`Setting initial reasoning_effort=${initialModel.reasoning_effort}`);
                 }
 
                 // Handle extended_thinking (either as boolean or object)
@@ -280,7 +280,7 @@ export const SessionProvider = ({children}) => {
                             jsonData.budget_tokens = extThinking.budget_tokens;
                         }
 
-                        console.log(`Setting extended_thinking as object with enabled=${extThinking.enabled}`);
+                        console.log(`Setting initial extended_thinking as object with enabled=${extThinking.enabled}`);
                     } else {
                         // It's a boolean
                         jsonData.extended_thinking = extThinking;
@@ -290,7 +290,7 @@ export const SessionProvider = ({children}) => {
                             jsonData.budget_tokens = initialModel.budget_tokens;
                         }
 
-                        console.log(`Setting extended_thinking=${extThinking}`);
+                        // console.log(`Setting extended_thinking=${extThinking}`);
                     }
                 }
                 // Fallback to addModelParameters when no direct parameters were provided
@@ -340,24 +340,22 @@ export const SessionProvider = ({children}) => {
         if (model.parameters?.temperature) {
             const currentTemp = temperature ?? model.parameters.temperature.default;
             jsonData.temperature = currentTemp;
-            console.log(`Setting temperature=${currentTemp}`);
+            // console.log(`Setting temperature=${currentTemp}`);
         }
 
         // Handle Claude extended thinking parameters
         const hasExtendedThinking = !!model.parameters?.extended_thinking;
         if (hasExtendedThinking) {
-            // Determine if extended thinking should be enabled
-            const extendedThinkingDefault = Boolean(model.parameters.extended_thinking.enabled) === true;
+            // Keep track of UI state but don't send to backend
             const extendedThinking = modelParameters.extended_thinking !== undefined
                 ? modelParameters.extended_thinking
-                : extendedThinkingDefault;
+                : Boolean(model.parameters.extended_thinking.enabled) === true;
 
-            jsonData.extended_thinking = extendedThinking;
-
-            // Set budget tokens based on whether extended thinking is enabled
+            // Budget tokens is what actually matters
             const defaultBudgetTokens = parseInt(
                 model.parameters.extended_thinking.budget_tokens?.default || 5000
             );
+
             const budgetTokens = extendedThinking
                 ? (modelParameters.budget_tokens !== undefined
                     ? modelParameters.budget_tokens
@@ -365,7 +363,7 @@ export const SessionProvider = ({children}) => {
                 : 0;
 
             jsonData.budget_tokens = budgetTokens;
-            console.log(`Setting extended_thinking=${extendedThinking}, budget_tokens=${budgetTokens}`);
+            console.log(`Setting budget_tokens=${budgetTokens}`);
         }
 
         // Handle OpenAI reasoning effort parameter if supported
@@ -376,7 +374,7 @@ export const SessionProvider = ({children}) => {
                 : reasoningEffortDefault;
 
             jsonData.reasoning_effort = reasoningEffort;
-            console.log(`Setting reasoning_effort=${reasoningEffort}`);
+            // console.log(`Setting reasoning_effort=${reasoningEffort}`);
         }
     };
 
@@ -508,27 +506,22 @@ export const SessionProvider = ({children}) => {
                                 : updatedParameters.extended_thinking || false;
 
                             updatedParameters.extended_thinking = extendedThinking;
-                            jsonData.extended_thinking = extendedThinking;
 
-                            if (extendedThinking) {
-                                // If enabled, set budget tokens
-                                const budgetTokens = 'budget_tokens' in values
-                                    ? values.budget_tokens
-                                    : (updatedParameters.budget_tokens || 5000);
-
+                            if ('budget_tokens' in values) {
+                                updatedParameters.budget_tokens = values.budget_tokens;
+                                jsonData.budget_tokens = values.budget_tokens;
+                            } else if (extendedThinking) {
+                                // If UI shows extended thinking enabled but no budget specified,
+                                // use existing or default value
+                                const budgetTokens = updatedParameters.budget_tokens || 5000;
                                 updatedParameters.budget_tokens = budgetTokens;
                                 jsonData.budget_tokens = budgetTokens;
                             } else {
-                                // If disabled, set budget tokens to 0
+                                // If UI shows extended thinking disabled,
+                                // ensure budget_tokens is 0
                                 updatedParameters.budget_tokens = 0;
                                 jsonData.budget_tokens = 0;
                             }
-                        }
-                        // For backward compatibility - handle standalone budget_tokens update
-                        else if ('budget_tokens' in values && updatedParameters.extended_thinking) {
-                            updatedParameters.budget_tokens = values.budget_tokens;
-                            jsonData.extended_thinking = true;
-                            jsonData.budget_tokens = values.budget_tokens;
                         }
 
                         console.log('JSON data being sent:', jsonData);
