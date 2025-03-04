@@ -478,11 +478,12 @@ class AgentBridge:
             'created_time': self._current_timestamp(),
             'temperature': self.temperature,
             'reasoning_effort': self.reasoning_effort,
-            'model_parameters': {
+            'agent_parameters': {
                 'temperature': getattr(self, 'temperature', None),
                 'reasoning_effort': getattr(self, 'reasoning_effort', None),
-                'extended_thinking': getattr(self, 'extended_thinking', False),
-                'budget_tokens': getattr(self, 'budget_tokens', 0)
+                'extended_thinking': getattr(self, 'extended_thinking', None),
+                'budget_tokens': getattr(self, 'budget_tokens', None),
+                'max_tokens': getattr(self, 'max_tokens', None)
             }
         }
 

@@ -118,10 +118,11 @@ async def get_agent_config(ui_session_id: str, agent_manager=Depends(get_agent_m
             "backend": config["backend"],
             "model_info": {
                 "name": config["model_name"],
-                "temperature": config["model_parameters"]["temperature"],
-                "reasoning_effort": config["model_parameters"]["reasoning_effort"],
-                "extended_thinking": getattr(agent, "extended_thinking", False),
-                "budget_tokens": getattr(agent, "budget_tokens", 0)
+                "temperature": config["agent_parameters"]["temperature"],
+                "reasoning_effort": config["agent_parameters"]["reasoning_effort"],
+                "extended_thinking": config["agent_parameters"]["extended_thinking"],
+                "budget_tokens": config["agent_parameters"]["budget_tokens"],
+                "max_tokens": config["agent_parameters"]["max_tokens"]
             },
             "initialized_tools": config["initialized_tools"]
         })
@@ -201,11 +202,12 @@ async def debug_agent_state(ui_session_id: str, agent_manager=Depends(get_agent_
         agent = session_data["agent"]
 
         # Get ReactJSAgent parameters
-        reactjs_agent_params = {
+        agent_bridge_params = {
             "temperature": getattr(agent, "temperature", None),
             "reasoning_effort": getattr(agent, "reasoning_effort", None),
             "extended_thinking": getattr(agent, "extended_thinking", None),
             "budget_tokens": getattr(agent, "budget_tokens", None),
+            "max_tokens": getattr(agent, "max_tokens", None),
         }
 
         # Get internal agent parameters
@@ -217,11 +219,12 @@ async def debug_agent_state(ui_session_id: str, agent_manager=Depends(get_agent_
                 "temperature": getattr(internal_agent, "temperature", None),
                 "reasoning_effort": getattr(internal_agent, "reasoning_effort", None),
                 "budget_tokens": getattr(internal_agent, "budget_tokens", None),
+                "max_tokens": getattr(internal_agent, "max_tokens", None),
             }
 
         return {
             "status": "success",
-            "reactjs_agent_params": reactjs_agent_params,
+            "agent_bridge_params": agent_bridge_params,
             "internal_agent_params": internal_agent_params,
         }
     except Exception as e:
