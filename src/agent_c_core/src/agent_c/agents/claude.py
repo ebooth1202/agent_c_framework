@@ -38,12 +38,15 @@ class ClaudeChatAgent(BaseAgent):
         Non-Base Parameters:
         client: AsyncAnthropic, default is AsyncAnthropic()
             The client to use for making requests to the Anthropic API.
+        max_tokens: int, optional
+            The maximum number of tokens to generate in the response.
         """
         kwargs['token_counter'] = kwargs.get('token_counter', ClaudeChatAgent.ClaudeTokenCounter())
         super().__init__(**kwargs)
         self.client: AsyncAnthropic = kwargs.get("client", AsyncAnthropic())
         self.supports_multimodal = True
         self.can_use_tools = True
+        self.max_tokens = kwargs.get("max_tokens", self.CLAUDE_MAX_TOKENS)
 
 
 
@@ -51,7 +54,7 @@ class ClaudeChatAgent(BaseAgent):
         model_name: str = kwargs.get("model_name", self.model_name)
         sys_prompt: str = await self._render_system_prompt(**kwargs)
         temperature: float = kwargs.get("temperature", self.temperature)
-        max_tokens: int = kwargs.get("max_tokens", self.CLAUDE_MAX_TOKENS)
+        max_tokens: int = kwargs.get("max_tokens", self.max_tokens)
 
         messages = await self._construct_message_array(**kwargs)
         callback_opts = self._callback_opts(**kwargs)
