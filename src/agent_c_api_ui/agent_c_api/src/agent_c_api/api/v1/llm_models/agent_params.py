@@ -12,8 +12,6 @@ class AgentCommonParams(BaseModel):
     budget_tokens: Optional[int] = Field(None, description="Budget tokens (used by some Claude models)")
 
 class AgentUpdateParams(AgentCommonParams):
-    # Optionally, add update-only fields
-    extended_thinking: Optional[bool] = None
     ui_session_id: str = Field(..., description="Session ID of the agent to update")
 
 class AgentInitializationParams(AgentCommonParams):
@@ -38,9 +36,10 @@ class AgentInitializationParams(AgentCommonParams):
             if values.get('reasoning_effort') not in ['low', 'medium', 'high']:
                 values['reasoning_effort'] = 'medium'
 
-        # For Claude reasoning model: 'claude-3-7-sonnet-latest7'
+        # For Claude reasoning model: 'claude-3-7-sonnet-latest'
         if model_name == 'claude-3-7-sonnet-latest':
             if values.get('budget_tokens') is not None:
+                # we'll use the passed in budget_tokens, and determine what max_tokens to set
                 if values.get('max_tokens') is None:
                     values['max_tokens'] = 64000
             else:
@@ -64,7 +63,7 @@ class AgentInitializationParams(AgentCommonParams):
             'o1': {'reasoning_effort': 'reasoning_effort', 'max_tokens': 'max_completion_tokens'},
             'o1-mini': {'reasoning_effort': 'reasoning_effort', 'max_tokens': 'max_completion_tokens'},
             'o3-mini': {'reasoning_effort': 'reasoning_effort', 'max_tokens': 'max_completion_tokens'},
-            'claude-3-7-sonnet-latest7': {'budget_tokens': 'budget_tokens', 'max_tokens': 'max_tokens'},
+            'claude-3-7-sonnet-latest': {'budget_tokens': 'budget_tokens', 'max_tokens': 'max_tokens'},
         }
         mapping = allowed_params_mapping.get(self.model_name, {})
         filtered = {}
