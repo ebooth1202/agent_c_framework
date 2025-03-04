@@ -211,7 +211,12 @@ class AgentBridge:
         Initialize the chat session for the agent, including setting up the session manager.
         """
         if self.session_manager is None:
-            self.session_manager = ChatSessionManager()
+            self.session_manager = ChatSessionManager() # This always gets a new session_manager object
+            await self.session_manager.init(self.user_id) # This initializes the new session_manager object
+        elif not hasattr(self.session_manager, 'chat_session') or self.session_manager.chat_session is None:
+            # Only initialize if chat_session doesn't already exist on an already existing session_manager object.  Defensive programming here.
+            # Because we're messing with how things are setup,
+            # We may have a session_manager that is uninitialzied getting passed in, in that case we do need to initialize it.
             await self.session_manager.init(self.user_id)
 
         self.session_id = self.session_manager.chat_session.session_id
