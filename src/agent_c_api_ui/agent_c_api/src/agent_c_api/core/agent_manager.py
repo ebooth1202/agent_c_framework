@@ -70,9 +70,8 @@ class UItoAgentBridgeManager:
         Raises:
             Exception: If agent initialization fails
         """
-        # self.logger.debug(f"Creating new session with kwargs: {kwargs}\n")
 
-        # If updating existing session, use that ID, otherwise generate new one
+        # If updating existing session, use that ID, otherwise generate new one - this will transfer chat history
         ui_session_id = existing_ui_session_id if existing_ui_session_id else str(uuid.uuid4())
 
         # Extract custom_persona_text explicitly to avoid it being lost or overridden
@@ -87,7 +86,7 @@ class UItoAgentBridgeManager:
             existing_session = self.ui_sessions.get(ui_session_id, {})
             existing_agent: BaseAgent | None = existing_session.get("agent", None)
 
-            # IMPORTANT FIX: If we're changing models and no custom_persona_text was provided,
+            # IMPORTANT FIX: If we're changing models and no custom_persona_text was passed with the model change,
             # but the existing agent has one, we need to preserve it
             if existing_agent and custom_persona_text is None and existing_agent.custom_persona_text:
                 # this should work even if custom_persona_text==existing_agent.custom_persona_text - will be same value
@@ -106,12 +105,11 @@ class UItoAgentBridgeManager:
                 **kwargs
             )
 
-            # If updating existing session, transfer necessary state
+            # If updating existing session, transfer necessary session manager to preserve chat history
             if existing_agent:
-                # Transfer session manager to maintain history - I need to pass this first
                 agent.session_manager = existing_agent.session_manager
 
-            # Initialize the agent bridge. This fully initializes the agent and its tools as well.
+            # Now initialize the agent. This fully initializes the agent and its tools as well - with a passed in session manager
             await agent.initialize()
 
             # Update sessions dictionary
