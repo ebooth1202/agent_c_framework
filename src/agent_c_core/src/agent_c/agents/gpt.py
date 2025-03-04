@@ -195,7 +195,6 @@ class GPTChatAgent(BaseAgent):
         Returns: A list of messages from the chat.
         """
         opts = await self.__interaction_setup(**kwargs)
-        print(opts['completion_opts'])
         messages: List[dict[str, str]] = opts['completion_opts']['messages']
         session_manager: Union[ChatSessionManager, None] = kwargs.get("session_manager", None)
         tool_chest = opts['tool_chest']
