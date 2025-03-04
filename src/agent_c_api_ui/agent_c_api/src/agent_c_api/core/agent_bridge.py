@@ -93,6 +93,9 @@ class AgentBridge:
         # Non-Reasoning Models Parameters
         self.temperature = kwargs.get('temperature')
 
+        # Capture max_tokens if provided
+        self.max_tokens = kwargs.get('max_tokens')
+
         # Open AI Reasoning model parameters
         self.reasoning_effort = kwargs.get('reasoning_effort')
 
@@ -387,8 +390,12 @@ class AgentBridge:
 
         # Add temperature if it exists (applies to both Claude and GPT)
         if self.temperature is not None:
-            self.logger.info(f"Setting agent temperature to {self.temperature}")
+            # self.logger.debug(f"Setting agent temperature to {self.temperature}")
             agent_params["temperature"] = self.temperature
+
+        if self.max_tokens is not None:
+            self.logger.debug(f"Setting agent max_tokens to {self.max_tokens}")
+            agent_params["max_tokens"] = self.max_tokens
 
         if self.backend == 'claude':
             # Add Claude-specific parameters
