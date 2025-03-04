@@ -194,3 +194,93 @@ class UItoAgentBridgeManager:
         except Exception as e:
             self.logger.error(f"Error in stream_response: {e}")
             yield f"Error: {str(e)}"
+
+    async def debug_session(self, ui_session_id: str):
+        """
+        Generate a diagnostic report for a session to help debug issues.
+
+        Args:
+            ui_session_id: The session identifier
+
+        Returns:
+            Dict containing diagnostic information about the session
+
+        Raises:
+            ValueError: If the session ID is invalid
+        """
+        session_data = self.get_session_data(ui_session_id)
+        if not session_data:
+            raise ValueError(f"Invalid session ID: {ui_session_id}")
+
+        agent = session_data.get("agent")
+        if not agent:
+            return {"error": "No agent found in session data"}
+
+        diagnostic = {
+            "session_id": ui_session_id,
+            "agent_c_session_id": getattr(agent, "session_id", "unknown"),
+            "agent_name": agent.agent_name,
+            "created_at": session_data.get("created_at", "unknown"),
+            "backend": agent.backend,
+            "model_name": agent.model_name,
+        }
+
+        # Check session manager
+        session_manager = getattr(agent, "session_manager", None)
+        if session_manager:
+            diagnostic["session_manager"] = {
+                "exists": True,
+                "user_id": getattr(session_manager, "user_id", "unknown"),
+                "has_chat_session": hasattr(session_manager,
+                                            "chat_session") and session_manager.chat_session is not None,
+            }
+
+            if hasattr(session_manager, "chat_session") and session_manager.chat_session:
+                diagnostic["chat_session"] = {
+                    "session_id": session_manager.chat_session.session_id,
+                    "has_active_memory": hasattr(session_manager,
+                                                 "active_memory") and session_manager.active_memory is not None,
+                }
+
+                if hasattr(session_manager, "active_memory") and session_manager.active_memory:
+                    message_count = len(session_manager.active_memory.messages)
+                    diagnostic["messages"] = {
+                        "count": message_count,
+                        "user_messages": sum(1 for m in session_manager.active_memory.messages if m.role == "user"),
+                        "assistant_messages": sum(
+                            1 for m in session_manager.active_memory.messages if m.role == "assistant"),
+                        "latest_message": str(session_manager.active_memory.messages[-1].content)[:100] + "..."
+                        if message_count > 0 else "none"
+                    }
+
+                    # Sample of recent messages (last 3)
+                    recent_messages = []
+                    for msg in list(session_manager.active_memory.messages)[-3:]:
+                        recent_messages.append({
+                            "role": msg.role,
+                            "content_preview": str(msg.content)[:50] + "..." if len(str(msg.content)) > 50 else str(
+                                msg.content),
+                            "timestamp": str(getattr(msg, "timestamp", "unknown"))
+                        })
+                    diagnostic["recent_messages"] = recent_messages
+        else:
+            diagnostic["session_manager"] = {"exists": False}
+
+        # Check current_chat_Log
+        current_chat_log = getattr(agent, "current_chat_Log", None)
+        diagnostic["current_chat_Log"] = {
+            "exists": current_chat_log is not None,
+            "count": len(current_chat_log) if current_chat_log else 0
+        }
+
+        # Check tool chest
+        tool_chest = getattr(agent, "tool_chest", None)
+        if tool_chest:
+            diagnostic["tool_chest"] = {
+                "exists": True,
+                "active_tools": list(tool_chest.active_tools.keys()) if hasattr(tool_chest, "active_tools") else []
+            }
+        else:
+            diagnostic["tool_chest"] = {"exists": False}
+
+        return diagnostic
