@@ -399,16 +399,11 @@ class AgentBridge:
 
         if self.backend == 'claude':
             # Add Claude-specific parameters
-            if self.extended_thinking:
-                if self.budget_tokens is not None and self.budget_tokens > 0:
-                    # any budget tokens >0 turns on extended thinking
-                    agent_params["budget_tokens"] = self.budget_tokens
-                else:
-                    # if they don't provide budget_tokens, we'll set a default to turn on extended thinking
-                    agent_params["budget_tokens"] = 2500
-            else:
-                # this in effect turns off extended thinking
-                agent_params["budget_tokens"] = 0
+            # Because claude.py only includes completion params for budget_tokens > 0
+            # we can set it to 0 and it won't affect 3.5 or 3.7 models.
+            budget_tokens = self.budget_tokens if self.budget_tokens is not None else 0
+            agent_params["budget_tokens"] = budget_tokens
+            self.logger.debug(f"Setting agent budget_tokens to {budget_tokens}")
 
             self.agent = ClaudeChatAgent(**agent_params)
         else:
@@ -498,12 +493,21 @@ class AgentBridge:
         self.logger.debug(f"Agent {self.agent_name} reporting config: {config}")
         return config
 
-    @staticmethod
-    async def _handle_text_delta(event):
+    async def _handle_text_delta(self, event):
         """Handle text delta events from the agent/tools"""
+        vendor = 'anthropic' if self.backend == 'claude' else 'openai'
+        if vendor is None:
+            model_name = self.model_name.lower()
+            if any(name in model_name for name in ['sonnet', 'haiku', 'opus', 'claude']):
+                vendor = 'anthropic'  # These are Anthropic models, vendor should be 'anthropic'
+            elif any(name in model_name for name in ['gpt', 'davinci', 'o1', 'o1-mini', 'o3', 'o3-mini']):
+                vendor = 'openai'  # These are OpenAI models, vendor should be 'openai'
+            else:
+                vendor = 'unknown'
         payload = json.dumps({
             "type": "content",
             "data": event.content,
+            "vendor": vendor,
             "format": event.format
         }) + "\n"
         return payload
@@ -609,13 +613,14 @@ class AgentBridge:
         }) + "\n"
         return payload
 
-    @staticmethod
-    async def _handle_history(event):
+    async def _handle_history(self, event):
         """Handle history events which update the chat log"""
-        # self.current_chat_Log = event.messages
+        self.current_chat_Log = event.messages
         payload = json.dumps({
             "type": "history",
-            "messages": event.messages
+            "messages": event.messages,
+            "vendor": self.backend,
+            "model_name": self.model_name,
         }) + "\n"
         return payload
 
@@ -656,6 +661,26 @@ class AgentBridge:
             }) + "\n"
         return payload
 
+    async def _handle_thought_delta(self, event):
+        """Handle thinking process events"""
+        vendor = 'anthropic' if self.backend == 'claude' else 'openai'
+        if vendor is None:
+            model_name = self.model_name.lower()
+            if any(name in model_name for name in ['sonnet', 'haiku', 'opus', 'claude']):
+                vendor = 'anthropic'  # These are Anthropic models, vendor should be 'anthropic'
+            elif any(name in model_name for name in ['gpt', 'davinci', 'o1', 'o1-mini', 'o3', 'o3-mini']):
+                vendor = 'openai'  # These are OpenAI models, vendor should be 'openai'
+            else:
+                vendor = 'unknown'
+        payload = json.dumps({
+            "type": "thought_delta",
+            "data": event.content,
+            "vendor": vendor,
+            "model_name": self.model_name,
+            "format": "thinking"
+        }) + "\n"
+        return payload
+
     async def initialize(self):
         """
         Asynchronously initialize the agent's session, tool chest, and internal agent configuration.
@@ -684,6 +709,7 @@ class AgentBridge:
             - audio_delta: Audio content updates
             - completion: Task completion status
             - interaction: Interaction state changes
+            - thought_delta: Thinking process updates
 
         Notes:
             Events are processed and formatted into JSON strings with appropriate
@@ -704,6 +730,7 @@ class AgentBridge:
             "audio_delta": self._handle_audio_delta,
             "completion": self._handle_completion,
             "interaction": self._handle_interaction,
+            "thought_delta": self._handle_thought_delta
         }
 
         handler = handlers.get(event.type)
@@ -769,7 +796,7 @@ class AgentBridge:
                     session_manager=self.session_manager,
                     user_message=user_message,
                     prompt_metadata=prompt_metadata,
-                    messages=self.current_chat_Log,
+                    # messages=self.current_chat_Log, # passing this would override session manager's chat history.
                     output_format='raw',
                 )
             )
