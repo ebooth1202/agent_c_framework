@@ -1,0 +1,56 @@
+FROM python:3.12-slim
+
+# Set working directory
+WORKDIR /app
+run mkdir -p /app/images
+
+# Install system dependencies including Node.js for the React client
+RUN apt-get update && apt-get install -y \
+    curl \
+    build-essential \
+    git \
+    vim \
+    portaudio19-dev \
+    python3-dev \
+    libasound2-dev \
+    ffmpeg \
+    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+
+# Copy the entire repository
+COPY . .
+
+# Upgrade pip
+RUN pip install --no-cache-dir --upgrade pip
+
+# Install Python dependencies
+WORKDIR /app/src
+RUN pip install -e agent_c_core \
+    && pip install -e agent_c_tools \
+    && pip install -e my_agent_c \
+    && pip install -e agent_c_reference_apps \
+    && pip install -e agent_c_api_ui/agent_c_api
+
+# Install NPM dependencies for the React client
+WORKDIR /app/src/agent_c_api_ui/agent_c_react_client
+RUN npm install
+
+
+WORKDIR /app
+
+
+ENV PYTHONPATH=/app
+ENV GRADIO_SERVER_NAME="0.0.0.0"
+ENV ENHANCED_DEBUG_INFO="True"
+ENV ENVIRONMENT="LOCAL_DEV"
+ENV CLI_CHAT_USER_ID="Taytay"
+ENV DALLE_IMAGE_SAVE_FOLDER="app/images"
+
+EXPOSE 7860
+
+# Command to run when the container starts
+# Replace with your actual entry point command
+CMD ["python", "src/agent_c_reference_apps/src/agent_c_reference_apps/agent_c_cli.py"]

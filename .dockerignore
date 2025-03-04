@@ -1,0 +1,14 @@
+# Version control
+.git
+.gitignore
+.github
+
+# Python cache files
+__pycache__/
+*.py[cod]
+.idea/
+
+# Environments
+*.env
+.env
+.venv
