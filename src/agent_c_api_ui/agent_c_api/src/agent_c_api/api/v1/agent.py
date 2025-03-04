@@ -113,7 +113,7 @@ async def get_agent_config(ui_session_id: str, agent_manager=Depends(get_agent_m
         config.update({
             "user_id": config["user_id"],
             "custom_prompt": config["custom_prompt"],
-            "session_id": ui_session_id,
+            "ui_session_id": ui_session_id,
             "agent_c_session_id": session_data.get("agent_c_session_id"),
             "backend": config["backend"],
             "model_info": {
@@ -160,7 +160,7 @@ async def update_agent_tools(
             "status": "success",
             "message": "Tools updated successfully",
             "active_tools": tool_list,
-            "session_id": ui_session_id,
+            "ui_session_id": ui_session_id,
             "agent_c_session_id": session_data.get('agent_c_session_id', "Unknown")
         }
     except Exception as e:
