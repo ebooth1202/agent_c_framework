@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 @router.post("/upload_file")
 async def upload_file(
-        session_id: str = Form(...),
+        ui_session_id: str = Form(...),
         file: UploadFile = File(...),
         agent_manager=Depends(get_agent_manager)
 ):
@@ -17,7 +17,7 @@ async def upload_file(
     A simple file upload endpoint to associate a file with a user's session.
     For example, store images that might later be used in the conversation.
     """
-    session_data = agent_manager.get_session_data(session_id)
+    session_data = agent_manager.get_session_data(ui_session_id)
     if not session_data:
         return {"error": "Invalid session_id"}
 
@@ -26,6 +26,6 @@ async def upload_file(
     content = await file.read()
     filename = file.filename
     # Store or process the file as needed...
-    logger.info(f"Received file '{filename}' for session {session_id} of size {len(content)} bytes")
+    logger.info(f"Received file '{filename}' for session {ui_session_id} of size {len(content)} bytes")
 
     return {"status": "File uploaded successfully", "filename": filename}

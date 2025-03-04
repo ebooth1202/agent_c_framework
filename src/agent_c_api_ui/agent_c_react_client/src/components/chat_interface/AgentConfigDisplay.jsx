@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {Settings} from 'lucide-react';
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
 import * as Portal from '@radix-ui/react-portal';
@@ -17,6 +17,7 @@ import {API_URL} from "@/config/config";
 const AgentConfigDisplay = ({sessionId, className = "", settingsVersion}) => {
     const [config, setConfig] = useState(null);
     const [error, setError] = useState(null);
+    const lastFetchRef = useRef(null);
 
     // Debug log when props change
     // useEffect(() => {
@@ -34,10 +35,25 @@ const AgentConfigDisplay = ({sessionId, className = "", settingsVersion}) => {
          * @function
          * @throws {Error} When the API request fails
          */
+        // Add this line at the beginning of the effect
+        if (sessionId) {
+            // Clear config when session changes to avoid showing stale data
+            setConfig(null);
+        }
+
         const fetchConfig = async () => {
             try {
                 if (!sessionId) {
                     console.log('No sessionId provided, skipping fetch');
+                    return;
+                }
+
+                // Create a unique key for this fetch operation
+                const fetchKey = `${sessionId}-${settingsVersion}`;
+
+                // Skip duplicate fetches within a short time window
+                if (lastFetchRef.current === fetchKey) {
+                    console.log('Duplicate fetch detected, skipping');
                     return;
                 }
 
@@ -58,6 +74,9 @@ const AgentConfigDisplay = ({sessionId, className = "", settingsVersion}) => {
 
                 const data = await response.json();
                 console.log('Received new config for agent:', data);
+
+                // Set the fetch key to prevent duplicates
+                lastFetchRef.current = fetchKey;
 
                 // Compare with previous config to see what changed
                 if (config) {
@@ -112,7 +131,7 @@ const AgentConfigDisplay = ({sessionId, className = "", settingsVersion}) => {
         );
     }
 
-     // Format initialized tools for display
+    // Format initialized tools for display
     const formattedTools = config.initialized_tools.map(tool =>
         `${tool.class_name}`
     ).join(', ');
@@ -123,19 +142,29 @@ const AgentConfigDisplay = ({sessionId, className = "", settingsVersion}) => {
      * @type {Record<string, string|number>}
      */
     const configDisplay = {
-        "Model": config.model_info?.name,
-        "Backend": config.backend,
-        ...(config.model_info?.temperature !== undefined && {
-            "Temperature": config.model_info?.temperature.toFixed(2)
-        }),
-        ...(config.model_info?.reasoning_effort && {
-            "Reasoning Effort": config.model_info?.reasoning_effort
-        }),
-        "Persona": config.persona_name,
-        "Active Tools": config.initialized_tools.length,
-        "Session ID": config.session_id,
-        "Agent_c_session_id": config.agent_c_session_id,
-        "initialized_tools": formattedTools
+        "Model": config.model_info?.name ?? "undefined",
+        "Backend": config.backend ?? "undefined",
+        "Temperature": config.model_info?.temperature != null
+            ? config.model_info.temperature.toFixed(2)
+            : "undefined",
+        "Reasoning Effort": config.model_info?.reasoning_effort != null
+            ? config.model_info.reasoning_effort
+            : "undefined",
+        "Extended Thinking": config.model_info?.extended_thinking != null
+            ? (typeof config.model_info.extended_thinking === 'object'
+                ? (config.model_info.extended_thinking.enabled ? "Enabled" : "Disabled")
+                : (config.model_info.extended_thinking ? "Enabled" : "Disabled"))
+            : "undefined",
+        "Thinking Budget": config.model_info?.extended_thinking?.budget_tokens != null
+            ? `${config.model_info.extended_thinking.budget_tokens.toLocaleString()} tokens`
+            : (config.model_info?.budget_tokens != null
+                ? `${config.model_info.budget_tokens.toLocaleString()} tokens`
+                : "undefined"),
+        "Persona": config.persona_name ?? "undefined",
+        "Active Tools": config.initialized_tools ? config.initialized_tools.length : "undefined",
+        "UI Session ID": config.ui_session_id ?? "undefined",
+        "Chat session_id": config.agent_c_session_id ?? "undefined",
+        "initialized_tools": formattedTools || "undefined"
     };
 
     return (

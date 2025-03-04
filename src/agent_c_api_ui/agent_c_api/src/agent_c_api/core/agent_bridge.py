@@ -24,7 +24,7 @@ from agent_c.prompting import PromptBuilder, CoreInstructionSection, HelpfulInfo
 from agent_c_tools.tools.user_bio.prompt import UserBioSection
 
 
-class ReactJSAgent:
+class AgentBridge:
     """
     A bridge interface between the agent_c library and ReactJS applications for chat functionality.
 
@@ -43,7 +43,7 @@ class ReactJSAgent:
 
     def __init__(self, user_id: str = 'default', session_manager: Union[ChatSessionManager, None] = None,
                  backend: str = 'openai', model_name: str = 'gpt-4o', persona_name: str = 'default',
-                 custom_persona_text: str = '',
+                 custom_persona_text: str = None,
                  essential_tools: List[str] = None,
                  additional_tools: List[str] = None,
                  **kwargs):
@@ -52,11 +52,21 @@ class ReactJSAgent:
 
         Args:
             user_id (str): Identifier for the user. Defaults to 'default'.
-            session_manager (Union[ChatSessionManager, None]): Session manager for chat sessions. Defaults to None.
-            backend (str): Backend to use for the agent (e.g., 'openai', 'claude'). Defaults to 'openai'.
-            model_name (str): Name of the AI model to use. Defaults to 'gpt-4o'.
-            additional_tools (List[str]): List of additional tools to add to the agent. Defaults to None.
-            **kwargs: Additional optional keyword arguments.
+        session_manager (Union[ChatSessionManager, None]): Session manager for chat sessions. Defaults to None.
+        backend (str): Backend to use for the agent (e.g., 'openai', 'claude'). Defaults to 'openai'.
+        model_name (str): Name of the AI model to use. Defaults to 'gpt-4o'.
+        persona_name (str): Name of the persona to use. Defaults to 'default'.
+        custom_persona_text (str): Custom text to use for the agent's persona. Defaults to None.
+        essential_tools (List[str]): List of essential tools the agent must have. Defaults to None.
+        additional_tools (List[str]): List of additional tools to add to the agent. Defaults to None.
+        **kwargs: Additional optional keyword arguments including:
+            temperature (float): Temperature parameter for non-reasoning models
+            reasoning_effort (float): Reasoning effort parameter for OpenAI models
+            extended_thinking (bool): Extended thinking parameter for Claude models
+            budget_tokens (int): Budget tokens parameter for Claude models
+            agent_name (str): Name for the agent (for debugging)
+            output_format (str): Output format for agent responses
+            tool_cache_dir (str): Directory for tool cache
         """
 
 
@@ -66,6 +76,7 @@ class ReactJSAgent:
         # Debugging and Logging Setup
         logging_manager = LoggingManager(__name__)
         self.logger = logging_manager.get_logger()
+
         self.debug_event = None
 
         self.agent_name = kwargs.get('agent_name', None)  # Debugging only
@@ -78,8 +89,19 @@ class ReactJSAgent:
         self.model_name = model_name
         self.agent = None
         self.agent_output_format = kwargs.get('output_format', 'raw')
-        self.temperature = kwargs.get('temperature', 0.5)
-        self.reasoning_effort = kwargs.get('reasoning_effort', 'medium')
+
+        # Non-Reasoning Models Parameters
+        self.temperature = kwargs.get('temperature')
+
+        # Capture max_tokens if provided
+        self.max_tokens = kwargs.get('max_tokens')
+
+        # Open AI Reasoning model parameters
+        self.reasoning_effort = kwargs.get('reasoning_effort')
+
+        # Claude Reasoning model parameters
+        self.extended_thinking = kwargs.get('extended_thinking')
+        self.budget_tokens = kwargs.get('budget_tokens')
 
         # Agent "User" Management - these are used to keep agents and sessions separate in zep cache
         # - User ID: The user ID for the agent, this is used for user preference management, it is required.
@@ -93,13 +115,18 @@ class ReactJSAgent:
         # we will pass in custom text later
         self.persona_name = persona_name
         self.custom_persona_text = custom_persona_text
+
         if self.persona_name is None or self.persona_name == '':
             self.persona_name = 'default'
-        try:
-            self.custom_persona_text = self.__load_persona(self.persona_name)
-            # self.logger.info(f"Loaded persona: {self.persona_name} for user_id: {self.user_id}")
-        except Exception as e:
-            self.logger.error(f"Error loading persona {self.persona_name}: {e}")
+
+        if self.custom_persona_text is None:
+            try:
+                self.logger.info(f"Loading persona file for {self.persona_name} because custom_persona_text is None")
+                self.custom_persona_text = self.__load_persona(self.persona_name)
+            except Exception as e:
+                self.logger.error(f"Error loading persona {self.persona_name}: {e}")
+        else:
+            self.logger.info(f"Using provided custom_persona_text: {self.custom_persona_text[:10]}...")
 
         # Chat Management, this is where the agent stores the chat history
         self.current_chat_Log: Union[List[Dict], None] = None
@@ -187,7 +214,12 @@ class ReactJSAgent:
         Initialize the chat session for the agent, including setting up the session manager.
         """
         if self.session_manager is None:
-            self.session_manager = ChatSessionManager()
+            self.session_manager = ChatSessionManager() # This always gets a new session_manager object
+            await self.session_manager.init(self.user_id) # This initializes the new session_manager object
+        elif not hasattr(self.session_manager, 'chat_session') or self.session_manager.chat_session is None:
+            # Only initialize if chat_session doesn't already exist on an already existing session_manager object.  Defensive programming here.
+            # Because we're messing with how things are setup,
+            # We may have a session_manager that is uninitialzied getting passed in, in that case we do need to initialize it.
             await self.session_manager.init(self.user_id)
 
         self.session_id = self.session_manager.chat_session.session_id
@@ -222,7 +254,7 @@ class ReactJSAgent:
         await self.__init_tool_chest()
 
         # Reinitialize the agent with new tools but keep the session
-        await self.__init_agent()
+        await self.initialize_agent_parameters()
 
         self.logger.info(f"Tools updated successfully. Current Active tools: {list(self.tool_chest.active_tools.keys())}")
 
@@ -301,7 +333,7 @@ class ReactJSAgent:
             print(f"Error initializing tools: {e}")
         return
 
-    async def __init_agent(self):
+    async def initialize_agent_parameters(self):
         """
         Initialize the internal agent with prompt builders, tools, and configurations.
 
@@ -347,23 +379,45 @@ class ReactJSAgent:
 
         prompt_builder = PromptBuilder(sections=operating_sections + info_sections)
 
+        # Prepare common parameters that apply to both backends
+        agent_params = {
+            "prompt_builder": prompt_builder,
+            "model_name": self.model_name,
+            "tool_chest": self.tool_chest,
+            "streaming_callback": self.consolidated_streaming_callback,
+            "output_format": self.agent_output_format
+        }
+
+        # Add temperature if it exists (applies to both Claude and GPT)
+        if self.temperature is not None:
+            # self.logger.debug(f"Setting agent temperature to {self.temperature}")
+            agent_params["temperature"] = self.temperature
+
+        if self.max_tokens is not None:
+            self.logger.debug(f"Setting agent max_tokens to {self.max_tokens}")
+            agent_params["max_tokens"] = self.max_tokens
+
         if self.backend == 'claude':
-            self.agent = ClaudeChatAgent(
-                prompt_builder=prompt_builder,
-                model_name=self.model_name,
-                tool_chest=self.tool_chest,
-                streaming_callback=self.consolidated_streaming_callback,
-                output_format=self.agent_output_format
-            )
+            # Add Claude-specific parameters
+            # Because claude.py only includes completion params for budget_tokens > 0
+            # we can set it to 0 and it won't affect 3.5 or 3.7 models.
+            budget_tokens = self.budget_tokens if self.budget_tokens is not None else 0
+            agent_params["budget_tokens"] = budget_tokens
+            self.logger.debug(f"Setting agent budget_tokens to {budget_tokens}")
+
+            self.agent = ClaudeChatAgent(**agent_params)
         else:
-            self.agent = GPTChatAgent(
-                prompt_builder=prompt_builder,
-                model_name=self.model_name,
-                tool_chest=self.tool_chest,
-                streaming_callback=self.consolidated_streaming_callback,
-                output_format=self.agent_output_format
-            )
-        self.logger.info(f"Agent {self.agent_name} initialized successfully")
+            # Add OpenAI-specific parameters
+            # Only pass reasoning_effort if it's set and we're using a reasoning model
+            if self.reasoning_effort is not None and any(
+                    reasoning_model in self.model_name
+                    for reasoning_model in ["o1", "o1-mini", "o3", "o3-mini"]
+            ):
+                agent_params["reasoning_effort"] = self.reasoning_effort
+
+            self.agent = GPTChatAgent(**agent_params)
+
+        self.logger.info(f"Agent initialized using the following parameters: {agent_params}")
 
     async def __build_prompt_metadata(self) -> Dict[str, Any]:
         """
@@ -371,7 +425,7 @@ class ReactJSAgent:
 
         Returns:
             Dict[str, Any]: Metadata for prompts.
-            - session_id (str): Session ID for the chat session.
+            - session_id (str): Session ID for the chat session. Not the UI session ID!
             - current_user_username (str): Username of the current user.
             - current_user_name (str): Name of the current user.
             - session_summary (str): Summary of the current chat session.
@@ -413,15 +467,18 @@ class ReactJSAgent:
             'persona_name': self.persona_name,
             'initialized_tools': [],
             'agent_name': self.agent_name,
-            'session_id': self.session_id,
+            'agent_session_id': self.session_id,
             'custom_prompt': self.custom_persona_text,
             'output_format': self.agent_output_format,
             'created_time': self._current_timestamp(),
             'temperature': self.temperature,
             'reasoning_effort': self.reasoning_effort,
-            'model_parameters': {
+            'agent_parameters': {
                 'temperature': getattr(self, 'temperature', None),
-                'reasoning_effort': getattr(self, 'reasoning_effort', None)
+                'reasoning_effort': getattr(self, 'reasoning_effort', None),
+                'extended_thinking': getattr(self, 'extended_thinking', None),
+                'budget_tokens': getattr(self, 'budget_tokens', None),
+                'max_tokens': getattr(self, 'max_tokens', None)
             }
         }
 
@@ -430,18 +487,27 @@ class ReactJSAgent:
                 'instance_name': instance_name,
                 'class_name': tool_instance.__class__.__name__,
                 'developer_tool_name': getattr(tool_instance, 'name', instance_name),
-                'description': tool_instance.__class__.__doc__
+                # 'description': tool_instance.__class__.__doc__
             } for instance_name, tool_instance in self.tool_chest.active_tools.items()]
 
         self.logger.debug(f"Agent {self.agent_name} reporting config: {config}")
         return config
 
-    @staticmethod
-    async def _handle_text_delta(event):
+    async def _handle_text_delta(self, event):
         """Handle text delta events from the agent/tools"""
+        vendor = 'anthropic' if self.backend == 'claude' else 'openai'
+        if vendor is None:
+            model_name = self.model_name.lower()
+            if any(name in model_name for name in ['sonnet', 'haiku', 'opus', 'claude']):
+                vendor = 'anthropic'  # These are Anthropic models, vendor should be 'anthropic'
+            elif any(name in model_name for name in ['gpt', 'davinci', 'o1', 'o1-mini', 'o3', 'o3-mini']):
+                vendor = 'openai'  # These are OpenAI models, vendor should be 'openai'
+            else:
+                vendor = 'unknown'
         payload = json.dumps({
             "type": "content",
             "data": event.content,
+            "vendor": vendor,
             "format": event.format
         }) + "\n"
         return payload
@@ -547,13 +613,14 @@ class ReactJSAgent:
         }) + "\n"
         return payload
 
-    @staticmethod
-    async def _handle_history(event):
+    async def _handle_history(self, event):
         """Handle history events which update the chat log"""
-        # self.current_chat_Log = event.messages
+        self.current_chat_Log = event.messages
         payload = json.dumps({
             "type": "history",
-            "messages": event.messages
+            "messages": event.messages,
+            "vendor": self.backend,
+            "model_name": self.model_name,
         }) + "\n"
         return payload
 
@@ -594,13 +661,34 @@ class ReactJSAgent:
             }) + "\n"
         return payload
 
+    async def _handle_thought_delta(self, event):
+        """Handle thinking process events"""
+        vendor = 'anthropic' if self.backend == 'claude' else 'openai'
+        if vendor is None:
+            model_name = self.model_name.lower()
+            if any(name in model_name for name in ['sonnet', 'haiku', 'opus', 'claude']):
+                vendor = 'anthropic'  # These are Anthropic models, vendor should be 'anthropic'
+            elif any(name in model_name for name in ['gpt', 'davinci', 'o1', 'o1-mini', 'o3', 'o3-mini']):
+                vendor = 'openai'  # These are OpenAI models, vendor should be 'openai'
+            else:
+                vendor = 'unknown'
+        payload = json.dumps({
+            "type": "thought_delta",
+            "data": event.content,
+            "vendor": vendor,
+            "model_name": self.model_name,
+            "format": "thinking"
+        }) + "\n"
+        return payload
+
     async def initialize(self):
         """
         Asynchronously initialize the agent's session, tool chest, and internal agent configuration.
         """
         await self.__init_session()
         await self.__init_tool_chest()
-        await self.__init_agent()
+        await self.initialize_agent_parameters()
+
 
     async def consolidated_streaming_callback(self, event: SessionEvent):
         """
@@ -621,6 +709,7 @@ class ReactJSAgent:
             - audio_delta: Audio content updates
             - completion: Task completion status
             - interaction: Interaction state changes
+            - thought_delta: Thinking process updates
 
         Notes:
             Events are processed and formatted into JSON strings with appropriate
@@ -641,6 +730,7 @@ class ReactJSAgent:
             "audio_delta": self._handle_audio_delta,
             "completion": self._handle_completion,
             "interaction": self._handle_interaction,
+            "thought_delta": self._handle_thought_delta
         }
 
         handler = handlers.get(event.type)
@@ -706,9 +796,8 @@ class ReactJSAgent:
                     session_manager=self.session_manager,
                     user_message=user_message,
                     prompt_metadata=prompt_metadata,
-                    messages=self.current_chat_Log,
+                    # messages=self.current_chat_Log, # passing this would override session manager's chat history.
                     output_format='raw',
-                    temperature=self.temperature
                 )
             )
 

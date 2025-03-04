@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     CONTACT_NAME: str = "Joseph Ours"
     CONTACT_EMAIL: str = "joseph.ours@centricconsulting.com"
     LICENSE_NAME: str = "BSD"
+    APP_VERSION: str = "0.1.0"
 
     # Base directories
     BASE_DIR: Path = get_project_root() / "src"

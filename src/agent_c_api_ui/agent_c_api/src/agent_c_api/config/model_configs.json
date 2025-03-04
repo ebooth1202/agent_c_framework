@@ -16,7 +16,9 @@
               "required": true
             },
             "max_tokens": {
-              "default": 4096,
+              "min": 1000,
+              "max": 16384,
+              "default": 16384,
               "required": false
             }
           },
@@ -44,7 +46,9 @@
               "required": true
             },
             "max_tokens": {
-              "default": 4096,
+              "min": 1000,
+              "max": 16384,
+              "default": 16384,
               "required": false
             }
           },
@@ -67,11 +71,17 @@
           "parameters": {
             "reasoning_effort": {
               "default": "medium",
-              "values": ["low", "medium", "high"],
+              "values": [
+                "low",
+                "medium",
+                "high"
+              ],
               "required": true
             },
-            "max_tokens": {
-              "default": 4096,
+            "max_completion_tokens": {
+              "min": 1000,
+              "max": 100000,
+              "default": 100000,
               "required": false
             }
           },
@@ -94,11 +104,17 @@
           "parameters": {
             "reasoning_effort": {
               "default": "medium",
-              "values": ["low", "medium", "high"],
+              "values": [
+                "low",
+                "medium",
+                "high"
+              ],
               "required": true
             },
-            "max_tokens": {
-              "default": 4096,
+            "max_completion_tokens": {
+              "min": 1000,
+              "max": 100000,
+              "default": 100000,
               "required": false
             }
           },
@@ -131,7 +147,47 @@
               "required": true
             },
             "max_tokens": {
+              "min": 1000,
+              "max": 8192,
               "default": 8192,
+              "required": true
+            }
+          },
+          "capabilities": {
+            "supports_tools": true,
+            "multi_modal": true
+          },
+          "allowed_inputs": {
+            "image": true,
+            "video": false,
+            "audio": false,
+            "file": false
+          }
+        },
+        {
+          "id": "claude-3-7-sonnet-latest",
+          "model_type": "chat",
+          "ui_name": "Claude 3.7 Sonnet Latest",
+          "description": "Latest Claude 3.7 Sonnet model for chat interactions.",
+          "parameters": {
+            "extended_thinking": {
+              "enabled": true,
+              "budget_tokens": {
+                "min": 0,
+                "max": 10000,
+                "default": 5000
+              },
+              "required": true
+            },
+            "max_tokens": {
+              "default": 8192,
+              "limits": {
+                "min": 1000,
+                "max": {
+                  "standard": 8192,
+                  "with_extended_thinking": 64000
+                }
+              },
               "required": true
             }
           },

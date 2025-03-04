@@ -90,6 +90,3 @@ class OAIAudioPlayerAsync:
 
     def terminate(self):
         self.stream.close()
-
-
-

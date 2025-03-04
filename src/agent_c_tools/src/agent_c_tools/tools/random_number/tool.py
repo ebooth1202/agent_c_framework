@@ -18,8 +18,8 @@ class RandomNumberTools(Toolset):
         """
         super().__init__(**kwargs, name='random_number_generator')
         self.logger = logging.getLogger(__name__)
-        self.logger.debug(
-            f"RandomNumberTools initialized with streaming_callback: {self.streaming_callback is not None}")
+        # self.logger.debug(
+        #     f"RandomNumberTools initialized with streaming_callback: {self.streaming_callback is not None}")
 
     @json_schema(
         description='Generate a random number (inclusive)',
@@ -66,8 +66,8 @@ class RandomNumberTools(Toolset):
             # Generate random number
             number = random.randint(min_level, max_ceiling)
             self.logger.info(f"Generated random number between {min_level} and {max_ceiling}: {number}")
-            self.logger.debug(
-                f"About to call chat_callback, streaming_callback exists: {self.streaming_callback is not None}")
+            # self.logger.debug(
+            #     f"About to call chat_callback, streaming_callback exists: {self.streaming_callback is not None}")
             await self._raise_render_media(
                 sent_by_class=self.__class__.__name__,
                 sent_by_function='generate_random_number',

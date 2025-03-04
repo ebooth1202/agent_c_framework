@@ -1,11 +1,17 @@
-# agent_c_api/core/setup.py
+import os
+
 from fastapi import FastAPI, APIRouter
 from starlette.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 # Import your settings and AgentManager
 from agent_c_api.config.env_config import settings
-from agent_c_api.core.agent_manager import AgentManager
+from agent_c_api.core.agent_manager import UItoAgentBridgeManager
+from agent_c_api.core.util.logging_utils import LoggingManager
+from agent_c_api.core.util.middleware_logging import APILoggingMiddleware
+
+logging_manager = LoggingManager(__name__)
+logger = logging_manager.get_logger()
 
 def create_application(router: APIRouter, **kwargs) -> FastAPI:
     """
@@ -20,7 +26,7 @@ def create_application(router: APIRouter, **kwargs) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         # Startup: Initialize your shared AgentManager instance.
-        app.state.agent_manager = AgentManager()
+        app.state.agent_manager = UItoAgentBridgeManager()
         yield
         # Shutdown: Optionally, perform any cleanup tasks.
         # For example: await app.state.agent_manager.cleanup_all_sessions()
@@ -51,7 +57,25 @@ def create_application(router: APIRouter, **kwargs) -> FastAPI:
         allow_headers=["*"],
     )
 
+    # Try to get the environment from settings, environment variables, or default to 'development'
+    environment = getattr(settings, "ENV", os.getenv("ENV", "development")).lower()
+    is_production = environment == "production"
+
+    logger.info(f"Application running in {environment} environment")
+
+    # Add our custom logging middleware
+    # Enable request body logging in development but not in production
+    app.add_middleware(
+        APILoggingMiddleware,
+        log_request_body=not is_production,
+        log_response_body=False
+    )
+
     # Include your router containing your API endpoints.
     app.include_router(router)
+
+    logger.info(
+        f"Application created: {getattr(settings, 'APP_NAME', 'Agent C API')} v{getattr(settings, 'APP_VERSION')}")
+    logger.debug(f"API documentation available at: {getattr(settings, 'DOCS_URL', '/docs')}")
 
     return app

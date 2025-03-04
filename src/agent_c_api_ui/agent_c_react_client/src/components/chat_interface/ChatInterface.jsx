@@ -8,6 +8,8 @@ import ToolCallDisplay from "./ToolCallDisplay";
 import MediaMessage from './MediaMessage';
 import TokenUsageDisplay from './TokenUsageDisplay';
 import MarkdownMessage from './MarkdownMessage';
+import ThoughtDisplay from './ThoughtDisplay';
+import ModelIcon from './ModelIcon';
 import {API_URL} from "@/config/config";
 
 /**
@@ -55,7 +57,7 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
         if (!fileInputRef.current?.files?.length) return;
 
         const formData = new FormData();
-        formData.append("session_id", sessionId);
+        formData.append("ui_session_id", sessionId);
         formData.append("file", fileInputRef.current.files[0]);
 
         try {
@@ -201,7 +203,7 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
             setInputText("");
 
             const formData = new FormData();
-            formData.append("session_id", sessionId);
+            formData.append("ui_session_id", sessionId);
             formData.append("message", userText);
             formData.append("custom_prompt", customPrompt || "");
 
@@ -305,11 +307,20 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                         if (last?.role === "assistant" && last?.type === "content") {
                             return prev.map((msg, i) =>
                                 i === prev.length - 1
-                                    ? {...msg, content: msg.content + parsed.data}
+                                    ? {
+                                        ...msg,
+                                        content: msg.content + parsed.data,
+                                        vendor: parsed.vendor || msg.vendor
+                                    }
                                     : msg
                             );
                         }
-                        return [...prev, {role: "assistant", type: "content", content: parsed.data}];
+                        return [...prev, {
+                            role: "assistant",
+                            type: "content",
+                            content: parsed.data,
+                            vendor: parsed.vendor || 'unknown'
+                        }];
                     });
                     break;
 
@@ -363,6 +374,28 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                         }
                     }
                     break;
+                case "thought_delta":
+                    setMessages((prev) => {
+                        const last = prev[prev.length - 1];
+                        if (last?.role === "assistant" && last?.type === "thinking") {
+                            return prev.map((msg, i) =>
+                                i === prev.length - 1
+                                    ? {
+                                        ...msg,
+                                        content: msg.content + parsed.data,
+                                        vendor: parsed.vendor || msg.vendor
+                                    }
+                                    : msg
+                            );
+                        }
+                        return [...prev, {
+                            role: "assistant",
+                            type: "thinking",
+                            content: parsed.data,
+                            vendor: parsed.vendor || 'unknown'
+                        }];
+                    });
+                    break;
 
                 // These cases don’t require any specific handling
                 case "interaction_start":
@@ -391,7 +424,7 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
             <ScrollArea className="flex-1 px-4 py-3  min-h-[400px]">
                 <div className="space-y-4">
                     {messages.map((msg, idx) => {
-                        // === 1) USER MESSAGES ===
+                        // === USER MESSAGES ===
                         if (msg.role === "user") {
                             return (
                                 <div key={idx} className="flex justify-end items-start gap-2">
@@ -404,12 +437,12 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                             );
                         }
 
-                        // === 2) ASSISTANT TEXT ===
+                        // === ASSISTANT TEXT ===
                         if (msg.role === "assistant" && msg.type === "content") {
                             return (
                                 <div key={idx} className="flex flex-col">
                                     <div className="flex justify-start items-start gap-2">
-                                        <Brain className="h-6 w-6 text-purple-500"/>
+                                        <ModelIcon vendor={msg.vendor}/>
                                         <div
                                             className="max-w-[80%] rounded-2xl px-4 py-2 shadow-sm bg-purple-50 text-purple-800 mr-12 rounded-bl-sm">
                                             <MarkdownMessage content={msg.content}/>
@@ -420,7 +453,7 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                             );
                         }
 
-                        // === 3) TOOL CALLS (single container for all tool calls) ===
+                        // === TOOL CALLS (single container for all tool calls) ===
                         if (msg.type === "tool_calls") {
                             return (
                                 <div key={idx}>
@@ -429,7 +462,16 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                             );
                         }
 
-                        // === 4) MEDIA ===
+                        // === THINKING MESSAGES ===
+                        if (msg.role === "assistant" && msg.type === "thinking") {
+                            return (
+                                <div key={idx}>
+                                    <ThoughtDisplay content={msg.content} vendor={msg.vendor}/>
+                                </div>
+                            );
+                        }
+
+                        // === MEDIA ===
                         if (msg.type === "media") {
                             return (
                                 <div key={idx}>
@@ -438,7 +480,7 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                             );
                         }
 
-                        // === 5) SYSTEM MESSAGES ===
+                        // === SYSTEM MESSAGES ===
                         if (msg.role === "system") {
                             return (
                                 <div key={idx} className="flex justify-start">

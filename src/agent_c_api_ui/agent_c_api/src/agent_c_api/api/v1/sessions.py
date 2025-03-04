@@ -1,39 +1,51 @@
 from fastapi import APIRouter, HTTPException, Depends
 import logging
 from agent_c_api.api.dependencies import get_agent_manager
+from agent_c_api.api.v1.llm_models.agent_params import AgentInitializationParams
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.get("/initialize")
-async def initialize_session(
-        temperature: float = 0.5,
-        model_name: str = "gpt-4o",
-        backend: str = "openai",
-        reasoning_effort: str = "medium",
-        persona_name: str = "",
+@router.post("/initialize")
+async def initialize_agent(params: AgentInitializationParams,
         agent_manager=Depends(get_agent_manager)
 ):
     """
-    Creates a fresh session with the provided parameters.
+    Creates an agent session with the provided parameters.
     """
     try:
         # Create a new session with both model and backend parameters
-        logging.debug(f"Creating new session with model: {model_name}, backend: {backend}")
-        model_params = {"temperature": temperature, "reasoning_effort": reasoning_effort}
-        # we're passing both temp/reasoning_effort to create_session, but only one will be used based on the model. That's controlled in teh actual agent's init method.
+        logging.debug(f"Creating new session with model: {params.model_name}, backend: {params.backend}")
+
+        # Get only the relevant model parameters using your filtering method.
+        model_params = params.to_agent_kwargs()
+        logging.debug(f"--->Model parameters: {model_params} identified")
+
+        # Get the additional parameters (including persona_name and custom prompt).
+        additional_params = params.to_additional_params()
+        logging.debug(f"--->Additional parameters: {additional_params} identified")
+
+        # Use ui_session_id if provided (for model changes) - this allows us to transfer chat history
+        session_params = {}
+        existing_ui_session_id = getattr(params, 'ui_session_id', None)
+        if existing_ui_session_id:
+            session_params['existing_ui_session_id'] = existing_ui_session_id
+        logger.debug(f"Existing session ID (if passed): {existing_ui_session_id}")
+
+
         new_session_id = await agent_manager.create_session(
-            llm_model=model_name,
-            backend=backend,
-            persona_name=persona_name,
-            **model_params
+            llm_model=params.model_name,
+            backend=params.backend,
+            **model_params,
+            **additional_params,
+            **session_params
         )
 
-        logger.debug(f"Current sessions in memory: {list(agent_manager.sessions.keys())}")
+        logger.debug(f"Current sessions in memory: {list(agent_manager.ui_sessions.keys())}")
         logger.debug(
             f"User Session {new_session_id} with session details: {agent_manager.get_session_data(new_session_id)}")
-        return {"session_id": new_session_id,
+        return {"ui_session_id": new_session_id,
                 "agent_c_session_id": agent_manager.get_session_data(new_session_id).get('agent_c_session_id',
                                                                                          "Unknown")}
 
@@ -42,12 +54,12 @@ async def initialize_session(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/verify_session/{session_id}")
-async def verify_session(session_id: str, agent_manager=Depends(get_agent_manager)):
+@router.get("/verify_session/{ui_session_id}")
+async def verify_session(ui_session_id: str, agent_manager=Depends(get_agent_manager)):
     """
     Verifies if a session exists and is valid
     """
-    session_data = agent_manager.get_session_data(session_id)
+    session_data = agent_manager.get_session_data(ui_session_id)
     return {"valid": session_data is not None}
 
 
@@ -64,17 +76,17 @@ async def delete_all_sessions(agent_manager=Depends(get_agent_manager)):
     """
     try:
         # Get count of sessions before deletion
-        session_count = len(agent_manager.sessions)
+        session_count = len(agent_manager.ui_sessions)
 
         # Create list of session IDs to avoid modifying dict during iteration
-        session_ids = list(agent_manager.sessions.keys())
+        ui_session_ids = list(agent_manager.ui_sessions.keys())
 
         # Clean up each session
-        for session_id in session_ids:
-            await agent_manager.cleanup_session(session_id)
+        for ui_session_id in ui_session_ids:
+            await agent_manager.cleanup_session(ui_session_id)
 
         logger.debug(
-            f"Deleted {session_count} sessions. Hanging sessions from deletion: {list(agent_manager.sessions.keys())}")
+            f"Deleted {session_count} sessions. Hanging sessions from deletion: {list(agent_manager.ui_sessions.keys())}")
 
         return {
             "status": "success",

@@ -1,5 +1,6 @@
 import asyncio
 import copy
+import json
 import logging
 
 from typing import Any, List, Union, Dict, Optional
@@ -20,7 +21,7 @@ class ClaudeChatAgent(BaseAgent):
 
         def count_tokens(self, text: str) -> int:
             response = self.anthropic.messages.count_tokens(
-                model="claude-3-5-sonnet-20241022",
+                model="claude-3-5-sonnet-latest",
                 system="",
                 messages=[{
                     "role": "user",
@@ -38,12 +39,17 @@ class ClaudeChatAgent(BaseAgent):
         Non-Base Parameters:
         client: AsyncAnthropic, default is AsyncAnthropic()
             The client to use for making requests to the Anthropic API.
+        max_tokens: int, optional
+            The maximum number of tokens to generate in the response.
         """
         kwargs['token_counter'] = kwargs.get('token_counter', ClaudeChatAgent.ClaudeTokenCounter())
         super().__init__(**kwargs)
         self.client: AsyncAnthropic = kwargs.get("client", AsyncAnthropic())
         self.supports_multimodal = True
         self.can_use_tools = True
+        # JO: I need these as class level variables to adjust outside a chat call.
+        self.max_tokens = kwargs.get("max_tokens", self.CLAUDE_MAX_TOKENS)
+        self.budget_tokens = kwargs.get("budget_tokens", 0)
 
 
 
@@ -51,7 +57,7 @@ class ClaudeChatAgent(BaseAgent):
         model_name: str = kwargs.get("model_name", self.model_name)
         sys_prompt: str = await self._render_system_prompt(**kwargs)
         temperature: float = kwargs.get("temperature", self.temperature)
-        max_tokens: int = kwargs.get("max_tokens", self.CLAUDE_MAX_TOKENS)
+        max_tokens: int = kwargs.get("max_tokens", self.max_tokens)
 
         messages = await self._construct_message_array(**kwargs)
         callback_opts = self._callback_opts(**kwargs)
@@ -61,7 +67,7 @@ class ClaudeChatAgent(BaseAgent):
         functions: List[Dict[str, Any]] = tool_chest.active_claude_schemas
 
         completion_opts = {"model": model_name, "messages": messages, "system": sys_prompt,  "max_tokens": max_tokens, 'temperature': temperature}
-        budget_tokens: int = kwargs.get("budget_tokens", 0)
+        budget_tokens: int = kwargs.get("budget_tokens", self.budget_tokens)
         if budget_tokens > 0:
             completion_opts['thinking'] = {"budget_tokens": budget_tokens, "type": "enabled"}
             completion_opts['temperature'] = 1
@@ -149,6 +155,9 @@ class ClaudeChatAgent(BaseAgent):
                                 await self._raise_completion_end(opts["completion_opts"], stop_reason=stop_reason, input_tokens=input_tokens, output_tokens=output_tokens, **callback_opts)
 
                                 # TODO: This will need moved when I fix tool call messages
+                                assistant_content = self._format_model_outputs_to_text(model_outputs)
+                                await self._save_interaction_to_session(session_manager, assistant_content)
+
                                 messages.append({'role': 'assistant', 'content': model_outputs})
 
                                 if stop_reason != 'tool_use':
@@ -156,11 +165,18 @@ class ClaudeChatAgent(BaseAgent):
                                     await self._raise_interaction_end(id=interaction_id, **callback_opts)
                                     return messages
                                 else:
-
                                     await self._raise_tool_call_start(collected_tool_calls, vendor="anthropic",
                                                                       **callback_opts)
+
+                                    # JOE: Fancy footwork for grabbing tool calls/results and adding them to messages for session history
+                                    tool_response_messages = await self.__tool_calls_to_messages(collected_tool_calls, tool_chest)
+                                    # For now we're not going to save tool calls/results to session history.  Too much incompatibility
+                                    # Between claude/gpt.  This is being solved in another branch.
+                                    # await self.process_tool_response_messages(session_manager, tool_response_messages)
+
+
                                     # TODO: These should probably be part of the model output
-                                    messages.extend(await self.__tool_calls_to_messages(collected_tool_calls, tool_chest))
+                                    messages.extend(tool_response_messages)
                                     await self._raise_tool_call_end(collected_tool_calls, messages[-1]['content'],
                                                                     vendor="anthropic", **callback_opts)
                                     await self._raise_history_event(messages, **callback_opts)
@@ -295,3 +311,57 @@ class ClaudeChatAgent(BaseAgent):
 
         return [{'role': 'assistant', 'content': list(ai_calls)},
                 {'role': 'user', 'content': list(results)}]
+
+    def _format_model_outputs_to_text(self, model_outputs: List[Dict[str, Any]]) -> str:
+        """
+        Convert Claude's model outputs into a single text string for session storage.
+        CREATED BY JOE: May not be the best way
+        Args:
+            model_outputs: List of output blocks from Claude
+
+        Returns:
+            str: Combined text content from all text blocks
+        """
+        text_parts = []
+        for output in model_outputs:
+            if 'text' in output:
+                text_parts.append(output['text'])
+            elif 'thinking' in output:
+                # use one or the other below lines for adding to message history, for now we're going to exclude
+                # text_parts.append(f"[Thinking] {output['thinking']}") # Add thinking blocks to the output
+                pass  # Skip thinking blocks by default
+
+        return "".join(text_parts)
+
+    async def process_tool_response_messages(self, session_manager, tool_response_messages):
+        """
+        Process the tool response messages from the assistant.
+        CREATED BY JOE: May not be the best way
+        Args:
+            session_manager: to save messages to for chat history
+            tool_response_messages: incoming tool response messages
+
+        Returns:
+
+        """
+        # Process the assistant's tool call (first message) - has role of Assistant
+        assistant_message = tool_response_messages[0]
+        if isinstance(assistant_message.get('content', ''), list):
+            content = json.dumps(assistant_message['content'])
+        else:
+            content = assistant_message.get('content', '')
+        prefixed_content = "[Tool Call] " + content
+        await self._save_message_to_session(session_manager, prefixed_content, 'assistant')
+
+        # Process the tool result message (second message, if it exists)
+        if len(tool_response_messages) > 1:
+            tool_result = tool_response_messages[1]
+            if isinstance(tool_result.get('content', ''), list):
+                content = json.dumps(tool_result['content'])
+            else:
+                content = tool_result.get('content', '')
+
+            # Save the tool result as 'assistant' with a prefix to indicate it was a tool response. This is because Claude
+            # does not like you passing in prior messages with a role of tool
+            tool_response_content = "[Tool Response] " + content
+            await self._save_message_to_session(session_manager, tool_response_content, 'assistant')

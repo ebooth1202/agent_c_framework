@@ -10,31 +10,29 @@ logger = logging.getLogger(__name__)
 
 @router.post("/chat")
 async def chat_endpoint(
-        session_id: str = Form(...),
+        ui_session_id: str = Form(...),
         message: str = Form(...),
-        custom_prompt: str = Form(""),
         agent_manager=Depends(get_agent_manager)
 ):
     """
     Endpoint for sending a message and getting a streaming response from the agent.
     We use SSE-like streaming via StreamingResponse.
     """
-    logger.info(f"Received chat request for session: {session_id}")
-    session_data = agent_manager.get_session_data(session_id)
+    logger.info(f"Received chat request for session: {ui_session_id}")
+    session_data = agent_manager.get_session_data(ui_session_id)
     # logger.debug(f"Available sessions: {list(agent_manager.sessions.keys())}")
 
     if not session_data:
-        logger.error(f"No session found for session_id: {session_id}")
+        logger.error(f"No session found for session_id: {ui_session_id}")
         raise HTTPException(status_code=404, detail="Session not found")
 
     async def event_stream():
         """Inner generator for streaming response chunks"""
-        # logger.debug(f"Starting event stream for session: {session_id}")
+        # logger.debug(f"Starting event stream for session: {ui_session_id}")
         try:
             async for token in agent_manager.stream_response(
-                    session_id,
+                    ui_session_id,
                     user_message=message,
-                    custom_prompt=custom_prompt,
             ):
                 # Each token is a piece of the assistant's reply
                 yield token

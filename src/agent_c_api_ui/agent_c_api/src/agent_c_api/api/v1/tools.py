@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Form, UploadFile, File, Depends, Request
 
-from agent_c_api.core.agent_manager import AgentManager
+from agent_c_api.core.agent_manager import UItoAgentBridgeManager
 from agent_c import Toolset
 
 
@@ -36,7 +36,7 @@ async def tools_list():
                 'name': tool_class.__name__,
                 'module': tool_class.__module__,
                 'doc': tool_class.__doc__,
-                'essential': tool_class.__name__ in AgentManager.ESSENTIAL_TOOLS
+                'essential': tool_class.__name__ in UItoAgentBridgeManager.ESSENTIAL_TOOLS
             }
 
             if tool_info['essential']:
