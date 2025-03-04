@@ -656,12 +656,12 @@ class GradioChat:
             self.__init_ui()
 
             # Start the UI in the background
-            self.open_browser_after_delay("http://localhost:7860", 1)
-            self.audio_cues.play_sound('app_start')
+            #self.open_browser_after_delay("http://localhost:7860", 1)
+            #self.audio_cues.play_sound('app_start')
 
             self.ui.queue()
             self.ui.launch(
-                server_name='127.0.0.1',
+                server_name='0.0.0.0',
                 server_port=7860,
                 share=False,
                 inbrowser=False,  # Don't auto-open browser since we're using our own method
@@ -669,11 +669,11 @@ class GradioChat:
                 max_threads=40,  # Maximum number of threads for handling requests
                 show_error=True,
                 show_api=False,  # Disable API docs for faster loading
-                quiet=True,  # Reduce console output
+                quiet=False,  # Reduce console output
                 enable_monitoring=False,  # Disable monitoring for faster startup
                 height=500,
                 width="100%",
-                strict_cors=True
+                strict_cors=False
             )
         except Exception as e:
             self.logger.error(f"Error during startup: {str(e)}")
