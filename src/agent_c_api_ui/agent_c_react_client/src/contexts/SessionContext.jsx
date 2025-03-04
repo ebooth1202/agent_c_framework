@@ -223,6 +223,12 @@ export const SessionProvider = ({children}) => {
                 persona_name: persona || 'default'
             };
 
+            // If we have an existing session and we're not forcing a new one, include the session ID
+            if (sessionId && !forceNew) {
+                jsonData.ui_session_id = sessionId;
+                console.log(`Using existing session ID: ${sessionId} for model change`);
+            }
+
 
             // Determine which custom prompt to use (cleaner approach)
             let promptToUse = null;
