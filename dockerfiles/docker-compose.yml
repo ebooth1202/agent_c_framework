@@ -1,0 +1,41 @@
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: dockerfiles/api.Dockerfile
+    env_file:
+      - ../.env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../src:/app/src  # For development hot-reloading
+      - ../images:/app/images  # Mounted volume for saved images
+    environment:
+      - ENVIRONMENT=LOCAL_DEV
+      - ENHANCED_DEBUG_INFO=True
+      - PYTHONPATH=/app
+      - HOST=0.0.0.0
+      - PORT=8000
+      - RELOAD=True
+    networks:
+      - agent-c-network
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: dockerfiles/frontend.Dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      - ../src/agent_c_api_ui/agent_c_react_client:/app  # For development hot-reloading
+    environment:
+      - VITE_API_URL=http://localhost:8000/api/v1  # Use localhost for browser access
+      - VITE_RAG_API_URL=http://localhost:8000/api/v1  # Use localhost for browser access
+    depends_on:
+      - api
+    networks:
+      - agent-c-network
+
+networks:
+  agent-c-network:
+    driver: bridge
