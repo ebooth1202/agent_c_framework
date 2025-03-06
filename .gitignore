@@ -9,6 +9,9 @@ temp/*
 !temp/.KEEP
 .local_workspaces.json
 
+#py-env
+.python-version
+
 # C extensions
 *.so
 .chat_input
@@ -164,11 +167,14 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 .idea/
 
+# Mac OS
+**/.DS_Store
+
+# Node Modules
+src/agent_c_api_ui/agent_c_react_client/node_modules/
+
 # Ignore everything in config
 config/*
 
 # But don't ignore the .gitkeep file
 !config/.gitkeep
-
-#pyenv
-.python-version
