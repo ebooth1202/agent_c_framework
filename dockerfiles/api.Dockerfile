@@ -24,6 +24,9 @@ RUN apt-get update && apt-get install -y \
 # Copy source code first
 COPY src ./src
 
+# Copy in the personas - right now we mount in docker-compose
+COPY personas /app/personas
+
 # Copy agent_c_api pyproject.toml
 COPY src/agent_c_api_ui/agent_c_api/pyproject.toml ./pyproject.toml
 

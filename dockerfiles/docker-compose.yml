@@ -10,6 +10,7 @@ services:
     volumes:
       - ../src:/app/src  # For development hot-reloading
       - ../images:/app/images  # Mounted volume for saved images
+      - ../personas:/app/personas  # Mount personas directory - required for persona selection
     environment:
       - ENVIRONMENT=LOCAL_DEV
       - ENHANCED_DEBUG_INFO=True
