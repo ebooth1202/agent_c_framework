@@ -128,6 +128,36 @@
             "audio": false,
             "file": false
           }
+        },
+        {
+          "id": "gpt-4.5-preview",
+          "model_type": "chat",
+          "ui_name": "GPT-4.5",
+          "description": "Largest most powerful OpenAI model for chat interactions.",
+          "parameters": {
+            "temperature": {
+              "default": 0.5,
+              "min": 0,
+              "max": 2,
+              "required": true
+            },
+            "max_tokens": {
+              "min": 1000,
+              "max": 16384,
+              "default": 16384,
+              "required": false
+            }
+          },
+          "capabilities": {
+            "supports_tools": true,
+            "multi_modal": true
+          },
+          "allowed_inputs": {
+            "image": true,
+            "video": false,
+            "audio": false,
+            "file": false
+          }
         }
       ]
     },
