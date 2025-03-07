@@ -7,6 +7,7 @@ services:
       - ../.env
     ports:
       - "8000:8000"
+    restart: always
     volumes:
       - ../src:/app/src  # For development hot-reloading
       - ../images:/app/images  # Mounted volume for saved images
@@ -25,10 +26,12 @@ services:
     build:
       context: ..
       dockerfile: dockerfiles/frontend.Dockerfile
+    restart: always
     ports:
       - "5173:5173"
-    #volumes:
-    #  - ../src/agent_c_api_ui/agent_c_react_client:/app  # For development hot-reloading
+    volumes:
+      - ../src/agent_c_api_ui/agent_c_react_client:/app  # For development hot-reloading
+      - /app/node_modules  # Keeps the container’s node_modules intact
     environment:
       - VITE_API_URL=http://localhost:8000/api/v1  # Use localhost for browser access
       - VITE_RAG_API_URL=http://localhost:8000/api/v1  # Use localhost for browser access
