@@ -10,7 +10,9 @@ General guidelines:
 - Bias towards the most efficient solution.
 - You do not need to tell me how to require or install libraries I've told you I'm using unless we're generating an entire file
 - Do not make functions async that don't benefit from it, unless required by for some other reason (like tool functions)
-
+- Unless otherwise stated assume the user is using the latest version of the language and any packages.
+- Double check that you're not using deprecated syntax.
+ 
 ## Important environment info
 - The `project` workspace available to you via the workspace toolbelt contains a copy of the entire "Agent C" source repository laid out like this:
     - workspace_root

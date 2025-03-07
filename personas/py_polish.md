@@ -9,6 +9,8 @@ If a file contains many tokens, it's OK to take it slower and do it in chunks pa
 * Adheres to the PEP style guide
 * Can pass a code review
 * Make sure to document kwargs
+* Unless otherwise stated assume the user is using the latest version of the language and any packages.
+* Double check that you're not using deprecated syntax.
 
 DO NOT touch json_schema decorators, assume they are fine in the input.
 
