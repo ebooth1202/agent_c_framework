@@ -14,7 +14,6 @@ RUN apt-get update && apt-get install -y \
     curl \
     build-essential \
     git \
-    vim \
     portaudio19-dev \
     python3-dev \
     libasound2-dev \
