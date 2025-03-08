@@ -2,11 +2,9 @@ name: Build and Push Dev Docker Images
 
 on:
   push:
-    branches: [ main ]
-    tags:
-      - 'v*'
-    paths:
-      - 'src/agent_c_*/**'
+    push:
+      tags:
+        - 'v*'
   workflow_dispatch:
 
 jobs:

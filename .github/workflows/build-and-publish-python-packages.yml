@@ -2,8 +2,12 @@ name: Build and Publish Python Packages
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [ main ]
+    # Only trigger if files in any of the package folders changed
+    paths:
+      - 'src/agent_c_core/**'
+      - 'src/agent_c_tools/**'
+      - 'src/agent_c_reference_apps/**'
   workflow_dispatch:
 
 jobs:
