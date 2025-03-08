@@ -3,6 +3,7 @@ FROM python:3.12-slim-bullseye
 # Set working directory and create required directories
 WORKDIR /app
 RUN mkdir -p /app/images
+RUN mkdir -p /app/src/agent_c_api_ui
 
 # Install system dependencies using apt
 RUN apt-get update && apt-get install -y \
@@ -22,27 +23,22 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Copy source code first
-COPY src ./src
+COPY src/agent_c_core ./src/agent_c_core
+COPY src/agent_c_tools ./src/agent_c_tools
+COPY src/agent_c_api_ui/agent_c_api ./src/agent_c_api_ui/agent_c_api
 
 # Copy in the personas - right now we mount in docker-compose
 COPY personas /app/personas
-
-# Copy agent_c_api pyproject.toml
-COPY src/agent_c_api_ui/agent_c_api/pyproject.toml ./pyproject.toml
-
-# Copy agent_c_api setup.py
-COPY src/agent_c_api_ui/agent_c_api/setup.py ./setup.py
 
 # Upgrade pip
 RUN pip install --no-cache-dir --upgrade pip
 
 # Install Python dependencies
 WORKDIR /app/src
+
 RUN pip install -e agent_c_core \
     && pip install zep_cloud \
     && pip install -e agent_c_tools \
-    && pip install -e my_agent_c \
-    && pip install -e agent_c_reference_apps \
     && pip install -e agent_c_api_ui/agent_c_api
 
 # Return to the app's root

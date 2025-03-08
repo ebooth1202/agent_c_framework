@@ -28,7 +28,7 @@ if not exist "%AGENT_C_CONFIG_PATH%\agent_c.config" (
 )
 
 :: Run in detached mode (background):
-docker-compose -f docker-compose.yml -p agent_c up --build -d
+docker-compose -f docker-compose.yml -p agent_c up -d --pull always
 
 :: Wait a few seconds for the containers to start
 timeout /t 5 /nobreak > nul
