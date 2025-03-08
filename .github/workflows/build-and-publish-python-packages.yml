@@ -1,0 +1,119 @@
+name: Build and Publish Python Packages
+
+on:
+  pull_request:
+    branches: [ main ]
+    types: [ closed ]
+  workflow_dispatch:
+
+jobs:
+  build_agent_c_core:
+    name: Build and Publish agent_c_core
+    runs-on: ubuntu-latest
+    if: ${{ github.event.pull_request.merged == true }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Check if agent_c_core changed
+        id: check
+        run: |
+          # Compare current commit with previous commit for changes in agent_c_core
+          if git diff --quiet HEAD^ HEAD -- src/agent_c_core; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+          echo "Change check result: $(cat $GITHUB_OUTPUT)"
+
+      - name: Bump version for agent_c_core
+        if: steps.check.outputs.changed == 'true'
+        run: python ci/bump_version.py src/agent_c_core/pyproject.toml ${{ github.run_number }}
+
+      - name: Build agent_c_core package
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          cd src/agent_c_core
+          python setup.py sdist bdist_wheel
+
+      - name: Publish agent_c_core package to GitHub Packages
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          twine upload --repository-url https://upload.github.com/ dist/*
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+  build_agent_c_tools:
+    name: Build and Publish agent_c_tools
+    runs-on: ubuntu-latest
+    needs: build_agent_c_core
+    if: ${{ github.event.pull_request.merged == true }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Check if agent_c_tools changed
+        id: check
+        run: |
+          if git diff --quiet HEAD^ HEAD -- src/agent_c_tools; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+          echo "Change check result: $(cat $GITHUB_OUTPUT)"
+
+      - name: Bump version for agent_c_tools
+        if: steps.check.outputs.changed == 'true'
+        run: python ci/bump_version.py src/agent_c_tools/pyproject.toml ${{ github.run_number }}
+
+      - name: Build agent_c_tools package
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          cd src/agent_c_tools
+          python setup.py sdist bdist_wheel
+
+      - name: Publish agent_c_tools package to GitHub Packages
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          twine upload --repository-url https://upload.github.com/ dist/*
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+  build_agent_c_reference_apps:
+    name: Build and Publish agent_c_reference_apps
+    runs-on: ubuntu-latest
+    needs: build_agent_c_tools
+    if: ${{ github.event.pull_request.merged == true }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Check if agent_c_reference_apps changed
+        id: check
+        run: |
+          if git diff --quiet HEAD^ HEAD -- src/agent_c_reference_apps; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+          echo "Change check result: $(cat $GITHUB_OUTPUT)"
+
+      - name: Bump version for agent_c_reference_apps
+        if: steps.check.outputs.changed == 'true'
+        run: python ci/bump_version.py src/agent_c_reference_apps/pyproject.toml ${{ github.run_number }}
+
+      - name: Build agent_c_reference_apps package
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          cd src/agent_c_reference_apps
+          python setup.py sdist bdist_wheel
+
+      - name: Publish agent_c_reference_apps package to GitHub Packages
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          twine upload --repository-url https://upload.github.com/ dist/*
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
