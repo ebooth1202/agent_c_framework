@@ -35,7 +35,7 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/centricconsulting/agent_c"
+Homepage = "https://github.com/centricconsulting/agent_c_framework"
 
 
 [project.scripts]

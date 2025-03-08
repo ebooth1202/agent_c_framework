@@ -1,10 +1,13 @@
+#!/usr/bin/env python3
 import sys
-import toml
+import tomli  # For reading TOML (pip install tomli)
+import tomli_w  # For writing TOML (pip install tomli-w)
 
 
 def bump_version(file_path, build_number):
     # Load the TOML file
-    data = toml.load(file_path)
+    with open(file_path, "rb") as f:
+        data = tomli.load(f)
 
     # Attempt to retrieve the current version from common sections.
     # Adjust the keys below based on your project's configuration.
@@ -27,8 +30,8 @@ def bump_version(file_path, build_number):
         data["project"]["version"] = new_version
 
     # Write changes back to the file.
-    with open(file_path, "w") as f:
-        toml.dump(data, f)
+    with open(file_path, "wb") as f:
+        tomli_w.dump(data, f)
 
     print(f"Updated version to {new_version} in {file_path}")
 

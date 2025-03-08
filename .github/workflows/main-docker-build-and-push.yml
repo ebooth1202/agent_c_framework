@@ -7,7 +7,27 @@ on:
   workflow_dispatch:
 
 jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      base_changed: ${{ steps.filter.outputs.base_changed }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Fetch all history to properly check changes
+
+      - name: Check for changes in base image directory
+        id: filter
+        uses: dorny/paths-filter@v2
+        with:
+          filters: |
+            base_changed:
+              - 'dockerfiles/base/python/**'
+
   build-and-push:
+    needs: check-changes
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -29,6 +49,20 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Base Python image
+        if: needs.check-changes.outputs.base_changed == 'true'
+        uses: docker/build-push-action@v4
+        with:
+          context: ./dockerfiles/base/python
+          file: ./dockerfiles/base/python/Dockerfile
+          # Only push when not a PR
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/agent_c_python_base:latest
+            ghcr.io/${{ github.repository_owner }}/agent_c_python_base:build-${{ github.run_number }}
+            ghcr.io/${{ github.repository_owner }}/agent_c_python_base:${{ env.SHORT_SHA }}
+            ghcr.io/${{ github.repository_owner }}/agent_c_python_base:${{ env.DATE }}
 
       - name: Build and push API image
         uses: docker/build-push-action@v4
