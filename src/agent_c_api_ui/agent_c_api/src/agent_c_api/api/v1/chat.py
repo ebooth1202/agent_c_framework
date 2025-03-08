@@ -1,3 +1,5 @@
+import traceback
+
 from fastapi import APIRouter, HTTPException, Form, Depends
 import logging
 from fastapi.responses import StreamingResponse
@@ -37,8 +39,10 @@ async def chat_endpoint(
                 # Each token is a piece of the assistant's reply
                 yield token
         except Exception as e:
-            logger.error(f"Error in stream_response: {e}")
-            yield f"Error: {str(e)}"
+            error_type = type(e).__name__
+            error_traceback = traceback.format_exc()
+            logger.error(f"Error in chat.py:stream_response - {error_type}: {str(e)}\n{error_traceback}")
+            yield f"Error: {str(e)}\n{error_traceback}"
 
     return StreamingResponse(
         event_stream(),

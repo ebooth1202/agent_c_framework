@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import traceback
 import uuid
 from typing import Dict, Optional, List, Any, AsyncGenerator
 
@@ -192,7 +193,9 @@ class UItoAgentBridgeManager:
                 yield chunk
 
         except Exception as e:
-            self.logger.error(f"Error in stream_response: {e}")
+            error_type = type(e).__name__
+            error_traceback = traceback.format_exc()
+            self.logger.error(f"Error in agent_manager.py:stream_response - {error_type}: {str(e)}\n{error_traceback}")
             yield f"Error: {str(e)}"
 
     async def debug_session(self, ui_session_id: str):
