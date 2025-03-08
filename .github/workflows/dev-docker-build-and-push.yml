@@ -36,7 +36,8 @@ jobs:
         with:
           context: .
           file: ./dockerfiles/api.Dockerfile
-          push: true
+          # Only push when not a PR
+          push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ghcr.io/${{ github.repository_owner }}/agent_c_api_dev:latest
             ghcr.io/${{ github.repository_owner }}/agent_c_api_dev:build-${{ github.run_number }}
@@ -48,7 +49,8 @@ jobs:
         with:
           context: .
           file: ./dockerfiles/Dockerfile.dev
-          push: true
+          # Only push when not a PR
+          push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ghcr.io/${{ github.repository_owner }}/agent_c_framework_dev:latest
             ghcr.io/${{ github.repository_owner }}/agent_c_framework_dev:build-${{ github.run_number }}
@@ -60,7 +62,8 @@ jobs:
         with:
           context: .
           file: ./dockerfiles/frontend.Dockerfile
-          push: true
+          # Only push when not a PR
+          push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ghcr.io/${{ github.repository_owner }}/agent_c_frontend_dev:latest
             ghcr.io/${{ github.repository_owner }}/agent_c_frontend_dev:build-${{ github.run_number }}
