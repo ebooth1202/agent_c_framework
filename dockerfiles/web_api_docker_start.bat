@@ -5,9 +5,9 @@ SETLOCAL
 cd /d "%~dp0"
 
 :: Build and start the containers in attached mode
-:: docker-compose -f  docker-compose.yml -p agent_c_api_reactui up --build
+:: docker-compose -f docker-compose_dev.yml -p agent_c_api_reactui up --build
 
 :: Run in detached mode (background):
-docker-compose -f docker-compose.yml -p agent_c_api_reactui up --build -d
+docker-compose -f docker-compose_dev.yml -p agent_c_api_reactui up --build -d
 
 ENDLOCAL
