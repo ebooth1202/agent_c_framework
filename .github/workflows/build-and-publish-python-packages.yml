@@ -49,6 +49,7 @@ jobs:
       - name: Publish agent_c_core package to GitHub Packages
         if: steps.check.outputs.changed == 'true'
         run: |
+          cd src/agent_c_core
           twine upload --repository-url https://upload.github.com/ dist/*
         env:
           TWINE_USERNAME: __token__
@@ -96,6 +97,7 @@ jobs:
       - name: Publish agent_c_tools package to GitHub Packages
         if: steps.check.outputs.changed == 'true'
         run: |
+          cd src/agent_c_tools
           twine upload --repository-url https://upload.github.com/ dist/*
         env:
           TWINE_USERNAME: __token__
@@ -143,6 +145,7 @@ jobs:
       - name: Publish agent_c_reference_apps package to GitHub Packages
         if: steps.check.outputs.changed == 'true'
         run: |
+          cd src/agent_c_reference_apps
           twine upload --repository-url https://upload.github.com/ dist/*
         env:
           TWINE_USERNAME: __token__
