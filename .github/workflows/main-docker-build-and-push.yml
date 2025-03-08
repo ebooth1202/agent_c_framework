@@ -3,8 +3,8 @@ name: Build and Push Dev Docker Images
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    paths:
+      - 'src/agent_c_*/**'
   workflow_dispatch:
 
 jobs:
