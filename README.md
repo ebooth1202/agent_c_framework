@@ -1,185 +1,281 @@
-# Agent C
+# Agent C Framework
 
-This project contains a fairly minimalist framework for interactive tool-using AI agents.  It serves as the core runtime of the Agent C accelerator from Centric Consulting.  
+## What is Agent C?
 
-The underlying agent handles things like streaming responses, parallel tool use, parallel tool calls, etc and allows us to either receive events via a callback, or consume content tokens via an async generator.  Both the agent and agent tools are fully async and designed to be non-blocking. 
+Agent C is a minimalist framework for building interactive, tool-using AI agents. Created by Centric Consulting, it provides a runtime environment that handles:
 
-## Pre-Requisites
+- Streaming responses
+- Parallel tool execution
+- Asynchronous operations
+- Multiple ways to consume AI content (callbacks or async generators)
 
-### Windows:
+All components are designed to be non-blocking and fully asynchronous.
 
-- [Git](https://git-scm.com/downloads/win) 
-- A decent Python IDE like [PyCharm (scroll to bottom of the page)](https://www.jetbrains.com/pycharm/download/).
-- [Python 3.12](https://www.python.org/downloads/release/python-3129/) or higher.
-    - Be aware, if you using anaconda your environment may conflict with the virtualenv that the helper scripts in ./scripts tries to create
-- [pyenv](https://github.com/pyenv-win/pyenv-win) is optional
-- [Microsoft visual c++ build tools](https://visualstudio.microsoft.com/downloads/).  
-    - or run: ```winget install Microsoft.VisualStudio.2022.BuildTools```
-    - ***Be sure to check the C++ development Option***
+## Getting Started
+
+Choose the setup path that best matches your needs:
+
+### 🚀 Quick Start (No Development)
+
+If you just want to use Agent C without modifying code:
+
+1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or Rancher Desktop)
+2. Run the appropriate startup script:
+   - Windows: `dockerfiles\start_agent_c.bat`
+   - Mac/Linux: `dockerfiles/start_agent_c.sh`
+3. On first run, a configuration file will be created in:
+   - Windows: `%USERPROFILE%\.agent_c`
+   - Mac/Linux: `~/.agent_c`
+4. Edit this configuration file to add your API keys and set your username (see [Configuration File](#configuration-file) below)
+5. Run the startup script again
+6. Agent C will open automatically in your browser
+7. Bookmark this page to access Agent C until you remove the Docker containers
+
+### 💻 Developer Setup
+
+#### Prerequisites
+
+<details>
+<summary><b>Windows Prerequisites</b> (click to expand)</summary>
+
+- [Git](https://git-scm.com/downloads/win)
+- [Python 3.12+](https://www.python.org/downloads/release/python-3129/)
+- A Python IDE like [PyCharm](https://www.jetbrains.com/pycharm/download/) (Community Edition is free)
+- [Microsoft Visual C++ Build Tools](https://visualstudio.microsoft.com/downloads/) (Be sure to check the "C++ development" option)
+  - Or run: `winget install Microsoft.VisualStudio.2022.BuildTools`
 - [Rust](https://www.rust-lang.org/tools/install)
-- [Node](https://nodejs.org/en/download)
+- [Node.js](https://nodejs.org/en/download)
 - [ffmpeg](https://ffmpeg.org/download.html#build-windows)
+- Optional: [pyenv](https://github.com/pyenv-win/pyenv-win) (for managing Python versions)
 
-### Mac OS: 
-1. install xcode command line tools (if not already installed)
+</details>
+
+<details>
+<summary><b>Mac/Linux Prerequisites</b> (click to expand)</summary>
+
+1. Install Xcode command line tools:
+   ```bash
+   xcode-select --install
+   ```
+
+2. Install Homebrew (if not already installed):
+   ```bash
+   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+   ```
+
+3. Install required packages:
+   ```bash
+   brew install python@3.12 pyenv rust node ffmpeg
+   ```
+
+4. Optional: Install development tools:
+   ```bash
+   brew install visual-studio-code
+   brew install --cask pycharm-ce
+   ```
+</details>
+
+#### Step 1: Clone the Repository
 
 ```bash
-xcode-select --install
-```
-
-2. install homebrew (if not installed)
-
-```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-```
-
-3. install python 3.12, pyenv, rust, and node (with npm), ffmpeg
-
-```bash
-brew install python@3.12 pyenv rust node ffmpeg
-```
-
-4. optional editors (or your favorite programmers editor)
-
-```bash
-brew install visual-studio-code
-brew install --cask pycharm-ce
-```
-### Clone the repo
-
-```shell
 git clone https://github.com/centricconsulting/agent_c_framework.git
 cd agent_c_framework
 ```
 
-### Setup your Python development environment
+#### Step 2: Set Up Your Python Environment
 
-#### Specify a python version (if needed)
-```shell
-pyenv install 3.12
-pyenv local 3.12
-```
+Python projects typically use "virtual environments" to keep dependencies isolated. This prevents conflicts between different projects on your system.
 
-#### Run setup script
-Windows:
-```shell
-.\scripts\initial_setup.bat
-```
+**Option A: Automatic Setup (Recommended for Beginners)**
 
-Mac OS: 
+Run the setup script for your platform:
+
 ```bash
+# On Windows
+.\scripts\initial_setup.bat
+
+# On Mac/Linux
 ./scripts/initial_setup.sh
 ```
 
-#### ***Or Manual steps if you do not want to use the script in the previous step***
+**Option B: Manual Setup**
 
-```shell
-python -m venv venv
+If you prefer to understand each step or if the script doesn't work:
+
+1. Create a virtual environment:
+   ```bash
+   python -m venv venv
+   ```
+
+2. Activate the virtual environment:
+   ```bash
+   # On Windows
+   venv\Scripts\activate.bat
+
+   # On Mac/Linux
+   source venv/bin/activate
+   ```
+
+3. Install the project packages:
+   ```bash
+   cd src
+   pip install -e agent_c_core
+   pip install -e agent_c_tools
+   pip install -e agent_c_reference_apps
+   ```
+
+> **Note**: The `-e` flag installs packages in "editable" mode, so your code changes are immediately available without reinstalling.
+
+#### Step 3: Get an OpenAI API Key
+
+Agent C requires an OpenAI API key to function:
+
+1. Sign up at the [OpenAI Platform](https://platform.openai.com/signup)
+2. Navigate to [API Keys](https://platform.openai.com/settings/organization/api-keys)
+3. Create a new API key
+4. Prepay/deposit an amount (e.g., $20 USD) for usage credits
+
+> **Important**: A ChatGPT Plus subscription is **not** sufficient - you need an actual API key.
+
+#### Step 4: Configure Environment Variables
+
+1. Copy the example environment file to create your own:
+   ```bash
+   cp example.env .env
+   ```
+
+2. Edit `.env` to add your OpenAI API key:
+   ```
+   OPEN_API_KEY=your-api-key-here
+   ```
+
+## Running Agent C
+
+You can run Agent C in two modes:
+
+### Command Line Interface
+
+```bash
+agent_c-cli [options]
 ```
 
-After this there will be a `venv` sub-folder containing a clean Python installation 
+### Web Interface
 
-While still in that same command line you will want to activate the environment.  
-
-- On Linux/MacOS/WSL run: `source venv/bin/activate`
-- If you're on Windows run: `venv\Scripts\activate.bat`
-
-Optional, for some 
-
-Still in that same command line run the following to pull down all the dependencies
-- On Linux/MacOS/WSL run: `scripts/install_deps.sh`
-- If you're on Windows run: `scripts/install_deps.bat`
-
-Or do it by hand with:
-
-```shell
-cd src
-pip install -e agent_c_core
-pip install -e agent_c_tools
-pip install -e agent_c_reference_apps 
+```bash
+agent_c-web [options]
 ```
 
-Make sure to set the python interpreter in your IDE to the one now in `<project_root>/venv`. 
+### Common Command Line Options
 
-### Note:
-Each time you pull latest it's recommended to install the packages again to ensure new dependencies are installed.  There is a `fetch_latest` script in the scripts folder the project that will do this for you.
+- `--model [model_name]`: Override the default AI model
+- `--prompt_file [/path/to/file]`: Supply a custom persona prompt file
+- `--userid [user_id]`: Set a specific user ID for the chat session
 
-## Get an Open AI API Key.
+### CLI Commands (Available Within the CLI App)
 
-If you do not all ready have an Open AI API Key, that's a HARD requirement for working with this code.  Visit the signup page for the [Open AI Platform](https://platform.openai.com/signup) to sign up. 
+When using the CLI version, you can use these special commands:
 
-API Keys can be found [here](https://platform.openai.com/settings/organization/api-keys) after signing in.
+- `!exit` or `!!!`: Exit the app
+- `!keep`: Mark the current session to be saved after exiting
+- `!!!!`: Exit without deleting the current session
+- `!compact`: Reduce the message history to save tokens
+- `!?`: Show all available commands
 
-You will need to prepay/deposit an amount such as $20 USD with them for usage credits. 
+The up/down arrow keys let you navigate through your command history.
 
-Please note: A ChatGPT Pro subscription is not sufficient.
+## Configuration File
 
-Create an environment variable named `OPEN_API_KEY` with your api key as the value. In Windows, this can be a user environment variable (rather than system, though system will work). In Mac OS / linux, you would create it in your shell's initialization scripts, such as `~/.bash_profile`.
+When you first run Agent C, it will create a configuration file (similar to `.env`) that needs to be modified before Agent C will function properly. This file contains API keys and other settings.
 
-#
-### Set up your application environment
-
-In the root folder of the repo there's an `example.env` that you should copy to `.env` and complete similar to how you just finished doing above.
-
-## Run the reference agent
-
-From the root folder of the project you can launch the reference agent with the following command:
-
-```shell
-agent_c-cli <opts>
+```
+# Location of configuration file:
+# Windows: %USERPROFILE%\.agent_c\agent_c.config
+# Mac/Linux: ~/.agent_c/agent_c.config
 ```
 
-or:
+### Essential Configuration
 
-```shell
-agent_c-web <opts>
+These settings are required for basic functionality:
+
+```
+# Required: OpenAI API key (you MUST set this)
+OPENAI_API_KEY=your-openai-api-key-here
+
+# Required: Set your user ID (default is "default")
+CLI_CHAT_USER_ID=YourName
+
+# Required: Zep API key for memory management
+# Create a free Zep Cloud account at: https://app.getzep.com/api/auth/register
+# Zep API keys are specific to a project. Visit "Project Settings" in the Zep dashboard to manage your keys.
+ZEP_API_KEY=your-zep-api-key-here
 ```
 
-#### Command line options
+### Optional Configuration
 
-- `--model [model_name]` allows you to override the default model used by the agent.
-- `--prompt_file [/path/to/file]` allows you to supply a file to be used as the persona portion of the system prompt for the agent.
-- `--userid [user_id]` provide a user ID to be used for the user in the chat session.  Setting this will override the value from the `.env` file for `CLI_CHAT_USER_ID`
+The following sections allow additional functionality if you have these services:
 
-### In app commands (CLI only)
+```
+# Optional: Claude/Anthropic API key (if you want to use Claude models)
+#ANTHROPIC_API_KEY=your-anthropic-key-here
 
-There are a small number of commands available within the app available by typing them alone on in the chat input and hitting enter:
+# Optional: Azure OpenAI (uncomment if using Azure instead of OpenAI)
+#AZURE_OPENAI_API_KEY=your-azure-key-here
+#AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+#AZURE_OPENAI_API_VERSION=2024-03-01-preview
 
-- `!exit` or `!!!` - Will exit the app.
-- `!keep` - will mark a session to be kept after exiting. By default, sessions are ephemeral and are deleted on app exit.
-- `!!!!` - will exit the app and without deleting the session.
-- `!compact` - will compact the message array being used for the chat down to the contents of the zep memory.  This is handy for clearing out tool calls and results or reducing the overall token count of the session. 
-- `!?` - show all commands
+# Optional: If you're using Zep CE locally instead of Zep Cloud
+#ZEP_CE_KEY=your-zep-ce-key-here
+#ZEP_URL=http://localhost:8001
 
-In addition the up/down arrows act as a "command history" allowing you easy access to anything you've submitted as input to the app. 
+# Optional: Debug information
+ENHANCED_DEBUG_INFO=False
 
-#### Workspaces
+# Optional: API keys for various tools
+# Uncomment and add keys for tools you want to use
+#SERPAPI_API_KEY=your-serpapi-key-here        # For web searches
+#SEC_API_KEY=your-sec-api-key-here            # For SEC filings access
+#TAVILI_API_KEY=your-tavili-key-here          # For Tavili integration
+#NEWSAPI_API_KEY=your-newsapi-key-here        # For news access
+```
 
-The reference app will create a `LocalStorageWorkspace` titled `project` and make it available to the agent. This means that the agent will have full read/write access to any file/folder in under the project root. A `temp` folder exists in the repo for the sole purpose of providing a standard place to drop things in that you'd like the agent to work with.
+### Example Configuration
 
-To work with files in workspaces, refer to the workspace name and the relative path within the workspace like:  "Could you load temp/data.csv from the project workspace and..."
+A minimal configuration to get started would look like:
+
+```
+OPENAI_API_KEY=sk-abcd1234567890abcdefg
+CLI_CHAT_USER_ID=JaneDoe
+ZEP_API_KEY=zep-cloud-api-key-12345abcde
+```
+
+After updating your configuration file, run the startup script again to launch Agent C with your settings.
+
+## Working with Files
+
+Agent C creates a `LocalStorageWorkspace` called `project` that gives the agent access to files in the project root. Use the `temp` folder for files you want the agent to work with.
+
+To reference files, use: "Could you load temp/data.csv from the project workspace and..."
 
 ## Personas
 
-Several persona files exist in the folder `personas`.  They can be used with the `--prompt_file` option to convert Agent C from a generic agent into something with a purpose.  The opening lines of each should clue you in to what they're for. 
+The `personas` folder contains various persona files that give Agent C different capabilities:
 
+- Use them with the `--prompt_file` option
+- For example, the `py_polish.md` persona specializes in cleaning up Python code, adding type hints, and improving documentation
 
+## Additional Documentation
 
-### PyPolish
+- Each submodule has its own README
+- `docs/tools.md`: Information on creating new tools and using existing ones
+- `docs/prompts.md`: Details on the prompt builder
+- `docs/web_tool.md`: Explains the Web tool and content formatters
 
-The persona file `py_polish.md` contains a persona file that can clean up up your code, add type hints, doc comments etc.  It's also aware the project structure and how to read and write to the project code.
+## License
 
-## Additional docs
-
-- Each sub module has it's own README, which may or may not have content...
-- `docs/tools.md` outlines how to create new tools for the agent as well as info on the existing tools.  And as mentioned above, the Toolman persona can help you quite a bit when building out new tools.
-- `docs/prompts.md` - Details how the prompts builder works
-- `docs/web_toolmd` - Explains how the Web tool and the content formatters works.
-
-## License This project is licensed under the Business Source License 1.1. 
+This project is licensed under the Business Source License 1.1.
 - **Licensor**: Centric Consulting
 - **Licensed Work**: Agent C Framework
 - **Change Date**: 2024-12-31
 - **Additional Use Grant**: None
 
-For details, see the [LICENSE](./LICENSE) file in this repository or visit the [BSL 1.1 website](https://mariadb.com/bsl11/).
+For details, see the [LICENSE](./LICENSE) file or visit the [BSL 1.1 website](https://mariadb.com/bsl11/).

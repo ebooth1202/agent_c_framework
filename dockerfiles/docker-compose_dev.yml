@@ -1,14 +1,17 @@
 services:
   api:
-    image: ghcr.io/centricconsulting/agent_c_api_dev:latest
+    build:
+      context: ..
+      dockerfile: dockerfiles/api.Dockerfile
     env_file:
-      - ${AGENT_C_CONFIG_PATH}/agent_c.config
+      - ../.env
     ports:
       - "8000:8000"
     restart: always
     volumes:
-      - ${AGENT_C_IMAGES_PATH}:/app/images  # Mounted volume for saved images
-      - ${AGENT_C_PERSONAS_PATH}:/app/personas/local  # Mount personas directory - required for persona selection
+      - ../src:/app/src  # For development hot-reloading
+      - ../images:/app/images  # Mounted volume for saved images
+      - ../personas:/app/personas  # Mount personas directory - required for persona selection
     environment:
       - ENVIRONMENT=LOCAL_DEV
       - ENHANCED_DEBUG_INFO=True
@@ -20,10 +23,15 @@ services:
       - agent-c-network
 
   frontend:
-    image: ghcr.io/centricconsulting/agent_c_frontend_dev:latest
+    build:
+      context: ..
+      dockerfile: dockerfiles/frontend.Dockerfile
     restart: always
     ports:
       - "5173:5173"
+    volumes:
+      - ../src/agent_c_api_ui/agent_c_react_client:/app  # For development hot-reloading
+      - /app/node_modules  # Keeps the container’s node_modules intact
     environment:
       - VITE_API_URL=http://localhost:8000/api/v1  # Use localhost for browser access
       - VITE_RAG_API_URL=http://localhost:8000/api/v1  # Use localhost for browser access

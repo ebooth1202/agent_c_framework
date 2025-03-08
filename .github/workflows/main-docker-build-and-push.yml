@@ -1,0 +1,103 @@
+name: Build and Push Dev Docker Images
+
+on:
+  pull_request:
+    branches: [ main ]
+    types: [ closed ]
+  workflow_dispatch:
+
+jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      base_changed: ${{ steps.filter.outputs.base_changed }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Fetch all history to properly check changes
+
+      - name: Check for changes in base image directory
+        id: filter
+        uses: dorny/paths-filter@v2
+        with:
+          filters: |
+            base_changed:
+              - 'dockerfiles/base/python/**'
+
+  build-and-push:
+    needs: check-changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up metadata
+        id: meta
+        run: |
+          echo "SHORT_SHA=$(echo ${GITHUB_SHA} | cut -c1-7)" >> $GITHUB_ENV
+          echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify registry login
+        run: |
+          echo "Verifying login to ghcr.io"
+          docker info
+          echo "Current event name: ${{ github.event_name }}"
+
+      - name: Build and push Base Python image
+        if: needs.check-changes.outputs.base_changed == 'true'
+        uses: docker/build-push-action@v4
+        with:
+          context: ./dockerfiles/base/python
+          file: ./dockerfiles/base/python/Dockerfile
+          # Only push when not a PR
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/agent_c_python_base:latest
+            ghcr.io/${{ github.repository_owner }}/agent_c_python_base:build-${{ github.run_number }}
+            ghcr.io/${{ github.repository_owner }}/agent_c_python_base:${{ env.SHORT_SHA }}
+            ghcr.io/${{ github.repository_owner }}/agent_c_python_base:${{ env.DATE }}
+
+      - name: Verify base image push
+        if: needs.check-changes.outputs.base_changed == 'true'
+        run: |
+          echo "Verifying base image was published"
+          docker pull ghcr.io/${{ github.repository_owner }}/agent_c_python_base:${{ env.SHORT_SHA }} || echo "Failed to pull image - may not be available immediately"
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./dockerfiles/api.Dockerfile
+          # Only push when not a PR
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/agent_c_api_dev:latest
+            ghcr.io/${{ github.repository_owner }}/agent_c_api_dev:build-${{ github.run_number }}
+            ghcr.io/${{ github.repository_owner }}/agent_c_api_dev:${{ env.SHORT_SHA }}
+            ghcr.io/${{ github.repository_owner }}/agent_c_api_dev:${{ env.DATE }}
+
+      - name: Build and push Frontend image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./dockerfiles/frontend.Dockerfile
+          # Only push when not a PR
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/agent_c_frontend_dev:latest
+            ghcr.io/${{ github.repository_owner }}/agent_c_frontend_dev:build-${{ github.run_number }}
+            ghcr.io/${{ github.repository_owner }}/agent_c_frontend_dev:${{ env.SHORT_SHA }}
+            ghcr.io/${{ github.repository_owner }}/agent_c_frontend_dev:${{ env.DATE }}

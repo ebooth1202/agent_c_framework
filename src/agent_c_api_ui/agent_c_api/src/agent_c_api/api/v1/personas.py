@@ -25,8 +25,11 @@ async def list_personas() -> List[Dict[str, str]]:
         return personas
 
     # Get all .md files in personas directory
-    for file_path in glob.glob(os.path.join(persona_dir, "*.md")):
-        name = os.path.basename(file_path)[:-3]  # Remove .md extension
+    for file_path in glob.glob(os.path.join(persona_dir, "**/*.md"), recursive=True):
+        rel_path = os.path.relpath(file_path, persona_dir)
+        name_with_path = rel_path[:-3]
+        # Replace directory separators with desired character (e.g., '_' or '/')
+        name = name_with_path.replace(os.sep, ' - ')
 
         # Read persona content
         try:

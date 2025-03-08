@@ -3,6 +3,7 @@ import json
 import os
 
 import threading
+import traceback
 from typing import Union, List, Dict, Any, AsyncGenerator
 from datetime import datetime, timezone
 
@@ -818,16 +819,18 @@ class AgentBridge:
             await self.session_manager.flush()
 
         except Exception as e:
-            self.logger.error(f"Error in stream_chat: {e}")
+            error_type = type(e).__name__
+            error_traceback = traceback.format_exc()
+            self.logger.error(f"Error in event_bridge.py:stream_chat {error_type}: {str(e)}\n{error_traceback}")
             yield json.dumps({
                 "type": "error",
-                "data": str(e)
+                "data": f"Error in event_bridge.py:stream_chat {error_type}: {str(e)}\n{error_traceback}"
             }) + "\n"
         finally:
             # Drain any remaining items in the queue.
             while not queue.empty():
                 try:
-                    await queue.get_nowait()
+                    await queue.get()
                     queue.task_done()
                 except asyncio.QueueEmpty:
                     break

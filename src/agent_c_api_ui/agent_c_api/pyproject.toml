@@ -4,16 +4,17 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agent_c-api"
-version = "0.1.0"
+version = "0.2.0"
 description = "FastAPI API Wrapper for Agent_C"
 dependencies = [
-    "agent_c-core>=0.1.2",
-    "agent_c-tools>=0.1.2",
+    "agent_c-core>=0.1.3",
+    "agent_c-tools>=0.1.3",
     "fastapi==0.115.7",
     "uvicorn==0.34.0",
     "pydantic==2.9.2",
     "pydantic-settings==2.6.0",
     "weaviate-client==4.8.1", # Also used by agent_c-rag
+    "python-multipart"
 ]
 
 requires-python = ">=3.12"
@@ -34,7 +35,7 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/centricconsulting/agent_c"
+Homepage = "https://github.com/centricconsulting/agent_c_framework"
 
 
 [project.scripts]
