@@ -14,6 +14,7 @@ dependencies = [
     "pydantic==2.9.2",
     "pydantic-settings==2.6.0",
     "weaviate-client==4.8.1", # Also used by agent_c-rag
+    "python-multipart"
 ]
 
 requires-python = ">=3.12"
