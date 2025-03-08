@@ -2,13 +2,13 @@ services:
   api:
     image: ghcr.io/centricconsulting/agent_c_api_dev:latest
     env_file:
-      - ../.env
+      - ${AGENT_C_CONFIG_PATH}/agent_c.config
     ports:
       - "8000:8000"
     restart: always
     volumes:
-      - ../images:/app/images  # Mounted volume for saved images
-      - ../personas:/app/personas  # Mount personas directory - required for persona selection
+      - ${AGENT_C_IMAGES_PATH}:/app/images  # Mounted volume for saved images
+      - ${AGENT_C_PERSONAS_PATH}:/app/personas/local  # Mount personas directory - required for persona selection
     environment:
       - ENVIRONMENT=LOCAL_DEV
       - ENHANCED_DEBUG_INFO=True
