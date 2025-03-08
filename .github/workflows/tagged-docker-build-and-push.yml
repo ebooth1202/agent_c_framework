@@ -1,10 +1,9 @@
-name: Build and Push Dev Docker Images
+name: Build and Push Dev Docker Images for tagged versions
 
 on:
   push:
-    push:
-      tags:
-        - 'v*'
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 jobs:
