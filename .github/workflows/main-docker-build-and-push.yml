@@ -50,6 +50,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Verify registry login
+        run: |
+          echo "Verifying login to ghcr.io"
+          docker info
+          echo "Current event name: ${{ github.event_name }}"
+
       - name: Build and push Base Python image
         if: needs.check-changes.outputs.base_changed == 'true'
         uses: docker/build-push-action@v4
@@ -57,12 +63,18 @@ jobs:
           context: ./dockerfiles/base/python
           file: ./dockerfiles/base/python/Dockerfile
           # Only push when not a PR
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/agent_c_python_base:latest
             ghcr.io/${{ github.repository_owner }}/agent_c_python_base:build-${{ github.run_number }}
             ghcr.io/${{ github.repository_owner }}/agent_c_python_base:${{ env.SHORT_SHA }}
             ghcr.io/${{ github.repository_owner }}/agent_c_python_base:${{ env.DATE }}
+
+      - name: Verify base image push
+        if: needs.check-changes.outputs.base_changed == 'true'
+        run: |
+          echo "Verifying base image was published"
+          docker pull ghcr.io/${{ github.repository_owner }}/agent_c_python_base:${{ env.SHORT_SHA }} || echo "Failed to pull image - may not be available immediately"
 
       - name: Build and push API image
         uses: docker/build-push-action@v4

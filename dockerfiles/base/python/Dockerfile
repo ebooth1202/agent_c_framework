@@ -32,10 +32,7 @@ RUN useradd -m agent_c
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | su agent_c -c "sh -s -- -y"
 ENV PATH="/home/agent_c/.cargo/bin:${PATH}"
 
-# Create and set permissions for app directory
 RUN mkdir -p /app && chown -R agent_c:agent_c /app
-
-# Set the working directory
 WORKDIR /app
 
 # Copy requirements file and set correct ownership
