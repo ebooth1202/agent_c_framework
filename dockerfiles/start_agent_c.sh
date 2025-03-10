@@ -9,6 +9,11 @@ export AGENT_C_CONFIG_PATH=$HOME/.agent_c
 export AGENT_C_IMAGES_PATH=$HOME/.agent_c/images
 export AGENT_C_PERSONAS_PATH=$HOME/.agent_c/personas
 
+# Add mappings for workspace folders (Documents, Desktop, and Downloads)
+export DOCUMENTS_WORKSPACE=$HOME/Documents
+export DESKTOP_WORKSPACE=$HOME/Desktop
+export DOWNLOADS_WORKSPACE=$HOME/Downloads
+
 # Create directories if they don't exist
 mkdir -p "$AGENT_C_CONFIG_PATH"
 mkdir -p "$AGENT_C_IMAGES_PATH"

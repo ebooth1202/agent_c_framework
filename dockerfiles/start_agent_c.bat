@@ -10,6 +10,11 @@ set AGENT_C_CONFIG_PATH=%USERPROFILE%\.agent_c
 set AGENT_C_IMAGES_PATH=%USERPROFILE%\.agent_c\images
 set AGENT_C_PERSONAS_PATH=%USERPROFILE%\.agent_c\personas
 
+:: Add mappings for workspace folders (Documents, Desktop, and Downloads)
+set DOCUMENTS_WORKSPACE=%USERPROFILE%\Documents
+set DESKTOP_WORKSPACE=%USERPROFILE%\Desktop
+set DOWNLOADS_WORKSPACE=%USERPROFILE%\Downloads
+
 :: Create directories if they don't exist
 if not exist "%AGENT_C_CONFIG_PATH%" mkdir "%AGENT_C_CONFIG_PATH%"
 if not exist "%AGENT_C_IMAGES_PATH%" mkdir "%AGENT_C_IMAGES_PATH%"
