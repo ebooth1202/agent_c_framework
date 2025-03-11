@@ -44,7 +44,7 @@ class AgentBridge:
 
     def __init__(self, user_id: str = 'default', session_manager: Union[ChatSessionManager, None] = None,
                  backend: str = 'openai', model_name: str = 'gpt-4o', persona_name: str = 'default',
-                 custom_persona_text: str = None,
+                 custom_prompt: str = None,
                  essential_tools: List[str] = None,
                  additional_tools: List[str] = None,
                  **kwargs):
@@ -57,7 +57,7 @@ class AgentBridge:
         backend (str): Backend to use for the agent (e.g., 'openai', 'claude'). Defaults to 'openai'.
         model_name (str): Name of the AI model to use. Defaults to 'gpt-4o'.
         persona_name (str): Name of the persona to use. Defaults to 'default'.
-        custom_persona_text (str): Custom text to use for the agent's persona. Defaults to None.
+        custom_prompt (str): Custom text to use for the agent's persona. Defaults to None.
         essential_tools (List[str]): List of essential tools the agent must have. Defaults to None.
         additional_tools (List[str]): List of additional tools to add to the agent. Defaults to None.
         **kwargs: Additional optional keyword arguments including:
@@ -115,19 +115,19 @@ class AgentBridge:
         # Agent persona management, pass in the persona name and we'll initialize the persona text now
         # we will pass in custom text later
         self.persona_name = persona_name
-        self.custom_persona_text = custom_persona_text
+        self.custom_prompt = custom_prompt
 
         if self.persona_name is None or self.persona_name == '':
             self.persona_name = 'default'
 
-        if self.custom_persona_text is None:
+        if self.custom_prompt is None:
             try:
-                self.logger.info(f"Loading persona file for {self.persona_name} because custom_persona_text is None")
-                self.custom_persona_text = self.__load_persona(self.persona_name)
+                self.logger.info(f"Loading persona file for {self.persona_name} because custom_prompt is None")
+                self.custom_prompt = self.__load_persona(self.persona_name)
             except Exception as e:
                 self.logger.error(f"Error loading persona {self.persona_name}: {e}")
         else:
-            self.logger.info(f"Using provided custom_persona_text: {self.custom_persona_text[:10]}...")
+            self.logger.info(f"Using provided custom_prompt: {self.custom_prompt[:10]}...")
 
         # Chat Management, this is where the agent stores the chat history
         self.current_chat_Log: Union[List[Dict], None] = None
@@ -437,7 +437,7 @@ class AgentBridge:
             "current_user_username": self.session_manager.user.user_id,
             "current_user_name": self.session_manager.user.first_name,
             "session_summary": self.session_manager.chat_session.active_memory.summary,
-            "persona_prompt": self.custom_persona_text,
+            "persona_prompt": self.custom_prompt,
             "voice_tools": self.voice_tools,  # Add voice tools to metadata
             "timestamp": datetime.now().isoformat(),
             "env_name": os.getenv('ENV_NAME', 'development'),
@@ -469,7 +469,7 @@ class AgentBridge:
             'initialized_tools': [],
             'agent_name': self.agent_name,
             'agent_session_id': self.session_id,
-            'custom_prompt': self.custom_persona_text,
+            'custom_prompt': self.custom_prompt,
             'output_format': self.agent_output_format,
             'created_time': self._current_timestamp(),
             'temperature': self.temperature,
@@ -716,11 +716,11 @@ class AgentBridge:
             Events are processed and formatted into JSON strings with appropriate
             type markers and payloads for client-side handling.
         """
-        try:
-            self.logger.debug(
-                f"Consolidated callback received event: {event.model_dump_json(exclude={'content_bytes'})}")
-        except Exception as e:
-            self.logger.debug(f"Error serializing event {event.type}: {e}")
+        # try:
+        #     self.logger.debug(
+        #         f"Consolidated callback received event: {event.model_dump_json(exclude={'content_bytes'})}")
+        # except Exception as e:
+        #     self.logger.debug(f"Error serializing event {event.type}: {e}")
 
         # A simple dispatch dictionary that maps event types to handler methods.
         handlers = {
@@ -783,7 +783,7 @@ class AgentBridge:
             await self.session_manager.update()
 
             if custom_prompt is not None:
-                self.custom_persona_text = custom_prompt
+                self.custom_prompt = custom_prompt
 
             # Set the agent’s streaming callback to our consolidated version.
             original_callback = self.agent.streaming_callback
@@ -819,6 +819,7 @@ class AgentBridge:
             await self.session_manager.flush()
 
         except Exception as e:
+            self.logger.error(f"Error in stream_chat: {e}")
             error_type = type(e).__name__
             error_traceback = traceback.format_exc()
             self.logger.error(f"Error in event_bridge.py:stream_chat {error_type}: {str(e)}\n{error_traceback}")

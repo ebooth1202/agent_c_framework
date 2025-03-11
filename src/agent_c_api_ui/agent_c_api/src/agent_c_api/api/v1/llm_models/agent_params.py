@@ -77,12 +77,12 @@ class AgentInitializationParams(AgentCommonParams):
         """
         Returns additional parameters based on the create_session logic.
         This includes:
-          - 'custom_persona_text': if a custom prompt is provided.
+          - 'custom_prompt': if a custom prompt is provided.
           - 'persona_name': always included, defaulting to 'default' if not provided.
         """
         additional = {}
         if self.custom_prompt is not None:
-            additional['custom_persona_text'] = self.custom_prompt
+            additional['custom_prompt'] = self.custom_prompt
         # Always include persona_name, defaulting to 'default'
         additional['persona_name'] = self.persona_name if self.persona_name else 'default'
         return additional
