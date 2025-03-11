@@ -1,8 +1,8 @@
 import asyncio
 import logging
-import traceback
 import uuid
 from typing import Dict, Optional, List, Any, AsyncGenerator
+import traceback
 
 from agent_c import BaseAgent
 from agent_c_api.core.agent_bridge import AgentBridge
@@ -102,7 +102,7 @@ class UItoAgentBridgeManager:
                 additional_tools=additional_tools or [],
                 persona_name=persona_name,
                 agent_name=f"Agent_{ui_session_id}",
-                custom_persona_text=custom_persona_text,
+                custom_prompt=custom_persona_text,
                 **kwargs
             )
 
@@ -193,10 +193,10 @@ class UItoAgentBridgeManager:
                 yield chunk
 
         except Exception as e:
+            self.logger.error(f"Error in stream_response: {e}")
             error_type = type(e).__name__
             error_traceback = traceback.format_exc()
             self.logger.error(f"Error in agent_manager.py:stream_response - {error_type}: {str(e)}\n{error_traceback}")
-            yield f"Error: {str(e)}"
 
     async def debug_session(self, ui_session_id: str):
         """
