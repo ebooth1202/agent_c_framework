@@ -301,6 +301,24 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
             console.log("Full parsed data:", parsed);
 
             switch (parsed.type) {
+                case "message":
+                    // Handle message type (typically used for errors from the model)
+                    console.log("Message received:", parsed);
+
+                    // Add as a system message (error)
+                    setMessages((prev) => [
+                        ...prev,
+                        {
+                            role: "system",
+                            type: "error",
+                            content: `Error: ${parsed.data}`,
+                            critical: parsed.critical || false
+                        },
+                    ]);
+
+                    // End streaming if we receive a message (especially errors)
+                    setIsStreaming(false);
+                    break;
                 case "content":
                     setMessages((prev) => {
                         const last = prev[prev.length - 1];
@@ -482,11 +500,17 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
 
                         // === SYSTEM MESSAGES ===
                         if (msg.role === "system") {
+                            const isError = msg.type === "error";
                             return (
                                 <div key={idx} className="flex justify-start">
                                     <div
-                                        className="max-w-[80%] rounded-2xl px-4 py-2 shadow-sm bg-gray-100 text-gray-600">
-                                        {msg.content}
+                                        className={`max-w-[80%] rounded-2xl px-4 py-2 shadow-sm ${
+                                            isError
+                                                ? "bg-red-100 text-red-800 border border-red-300"
+                                                : "bg-gray-100 text-gray-600"
+                                        }`}
+                                    >
+                                        {isError ? "🚫 Error: " : ""}{msg.content}
                                     </div>
                                 </div>
                             );
