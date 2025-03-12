@@ -178,3 +178,6 @@ config/*
 
 # But don't ignore the .gitkeep file
 !config/.gitkeep
+node_modules
+package-lock.json 
+package.json
