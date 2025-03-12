@@ -494,6 +494,60 @@ class AgentBridge:
         self.logger.debug(f"Agent {self.agent_name} reporting config: {config}")
         return config
 
+    @staticmethod
+    def convert_to_string(data):
+        # Check if data is None
+        if data is None:
+            raise ValueError("Input data is None")
+
+        # Check if it's already a string
+        if isinstance(data, str):
+            return data
+
+        # Check if the data is empty (this works for lists, dicts, etc.)
+        if not data:
+            raise ValueError("Input data is empty")
+
+        # Attempt to convert to a JSON formatted string
+        try:
+            return json.dumps(data)
+        except (TypeError, ValueError) as e:
+            raise ValueError("Error converting input to string: " + str(e))
+
+    async def _handle_message(self, event):
+        """
+        Handle message events (such as errors) from the model
+
+        This is particularly important for handling Anthropic API errors
+        """
+        # Check if this is an error message about prompt length
+        payload = json.dumps({
+            "type": "message",
+            "data": event.content,
+            "role": event.role,
+            "format": event.format,
+            "critical": True
+        }) + "\n"
+        return payload
+
+    async def _handle_tool_select_delta(self, event):
+        """Handle tool selection events from the agent"""
+        payload = json.dumps({
+            "type": "tool_select_delta",
+            "data": self.convert_to_string(event.tool_calls) if hasattr(event, 'tool_calls') else 'No data',
+            "format": "markdown"
+        }) + "\n"
+        return payload
+
+    async def _handle_tool_call_delta(self, event):
+        """Handle tool selection events from the agent"""
+        payload = json.dumps({
+            "type": "tool_call_delta",
+            "data": self.convert_to_string(event.content) if hasattr(event, 'content') else 'No data',
+            "format": "markdown"
+        }) + "\n"
+        return payload
+
     async def _handle_text_delta(self, event):
         """Handle text delta events from the agent/tools"""
         vendor = 'anthropic' if self.backend == 'claude' else 'openai'
@@ -731,7 +785,10 @@ class AgentBridge:
             "audio_delta": self._handle_audio_delta,
             "completion": self._handle_completion,
             "interaction": self._handle_interaction,
-            "thought_delta": self._handle_thought_delta
+            "thought_delta": self._handle_thought_delta,
+            "tool_call_delta": self._handle_tool_call_delta,
+            "tool_select_delta": self._handle_tool_select_delta,
+            "message": self._handle_message,
         }
 
         handler = handlers.get(event.type)
@@ -739,7 +796,9 @@ class AgentBridge:
             # Each handler method is responsible for formatting the payload.
             payload = await handler(event)
             if payload is not None and hasattr(self, "_stream_queue"):
-                await self._stream_queue.put(payload)
+                # Don't put tool_call_delta and tool_select_delta in the stream queue
+                if event.type not in ["tool_call_delta", "tool_select_delta"]:
+                    await self._stream_queue.put(payload)
 
             # If this is the end-of-stream event, push a termination marker.
             # Client must handle a None payload to know the stream has ended.
