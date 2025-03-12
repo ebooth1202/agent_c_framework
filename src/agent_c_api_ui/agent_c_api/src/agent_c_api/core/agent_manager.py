@@ -75,8 +75,8 @@ class UItoAgentBridgeManager:
         # If updating existing session, use that ID, otherwise generate new one - this will transfer chat history
         ui_session_id = existing_ui_session_id if existing_ui_session_id else str(uuid.uuid4())
 
-        # Extract custom_persona_text explicitly to avoid it being lost or overridden
-        custom_persona_text = kwargs.pop('custom_persona_text', None)
+        # Extract custom_prompt explicitly to avoid it being lost or overridden
+        custom_prompt = kwargs.pop('custom_prompt', None)
 
         # Create lock if it doesn't exist
         if ui_session_id not in self._locks:
@@ -87,12 +87,12 @@ class UItoAgentBridgeManager:
             existing_session = self.ui_sessions.get(ui_session_id, {})
             existing_agent: BaseAgent | None = existing_session.get("agent", None)
 
-            # IMPORTANT FIX: If we're changing models and no custom_persona_text was passed with the model change,
+            # IMPORTANT FIX: If we're changing models and no custom_prompt was passed with the model change,
             # but the existing agent has one, we need to preserve it
-            if existing_agent and custom_persona_text is None and existing_agent.custom_persona_text:
-                # this should work even if custom_persona_text==existing_agent.custom_persona_text - will be same value
-                custom_persona_text = existing_agent.custom_persona_text
-                self.logger.info(f"Preserving existing custom_persona_text: {custom_persona_text[:10]}...")
+            if existing_agent and custom_prompt is None and existing_agent.custom_prompt:
+                # this should work even if custom_prompt==existing_agent.custom_prompt - will be same value
+                custom_prompt = existing_agent.custom_prompt
+                self.logger.info(f"Preserving existing custom_prompt: {custom_prompt[:10]}...")
 
             # Initialize agent bridge for this session - this creates a session manager that will persist history
             agent = AgentBridge(
@@ -102,7 +102,7 @@ class UItoAgentBridgeManager:
                 additional_tools=additional_tools or [],
                 persona_name=persona_name,
                 agent_name=f"Agent_{ui_session_id}",
-                custom_prompt=custom_persona_text,
+                custom_prompt=custom_prompt,
                 **kwargs
             )
 
