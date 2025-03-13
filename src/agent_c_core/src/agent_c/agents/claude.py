@@ -8,6 +8,7 @@ from anthropic import AsyncAnthropic, APITimeoutError, Anthropic
 
 from agent_c.agents.base import BaseAgent
 from agent_c.chat.session_manager import ChatSessionManager
+from agent_c.models.input import FileInput
 from agent_c.models.input.audio_input import AudioInput
 from agent_c.models.input.image_input import ImageInput
 from agent_c.util.token_counter import TokenCounter
@@ -239,25 +240,84 @@ class ClaudeChatAgent(BaseAgent):
 
         return messages
 
+    def _generate_multi_modal_user_message(self, user_input: str, images: List[ImageInput], audio: List[AudioInput],
+                                           files: List[FileInput]) -> Union[List[dict[str, Any]], None]:
+        """
+        Generates a multimodal message containing text, images, and file content.
 
+        This method formats various input types into a structure that can be sent to
+        the Claude API, adhering to the Anthropic message format.
 
+        Args:
+            user_input (str): The user's text message
+            images (List[ImageInput]): List of image inputs to include
+            audio (List[AudioInput]): List of audio inputs (not directly supported by Claude)
+            files (List[FileInput]): List of file inputs to include
 
-    def _generate_multi_modal_user_message(self, user_input: str, images: List[ImageInput], audio: List[AudioInput]) -> Union[List[dict[str, Any]], None]:
+        Returns:
+            Union[List[dict[str, Any]], None]: Formatted message content for Claude
+        """
         contents = []
+
+        # Add images first
         for image in images:
             if image.content is None and image.url is not None:
-                logging.warning(f"ImageInput has no content and Claude doesn't support image URLs. Skipping image {image.url}")
+                logging.warning(
+                    f"ImageInput has no content and Claude doesn't support image URLs. Skipping image {image.url}")
                 continue
 
             img_source = {"type": "base64", "media_type": image.content_type, "data": image.content}
             contents.append({"type": "image", "source": img_source})
 
-        if self.mitigate_image_prompt_injection:
-            text = f"User: {user_input}{BaseAgent.IMAGE_PI_MITIGATION}"
-        else:
-            text = user_input
+        # Process file content
+        file_content_blocks = []
+        if files:
+            logging.info(f"Processing {len(files)} file inputs in Claude _generate_multi_modal_user_message")
 
-        contents.append({"type": "text", "text": text})
+            for idx, file in enumerate(files):
+                # Always try to use get_text_content() to get extracted text
+                extracted_text = None
+
+                # Check if get_text_content method exists and call it
+                if hasattr(file, 'get_text_content') and callable(file.get_text_content):
+                    extracted_text = file.get_text_content()
+                    logging.info(
+                        f"Claude: File {idx} ({file.file_name}): get_text_content() returned {len(extracted_text) if extracted_text else 0} chars")
+                else:
+                    logging.warning(f"Claude: File {idx} ({file.file_name}): get_text_content() method not available")
+
+                if extracted_text:
+                    file_name = file.file_name or "unknown file"
+                    content_block = f"Content from file {file_name}:\n\n{extracted_text}"
+
+                    file_content_blocks.append(content_block)
+                    logging.info(f"Claude: File {idx} ({file.file_name}): Added extracted text to message")
+                else:
+                    # Fall back to mentioning the file without content
+                    file_name = file.file_name or "unknown file"
+                    file_content_blocks.append(f"[File attached: {file_name} (content could not be extracted)]")
+                    logging.warning(
+                        f"Claude: File {idx} ({file.file_name}): No text content available, adding file name only")
+
+        # Prepare the main text content with file content
+        main_text = user_input or ""
+
+        # If we have file content blocks, add them before the user message
+        if file_content_blocks:
+            all_file_content = "\n\n".join(file_content_blocks)
+            main_text = f"{all_file_content}\n\n{main_text}"
+
+        # Add PI mitigation if needed
+        if self.mitigate_image_prompt_injection and images:
+            main_text = f"{main_text}{BaseAgent.IMAGE_PI_MITIGATION}"
+
+        # Add the combined text as the final content block
+        contents.append({"type": "text", "text": main_text})
+
+        # For audio clips, since Claude doesn't support audio directly, just log a warning
+        if audio and len(audio) > 0:
+            logging.warning(
+                f"Claude does not directly support audio input. Mentioned {len(audio)} audio clips in text.")
 
         return [{"role": "user", "content": contents}]
 

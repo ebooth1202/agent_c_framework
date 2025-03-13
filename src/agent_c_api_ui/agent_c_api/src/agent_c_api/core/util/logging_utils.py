@@ -208,6 +208,7 @@ class LoggingManager:
             "httpcore": "WARNING",
             "python_multipart": "WARNING",
             "anthropic": "WARNING",
+            "openai": "WARNING",
             # Add others as needed
         }
 

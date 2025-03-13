@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Union, Optional, Callable, Awaitable
 from agent_c.chat import ChatSessionManager
 from agent_c.models import ChatEvent, ImageInput, MemoryMessage
 from agent_c.models.events.chat import ThoughtDeltaEvent
+from agent_c.models.input import FileInput
 from agent_c.models.input.audio_input import AudioInput
 from agent_c.models.events import MessageEvent, ToolCallEvent, InteractionEvent, TextDeltaEvent, HistoryEvent, CompletionEvent, ToolCallDeltaEvent
 from agent_c.prompting import PromptBuilder
@@ -213,6 +214,24 @@ class BaseAgent:
         await asyncio.sleep(min(2 * delay, self.max_delay))
 
     async def _construct_message_array(self, **kwargs) -> List[dict[str, Any]]:
+        """
+        Constructs a message array for LLM interaction, handling various input types.
+
+        This method retrieves messages from session manager if available, and adds
+        the current user message (including any multimodal content) to the array.
+
+        Args:
+            **kwargs: Keyword arguments including:
+                - session_manager (ChatSessionManager): For retrieving session messages
+                - messages (List[Dict[str, Any]]): Pre-existing messages
+                - user_message (str): Text message from user
+                - images (List[ImageInput]): Image inputs
+                - audio (List[AudioInput]): Audio inputs
+                - files (List[FileInput]): File inputs
+
+        Returns:
+            List[dict[str, Any]]: Formatted message array for LLM API
+        """
         sess_mgr: Optional[ChatSessionManager] = kwargs.get("session_manager", None)
         messages: Optional[List[Dict[str, Any]]] = kwargs.get("messages", None)
 
@@ -227,10 +246,16 @@ class BaseAgent:
                 if len(audio_clips) > 0:
                     user_message = audio_clips[0].transcript or "audio input"
                     await self._save_user_message_to_session(mgr, user_message)
+                # If no audio but we have files, record that files were submitted
+                elif kwargs.get("files") or kwargs.get("images"):
+                    user_message = "Files submitted"
+                    await self._save_user_message_to_session(mgr, user_message)
+            elif user_message:
+                await self._save_user_message_to_session(mgr, user_message)
 
         return self.__construct_message_array(**kwargs)
 
-    def _generate_multi_modal_user_message(self, user_input: str,  images: List[ImageInput], audio: List[AudioInput]) -> Union[List[dict[str, Any]], None]:
+    def _generate_multi_modal_user_message(self, user_input: str,  images: List[ImageInput], audio: List[AudioInput], files: List[FileInput]) -> Union[List[dict[str, Any]], None]:
         """
         Subclasses will implement this method to generate a multimodal user message.
         """
@@ -253,6 +278,7 @@ class BaseAgent:
         sys_prompt: Union[str, None] = kwargs.get("system_prompt", None)
         images: List[ImageInput] = kwargs.get("images") or []
         audio_clips: List[AudioInput] = kwargs.get("audio") or []
+        files: List[FileInput] = kwargs.get("files") or []
 
         message_array: List[dict[str, Any]] = []
 
@@ -265,8 +291,8 @@ class BaseAgent:
         if messages is not None:
             message_array += messages
 
-        if len(images) > 0 or len(audio_clips) > 0:
-            multimodal_user_message = self._generate_multi_modal_user_message(user_message, images, audio_clips)
+        if len(images) > 0 or len(audio_clips) > 0 or len(files) > 0:
+            multimodal_user_message = self._generate_multi_modal_user_message(user_message, images, audio_clips, files)
             message_array += multimodal_user_message
         else:
             message_array.append({"role": "user", "content": user_message})
