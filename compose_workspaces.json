@@ -14,6 +14,11 @@
             "name": "Desktop",
             "workspace_path": "/app/workspaces/desktop",
             "description": "A workspace mapped to the User's desktop. folder"
+        },
+       {
+            "name": "Local Personas",
+            "workspace_path": "/app/personas/local",
+            "description": "A workspace mapped to the User's personal persona folder.  Save new personas here."
         }
     ]
 }
