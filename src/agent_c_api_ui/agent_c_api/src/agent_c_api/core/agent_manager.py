@@ -161,6 +161,7 @@ class UItoAgentBridgeManager:
             ui_session_id: str,
             user_message: str,
             custom_prompt: Optional[str] = None,
+            file_ids: Optional[List[str]] = None
     ) -> AsyncGenerator[str, None]:
         """
         Get streaming response from the agent for a given message.
@@ -170,6 +171,7 @@ class UItoAgentBridgeManager:
             ui_session_id: The session identifier
             user_message: The user's message to process
             custom_prompt: Optional custom prompt to use
+            file_ids: Optional list of file IDs to include with the message
 
         Yields:
             Chunks of the response as they become available
@@ -185,12 +187,22 @@ class UItoAgentBridgeManager:
         agent = session_data["agent"]
 
         try:
-            # Use the new streaming method
-            async for chunk in agent.stream_chat(
-                    user_message=user_message,
-                    custom_prompt=custom_prompt
-            ):
-                yield chunk
+            # Pass file_ids to the agent's stream_chat method if it accepts them
+            if file_ids and hasattr(agent, "file_handler") and agent.file_handler is not None:
+                # For agents with file handling capabilities
+                async for chunk in agent.stream_chat(
+                        user_message=user_message,
+                        file_ids=file_ids,
+                        custom_prompt=custom_prompt
+                ):
+                    yield chunk
+            else:
+                # For agents without file handling or no files
+                async for chunk in agent.stream_chat(
+                        user_message=user_message,
+                        custom_prompt=custom_prompt
+                ):
+                    yield chunk
 
         except Exception as e:
             self.logger.error(f"Error in stream_response: {e}")

@@ -4,13 +4,18 @@ import os
 
 import threading
 import traceback
-from typing import Union, List, Dict, Any, AsyncGenerator
+from typing import Union, List, Dict, Any, AsyncGenerator, Optional
 from datetime import datetime, timezone
 
-from agent_c import DynamicPersonaSection
+from agent_c.models.input.image_input import ImageInput
+from agent_c.models.input.audio_input import AudioInput
+from agent_c.models.input.file_input import FileInput
+from agent_c.prompting.basic_sections.persona import DynamicPersonaSection
 from agent_c.agents import GPTChatAgent
 from agent_c.agents.claude import ClaudeChatAgent
 from agent_c.models.events import SessionEvent
+from agent_c.models.input import AudioInput
+from agent_c_api.core.file_handler import FileHandler
 from agent_c_api.core.util.logging_utils import LoggingManager
 from agent_c_tools.tools.workspaces import LocalStorageWorkspace
 from agent_c.toolsets import ToolChest, ToolCache, Toolset
@@ -40,6 +45,7 @@ class AgentBridge:
         - Custom persona management
         - Comprehensive event handling
         - Workspace management
+        - File handling capabilities
     """
 
     def __init__(self, user_id: str = 'default', session_manager: Union[ChatSessionManager, None] = None,
@@ -47,6 +53,7 @@ class AgentBridge:
                  custom_prompt: str = None,
                  essential_tools: List[str] = None,
                  additional_tools: List[str] = None,
+                 file_handler: Optional[FileHandler] = None,
                  **kwargs):
         """
         Initialize the SimplifiedAgent instance.
@@ -68,6 +75,7 @@ class AgentBridge:
             agent_name (str): Name for the agent (for debugging)
             output_format (str): Output format for agent responses
             tool_cache_dir (str): Directory for tool cache
+            file_handler (Optional[FileHandler]): Handler for file operations.
         """
 
 
@@ -155,6 +163,11 @@ class AgentBridge:
         self.__init_workspaces()
 
         self.voice_tools = None
+
+        # Initialize file handling capabilities
+        self.file_handler = file_handler
+        self.image_inputs: List[ImageInput] = []
+        self.audio_inputs: List[AudioInput] = []
 
     def __init_events(self):
         """
@@ -808,7 +821,7 @@ class AgentBridge:
         else:
             self.logger.warning(f"Unhandled event type: {event.type}")
 
-    async def stream_chat(self, user_message: str, custom_prompt: str = None) -> AsyncGenerator[str, None]:
+    async def stream_chat(self, user_message: str, custom_prompt: str = None, file_ids: List[str] = None) -> AsyncGenerator[str, None]:
         """
         Streams chat responses for a given user message.
 
@@ -822,6 +835,7 @@ class AgentBridge:
         Args:
             user_message (str): The message from the user to process
             custom_prompt (str, optional): Custom prompt to override default persona. Defaults to None.
+            file_ids (List[str], optional): IDs of files to include with the message
 
         Yields:
             str: JSON-formatted strings containing various response types:
@@ -838,11 +852,24 @@ class AgentBridge:
         queue = asyncio.Queue()
         self._stream_queue = queue  # Make the queue available to the callback
 
+        # Clear existing file inputs
+        self.image_inputs = []
+        self.audio_inputs = []
+
         try:
             await self.session_manager.update()
 
             if custom_prompt is not None:
                 self.custom_prompt = custom_prompt
+
+            # Process any files included with the message
+            file_content = ""
+            if file_ids and self.file_handler:
+                file_content = await self.process_files_for_message(file_ids)
+            # Combine user message with file content if available
+            combined_message = user_message
+            if file_content:
+                combined_message = f"{user_message}\n\nHere are the contents of the files the user uploaded directly in chat: {file_content}"
 
             # Set the agent’s streaming callback to our consolidated version.
             original_callback = self.agent.streaming_callback
@@ -854,7 +881,7 @@ class AgentBridge:
                 self.agent.chat(
                     streaming_queue=queue,
                     session_manager=self.session_manager,
-                    user_message=user_message,
+                    user_message=combined_message,
                     prompt_metadata=prompt_metadata,
                     # messages=self.current_chat_Log, # passing this would override session manager's chat history.
                     output_format='raw',
@@ -877,6 +904,10 @@ class AgentBridge:
             self.agent.streaming_callback = original_callback
             await self.session_manager.flush()
 
+            # Clean up file inputs
+            self.image_inputs = []
+            self.audio_inputs = []
+
         except Exception as e:
             self.logger.error(f"Error in stream_chat: {e}")
             error_type = type(e).__name__
@@ -894,3 +925,52 @@ class AgentBridge:
                     queue.task_done()
                 except asyncio.QueueEmpty:
                     break
+
+    async def process_files_for_message(self, file_ids: List[str]) -> str:
+        """
+        Process files and create a text representation to include in messages.
+
+        Args:
+            file_ids: List of file IDs to process
+
+        Returns:
+            str: Text representation of the files
+        """
+        if not self.file_handler or not file_ids:
+            return ""
+
+        file_contents = []
+
+        for file_id in file_ids:
+            # Process the file to extract text if possible
+            metadata = await self.file_handler.process_file(file_id, self.user_id)
+            if not metadata:
+                continue
+
+            # Create appropriate text representation based on file type
+            if metadata.mime_type.startswith("image/"):
+                file_contents.append(f"[Image: {metadata.original_filename}]")
+                # Add to image inputs for multimodal models
+                image_input = self.file_handler.get_file_as_input(file_id, self.user_id)
+                if image_input and isinstance(image_input, ImageInput):
+                    self.image_inputs.append(image_input)
+
+            elif metadata.mime_type.startswith("audio/"):
+                file_contents.append(f"[Audio: {metadata.original_filename}]")
+                # Add to audio inputs for multimodal models
+                audio_input = self.file_handler.get_file_as_input(file_id, self.user_id)
+                if audio_input and isinstance(audio_input, AudioInput):
+                    self.audio_inputs.append(audio_input)
+
+            elif metadata.extracted_text:
+                # For text-extractable files, include the content
+                file_contents.append(
+                    f"[File: {metadata.original_filename}]\n"
+                    f"Content:\n```\n{metadata.extracted_text}\n```"
+                )
+
+            else:
+                # For other files, just include a reference
+                file_contents.append(f"[File: {metadata.original_filename}]")
+
+        return "\n\n".join(file_contents)
