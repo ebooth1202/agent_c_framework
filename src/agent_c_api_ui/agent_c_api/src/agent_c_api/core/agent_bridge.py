@@ -504,7 +504,7 @@ class AgentBridge:
                 # 'description': tool_instance.__class__.__doc__
             } for instance_name, tool_instance in self.tool_chest.active_tools.items()]
 
-        self.logger.debug(f"Agent {self.agent_name} reporting config: {config}")
+        # self.logger.debug(f"Agent {self.agent_name} reporting config: {config[:100]}")
         return config
 
     @staticmethod
@@ -852,24 +852,22 @@ class AgentBridge:
         queue = asyncio.Queue()
         self._stream_queue = queue  # Make the queue available to the callback
 
-        # Clear existing file inputs
-        self.image_inputs = []
-        self.audio_inputs = []
-
         try:
             await self.session_manager.update()
 
             if custom_prompt is not None:
                 self.custom_prompt = custom_prompt
 
-            # Process any files included with the message
-            file_content = ""
+            file_inputs = []
             if file_ids and self.file_handler:
-                file_content = await self.process_files_for_message(file_ids)
-            # Combine user message with file content if available
-            combined_message = user_message
-            if file_content:
-                combined_message = f"{user_message}\n\nHere are the contents of the files the user uploaded directly in chat: {file_content}"
+                file_inputs = await self.process_files_for_message(file_ids, self.user_id)
+
+                # Log information about processed files
+                if file_inputs:
+                    input_types = {type(input_obj).__name__: 0 for input_obj in file_inputs}
+                    for input_obj in file_inputs:
+                        input_types[type(input_obj).__name__] += 1
+                    self.logger.info(f"Processing {len(file_inputs)} files: {input_types}")
 
             # Set the agent’s streaming callback to our consolidated version.
             original_callback = self.agent.streaming_callback
@@ -877,15 +875,36 @@ class AgentBridge:
 
             prompt_metadata = await self.__build_prompt_metadata()
 
+            # Prepare chat parameters
+            chat_params = {
+                "streaming_queue": queue,
+                "session_manager": self.session_manager,
+                "user_message": user_message,
+                "prompt_metadata": prompt_metadata,
+                "output_format": 'raw',
+            }
+
+            # Categorize file inputs by type to pass to appropriate parameters
+            image_inputs = [input_obj for input_obj in file_inputs
+                            if isinstance(input_obj, ImageInput)]
+            audio_inputs = [input_obj for input_obj in file_inputs
+                            if isinstance(input_obj, AudioInput)]
+            document_inputs = [input_obj for input_obj in file_inputs
+                               if isinstance(input_obj, FileInput) and
+                               not isinstance(input_obj, ImageInput) and
+                               not isinstance(input_obj, AudioInput)]
+
+            # Only add parameters if there are inputs of that type
+            if image_inputs:
+                chat_params["images"] = image_inputs
+            if audio_inputs:
+                chat_params["audio_clips"] = audio_inputs
+            if document_inputs:
+                chat_params["files"] = document_inputs
+
+            # Start the chat task
             chat_task = asyncio.create_task(
-                self.agent.chat(
-                    streaming_queue=queue,
-                    session_manager=self.session_manager,
-                    user_message=combined_message,
-                    prompt_metadata=prompt_metadata,
-                    # messages=self.current_chat_Log, # passing this would override session manager's chat history.
-                    output_format='raw',
-                )
+                self.agent.chat(**chat_params)
             )
 
             while True:
@@ -903,10 +922,6 @@ class AgentBridge:
             # Restore the original callback
             self.agent.streaming_callback = original_callback
             await self.session_manager.flush()
-
-            # Clean up file inputs
-            self.image_inputs = []
-            self.audio_inputs = []
 
         except Exception as e:
             self.logger.error(f"Error in stream_chat: {e}")
@@ -926,51 +941,43 @@ class AgentBridge:
                 except asyncio.QueueEmpty:
                     break
 
-    async def process_files_for_message(self, file_ids: List[str]) -> str:
+    async def process_files_for_message(self, file_ids: List[str], session_id: str) -> List[
+        Union[FileInput, ImageInput, AudioInput]]:
         """
-        Process files and create a text representation to include in messages.
+        Process files and convert them to appropriate Input objects for the agent.
+
+        This method processes uploaded files and converts them to the appropriate input
+        objects (FileInput, ImageInput, AudioInput) for handling by the agent's multimodal
+        capabilities.
 
         Args:
             file_ids: List of file IDs to process
+            session_id: Session ID
 
         Returns:
-            str: Text representation of the files
+            List[Union[FileInput, ImageInput, AudioInput]]: List of input objects for the agent
         """
         if not self.file_handler or not file_ids:
-            return ""
+            return []
 
-        file_contents = []
+        input_objects = []
 
         for file_id in file_ids:
-            # Process the file to extract text if possible
-            metadata = await self.file_handler.process_file(file_id, self.user_id)
+            # Get file metadata
+            metadata = self.file_handler.get_file_metadata(file_id, session_id)
             if not metadata:
+                metadata = await self.file_handler.process_file(file_id, session_id)
+
+            if not metadata:
+                self.logger.warning(f"Could not get metadata for file {file_id}")
                 continue
 
-            # Create appropriate text representation based on file type
-            if metadata.mime_type.startswith("image/"):
-                file_contents.append(f"[Image: {metadata.original_filename}]")
-                # Add to image inputs for multimodal models
-                image_input = self.file_handler.get_file_as_input(file_id, self.user_id)
-                if image_input and isinstance(image_input, ImageInput):
-                    self.image_inputs.append(image_input)
-
-            elif metadata.mime_type.startswith("audio/"):
-                file_contents.append(f"[Audio: {metadata.original_filename}]")
-                # Add to audio inputs for multimodal models
-                audio_input = self.file_handler.get_file_as_input(file_id, self.user_id)
-                if audio_input and isinstance(audio_input, AudioInput):
-                    self.audio_inputs.append(audio_input)
-
-            elif metadata.extracted_text:
-                # For text-extractable files, include the content
-                file_contents.append(
-                    f"[File: {metadata.original_filename}]\n"
-                    f"Content:\n```\n{metadata.extracted_text}\n```"
-                )
-
+            # Create the appropriate input object based on file type
+            input_obj = self.file_handler.get_file_as_input(file_id, session_id)
+            if input_obj:
+                self.logger.info(f"Created {type(input_obj).__name__} for file {metadata.original_filename}")
+                input_objects.append(input_obj)
             else:
-                # For other files, just include a reference
-                file_contents.append(f"[File: {metadata.original_filename}]")
+                self.logger.warning(f"Failed to create input object for file {metadata.original_filename}")
 
-        return "\n\n".join(file_contents)
+        return input_objects

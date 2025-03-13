@@ -21,7 +21,7 @@ class FileInput(BaseInput):
 
     content_type: str = Field(..., alias="content-type")
     url: Optional[str] = None
-    content: Optional[str] = None
+    content: Optional[str] = Field(None, description="An optional that will contain raw base64 encoded content.")
     file_name: Optional[str] = None
     activity_hint: Optional[str] = Field(None, description="An optional hint to the system/assistant about the activity intended for the file.")
     id: Optional[str] = Field(None, description="An optional identifier for the file.")
@@ -80,3 +80,13 @@ class FileInput(BaseInput):
             str: The data URL of the file, which can be directly used in HTML.
         """
         return f"data:{self.content_type};base64,{self.content}"
+
+    def get_text_content(self) -> Optional[str]:
+        """
+        Get text content extracted from the file, if possible.
+
+        Returns:
+            Optional[str]: Extracted text content, or None if not available
+        """
+        return None
+

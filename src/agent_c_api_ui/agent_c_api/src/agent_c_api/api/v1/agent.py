@@ -127,7 +127,7 @@ async def get_agent_config(ui_session_id: str, agent_manager=Depends(get_agent_m
             "initialized_tools": config["initialized_tools"]
         })
 
-        logger.info(f"Session {ui_session_id} requested agent config: {config}")
+        # logger.info(f"Session {ui_session_id} requested agent config: {config[:100]}")
         return {
             "config": config,
             "status": "success"

@@ -242,28 +242,68 @@ class FileHandler:
 
     def get_file_as_input(self, file_id: str, session_id: str) -> Optional[Union[FileInput, ImageInput, AudioInput]]:
         """
-        Convert a file to the appropriate agent input type.
+        Convert a file to the appropriate agent input type based on its MIME type.
+
+        This method leverages the specialized input classes from agent_c:
+        - ImageInput for images
+        - AudioInput for audio files
+        - FileInput for all other file types
+
+        Extracted text (if available) is attached to FileInput objects.
 
         Args:
             file_id: ID of the file
             session_id: Session ID
 
         Returns:
-            Optional[Union[FileInput, ImageInput, AudioInput]]: Input object or None if file not found
+            Optional[Union[FileInput, ImageInput, AudioInput]]:
+                The appropriate input object for the file type, or None if conversion fails
         """
         metadata = self.get_file_metadata(file_id, session_id)
         if not metadata:
+            self.logger.warning(f"No metadata found for file {file_id}")
             return None
+
+        file_path = metadata.filename
 
         try:
             if metadata.mime_type.startswith("image/"):
-                return ImageInput.from_file(metadata.filename)
+                # For images, create an ImageInput object
+                self.logger.info(f"Creating ImageInput for {metadata.original_filename}")
+                return ImageInput.from_file(file_path)
+
             elif metadata.mime_type.startswith("audio/"):
-                return AudioInput.from_file(metadata.filename)
+                # For audio files, create an AudioInput object
+                self.logger.info(f"Creating AudioInput for {metadata.original_filename}")
+                return AudioInput.from_file(file_path)
+
             else:
-                return FileInput.from_file(metadata.filename)
+                # For all other files, create a FileInput object
+                self.logger.info(f"Creating FileInput for {metadata.original_filename}")
+                file_input = FileInput.from_file(file_path)
+
+                # Attach the extracted text if available
+                if metadata.extracted_text:
+                    # Create a subclass of FileInput that overrides get_text_content
+                    class DocumentFileInput(FileInput):
+                        def get_text_content(self) -> Optional[str]:
+                            return metadata.extracted_text
+
+                    # Copy attributes from file_input to the new instance
+                    doc_input = DocumentFileInput(
+                        content_type=file_input.content_type,
+                        content=file_input.content,
+                        file_name=metadata.original_filename,
+                        url=getattr(file_input, 'url', None)
+                    )
+
+                    self.logger.info(f"Attached extracted text ({len(metadata.extracted_text)} chars) to FileInput")
+                    return doc_input
+
+                return file_input
+
         except Exception as e:
-            self.logger.error(f"Error creating input object: {str(e)}")
+            self.logger.error(f"Error creating input object for {metadata.original_filename}: {str(e)}", exc_info=True)
             return None
 
     def cleanup_session(self, session_id: str) -> int:
