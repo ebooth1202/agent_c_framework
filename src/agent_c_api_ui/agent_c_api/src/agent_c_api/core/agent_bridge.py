@@ -4,13 +4,18 @@ import os
 
 import threading
 import traceback
-from typing import Union, List, Dict, Any, AsyncGenerator
+from typing import Union, List, Dict, Any, AsyncGenerator, Optional
 from datetime import datetime, timezone
 
-from agent_c import DynamicPersonaSection
+from agent_c.models.input.image_input import ImageInput
+from agent_c.models.input.audio_input import AudioInput
+from agent_c.models.input.file_input import FileInput
+from agent_c.prompting.basic_sections.persona import DynamicPersonaSection
 from agent_c.agents import GPTChatAgent
 from agent_c.agents.claude import ClaudeChatAgent
 from agent_c.models.events import SessionEvent
+from agent_c.models.input import AudioInput
+from agent_c_api.core.file_handler import FileHandler
 from agent_c_api.core.util.logging_utils import LoggingManager
 from agent_c_tools.tools.workspaces import LocalStorageWorkspace
 from agent_c.toolsets import ToolChest, ToolCache, Toolset
@@ -40,6 +45,7 @@ class AgentBridge:
         - Custom persona management
         - Comprehensive event handling
         - Workspace management
+        - File handling capabilities
     """
 
     def __init__(self, user_id: str = 'default', session_manager: Union[ChatSessionManager, None] = None,
@@ -47,6 +53,7 @@ class AgentBridge:
                  custom_prompt: str = None,
                  essential_tools: List[str] = None,
                  additional_tools: List[str] = None,
+                 file_handler: Optional[FileHandler] = None,
                  **kwargs):
         """
         Initialize the SimplifiedAgent instance.
@@ -68,6 +75,7 @@ class AgentBridge:
             agent_name (str): Name for the agent (for debugging)
             output_format (str): Output format for agent responses
             tool_cache_dir (str): Directory for tool cache
+            file_handler (Optional[FileHandler]): Handler for file operations.
         """
 
 
@@ -155,6 +163,11 @@ class AgentBridge:
         self.__init_workspaces()
 
         self.voice_tools = None
+
+        # Initialize file handling capabilities
+        self.file_handler = file_handler
+        self.image_inputs: List[ImageInput] = []
+        self.audio_inputs: List[AudioInput] = []
 
     def __init_events(self):
         """
@@ -491,7 +504,7 @@ class AgentBridge:
                 # 'description': tool_instance.__class__.__doc__
             } for instance_name, tool_instance in self.tool_chest.active_tools.items()]
 
-        self.logger.debug(f"Agent {self.agent_name} reporting config: {config}")
+        # self.logger.debug(f"Agent {self.agent_name} reporting config: {config[:100]}")
         return config
 
     @staticmethod
@@ -808,7 +821,7 @@ class AgentBridge:
         else:
             self.logger.warning(f"Unhandled event type: {event.type}")
 
-    async def stream_chat(self, user_message: str, custom_prompt: str = None) -> AsyncGenerator[str, None]:
+    async def stream_chat(self, user_message: str, custom_prompt: str = None, file_ids: List[str] = None) -> AsyncGenerator[str, None]:
         """
         Streams chat responses for a given user message.
 
@@ -822,6 +835,7 @@ class AgentBridge:
         Args:
             user_message (str): The message from the user to process
             custom_prompt (str, optional): Custom prompt to override default persona. Defaults to None.
+            file_ids (List[str], optional): IDs of files to include with the message
 
         Yields:
             str: JSON-formatted strings containing various response types:
@@ -844,21 +858,53 @@ class AgentBridge:
             if custom_prompt is not None:
                 self.custom_prompt = custom_prompt
 
+            file_inputs = []
+            if file_ids and self.file_handler:
+                file_inputs = await self.process_files_for_message(file_ids, self.user_id)
+
+                # Log information about processed files
+                if file_inputs:
+                    input_types = {type(input_obj).__name__: 0 for input_obj in file_inputs}
+                    for input_obj in file_inputs:
+                        input_types[type(input_obj).__name__] += 1
+                    self.logger.info(f"Processing {len(file_inputs)} files: {input_types}")
+
             # Set the agent’s streaming callback to our consolidated version.
             original_callback = self.agent.streaming_callback
             self.agent.streaming_callback = self.consolidated_streaming_callback
 
             prompt_metadata = await self.__build_prompt_metadata()
 
+            # Prepare chat parameters
+            chat_params = {
+                "streaming_queue": queue,
+                "session_manager": self.session_manager,
+                "user_message": user_message,
+                "prompt_metadata": prompt_metadata,
+                "output_format": 'raw',
+            }
+
+            # Categorize file inputs by type to pass to appropriate parameters
+            image_inputs = [input_obj for input_obj in file_inputs
+                            if isinstance(input_obj, ImageInput)]
+            audio_inputs = [input_obj for input_obj in file_inputs
+                            if isinstance(input_obj, AudioInput)]
+            document_inputs = [input_obj for input_obj in file_inputs
+                               if isinstance(input_obj, FileInput) and
+                               not isinstance(input_obj, ImageInput) and
+                               not isinstance(input_obj, AudioInput)]
+
+            # Only add parameters if there are inputs of that type
+            if image_inputs:
+                chat_params["images"] = image_inputs
+            if audio_inputs:
+                chat_params["audio_clips"] = audio_inputs
+            if document_inputs:
+                chat_params["files"] = document_inputs
+
+            # Start the chat task
             chat_task = asyncio.create_task(
-                self.agent.chat(
-                    streaming_queue=queue,
-                    session_manager=self.session_manager,
-                    user_message=user_message,
-                    prompt_metadata=prompt_metadata,
-                    # messages=self.current_chat_Log, # passing this would override session manager's chat history.
-                    output_format='raw',
-                )
+                self.agent.chat(**chat_params)
             )
 
             while True:
@@ -894,3 +940,44 @@ class AgentBridge:
                     queue.task_done()
                 except asyncio.QueueEmpty:
                     break
+
+    async def process_files_for_message(self, file_ids: List[str], session_id: str) -> List[
+        Union[FileInput, ImageInput, AudioInput]]:
+        """
+        Process files and convert them to appropriate Input objects for the agent.
+
+        This method processes uploaded files and converts them to the appropriate input
+        objects (FileInput, ImageInput, AudioInput) for handling by the agent's multimodal
+        capabilities.
+
+        Args:
+            file_ids: List of file IDs to process
+            session_id: Session ID
+
+        Returns:
+            List[Union[FileInput, ImageInput, AudioInput]]: List of input objects for the agent
+        """
+        if not self.file_handler or not file_ids:
+            return []
+
+        input_objects = []
+
+        for file_id in file_ids:
+            # Get file metadata
+            metadata = self.file_handler.get_file_metadata(file_id, session_id)
+            if not metadata:
+                metadata = await self.file_handler.process_file(file_id, session_id)
+
+            if not metadata:
+                self.logger.warning(f"Could not get metadata for file {file_id}")
+                continue
+
+            # Create the appropriate input object based on file type
+            input_obj = self.file_handler.get_file_as_input(file_id, session_id)
+            if input_obj:
+                self.logger.info(f"Created {type(input_obj).__name__} for file {metadata.original_filename}")
+                input_objects.append(input_obj)
+            else:
+                self.logger.warning(f"Failed to create input object for file {metadata.original_filename}")
+
+        return input_objects

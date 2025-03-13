@@ -32,6 +32,10 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
     const [activeToolCalls, setActiveToolCalls] = useState(new Map()); // Track active tool calls
     const fileInputRef = useRef(null);
     const messagesEndRef = useRef(null);
+    const [uploadedFiles, setUploadedFiles] = useState([]);
+    const [selectedFiles, setSelectedFiles] = useState([]);
+    const [isUploading, setIsUploading] = useState(false);
+    const [selectedFileForUpload, setSelectedFileForUpload] = useState(null); // Track selected file
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({behavior: "smooth"});
@@ -49,31 +53,77 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
     }, [isStreaming, onProcessingStatus]);
 
     /**
-     * Handles file upload to the server
+     * Handles file selection change
+     * @param {Event} e - Change event from the file input
+     */
+    const handleFileSelection = (e) => {
+        if (e.target.files && e.target.files.length > 0) {
+            setSelectedFileForUpload(e.target.files[0]);
+        } else {
+            setSelectedFileForUpload(null);
+        }
+    };
+
+    /**
+     * Handles file upload to the server and tracks processing status
      * @returns {Promise<void>}
      * @throws {Error} If the file upload fails
      */
     const handleUploadFile = async () => {
-        if (!fileInputRef.current?.files?.length) return;
+        // Use the selected file from state instead of directly accessing fileInputRef
+        if (!selectedFileForUpload) return;
+
+        setIsUploading(true);
 
         const formData = new FormData();
         formData.append("ui_session_id", sessionId);
-        formData.append("file", fileInputRef.current.files[0]);
+        formData.append("file", selectedFileForUpload);
 
         try {
+            // Upload the file
             const response = await fetch(`${API_URL}/upload_file`, {
                 method: "POST",
                 body: formData,
             });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
             const data = await response.json();
+
+            // Add file to state with initial "pending" status
+            const newFile = {
+                id: data.id,
+                name: data.filename,
+                type: data.mime_type,
+                size: data.size,
+                selected: true,
+                processing_status: "pending", // Initial status
+                processing_error: null
+            };
+
+            setUploadedFiles(prev => [...prev, newFile]);
+            setSelectedFiles(prev => [...prev, newFile]);
+
             setMessages((prev) => [
                 ...prev,
                 {
                     role: "system",
                     type: "content",
-                    content: `File uploaded: ${fileInputRef.current.files[0].name}`,
+                    content: `File uploaded: ${selectedFileForUpload.name}`,
                 },
             ]);
+
+            // Reset file input and state
+            if (fileInputRef.current) {
+                fileInputRef.current.value = null;
+            }
+            setSelectedFileForUpload(null);
+
+            // Check processing status after upload
+            checkFileProcessingStatus(data.id);
+
         } catch (error) {
             console.error("Error uploading file:", error);
             setMessages((prev) => [
@@ -81,10 +131,98 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                 {
                     role: "system",
                     type: "content",
-                    content: "Error uploading file",
+                    content: `Error uploading file: ${error.message}`,
                 },
             ]);
+        } finally {
+            setIsUploading(false);
         }
+    };
+
+    /**
+     * Checks the processing status of a file
+     * @param {string} fileId - The ID of the file to check
+     */
+    const checkFileProcessingStatus = async (fileId) => {
+        // Poll the server every 2 seconds to check processing status
+        const checkStatus = async () => {
+            try {
+                const response = await fetch(`${API_URL}/files/${sessionId}`);
+                if (!response.ok) {
+                    console.error(`Error fetching file status: ${response.status}`);
+                    return true; // Stop polling on error
+                }
+
+                const data = await response.json();
+
+                // Find the file in the response
+                const fileData = data.files.find(f => f.id === fileId);
+                if (!fileData) return false;
+
+                // Update state with current processing status
+                setUploadedFiles(prev => prev.map(file => {
+                    if (file.id === fileId) {
+                        return {
+                            ...file,
+                            processing_status: fileData.processing_status,
+                            processing_error: fileData.processing_error
+                        };
+                    }
+                    return file;
+                }));
+
+                // If processing is complete or failed, stop polling
+                return fileData.processing_status !== "pending";
+            } catch (error) {
+                console.error("Error checking file status:", error);
+                return true; // Stop polling on error
+            }
+        };
+
+        // Poll until processing completes or fails (max 30 seconds)
+        let attempts = 0;
+        const maxAttempts = 15; // 15 attempts * 2 seconds = 30 seconds max
+
+        const pollTimer = setInterval(async () => {
+            attempts++;
+            const shouldStop = await checkStatus();
+
+            if (shouldStop || attempts >= maxAttempts) {
+                clearInterval(pollTimer);
+
+                // If we hit max attempts and status is still pending, mark as failed
+                if (attempts >= maxAttempts) {
+                    setUploadedFiles(prev => prev.map(file => {
+                        if (file.id === fileId && file.processing_status === "pending") {
+                            return {
+                                ...file,
+                                processing_status: "failed",
+                                processing_error: "Processing timed out"
+                            };
+                        }
+                        return file;
+                    }));
+                }
+            }
+        }, 2000);
+    };
+
+    const toggleFileSelection = (fileId) => {
+        setUploadedFiles(prev => prev.map(file => {
+            if (file.id === fileId) {
+                const newSelected = !file.selected;
+
+                // Update selectedFiles state
+                if (newSelected) {
+                    setSelectedFiles(prev => [...prev, file]);
+                } else {
+                    setSelectedFiles(prev => prev.filter(f => f.id !== fileId));
+                }
+
+                return {...file, selected: newSelected};
+            }
+            return file;
+        }));
     };
 
     /**
@@ -187,7 +325,7 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
      * @throws {Error} If the message send fails or stream processing encounters an error
      */
     const handleSendMessage = async () => {
-        if (!inputText.trim() || isStreaming) return;
+        if ((!inputText.trim() && selectedFiles.length === 0) || isStreaming) return;
 
         try {
             setIsStreaming(true);
@@ -196,7 +334,12 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
             // Add user message
             setMessages((prev) => [
                 ...prev,
-                {role: "user", type: "content", content: inputText},
+                {
+                    role: "user",
+                    type: "content",
+                    content: inputText,
+                    files: selectedFiles.length > 0 ? selectedFiles.map(f => f.name) : undefined
+                },
             ]);
 
             const userText = inputText;
@@ -206,6 +349,9 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
             formData.append("ui_session_id", sessionId);
             formData.append("message", userText);
             formData.append("custom_prompt", customPrompt || "");
+            if (selectedFiles.length > 0) {
+                formData.append("file_ids", JSON.stringify(selectedFiles.map(f => f.id)));
+            }
 
             // Add the correct parameter based on model type
             if (modelParameters.temperature !== undefined) {
@@ -274,6 +420,8 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
             ]);
         } finally {
             setIsStreaming(false);
+            setSelectedFiles([]);
+            setUploadedFiles(prev => prev.map(file => ({...file, selected: false})));
         }
     };
 
@@ -415,7 +563,7 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                     });
                     break;
 
-                // These cases don’t require any specific handling
+                // These cases don't require any specific handling
                 case "interaction_start":
                 case "interaction_end":
                 case "history":
@@ -528,46 +676,93 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                     <Input
                         type="file"
                         ref={fileInputRef}
+                        onChange={handleFileSelection}
                         className="block w-full text-sm text-gray-500
-              file:mr-4 file:py-2 file:px-4
-              file:rounded-xl file:border-0
-              file:text-sm file:font-semibold
-              file:bg-blue-50 file:text-blue-700
-              hover:file:bg-blue-100
-              focus:outline-none focus:ring-2 focus:ring-blue-200 focus:ring-opacity-50
-              rounded-xl
-              cursor-pointer
-              transition-all
-              border border-gray-200
-              bg-white/50 backdrop-blur-sm"
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-xl file:border-0
+                        file:text-sm file:font-semibold
+                        file:bg-blue-50 file:text-blue-700
+                        hover:file:bg-blue-100
+                        focus:outline-none focus:ring-2 focus:ring-blue-200 focus:ring-opacity-50
+                        rounded-xl
+                        cursor-pointer
+                        transition-all
+                        border border-gray-200
+                        bg-white/50 backdrop-blur-sm
+                        h-12 py-2"
                     />
                     <Button
                         onClick={handleUploadFile}
                         variant="outline"
                         size="icon"
+                        disabled={!selectedFileForUpload || isUploading}
                         className="shrink-0 rounded-xl border-gray-200 bg-white/50 backdrop-blur-sm hover:bg-white/80 transition-colors"
                     >
                         <Upload className="h-4 w-4"/>
                     </Button>
                 </div>
 
+                {/* Add the file list here - before the message input */}
+                {uploadedFiles.length > 0 && (
+                    <div
+                        className="my-2 p-3 bg-gray-50 rounded-lg max-h-32 overflow-y-auto border border-gray-300 shadow-sm">
+                        <div className="text-xs font-medium text-gray-500 mb-2">Uploaded Files</div>
+                        {uploadedFiles.map((file) => (
+                            <div key={file.id}
+                                 className={`file-item flex items-center justify-between mb-1 p-2 rounded border ${
+                                     file.processing_status === 'failed' ? 'bg-red-50 border-red-200' :
+                                         file.processing_status === 'complete' ? 'bg-green-50 border-green-200' : 'bg-gray-100 border-gray-200'
+                                 }`}>
+                                <span className="text-sm truncate max-w-[70%]">{file.name}</span>
+                                <div className="flex items-center space-x-2">
+                                    {file.processing_status === 'pending' &&
+                                        <span
+                                            className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">Processing...</span>
+                                    }
+                                    {file.processing_status === 'failed' && (
+                                        <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded-full"
+                                              title={file.processing_error || "Error processing file"}>
+                            Error
+                        </span>
+                                    )}
+                                    {file.processing_status === 'complete' &&
+                                        <span
+                                            className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">Ready</span>
+                                    }
+                                    <input
+                                        type="checkbox"
+                                        checked={file.selected}
+                                        onChange={() => toggleFileSelection(file.id)}
+                                        className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                                    />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
                 <div className="flex gap-2">
-                    <Input
-                        type="text"
-                        placeholder="Type your message..."
-                        value={inputText}
-                        onChange={(e) => setInputText(e.target.value)}
-                        onKeyPress={handleKeyPress}
-                        disabled={isStreaming}
-                        className="flex-1 rounded-xl border-gray-200 bg-white/50 backdrop-blur-sm transition-colors
-              hover:bg-white/80 focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50
-              placeholder-gray-400"
-                    />
+    <textarea
+        placeholder="Type your message..."
+        value={inputText}
+        onChange={(e) => setInputText(e.target.value)}
+        onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+            }
+        }}
+        disabled={isStreaming}
+        rows="2"
+        className="flex-1 rounded-xl border border-gray-200 bg-white/50 backdrop-blur-sm transition-colors
+        hover:bg-white/80 focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50
+        placeholder-gray-400 py-2 px-3 resize-none"
+    />
                     <Button
                         onClick={handleSendMessage}
                         disabled={isStreaming}
                         size="icon"
-                        className="shrink-0 rounded-xl bg-blue-500 hover:bg-blue-600 transition-colors"
+                        className="shrink-0 rounded-xl bg-blue-500 hover:bg-blue-600 transition-colors self-end"
                     >
                         <Send className="h-4 w-4"/>
                     </Button>
