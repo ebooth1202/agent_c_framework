@@ -146,7 +146,7 @@ Agent C requires an OpenAI API key to function:
 
 2. Edit `.env` to add your OpenAI API key:
    ```
-   OPEN_API_KEY=your-api-key-here
+   OPENAI_API_KEY=your-api-key-here
    ```
 
 ## Running Agent C
