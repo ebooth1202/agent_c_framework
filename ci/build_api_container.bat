@@ -1,0 +1,1 @@
+docker build -t ghcr.io/centricconsulting/agent_c_api_dev:latest -f dockerfiles\api.Dockerfile .
