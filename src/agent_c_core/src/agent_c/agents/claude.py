@@ -67,7 +67,13 @@ class ClaudeChatAgent(BaseAgent):
 
         functions: List[Dict[str, Any]] = tool_chest.active_claude_schemas
 
-        completion_opts = {"model": model_name, "messages": messages, "system": sys_prompt,  "max_tokens": max_tokens, 'temperature': temperature}
+        completion_opts = {"model": model_name, "messages": messages,
+                           "system": sys_prompt,  "max_tokens": max_tokens,
+                           'temperature': temperature}
+
+        if '3-7-sonnet' in model_name:
+            completion_opts['betas'] = ["token-efficient-tools-2025-02-19", "output-128k-2025-02-19"]
+
         budget_tokens: int = kwargs.get("budget_tokens", self.budget_tokens)
         if budget_tokens > 0:
             completion_opts['thinking'] = {"budget_tokens": budget_tokens, "type": "enabled"}
@@ -131,7 +137,7 @@ class ClaudeChatAgent(BaseAgent):
             while delay <= self.max_delay:
                 try:
                     await self._raise_completion_start(opts["completion_opts"], **callback_opts)
-                    async with self.client.messages.stream (**opts["completion_opts"]) as stream:
+                    async with self.client.beta.messages.stream (**opts["completion_opts"]) as stream:
                         collected_messages = []
                         collected_tool_calls = []
                         input_tokens = 0
