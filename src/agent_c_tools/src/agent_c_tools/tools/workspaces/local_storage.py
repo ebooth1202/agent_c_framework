@@ -19,24 +19,46 @@ class LocalStorageWorkspace(BaseWorkspace):
         if self.valid:
             self.workspace_root: Path = Path(workspace_path).resolve()
 
-        self.max_filename_length = 200
+        # Check environment for development/local mode
+        env = os.environ.get('ENVIRONMENT', '').lower()
+        self.allow_symlinks: bool = kwargs.get('allow_symlinks', 'local' in env or 'dev' in env)
         self.logger: logging.Logger = logging.getLogger(__name__)
 
+        if self.allow_symlinks:
+            self.logger.info("Symlink paths are allowed in workspace")
+
+        self.max_filename_length = 200
+
     def _is_path_within_workspace(self, path: str) -> bool:
-        """Check if the provided path is within the workspaces.
+        """Check if the provided path is within the workspace.
+
+        With symlink allowance enabled, this checks the path string itself rather than
+        resolving to physical paths, which would break in Docker environments.
 
         Args:
             path (str): The path to check.
 
         Returns:
-            bool: True if the path is within the workspaces, else False.
+            bool: True if the path is valid within the workspace context, else False.
         """
+        # Normalize the path (but don't resolve symlinks)
+        norm_path = os.path.normpath(path)
+
+        # Prevent path traversal attacks with .. regardless of symlink settings
+        if ".." in norm_path.split(os.sep):
+            return False
+
+        # If symlinks are allowed and no path traversal, simply allow the path
+        if self.allow_symlinks:
+            return True
+
+        # If symlinks not allowed, use the traditional path resolution check
         resolved_path = self.workspace_root.joinpath(path).resolve()
         return self.workspace_root in resolved_path.parents or resolved_path == self.workspace_root
 
     async def ls(self, relative_path: str) -> str:
         if not self._is_path_within_workspace(relative_path):
-            error_msg = f'The path {relative_path} is not within the workspaces.'
+            error_msg = f'The path {relative_path} is not within the workspace.'
             self.logger.error(error_msg)
             return json.dumps({'error': error_msg})
 
@@ -164,3 +186,54 @@ class LocalStorageWorkspace(BaseWorkspace):
             error_msg = f'An error occurred while writing to the file: {e}'
             self.logger.exception(f"Failed to write to the file: {file_path}")
             return json.dumps({'error': error_msg})
+
+
+class LocalProjectWorkspace(LocalStorageWorkspace):
+    """
+    A workspace that automatically determines the project path using a fallback strategy:
+    1. Uses PROJECT_WORKSPACE_PATH environment variable if available
+    2. Uses 'app/workspaces/project' path if it exists
+    3. Defaults to current working directory
+
+    The description can be overridden via PROJECT_WORKSPACE_DESCRIPTION environment variable.
+    """
+
+    def __init__(self, name="project", default_description="A workspace holding the `Agent C` source code in Python."):
+        # Use a specific logger name that matches your logging configuration
+        self.logger = logging.getLogger("agent_c_tools.tools.workspaces.local_project_workspace")
+        self.logger.info("Initializing LocalProjectWorkspace")  # Add this to verify logger works
+
+        # Determine workspace path using fallback strategy
+        workspace_path = self._determine_workspace_path()
+
+        # Get description from environment variable or use default
+        description = os.environ.get("PROJECT_WORKSPACE_DESCRIPTION", default_description)
+
+        # Initialize the parent class with the determined parameters
+        super().__init__(
+            name=name,
+            workspace_path=workspace_path,
+            description=description
+        )
+
+    def _determine_workspace_path(self) -> str:
+        """
+        Determine the workspace path using the fallback strategy:
+        1. Environment variable
+        2. app/workspaces/project directory
+        3. Current working directory
+        """
+        # Check for environment variable
+        if "PROJECT_WORKSPACE_PATH" in os.environ:
+            self.logger.info(f"Found PROJECT_WORKSPACE_PATH environment variable: {os.environ['PROJECT_WORKSPACE_PATH']}")
+            return os.environ["PROJECT_WORKSPACE_PATH"]
+
+        # Check if /app/workspaces/project exists
+        app_workspace_path = Path("/app/workspaces/project")
+        if app_workspace_path.exists():
+            self.logger.info(f"Found /app/workspaces/project directory: {str(app_workspace_path.absolute())}")
+            return str(app_workspace_path.absolute())
+
+        # Default to current working directory
+        self.logger.info(f"Using current working directory as the project workspace: {os.getcwd()}")
+        return os.getcwd()

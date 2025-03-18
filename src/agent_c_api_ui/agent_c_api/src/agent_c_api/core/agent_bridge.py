@@ -28,6 +28,7 @@ from agent_c.prompting import PromptBuilder, CoreInstructionSection, HelpfulInfo
     EnvironmentInfoSection
 
 from agent_c_tools.tools.user_bio.prompt import UserBioSection
+from agent_c_tools.tools.workspaces.local_storage import LocalProjectWorkspace
 
 
 class AgentBridge:
@@ -213,8 +214,9 @@ class AgentBridge:
         """
         Initialize the agent's workspaces by loading local workspace configurations.
         """
-        self.workspaces = [LocalStorageWorkspace(name="project", workspace_path=os.getcwd(),
-                                                 description="A workspace holding the `Agent C` source code in Python.")]
+        local_project = LocalProjectWorkspace()
+        self.workspaces = [local_project]
+        self.logger.info(f"Agent {self.agent_name} initialized workspaces {local_project.workspace_root}")
 
         try:
             local_workspaces = json.load(open(".local_workspaces.json", "r"))

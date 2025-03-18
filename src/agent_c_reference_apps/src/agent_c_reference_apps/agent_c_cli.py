@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 from agent_c.models.input import AudioInput
 from agent_c.models.input.image_input import ImageInput
 from agent_c_tools import LocalStorageWorkspace
+from agent_c_tools.tools.workspaces.local_storage import LocalProjectWorkspace
 
 # Note: we load the env file here so that it's loaded when we start loading the libs that depend on API KEYs.   I'm looking at you Eleven Labs
 load_dotenv(override=True)
@@ -92,8 +93,7 @@ class CLIChat:
 
     def __init_workspaces(self):
         self.logger.debug("Initializing Workspaces...")
-        self.workspaces = [LocalStorageWorkspace(name="project", workspace_path=os.getcwd(),
-                                                 description="A workspace holding the `Agent C` source code in Python.")]
+        self.workspaces = [LocalProjectWorkspace()]
 
         try:
             local_workspaces = json.load(open(".local_workspaces.json", "r"))
