@@ -25,6 +25,7 @@ from agent_c.util.response_format import align_tool_calls, question_response, sy
     combine_debug_info, filtered_responses
 
 from agent_c_reference_apps.ui.markdown_render import MarkdownTokenRenderer
+from agent_c_tools.tools.workspaces.local_storage import LocalProjectWorkspace
 
 # Note: we load the env file here so that it's loaded when we start loading the libs that depend on API KEYs.   I'm looking at you Eleven Labs
 load_dotenv(override=True)
@@ -147,8 +148,7 @@ class GradioChat:
 
     def __init_workspaces(self):
         self.logger.debug("Initializing Workspaces...")
-        self.workspaces = [LocalStorageWorkspace(name="project", workspace_path=os.getcwd(),
-                                                 description="A workspace holding the `Agent C` source code in Python.")]
+        self.workspaces = [LocalProjectWorkspace()]
         f = None
         try:
             f = open(".local_workspaces.json", "r")

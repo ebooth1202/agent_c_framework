@@ -1,3 +1,4 @@
+import json
 import logging
 from typing import Any, List
 
@@ -5,9 +6,6 @@ from agent_c.toolsets.tool_set import Toolset
 from agent_c.toolsets.json_schema import json_schema
 from agent_c_tools.tools.workspaces.base import BaseWorkspace
 from agent_c_tools.tools.workspaces.prompt import WorkspaceSection
-
-logger = logging.getLogger(__name__)
-
 
 class WorkspaceTools(Toolset):
     """
@@ -21,6 +19,7 @@ class WorkspaceTools(Toolset):
         super().__init__(**kwargs, name="workspace")
         self.workspaces: List[BaseWorkspace] = kwargs.get('workspaces', [])
         self._create_section()
+        self.logger = logging.getLogger(__name__)
 
     def add_workspace(self, workspace: BaseWorkspace) -> None:
         """Add a workspace to the list of workspaces."""
@@ -36,7 +35,7 @@ class WorkspaceTools(Toolset):
             return next(workspace for workspace in self.workspaces if workspace.name == name)
         except StopIteration:
             # Handle the case where no workspaces with the given name is found
-            logger.warning(f"No workspaces found with the name: {name}")
+            self.logger.warning(f"No workspaces found with the name: {name}")
             return None
 
 
@@ -66,6 +65,11 @@ class WorkspaceTools(Toolset):
             str: JSON string with the listing or an error message.
         """
         relative_path: str = kwargs.get('path', '')
+        if relative_path.startswith('/') and relative_path != '/':
+            error_msg = f'The path {relative_path} is absolute. Please provide a relative path.'
+            self.logger.error(error_msg)
+            return json.dumps({'error': error_msg})
+
         workspace = self.find_workspace_by_name(kwargs.get('workspace'))
         if workspace is None:
             return f'No workspaces found with the name: {workspace}'
@@ -100,6 +104,11 @@ class WorkspaceTools(Toolset):
             str: JSON string with the file content or an error message.
         """
         file_path: str = kwargs['file_path']
+        if file_path.startswith('/'):
+            error_msg = f'The path {file_path} is absolute. Please provide a relative path.'
+            self.logger.error(error_msg)
+            return json.dumps({'error': error_msg})
+
         workspace = self.find_workspace_by_name(kwargs.get('workspace'))
         if workspace is None:
             return f'No workspaces found with the name: {workspace}'
@@ -145,6 +154,11 @@ class WorkspaceTools(Toolset):
         file_path: str = kwargs['file_path']
         data: str = kwargs['data']
         mode: str = kwargs.get('mode', 'write')
+
+        if file_path.startswith('/'):
+            error_msg = f'The path {file_path} is absolute. Please provide a relative path.'
+            self.logger.error(error_msg)
+            return json.dumps({'error': error_msg})
 
         workspace = self.find_workspace_by_name(kwargs.get('workspace'))
         if workspace is None:

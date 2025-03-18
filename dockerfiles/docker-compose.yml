@@ -12,6 +12,7 @@ services:
       - ${DOCUMENTS_WORKSPACE}:/app/workspaces/documents  # Mount documents workspace directory
       - ${DOWNLOADS_WORKSPACE}:/app/workspaces/downloads  # Mount downloads workspace directory
       - ${DESKTOP_WORKSPACE}:/app/workspaces/desktop  # Mount desktop workspace directory
+      - ${PROJECT_WORKSPACE_PATH}:/app/workspaces/project  # Mount point for projects
     environment:
       - ENVIRONMENT=LOCAL_DEV
       - ENHANCED_DEBUG_INFO=True
