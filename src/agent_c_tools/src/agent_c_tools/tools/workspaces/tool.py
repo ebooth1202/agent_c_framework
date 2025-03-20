@@ -65,7 +65,10 @@ class WorkspaceTools(Toolset):
             str: JSON string with the listing or an error message.
         """
         relative_path: str = kwargs.get('path', '')
-        if relative_path.startswith('/') and relative_path != '/':
+        if relative_path == '/':
+            relative_path = ''
+
+        if relative_path.startswith('/'):
             error_msg = f'The path {relative_path} is absolute. Please provide a relative path.'
             self.logger.error(error_msg)
             return json.dumps({'error': error_msg})
@@ -76,6 +79,45 @@ class WorkspaceTools(Toolset):
 
         return await workspace.ls(relative_path)
 
+    @json_schema(
+        'Retrieve a string "tree" of the directory structure within a workspace.',
+        {
+            'workspace': {
+                'type': 'string',
+                'description': 'The name of the workspace the path resides in. Refer to the "available workspaces" list for valid names.',
+                'required': True
+            },
+            'path': {
+                'type': 'string',
+                'description': 'The path, relative to the workspace root folder, to start the tree from.',
+                'required': False
+            }
+        }
+    )
+    async def ls(self, **kwargs: Any) -> str:
+        """Asynchronously lists the contents of a workspaces or a subdirectory in it.
+
+        Args:
+            workspace (str): The workspaces to use
+            path (str): Relative path within the workspaces to list contents for.
+
+        Returns:
+            str: JSON string with the listing or an error message.
+        """
+        relative_path: str = kwargs.get('path', '')
+        if relative_path == '/':
+            relative_path = ''
+
+        if relative_path.startswith('/'):
+            error_msg = f'The path {relative_path} is absolute. Please provide a relative path.'
+            self.logger.error(error_msg)
+            return json.dumps({'error': error_msg})
+
+        workspace = self.find_workspace_by_name(kwargs.get('workspace'))
+        if workspace is None:
+            return f'No workspaces found with the name: {workspace}'
+
+        return await workspace.tree(relative_path)
 
 
 

@@ -6,6 +6,7 @@ import logging
 from pathlib import Path
 from typing import Optional, Union
 
+from agent_c.util import generate_path_tree
 from agent_c.util.token_counter import TokenCounter
 from agent_c_tools.tools.workspaces.base import BaseWorkspace
 
@@ -56,8 +57,18 @@ class LocalStorageWorkspace(BaseWorkspace):
         resolved_path = self.workspace_root.joinpath(path).resolve()
         return self.workspace_root in resolved_path.parents or resolved_path == self.workspace_root
 
-    async def ls(self, relative_path: str) -> str:
+    async def tree(self, relative_path: str) -> str:
         if not self._is_path_within_workspace(relative_path):
+            error_msg = f'The path {relative_path} is not within the workspaces.'
+            self.logger.error(error_msg)
+            return json.dumps({'error': error_msg})
+
+        full_path: Path = self.workspace_root.joinpath(relative_path)
+
+        return  '\n'.join(generate_path_tree(str(full_path)))
+
+    async def ls(self, relative_path: str) -> str:
+        if not self._is_path_within_workspace(relative_path) or relative_path == '':
             error_msg = f'The path {relative_path} is not within the workspace.'
             self.logger.error(error_msg)
             return json.dumps({'error': error_msg})
