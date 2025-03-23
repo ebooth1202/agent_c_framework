@@ -94,7 +94,7 @@ class WorkspaceTools(Toolset):
             }
         }
     )
-    async def ls(self, **kwargs: Any) -> str:
+    async def tree(self, **kwargs: Any) -> str:
         """Asynchronously lists the contents of a workspaces or a subdirectory in it.
 
         Args:
