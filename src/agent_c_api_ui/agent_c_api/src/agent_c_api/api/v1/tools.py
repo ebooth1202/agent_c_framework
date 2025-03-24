@@ -1,15 +1,39 @@
 from fastapi import APIRouter, HTTPException, Form, UploadFile, File, Depends, Request
+import logging
 
 from agent_c_api.core.agent_manager import UItoAgentBridgeManager
 from agent_c import Toolset
 
-
-# Ensure all our toolsets get registered
+# Always import the core tools - These must be available!
 from agent_c_tools.tools import *  # noqa
+
+# Conditionally import other tool modules
+logger = logging.getLogger(__name__)
+
+# Try to import each optional module
+try:
+    from agent_c_demo.tools import *  # noqa
+    AGENT_C_DEMO_AVAILABLE = True
+except ImportError:
+    logger.info("agent_c_demo.tools module not available")
+    AGENT_C_DEMO_AVAILABLE = False
+
+try:
+    from agent_c_voice.tools import *  # noqa
+    AGENT_C_VOICE_AVAILABLE = True
+except ImportError:
+    logger.info("agent_c_voice.tools module not available")
+    AGENT_C_VOICE_AVAILABLE = False
+
+try:
+    from agent_c_rag.tools import *  # noqa
+    AGENT_C_RAG_AVAILABLE = True
+except ImportError:
+    logger.info("agent_c_rag.tools module not available")
+    AGENT_C_RAG_AVAILABLE = False
 
 
 router = APIRouter()
-logger = logging.getLogger(__name__)
 
 @router.get("/tools")
 async def tools_list():
@@ -67,5 +91,3 @@ async def tools_list():
     except Exception as e:
         logger.error(f"Error retrieving tools: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
