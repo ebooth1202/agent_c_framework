@@ -40,42 +40,37 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
 
     // Helper function to format a message for copying
     const formatMessageForCopy = useCallback((msg) => {
-      if (msg.role === 'user') {
-        return `User: ${msg.content}\n`;
-      }
-      else if (msg.role === 'assistant' && msg.type === 'content') {
-        return `Assistant: ${msg.content}\n`;
-      }
-      else if (msg.role === 'assistant' && msg.type === 'thinking') {
-        return `Assistant (thinking): ${msg.content}\n`;
-      }
-      else if (msg.type === 'tool_calls') {
-        // Format tool calls
-        let result = `Assistant (tool): Using ${msg.toolCalls.map(t => t.name || t.function?.name).join(', ')}\n`;
-        msg.toolCalls.forEach(tool => {
-          const toolName = tool.name || tool.function?.name;
-          const toolArgs = tool.arguments || tool.function?.arguments;
-          if (toolArgs) {
-            result += `  ${toolName} Arguments: ${typeof toolArgs === 'string' ? toolArgs : JSON.stringify(toolArgs)}\n`;
-          }
-          if (tool.results) {
-            result += `  ${toolName} Results: ${typeof tool.results === 'string' ? tool.results : JSON.stringify(tool.results)}\n`;
-          }
-        });
-        return result;
-      }
-      else if (msg.type === 'media') {
-        return `Assistant (media): Shared ${msg.contentType} content\n`;
-      }
-      else if (msg.role === 'system') {
-        return `System: ${msg.content}\n`;
-      }
-      return '';
+        if (msg.role === 'user') {
+            return `User: ${msg.content}\n`;
+        } else if (msg.role === 'assistant' && msg.type === 'content') {
+            return `Assistant: ${msg.content}\n`;
+        } else if (msg.role === 'assistant' && msg.type === 'thinking') {
+            return `Assistant (thinking): ${msg.content}\n`;
+        } else if (msg.type === 'tool_calls') {
+            // Format tool calls
+            let result = `Assistant (tool): Using ${msg.toolCalls.map(t => t.name || t.function?.name).join(', ')}\n`;
+            msg.toolCalls.forEach(tool => {
+                const toolName = tool.name || tool.function?.name;
+                const toolArgs = tool.arguments || tool.function?.arguments;
+                if (toolArgs) {
+                    result += `  ${toolName} Arguments: ${typeof toolArgs === 'string' ? toolArgs : JSON.stringify(toolArgs)}\n`;
+                }
+                if (tool.results) {
+                    result += `  ${toolName} Results: ${typeof tool.results === 'string' ? tool.results : JSON.stringify(tool.results)}\n`;
+                }
+            });
+            return result;
+        } else if (msg.type === 'media') {
+            return `Assistant (media): Shared ${msg.contentType} content\n`;
+        } else if (msg.role === 'system') {
+            return `System: ${msg.content}\n`;
+        }
+        return '';
     }, []);
 
     // Helper function to format the entire chat for copying
     const formatChatForCopy = useCallback(() => {
-      return messages.map(formatMessageForCopy).join('\n');
+        return messages.map(formatMessageForCopy).join('\n');
     }, [messages, formatMessageForCopy]);
 
     const scrollToBottom = () => {
@@ -535,6 +530,11 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                 case "tool_calls":
                     if (parsed.tool_calls) {
                         handleToolStart(parsed.tool_calls);
+                        setToolSelectionState({
+                            inProgress: true,
+                            toolName: parsed.tool_calls[0]?.name || "unknown tool",
+                            timestamp: Date.now()
+                        });
                     }
                     break;
 
@@ -660,14 +660,14 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
             <ScrollArea className="flex-1 px-4 py-3 min-h-[400px]">
                 {/* Add copy entire chat button */}
                 <div className="flex justify-end p-2 sticky top-0 z-10 bg-white/80 backdrop-blur-sm">
-                  <CopyButton
-                    content={formatChatForCopy}
-                    tooltipText="Copy entire chat"
-                    successText="Chat copied!"
-                    size="sm"
-                    variant="outline"
-                    className="border-gray-300"
-                  />
+                    <CopyButton
+                        content={formatChatForCopy}
+                        tooltipText="Copy entire chat"
+                        successText="Chat copied!"
+                        size="sm"
+                        variant="outline"
+                        className="border-gray-300"
+                    />
                 </div>
 
                 <div className="space-y-4">
@@ -681,15 +681,16 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                                         {msg.content}
 
                                         {/* Copy button that appears on hover */}
-                                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity transform -translate-x-full">
-                                          <CopyButton
-                                            content={msg.content}
-                                            tooltipText="Copy message"
-                                            position="left"
-                                            variant="secondary"
-                                            size="xs"
-                                            className="bg-blue-600 hover:bg-blue-700 text-white"
-                                          />
+                                        <div
+                                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity transform -translate-x-full">
+                                            <CopyButton
+                                                content={msg.content}
+                                                tooltipText="Copy message"
+                                                position="left"
+                                                variant="secondary"
+                                                size="xs"
+                                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                                            />
                                         </div>
                                     </div>
                                     <User className="h-6 w-6 text-blue-500"/>
@@ -755,15 +756,16 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                                         {isError ? "🚫 Error: " : ""}{msg.content}
 
                                         {/* Copy button that appears on hover */}
-                                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                          <CopyButton
-                                            content={msg.content}
-                                            tooltipText="Copy message"
-                                            position="left"
-                                            variant="ghost"
-                                            size="xs"
-                                            className="text-gray-500 hover:bg-gray-200"
-                                          />
+                                        <div
+                                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <CopyButton
+                                                content={msg.content}
+                                                tooltipText="Copy message"
+                                                position="left"
+                                                variant="ghost"
+                                                size="xs"
+                                                className="text-gray-500 hover:bg-gray-200"
+                                            />
                                         </div>
                                     </div>
                                 </div>
