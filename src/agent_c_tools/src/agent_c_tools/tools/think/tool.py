@@ -1,8 +1,7 @@
 import copy
 import inspect
 import logging
-import random
-import json
+import markdown
 from typing import List, Dict, Any
 
 from agent_c.toolsets import Toolset, json_schema
@@ -13,8 +12,9 @@ class ThinkTools(Toolset):
     A simple toolset that allows reasoning models (claude) to think about something.
     """
     def __init__(self, **kwargs):
-        super().__init__(**kwargs, name='think')
+        super().__init__(**kwargs, name='think', required_tools=['workspace'])
         self.logger = logging.getLogger(__name__)
+
         # TODO: Remove this when the new tools go in.
         self.openai_schemas: List[Dict[str, Any]] = self.__openai_schemas()
 
@@ -31,7 +31,14 @@ class ThinkTools(Toolset):
         }
     )
     async def think(self, **kwargs) -> str:
-        return kwargs.get('thought')
+        thought = markdown.markdown(kwargs.get('thought'))
+        await self._raise_render_media(
+            sent_by_class=self.__class__.__name__,
+            sent_by_function='think',
+            content_type="text/html",
+            content=f"<div>{thought}</div>"
+        )
+        return ''
 
     # TODO: remove this when the new tolls go in.
     def __openai_schemas(self) -> List[Dict[str, Any]]:

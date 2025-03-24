@@ -210,8 +210,8 @@
               "enabled": true,
               "budget_tokens": {
                 "min": 0,
-                "max": 10000,
-                "default": 5000
+                "max": 24000,
+                "default": 10000
               },
               "required": true
             },
