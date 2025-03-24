@@ -547,6 +547,7 @@ class AgentBridge:
 
     async def _handle_tool_select_delta(self, event):
         """Handle tool selection events from the agent"""
+        self.logger.debug(f"tool SELECT delta event. {event.model_dump()}")
         payload = json.dumps({
             "type": "tool_select_delta",
             "data": self.convert_to_string(event.tool_calls) if hasattr(event, 'tool_calls') else 'No data',
@@ -556,6 +557,7 @@ class AgentBridge:
 
     async def _handle_tool_call_delta(self, event):
         """Handle tool selection events from the agent"""
+        self.logger.debug(f"tool CALL delta event. {event.model_dump()}")
         payload = json.dumps({
             "type": "tool_call_delta",
             "data": self.convert_to_string(event.content) if hasattr(event, 'content') else 'No data',
@@ -812,8 +814,8 @@ class AgentBridge:
             payload = await handler(event)
             if payload is not None and hasattr(self, "_stream_queue"):
                 # Don't put tool_call_delta and tool_select_delta in the stream queue
-                if event.type not in ["tool_call_delta", "tool_select_delta"]:
-                    await self._stream_queue.put(payload)
+                # if event.type not in ["tool_call_delta", "tool_select_delta"]:
+                await self._stream_queue.put(payload)
 
             # If this is the end-of-stream event, push a termination marker.
             # Client must handle a None payload to know the stream has ended.
@@ -914,6 +916,7 @@ class AgentBridge:
                     content = await queue.get()
                     if content is None:
                         break
+                    # self.logger.info(f"Yielding chunk: {content.replace("\n","")}")
                     yield content
                     queue.task_done()
                 except asyncio.CancelledError:

@@ -54,12 +54,16 @@ async def chat_endpoint(
         """Inner generator for streaming response chunks"""
         # logger.debug(f"Starting event stream for session: {ui_session_id}")
         try:
+            # try to force through browser buffering
+            # yield " " * 2048 + "\n"
             async for token in agent_manager.stream_response(
                     ui_session_id,
                     file_ids=file_id_list,
                     user_message=message,
             ):
                 # Each token is a piece of the assistant's reply
+                if not token.endswith('\n'):
+                    token += '\n'
                 yield token
         except Exception as e:
             logger.error(f"Error in stream_response: {e}")
@@ -74,5 +78,24 @@ async def chat_endpoint(
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
-        }
+        },
+        # headers={ "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
+        # "Pragma": "no-cache",
+        # "Expires": "0",
+        # "Connection": "keep-alive",
+        # "X-Accel-Buffering": "no",  # Disable Nginx buffering
+        # "Transfer-Encoding": "chunked",  # Force chunked transfer encoding
+        # "Content-Encoding": "identity"}
     )
+    # return StreamingResponse(
+    #     event_stream(),
+    #     media_type="text/event-stream",
+    #     headers={
+    #         "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
+    #         "Pragma": "no-cache",
+    #         "Expires": "0",
+    #         "Connection": "keep-alive",
+    #         "X-Accel-Buffering": "no",  # Disable Nginx buffering
+    #         "Transfer-Encoding": "chunked"  # Force chunked transfer encoding
+    #     }
+    # )
