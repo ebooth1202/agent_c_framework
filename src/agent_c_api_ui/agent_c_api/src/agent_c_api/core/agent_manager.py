@@ -24,7 +24,7 @@ class UItoAgentBridgeManager:
         ui_sessions (Dict[str, Dict[str, Any]]): Active session storage
         _locks (Dict[str, asyncio.Lock]): Session operation locks
     """
-    ESSENTIAL_TOOLS = ['MemoryTools', 'WorkspaceTools', 'PreferenceTools']
+    ESSENTIAL_TOOLS = ['MemoryTools', 'WorkspaceTools', 'ThinkTools', 'RandomNumberTools']
 
     def __init__(self):
         logging_manager = LoggingManager(__name__)

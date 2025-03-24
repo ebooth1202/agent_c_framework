@@ -76,6 +76,8 @@ class MicInputThread:
 
             if audio_id:
                 self.output_queue.put(AudioInputEndEvent(id=audio_id))
+        except:
+            pass
         finally:
             stream.stop()
             stream.close()

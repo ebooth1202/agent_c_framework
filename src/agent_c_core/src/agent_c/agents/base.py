@@ -311,7 +311,12 @@ class BaseAgent:
 
         Returns: The function call result.
         """
-        toolset, function_name = function_id.split(Toolset.tool_sep, 1)
+        # TOD: Remove when the new tool calling is in place
+        if function_id.lower() == "think":
+            toolset = "think"
+            function_name = "think"
+        else:
+            toolset, function_name = function_id.split(Toolset.tool_sep, 1)
         try:
             src_obj: Toolset = tool_chest.active_tools[toolset]
             if src_obj is None:
