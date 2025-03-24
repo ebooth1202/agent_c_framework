@@ -1,8 +1,8 @@
-import React, {useState, useRef, useEffect} from "react";
+import React, {useState, useRef, useEffect, useCallback} from "react";
 import {Card} from "@/components/ui/card";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
-import {Send, Upload, Brain, User} from "lucide-react";
+import {Send, Upload, User} from "lucide-react";
 import {ScrollArea} from "@/components/ui/scroll-area";
 import ToolCallDisplay from "./ToolCallDisplay";
 import MediaMessage from './MediaMessage';
@@ -10,6 +10,7 @@ import TokenUsageDisplay from './TokenUsageDisplay';
 import MarkdownMessage from './MarkdownMessage';
 import ThoughtDisplay from './ThoughtDisplay';
 import ModelIcon from './ModelIcon';
+import CopyButton from './CopyButton';
 import {API_URL} from "@/config/config";
 
 /**
@@ -36,6 +37,46 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [isUploading, setIsUploading] = useState(false);
     const [selectedFileForUpload, setSelectedFileForUpload] = useState(null); // Track selected file
+
+    // Helper function to format a message for copying
+    const formatMessageForCopy = useCallback((msg) => {
+      if (msg.role === 'user') {
+        return `User: ${msg.content}\n`;
+      }
+      else if (msg.role === 'assistant' && msg.type === 'content') {
+        return `Assistant: ${msg.content}\n`;
+      }
+      else if (msg.role === 'assistant' && msg.type === 'thinking') {
+        return `Assistant (thinking): ${msg.content}\n`;
+      }
+      else if (msg.type === 'tool_calls') {
+        // Format tool calls
+        let result = `Assistant (tool): Using ${msg.toolCalls.map(t => t.name || t.function?.name).join(', ')}\n`;
+        msg.toolCalls.forEach(tool => {
+          const toolName = tool.name || tool.function?.name;
+          const toolArgs = tool.arguments || tool.function?.arguments;
+          if (toolArgs) {
+            result += `  ${toolName} Arguments: ${typeof toolArgs === 'string' ? toolArgs : JSON.stringify(toolArgs)}\n`;
+          }
+          if (tool.results) {
+            result += `  ${toolName} Results: ${typeof tool.results === 'string' ? tool.results : JSON.stringify(tool.results)}\n`;
+          }
+        });
+        return result;
+      }
+      else if (msg.type === 'media') {
+        return `Assistant (media): Shared ${msg.contentType} content\n`;
+      }
+      else if (msg.role === 'system') {
+        return `System: ${msg.content}\n`;
+      }
+      return '';
+    }, []);
+
+    // Helper function to format the entire chat for copying
+    const formatChatForCopy = useCallback(() => {
+      return messages.map(formatMessageForCopy).join('\n');
+    }, [messages, formatMessageForCopy]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({behavior: "smooth"});
@@ -225,6 +266,11 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
         }));
     };
 
+    const [toolSelectionState, setToolSelectionState] = useState({
+        inProgress: false,
+        toolName: null,
+        timestamp: null
+    });
     /**
      * Handles the start of a tool call operation
      * @param {Array<Object>} toolDetails - Array of tool call details
@@ -445,7 +491,7 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                 console.log("Termination marker received after parsing.");
                 return;
             }
-            console.log("=== Received message ===");
+            // console.log("=== Received message ===");
             console.log("Full parsed data:", parsed);
 
             switch (parsed.type) {
@@ -467,6 +513,31 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                     // End streaming if we receive a message (especially errors)
                     setIsStreaming(false);
                     break;
+
+                case "tool_select_delta":
+                    try {
+                        const toolData = JSON.parse(parsed.data)[0];
+                        setToolSelectionState({
+                            inProgress: true,
+                            toolName: toolData?.name || "unknown tool",
+                            timestamp: Date.now()
+                        });
+                    } catch (err) {
+                        console.error("Error parsing tool selection data:", err);
+                        setToolSelectionState({
+                            inProgress: false,
+                            toolName: "unknown tool",
+                            timestamp: Date.now()
+                        });
+                    }
+                    break;
+
+                case "tool_calls":
+                    if (parsed.tool_calls) {
+                        handleToolStart(parsed.tool_calls);
+                    }
+                    break;
+
                 case "content":
                     setMessages((prev) => {
                         const last = prev[prev.length - 1];
@@ -490,16 +561,16 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                     });
                     break;
 
-                case "tool_calls":
-                    if (parsed.tool_calls) {
-                        handleToolStart(parsed.tool_calls);
-                    }
-                    break;
-
                 case "tool_results":
                     if (parsed.tool_results) {
                         parsed.tool_results.forEach((result) => handleToolEnd(result));
                     }
+                    // Clear tool selection state when actual call happens
+                    setToolSelectionState({
+                        inProgress: false,
+                        toolName: null,
+                        timestamp: null
+                    });
                     break;
 
                 case "render_media":
@@ -568,7 +639,6 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                 case "interaction_end":
                 case "history":
                     break;
-
                 default:
                     console.warn("Unknown message type:", parsed.type);
             }
@@ -587,16 +657,40 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
 
     return (
         <Card className="flex flex-col h-full bg-white/50 backdrop-blur-sm border shadow-lg rounded-xl relative z-0">
-            <ScrollArea className="flex-1 px-4 py-3  min-h-[400px]">
+            <ScrollArea className="flex-1 px-4 py-3 min-h-[400px]">
+                {/* Add copy entire chat button */}
+                <div className="flex justify-end p-2 sticky top-0 z-10 bg-white/80 backdrop-blur-sm">
+                  <CopyButton
+                    content={formatChatForCopy}
+                    tooltipText="Copy entire chat"
+                    successText="Chat copied!"
+                    size="sm"
+                    variant="outline"
+                    className="border-gray-300"
+                  />
+                </div>
+
                 <div className="space-y-4">
                     {messages.map((msg, idx) => {
                         // === USER MESSAGES ===
                         if (msg.role === "user") {
                             return (
-                                <div key={idx} className="flex justify-end items-start gap-2">
+                                <div key={idx} className="flex justify-end items-start gap-2 group">
                                     <div
-                                        className="max-w-[80%] rounded-2xl px-4 py-2 shadow-sm bg-blue-500 text-white ml-12 rounded-br-sm">
+                                        className="max-w-[80%] rounded-2xl px-4 py-2 shadow-sm bg-blue-500 text-white ml-12 rounded-br-sm relative">
                                         {msg.content}
+
+                                        {/* Copy button that appears on hover */}
+                                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity transform -translate-x-full">
+                                          <CopyButton
+                                            content={msg.content}
+                                            tooltipText="Copy message"
+                                            position="left"
+                                            variant="secondary"
+                                            size="xs"
+                                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                                          />
+                                        </div>
                                     </div>
                                     <User className="h-6 w-6 text-blue-500"/>
                                 </div>
@@ -607,7 +701,7 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                         if (msg.role === "assistant" && msg.type === "content") {
                             return (
                                 <div key={idx} className="flex flex-col">
-                                    <div className="flex justify-start items-start gap-2">
+                                    <div className="flex justify-start items-start gap-2 group">
                                         <ModelIcon vendor={msg.vendor}/>
                                         <div
                                             className="max-w-[80%] rounded-2xl px-4 py-2 shadow-sm bg-purple-50 text-purple-800 mr-12 rounded-bl-sm">
@@ -650,15 +744,27 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                         if (msg.role === "system") {
                             const isError = msg.type === "error";
                             return (
-                                <div key={idx} className="flex justify-start">
+                                <div key={idx} className="flex justify-start group">
                                     <div
-                                        className={`max-w-[80%] rounded-2xl px-4 py-2 shadow-sm ${
+                                        className={`max-w-[80%] rounded-2xl px-4 py-2 shadow-sm relative ${
                                             isError
                                                 ? "bg-red-100 text-red-800 border border-red-300"
                                                 : "bg-gray-100 text-gray-600"
                                         }`}
                                     >
                                         {isError ? "🚫 Error: " : ""}{msg.content}
+
+                                        {/* Copy button that appears on hover */}
+                                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                          <CopyButton
+                                            content={msg.content}
+                                            tooltipText="Copy message"
+                                            position="left"
+                                            variant="ghost"
+                                            size="xs"
+                                            className="text-gray-500 hover:bg-gray-200"
+                                          />
+                                        </div>
                                     </div>
                                 </div>
                             );
@@ -666,6 +772,14 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
 
                         return null;
                     })}
+                    {
+                        toolSelectionState.inProgress && (
+                            <div className="flex items-center gap-2 text-sm text-gray-500 italic my-1 ml-8">
+                                <div className="animate-pulse h-2 w-2 bg-purple-400 rounded-full"></div>
+                                <span>Preparing to use: {toolSelectionState.toolName.replace(/-/g, ' ')}</span>
+                            </div>
+                        )
+                    }
                     <div ref={messagesEndRef}/>
                 </div>
             </ScrollArea>
