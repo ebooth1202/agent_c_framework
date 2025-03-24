@@ -34,7 +34,9 @@ from agent_c.prompting import CoreInstructionSection, HelpfulInfoStartSection, E
 
 # Ensure all our toolsets get registered
 #from agent_c_tools.tools import *  # noqa
+from agent_c_tools import WorkspaceTools, ThinkTools, LocalStorageWorkspace
 from agent_c_tools.tools.user_bio.prompt import UserBioSection
+
 
 
 # These are only for the CLI app.
@@ -183,7 +185,8 @@ class CLIChat:
             persona_prompt (str): The prompt to initialize the ChatAgent with.
         """
         self.logger.debug("Initializing Chat Agent...")
-        self.tool_chest = ToolChest()
+        tool_classes=[WorkspaceTools, ThinkTools]
+        self.tool_chest = ToolChest(tool_classes=tool_classes)
         tool_opts = {'tool_cache': self.tool_cache, 'session_manager': self.session_manager, 'user_preferences': self.user_prefs,
                      'workspaces': self.workspaces, 'streaming_callback': self.chat_callback}
 
