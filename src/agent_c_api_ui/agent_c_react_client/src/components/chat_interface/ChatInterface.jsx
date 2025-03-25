@@ -12,6 +12,8 @@ import ThoughtDisplay from './ThoughtDisplay';
 import ModelIcon from './ModelIcon';
 import CopyButton from './CopyButton';
 import {API_URL} from "@/config/config";
+import { createClipboardContent } from '@/components/chat_interface/utils/htmlChatFormatter';
+import ExportHTMLButton from './ExportHTMLButton';
 
 /**
  * ChatInterface component provides a complete chat interface with support for
@@ -68,10 +70,22 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
         return '';
     }, []);
 
-    // Helper function to format the entire chat for copying
+    // Use the enhanced formatter function
     const formatChatForCopy = useCallback(() => {
         return messages.map(formatMessageForCopy).join('\n');
     }, [messages, formatMessageForCopy]);
+
+    // Get both text and HTML versions for the entire chat
+    const getChatCopyContent = useCallback(() => {
+        const clipboardContent = createClipboardContent(messages);
+        return clipboardContent.text;
+    }, [messages]);
+
+    // Get HTML version for rich copying
+    const getChatCopyHTML = useCallback(() => {
+        const clipboardContent = createClipboardContent(messages);
+        return clipboardContent.html;
+    }, [messages]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({behavior: "smooth"});
@@ -659,11 +673,20 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
         <Card className="flex flex-col h-full bg-white/50 backdrop-blur-sm border shadow-lg rounded-xl relative z-0">
             <ScrollArea className="flex-1 px-4 py-3 min-h-[400px]">
                 {/* Add copy entire chat button */}
-                <div className="flex justify-end p-2 sticky top-0 z-10 bg-white/80 backdrop-blur-sm">
+                <div className="flex justify-end gap-2 p-2 sticky top-0 z-10 bg-white/80 backdrop-blur-sm">
                     <CopyButton
-                        content={formatChatForCopy}
+                        content={getChatCopyContent}
+                        htmlContent={getChatCopyHTML}
                         tooltipText="Copy entire chat"
                         successText="Chat copied!"
+                        size="sm"
+                        variant="outline"
+                        className="border-gray-300"
+                    />
+                    <ExportHTMLButton
+                        messages={messages}
+                        tooltipText="Export as HTML"
+                        filename={`chat-export-${new Date().toISOString().slice(0, 10)}.html`}
                         size="sm"
                         variant="outline"
                         className="border-gray-300"
