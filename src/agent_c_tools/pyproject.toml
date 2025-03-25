@@ -24,7 +24,7 @@ dependencies = [
     "tavily-python==0.5.0", # web_search-tavily
     "wikipedia==1.4.0",    # web_search-wikipedia
     "lxml_html_clean",
-    "markdown>=3.7"
+    "aiobotocore>=2.21.1"
 ]
 
 requires-python = ">=3.10"
@@ -47,5 +47,8 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://github.com/centricconsulting/agent_c_framework"
+
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
 
 
