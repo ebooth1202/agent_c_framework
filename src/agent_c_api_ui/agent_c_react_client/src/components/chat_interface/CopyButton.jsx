@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
  *
  * @param {Object} props
  * @param {string|Function} props.content - Content to copy or function that returns content
+ * @param {string|Function} [props.htmlContent] - HTML content to copy or function that returns HTML content
  * @param {string} [props.tooltipText="Copy to clipboard"] - Text to show in tooltip
  * @param {string} [props.successText="Copied!"] - Text to show after successful copy
  * @param {string} [props.className=""] - Additional CSS classes
@@ -17,6 +18,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
  */
 const CopyButton = ({
   content,
+  htmlContent,
   tooltipText = "Copy to clipboard",
   successText = "Copied!",
   className = "",
@@ -30,14 +32,39 @@ const CopyButton = ({
     try {
       const textToCopy = typeof content === 'function' ? content() : content;
 
-      await navigator.clipboard.writeText(textToCopy);
+      // If htmlContent is provided, use it for rich copying
+      if (htmlContent) {
+        const htmlToCopy = typeof htmlContent === 'function' ? htmlContent() : htmlContent;
+
+        // Use the Clipboard API with ClipboardItem to handle multiple formats
+        const clipboardItem = new ClipboardItem({
+          'text/plain': new Blob([textToCopy], { type: 'text/plain' }),
+          'text/html': new Blob([htmlToCopy], { type: 'text/html' })
+        });
+
+        await navigator.clipboard.write([clipboardItem]);
+      } else {
+        // Fall back to regular text copying
+        await navigator.clipboard.writeText(textToCopy);
+      }
 
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
     } catch (error) {
       console.error('Failed to copy content:', error);
+
+      // Fallback for browsers that don't support the clipboard API fully
+      if (htmlContent && error.name === 'NotAllowedError') {
+        try {
+          await navigator.clipboard.writeText(textToCopy);
+          setIsCopied(true);
+          setTimeout(() => setIsCopied(false), 2000);
+        } catch (fallbackError) {
+          console.error('Fallback copy failed:', fallbackError);
+        }
+      }
     }
-  }, [content]);
+  }, [content, htmlContent]);
 
   return (
     <TooltipProvider>
