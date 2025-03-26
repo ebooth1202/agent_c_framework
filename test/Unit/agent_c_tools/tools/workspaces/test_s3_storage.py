@@ -145,11 +145,11 @@ class TestS3StorageWorkspace:
             }
         }
         self.mock_client.get_object.side_effect = ClientError(error_response,"read_bytes_internal")
-        with pytest.raises(FileNotFoundError) as exc_info:
+        with pytest.raises(FileNotFoundError):
             await self.workspace.read_bytes_internal("nonexistent.txt")
 
         self.mock_client.get_object.side_effect = Exception("Test error")
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(Exception):
             await self.workspace.read_bytes_internal("file.txt")
 
     @pytest.mark.asyncio
