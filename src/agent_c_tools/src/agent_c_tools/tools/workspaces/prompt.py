@@ -8,20 +8,23 @@ class WorkspaceSection(PromptSection):
 
     def __init__(self, **data: Any):
         TEMPLATE = ("The workspace tools provide you a way to work with files in one or more workspaces.\n"
-                    "The list below contains the workspaces present and available  by name, along with their read/write status, the type of workspace it is and a description of the workspace.\n"
-                    "You this list to help you determine the name of the workspace to use with the workspace toolsets:\n"
-                    "**important** If the user asks about the available workspaces use the info in this list.\n\n"
+                    "Available workspaces are listed below with their name, read/write status, type, and description.\n"
+                    "Always use this list when referencing workspaces in your operations:\n\n"
                     "### Available Workspace List \n"
                     "${workspace_list}\n\n"
-                    "## Important Workspace rules and procedures\n"
-                    "- Workspace paths are relative, do not being with a slash\n"
-                    "- Path names from users should be assumed to exist. Checking wasts time and resources\n"
-                    "- Write operations do a `mkdir -p` to ensure the path exists automatically\n"
-                    "- Favor using apply_unified_diff to apply changes to files\n"
-                    "- The term `scratchpad` is used to refer to a folder `.scratchpad` set aside for your use in a workspace\n"
-                    "  - If the no workspace is specified by the user or your instructions, ask the user for clarification\n"
-                    "  - The user may ask you to use a different folder within the workspace as your scratchpad.  PAY ATTENTION ")
-        super().__init__(template=TEMPLATE, required=True, name="Workspaces", render_section_header=True,  **data)
+                    "## Workspace Operations Guide\n"
+                    "- **Paths**: Always use relative paths without leading slashes\n"
+                    "- **Reading**: Use `read` to get file contents; assume paths exist rather than checking first\n"
+                    "- **Writing**: Use `write` for creating or replacing files; parent directories are created automatically\n"
+                    "- **Updating Files**: Use `update` for targeted modifications:\n"
+                    "  - For multiple replacements: provide `updates` array with `old_string` and `new_string` pairs\n"
+                    "  - For full rewrites: set `rewrite: true` and provide new content in the first update's `new_string`\n"
+                    "- **Navigation**: Use `ls` to list directory contents and `tree` for hierarchical views\n"
+                    "- **File Management**: Use `cp` to copy and `mv` to move files or directories\n"
+                    "- **Scratchpad**: The `.scratch` directory exists for your temporary work\n"
+                    "  - If no workspace is specified, ask the user for clarification\n"
+                    "  - Pay attention if the user requests using a different directory as scratchpad")
+        super().__init__(template=TEMPLATE, required=True, name="Workspaces", render_section_header=True, **data)
 
     @property_bag_item
     async def workspace_list(self):

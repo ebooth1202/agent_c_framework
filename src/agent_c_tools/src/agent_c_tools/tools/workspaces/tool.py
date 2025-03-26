@@ -121,47 +121,6 @@ class WorkspaceTools(Toolset):
         return await workspace.tree(relative_path)
 
     @json_schema(
-        'Update a text file within the workspace with a unified diff. **This is the preferred way to update files**',
-        {
-            'workspace': {
-                'type': 'string',
-                'description': 'The name of the workspace the path resides in..',
-                'required': True
-            },
-            'path': {
-                'type': 'string',
-                'description': 'The path, relative to the workspace root folder, of the file you wish to patch..',
-                'required': True
-            },
-            'diff': {
-                'type': 'string',
-                'description': 'The unified diff to apply to the file.',
-                'required': True
-            }
-        })
-    async def apply_unified_diff(self, **kwargs) -> str:
-        """Apply a unified diff to a file within the workspaces.
-
-        Args:
-            path (str): The relative path to the file within the workspaces.
-            diff (str): The unified diff content to apply.
-
-        Returns:
-            str: JSON string with a success message or an error message.
-        """
-        workspace = self.find_workspace_by_name(kwargs.get('workspace'))
-        if workspace is None:
-            return f'No workspaces found with the name: {workspace}'
-
-        try:
-            file_path: str = kwargs['path']
-            diff_content: str = kwargs['diff']
-            resp = await workspace.apply_unified_diff(file_path, diff_content)
-            return resp
-        except Exception as e:
-            return json.dumps({'error': str(e)})
-
-    @json_schema(
         'Reads the contents of a text file within the workspaces.',
         {
             'workspace': {
@@ -349,6 +308,145 @@ class WorkspaceTools(Toolset):
             return f'No workspace found with the name: {kwargs.get("workspace")}'
 
         return await workspace.mv(src_path, dest_path)
+
+    @json_schema(
+        'Update a text file within the workspace with multiple string replacements or complete rewrite.',
+        {
+            'workspace': {
+                'type': 'string',
+                'description': 'The name of the workspace the file resides in.',
+                'required': True
+            },
+            'file_path': {
+                'type': 'string',
+                'description': 'The path, relative to the workspace root folder, of the file to update.',
+                'required': True
+            },
+            'updates': {
+                'type': 'array',
+                'description': 'Array of update operations to perform.',
+                'items': {
+                    'type': 'object',
+                    'properties': {
+                        'old_string': {
+                            'type': 'string',
+                            'description': 'The exact string to be replaced.'
+                        },
+                        'new_string': {
+                            'type': 'string',
+                            'description': 'The new string that will replace the old string.'
+                        }
+                    },
+                    'required': ['old_string', 'new_string']
+                },
+                'required': True
+            },
+            'rewrite': {
+                'type': 'boolean',
+                'description': 'Whether to completely rewrite the file. If true, the first update is treated as the complete new content.',
+                'required': False
+            }
+        }
+    )
+    async def update(self, **kwargs: Any) -> str:
+        """Asynchronously updates a file with multiple string replacements or a full rewrite.
+
+        Args:
+            workspace (str): The name of the workspace the file resides in.
+            file_path (str): Relative path to the file within the workspace.
+            updates (list): A list of update operations, each containing 'old_string' and 'new_string'.
+            rewrite (bool, optional): If True, performs a full rewrite instead of string replacements.
+
+        Returns:
+            str: JSON string with a success message or an error message.
+        """
+        file_path: str = kwargs['file_path']
+        updates: list = kwargs['updates']
+        rewrite: bool = kwargs.get('rewrite', False)
+
+        if file_path.startswith('/'):
+            error_msg = f'The path {file_path} is absolute. Please provide a relative path.'
+            self.logger.error(error_msg)
+            return json.dumps({'error': error_msg})
+
+        workspace = self.find_workspace_by_name(kwargs.get('workspace'))
+        if workspace is None:
+            return f'No workspace found with the name: {kwargs.get("workspace")}'
+
+        try:
+            if rewrite:
+                if not updates or len(updates) == 0:
+                    return json.dumps({'error': 'No updates provided for rewrite operation'})
+
+                # Use the new_string from the first update as the complete new content
+                new_content = updates[0].get('new_string', '')
+                if not new_content:
+                    return json.dumps({'error': 'No new content provided for rewrite operation'})
+
+                # Write the new content to the file
+                write_response = await workspace.write(file_path, 'write', new_content)
+
+                return write_response
+            else:
+                file_content_response = await workspace.read(file_path)
+
+                # Parse the response to get the actual content
+                try:
+                    file_content_json = json.loads(file_content_response)
+                    if 'error' in file_content_json:
+                        return file_content_response  # Return the error from read operation
+                    file_content = file_content_json.get('content', '')
+                except json.JSONDecodeError:
+                    file_content = file_content_response
+
+                replacement_stats = []
+                updated_content = file_content
+
+                for i, update_op in enumerate(updates):
+                    old_string = update_op.get('old_string')
+                    new_string = update_op.get('new_string')
+
+                    # Validate the update operation
+                    if not old_string or not isinstance(old_string, str):
+                        return json.dumps({'error': f'Invalid old_string in update operation {i}'})
+                    if not isinstance(new_string, str):
+                        return json.dumps({'error': f'Invalid new_string in update operation {i}'})
+
+                    # Check if old_string exists in the current content
+                    if old_string not in updated_content:
+                        replacement_stats.append({
+                            'operation': i,
+                            'status': 'skipped',
+                            'reason': 'Old string not found'
+                        })
+                        continue
+
+                    # Replace the old string with the new string
+                    occurrences = updated_content.count(old_string)
+                    updated_content = updated_content.replace(old_string, new_string)
+
+                    replacement_stats.append({
+                        'operation': i,
+                        'status': 'success',
+                        'replacements': occurrences
+                    })
+
+                # Write the updated content back to the file
+                write_response = await workspace.write(file_path, 'write', updated_content)
+
+                if 'error' in write_response:
+                    return write_response
+
+                return json.dumps({
+                    'success': True,
+                    'message': f'Successfully updated file {file_path}',
+                    'operation': 'update',
+                    'replacement_stats': replacement_stats
+                })
+        except Exception as e:
+            error_msg = f'Error updating file: {str(e)}'
+            self.logger.error(error_msg)
+            return json.dumps({'error': error_msg})
 
 
 Toolset.register(WorkspaceTools)

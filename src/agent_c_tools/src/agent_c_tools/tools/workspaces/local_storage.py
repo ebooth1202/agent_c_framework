@@ -214,58 +214,6 @@ class LocalStorageWorkspace(BaseWorkspace):
             self.logger.exception(f"Failed to write to the file: {file_path}")
             return json.dumps({'error': error_msg})
 
-    async def apply_unified_diff(self, file_path: str, diff_content: str) -> str:
-        """
-        Apply a simple diff to a file in the workspace.
-
-        Args:
-            file_path (str): The path to the file to be modified
-            diff_content (str): The unified diff content to apply
-
-        Returns:
-            str: JSON response with success message or error
-        """
-        # Handle read-only check
-        if self.read_only:
-            return json.dumps({'error': 'This workspace is read-only.'})
-
-        # Validate and normalize path
-        norm_path = self._normalize_input_path(file_path)
-        if not self._is_path_within_workspace(norm_path):
-            error_msg = f'The file {file_path} is not within the workspaces.'
-            self.logger.error(error_msg)
-            return json.dumps({'error': error_msg})
-
-        full_path = self.workspace_root.joinpath(norm_path)
-
-        # Check if file exists
-        if not full_path.is_file():
-            error_msg = f'The file {file_path} does not exist.'
-            self.logger.error(error_msg)
-            return json.dumps({'error': error_msg})
-
-        try:
-            # Read the original file content
-            original_content = self._read_file(full_path)
-
-            # Create a temporary file with the diff content
-            temp_file_path = self._create_temp_diff_file(diff_content)
-
-            try:
-                # Apply the patch and write the result
-                new_content = self._apply_patch(temp_file_path, original_content)
-                self._write_file(full_path, new_content)
-
-                return json.dumps({'message': f'Diff successfully applied to {file_path}.'})
-            finally:
-                # Clean up the temporary file
-                os.unlink(temp_file_path)
-
-        except Exception as e:
-            error_msg = f'An error occurred while applying the diff: {e}'
-            self.logger.exception("Failed to apply diff to the file.")
-            return json.dumps({'error': error_msg})
-
     async def cp(self, src_path: str, dest_path: str) -> str:
         """
         Copy a file or directory from src_path to dest_path within the workspace.
@@ -388,75 +336,6 @@ class LocalStorageWorkspace(BaseWorkspace):
             self.logger.exception("Failed to move.")
             return json.dumps({'error': error_msg})
 
-    def _read_file(self, path: Path) -> str:
-        """Read file content with UTF-8 encoding."""
-        with open(path, 'r', encoding='utf-8') as file:
-            return file.read()
-
-    def _write_file(self, path: Path, content: str) -> None:
-        """Write content to file with UTF-8 encoding."""
-        with open(path, 'w', encoding='utf-8') as file:
-            file.write(content)
 
 
-
-from agent_c_tools.tools.workspaces.local_project import LocalProjectWorkspace
-
-if __name__ == "__main__":
-    import asyncio
-    import sys
-    import os
-
-
-    async def main():
-        # Initialize workspace with the specified desktop path
-        workspace = LocalStorageWorkspace(
-            workspace_path="C:\\Users\\donav\\Desktop",
-            max_size=50000,
-            read_only=False,
-            allow_symlinks=True
-        )
-
-        # Check if the correct number of arguments is provided
-        if len(sys.argv) != 3:
-            print("Usage: python local_storage.py <file_to_patch> <diff_file>")
-            return
-
-        # Get the file to patch and the diff file paths from command line arguments
-        file_to_patch = sys.argv[1]
-        full_diff_path = sys.argv[2]
-
-        # Check if both files exist
-        if not await workspace.path_exists(file_to_patch):
-            print(f"Error: File to patch '{file_to_patch}' does not exist.")
-            return
-
-        # Read the diff content
-        try:
-            with open(full_diff_path, 'r', encoding='utf-8') as f:
-                diff_content = f.read()
-        except Exception as e:
-            print(f"Error reading diff file: {e}")
-            return
-
-        print(f"Applying diff from '{full_diff_path}' to '{file_to_patch}'...")
-
-        # Apply the unified diff
-        result = await workspace.apply_unified_diff(file_to_patch, diff_content)
-        print(result)
-
-        # Display the modified file content if successful
-        if '"error":' not in result:
-            content_result = await workspace.read(file_to_patch)
-            try:
-                import json
-                content = json.loads(content_result).get('contents', '')
-                print("\nModified file content:")
-                print(content)
-            except:
-                print("\nCould not display file content.")
-
-
-    # Run the async main function
-    asyncio.run(main())
-
+from agent_c_tools.tools.workspaces.local_project import LocalProjectWorkspace #noqa
