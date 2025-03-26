@@ -17,6 +17,7 @@ class WorkspaceSection(PromptSection):
                     "- Workspace paths are relative, do not being with a slash\n"
                     "- Path names from users should be assumed to exist. Checking wasts time and resources\n"
                     "- Write operations do a `mkdir -p` to ensure the path exists automatically\n"
+                    "- Favor using apply_unified_diff to apply changes to files\n"
                     "- The term `scratchpad` is used to refer to a folder `.scratchpad` set aside for your use in a workspace\n"
                     "  - If the no workspace is specified by the user or your instructions, ask the user for clarification\n"
                     "  - The user may ask you to use a different folder within the workspace as your scratchpad.  PAY ATTENTION ")
