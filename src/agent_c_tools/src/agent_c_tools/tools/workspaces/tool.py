@@ -310,7 +310,7 @@ class WorkspaceTools(Toolset):
         return await workspace.mv(src_path, dest_path)
 
     @json_schema(
-        'Update a text file within the workspace with multiple string replacements or complete rewrite.',
+        'Update a text file within the workspace with multiple string replacements or complete rewrite. This functions the same as the Anthropic artifacts update tool does ',
         {
             'workspace': {
                 'type': 'string',
@@ -330,11 +330,11 @@ class WorkspaceTools(Toolset):
                     'properties': {
                         'old_string': {
                             'type': 'string',
-                            'description': 'The exact string to be replaced.'
+                            'description': 'The exact string to be replaced. This can be a multiline string.'
                         },
                         'new_string': {
                             'type': 'string',
-                            'description': 'The new string that will replace the old string.'
+                            'description': 'The new string that will replace the old string.  This can be a multiline string.'
                         }
                     },
                     'required': ['old_string', 'new_string']
@@ -395,7 +395,7 @@ class WorkspaceTools(Toolset):
                     file_content_json = json.loads(file_content_response)
                     if 'error' in file_content_json:
                         return file_content_response  # Return the error from read operation
-                    file_content = file_content_json.get('content', '')
+                    file_content = file_content_json.get('contents', '')
                 except json.JSONDecodeError:
                     file_content = file_content_response
 
