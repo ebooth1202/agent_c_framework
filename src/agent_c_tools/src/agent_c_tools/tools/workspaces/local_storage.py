@@ -1,6 +1,7 @@
-import base64
 import os
 import json
+import base64
+import shutil
 import logging
 
 from pathlib import Path
@@ -213,36 +214,128 @@ class LocalStorageWorkspace(BaseWorkspace):
             self.logger.exception(f"Failed to write to the file: {file_path}")
             return json.dumps({'error': error_msg})
 
+    async def cp(self, src_path: str, dest_path: str) -> str:
+        """
+        Copy a file or directory from src_path to dest_path within the workspace.
 
-class LocalProjectWorkspace(LocalStorageWorkspace):
-    """
-    A workspace that automatically determines the project path using a fallback strategy:
-    1. Uses PROJECT_WORKSPACE_PATH environment variable if available
-    2. Uses 'app/workspaces/project' path if it exists
-    3. Defaults to current working directory
+        Args:
+            src_path (str): Source path relative to workspace
+            dest_path (str): Destination path relative to workspace
 
-    The description can be overridden via PROJECT_WORKSPACE_DESCRIPTION environment variable.
-    """
-    def __init__(self, name="project", default_description="A workspace holding the `Agent C` source code in Python."):
-        self.logger = logging.getLogger("agent_c_tools.tools.workspaces.local_project_workspace")
-        self.logger.info("Initializing LocalProjectWorkspace")
-        workspace_path = self._determine_workspace_path()
-        description = os.environ.get("PROJECT_WORKSPACE_DESCRIPTION", default_description)
-        super().__init__(
-            name=name,
-            workspace_path=workspace_path,
-            description=description
-        )
+        Returns:
+            str: JSON response with success message or error
+        """
+        if self.read_only:
+            return json.dumps({'error': 'This workspace is read-only.'})
 
-    def _determine_workspace_path(self) -> str:
-        if "PROJECT_WORKSPACE_PATH" in os.environ:
-            self.logger.info(f"Found PROJECT_WORKSPACE_PATH environment variable: {os.environ['PROJECT_WORKSPACE_PATH']}")
-            return os.environ["PROJECT_WORKSPACE_PATH"]
+        # Normalize and validate paths
+        norm_src = self._normalize_input_path(src_path)
+        norm_dest = self._normalize_input_path(dest_path)
 
-        app_workspace_path = Path("/app/workspaces/project")
-        if app_workspace_path.exists():
-            self.logger.info(f"Found /app/workspaces/project directory: {str(app_workspace_path.absolute())}")
-            return str(app_workspace_path.absolute())
+        if not self._is_path_within_workspace(norm_src):
+            error_msg = f'The source path {src_path} is not within the workspace.'
+            self.logger.error(error_msg)
+            return json.dumps({'error': error_msg})
 
-        self.logger.info(f"Using current working directory as the project workspace: {os.getcwd()}")
-        return os.getcwd()
+        if not self._is_path_within_workspace(norm_dest):
+            error_msg = f'The destination path {dest_path} is not within the workspace.'
+            self.logger.error(error_msg)
+            return json.dumps({'error': error_msg})
+
+        full_src_path = self.workspace_root.joinpath(norm_src)
+        full_dest_path = self.workspace_root.joinpath(norm_dest)
+
+        # Check if source exists
+        if not full_src_path.exists():
+            error_msg = f'The source path {src_path} does not exist.'
+            self.logger.error(error_msg)
+            return json.dumps({'error': error_msg})
+
+        try:
+            # Create parent directories for destination if they don't exist
+            full_dest_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # Perform copy operation based on whether source is file or directory
+            if full_src_path.is_file():
+                import shutil
+                shutil.copy2(full_src_path, full_dest_path)
+                return json.dumps({'message': f'File {src_path} successfully copied to {dest_path}.'})
+            elif full_src_path.is_dir():
+                import shutil
+                # If destination exists and is a directory, copy into it
+                if full_dest_path.exists() and full_dest_path.is_dir():
+                    # Copy content into the existing directory
+                    dest_dir = full_dest_path / full_src_path.name
+                    shutil.copytree(full_src_path, dest_dir)
+                    return json.dumps({'message': f'Directory {src_path} successfully copied to {dest_path}/{full_src_path.name}.'})
+                else:
+                    # Copy to the specified destination
+                    shutil.copytree(full_src_path, full_dest_path)
+                    return json.dumps({'message': f'Directory {src_path} successfully copied to {dest_path}.'})
+            else:
+                error_msg = f'The source path {src_path} is neither a file nor a directory.'
+                self.logger.error(error_msg)
+                return json.dumps({'error': error_msg})
+        except Exception as e:
+            error_msg = f'An error occurred while copying: {e}'
+            self.logger.exception("Failed to copy.")
+            return json.dumps({'error': error_msg})
+
+    async def mv(self, src_path: str, dest_path: str) -> str:
+        """
+        Move a file or directory from src_path to dest_path within the workspace.
+
+        Args:
+            src_path (str): Source path relative to workspace
+            dest_path (str): Destination path relative to workspace
+
+        Returns:
+            str: JSON response with success message or error
+        """
+        if self.read_only:
+            return json.dumps({'error': 'This workspace is read-only.'})
+
+        # Normalize and validate paths
+        norm_src = self._normalize_input_path(src_path)
+        norm_dest = self._normalize_input_path(dest_path)
+
+        if not self._is_path_within_workspace(norm_src):
+            error_msg = f'The source path {src_path} is not within the workspace.'
+            self.logger.error(error_msg)
+            return json.dumps({'error': error_msg})
+
+        if not self._is_path_within_workspace(norm_dest):
+            error_msg = f'The destination path {dest_path} is not within the workspace.'
+            self.logger.error(error_msg)
+            return json.dumps({'error': error_msg})
+
+        full_src_path = self.workspace_root.joinpath(norm_src)
+        full_dest_path = self.workspace_root.joinpath(norm_dest)
+
+        # Check if source exists
+        if not full_src_path.exists():
+            error_msg = f'The source path {src_path} does not exist.'
+            self.logger.error(error_msg)
+            return json.dumps({'error': error_msg})
+
+        try:
+            # Create parent directories for destination if they don't exist
+            full_dest_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # If destination is an existing directory, move into it
+            if full_dest_path.exists() and full_dest_path.is_dir():
+                dest = full_dest_path / full_src_path.name
+                shutil.move(str(full_src_path), str(dest))
+                return json.dumps({'message': f'{src_path} successfully moved to {dest_path}/{full_src_path.name}.'})
+            else:
+                # Move to the specified destination
+                shutil.move(str(full_src_path), str(full_dest_path))
+                return json.dumps({'message': f'{src_path} successfully moved to {dest_path}.'})
+        except Exception as e:
+            error_msg = f'An error occurred while moving: {e}'
+            self.logger.exception("Failed to move.")
+            return json.dumps({'error': error_msg})
+
+
+
+from agent_c_tools.tools.workspaces.local_project import LocalProjectWorkspace #noqa

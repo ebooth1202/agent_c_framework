@@ -1,5 +1,7 @@
 from typing import Optional
-
+from io import StringIO
+from unidiff import PatchSet
+from tempfile import NamedTemporaryFile
 
 class BaseWorkspace:
     """
@@ -144,4 +146,10 @@ class BaseWorkspace:
         Raises:
             NotImplementedError: This method should be implemented by subclasses.
         """
+        raise NotImplementedError
+
+    async def cp(self, src_path: str, dest_path: str) -> str:
+        raise NotImplementedError
+
+    async def mv(self, src_path: str, dest_path: str) -> str:
         raise NotImplementedError
