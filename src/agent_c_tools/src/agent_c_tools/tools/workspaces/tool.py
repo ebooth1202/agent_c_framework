@@ -1,12 +1,13 @@
 import json
 import logging
-
-from typing import Any, List
+import xml.etree.ElementTree as ET
+from typing import Optional, List, Dict, Any, Union
 
 from agent_c.toolsets.tool_set import Toolset
 from agent_c.toolsets.json_schema import json_schema
 from agent_c_tools.tools.workspaces.base import BaseWorkspace
 from agent_c_tools.tools.workspaces.prompt import WorkspaceSection
+from agent_c_tools.tools.workspaces.xml_navigator import XMLNavigator
 
 class WorkspaceTools(Toolset):
     """
@@ -448,5 +449,170 @@ class WorkspaceTools(Toolset):
             self.logger.error(error_msg)
             return json.dumps({'error': error_msg})
 
+
+    # Add to WorkspaceTools class methods
+    @json_schema(
+        'Get structure information about a large XML file without loading the entire file.',
+        {
+            'workspace': {
+                'type': 'string',
+                'description': 'The name of the workspace the file resides in.',
+                'required': True
+            },
+            'file_path': {
+                'type': 'string',
+                'description': 'The path to the XML file, relative to the workspace root folder.',
+                'required': True
+            },
+            'max_depth': {
+                'type': 'integer',
+                'description': 'Maximum depth to traverse in the XML structure.',
+                'required': False
+            },
+            'sample_count': {
+                'type': 'integer',
+                'description': 'Number of sample elements to include at each level.',
+                'required': False
+            }
+        }
+    )
+    async def xml_structure(self, **kwargs: Any) -> str:
+        """Asynchronously retrieves structure information about a large XML file.
+
+        Args:
+            workspace (str): The name of the workspace the file resides in.
+            file_path (str): Relative path to the XML file within the workspace.
+            max_depth (int, optional): Maximum depth to traverse in the XML structure. Defaults to 3.
+            sample_count (int, optional): Number of sample elements to include at each level. Defaults to 5.
+
+        Returns:
+            str: JSON string with structure information or an error message.
+        """
+        file_path: str = kwargs['file_path']
+        max_depth: int = kwargs.get('max_depth', 3)
+        sample_count: int = kwargs.get('sample_count', 5)
+
+        if file_path.startswith('/'):
+            error_msg = f'The path {file_path} is absolute. Please provide a relative path.'
+            self.logger.error(error_msg)
+            return json.dumps({'error': error_msg})
+
+        workspace = self.find_workspace_by_name(kwargs.get('workspace'))
+        if workspace is None:
+            return f'No workspace found with the name: {kwargs.get("workspace")}'
+
+        navigator = XMLNavigator(workspace)
+        return await navigator.get_structure(file_path, max_depth, sample_count)
+
+    @json_schema(
+        'Execute an XPath query on an XML file and return matching elements.',
+        {
+            'workspace': {
+                'type': 'string',
+                'description': 'The name of the workspace the file resides in.',
+                'required': True
+            },
+            'file_path': {
+                'type': 'string',
+                'description': 'The path to the XML file, relative to the workspace root folder.',
+                'required': True
+            },
+            'xpath': {
+                'type': 'string',
+                'description': 'XPath query to execute on the XML file.',
+                'required': True
+            },
+            'limit': {
+                'type': 'integer',
+                'description': 'Maximum number of results to return.',
+                'required': False
+            }
+        }
+    )
+    async def xml_query(self, **kwargs: Any) -> str:
+        """Asynchronously executes an XPath query on an XML file.
+
+        Args:
+            workspace (str): The name of the workspace the file resides in.
+            file_path (str): Relative path to the XML file within the workspace.
+            xpath (str): XPath query to execute on the XML file.
+            limit (int, optional): Maximum number of results to return. Defaults to 10.
+
+        Returns:
+            str: JSON string with query results or an error message.
+        """
+        file_path: str = kwargs['file_path']
+        xpath: str = kwargs['xpath']
+        limit: int = kwargs.get('limit', 10)
+
+        if file_path.startswith('/'):
+            error_msg = f'The path {file_path} is absolute. Please provide a relative path.'
+            self.logger.error(error_msg)
+            return json.dumps({'error': error_msg})
+
+        workspace = self.find_workspace_by_name(kwargs.get('workspace'))
+        if workspace is None:
+            return f'No workspace found with the name: {kwargs.get("workspace")}'
+
+        navigator = XMLNavigator(workspace)
+        return await navigator.xpath_query(file_path, xpath, limit)
+
+    @json_schema(
+        'Extract a subtree from an XML file and optionally save it to a new file.',
+        {
+            'workspace': {
+                'type': 'string',
+                'description': 'The name of the workspace the file resides in.',
+                'required': True
+            },
+            'file_path': {
+                'type': 'string',
+                'description': 'The path to the XML file, relative to the workspace root folder.',
+                'required': True
+            },
+            'xpath': {
+                'type': 'string',
+                'description': 'XPath to the root element of the subtree to extract.',
+                'required': True
+            },
+            'output_path': {
+                'type': 'string',
+                'description': 'Optional path to save the extracted subtree.',
+                'required': False
+            }
+        }
+    )
+    async def xml_extract(self, **kwargs: Any) -> str:
+        """Asynchronously extracts a subtree from an XML file.
+
+        Args:
+            workspace (str): The name of the workspace the file resides in.
+            file_path (str): Relative path to the XML file within the workspace.
+            xpath (str): XPath to the root element of the subtree to extract.
+            output_path (str, optional): Path to save the extracted subtree.
+
+        Returns:
+            str: JSON string with the extracted subtree or a status message.
+        """
+        file_path: str = kwargs['file_path']
+        xpath: str = kwargs['xpath']
+        output_path: Optional[str] = kwargs.get('output_path')
+
+        if file_path.startswith('/'):
+            error_msg = f'The path {file_path} is absolute. Please provide a relative path.'
+            self.logger.error(error_msg)
+            return json.dumps({'error': error_msg})
+
+        if output_path and output_path.startswith('/'):
+            error_msg = f'The output path {output_path} is absolute. Please provide a relative path.'
+            self.logger.error(error_msg)
+            return json.dumps({'error': error_msg})
+
+        workspace = self.find_workspace_by_name(kwargs.get('workspace'))
+        if workspace is None:
+            return f'No workspace found with the name: {kwargs.get("workspace")}'
+
+        navigator = XMLNavigator(workspace)
+        return await navigator.extract_subtree(file_path, xpath, output_path)
 
 Toolset.register(WorkspaceTools)
