@@ -1,8 +1,9 @@
 import json
 from agent_c_api.config.env_config import settings
-import logging
+from agent_c_api.core.util.logging_utils import LoggingManager
 
-logger = logging.getLogger(__name__)
+logging_manager = LoggingManager(__name__)
+logger = logging_manager.get_logger()
 
 MODELS_CONFIG = {}
 
