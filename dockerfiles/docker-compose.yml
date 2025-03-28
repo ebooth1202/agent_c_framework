@@ -13,6 +13,7 @@ services:
       - ${DOWNLOADS_WORKSPACE}:/app/workspaces/downloads  # Mount downloads workspace directory
       - ${DESKTOP_WORKSPACE}:/app/workspaces/desktop  # Mount desktop workspace directory
       - ${PROJECT_WORKSPACE_PATH}:/app/workspaces/project  # Mount point for projects
+      - ${AGENT_C_LOGS_PATH}:/app/logs  # Mount logs directory
     environment:
       - ENVIRONMENT=LOCAL_DEV
       - ENHANCED_DEBUG_INFO=True

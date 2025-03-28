@@ -12,6 +12,7 @@ for %%I in ("%~dp0..") do set "PROJECT_ROOT=%%~fI"
 set AGENT_C_CONFIG_PATH=%USERPROFILE%\.agent_c
 set AGENT_C_IMAGES_PATH=%USERPROFILE%\.agent_c\images
 set AGENT_C_PERSONAS_PATH=%USERPROFILE%\.agent_c\personas
+set AGENT_C_LOGS_PATH=%USERPROFILE%\.agent_c\logs
 
 :: Add mappings for workspace folders (Documents, Desktop, and Downloads)
 set DOCUMENTS_WORKSPACE=%USERPROFILE%\Documents
@@ -20,12 +21,13 @@ set DOWNLOADS_WORKSPACE=%USERPROFILE%\Downloads
 
 :: Set PROJECT_WORKSPACE_PATH to the project root directory
 set PROJECT_WORKSPACE_PATH=%PROJECT_ROOT%
-echo %PROJECT_WORKSPACE_PATH%
 
 :: Create directories if they don't exist
 if not exist "%AGENT_C_CONFIG_PATH%" mkdir "%AGENT_C_CONFIG_PATH%"
 if not exist "%AGENT_C_IMAGES_PATH%" mkdir "%AGENT_C_IMAGES_PATH%"
 if not exist "%AGENT_C_PERSONAS_PATH%" mkdir "%AGENT_C_PERSONAS_PATH%"
+if not exist "%AGENT_C_LOGS_PATH%" mkdir "%AGENT_C_LOGS_PATH%"
+
 
 :: Check if config file exists
 if not exist "%AGENT_C_CONFIG_PATH%\agent_c.config" (
