@@ -449,8 +449,6 @@ class WorkspaceTools(Toolset):
             self.logger.error(error_msg)
             return json.dumps({'error': error_msg})
 
-
-    # Add to WorkspaceTools class methods
     @json_schema(
         'Get structure information about a large XML file without loading the entire file.',
         {
@@ -614,5 +612,141 @@ class WorkspaceTools(Toolset):
 
         navigator = XMLNavigator(workspace)
         return await navigator.extract_subtree(file_path, xpath, output_path)
+
+    @json_schema(
+        'Find customizations in a Dynamics customizations.xml file.',
+        {
+            'workspace': {
+                'type': 'string',
+                'description': 'The name of the workspace the file resides in.',
+                'required': True
+            },
+            'file_path': {
+                'type': 'string',
+                'description': 'The path to the customizations.xml file, relative to the workspace root folder.',
+                'required': True
+            }
+        }
+    )
+    async def dynamics_find_customizations(self, **kwargs: Any) -> str:
+        """Asynchronously finds customizations in a Dynamics customizations.xml file.
+
+        Args:
+            workspace (str): The name of the workspace the file resides in.
+            file_path (str): Relative path to the customizations.xml file within the workspace.
+
+        Returns:
+            str: JSON string with customization details or an error message.
+        """
+        file_path: str = kwargs['file_path']
+
+        if file_path.startswith('/'):
+            error_msg = f'The path {file_path} is absolute. Please provide a relative path.'
+            self.logger.error(error_msg)
+            return json.dumps({'error': error_msg})
+
+        workspace = self.find_workspace_by_name(kwargs.get('workspace'))
+        if workspace is None:
+            return f'No workspace found with the name: {kwargs.get("workspace")}'
+
+        navigator = XMLNavigator(workspace)
+        return await navigator.find_customizations(file_path)
+
+    @json_schema(
+        'Extract a specific section from a Dynamics customizations.xml file for detailed analysis.',
+        {
+            'workspace': {
+                'type': 'string',
+                'description': 'The name of the workspace the file resides in.',
+                'required': True
+            },
+            'file_path': {
+                'type': 'string',
+                'description': 'The path to the customizations.xml file, relative to the workspace root folder.',
+                'required': True
+            },
+            'section_type': {
+                'type': 'string',
+                'description': 'Type of section to extract (Entity, Form, Ribbon, SiteMap, SavedQuery, Workflow).',
+                'required': True
+            },
+            'entity_name': {
+                'type': 'string',
+                'description': 'Optional entity name to filter by.',
+                'required': False
+            },
+            'output_path': {
+                'type': 'string',
+                'description': 'Optional path to save the extracted section.',
+                'required': False
+            },
+            'metadata_only': {
+                'type': 'boolean',
+                'description': 'Return only metadata about the sections found, not their content.',
+                'required': False
+            },
+            'limit': {
+                'type': 'integer',
+                'description': 'Maximum number of sections to return.',
+                'required': False
+            },
+            'attributes_to_include': {
+                'type': 'array',
+                'description': 'List of specific attributes to include in metadata.',
+                'items': {
+                    'type': 'string'
+                },
+                'required': False
+            },
+            'format': {
+                'type': 'string',
+                'description': 'Output format (yaml, json, or xml).',
+                'required': False
+            }
+        }
+    )
+    async def dynamics_extract_section(self, **kwargs: Any) -> str:
+        """Asynchronously extracts a specific section from a Dynamics customizations.xml file.
+
+        Args:
+            workspace (str): The name of the workspace the file resides in.
+            file_path (str): Relative path to the customizations.xml file within the workspace.
+            section_type (str): Type of section to extract (Entity, Form, Ribbon, SiteMap, SavedQuery, Workflow).
+            entity_name (str, optional): Optional entity name to filter by.
+            output_path (str, optional): Optional path to save the extracted section.
+            metadata_only (bool, optional): Return only metadata about the sections found, not their content. Defaults to False.
+            limit (int, optional): Maximum number of sections to return. Defaults to 10.
+            attributes_to_include (list, optional): List of specific attributes to include in metadata.
+            format (str, optional): Output format (yaml, json, or xml). Defaults to yaml.
+
+        Returns:
+            str: JSON string with the extracted section, metadata, or a status message.
+        """
+        file_path: str = kwargs['file_path']
+        section_type: str = kwargs['section_type']
+        entity_name: Optional[str] = kwargs.get('entity_name')
+        output_path: Optional[str] = kwargs.get('output_path')
+        metadata_only: bool = kwargs.get('metadata_only', False)
+        limit: int = kwargs.get('limit', 10)
+        attributes_to_include: Optional[List[str]] = kwargs.get('attributes_to_include')
+        format: str = kwargs.get('format', 'yaml')  # Default to YAML
+
+        if file_path.startswith('/'):
+            error_msg = f'The path {file_path} is absolute. Please provide a relative path.'
+            self.logger.error(error_msg)
+            return json.dumps({'error': error_msg})
+
+        if output_path and output_path.startswith('/'):
+            error_msg = f'The output path {output_path} is absolute. Please provide a relative path.'
+            self.logger.error(error_msg)
+            return json.dumps({'error': error_msg})
+
+        workspace = self.find_workspace_by_name(kwargs.get('workspace'))
+        if workspace is None:
+            return f'No workspace found with the name: {kwargs.get("workspace")}'
+
+        navigator = XMLNavigator(workspace)
+        return await navigator.extract_section(file_path, section_type, entity_name, output_path,
+                                               metadata_only, limit, attributes_to_include, format)
 
 Toolset.register(WorkspaceTools)
