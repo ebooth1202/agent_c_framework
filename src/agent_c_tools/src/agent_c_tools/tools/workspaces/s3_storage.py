@@ -41,12 +41,14 @@ class S3StorageWorkspace(BaseWorkspace):
         aws_access_key_id = os.getenv('AWS_ACCESS_KEY_ID')
 
         if not aws_access_key_id or not aws_secret_access_key or not aws_region_name:
-            raise ValueError("AWS credentials not found")
+            error_msg = "AWS credentials not found"
+            logging.error(error_msg)
+            raise ValueError(error_msg)
 
         aws_session_token = os.getenv('AWS_SESSION_TOKEN')
 
         self.session.set_credentials(
-            secret_key=aws_secret_access_key, 
+            secret_key=aws_secret_access_key,
             access_key=aws_access_key_id,
             token=aws_session_token if aws_session_token else None)
 
@@ -122,15 +124,14 @@ class S3StorageWorkspace(BaseWorkspace):
             except ClientError as client_error:
                 logging.error(client_error)
                 if client_error.response['Error']['Code'] == 'NoSuchKey':
-                    raise FileNotFoundError(f"File not found: {file_path}") from client_error
+                    error_msg = f"File not found: {file_path}"
+                    raise FileNotFoundError(error_msg) from client_error
                 else:
                     raise client_error
-            #except client.exceptions.NoSuchKey as exc:
-            #    raise FileNotFoundError(f"File not found: {file_path}") from exc
             except Exception as e:
-                logging.error(e)
-                raise ClientError(f"Error reading file {file_path}: {str(e)}",
-                                  "read_bytes_internal") from e
+                error_msg = f"Error reading file {file_path}: {str(e)}","read_bytes_internal"
+                logging.error(error_msg)
+                raise ClientError(error_msg) from e
 
     async def read_bytes_base64(self, file_path: str) -> str:
         """

@@ -1,9 +1,12 @@
 """ Integration tests for S3Workspace. """
 
+import logging
+import os
 import uuid
 import pytest
-import aiobotocore
+import pytest_asyncio
 from aiobotocore.session import get_session
+from botocore.exceptions import ClientError
 from agent_c_tools.tools.workspaces.s3_storage import S3StorageWorkspace
 
 
@@ -11,11 +14,10 @@ from agent_c_tools.tools.workspaces.s3_storage import S3StorageWorkspace
 class TestS3WorkspaceIntegration:
     """
     Integration tests for S3Workspace.
-    
+
     IMPORTANT: These tests require:
     1. Valid AWS credentials configured
-    2. A test S3 bucket that the user has write access to
-    3. Pytest and pytest-asyncio installed
+    2. Credentials have ability to create S3 bucket and can write objects to it
     """
 
     @pytest.fixture(scope="class")
@@ -46,6 +48,57 @@ class TestS3WorkspaceIntegration:
         )
 
         return workspace
+
+    @pytest_asyncio.fixture(scope="class", autouse=True)
+    async def setup_testing(self, bucket_name):
+        """
+        Setup the testing environment.
+        """
+
+        region_name = os.getenv('AWS_REGION_NAME')
+        access_key_id = os.getenv('AWS_ACCESS_KEY_ID')
+        secret_access_key = os.getenv('AWS_SECRET_ACCESS_KEY')
+        session_token = os.getenv('AWS_SESSION_TOKEN')
+
+        session = get_session()
+        async with session.create_client('s3', region_name=region_name,
+                                         aws_access_key_id=access_key_id,
+                                         aws_secret_access_key=secret_access_key,
+                                         aws_session_token=session_token) as client:
+            try:
+                await client.head_bucket(Bucket=bucket_name)
+                logging.info("bucket already exists")
+            except ClientError as ce:
+                if ce.response['Error']['Code'] == '404':
+                    try:
+                        await client.create_bucket(Bucket=bucket_name,
+                                                   ACL='private',
+                                                   CreateBucketConfiguration={
+                                                       'LocationConstraint': region_name
+                                                   })
+                        logging.info("bucket created")
+                    except Exception as e:
+                        logging.error(e)
+                        raise e
+
+    @pytest_asyncio.fixture(scope="class", autouse=True)
+    async def cleanup_workspace(self, bucket_name):
+        """
+        Fixture to clean up all test files after tests complete
+
+        Runs automatically due to autouse=True
+        Cleans up all files under the test prefix
+        """
+        # Yield control to tests
+        yield
+
+        # Cleanup after all tests in the class complete
+        try:
+            await self.integration_test_cleanup(bucket_name)
+
+        except Exception as e:
+            # Log or print cleanup errors without failing the test suite
+            print(f"Error during cleanup: {e}")
 
     @pytest.mark.asyncio
     async def test_write_and_read_text(self, workspace):
@@ -157,34 +210,40 @@ class TestS3WorkspaceIntegration:
             prefix=workspace.prefix,
             read_only=True
         )
-        
+
         with pytest.raises(ValueError, match="Cannot write to read-only workspace"):
             await ro_workspace.write("test.txt", "write", "Test content")
 
+    @pytest.mark.asyncio
+    async def integration_test_cleanup(self, bucket_name):
+        """
+        Method for cleaning up S3 bucket after integration tests.
+        """
 
-# Optional: Cleanup fixture to delete test files and bucket
-@pytest.fixture(scope="session")
-async def cleanup_s3_resources(bucket_name, prefix):
-    """
-    Optional cleanup of S3 resources after tests.
-    Note: This is a simple implementation and might need to be expanded 
-    based on your specific requirements.
-    """
-    yield  # Run tests first
+        # Proceed with deletion if context is valid
+        session = get_session()
+        async with session.create_client('s3', region_name=os.getenv('AWS_REGION_NAME'),
+                                         aws_access_key_id=os.getenv(
+                                             'AWS_ACCESS_KEY_ID'),
+                                         aws_secret_access_key=os.getenv(
+                                             'AWS_SECRET_ACCESS_KEY'),
+                                         aws_session_token=os.getenv('AWS_SESSION_TOKEN')) as client:
+            try:
+                # List all objects in the bucket
+                paginator = client.get_paginator('list_objects_v2')
+                async for page in paginator.paginate(Bucket=bucket_name):
+                    if 'Contents' in page:
+                        delete_requests = [{'Key': obj['Key']}
+                                           for obj in page['Contents']]
 
-    # Perform cleanup after all tests in the class have run
-    session = self.workspace.session
-    async with session.create_client('s3') as client:
-        # List and delete all objects with the prefix
-        paginator = client.get_paginator('list_objects_v2')
-        async for page in paginator.paginate(Bucket=bucket_name, Prefix=prefix):
-            if 'Contents' in page:
-                objects = [{'Key': obj['Key']} for obj in page['Contents']]
-                await client.delete_objects(
-                    Bucket=bucket_name,
-                    Delete={'Objects': objects}
-                )
-
-        # Optional: Delete the bucket if you created a unique one
-        # Uncomment if you want to delete the entire bucket
-        # await client.delete_bucket(Bucket=bucket_name)
+                        # Delete objects in batches
+                        await client.delete_objects(
+                            Bucket=bucket_name,
+                            Delete={'Objects': delete_requests}
+                        )
+                await client.delete_bucket(Bucket=bucket_name)
+            except ClientError as client_error:
+                logging.error("Error during cleanup: %s", client_error)
+            except Exception as e:
+                logging.error(e)
+                raise e
