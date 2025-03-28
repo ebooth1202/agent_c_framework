@@ -60,4 +60,4 @@ def run():
     """Entrypoint for the API"""
     logger.info(f"Starting API server on {settings.HOST}:{settings.PORT}")
     uvicorn.run("agent_c_api.main:app", host=settings.HOST, port=settings.PORT,
-                reload=settings.RELOAD, log_level=LoggingManager.LOG_LEVEL.lower())
+                reload=settings.RELOAD, log_level=LoggingManager.LOG_LEVEL.lower() if hasattr(LoggingManager, 'LOG_LEVEL') else "info")

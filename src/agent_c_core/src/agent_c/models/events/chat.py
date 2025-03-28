@@ -14,7 +14,6 @@ class InteractionEvent(SessionEvent):
     started: bool = Field(..., description="If False, the interaction has been completed. And the UI should allow input from the use")
     id: str = Field(..., description="The ID of the interaction")
 
-
 class CompletionEvent(SessionEvent):
     """
     Sent to notify the UI that the completion call

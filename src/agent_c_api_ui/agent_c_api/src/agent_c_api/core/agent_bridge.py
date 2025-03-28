@@ -547,7 +547,7 @@ class AgentBridge:
 
     async def _handle_tool_select_delta(self, event):
         """Handle tool selection events from the agent"""
-        self.logger.debug(f"tool SELECT delta event. {event.model_dump()}")
+        # self.logger.debug(f"tool SELECT delta event. {event.model_dump()}")
         payload = json.dumps({
             "type": "tool_select_delta",
             "data": self.convert_to_string(event.tool_calls) if hasattr(event, 'tool_calls') else 'No data',
@@ -557,7 +557,7 @@ class AgentBridge:
 
     async def _handle_tool_call_delta(self, event):
         """Handle tool selection events from the agent"""
-        self.logger.debug(f"tool CALL delta event. {event.model_dump()}")
+        # self.logger.debug(f"tool CALL delta event. {event.model_dump()}")
         payload = json.dumps({
             "type": "tool_call_delta",
             "data": self.convert_to_string(event.content) if hasattr(event, 'content') else 'No data',
