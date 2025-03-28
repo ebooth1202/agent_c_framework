@@ -53,6 +53,7 @@ jobs:
           echo "Installing dependencies for unit tests"
           python -m pip install --upgrade pip  
           pip install -r dockerfiles/base/python/requirements.txt
+          pip install src/agent_c_tools
       
       - name: Run unit tests
         run: |
