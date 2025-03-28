@@ -52,7 +52,7 @@ jobs:
         run: |
           echo "Installing dependencies for unit tests"
           python -m pip install --upgrade pip  
-          pip install -r requirements.txt
+          pip install -r /dockerfiles/base/python/requirements.txt
       
       - name: Run unit tests
         run: |
