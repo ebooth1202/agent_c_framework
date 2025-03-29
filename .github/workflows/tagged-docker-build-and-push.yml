@@ -38,10 +38,10 @@ jobs:
           # Only push when not a PR
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
-            ghcr.io/${{ github.repository_owner }}/agent_c_api_dev:latest
-            ghcr.io/${{ github.repository_owner }}/agent_c_api_dev:build-${{ github.run_number }}
-            ghcr.io/${{ github.repository_owner }}/agent_c_api_dev:${{ env.SHORT_SHA }}
-            ghcr.io/${{ github.repository_owner }}/agent_c_api_dev:${{ env.DATE }}
+            ghcr.io/${{ github.repository_owner | lower }}/agent_c_api_dev:latest
+            ghcr.io/${{ github.repository_owner | lower }}/agent_c_api_dev:build-${{ github.run_number }}
+            ghcr.io/${{ github.repository_owner | lower }}/agent_c_api_dev:${{ env.SHORT_SHA }}
+            ghcr.io/${{ github.repository_owner | lower }}/agent_c_api_dev:${{ env.DATE }}
 
       - name: Build and push Framework image
         uses: docker/build-push-action@v4
@@ -51,10 +51,10 @@ jobs:
           # Only push when not a PR
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
-            ghcr.io/${{ github.repository_owner }}/agent_c_framework_dev:latest
-            ghcr.io/${{ github.repository_owner }}/agent_c_framework_dev:build-${{ github.run_number }}
-            ghcr.io/${{ github.repository_owner }}/agent_c_framework_dev:${{ env.SHORT_SHA }}
-            ghcr.io/${{ github.repository_owner }}/agent_c_framework_dev:${{ env.DATE }}
+            ghcr.io/${{ github.repository_owner | lower }}/agent_c_framework_dev:latest
+            ghcr.io/${{ github.repository_owner | lower }}/agent_c_framework_dev:build-${{ github.run_number }}
+            ghcr.io/${{ github.repository_owner | lower }}/agent_c_framework_dev:${{ env.SHORT_SHA }}
+            ghcr.io/${{ github.repository_owner | lower }}/agent_c_framework_dev:${{ env.DATE }}
 
       - name: Build and push Frontend image
         uses: docker/build-push-action@v4
@@ -64,7 +64,7 @@ jobs:
           # Only push when not a PR
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
-            ghcr.io/${{ github.repository_owner }}/agent_c_frontend_dev:latest
-            ghcr.io/${{ github.repository_owner }}/agent_c_frontend_dev:build-${{ github.run_number }}
-            ghcr.io/${{ github.repository_owner }}/agent_c_frontend_dev:${{ env.SHORT_SHA }}
-            ghcr.io/${{ github.repository_owner }}/agent_c_frontend_dev:${{ env.DATE }}
+            ghcr.io/${{ github.repository_owner | lower }}/agent_c_frontend_dev:latest
+            ghcr.io/${{ github.repository_owner | lower }}/agent_c_frontend_dev:build-${{ github.run_number }}
+            ghcr.io/${{ github.repository_owner | lower }}/agent_c_frontend_dev:${{ env.SHORT_SHA }}
+            ghcr.io/${{ github.repository_owner | lower }}/agent_c_frontend_dev:${{ env.DATE }}
