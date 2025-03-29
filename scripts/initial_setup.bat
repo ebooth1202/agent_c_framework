@@ -31,7 +31,8 @@ if errorlevel 1 (
 
 :: Upgrade pip to latest version
 echo Upgrading Pip to the latest version.
-pip install --upgrade pip tomli
+python -m pip install --upgrade pip
+pip install tomli
 
 :: Install the requirements
 echo Installing dependencies.
