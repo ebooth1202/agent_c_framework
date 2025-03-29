@@ -70,16 +70,16 @@ jobs:
           # Push on PR close, push to main, or manual dispatch
           push: ${{ github.event_name == 'pull_request_target' || github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
           tags: |
-            ghcr.io/${{ github.repository_owner | lower }}/agent_c_python_base:latest
-            ghcr.io/${{ github.repository_owner | lower }}/agent_c_python_base:build-${{ github.run_number }}
-            ghcr.io/${{ github.repository_owner | lower }}/agent_c_python_base:${{ env.SHORT_SHA }}
-            ghcr.io/${{ github.repository_owner | lower }}/agent_c_python_base:${{ env.DATE }}
+            ghcr.io/${ { toLower(github.repository_owner) }}/agent_c_python_base:latest
+            ghcr.io/${ { toLower(github.repository_owner) }}/agent_c_python_base:build-${{ github.run_number }}
+            ghcr.io/${ { toLower(github.repository_owner) }}/agent_c_python_base:${{ env.SHORT_SHA }}
+            ghcr.io/${ { toLower(github.repository_owner) }}/agent_c_python_base:${{ env.DATE }}
 
       - name: Verify base image push
         if: (needs.check-changes.outputs.base_changed == 'true') && (github.event_name == 'pull_request_target' || github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         run: |
           echo "Verifying base image was published"
-          docker pull ghcr.io/${{ github.repository_owner | lower }}/agent_c_python_base:${{ env.SHORT_SHA }} || echo "Failed to pull image - may not be available immediately"
+          docker pull ghcr.io/${ { toLower(github.repository_owner) }}/agent_c_python_base:${{ env.SHORT_SHA }} || echo "Failed to pull image - may not be available immediately"
 
       - name: Build and push API image
         uses: docker/build-push-action@v4
@@ -89,10 +89,10 @@ jobs:
           # Push on PR close, push to main, or manual dispatch
           push: ${{ github.event_name == 'pull_request_target' || github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
           tags: |
-            ghcr.io/${{ github.repository_owner | lower }}/agent_c_api_dev:latest
-            ghcr.io/${{ github.repository_owner | lower }}/agent_c_api_dev:build-${{ github.run_number }}
-            ghcr.io/${{ github.repository_owner | lower }}/agent_c_api_dev:${{ env.SHORT_SHA }}
-            ghcr.io/${{ github.repository_owner | lower }}/agent_c_api_dev:${{ env.DATE }}
+            ghcr.io/${ { toLower(github.repository_owner) }}/agent_c_api_dev:latest
+            ghcr.io/${ { toLower(github.repository_owner) }}/agent_c_api_dev:build-${{ github.run_number }}
+            ghcr.io/${ { toLower(github.repository_owner) }}/agent_c_api_dev:${{ env.SHORT_SHA }}
+            ghcr.io/${ { toLower(github.repository_owner) }}/agent_c_api_dev:${{ env.DATE }}
 
       - name: Build and push Frontend image
         uses: docker/build-push-action@v4
@@ -102,7 +102,7 @@ jobs:
           # Push on PR close, push to main, or manual dispatch
           push: ${{ github.event_name == 'pull_request_target' || github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
           tags: |
-            ghcr.io/${{ github.repository_owner | lower }}/agent_c_frontend_dev:latest
-            ghcr.io/${{ github.repository_owner | lower }}/agent_c_frontend_dev:build-${{ github.run_number }}
-            ghcr.io/${{ github.repository_owner | lower }}/agent_c_frontend_dev:${{ env.SHORT_SHA }}
-            ghcr.io/${{ github.repository_owner | lower }}/agent_c_frontend_dev:${{ env.DATE }}
+            ghcr.io/${ { toLower(github.repository_owner) }}/agent_c_frontend_dev:latest
+            ghcr.io/${ { toLower(github.repository_owner) }}/agent_c_frontend_dev:build-${{ github.run_number }}
+            ghcr.io/${ { toLower(github.repository_owner) }}/agent_c_frontend_dev:${{ env.SHORT_SHA }}
+            ghcr.io/${ { toLower(github.repository_owner) }}/agent_c_frontend_dev:${{ env.DATE }}
