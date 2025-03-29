@@ -27,9 +27,6 @@ class ChatSessionManager:
     def active_memory(self):
         return self.chat_session.active_memory
 
-    async def add_message(self, msg: MemoryMessage):
-        return await self.chat_session.add_message(msg)
-
     async def delete_session(self, session_id: str = None) -> None:
         """
         Deletes a chat session.

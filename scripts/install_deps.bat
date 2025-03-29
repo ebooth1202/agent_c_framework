@@ -4,6 +4,13 @@ SETLOCAL
 :: Store the starting directory
 pushd %CD%
 
+::install package dependencies
+pip install pytest
+pip install pytest-asyncio
+pip install pytest-cov
+pip install pytest-mock
+pip install markdown
+
 :: Install the requirements
 echo Installing dependencies.
 cd src

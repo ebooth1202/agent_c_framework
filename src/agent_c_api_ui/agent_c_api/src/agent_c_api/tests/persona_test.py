@@ -37,7 +37,7 @@ class TestCustomPersonaPersistence(unittest.TestCase):
             backend="openai",
             model_name="gpt-4o",
             persona_name="default",
-            custom_persona_text=self.custom_prompt
+            custom_prompt=self.custom_prompt
         )
 
         # Mock private methods correctly - using the name-mangled version
@@ -46,13 +46,13 @@ class TestCustomPersonaPersistence(unittest.TestCase):
                               new_callable=AsyncMock) as mock_init_tools:
                 with patch.object(AgentBridge, '_ReactJSAgent__init_agent', new_callable=AsyncMock) as mock_init_agent:
                     # Check initial state
-                    self.assertEqual(agent.custom_persona_text, self.custom_prompt)
+                    self.assertEqual(agent.custom_prompt, self.custom_prompt)
 
                     # Run initialization with mocked dependencies
                     self.loop.run_until_complete(agent.initialize())
 
                     # Verify custom prompt still exists after initialization
-                    self.assertEqual(agent.custom_persona_text, self.custom_prompt)
+                    self.assertEqual(agent.custom_prompt, self.custom_prompt)
 
                     # Verify our mocks were called
                     mock_init_session.assert_called_once()
@@ -63,12 +63,12 @@ class TestCustomPersonaPersistence(unittest.TestCase):
     def test_custom_prompt_persists_during_model_change(self, mock_openai):
         """Test that custom prompt persists when changing models."""
 
-        # Create a simpler test that directly tests AgentManager's handling of custom_persona_text
+        # Create a simpler test that directly tests AgentManager's handling of custom_prompt
 
         # Create a more complete mock ReactJSAgent that includes required methods
         class MockReactJSAgent:
             def __init__(self, **kwargs):
-                self.custom_persona_text = kwargs.get('custom_persona_text')
+                self.custom_prompt = kwargs.get('custom_prompt')
                 self.session_manager = None
                 self.model_name = kwargs.get('model_name')
                 self.persona_name = kwargs.get('persona_name', 'default')
@@ -93,7 +93,7 @@ class TestCustomPersonaPersistence(unittest.TestCase):
                     'initialized_tools': [],
                     'agent_name': 'MockAgent',
                     'session_id': self.session_id,
-                    'custom_prompt': self.custom_persona_text,
+                    'custom_prompt': self.custom_prompt,
                     'output_format': 'raw',
                     'created_time': self._current_timestamp(),
                     'temperature': None,
@@ -114,7 +114,7 @@ class TestCustomPersonaPersistence(unittest.TestCase):
                     llm_model="gpt-4o",
                     backend="openai",
                     persona_name="default",
-                    custom_persona_text=self.custom_prompt
+                    custom_prompt=self.custom_prompt
                 )
             )
 
@@ -122,9 +122,9 @@ class TestCustomPersonaPersistence(unittest.TestCase):
             session_data = self.agent_manager.get_session_data(session_id)
             self.assertIsNotNone(session_data)
             agent = session_data["agent"]
-            self.assertEqual(agent.custom_persona_text, self.custom_prompt)
+            self.assertEqual(agent.custom_prompt, self.custom_prompt)
 
-            # Change model - without specifying custom_persona_text again
+            # Change model - without specifying custom_prompt again
             new_session_id = self.loop.run_until_complete(
                 self.agent_manager.create_session(
                     llm_model="gpt-3.5-turbo",
@@ -140,7 +140,7 @@ class TestCustomPersonaPersistence(unittest.TestCase):
             new_agent = new_session_data["agent"]
 
             # This is the key assertion - verify the custom prompt was maintained
-            self.assertEqual(new_agent.custom_persona_text, self.custom_prompt)
+            self.assertEqual(new_agent.custom_prompt, self.custom_prompt)
 
     @patch('agent_c.agents.gpt.AsyncOpenAI')
     def test_real_agent_persists_custom_prompt_during_model_change(self, mock_openai):
@@ -169,7 +169,7 @@ class TestCustomPersonaPersistence(unittest.TestCase):
                             llm_model="gpt-4o",
                             backend="openai",
                             persona_name="default",
-                            custom_persona_text=self.custom_prompt
+                            custom_prompt=self.custom_prompt
                         )
                     )
 
@@ -177,9 +177,9 @@ class TestCustomPersonaPersistence(unittest.TestCase):
                     session_data = self.agent_manager.get_session_data(session_id)
                     self.assertIsNotNone(session_data)
                     agent = session_data["agent"]
-                    self.assertEqual(agent.custom_persona_text, self.custom_prompt)
+                    self.assertEqual(agent.custom_prompt, self.custom_prompt)
 
-                    # Change model - without specifying custom_persona_text again
+                    # Change model - without specifying custom_prompt again
                     new_session_id = self.loop.run_until_complete(
                         self.agent_manager.create_session(
                             llm_model="gpt-3.5-turbo",
@@ -195,7 +195,7 @@ class TestCustomPersonaPersistence(unittest.TestCase):
                     new_agent = new_session_data["agent"]
 
                     # This checks that the real ReactJSAgent properly maintains the prompt
-                    self.assertEqual(new_agent.custom_persona_text, self.custom_prompt)
+                    self.assertEqual(new_agent.custom_prompt, self.custom_prompt)
 
 
 if __name__ == "__main__":

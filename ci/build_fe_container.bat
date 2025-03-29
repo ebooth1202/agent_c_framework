@@ -1,0 +1,1 @@
+docker build -t ghcr.io/centricconsulting/agent_c_frontend_dev:latest -f dockerfiles\frontend.Dockerfile .

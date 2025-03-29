@@ -1,7 +1,9 @@
+import fnmatch
 import os
 import re
 from typing import List
 
+DEFAULT_TREE_IGNORE_PATTERNS = [".git", "__pycache__", "*.pyc", "node_modules", ".venv"]
 
 def to_snake_case(s: str) -> str:
     """
@@ -22,30 +24,37 @@ def to_snake_case(s: str) -> str:
     return ''.join(['_' + i.lower() if i.isupper() else i for i in s]).lstrip('_')
 
 
-def generate_path_tree(start_path: str, prefix: str = "") -> List[str]:
+def generate_path_tree(start_path: str, prefix: str = "", ignore_patterns: List[str] = None) -> List[str]:
     """
     Generates a directory structure tree as a list of formatted lines indicating structure.
 
     Args:
         start_path (str): The root directory to start generating the tree from.
         prefix (str, optional): String prefix used to maintain visual alignment during recursion. Defaults to "".
+        ignore_patterns (List[str], optional): List of patterns to ignore. Can include glob patterns like ".git" or "*.pyc". Defaults to None.
 
     Returns:
         List[str]: A list of strings representing the recursive directory structure.
     """
+    if ignore_patterns is None:
+        ignore_patterns = DEFAULT_TREE_IGNORE_PATTERNS
+
     tree_structure: List[str] = []
     contents: List[str] = os.listdir(start_path)  # Get directory contents
     contents.sort()  # Sort for consistency
 
-    for index, name in enumerate(contents):
+    # Filter out ignored patterns
+    filtered_contents = [name for name in contents if not any(fnmatch.fnmatch(name, pattern) for pattern in ignore_patterns)]
+
+    for index, name in enumerate(filtered_contents):
         path: str = os.path.join(start_path, name)
-        connector: str = "├── " if index < len(contents) - 1 else "└── "  # Connector icon for tree-like structure
+        connector: str = "├── " if index < len(filtered_contents) - 1 else "└── "  # Connector icon for tree-like structure
 
         tree_structure.append(f"{prefix}{connector}{name}")  # Add current file/folder to the structure
 
         if os.path.isdir(path):
             # If it's a directory, recursively generate sub-path(s)
-            extension = "│   " if index < len(contents) - 1 else "    "  # Extend prefix for consistent formatting
-            tree_structure.extend(generate_path_tree(path, prefix + extension))
+            extension = "│   " if index < len(filtered_contents) - 1 else "    "  # Extend prefix for consistent formatting
+            tree_structure.extend(generate_path_tree(path, prefix + extension, ignore_patterns))
 
     return tree_structure

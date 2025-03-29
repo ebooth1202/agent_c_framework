@@ -1,0 +1,24 @@
+{
+     "local_workspaces": [
+        {
+            "name": "Documents",
+            "workspace_path": "/app/workspaces/documents",
+            "description": "A workspace mapped to the `My Documents` folder of the user."
+        },
+       {
+            "name": "Downloads",
+            "workspace_path": "/app/workspaces/downloads",
+            "description": "A workspace mapped to the `My Downloads` folder of the user."
+        },
+       {
+            "name": "Desktop",
+            "workspace_path": "/app/workspaces/desktop",
+            "description": "A workspace mapped to the User's desktop. folder"
+        },
+       {
+            "name": "Local Personas",
+            "workspace_path": "/app/personas/local",
+            "description": "A workspace mapped to the User's personal persona folder.  Save new personas here."
+        }
+    ]
+}

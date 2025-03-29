@@ -4,13 +4,18 @@ import os
 
 import threading
 import traceback
-from typing import Union, List, Dict, Any, AsyncGenerator
+from typing import Union, List, Dict, Any, AsyncGenerator, Optional
 from datetime import datetime, timezone
 
-from agent_c import DynamicPersonaSection
+from agent_c.models.input.image_input import ImageInput
+from agent_c.models.input.audio_input import AudioInput
+from agent_c.models.input.file_input import FileInput
+from agent_c.prompting.basic_sections.persona import DynamicPersonaSection
 from agent_c.agents import GPTChatAgent
 from agent_c.agents.claude import ClaudeChatAgent
 from agent_c.models.events import SessionEvent
+from agent_c.models.input import AudioInput
+from agent_c_api.core.file_handler import FileHandler
 from agent_c_api.core.util.logging_utils import LoggingManager
 from agent_c_tools.tools.workspaces import LocalStorageWorkspace
 from agent_c.toolsets import ToolChest, ToolCache, Toolset
@@ -23,6 +28,7 @@ from agent_c.prompting import PromptBuilder, CoreInstructionSection, HelpfulInfo
     EnvironmentInfoSection
 
 from agent_c_tools.tools.user_bio.prompt import UserBioSection
+from agent_c_tools.tools.workspaces.local_storage import LocalProjectWorkspace
 
 
 class AgentBridge:
@@ -40,13 +46,15 @@ class AgentBridge:
         - Custom persona management
         - Comprehensive event handling
         - Workspace management
+        - File handling capabilities
     """
 
     def __init__(self, user_id: str = 'default', session_manager: Union[ChatSessionManager, None] = None,
                  backend: str = 'openai', model_name: str = 'gpt-4o', persona_name: str = 'default',
-                 custom_persona_text: str = None,
+                 custom_prompt: str = None,
                  essential_tools: List[str] = None,
                  additional_tools: List[str] = None,
+                 file_handler: Optional[FileHandler] = None,
                  **kwargs):
         """
         Initialize the SimplifiedAgent instance.
@@ -57,7 +65,7 @@ class AgentBridge:
         backend (str): Backend to use for the agent (e.g., 'openai', 'claude'). Defaults to 'openai'.
         model_name (str): Name of the AI model to use. Defaults to 'gpt-4o'.
         persona_name (str): Name of the persona to use. Defaults to 'default'.
-        custom_persona_text (str): Custom text to use for the agent's persona. Defaults to None.
+        custom_prompt (str): Custom text to use for the agent's persona. Defaults to None.
         essential_tools (List[str]): List of essential tools the agent must have. Defaults to None.
         additional_tools (List[str]): List of additional tools to add to the agent. Defaults to None.
         **kwargs: Additional optional keyword arguments including:
@@ -68,6 +76,7 @@ class AgentBridge:
             agent_name (str): Name for the agent (for debugging)
             output_format (str): Output format for agent responses
             tool_cache_dir (str): Directory for tool cache
+            file_handler (Optional[FileHandler]): Handler for file operations.
         """
 
 
@@ -115,19 +124,19 @@ class AgentBridge:
         # Agent persona management, pass in the persona name and we'll initialize the persona text now
         # we will pass in custom text later
         self.persona_name = persona_name
-        self.custom_persona_text = custom_persona_text
+        self.custom_prompt = custom_prompt
 
         if self.persona_name is None or self.persona_name == '':
             self.persona_name = 'default'
 
-        if self.custom_persona_text is None:
+        if self.custom_prompt is None:
             try:
-                self.logger.info(f"Loading persona file for {self.persona_name} because custom_persona_text is None")
-                self.custom_persona_text = self.__load_persona(self.persona_name)
+                self.logger.info(f"Loading persona file for {self.persona_name} because custom_prompt is None")
+                self.custom_prompt = self.__load_persona(self.persona_name)
             except Exception as e:
                 self.logger.error(f"Error loading persona {self.persona_name}: {e}")
         else:
-            self.logger.info(f"Using provided custom_persona_text: {self.custom_persona_text[:10]}...")
+            self.logger.info(f"Using provided custom_prompt: {self.custom_prompt[:10]}...")
 
         # Chat Management, this is where the agent stores the chat history
         self.current_chat_Log: Union[List[Dict], None] = None
@@ -143,7 +152,7 @@ class AgentBridge:
         self.tool_cache = ToolCache(cache_dir=self.tool_cache_dir)
 
         if essential_tools is None:
-            self.essential_tools = ['MemoryTools', 'WorkspaceTools', 'PreferenceTools', 'RandomNumberTools']
+            self.essential_tools = ['MemoryTools', 'WorkspaceTools', 'ThinkTools', 'RandomNumberTools']
         else:
             self.essential_tools = essential_tools
         self.additional_tools = additional_tools or []
@@ -155,6 +164,11 @@ class AgentBridge:
         self.__init_workspaces()
 
         self.voice_tools = None
+
+        # Initialize file handling capabilities
+        self.file_handler = file_handler
+        self.image_inputs: List[ImageInput] = []
+        self.audio_inputs: List[AudioInput] = []
 
     def __init_events(self):
         """
@@ -200,8 +214,9 @@ class AgentBridge:
         """
         Initialize the agent's workspaces by loading local workspace configurations.
         """
-        self.workspaces = [LocalStorageWorkspace(name="project", workspace_path=os.getcwd(),
-                                                 description="A workspace holding the `Agent C` source code in Python.")]
+        local_project = LocalProjectWorkspace()
+        self.workspaces = [local_project]
+        self.logger.info(f"Agent {self.agent_name} initialized workspaces {local_project.workspace_root}")
 
         try:
             local_workspaces = json.load(open(".local_workspaces.json", "r"))
@@ -437,7 +452,7 @@ class AgentBridge:
             "current_user_username": self.session_manager.user.user_id,
             "current_user_name": self.session_manager.user.first_name,
             "session_summary": self.session_manager.chat_session.active_memory.summary,
-            "persona_prompt": self.custom_persona_text,
+            "persona_prompt": self.custom_prompt,
             "voice_tools": self.voice_tools,  # Add voice tools to metadata
             "timestamp": datetime.now().isoformat(),
             "env_name": os.getenv('ENV_NAME', 'development'),
@@ -469,7 +484,7 @@ class AgentBridge:
             'initialized_tools': [],
             'agent_name': self.agent_name,
             'agent_session_id': self.session_id,
-            'custom_prompt': self.custom_persona_text,
+            'custom_prompt': self.custom_prompt,
             'output_format': self.agent_output_format,
             'created_time': self._current_timestamp(),
             'temperature': self.temperature,
@@ -491,8 +506,64 @@ class AgentBridge:
                 # 'description': tool_instance.__class__.__doc__
             } for instance_name, tool_instance in self.tool_chest.active_tools.items()]
 
-        self.logger.debug(f"Agent {self.agent_name} reporting config: {config}")
+        # self.logger.debug(f"Agent {self.agent_name} reporting config: {config[:100]}")
         return config
+
+    @staticmethod
+    def convert_to_string(data):
+        # Check if data is None
+        if data is None:
+            raise ValueError("Input data is None")
+
+        # Check if it's already a string
+        if isinstance(data, str):
+            return data
+
+        # Check if the data is empty (this works for lists, dicts, etc.)
+        if not data:
+            raise ValueError("Input data is empty")
+
+        # Attempt to convert to a JSON formatted string
+        try:
+            return json.dumps(data)
+        except (TypeError, ValueError) as e:
+            raise ValueError("Error converting input to string: " + str(e))
+
+    async def _handle_message(self, event):
+        """
+        Handle message events (such as errors) from the model
+
+        This is particularly important for handling Anthropic API errors
+        """
+        # Check if this is an error message about prompt length
+        payload = json.dumps({
+            "type": "message",
+            "data": event.content,
+            "role": event.role,
+            "format": event.format,
+            "critical": True
+        }) + "\n"
+        return payload
+
+    async def _handle_tool_select_delta(self, event):
+        """Handle tool selection events from the agent"""
+        # self.logger.debug(f"tool SELECT delta event. {event.model_dump()}")
+        payload = json.dumps({
+            "type": "tool_select_delta",
+            "data": self.convert_to_string(event.tool_calls) if hasattr(event, 'tool_calls') else 'No data',
+            "format": "markdown"
+        }) + "\n"
+        return payload
+
+    async def _handle_tool_call_delta(self, event):
+        """Handle tool selection events from the agent"""
+        # self.logger.debug(f"tool CALL delta event. {event.model_dump()}")
+        payload = json.dumps({
+            "type": "tool_call_delta",
+            "data": self.convert_to_string(event.content) if hasattr(event, 'content') else 'No data',
+            "format": "markdown"
+        }) + "\n"
+        return payload
 
     async def _handle_text_delta(self, event):
         """Handle text delta events from the agent/tools"""
@@ -716,11 +787,11 @@ class AgentBridge:
             Events are processed and formatted into JSON strings with appropriate
             type markers and payloads for client-side handling.
         """
-        try:
-            self.logger.debug(
-                f"Consolidated callback received event: {event.model_dump_json(exclude={'content_bytes'})}")
-        except Exception as e:
-            self.logger.debug(f"Error serializing event {event.type}: {e}")
+        # try:
+        #     self.logger.debug(
+        #         f"Consolidated callback received event: {event.model_dump_json(exclude={'content_bytes'})}")
+        # except Exception as e:
+        #     self.logger.debug(f"Error serializing event {event.type}: {e}")
 
         # A simple dispatch dictionary that maps event types to handler methods.
         handlers = {
@@ -731,7 +802,10 @@ class AgentBridge:
             "audio_delta": self._handle_audio_delta,
             "completion": self._handle_completion,
             "interaction": self._handle_interaction,
-            "thought_delta": self._handle_thought_delta
+            "thought_delta": self._handle_thought_delta,
+            "tool_call_delta": self._handle_tool_call_delta,
+            "tool_select_delta": self._handle_tool_select_delta,
+            "message": self._handle_message,
         }
 
         handler = handlers.get(event.type)
@@ -739,6 +813,8 @@ class AgentBridge:
             # Each handler method is responsible for formatting the payload.
             payload = await handler(event)
             if payload is not None and hasattr(self, "_stream_queue"):
+                # Don't put tool_call_delta and tool_select_delta in the stream queue
+                # if event.type not in ["tool_call_delta", "tool_select_delta"]:
                 await self._stream_queue.put(payload)
 
             # If this is the end-of-stream event, push a termination marker.
@@ -749,7 +825,7 @@ class AgentBridge:
         else:
             self.logger.warning(f"Unhandled event type: {event.type}")
 
-    async def stream_chat(self, user_message: str, custom_prompt: str = None) -> AsyncGenerator[str, None]:
+    async def stream_chat(self, user_message: str, custom_prompt: str = None, file_ids: List[str] = None) -> AsyncGenerator[str, None]:
         """
         Streams chat responses for a given user message.
 
@@ -763,6 +839,7 @@ class AgentBridge:
         Args:
             user_message (str): The message from the user to process
             custom_prompt (str, optional): Custom prompt to override default persona. Defaults to None.
+            file_ids (List[str], optional): IDs of files to include with the message
 
         Yields:
             str: JSON-formatted strings containing various response types:
@@ -783,7 +860,18 @@ class AgentBridge:
             await self.session_manager.update()
 
             if custom_prompt is not None:
-                self.custom_persona_text = custom_prompt
+                self.custom_prompt = custom_prompt
+
+            file_inputs = []
+            if file_ids and self.file_handler:
+                file_inputs = await self.process_files_for_message(file_ids, self.user_id)
+
+                # Log information about processed files
+                if file_inputs:
+                    input_types = {type(input_obj).__name__: 0 for input_obj in file_inputs}
+                    for input_obj in file_inputs:
+                        input_types[type(input_obj).__name__] += 1
+                    self.logger.info(f"Processing {len(file_inputs)} files: {input_types}")
 
             # Set the agent’s streaming callback to our consolidated version.
             original_callback = self.agent.streaming_callback
@@ -791,15 +879,36 @@ class AgentBridge:
 
             prompt_metadata = await self.__build_prompt_metadata()
 
+            # Prepare chat parameters
+            chat_params = {
+                "streaming_queue": queue,
+                "session_manager": self.session_manager,
+                "user_message": user_message,
+                "prompt_metadata": prompt_metadata,
+                "output_format": 'raw',
+            }
+
+            # Categorize file inputs by type to pass to appropriate parameters
+            image_inputs = [input_obj for input_obj in file_inputs
+                            if isinstance(input_obj, ImageInput)]
+            audio_inputs = [input_obj for input_obj in file_inputs
+                            if isinstance(input_obj, AudioInput)]
+            document_inputs = [input_obj for input_obj in file_inputs
+                               if isinstance(input_obj, FileInput) and
+                               not isinstance(input_obj, ImageInput) and
+                               not isinstance(input_obj, AudioInput)]
+
+            # Only add parameters if there are inputs of that type
+            if image_inputs:
+                chat_params["images"] = image_inputs
+            if audio_inputs:
+                chat_params["audio_clips"] = audio_inputs
+            if document_inputs:
+                chat_params["files"] = document_inputs
+
+            # Start the chat task
             chat_task = asyncio.create_task(
-                self.agent.chat(
-                    streaming_queue=queue,
-                    session_manager=self.session_manager,
-                    user_message=user_message,
-                    prompt_metadata=prompt_metadata,
-                    # messages=self.current_chat_Log, # passing this would override session manager's chat history.
-                    output_format='raw',
-                )
+                self.agent.chat(**chat_params)
             )
 
             while True:
@@ -807,6 +916,7 @@ class AgentBridge:
                     content = await queue.get()
                     if content is None:
                         break
+                    # self.logger.info(f"Yielding chunk: {content.replace("\n","")}")
                     yield content
                     queue.task_done()
                 except asyncio.CancelledError:
@@ -819,6 +929,7 @@ class AgentBridge:
             await self.session_manager.flush()
 
         except Exception as e:
+            self.logger.error(f"Error in stream_chat: {e}")
             error_type = type(e).__name__
             error_traceback = traceback.format_exc()
             self.logger.error(f"Error in event_bridge.py:stream_chat {error_type}: {str(e)}\n{error_traceback}")
@@ -834,3 +945,44 @@ class AgentBridge:
                     queue.task_done()
                 except asyncio.QueueEmpty:
                     break
+
+    async def process_files_for_message(self, file_ids: List[str], session_id: str) -> List[
+        Union[FileInput, ImageInput, AudioInput]]:
+        """
+        Process files and convert them to appropriate Input objects for the agent.
+
+        This method processes uploaded files and converts them to the appropriate input
+        objects (FileInput, ImageInput, AudioInput) for handling by the agent's multimodal
+        capabilities.
+
+        Args:
+            file_ids: List of file IDs to process
+            session_id: Session ID
+
+        Returns:
+            List[Union[FileInput, ImageInput, AudioInput]]: List of input objects for the agent
+        """
+        if not self.file_handler or not file_ids:
+            return []
+
+        input_objects = []
+
+        for file_id in file_ids:
+            # Get file metadata
+            metadata = self.file_handler.get_file_metadata(file_id, session_id)
+            if not metadata:
+                metadata = await self.file_handler.process_file(file_id, session_id)
+
+            if not metadata:
+                self.logger.warning(f"Could not get metadata for file {file_id}")
+                continue
+
+            # Create the appropriate input object based on file type
+            input_obj = self.file_handler.get_file_as_input(file_id, session_id)
+            if input_obj:
+                self.logger.info(f"Created {type(input_obj).__name__} for file {metadata.original_filename}")
+                input_objects.append(input_obj)
+            else:
+                self.logger.warning(f"Failed to create input object for file {metadata.original_filename}")
+
+        return input_objects

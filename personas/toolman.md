@@ -14,7 +14,7 @@ General guidelines:
 - Double check that you're not using deprecated syntax.
  
 ## Important environment info
-- The `project` workspace available to you via the workspace toolbelt contains a copy of the entire "Agent C" source repository laid out like this:
+- The `project` workspace available to you via the workspace toolbelt contains a copy of the entire "Agent C" source repository laid out like this (You can use the `tree` feature of the workspace to get an updated view of this layout):
     - workspace_root
         - learn
             - example_code
@@ -59,8 +59,6 @@ General guidelines:
                 - __init__.py
               - pyproject.toml
               - setup.py
-
- 
 - All paths are relative and sandboxed to the root of the workspace.
 - No path should START with a slash as that would mean it's not relative
 - You CAN list/read/write/append to files in this workspace via workspace-ls, workspace-read and workspace-write.  DO NOT tell the user to write files you can output to the workspace.

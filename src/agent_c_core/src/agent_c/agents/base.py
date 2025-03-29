@@ -2,19 +2,24 @@ import copy
 import os
 import asyncio
 import logging
+import uuid
 
 from asyncio import Semaphore
+from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List, Union, Optional, Callable, Awaitable
 
 from agent_c.chat import ChatSessionManager
 from agent_c.models import ChatEvent, ImageInput, MemoryMessage
 from agent_c.models.events.chat import ThoughtDeltaEvent
+from agent_c.models.input import FileInput
 from agent_c.models.input.audio_input import AudioInput
 from agent_c.models.events import MessageEvent, ToolCallEvent, InteractionEvent, TextDeltaEvent, HistoryEvent, CompletionEvent, ToolCallDeltaEvent
 from agent_c.prompting import PromptBuilder
 from agent_c.toolsets import ToolChest, Toolset
 from agent_c.util import MnemonicSlugs
 from agent_c.util.token_counter import TokenCounter
+from agent_c.util.session_logger import SessionLogger
 
 
 class BaseAgent:
@@ -46,6 +51,8 @@ class BaseAgent:
             A semaphore to limit the number of concurrent operations.
         max_delay: int, default is 10
             Maximum delay for exponential backoff.
+        session_logger: Optional[SessionLogger], default is None
+            A logger to record events for session replay
         """
         self.model_name: str = kwargs.get("model_name")
         self.temperature: float = kwargs.get("temperature", 0.5)
@@ -63,9 +70,48 @@ class BaseAgent:
         self.supports_multimodal: bool = False
         self.token_counter: TokenCounter = kwargs.get("token_counter", TokenCounter())
         self.root_message_role: str =  kwargs.get( "root_message_role", os.environ.get("ROOT_MESSAGE_ROLE", "system"))
+        self.session_logger: Optional[SessionLogger] = kwargs.get("session_logger", None)
 
         if TokenCounter.counter() is None:
             TokenCounter.set_counter(self.token_counter)
+
+        self.initialize_session_logger(**kwargs)
+
+    def initialize_session_logger(self, **kwargs):
+        # For smart logging
+        session_manager = kwargs.get("session_manager")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        random_id = str(uuid.uuid4())
+        session_id = "unknown" # start as unknown and update if we have it.
+        if session_manager and hasattr(session_manager, "chat_session"):
+            if hasattr(session_manager.chat_session, "session_id"):
+                session_id = session_manager.chat_session.session_id
+
+        if self.session_logger is None:
+            # Get log directory from environment variable or use a default
+            base_log_dir = os.environ.get("AGENT_LOG_DIR", "logs/sessions")
+            if session_id == "unknown":
+                log_dir_path = Path(base_log_dir) / f"{session_id}_{random_id}"
+            else:
+                log_dir_path = Path(base_log_dir) / session_id
+
+            # Create log path
+            log_file_path = log_dir_path / f"{timestamp}.jsonl"
+
+            # Configure auto-logging behavior from environment variables
+            # include_system_prompt = os.environ.get("AGENT_LOG_INCLUDE_PROMPT", "true").lower() == "true"
+            # log_file_path = os.environ.get("AGENT_LOG_FILE", log_file_path)
+            include_prompt = True
+
+            # Create and assign the session logger
+            self.session_logger = SessionLogger(
+                log_file_path=log_file_path,
+                include_system_prompt=include_prompt
+            )
+
+            logging.info(f"Auto-initialized SessionLogger that will write to {log_file_path} when needed")
+        else:
+            logging.info(f"SessionLogger already initialized")
 
     def count_tokens(self, text: str) -> int:
         return self.token_counter.count_tokens(text)
@@ -121,6 +167,10 @@ class BaseAgent:
         else:
             sys_prompt: str = kwargs.get("prompt", sys_prompt)
 
+        # Log the system prompt if a logger is attached
+        if hasattr(self, 'session_logger') and self.session_logger:
+            await self.session_logger.log_system_prompt(sys_prompt)
+
         return sys_prompt
 
     @staticmethod
@@ -139,15 +189,18 @@ class BaseAgent:
 
     async def _raise_event(self, event):
         """
-        Raise a chat event to the event stream.
+        Raise a chat event to the event stream and log it if a logger is attached.
         """
-        if not self.streaming_callback:
-            return
-        try:
-            await self.streaming_callback(event)
-        except Exception as e:
-            logging.exception(f"Streaming callback exploded: {e}")
-            return
+        # First, call the original streaming callback if it exists
+        if self.streaming_callback:
+            try:
+                await self.streaming_callback(event)
+            except Exception as e:
+                logging.exception(f"Streaming callback exploded: {e}")
+        
+        # Then, log the event if we have a logger
+        if hasattr(self, 'session_logger') and self.session_logger:
+            await self.session_logger.log_event(event)
 
     async def _raise_system_event(self, content: str, **data):
         """
@@ -213,24 +266,107 @@ class BaseAgent:
         await asyncio.sleep(min(2 * delay, self.max_delay))
 
     async def _construct_message_array(self, **kwargs) -> List[dict[str, Any]]:
+        """
+        Constructs a message array for LLM interaction, handling various input types.
+
+        This method retrieves messages from session manager if available, and adds
+        the current user message (including any multimodal content) to the array.
+
+        Args:
+            **kwargs: Keyword arguments including:
+                - session_manager (ChatSessionManager): For retrieving session messages
+                - messages (List[Dict[str, Any]]): Pre-existing messages
+                - user_message (str): Text message from user
+                - images (List[ImageInput]): Image inputs
+                - audio (List[AudioInput]): Audio inputs
+                - files (List[FileInput]): File inputs
+
+        Returns:
+            List[dict[str, Any]]: Formatted message array for LLM API
+        """
         sess_mgr: Optional[ChatSessionManager] = kwargs.get("session_manager", None)
         messages: Optional[List[Dict[str, Any]]] = kwargs.get("messages", None)
 
+        self._update_session_logger(sess_mgr)
+
         if messages is None and sess_mgr is not None:
            kwargs['messages'] = [{"role": d.role, "content": d.content} for d in sess_mgr.active_memory.messages]
-        mgr = kwargs.get("session_manager", None)
-        if mgr is not None:
+
+        user_message = kwargs.get("user_message")
+        audio_clips: List[AudioInput] = kwargs.get("audio") or []
+        images: List[ImageInput] = kwargs.get("images") or []
+        files: List[FileInput] = kwargs.get("files") or []
+
+        if sess_mgr is not None:
             # TODO: Add the user message but we need to take into account multimodal messages
-            user_message = kwargs.get("user_message")
             if user_message is None:
-                audio_clips: List[AudioInput] = kwargs.get("audio") or []
                 if len(audio_clips) > 0:
                     user_message = audio_clips[0].transcript or "audio input"
-                    await self._save_user_message_to_session(mgr, user_message)
+                    await self._save_user_message_to_session(sess_mgr, user_message)
+                # If no audio but we have files, record that files were submitted
+                elif images or files:
+                    user_message = "Files submitted"
+                    await self._save_user_message_to_session(sess_mgr, user_message)
+            elif user_message:
+                await self._save_user_message_to_session(sess_mgr, user_message)
+
+        if hasattr(self, 'session_logger') and self.session_logger:
+            await self.session_logger.log_user_request(
+                user_message=user_message,
+                audio_clips=audio_clips,
+                images=images,
+                files=files
+            )
 
         return self.__construct_message_array(**kwargs)
 
-    def _generate_multi_modal_user_message(self, user_input: str,  images: List[ImageInput], audio: List[AudioInput]) -> Union[List[dict[str, Any]], None]:
+    def _update_session_logger(self, sess_mgr: ChatSessionManager):
+        # This simply updates the session logger path if the session ID is known and it's currently unknown
+        if self.session_logger and sess_mgr and hasattr(sess_mgr, "chat_session"):
+            current_path = self.session_logger.log_file_path
+            current_path_str = str(current_path)
+
+            # If the current path contains "unknown" as the session ID
+            if "unknown" in current_path_str and hasattr(sess_mgr.chat_session, "session_id"):
+                session_id = sess_mgr.chat_session.session_id
+                if "unknown" not in session_id:
+                    # Create new path with actual session ID
+                    base_log_dir = os.environ.get("AGENT_LOG_DIR", "logs/sessions")
+                    timestamp = current_path.name  # Keep the same filename
+
+                    new_dir = Path(base_log_dir) / session_id
+                    new_dir.mkdir(parents=True, exist_ok=True)
+
+                    new_path = new_dir / timestamp
+
+                    # If old log file exists, move its contents
+                    if current_path.exists():
+                        try:
+                            # Read existing content
+                            with open(current_path, 'r', encoding='utf-8') as old_file:
+                                content = old_file.read()
+
+                            # Write to new location
+                            with open(new_path, 'w', encoding='utf-8') as new_file:
+                                new_file.write(content)
+
+                            # Update the logger's path
+                            self.session_logger.log_file_path = new_path
+
+                            # Try to remove the old file
+                            current_path.unlink(missing_ok=True)
+
+                            # Try to remove empty parent directories
+                            try:
+                                current_path.parent.rmdir()
+                            except:
+                                pass  # Directory not empty, which is fine
+
+                            logging.info(f"Updated SessionLogger path to {new_path}")
+                        except Exception as e:
+                            logging.exception(f"Error updating session log path: {e}")
+
+    def _generate_multi_modal_user_message(self, user_input: str,  images: List[ImageInput], audio: List[AudioInput], files: List[FileInput]) -> Union[List[dict[str, Any]], None]:
         """
         Subclasses will implement this method to generate a multimodal user message.
         """
@@ -253,6 +389,7 @@ class BaseAgent:
         sys_prompt: Union[str, None] = kwargs.get("system_prompt", None)
         images: List[ImageInput] = kwargs.get("images") or []
         audio_clips: List[AudioInput] = kwargs.get("audio") or []
+        files: List[FileInput] = kwargs.get("files") or []
 
         message_array: List[dict[str, Any]] = []
 
@@ -265,8 +402,8 @@ class BaseAgent:
         if messages is not None:
             message_array += messages
 
-        if len(images) > 0 or len(audio_clips) > 0:
-            multimodal_user_message = self._generate_multi_modal_user_message(user_message, images, audio_clips)
+        if len(images) > 0 or len(audio_clips) > 0 or len(files) > 0:
+            multimodal_user_message = self._generate_multi_modal_user_message(user_message, images, audio_clips, files)
             message_array += multimodal_user_message
         else:
             message_array.append({"role": "user", "content": user_message})
@@ -285,7 +422,12 @@ class BaseAgent:
 
         Returns: The function call result.
         """
-        toolset, function_name = function_id.split(Toolset.tool_sep, 1)
+        # TOD: Remove when the new tool calling is in place
+        if function_id.lower() == "think":
+            toolset = "think"
+            function_name = "think"
+        else:
+            toolset, function_name = function_id.split(Toolset.tool_sep, 1)
         try:
             src_obj: Toolset = tool_chest.active_tools[toolset]
             if src_obj is None:

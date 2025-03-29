@@ -2,6 +2,7 @@ import React, {useState} from 'react';
 import {Monitor, ChevronDown, Maximize2, Info} from 'lucide-react';
 import {Dialog, DialogContent} from "@/components/ui/dialog";
 import {Card} from "@/components/ui/card";
+import CopyButton from './CopyButton';
 
 const MediaMessage = ({message}) => {
     const [isExpanded, setIsExpanded] = useState(true);
@@ -15,6 +16,24 @@ const MediaMessage = ({message}) => {
     const toggleFullscreen = (e) => {
         e.stopPropagation();
         setIsFullscreen(!isFullscreen);
+    };
+
+    // Get content to copy based on media type
+    const getCopyContent = () => {
+        // For SVG, return the SVG code
+        if (message.contentType === 'image/svg+xml') {
+            return message.content;
+        }
+        // For HTML, return the HTML code
+        if (message.contentType === "text/html") {
+            return message.content;
+        }
+        // For images, we can't copy the binary data directly,
+        // so we'll create a data URL that could be used in an img tag
+        if (message.contentType?.startsWith('image/')) {
+            return `data:${message.contentType};base64,${message.content}`;
+        }
+        return message.content;
     };
 
     const MediaContentWrapper = ({children, allowFullscreen = false}) => (
@@ -125,11 +144,22 @@ const MediaMessage = ({message}) => {
                             {getContentTypeDisplay()}
                         </span>
                     </div>
-                    <ChevronDown
-                        className={`h-5 w-5 text-amber-600 transform transition-transform duration-200 ${
-                            isExpanded ? "rotate-180" : ""
-                        }`}
-                    />
+                    <div className="flex items-center gap-2">
+                        {/* Copy button that stops event propagation */}
+                        <div onClick={(e) => e.stopPropagation()}>
+                            <CopyButton
+                                content={getCopyContent}
+                                tooltipText={`Copy ${message.contentType.split('/')[1]}`}
+                                variant="ghost"
+                                className="text-amber-600 hover:text-amber-800 hover:bg-amber-100"
+                            />
+                        </div>
+                        <ChevronDown
+                            className={`h-5 w-5 text-amber-600 transform transition-transform duration-200 ${
+                                isExpanded ? "rotate-180" : ""
+                            }`}
+                        />
+                    </div>
                 </div>
 
                 {isExpanded && (

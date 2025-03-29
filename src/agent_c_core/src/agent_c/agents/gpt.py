@@ -18,6 +18,7 @@ from openai.types.chat import  ChatCompletionChunk
 from typing import Any, Dict, List, Union, Optional
 
 from agent_c.chat.session_manager import ChatSessionManager
+from agent_c.models.input import FileInput
 from agent_c.models.input.audio_input import AudioInput
 from agent_c.models.events.chat import ReceivedAudioDeltaEvent
 from agent_c.models.input.image_input import ImageInput
@@ -69,7 +70,7 @@ class GPTChatAgent(BaseAgent):
             self.root_message_role = "developer"
 
 
-    def _generate_multi_modal_user_message(self, user_input: str, images: List[ImageInput], audio_clips: List[AudioInput]) -> Union[List[dict[str, Any]], None]:
+    def _generate_multi_modal_user_message(self, user_input: str, images: List[ImageInput], audio_clips: List[AudioInput], files: List[FileInput] = None) -> Union[List[dict[str, Any]], None]:
         contents = []
         if user_input is not None and len(user_input) > 0:
             contents.append({"type": "text", "text": user_input})
@@ -85,6 +86,26 @@ class GPTChatAgent(BaseAgent):
 
         for clip in audio_clips:
             contents.append({"type": "input_audio", "input_audio": {"data": clip.content, 'format': clip.format}})
+
+        # Add file content as additional text blocks
+        if files:
+            for file in files:
+                text_content = file.get_text_content()
+
+                if text_content:
+                    file_name = file.file_name or "unknown file"
+                    content_block = f"Content from file {file_name}:\n\n{text_content}"
+                    contents.append({
+                        "type": "text",
+                        "text": f"Content from file {file.file_name}:\n{text_content}"
+                    })
+                else:
+                    # If no text content available, at least mention the file
+                    file_name = file.file_name or "unknown file"
+                    contents.append({
+                        "type": "text",
+                        "text": f"[File uploaded by user: {file_name}. But preprocessing failed to extract any text]"
+                    })
 
         return [{"role": "user", "content": contents}]
 

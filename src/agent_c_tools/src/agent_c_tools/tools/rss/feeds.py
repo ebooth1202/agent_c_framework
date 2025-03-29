@@ -26,6 +26,13 @@ SEEKING_ALPHA_POPULAR_ARTICLES="https://seekingalpha.com/most-popular-articles.x
 SEEKING_ALPHA_FINANCIAL_NEWS="https://seekingalpha.com/financial.xml"
 SA_SCHEMA = ['title', 'uri', 'published_on', 'id']
 
+# markovate consulting
+MARKOVATE_BLOG="https://markovate.com/feed/"
+MARKOVATE_STORIES="https://markovate.com/web-stories/feed/"
+
+# RTS Labs consulting
+RTS_LABS_BLOG="https://rtslabs.com/feed"
+
 
 default_feeds = [RSSToolFeed(id="propublica_news", url=PP_FEED_URL, fields_wanted=PP_SCHEMA, desc="Latest headlines from ProPublica (Investigative Journalism in the Public Interest)"),
                  RSSToolFeed(id="cnn_top_stories", url=CNN_TOP_STORIES_URL, fields_wanted=STD_SCHEMA, desc="Top stories from CNN."),
@@ -41,4 +48,7 @@ default_feeds = [RSSToolFeed(id="propublica_news", url=PP_FEED_URL, fields_wante
                  RSSToolFeed(id="azure_blog", url=AWS_NEWS_BLOG, fields_wanted=STD_SCHEMA, desc="Latest Azure news from Microsoft"),
                  RSSToolFeed(id="seeking_alpha_current_market", url=SEEKING_ALPHA_CURRENT_MARKET_NEWS, fields_wanted=SA_SCHEMA, desc="Latest Market News from Seeking Alpha"),
                  RSSToolFeed(id="seeking_alpha_popular_articles", url=SEEKING_ALPHA_POPULAR_ARTICLES, fields_wanted=SA_SCHEMA, desc="Popular Articles from Seeking Alpha"),
-                 RSSToolFeed(id="seeking_alpha_financial_news", url=SEEKING_ALPHA_FINANCIAL_NEWS, fields_wanted=SA_SCHEMA, desc="Financial Industry News from Seeking Alpha")]
+                 RSSToolFeed(id="seeking_alpha_financial_news", url=SEEKING_ALPHA_FINANCIAL_NEWS, fields_wanted=SA_SCHEMA, desc="Financial Industry News from Seeking Alpha"),
+                 RSSToolFeed(id="markvovate_blog", url=MARKOVATE_BLOG, fields_wanted=STD_SCHEMA, desc="Blog posts frm Markovate Consulting a leader in GenAI consulting"),
+                 RSSToolFeed(id="markvovate_stories", url=MARKOVATE_STORIES, fields_wanted=STD_SCHEMA, desc="Web Stories from Markovate Consulting a leader in GenAI consulting"),
+                 RSSToolFeed(id="rts_labs_blog", url=RTS_LABS_BLOG, fields_wanted=STD_SCHEMA, desc="Blog posts from RTS Labs | Enterprise AI Consulting, Data Engineering & DevOps")]

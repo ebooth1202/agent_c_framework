@@ -1,8 +1,8 @@
-import React, {useState, useRef, useEffect} from "react";
+import React, {useState, useRef, useEffect, useCallback} from "react";
 import {Card} from "@/components/ui/card";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
-import {Send, Upload, Brain, User} from "lucide-react";
+import {Send, Upload, User} from "lucide-react";
 import {ScrollArea} from "@/components/ui/scroll-area";
 import ToolCallDisplay from "./ToolCallDisplay";
 import MediaMessage from './MediaMessage';
@@ -10,7 +10,10 @@ import TokenUsageDisplay from './TokenUsageDisplay';
 import MarkdownMessage from './MarkdownMessage';
 import ThoughtDisplay from './ThoughtDisplay';
 import ModelIcon from './ModelIcon';
+import CopyButton from './CopyButton';
 import {API_URL} from "@/config/config";
+import { createClipboardContent } from '@/components/chat_interface/utils/htmlChatFormatter';
+import ExportHTMLButton from './ExportHTMLButton';
 
 /**
  * ChatInterface component provides a complete chat interface with support for
@@ -32,6 +35,57 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
     const [activeToolCalls, setActiveToolCalls] = useState(new Map()); // Track active tool calls
     const fileInputRef = useRef(null);
     const messagesEndRef = useRef(null);
+    const [uploadedFiles, setUploadedFiles] = useState([]);
+    const [selectedFiles, setSelectedFiles] = useState([]);
+    const [isUploading, setIsUploading] = useState(false);
+    const [selectedFileForUpload, setSelectedFileForUpload] = useState(null); // Track selected file
+
+    // Helper function to format a message for copying
+    const formatMessageForCopy = useCallback((msg) => {
+        if (msg.role === 'user') {
+            return `User: ${msg.content}\n`;
+        } else if (msg.role === 'assistant' && msg.type === 'content') {
+            return `Assistant: ${msg.content}\n`;
+        } else if (msg.role === 'assistant' && msg.type === 'thinking') {
+            return `Assistant (thinking): ${msg.content}\n`;
+        } else if (msg.type === 'tool_calls') {
+            // Format tool calls
+            let result = `Assistant (tool): Using ${msg.toolCalls.map(t => t.name || t.function?.name).join(', ')}\n`;
+            msg.toolCalls.forEach(tool => {
+                const toolName = tool.name || tool.function?.name;
+                const toolArgs = tool.arguments || tool.function?.arguments;
+                if (toolArgs) {
+                    result += `  ${toolName} Arguments: ${typeof toolArgs === 'string' ? toolArgs : JSON.stringify(toolArgs)}\n`;
+                }
+                if (tool.results) {
+                    result += `  ${toolName} Results: ${typeof tool.results === 'string' ? tool.results : JSON.stringify(tool.results)}\n`;
+                }
+            });
+            return result;
+        } else if (msg.type === 'media') {
+            return `Assistant (media): Shared ${msg.contentType} content\n`;
+        } else if (msg.role === 'system') {
+            return `System: ${msg.content}\n`;
+        }
+        return '';
+    }, []);
+
+    // Use the enhanced formatter function
+    const formatChatForCopy = useCallback(() => {
+        return messages.map(formatMessageForCopy).join('\n');
+    }, [messages, formatMessageForCopy]);
+
+    // Get both text and HTML versions for the entire chat
+    const getChatCopyContent = useCallback(() => {
+        const clipboardContent = createClipboardContent(messages);
+        return clipboardContent.text;
+    }, [messages]);
+
+    // Get HTML version for rich copying
+    const getChatCopyHTML = useCallback(() => {
+        const clipboardContent = createClipboardContent(messages);
+        return clipboardContent.html;
+    }, [messages]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({behavior: "smooth"});
@@ -49,31 +103,77 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
     }, [isStreaming, onProcessingStatus]);
 
     /**
-     * Handles file upload to the server
+     * Handles file selection change
+     * @param {Event} e - Change event from the file input
+     */
+    const handleFileSelection = (e) => {
+        if (e.target.files && e.target.files.length > 0) {
+            setSelectedFileForUpload(e.target.files[0]);
+        } else {
+            setSelectedFileForUpload(null);
+        }
+    };
+
+    /**
+     * Handles file upload to the server and tracks processing status
      * @returns {Promise<void>}
      * @throws {Error} If the file upload fails
      */
     const handleUploadFile = async () => {
-        if (!fileInputRef.current?.files?.length) return;
+        // Use the selected file from state instead of directly accessing fileInputRef
+        if (!selectedFileForUpload) return;
+
+        setIsUploading(true);
 
         const formData = new FormData();
         formData.append("ui_session_id", sessionId);
-        formData.append("file", fileInputRef.current.files[0]);
+        formData.append("file", selectedFileForUpload);
 
         try {
+            // Upload the file
             const response = await fetch(`${API_URL}/upload_file`, {
                 method: "POST",
                 body: formData,
             });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
             const data = await response.json();
+
+            // Add file to state with initial "pending" status
+            const newFile = {
+                id: data.id,
+                name: data.filename,
+                type: data.mime_type,
+                size: data.size,
+                selected: true,
+                processing_status: "pending", // Initial status
+                processing_error: null
+            };
+
+            setUploadedFiles(prev => [...prev, newFile]);
+            setSelectedFiles(prev => [...prev, newFile]);
+
             setMessages((prev) => [
                 ...prev,
                 {
                     role: "system",
                     type: "content",
-                    content: `File uploaded: ${fileInputRef.current.files[0].name}`,
+                    content: `File uploaded: ${selectedFileForUpload.name}`,
                 },
             ]);
+
+            // Reset file input and state
+            if (fileInputRef.current) {
+                fileInputRef.current.value = null;
+            }
+            setSelectedFileForUpload(null);
+
+            // Check processing status after upload
+            checkFileProcessingStatus(data.id);
+
         } catch (error) {
             console.error("Error uploading file:", error);
             setMessages((prev) => [
@@ -81,12 +181,105 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                 {
                     role: "system",
                     type: "content",
-                    content: "Error uploading file",
+                    content: `Error uploading file: ${error.message}`,
                 },
             ]);
+        } finally {
+            setIsUploading(false);
         }
     };
 
+    /**
+     * Checks the processing status of a file
+     * @param {string} fileId - The ID of the file to check
+     */
+    const checkFileProcessingStatus = async (fileId) => {
+        // Poll the server every 2 seconds to check processing status
+        const checkStatus = async () => {
+            try {
+                const response = await fetch(`${API_URL}/files/${sessionId}`);
+                if (!response.ok) {
+                    console.error(`Error fetching file status: ${response.status}`);
+                    return true; // Stop polling on error
+                }
+
+                const data = await response.json();
+
+                // Find the file in the response
+                const fileData = data.files.find(f => f.id === fileId);
+                if (!fileData) return false;
+
+                // Update state with current processing status
+                setUploadedFiles(prev => prev.map(file => {
+                    if (file.id === fileId) {
+                        return {
+                            ...file,
+                            processing_status: fileData.processing_status,
+                            processing_error: fileData.processing_error
+                        };
+                    }
+                    return file;
+                }));
+
+                // If processing is complete or failed, stop polling
+                return fileData.processing_status !== "pending";
+            } catch (error) {
+                console.error("Error checking file status:", error);
+                return true; // Stop polling on error
+            }
+        };
+
+        // Poll until processing completes or fails (max 30 seconds)
+        let attempts = 0;
+        const maxAttempts = 15; // 15 attempts * 2 seconds = 30 seconds max
+
+        const pollTimer = setInterval(async () => {
+            attempts++;
+            const shouldStop = await checkStatus();
+
+            if (shouldStop || attempts >= maxAttempts) {
+                clearInterval(pollTimer);
+
+                // If we hit max attempts and status is still pending, mark as failed
+                if (attempts >= maxAttempts) {
+                    setUploadedFiles(prev => prev.map(file => {
+                        if (file.id === fileId && file.processing_status === "pending") {
+                            return {
+                                ...file,
+                                processing_status: "failed",
+                                processing_error: "Processing timed out"
+                            };
+                        }
+                        return file;
+                    }));
+                }
+            }
+        }, 2000);
+    };
+
+    const toggleFileSelection = (fileId) => {
+        setUploadedFiles(prev => prev.map(file => {
+            if (file.id === fileId) {
+                const newSelected = !file.selected;
+
+                // Update selectedFiles state
+                if (newSelected) {
+                    setSelectedFiles(prev => [...prev, file]);
+                } else {
+                    setSelectedFiles(prev => prev.filter(f => f.id !== fileId));
+                }
+
+                return {...file, selected: newSelected};
+            }
+            return file;
+        }));
+    };
+
+    const [toolSelectionState, setToolSelectionState] = useState({
+        inProgress: false,
+        toolName: null,
+        timestamp: null
+    });
     /**
      * Handles the start of a tool call operation
      * @param {Array<Object>} toolDetails - Array of tool call details
@@ -187,7 +380,7 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
      * @throws {Error} If the message send fails or stream processing encounters an error
      */
     const handleSendMessage = async () => {
-        if (!inputText.trim() || isStreaming) return;
+        if ((!inputText.trim() && selectedFiles.length === 0) || isStreaming) return;
 
         try {
             setIsStreaming(true);
@@ -196,7 +389,12 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
             // Add user message
             setMessages((prev) => [
                 ...prev,
-                {role: "user", type: "content", content: inputText},
+                {
+                    role: "user",
+                    type: "content",
+                    content: inputText,
+                    files: selectedFiles.length > 0 ? selectedFiles.map(f => f.name) : undefined
+                },
             ]);
 
             const userText = inputText;
@@ -206,6 +404,9 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
             formData.append("ui_session_id", sessionId);
             formData.append("message", userText);
             formData.append("custom_prompt", customPrompt || "");
+            if (selectedFiles.length > 0) {
+                formData.append("file_ids", JSON.stringify(selectedFiles.map(f => f.id)));
+            }
 
             // Add the correct parameter based on model type
             if (modelParameters.temperature !== undefined) {
@@ -274,6 +475,8 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
             ]);
         } finally {
             setIsStreaming(false);
+            setSelectedFiles([]);
+            setUploadedFiles(prev => prev.map(file => ({...file, selected: false})));
         }
     };
 
@@ -297,10 +500,58 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                 console.log("Termination marker received after parsing.");
                 return;
             }
-            console.log("=== Received message ===");
+            // console.log("=== Received message ===");
             console.log("Full parsed data:", parsed);
 
             switch (parsed.type) {
+                case "message":
+                    // Handle message type (typically used for errors from the model)
+                    console.log("Message received:", parsed);
+
+                    // Add as a system message (error)
+                    setMessages((prev) => [
+                        ...prev,
+                        {
+                            role: "system",
+                            type: "error",
+                            content: `Error: ${parsed.data}`,
+                            critical: parsed.critical || false
+                        },
+                    ]);
+
+                    // End streaming if we receive a message (especially errors)
+                    setIsStreaming(false);
+                    break;
+
+                case "tool_select_delta":
+                    try {
+                        const toolData = JSON.parse(parsed.data)[0];
+                        setToolSelectionState({
+                            inProgress: true,
+                            toolName: toolData?.name || "unknown tool",
+                            timestamp: Date.now()
+                        });
+                    } catch (err) {
+                        console.error("Error parsing tool selection data:", err);
+                        setToolSelectionState({
+                            inProgress: false,
+                            toolName: "unknown tool",
+                            timestamp: Date.now()
+                        });
+                    }
+                    break;
+
+                case "tool_calls":
+                    if (parsed.tool_calls) {
+                        handleToolStart(parsed.tool_calls);
+                        setToolSelectionState({
+                            inProgress: true,
+                            toolName: parsed.tool_calls[0]?.name || "unknown tool",
+                            timestamp: Date.now()
+                        });
+                    }
+                    break;
+
                 case "content":
                     setMessages((prev) => {
                         const last = prev[prev.length - 1];
@@ -324,16 +575,16 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                     });
                     break;
 
-                case "tool_calls":
-                    if (parsed.tool_calls) {
-                        handleToolStart(parsed.tool_calls);
-                    }
-                    break;
-
                 case "tool_results":
                     if (parsed.tool_results) {
                         parsed.tool_results.forEach((result) => handleToolEnd(result));
                     }
+                    // Clear tool selection state when actual call happens
+                    setToolSelectionState({
+                        inProgress: false,
+                        toolName: null,
+                        timestamp: null
+                    });
                     break;
 
                 case "render_media":
@@ -397,12 +648,11 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                     });
                     break;
 
-                // These cases don’t require any specific handling
+                // These cases don't require any specific handling
                 case "interaction_start":
                 case "interaction_end":
                 case "history":
                     break;
-
                 default:
                     console.warn("Unknown message type:", parsed.type);
             }
@@ -421,16 +671,50 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
 
     return (
         <Card className="flex flex-col h-full bg-white/50 backdrop-blur-sm border shadow-lg rounded-xl relative z-0">
-            <ScrollArea className="flex-1 px-4 py-3  min-h-[400px]">
+            <ScrollArea className="flex-1 px-4 py-3 min-h-[400px]">
+                {/* Add copy entire chat button */}
+                <div className="flex justify-end gap-2 p-2 sticky top-0 z-10 bg-white/80 backdrop-blur-sm">
+                    <CopyButton
+                        content={getChatCopyContent}
+                        htmlContent={getChatCopyHTML}
+                        tooltipText="Copy entire chat"
+                        successText="Chat copied!"
+                        size="sm"
+                        variant="outline"
+                        className="border-gray-300"
+                    />
+                    <ExportHTMLButton
+                        messages={messages}
+                        tooltipText="Export as HTML"
+                        filename={`chat-export-${new Date().toISOString().slice(0, 10)}.html`}
+                        size="sm"
+                        variant="outline"
+                        className="border-gray-300"
+                    />
+                </div>
+
                 <div className="space-y-4">
                     {messages.map((msg, idx) => {
                         // === USER MESSAGES ===
                         if (msg.role === "user") {
                             return (
-                                <div key={idx} className="flex justify-end items-start gap-2">
+                                <div key={idx} className="flex justify-end items-start gap-2 group">
                                     <div
-                                        className="max-w-[80%] rounded-2xl px-4 py-2 shadow-sm bg-blue-500 text-white ml-12 rounded-br-sm">
+                                        className="max-w-[80%] rounded-2xl px-4 py-2 shadow-sm bg-blue-500 text-white ml-12 rounded-br-sm relative">
                                         {msg.content}
+
+                                        {/* Copy button that appears on hover */}
+                                        <div
+                                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity transform -translate-x-full">
+                                            <CopyButton
+                                                content={msg.content}
+                                                tooltipText="Copy message"
+                                                position="left"
+                                                variant="secondary"
+                                                size="xs"
+                                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                                            />
+                                        </div>
                                     </div>
                                     <User className="h-6 w-6 text-blue-500"/>
                                 </div>
@@ -441,7 +725,7 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                         if (msg.role === "assistant" && msg.type === "content") {
                             return (
                                 <div key={idx} className="flex flex-col">
-                                    <div className="flex justify-start items-start gap-2">
+                                    <div className="flex justify-start items-start gap-2 group">
                                         <ModelIcon vendor={msg.vendor}/>
                                         <div
                                             className="max-w-[80%] rounded-2xl px-4 py-2 shadow-sm bg-purple-50 text-purple-800 mr-12 rounded-bl-sm">
@@ -482,11 +766,30 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
 
                         // === SYSTEM MESSAGES ===
                         if (msg.role === "system") {
+                            const isError = msg.type === "error";
                             return (
-                                <div key={idx} className="flex justify-start">
+                                <div key={idx} className="flex justify-start group">
                                     <div
-                                        className="max-w-[80%] rounded-2xl px-4 py-2 shadow-sm bg-gray-100 text-gray-600">
-                                        {msg.content}
+                                        className={`max-w-[80%] rounded-2xl px-4 py-2 shadow-sm relative ${
+                                            isError
+                                                ? "bg-red-100 text-red-800 border border-red-300"
+                                                : "bg-gray-100 text-gray-600"
+                                        }`}
+                                    >
+                                        {isError ? "🚫 Error: " : ""}{msg.content}
+
+                                        {/* Copy button that appears on hover */}
+                                        <div
+                                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <CopyButton
+                                                content={msg.content}
+                                                tooltipText="Copy message"
+                                                position="left"
+                                                variant="ghost"
+                                                size="xs"
+                                                className="text-gray-500 hover:bg-gray-200"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             );
@@ -494,6 +797,14 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
 
                         return null;
                     })}
+                    {
+                        toolSelectionState.inProgress && (
+                            <div className="flex items-center gap-2 text-sm text-gray-500 italic my-1 ml-8">
+                                <div className="animate-pulse h-2 w-2 bg-purple-400 rounded-full"></div>
+                                <span>Preparing to use: {toolSelectionState.toolName.replace(/-/g, ' ')}</span>
+                            </div>
+                        )
+                    }
                     <div ref={messagesEndRef}/>
                 </div>
             </ScrollArea>
@@ -504,46 +815,93 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                     <Input
                         type="file"
                         ref={fileInputRef}
+                        onChange={handleFileSelection}
                         className="block w-full text-sm text-gray-500
-              file:mr-4 file:py-2 file:px-4
-              file:rounded-xl file:border-0
-              file:text-sm file:font-semibold
-              file:bg-blue-50 file:text-blue-700
-              hover:file:bg-blue-100
-              focus:outline-none focus:ring-2 focus:ring-blue-200 focus:ring-opacity-50
-              rounded-xl
-              cursor-pointer
-              transition-all
-              border border-gray-200
-              bg-white/50 backdrop-blur-sm"
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-xl file:border-0
+                        file:text-sm file:font-semibold
+                        file:bg-blue-50 file:text-blue-700
+                        hover:file:bg-blue-100
+                        focus:outline-none focus:ring-2 focus:ring-blue-200 focus:ring-opacity-50
+                        rounded-xl
+                        cursor-pointer
+                        transition-all
+                        border border-gray-200
+                        bg-white/50 backdrop-blur-sm
+                        h-12 py-2"
                     />
                     <Button
                         onClick={handleUploadFile}
                         variant="outline"
                         size="icon"
+                        disabled={!selectedFileForUpload || isUploading}
                         className="shrink-0 rounded-xl border-gray-200 bg-white/50 backdrop-blur-sm hover:bg-white/80 transition-colors"
                     >
                         <Upload className="h-4 w-4"/>
                     </Button>
                 </div>
 
+                {/* Add the file list here - before the message input */}
+                {uploadedFiles.length > 0 && (
+                    <div
+                        className="my-2 p-3 bg-gray-50 rounded-lg max-h-32 overflow-y-auto border border-gray-300 shadow-sm">
+                        <div className="text-xs font-medium text-gray-500 mb-2">Uploaded Files</div>
+                        {uploadedFiles.map((file) => (
+                            <div key={file.id}
+                                 className={`file-item flex items-center justify-between mb-1 p-2 rounded border ${
+                                     file.processing_status === 'failed' ? 'bg-red-50 border-red-200' :
+                                         file.processing_status === 'complete' ? 'bg-green-50 border-green-200' : 'bg-gray-100 border-gray-200'
+                                 }`}>
+                                <span className="text-sm truncate max-w-[70%]">{file.name}</span>
+                                <div className="flex items-center space-x-2">
+                                    {file.processing_status === 'pending' &&
+                                        <span
+                                            className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">Processing...</span>
+                                    }
+                                    {file.processing_status === 'failed' && (
+                                        <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded-full"
+                                              title={file.processing_error || "Error processing file"}>
+                            Error
+                        </span>
+                                    )}
+                                    {file.processing_status === 'complete' &&
+                                        <span
+                                            className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">Ready</span>
+                                    }
+                                    <input
+                                        type="checkbox"
+                                        checked={file.selected}
+                                        onChange={() => toggleFileSelection(file.id)}
+                                        className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                                    />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
                 <div className="flex gap-2">
-                    <Input
-                        type="text"
-                        placeholder="Type your message..."
-                        value={inputText}
-                        onChange={(e) => setInputText(e.target.value)}
-                        onKeyPress={handleKeyPress}
-                        disabled={isStreaming}
-                        className="flex-1 rounded-xl border-gray-200 bg-white/50 backdrop-blur-sm transition-colors
-              hover:bg-white/80 focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50
-              placeholder-gray-400"
-                    />
+    <textarea
+        placeholder="Type your message..."
+        value={inputText}
+        onChange={(e) => setInputText(e.target.value)}
+        onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+            }
+        }}
+        disabled={isStreaming}
+        rows="2"
+        className="flex-1 rounded-xl border border-gray-200 bg-white/50 backdrop-blur-sm transition-colors
+        hover:bg-white/80 focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50
+        placeholder-gray-400 py-2 px-3 resize-none"
+    />
                     <Button
                         onClick={handleSendMessage}
                         disabled={isStreaming}
                         size="icon"
-                        className="shrink-0 rounded-xl bg-blue-500 hover:bg-blue-600 transition-colors"
+                        className="shrink-0 rounded-xl bg-blue-500 hover:bg-blue-600 transition-colors self-end"
                     >
                         <Send className="h-4 w-4"/>
                     </Button>

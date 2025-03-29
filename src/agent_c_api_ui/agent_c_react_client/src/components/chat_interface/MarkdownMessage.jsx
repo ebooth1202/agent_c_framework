@@ -2,10 +2,15 @@ import React, { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import CopyButton from './CopyButton';
 
 const MarkdownMessage = ({ content }) => {
   // Memoize the markdown content to prevent unnecessary re-renders
   const memoizedContent = useMemo(() => {
+
+      if (content === undefined || content === null) {
+      return '';
+    }
     // Ensure proper spacing around headers
     let processedContent = content.replace(/\n(#{1,6})\s*([^\n]+)/g, '\n\n$1 $2\n');
 
@@ -15,11 +20,20 @@ const MarkdownMessage = ({ content }) => {
     // Add extra newline before lists
     processedContent = processedContent.replace(/\n[-*]/g, '\n\n*');
 
-    return processedContent || '';
+    return typeof processedContent === 'string' ? content : String(content);
   }, [content]);
 
   return (
-    <div className="prose prose-sm max-w-none prose-headings:mt-4 prose-headings:mb-2">
+    <div className="prose prose-sm max-w-none prose-headings:mt-4 prose-headings:mb-2 relative group">
+      {/* Copy button that appears on hover */}
+      <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity">
+        <CopyButton
+          content={content}
+          tooltipText="Copy markdown"
+          position="left"
+        />
+      </div>
+
       <ReactMarkdown
         components={{
           h1: ({node, ...props}) => <h1 className="text-2xl font-bold mt-6 mb-4" {...props} />,
@@ -37,13 +51,22 @@ const MarkdownMessage = ({ content }) => {
           strong: ({node, ...props}) => (
             <strong className="font-bold text-purple-800" {...props} />
           ),
-          // Enhanced code block rendering
+          // Enhanced code block rendering with copy button
           code: ({node, inline, className, children, ...props}) => {
             const match = /language-(\w+)/.exec(className || '');
             const language = match ? match[1] : '';
+            const codeString = String(children).replace(/\n$/, '');
 
             return !inline ? (
-              <div className="rounded-lg overflow-hidden my-4">
+              <div className="rounded-lg overflow-hidden my-4 relative group">
+                <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <CopyButton
+                    content={codeString}
+                    tooltipText="Copy code"
+                    variant="secondary"
+                    className="bg-gray-800 hover:bg-gray-700 text-white hover:text-white"
+                  />
+                </div>
                 <SyntaxHighlighter
                   style={oneDark}
                   language={language || 'text'}
@@ -52,7 +75,7 @@ const MarkdownMessage = ({ content }) => {
                   showLineNumbers={true}
                   {...props}
                 >
-                  {String(children).replace(/\n$/, '')}
+                  {codeString}
                 </SyntaxHighlighter>
               </div>
             ) : (

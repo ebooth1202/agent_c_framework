@@ -104,11 +104,66 @@ export const SessionProvider = ({children}) => {
                 modelsResponse.json()
             ]);
             // console.log('Fetched initial data:', {personasData, toolsData, modelsData});
+            // Store data returned from backend into their data structures.
             setPersonas(personasData);
             setAvailableTools(toolsData);
             setModelConfigs(modelsData.models);
 
+            // try pulling config from localstorage and applying.
+            const savedConfig = localStorage.getItem("agent_config");
+            if (savedConfig) {
+                try {
+                    const parsedConfig = JSON.parse(savedConfig);
 
+                    // Check if the configuration is expired (14 days)
+                    if (parsedConfig.lastUpdated) {
+                        const configAge = new Date() - new Date(parsedConfig.lastUpdated);
+                        const maxAgeMs = 14 * 24 * 60 * 60 * 1000; // 14 days
+
+                        if (configAge > maxAgeMs) {
+                            console.log('Saved configuration is too old (>14 days), using defaults');
+                            localStorage.removeItem("agent_config");
+                        } else {
+                            // Verify the saved model still exists in the available models
+                            const savedModel = modelsData.models.find(m => m.id === parsedConfig.modelName);
+
+                            if (savedModel) {
+                                console.log('Loading saved configuration:', parsedConfig);
+                                // Use the saved model as the initial model
+                                const initialModel = {
+                                    id: savedModel.id,
+                                    backend: savedModel.backend,
+                                    persona_name: parsedConfig.persona || 'default',
+                                    custom_prompt: parsedConfig.customPrompt || '',
+                                    temperature: parsedConfig.modelParameters?.temperature,
+                                    reasoning_effort: parsedConfig.modelParameters?.reasoning_effort,
+                                    extended_thinking: parsedConfig.modelParameters?.extended_thinking,
+                                    budget_tokens: parsedConfig.modelParameters?.budget_tokens
+                                };
+
+                                // Set state with saved values
+                                setModelName(savedModel.id);
+                                setSelectedModel(savedModel);
+                                setPersona(parsedConfig.persona || 'default');
+                                setCustomPrompt(parsedConfig.customPrompt || '');
+                                setModelParameters(parsedConfig.modelParameters || {});
+
+                                // Initialize session with saved configuration
+                                await initializeSession(false, initialModel, modelsData.models);
+                                setIsInitialized(true);
+                                return; // Exit early as we've handled initialization
+                            } else {
+                                console.log('Saved model not found in available models, using defaults');
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.error('Error parsing saved configuration:', err);
+                    // Continue with default initialization if parsing fails
+                }
+            }
+
+            // this is the default initialization path is a config is not saved.
             if (modelsData.models.length > 0) {
                 // console.log('Initializing session with model:', modelsData.models[0]);
                 const initialModel = modelsData.models[0];
@@ -443,6 +498,11 @@ export const SessionProvider = ({children}) => {
                     // Initialize new session with the custom prompt
                     await initializeSession(false, modelWithPersona);
                     setSettingsVersion(v => v + 1);
+                    const updatedModelConfig = {
+                        modelName: values.modelName,
+                        modelParameters: newParameters
+                    };
+                    saveConfigToStorage(updatedModelConfig);
                     break;
                 }
                 case 'SETTINGS_UPDATE': {
@@ -470,6 +530,11 @@ export const SessionProvider = ({children}) => {
                     });
                     if (!response.ok) throw new Error('Failed to update settings');
                     setSettingsVersion(v => v + 1);
+                    const updatedSettingsConfig = {
+                        persona: updatedPersona,
+                        customPrompt: updatedPrompt
+                    };
+                    saveConfigToStorage(updatedSettingsConfig);
                     break;
                 }
                 case 'PARAMETER_UPDATE': {
@@ -534,6 +599,10 @@ export const SessionProvider = ({children}) => {
                             body: JSON.stringify(jsonData)
                         });
                         setSettingsVersion(v => v + 1);
+                        const updatedParamConfig = {
+                            modelParameters: updatedParameters
+                        };
+                        saveConfigToStorage(updatedParamConfig);
                     }, 300);
                     break;
                 }
@@ -544,6 +613,21 @@ export const SessionProvider = ({children}) => {
             setError(`Failed to update settings: ${err.message}`);
         }
     };
+
+    // save config to storage
+    const saveConfigToStorage = (updatedConfig = {}) => {
+        const configToSave = {
+            modelName: updatedConfig.modelName || modelName,
+            persona: updatedConfig.persona || persona,
+            customPrompt: updatedConfig.customPrompt || customPrompt,
+            modelParameters: updatedConfig.modelParameters || modelParameters,
+            lastUpdated: new Date().toISOString()
+        };
+
+        console.log('Saving configuration to localStorage:', configToSave);
+        localStorage.setItem("agent_config", JSON.stringify(configToSave));
+    };
+
 
     // Handle equipping tools
     const handleEquipTools = async (tools) => {
@@ -562,6 +646,7 @@ export const SessionProvider = ({children}) => {
             if (!response.ok) throw new Error("Failed to equip tools");
             await fetchAgentTools();
             setSettingsVersion(v => v + 1);
+            // saveConfigToStorage(); // this does nothing right now, but future request will be to pre-initialize tools
         } catch (err) {
             console.error("Failed to equip tools:", err);
             throw err;
@@ -576,6 +661,7 @@ export const SessionProvider = ({children}) => {
     // Handle session deletion
     const handleSessionsDeleted = () => {
         localStorage.removeItem("ui_session_id");
+        localStorage.removeItem("agent_config");
         setSessionId(null);
         setIsReady(false);
         setActiveTools([]);

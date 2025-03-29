@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { PocketKnife, ChevronDown } from 'lucide-react';
+import CopyButton from './CopyButton';
 
 function formatData(data) {
   if (!data) return "";
@@ -35,18 +36,45 @@ const ToolCallItem = ({ tool, results }) => {
             {tool.name}
           </span>
         </div>
-        <ChevronDown
-          className={`h-5 w-5 text-blue-600 transform transition-transform duration-200 ${
-            isExpanded ? "rotate-180" : ""
-          }`}
-        />
+        <div className="flex items-center gap-2">
+          {/* Copy entire tool call including arguments and results */}
+          <div onClick={(e) => e.stopPropagation()}>
+            <CopyButton
+              content={() => {
+                const toolData = {
+                  name: tool.name,
+                  arguments: tool.arguments ? JSON.parse(typeof tool.arguments === 'string' ? tool.arguments : JSON.stringify(tool.arguments)) : {},
+                  results: results
+                };
+                return JSON.stringify(toolData, null, 2);
+              }}
+              tooltipText="Copy tool call"
+              variant="ghost"
+              className="text-blue-600 hover:text-blue-800 hover:bg-blue-100"
+            />
+          </div>
+          <ChevronDown
+            className={`h-5 w-5 text-blue-600 transform transition-transform duration-200 ${
+              isExpanded ? "rotate-180" : ""
+            }`}
+          />
+        </div>
       </div>
 
       {isExpanded && (
         <div className="border-t border-blue-200 bg-white p-4 rounded-b-lg">
           {formattedArguments && (
-            <div className="mb-4">
-              <h5 className="text-sm font-semibold text-blue-600 mb-2">Arguments:</h5>
+            <div className="mb-4 relative group">
+              <div className="flex justify-between items-center mb-2">
+                <h5 className="text-sm font-semibold text-blue-600">Arguments:</h5>
+                <CopyButton
+                  content={formattedArguments}
+                  tooltipText="Copy arguments"
+                  variant="ghost"
+                  className="text-blue-600 hover:text-blue-800 hover:bg-blue-100"
+                  size="xs"
+                />
+              </div>
               <pre className="text-sm font-mono bg-blue-50 p-2 rounded-md whitespace-pre-wrap overflow-x-auto">
                 {formattedArguments}
               </pre>
@@ -54,8 +82,17 @@ const ToolCallItem = ({ tool, results }) => {
           )}
 
           {formattedResults && (
-            <div>
-              <h5 className="text-sm font-semibold text-blue-600 mb-2">Results:</h5>
+            <div className="relative group">
+              <div className="flex justify-between items-center mb-2">
+                <h5 className="text-sm font-semibold text-blue-600">Results:</h5>
+                <CopyButton
+                  content={formattedResults}
+                  tooltipText="Copy results"
+                  variant="ghost"
+                  className="text-blue-600 hover:text-blue-800 hover:bg-blue-100"
+                  size="xs"
+                />
+              </div>
               <pre className="text-sm font-mono bg-blue-50 p-2 rounded-md whitespace-pre-wrap overflow-x-auto">
                 {formattedResults}
               </pre>

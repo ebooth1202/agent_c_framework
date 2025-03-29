@@ -22,6 +22,7 @@
               "required": false
             }
           },
+          "context_window": 128000,
           "capabilities": {
             "supports_tools": true,
             "multi_modal": true
@@ -52,6 +53,7 @@
               "required": false
             }
           },
+          "context_window": 128000,
           "capabilities": {
             "supports_tools": true,
             "multi_modal": true
@@ -85,6 +87,7 @@
               "required": false
             }
           },
+          "context_window": 128000,
           "capabilities": {
             "supports_tools": true,
             "multi_modal": true
@@ -118,6 +121,7 @@
               "required": false
             }
           },
+          "context_window": 200000,
           "capabilities": {
             "supports_tools": true,
             "multi_modal": true
@@ -148,6 +152,7 @@
               "required": false
             }
           },
+          "context_window": 128000,
           "capabilities": {
             "supports_tools": true,
             "multi_modal": true
@@ -183,6 +188,7 @@
               "required": true
             }
           },
+          "context_window": 200000,
           "capabilities": {
             "supports_tools": true,
             "multi_modal": true
@@ -204,8 +210,8 @@
               "enabled": true,
               "budget_tokens": {
                 "min": 0,
-                "max": 10000,
-                "default": 5000
+                "max": 24000,
+                "default": 10000
               },
               "required": true
             },
@@ -221,6 +227,7 @@
               "required": true
             }
           },
+          "context_window": 200000,
           "capabilities": {
             "supports_tools": true,
             "multi_modal": true

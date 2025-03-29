@@ -1,8 +1,8 @@
 import asyncio
 import logging
-import traceback
 import uuid
 from typing import Dict, Optional, List, Any, AsyncGenerator
+import traceback
 
 from agent_c import BaseAgent
 from agent_c_api.core.agent_bridge import AgentBridge
@@ -24,7 +24,7 @@ class UItoAgentBridgeManager:
         ui_sessions (Dict[str, Dict[str, Any]]): Active session storage
         _locks (Dict[str, asyncio.Lock]): Session operation locks
     """
-    ESSENTIAL_TOOLS = ['MemoryTools', 'WorkspaceTools', 'PreferenceTools', 'RandomNumberTools']
+    ESSENTIAL_TOOLS = ['MemoryTools', 'WorkspaceTools', 'ThinkTools', 'RandomNumberTools']
 
     def __init__(self):
         logging_manager = LoggingManager(__name__)
@@ -75,8 +75,8 @@ class UItoAgentBridgeManager:
         # If updating existing session, use that ID, otherwise generate new one - this will transfer chat history
         ui_session_id = existing_ui_session_id if existing_ui_session_id else str(uuid.uuid4())
 
-        # Extract custom_persona_text explicitly to avoid it being lost or overridden
-        custom_persona_text = kwargs.pop('custom_persona_text', None)
+        # Extract custom_prompt explicitly to avoid it being lost or overridden
+        custom_prompt = kwargs.pop('custom_prompt', None)
 
         # Create lock if it doesn't exist
         if ui_session_id not in self._locks:
@@ -87,12 +87,12 @@ class UItoAgentBridgeManager:
             existing_session = self.ui_sessions.get(ui_session_id, {})
             existing_agent: BaseAgent | None = existing_session.get("agent", None)
 
-            # IMPORTANT FIX: If we're changing models and no custom_persona_text was passed with the model change,
+            # IMPORTANT FIX: If we're changing models and no custom_prompt was passed with the model change,
             # but the existing agent has one, we need to preserve it
-            if existing_agent and custom_persona_text is None and existing_agent.custom_persona_text:
-                # this should work even if custom_persona_text==existing_agent.custom_persona_text - will be same value
-                custom_persona_text = existing_agent.custom_persona_text
-                self.logger.info(f"Preserving existing custom_persona_text: {custom_persona_text[:10]}...")
+            if existing_agent and custom_prompt is None and existing_agent.custom_prompt:
+                # this should work even if custom_prompt==existing_agent.custom_prompt - will be same value
+                custom_prompt = existing_agent.custom_prompt
+                self.logger.info(f"Preserving existing custom_prompt: {custom_prompt[:10]}...")
 
             # Initialize agent bridge for this session - this creates a session manager that will persist history
             agent = AgentBridge(
@@ -102,7 +102,7 @@ class UItoAgentBridgeManager:
                 additional_tools=additional_tools or [],
                 persona_name=persona_name,
                 agent_name=f"Agent_{ui_session_id}",
-                custom_persona_text=custom_persona_text,
+                custom_prompt=custom_prompt,
                 **kwargs
             )
 
@@ -161,6 +161,7 @@ class UItoAgentBridgeManager:
             ui_session_id: str,
             user_message: str,
             custom_prompt: Optional[str] = None,
+            file_ids: Optional[List[str]] = None
     ) -> AsyncGenerator[str, None]:
         """
         Get streaming response from the agent for a given message.
@@ -170,6 +171,7 @@ class UItoAgentBridgeManager:
             ui_session_id: The session identifier
             user_message: The user's message to process
             custom_prompt: Optional custom prompt to use
+            file_ids: Optional list of file IDs to include with the message
 
         Yields:
             Chunks of the response as they become available
@@ -185,18 +187,28 @@ class UItoAgentBridgeManager:
         agent = session_data["agent"]
 
         try:
-            # Use the new streaming method
-            async for chunk in agent.stream_chat(
-                    user_message=user_message,
-                    custom_prompt=custom_prompt
-            ):
-                yield chunk
+            # Pass file_ids to the agent's stream_chat method if it accepts them
+            if file_ids and hasattr(agent, "file_handler") and agent.file_handler is not None:
+                # For agents with file handling capabilities
+                async for chunk in agent.stream_chat(
+                        user_message=user_message,
+                        file_ids=file_ids,
+                        custom_prompt=custom_prompt
+                ):
+                    yield chunk
+            else:
+                # For agents without file handling or no files
+                async for chunk in agent.stream_chat(
+                        user_message=user_message,
+                        custom_prompt=custom_prompt
+                ):
+                    yield chunk
 
         except Exception as e:
+            self.logger.error(f"Error in stream_response: {e}")
             error_type = type(e).__name__
             error_traceback = traceback.format_exc()
             self.logger.error(f"Error in agent_manager.py:stream_response - {error_type}: {str(e)}\n{error_traceback}")
-            yield f"Error: {str(e)}"
 
     async def debug_session(self, ui_session_id: str):
         """
