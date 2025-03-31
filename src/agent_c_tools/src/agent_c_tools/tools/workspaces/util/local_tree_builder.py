@@ -1,7 +1,7 @@
 import os
 import fnmatch
 import re
-from typing import List, Optional, Tuple, Set
+from typing import List, Optional, Tuple, Set, Union
 
 
 class LocalPathTreeGenerator:
@@ -19,24 +19,29 @@ class LocalPathTreeGenerator:
         "*.pyd", ".DS_Store", "*.so", "*.dylib", "*.dll"
     ]
 
-    def __init__(self, ignore_patterns: Optional[List[str]] = None, ignore_file_content: Optional[str] = None):
+    def __init__(self, ignore_patterns: Optional[Union[List[str], str]] = None):
         """
         Initialize the LocalPathTreeGenerator with configurable ignore patterns.
 
         Args:
-            ignore_patterns: List of patterns to ignore (glob patterns like "*.pyc")
-            ignore_file_content: String content in .gitignore format with patterns to ignore
+            ignore_patterns: Patterns to ignore, either as:
+                - A list of glob patterns (e.g., ["*.pyc", ".git/"])
+                - A string in .gitignore format
+                - None to use defaults
         """
         self.ignore_patterns = self.DEFAULT_IGNORE_PATTERNS.copy()
 
-        # Add any explicitly provided patterns
-        if ignore_patterns:
-            self.ignore_patterns.extend(ignore_patterns)
-
-        # Parse ignore file content if provided
-        if ignore_file_content:
-            parsed_patterns = self._parse_ignore_file_content(ignore_file_content)
-            self.ignore_patterns.extend(parsed_patterns)
+        # Process ignore patterns if provided
+        if ignore_patterns is not None:
+            if isinstance(ignore_patterns, list):
+                # Add list of patterns directly
+                self.ignore_patterns.extend(ignore_patterns)
+            elif isinstance(ignore_patterns, str):
+                # Parse string as .gitignore format
+                parsed_patterns = self._parse_ignore_file_content(ignore_patterns)
+                self.ignore_patterns.extend(parsed_patterns)
+            else:
+                raise TypeError("ignore_patterns must be a list of strings or a string in .gitignore format")
 
     def _parse_ignore_file_content(self, content: str) -> List[str]:
         """
@@ -70,7 +75,7 @@ class LocalPathTreeGenerator:
 
         return patterns
 
-    def _should_ignore(self, name: str, rel_path: str, is_dir: bool) -> bool:
+    def _should_ignore(self, name: str, rel_path: str, is_dir: bool, patterns: List[str]) -> bool:
         """
         Check if a file or directory should be ignored.
 
@@ -78,11 +83,12 @@ class LocalPathTreeGenerator:
             name: The name of the file or directory
             rel_path: The relative path from the start path
             is_dir: Whether the item is a directory
+            patterns: List of ignore patterns to check against
 
         Returns:
             True if the item should be ignored, False otherwise
         """
-        for pattern in self.ignore_patterns:
+        for pattern in patterns:
             # Check for exact matches and glob pattern matches
             if (fnmatch.fnmatch(name, pattern) or
                     fnmatch.fnmatch(rel_path, pattern) or
@@ -97,7 +103,7 @@ class LocalPathTreeGenerator:
             start_path: str,
             max_depth: Optional[int] = None,
             max_files_depth: Optional[int] = None,
-            ignore_file_content: Optional[str] = None
+            ignore_patterns: Optional[Union[List[str], str]] = None
     ) -> List[str]:
         """
         Generate a directory structure tree starting from the given path.
@@ -106,7 +112,10 @@ class LocalPathTreeGenerator:
             start_path: The root directory to start generating the tree from
             max_depth: Maximum depth to traverse directories (None for unlimited)
             max_files_depth: Maximum depth at which to show files (None for unlimited)
-            ignore_file_content: Optional .gitignore format content to parse for this specific tree generation
+            ignore_patterns: Additional patterns to ignore for this specific call, either as:
+                - A list of glob patterns (e.g., ["*.pyc", ".git/"])
+                - A string in .gitignore format
+                - None to use only the patterns from initialization
 
         Returns:
             A list of strings representing the recursive directory structure
@@ -118,10 +127,15 @@ class LocalPathTreeGenerator:
         # Create a local copy of ignore patterns for this call
         local_ignore_patterns = self.ignore_patterns.copy()
 
-        # Add any patterns from the ignore_file_content for this specific call
-        if ignore_file_content:
-            additional_patterns = self._parse_ignore_file_content(ignore_file_content)
-            local_ignore_patterns.extend(additional_patterns)
+        # Add any call-specific patterns
+        if ignore_patterns is not None:
+            if isinstance(ignore_patterns, list):
+                local_ignore_patterns.extend(ignore_patterns)
+            elif isinstance(ignore_patterns, str):
+                additional_patterns = self._parse_ignore_file_content(ignore_patterns)
+                local_ignore_patterns.extend(additional_patterns)
+            else:
+                raise TypeError("ignore_patterns must be a list of strings or a string in .gitignore format")
 
         return self._generate_tree_recursive(
             start_path,
@@ -176,18 +190,11 @@ class LocalPathTreeGenerator:
                 rel_path = os.path.relpath(full_path, start_path)
                 is_dir = os.path.isdir(full_path)
 
-                # Check if it matches any ignore pattern
-                should_ignore = False
-                for pattern in local_ignore_patterns:
-                    if (fnmatch.fnmatch(name, pattern) or
-                            fnmatch.fnmatch(rel_path, pattern) or
-                            fnmatch.fnmatch(rel_path, f"{pattern}/**") or
-                            (is_dir and fnmatch.fnmatch(f"{rel_path}/", f"{pattern}/"))):
-                        should_ignore = True
-                        break
+                # Skip if matches any ignore pattern
+                if self._should_ignore(name, rel_path, is_dir, local_ignore_patterns):
+                    continue
 
-                if not should_ignore:
-                    filtered_contents.append(name)
+                filtered_contents.append(name)
 
             # Split into directories and files
             dirs_and_files = []
@@ -220,7 +227,9 @@ class LocalPathTreeGenerator:
                         prefix + extension,
                         current_depth + 1,
                         max_depth,
-                        max_files_depth
+                        max_files_depth,
+                        start_path,
+                        local_ignore_patterns
                     )
                     tree_structure.extend(subtree)
 
