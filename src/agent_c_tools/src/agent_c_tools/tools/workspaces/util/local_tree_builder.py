@@ -238,3 +238,36 @@ class LocalPathTreeGenerator:
             tree_structure.append(f"{prefix}└── [Error: {str(e)}]")
 
         return tree_structure
+
+def main():
+
+    # Example 3: Use defaults for initialization, add patterns at generation time
+    generator = LocalPathTreeGenerator()
+    tree = generator.generate_tree(
+        "./",
+        max_depth=3,
+        ignore_patterns=["temp/", "*.log"]  # List format
+    )
+
+    # Print the generated tree
+    for line in tree:
+        print(line)
+
+    # Example 4: Add .gitignore string at generation time
+    tree = generator.generate_tree(
+        "./",
+        max_depth=4,
+        max_files_depth=2,
+        ignore_patterns="""
+        # Project-specific ignores
+        data/raw/
+        *.bak
+        """  # String format
+    )
+    print("\n\nGenerated tree with .gitignore string:\n")
+    # Print the generated tree
+    for line in tree:
+        print(line)
+
+if __name__ == "__main__":
+    main()
