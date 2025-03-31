@@ -7,6 +7,10 @@ import CopyButton from './CopyButton';
 const MarkdownMessage = ({ content }) => {
   // Memoize the markdown content to prevent unnecessary re-renders
   const memoizedContent = useMemo(() => {
+
+      if (content === undefined || content === null) {
+      return '';
+    }
     // Ensure proper spacing around headers
     let processedContent = content.replace(/\n(#{1,6})\s*([^\n]+)/g, '\n\n$1 $2\n');
 
@@ -16,7 +20,7 @@ const MarkdownMessage = ({ content }) => {
     // Add extra newline before lists
     processedContent = processedContent.replace(/\n[-*]/g, '\n\n*');
 
-    return processedContent || '';
+    return typeof processedContent === 'string' ? content : String(content);
   }, [content]);
 
   return (
