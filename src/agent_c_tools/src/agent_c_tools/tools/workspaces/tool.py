@@ -1,20 +1,23 @@
 import json
 import logging
-
-from typing import Any, List
+import re
+from typing import Any, List, Tuple, Optional
 
 from agent_c.toolsets.tool_set import Toolset
 from agent_c.toolsets.json_schema import json_schema
 from agent_c_tools.tools.workspaces.base import BaseWorkspace
 from agent_c_tools.tools.workspaces.prompt import WorkspaceSection
 
+
 class WorkspaceTools(Toolset):
     """
     WorkspaceTools allows the model to read / write data to one or more workspaces.
-    This allows us to absract things like S3, Azure Storage and the like.
+    This allows us to abstract things like S3, Azure Storage and the like.
 
-    This really just a rough outline at this point.
+    Uses UNC-style paths (//WORKSPACE/path) to reference files and directories.
     """
+
+    UNC_PATH_PATTERN = r'^//([^/]+)(?:/(.*))?$'
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs, name="workspace")
@@ -32,299 +35,288 @@ class WorkspaceTools(Toolset):
         self.section = WorkspaceSection(workspaces=spaces)
 
     def find_workspace_by_name(self, name):
+        """Find a workspace by its name."""
         try:
             return next(workspace for workspace in self.workspaces if workspace.name == name)
         except StopIteration:
-            # Handle the case where no workspaces with the given name is found
-            self.logger.warning(f"No workspaces found with the name: {name}")
+            # Handle the case where no workspace with the given name is found
+            self.logger.warning(f"No workspace found with the name: {name}")
             return None
 
+    def _parse_unc_path(self, path: str) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+        """
+        Parse a UNC path (//WORKSPACE/path) into workspace name and relative path.
+
+        Args:
+            path (str): The UNC path to parse
+
+        Returns:
+            Tuple[Optional[str], Optional[str], Optional[str]]:
+                - Error message (if any)
+                - Workspace name (if no error)
+                - Relative path (if no error)
+        """
+        if not path:
+            return "Path cannot be empty", None, None
+
+        match = re.match(self.UNC_PATH_PATTERN, path)
+        if not match:
+            return f"Invalid UNC path format: {path}. Expected format: //WORKSPACE/path", None, None
+
+        workspace_name = match.group(1)
+        relative_path = match.group(2) or ''
+
+        workspace = self.find_workspace_by_name(workspace_name)
+        if workspace is None:
+            return f"No workspace found with the name: {workspace_name}", None, None
+
+        return None, workspace, relative_path
+
+    def _validate_and_get_workspace_path(self, unc_path: str) -> Tuple[Optional[str], Optional[BaseWorkspace], Optional[str]]:
+        """
+        Validate a UNC path and return the workspace object and relative path.
+
+        Args:
+            unc_path (str): UNC-style path to validate
+
+        Returns:
+            Tuple[Optional[str], Optional[BaseWorkspace], Optional[str]]:
+                - Error message (if any)
+                - Workspace object (if no error)
+                - Relative path (if no error)
+        """
+        error, workspace, relative_path = self._parse_unc_path(unc_path)
+        if error:
+            self.logger.error(error)
+            return error, None, None
+
+        return None, workspace, relative_path
 
     @json_schema(
-        'List the contents of a directory within a workspaces.',
+        'List the contents of a directory using UNC-style path (//WORKSPACE/path)',
         {
-            'workspace': {
-                'type': 'string',
-                'description': 'The name of the workspace the path resides in. Refer to the "available workspaces" list for valid names.',
-                'required': True
-            },
             'path': {
                 'type': 'string',
-                'description': 'The path, relative to the workspace root folder, to list.',
-                'required': False
+                'description': 'UNC-style path (//WORKSPACE/path) to list contents for',
+                'required': True
             }
         }
     )
     async def ls(self, **kwargs: Any) -> str:
-        """Asynchronously lists the contents of a workspaces or a subdirectory in it.
+        """Asynchronously lists the contents of a workspace directory.
 
         Args:
-            workspace (str): The workspaces to use
-            path (str): Relative path within the workspaces to list contents for.
+            path (str): UNC-style path (//WORKSPACE/path) to list contents for
 
         Returns:
             str: JSON string with the listing or an error message.
         """
-        relative_path: str = kwargs.get('path', '')
-        if relative_path == '/':
-            relative_path = ''
+        unc_path = kwargs.get('path', '')
 
-        if relative_path.startswith('/'):
-            error_msg = f'The path {relative_path} is absolute. Please provide a relative path.'
-            self.logger.error(error_msg)
-            return json.dumps({'error': error_msg})
-
-        workspace = self.find_workspace_by_name(kwargs.get('workspace'))
-        if workspace is None:
-            return f'No workspaces found with the name: {workspace}'
+        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
+        if error:
+            return json.dumps({'error': error})
 
         return await workspace.ls(relative_path)
 
     @json_schema(
-        'Retrieve a string "tree" of the directory structure within a workspace.',
+        'Retrieve a string "tree" of the directory structure using UNC-style path',
         {
-            'workspace': {
-                'type': 'string',
-                'description': 'The name of the workspace the path resides in. Refer to the "available workspaces" list for valid names.',
-                'required': True
-            },
             'path': {
                 'type': 'string',
-                'description': 'The path, relative to the workspace root folder, to start the tree from.',
-                'required': False
+                'description': 'UNC-style path (//WORKSPACE/path) to start the tree from',
+                'required': True
             }
         }
     )
     async def tree(self, **kwargs: Any) -> str:
-        """Asynchronously lists the contents of a workspaces or a subdirectory in it.
+        """Asynchronously generates a tree view of a directory.
 
         Args:
-            workspace (str): The workspaces to use
-            path (str): Relative path within the workspaces to list contents for.
+            path (str): UNC-style path (//WORKSPACE/path) to start the tree from
 
         Returns:
-            str: JSON string with the listing or an error message.
+            str: JSON string with the tree view or an error message.
         """
-        relative_path: str = kwargs.get('path', '')
-        if relative_path == '/':
-            relative_path = ''
+        unc_path = kwargs.get('path', '')
 
-        if relative_path.startswith('/'):
-            error_msg = f'The path {relative_path} is absolute. Please provide a relative path.'
-            self.logger.error(error_msg)
-            return json.dumps({'error': error_msg})
-
-        workspace = self.find_workspace_by_name(kwargs.get('workspace'))
-        if workspace is None:
-            return f'No workspaces found with the name: {workspace}'
+        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
+        if error:
+            return json.dumps({'error': error})
 
         return await workspace.tree(relative_path)
 
     @json_schema(
-        'Reads the contents of a text file within the workspaces.',
+        'Reads the contents of a text file using UNC-style path',
         {
-            'workspace': {
+            'path': {
                 'type': 'string',
-                'description': 'The name of the workspace the file_path resides in. Refer to the "available workspaces" list for valid names.',
-                'required': True
-            },
-            'file_path': {
-                'type': 'string',
-                'description': 'The path to the file, relative to the workspace root folder',
+                'description': 'UNC-style path (//WORKSPACE/path) to the file to read',
                 'required': True
             }
         }
     )
     async def read(self, **kwargs: Any) -> str:
-        """Asynchronously reads the content of a text file within the workspaces.
+        """Asynchronously reads the content of a text file.
 
         Args:
-            file_path (str): Relative path to the text file within the workspaces.
+            path (str): UNC-style path (//WORKSPACE/path) to the file to read
 
         Returns:
             str: JSON string with the file content or an error message.
         """
-        file_path: str = kwargs['file_path']
-        if file_path.startswith('/'):
-            error_msg = f'The path {file_path} is absolute. Please provide a relative path.'
-            self.logger.error(error_msg)
-            return json.dumps({'error': error_msg})
+        unc_path = kwargs.get('path', '')
 
-        workspace = self.find_workspace_by_name(kwargs.get('workspace'))
-        if workspace is None:
-            return f'No workspaces found with the name: {workspace}'
+        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
+        if error:
+            return json.dumps({'error': error})
 
-        return await workspace.read(file_path)
+        return await workspace.read(relative_path)
 
     @json_schema(
-        'Writes or appends text data to a file within the workspaces.',
+        'Writes or appends text data to a file using UNC-style path',
         {
-            'workspace': {
+            'path': {
                 'type': 'string',
-                'description': 'The name of the workspace the file_path resides in. Refer to the "available workspaces" list for valid names.',
-                'required': True
-            },
-            'file_path': {
-                'type': 'string',
-                'description': 'The path, relative to the workspace root folder, to the file within the workspace.',
+                'description': 'UNC-style path (//WORKSPACE/path) to the file to write',
                 'required': True
             },
             'data': {
                 'type': 'string',
-                'description': 'The text data to write or append to the file.',
+                'description': 'The text data to write or append to the file',
                 'required': True
             },
             'mode': {
                 'type': 'string',
-                'description': 'The writing mode: "write" to overwrite or "append" to add to the file.',
+                'description': 'The writing mode: "write" to overwrite or "append" to add to the file',
                 'required': False
             }
         }
     )
     async def write(self, **kwargs: Any) -> str:
-        """Asynchronously writes or appends data to a file within the workspaces.
+        """Asynchronously writes or appends data to a file.
 
         Args:
-            file_path (str): Relative path to the file within the workspaces.
-            data (str): The text data to write or append to the file.
-            mode (str): The writing mode, either 'write' to overwrite or 'append'.
+            path (str): UNC-style path (//WORKSPACE/path) to the file to write
+            data (str): The text data to write or append to the file
+            mode (str): The writing mode, either 'write' to overwrite or 'append'
 
         Returns:
             str: JSON string with a success message or an error message.
         """
-        file_path: str = kwargs['file_path']
-        data: str = kwargs['data']
-        mode: str = kwargs.get('mode', 'write')
+        unc_path = kwargs.get('path', '')
+        data = kwargs['data']
+        mode = kwargs.get('mode', 'write')
 
-        if file_path.startswith('/'):
-            error_msg = f'The path {file_path} is absolute. Please provide a relative path.'
-            self.logger.error(error_msg)
-            return json.dumps({'error': error_msg})
+        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
+        if error:
+            return json.dumps({'error': error})
 
-        workspace = self.find_workspace_by_name(kwargs.get('workspace'))
-        if workspace is None:
-            return f'No workspaces found with the name: {workspace}'
-
-        return await workspace.write(file_path, mode, data)
+        return await workspace.write(relative_path, mode, data)
 
     @json_schema(
-        'Copy a file or directory within a workspace.',
+        'Copy a file or directory using UNC-style paths',
         {
-            'workspace': {
-                'type': 'string',
-                'description': 'The name of the workspace the paths reside in. Refer to the "available workspaces" list for valid names.',
-                'required': True
-            },
             'src_path': {
                 'type': 'string',
-                'description': 'The source path, relative to the workspace root folder.',
+                'description': 'UNC-style path (//WORKSPACE/path) to the source',
                 'required': True
             },
             'dest_path': {
                 'type': 'string',
-                'description': 'The destination path, relative to the workspace root folder.',
+                'description': 'UNC-style path (//WORKSPACE/path) to the destination',
                 'required': True
             }
         }
     )
     async def cp(self, **kwargs: Any) -> str:
-        """Asynchronously copies a file or directory within a workspace.
+        """Asynchronously copies a file or directory.
 
         Args:
-            workspace (str): The workspace to use
-            src_path (str): Relative source path within the workspace
-            dest_path (str): Relative destination path within the workspace
+            src_path (str): UNC-style path (//WORKSPACE/path) to the source
+            dest_path (str): UNC-style path (//WORKSPACE/path) to the destination
 
         Returns:
             str: JSON string with the result or an error message.
         """
-        src_path: str = kwargs.get('src_path', '')
-        dest_path: str = kwargs.get('dest_path', '')
+        src_unc_path = kwargs.get('src_path', '')
+        dest_unc_path = kwargs.get('dest_path', '')
 
-        # Check for absolute paths
-        if src_path.startswith('/'):
-            error_msg = f'The source path {src_path} is absolute. Please provide a relative path.'
+        # Validate source path
+        src_error, src_workspace, src_relative_path = self._validate_and_get_workspace_path(src_unc_path)
+        if src_error:
+            return json.dumps({'error': src_error})
+
+        # Validate destination path
+        dest_error, dest_workspace, dest_relative_path = self._validate_and_get_workspace_path(dest_unc_path)
+        if dest_error:
+            return json.dumps({'error': dest_error})
+
+        # Check if both paths are in the same workspace
+        if src_workspace != dest_workspace:
+            error_msg = f"Cross-workspace operations are not supported. Source and destination must be in the same workspace."
             self.logger.error(error_msg)
             return json.dumps({'error': error_msg})
 
-        if dest_path.startswith('/'):
-            error_msg = f'The destination path {dest_path} is absolute. Please provide a relative path.'
-            self.logger.error(error_msg)
-            return json.dumps({'error': error_msg})
-
-        workspace = self.find_workspace_by_name(kwargs.get('workspace'))
-        if workspace is None:
-            return f'No workspace found with the name: {kwargs.get("workspace")}'
-
-        return await workspace.cp(src_path, dest_path)
+        return await src_workspace.cp(src_relative_path, dest_relative_path)
 
     @json_schema(
-        'Move a file or directory within a workspace.',
+        'Move a file or directory using UNC-style paths',
         {
-            'workspace': {
-                'type': 'string',
-                'description': 'The name of the workspace the paths reside in. Refer to the "available workspaces" list for valid names.',
-                'required': True
-            },
             'src_path': {
                 'type': 'string',
-                'description': 'The source path, relative to the workspace root folder.',
+                'description': 'UNC-style path (//WORKSPACE/path) to the source',
                 'required': True
             },
             'dest_path': {
                 'type': 'string',
-                'description': 'The destination path, relative to the workspace root folder.',
+                'description': 'UNC-style path (//WORKSPACE/path) to the destination',
                 'required': True
             }
         }
     )
     async def mv(self, **kwargs: Any) -> str:
-        """Asynchronously moves a file or directory within a workspace.
+        """Asynchronously moves a file or directory.
 
         Args:
-            workspace (str): The workspace to use
-            src_path (str): Relative source path within the workspace
-            dest_path (str): Relative destination path within the workspace
+            src_path (str): UNC-style path (//WORKSPACE/path) to the source
+            dest_path (str): UNC-style path (//WORKSPACE/path) to the destination
 
         Returns:
             str: JSON string with the result or an error message.
         """
-        src_path: str = kwargs.get('src_path', '')
-        dest_path: str = kwargs.get('dest_path', '')
+        src_unc_path = kwargs.get('src_path', '')
+        dest_unc_path = kwargs.get('dest_path', '')
 
-        # Check for absolute paths
-        if src_path.startswith('/'):
-            error_msg = f'The source path {src_path} is absolute. Please provide a relative path.'
+        # Validate source path
+        src_error, src_workspace, src_relative_path = self._validate_and_get_workspace_path(src_unc_path)
+        if src_error:
+            return json.dumps({'error': src_error})
+
+        # Validate destination path
+        dest_error, dest_workspace, dest_relative_path = self._validate_and_get_workspace_path(dest_unc_path)
+        if dest_error:
+            return json.dumps({'error': dest_error})
+
+        # Check if both paths are in the same workspace
+        if src_workspace != dest_workspace:
+            error_msg = f"Cross-workspace operations are not supported. Source and destination must be in the same workspace."
             self.logger.error(error_msg)
             return json.dumps({'error': error_msg})
 
-        if dest_path.startswith('/'):
-            error_msg = f'The destination path {dest_path} is absolute. Please provide a relative path.'
-            self.logger.error(error_msg)
-            return json.dumps({'error': error_msg})
-
-        workspace = self.find_workspace_by_name(kwargs.get('workspace'))
-        if workspace is None:
-            return f'No workspace found with the name: {kwargs.get("workspace")}'
-
-        return await workspace.mv(src_path, dest_path)
+        return await src_workspace.mv(src_relative_path, dest_relative_path)
 
     @json_schema(
-        'Update a text file within the workspace with multiple string replacements or complete rewrite. This functions the same as the Anthropic artifacts update tool does ',
+        'Update a text file with multiple string replacements or complete rewrite using UNC-style path',
         {
-            'workspace': {
+            'path': {
                 'type': 'string',
-                'description': 'The name of the workspace the file resides in.',
-                'required': True
-            },
-            'file_path': {
-                'type': 'string',
-                'description': 'The path, relative to the workspace root folder, of the file to update.',
+                'description': 'UNC-style path (//WORKSPACE/path) to the file to update',
                 'required': True
             },
             'updates': {
                 'type': 'array',
-                'description': 'Array of update operations to perform.',
+                'description': 'Array of update operations to perform',
                 'items': {
                     'type': 'object',
                     'properties': {
@@ -334,7 +326,7 @@ class WorkspaceTools(Toolset):
                         },
                         'new_string': {
                             'type': 'string',
-                            'description': 'The new string that will replace the old string.  This can be a multiline string.'
+                            'description': 'The new string that will replace the old string. This can be a multiline string.'
                         }
                     },
                     'required': ['old_string', 'new_string']
@@ -352,26 +344,20 @@ class WorkspaceTools(Toolset):
         """Asynchronously updates a file with multiple string replacements or a full rewrite.
 
         Args:
-            workspace (str): The name of the workspace the file resides in.
-            file_path (str): Relative path to the file within the workspace.
-            updates (list): A list of update operations, each containing 'old_string' and 'new_string'.
-            rewrite (bool, optional): If True, performs a full rewrite instead of string replacements.
+            path (str): UNC-style path (//WORKSPACE/path) to the file to update
+            updates (list): A list of update operations, each containing 'old_string' and 'new_string'
+            rewrite (bool, optional): If True, performs a full rewrite instead of string replacements
 
         Returns:
             str: JSON string with a success message or an error message.
         """
-        file_path: str = kwargs['file_path']
-        updates: list = kwargs['updates']
-        rewrite: bool = kwargs.get('rewrite', False)
+        unc_path = kwargs.get('path', '')
+        updates = kwargs['updates']
+        rewrite = kwargs.get('rewrite', False)
 
-        if file_path.startswith('/'):
-            error_msg = f'The path {file_path} is absolute. Please provide a relative path.'
-            self.logger.error(error_msg)
-            return json.dumps({'error': error_msg})
-
-        workspace = self.find_workspace_by_name(kwargs.get('workspace'))
-        if workspace is None:
-            return f'No workspace found with the name: {kwargs.get("workspace")}'
+        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
+        if error:
+            return json.dumps({'error': error})
 
         try:
             if rewrite:
@@ -384,11 +370,10 @@ class WorkspaceTools(Toolset):
                     return json.dumps({'error': 'No new content provided for rewrite operation'})
 
                 # Write the new content to the file
-                write_response = await workspace.write(file_path, 'write', new_content)
-
+                write_response = await workspace.write(relative_path, 'write', new_content)
                 return write_response
             else:
-                file_content_response = await workspace.read(file_path)
+                file_content_response = await workspace.read(relative_path)
 
                 # Parse the response to get the actual content
                 try:
@@ -432,14 +417,14 @@ class WorkspaceTools(Toolset):
                     })
 
                 # Write the updated content back to the file
-                write_response = await workspace.write(file_path, 'write', updated_content)
+                write_response = await workspace.write(relative_path, 'write', updated_content)
 
                 if 'error' in write_response:
                     return write_response
 
                 return json.dumps({
                     'success': True,
-                    'message': f'Successfully updated file {file_path}',
+                    'message': f'Successfully updated file {relative_path}',
                     'operation': 'update',
                     'replacement_stats': replacement_stats
                 })
