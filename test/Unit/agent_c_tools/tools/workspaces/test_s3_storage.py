@@ -53,7 +53,7 @@ class TestS3StorageWorkspace:
         assert workspace.bucket_name == "test-bucket"
         assert workspace.prefix == ""
         assert workspace.type_name == "s3"
-        assert workspace.read_only == False
+        assert workspace.read_only is False
         assert workspace.max_filename_length == 1024
 
         # Test with custom values
@@ -68,7 +68,7 @@ class TestS3StorageWorkspace:
         assert workspace.prefix == "my/prefix/"
         assert workspace.name == "test-workspace"
         assert workspace.description == "Test workspace"
-        assert workspace.read_only == True
+        assert workspace.read_only is True
         assert workspace.max_filename_length == 1024 - len("my/prefix/")
 
     def test_get_full_path(self):
