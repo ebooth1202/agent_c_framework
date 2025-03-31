@@ -13,10 +13,21 @@ class LocalFileSystemTreeBuilder(TreeBuilder):
     Builds a DirectoryTree model by traversing the local file system.
     """
 
-    DEFAULT_IGNORE_PATTERNS = [
-        ".git", "__pycache__", "*.pyc", "*.pyo",
-        "*.pyd", ".DS_Store", "*.so", "*.dylib", "*.dll"
-    ]
+
+    @classmethod
+    def load_agent_c_ignore_patterns(cls) -> List[str]:
+        ignore_path = os.environ.get("AGENT_C_IGNOREFILE", ".agentcignore")
+        if os.path.exists(ignore_path):
+            with open(ignore_path, "r") as f:
+                content = f.read()
+                return cls.parse_ignore_file_content(content)
+
+        DEFAULT_IGNORE_PATTERNS = [
+            ".git", "__pycache__", "*.pyc", "*.pyo",
+            "*.pyd", ".DS_Store", "*.so", "*.dylib", "*.dll",
+            ".venv"
+        ]
+        return DEFAULT_IGNORE_PATTERNS
 
     def __init__(self, ignore_patterns: Optional[Union[List[str], str]] = None):
         """
@@ -28,7 +39,7 @@ class LocalFileSystemTreeBuilder(TreeBuilder):
                 - A string in .gitignore format
                 - None to use defaults
         """
-        self.ignore_patterns = self.DEFAULT_IGNORE_PATTERNS.copy()
+        self.ignore_patterns = self.__class__.load_agent_c_ignore_patterns()
 
         # Process ignore patterns if provided
         if ignore_patterns is not None:
@@ -37,20 +48,22 @@ class LocalFileSystemTreeBuilder(TreeBuilder):
                 self.ignore_patterns.extend(ignore_patterns)
             elif isinstance(ignore_patterns, str):
                 # Parse string as .gitignore format
-                parsed_patterns = self._parse_ignore_file_content(ignore_patterns)
+                parsed_patterns = self.__class__.parse_ignore_file_content(ignore_patterns)
                 self.ignore_patterns.extend(parsed_patterns)
             else:
                 raise TypeError("ignore_patterns must be a list of strings or a string in .gitignore format")
 
     def build_tree(self,
                    start_path: str,
-                   ignore_patterns: Optional[Union[List[str], str]] = None) -> DirectoryTree:
+                   ignore_patterns: Optional[Union[List[str], str]] = None,
+                   root_name: Optional[str] = None) -> DirectoryTree:
         """
         Build a directory tree structure from the given start path.
 
         Args:
             start_path: The root path to start building the tree from
             ignore_patterns: Additional patterns to ignore for this specific call
+            root_name: Optional name for the root node
 
         Returns:
             DirectoryTree representing the directory structure
@@ -63,15 +76,16 @@ class LocalFileSystemTreeBuilder(TreeBuilder):
             if isinstance(ignore_patterns, list):
                 local_ignore_patterns.extend(ignore_patterns)
             elif isinstance(ignore_patterns, str):
-                additional_patterns = self._parse_ignore_file_content(ignore_patterns)
+                additional_patterns = self.parse_ignore_file_content(ignore_patterns)
                 local_ignore_patterns.extend(additional_patterns)
             else:
                 raise TypeError("ignore_patterns must be a list of strings or a string in .gitignore format")
 
         # Create the root node using the start path's basename
-        root_name = os.path.basename(os.path.abspath(start_path))
-        if not root_name:  # Handle case for root directory
-            root_name = start_path
+        if root_name is None:
+            root_name = os.path.basename(os.path.abspath(start_path))
+            if not root_name:  # Handle case for root directory
+                root_name = start_path
 
         root_node = TreeNode(name=root_name, is_dir=True)
 

@@ -30,7 +30,8 @@ class TreeBuilder(ABC):
         """
         pass
 
-    def _parse_ignore_file_content(self, content: str) -> List[str]:
+    @classmethod
+    def parse_ignore_file_content(cls, content: str) -> List[str]:
         """
         Parse .gitignore style content into a list of patterns.
 

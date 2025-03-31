@@ -41,7 +41,6 @@ def _discover_tools():
 _tools_mapping = _discover_tools()
 
 __all__ = list(_tools_mapping.keys())
-print(f"mapped tools: {__all__}")
 
 
 def __getattr__(name: str):
