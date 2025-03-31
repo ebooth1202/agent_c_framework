@@ -9,7 +9,7 @@ from typing import Optional, Union
 
 from agent_c.util import generate_path_tree
 from agent_c.util.token_counter import TokenCounter
-from agent_c_tools.tools.workspaces.base import BaseWorkspace
+from agent_c_tools.tools.workspace.base import BaseWorkspace
 
 
 class LocalStorageWorkspace(BaseWorkspace):
@@ -338,4 +338,4 @@ class LocalStorageWorkspace(BaseWorkspace):
 
 
 
-from agent_c_tools.tools.workspaces.local_project import LocalProjectWorkspace #noqa
+from agent_c_tools.tools.workspace.local_project import LocalProjectWorkspace #noqa

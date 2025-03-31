@@ -7,7 +7,7 @@ from newsapi.newsapi_client import NewsApiClient
 
 from agent_c import json_schema, Toolset
 
-class NewsTools(Toolset):
+class NewsApiTools(Toolset):
     def __init__(self, **kwargs):
         super().__init__(**kwargs, name='newsapiorg', needed_keys=['NEWSAPI_API_KEY'])
         api_key = kwargs.get('api_key', os.environ['NEWSAPI_API_KEY'])
@@ -158,4 +158,4 @@ class NewsTools(Toolset):
             return json.dumps({'error': str(e)})
 
 
-Toolset.register(NewsTools)
+Toolset.register(NewsApiTools)

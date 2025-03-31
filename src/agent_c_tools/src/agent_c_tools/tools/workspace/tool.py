@@ -5,8 +5,8 @@ from typing import Any, List, Tuple, Optional
 
 from agent_c.toolsets.tool_set import Toolset
 from agent_c.toolsets.json_schema import json_schema
-from agent_c_tools.tools.workspaces.base import BaseWorkspace
-from agent_c_tools.tools.workspaces.prompt import WorkspaceSection
+from agent_c_tools.tools.workspace.base import BaseWorkspace
+from agent_c_tools.tools.workspace.prompt import WorkspaceSection
 
 
 class WorkspaceTools(Toolset):
