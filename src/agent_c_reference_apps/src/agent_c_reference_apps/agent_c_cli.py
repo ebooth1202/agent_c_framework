@@ -22,8 +22,7 @@ from agent_c_reference_apps.util.audio_cues import AudioCues
 from agent_c_reference_apps.util.chat_commands import CommandHandler
 
 # Without this none of the rest matter
-from agent_c import GPTChatAgent, ClaudeChatAgent, ChatSessionManager, ToolChest, ToolCache
-
+from agent_c import GPTChatAgent, ClaudeChatAgent, ChatSessionManager, ToolChest, ToolCache, DynamicPersonaSection
 
 from agent_c.util import debugger_is_active
 from agent_c_tools.tools.user_preferences import AssistantPersonalityPreference, AddressMeAsPreference, UserPreference #noqa
@@ -188,7 +187,7 @@ class CLIChat:
         tool_classes=[WorkspaceTools, ThinkTools]
         self.tool_chest = ToolChest(tool_classes=tool_classes)
         tool_opts = {'tool_cache': self.tool_cache, 'session_manager': self.session_manager, 'user_preferences': self.user_prefs,
-                     'workspaces': self.workspaces, 'streaming_callback': self.chat_callback}
+                     'workspaces': self.workspaces, 'streaming_callback': self.chat_callback, 'persona_prompt': persona_prompt }
 
         self.logger.debug("Initializing Chat Agent... Initializing toolsets...")
         await self.tool_chest.init_tools(**tool_opts)
@@ -196,7 +195,7 @@ class CLIChat:
         self.logger.debug("Initializing Chat Agent... Initializing sections...")
         operating_sections = [
             CoreInstructionSection(template="<operating_guidelines>\n"),
-            PersonaSection(template=persona_prompt),
+            DynamicPersonaSection(),
             EndOperatingGuideLinesSection()
         ]
 
@@ -271,7 +270,8 @@ class CLIChat:
                 "current_user_name": self.session_manager.user.first_name,
                 "session_summary": memory_summary,
                 "session_context": memory_context,
-                "agent_voice": self.agent_voice}
+                "agent_voice": self.agent_voice,
+                "persona_prompt": self.prompt}
 
     async def __core_input_loop(self):
         """

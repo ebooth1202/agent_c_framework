@@ -6,9 +6,9 @@ from fastapi.logger import logger as fastapi_logger
 
 from agent_c_api.core.util.logging_utils import LoggingManager
 
-from .config.env_config import settings
-from .api import router
-from .core.setup import create_application
+from agent_c_api.config.env_config import settings
+from agent_c_api.api import router
+from agent_c_api.core.setup import create_application
 
 load_dotenv(override=True)
 
@@ -49,15 +49,23 @@ uvicorn_logger.propagate = False
 logging.getLogger("uvicorn.access").handlers = []
 logging.getLogger("uvicorn.error").handlers = []
 
-
 app = create_application(router=router, settings=settings)
-# for route in app.routes:
-#     logger.info(f"Registered route: {route.path}")
-
 logger.info(f"Registered {len(app.routes)} routes")
+
 
 def run():
     """Entrypoint for the API"""
     logger.info(f"Starting API server on {settings.HOST}:{settings.PORT}")
-    uvicorn.run("agent_c_api.main:app", host=settings.HOST, port=settings.PORT,
-                reload=settings.RELOAD, log_level=LoggingManager.LOG_LEVEL.lower() if hasattr(LoggingManager, 'LOG_LEVEL') else "info")
+
+    # If reload is enabled, we must use the import string
+    if settings.RELOAD:
+        uvicorn.run("agent_c_api.main:app", host=settings.HOST, port=settings.PORT,
+                    reload=settings.RELOAD, log_level=LoggingManager.LOG_LEVEL.lower() if hasattr(LoggingManager, 'LOG_LEVEL') else "info")
+    else:
+        # Otherwise, we can use the app object directly for better debugging
+        uvicorn.run(app, host=settings.HOST, port=settings.PORT,
+                    log_level=LoggingManager.LOG_LEVEL.lower() if hasattr(LoggingManager, 'LOG_LEVEL') else "info")
+
+
+if __name__ == "__main__":
+    run()
