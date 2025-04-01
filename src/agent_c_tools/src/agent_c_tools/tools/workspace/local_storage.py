@@ -71,6 +71,19 @@ class LocalStorageWorkspace(BaseWorkspace):
         resolved_path = self.workspace_root.joinpath(norm_path).resolve()
         return self.workspace_root in resolved_path.parents or resolved_path == self.workspace_root
 
+    def _find_nearest_ignore_file(self, path: Path) -> str:
+        """Find the nearest .agentcignore file by walking up the directory tree."""
+        current_dir = path if path.is_dir() else path.parent
+
+        while current_dir.is_relative_to(self.workspace_root):
+            ignore_file = current_dir.joinpath('.agentcignore')
+            if ignore_file.exists():
+                with open(ignore_file, 'r') as f:
+                    return f.read()
+            current_dir = current_dir.parent
+
+        return ""
+
     async def tree(self, relative_path: str) -> str:
         norm_path = self._normalize_input_path(relative_path)
         if not self._is_path_within_workspace(norm_path):
@@ -80,13 +93,10 @@ class LocalStorageWorkspace(BaseWorkspace):
 
         full_path: Path = self.workspace_root.joinpath(norm_path)
         ws_ignore: Path = self.workspace_root.joinpath('.agentcignore')
-        ignore_patterns = []
-        if ws_ignore.exists():
-            with open(ws_ignore, 'r') as f:
-                ignore_patterns = f.read()
+        ignore_patterns = self._find_nearest_ignore_file(full_path)
 
         builder = LocalFileSystemTreeBuilder(ignore_patterns=ignore_patterns)
-        if relative_path is not None and relative_path != '':
+        if relative_path is not None and relative_path != '' and relative_path != '/':
             root_name = f"//{self.name}/{relative_path}"
         else:
             root_name = f"//{self.name}"
