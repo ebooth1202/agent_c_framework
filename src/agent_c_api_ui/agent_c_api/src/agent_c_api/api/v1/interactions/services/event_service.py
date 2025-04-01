@@ -157,6 +157,9 @@ class EventService:
         # Cleanup when done
         if session_id in self.active_replays:
             self.active_replays[session_id]["status"] = "completed"
+            
+        # Send a properly formatted end message to prevent parsing errors
+        yield f"data: {json.dumps({"type": "stream_complete", "message": "Event stream complete"})}\n\n"
 
     def get_replay_status(self, session_id: str) -> Optional[Dict[str, Any]]:
         """

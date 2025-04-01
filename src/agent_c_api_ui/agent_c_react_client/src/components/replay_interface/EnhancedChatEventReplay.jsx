@@ -647,6 +647,15 @@ const EnhancedChatEventReplay = ({
                         // Handle the history type contains all data for an interaction. Not used yet.
                         break;
 
+                    case 'event_array':
+                        // Process array of events
+                        if (event.events && Array.isArray(event.events)) {
+                            console.log(`Processing array of ${event.events.length} events`);
+                            // The events will be processed separately by the parent component
+                            // We don't need special handling here as ReplayInterface already flattens these arrays
+                        }
+                        break;
+                    
                     default:
                         console.log(`Unhandled event type: ${event.type}`, event);
                 }

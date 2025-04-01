@@ -48,7 +48,7 @@ class GPTChatAgent(BaseAgent):
         client: AsyncOpenAI, default is AsyncOpenAI()
             The client to use for making requests to the Open AI API.
         """
-        kwargs['model_name'] = kwargs.get('model_name', "gpt-4o")
+        kwargs['model_name']: str = kwargs.get('model_name')
         kwargs['token_counter'] = kwargs.get('token_counter', TikTokenTokenCounter())
         super().__init__(**kwargs)
         self.schemas: Union[None, List[Dict[str, Any]]] = None
@@ -114,6 +114,8 @@ class GPTChatAgent(BaseAgent):
     async def __interaction_setup(self, **kwargs) -> dict[str, Any]:
         json_mode: bool = kwargs.get("json_mode", False)
         model_name: str = kwargs.get("model_name", self.model_name)
+        if model_name is None:
+            raise ValueError('GPT agent is missing a model_name')
         kwargs['prompt'] = kwargs.get('prompt', self.prompt)
         sys_prompt: str = await self._render_system_prompt(**kwargs)
         temperature: float = kwargs.get("temperature", self.temperature)

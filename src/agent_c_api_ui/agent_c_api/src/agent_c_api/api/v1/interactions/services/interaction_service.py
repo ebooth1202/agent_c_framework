@@ -1,6 +1,7 @@
 import os
 import glob
 import json
+import shutil
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 import asyncio
@@ -11,7 +12,7 @@ from agent_c_api.api.v1.interactions.utils.file_utils import read_jsonl_file, ge
 class InteractionService:
     async def list_sessions(self, limit: int, offset: int, sort_by: str, sort_order: str) -> List[InteractionSummary]:
         """
-        List sessions with pagination and sorting.
+        List sessions with pagination and sorting - optimized to only read metadata file or first/last events
         """
         sessions_dir = get_session_directory()
         session_dirs = os.listdir(sessions_dir)
@@ -28,39 +29,107 @@ class InteractionService:
             jsonl_files = glob.glob(os.path.join(session_dir, "*.jsonl"))
             if not jsonl_files:
                 continue
-
-            # Get basic session info
+                
+            # Check for metadata file first - a faster way to get session info
+            metadata_path = os.path.join(session_dir, "session_metadata.json")
+            if os.path.exists(metadata_path):
+                try:
+                    with open(metadata_path, 'r') as f:
+                        metadata = json.load(f)
+                    
+                    start_time = datetime.fromisoformat(metadata.get("start_time", "").replace("Z", "+00:00"))
+                    end_time = datetime.fromisoformat(metadata.get("end_time", "").replace("Z", "+00:00"))
+                    duration_seconds = metadata.get("duration_seconds")
+                    event_count = metadata.get("event_count")
+                    
+                    session_summaries.append(InteractionSummary(
+                        id=session_id,
+                        start_time=start_time,
+                        end_time=end_time,
+                        duration_seconds=duration_seconds,
+                        event_count=event_count,
+                        file_count=len(jsonl_files)
+                    ))
+                    continue
+                except (json.JSONDecodeError, KeyError, ValueError) as e:
+                    # If metadata file is invalid, fall back to scanning events
+                    pass
+            
+            # Optimize by only reading first and last events from each file
+            # instead of loading all events
             start_time = None
             end_time = None
-            event_count = 0
-
+            interaction_count = 0
+            
             for file_path in jsonl_files:
-                # Read first and last events to determine session time range
-                events = await read_jsonl_file(file_path)
-                if events:
-                    first_event = events[0]
-                    last_event = events[-1]
-
-                    first_timestamp = datetime.fromisoformat(first_event["timestamp"].replace("Z", "+00:00"))
-                    last_timestamp = datetime.fromisoformat(last_event["timestamp"].replace("Z", "+00:00"))
-
-                    if start_time is None or first_timestamp < start_time:
-                        start_time = first_timestamp
-
-                    if end_time is None or last_timestamp > end_time:
-                        end_time = last_timestamp
-
-                    event_count += len(events)
+                # Count lines to get event count without loading all events
+                with open(file_path, 'r') as f:
+                    # Count non-empty lines
+                    file_lines = sum(1 for line in f if line.strip())
+                    interaction_count += file_lines
+                
+                # Get first event timestamp
+                with open(file_path, 'r') as f:
+                    first_line = f.readline().strip()
+                    if first_line:
+                        try:
+                            first_event = json.loads(first_line)
+                            first_timestamp = datetime.fromisoformat(first_event["timestamp"].replace("Z", "+00:00"))
+                            if start_time is None or first_timestamp < start_time:
+                                start_time = first_timestamp
+                        except (json.JSONDecodeError, KeyError, ValueError):
+                            pass
+                
+                # Get last event timestamp
+                last_line = ""
+                with open(file_path, 'r') as f:
+                    # Seek to the end and read backward until we find a complete line
+                    try:
+                        # Read the last 2KB which should contain the last line in most cases
+                        f.seek(max(0, os.path.getsize(file_path) - 2048))
+                        chunk = f.read(2048)
+                        lines = chunk.split('\n')
+                        if lines and lines[-1].strip():
+                            last_line = lines[-1].strip()
+                        elif len(lines) > 1:
+                            last_line = lines[-2].strip()
+                    except Exception:
+                        # Fall back to reading the whole file if the above fails
+                        f.seek(0)
+                        last_line = list(filter(None, f.read().split('\n')))[-1]
+                
+                if last_line:
+                    try:
+                        last_event = json.loads(last_line)
+                        last_timestamp = datetime.fromisoformat(last_event["timestamp"].replace("Z", "+00:00"))
+                        if end_time is None or last_timestamp > end_time:
+                            end_time = last_timestamp
+                    except (json.JSONDecodeError, KeyError, ValueError):
+                        pass
 
             if start_time and end_time:
                 duration_seconds = (end_time - start_time).total_seconds()
+
+                # Create a session metadata file for future quick access
+                try:
+                    metadata = {
+                        "start_time": start_time.isoformat(),
+                        "end_time": end_time.isoformat(),
+                        "duration_seconds": duration_seconds,
+                        "event_count": interaction_count
+                    }
+                    with open(metadata_path, 'w') as f:
+                        json.dump(metadata, f)
+                except Exception:
+                    # Continue even if we can't write metadata
+                    pass
 
                 session_summaries.append(InteractionSummary(
                     id=session_id,
                     start_time=start_time,
                     end_time=end_time,
                     duration_seconds=duration_seconds,
-                    event_count=event_count,
+                    event_count=interaction_count,
                     file_count=len(jsonl_files)
                 ))
 
@@ -174,3 +243,21 @@ class InteractionService:
 
         jsonl_files = glob.glob(os.path.join(session_dir, "*.jsonl"))
         return [os.path.basename(f) for f in jsonl_files]
+        
+    async def delete_session(self, session_id: str) -> bool:
+        """
+        Delete a session directory and all its files.
+        """
+        sessions_dir = get_session_directory()
+        session_dir = os.path.join(sessions_dir, session_id)
+
+        if not os.path.isdir(session_dir):
+            return False
+            
+        try:
+            # Use shutil.rmtree to delete the directory and all its contents
+            shutil.rmtree(session_dir)
+            return True
+        except Exception as e:
+            print(f"Error deleting session {session_id}: {e}")
+            return False

@@ -49,9 +49,10 @@ uvicorn_logger.propagate = False
 logging.getLogger("uvicorn.access").handlers = []
 logging.getLogger("uvicorn.error").handlers = []
 
-app = create_application(router=router, settings=settings)
-logger.info(f"Registered {len(app.routes)} routes")
 
+app = create_application(router=router, settings=settings)
+
+logger.info(f"Registered {len(app.routes)} routes")
 
 def run():
     """Entrypoint for the API"""

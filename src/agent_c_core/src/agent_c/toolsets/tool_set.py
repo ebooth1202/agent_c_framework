@@ -93,16 +93,17 @@ class Toolset:
         
         # Create the event object
         render_media_event = RenderMediaEvent(**kwargs)
-        
-        # Send it to the streaming callback
-        if self.streaming_callback:
-            await self.streaming_callback(render_media_event)
-            
+
         # Log the event if we have access to an agent with a session_logger
         if hasattr(self.tool_chest, 'agent') and self.tool_chest.agent:
             agent = self.tool_chest.agent
             if hasattr(agent, 'session_logger') and agent.session_logger:
                 await agent.session_logger.log_render_media(render_media_event)
+        
+        # Send it to the streaming callback
+        if self.streaming_callback:
+            await self.streaming_callback(render_media_event)
+
 
     async def _raise_message_event(self, **kwargs: Any) -> None:
         """

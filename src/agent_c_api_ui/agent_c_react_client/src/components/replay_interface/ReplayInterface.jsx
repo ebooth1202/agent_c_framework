@@ -151,6 +151,15 @@ const ReplayInterface = ({ sessionId }) => {
 
           const eventData = JSON.parse(dataStr);
           
+          // Check if this is a stream_complete message
+          if (eventData.type === 'stream_complete') {
+            console.log('Stream complete message received:', eventData.message);
+            // Close the connection gracefully
+            eventSource.close();
+            setIsPlaying(false);
+            return;
+          }
+          
           // Generate a unique ID for this event to detect duplicates more reliably
           const eventType = eventData.event?.type || eventData.type || 'unknown';
           const timestamp = eventData.timestamp || new Date().toISOString();
@@ -217,6 +226,16 @@ const ReplayInterface = ({ sessionId }) => {
           }
         } catch (err) {
           console.error('Error processing event data:', err);
+          // Try to handle parsing errors gracefully
+          if (e.data && typeof e.data === 'string') {
+            console.log('Attempting to recover from parse error...');
+            if (e.data.includes('stream_complete')) {
+              console.log('Stream appears to be complete');
+              // Close the connection gracefully
+              eventSource.close();
+              setIsPlaying(false);
+            }
+          }
         }
       };
 
@@ -259,8 +278,8 @@ const ReplayInterface = ({ sessionId }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          action: newPlayingState ? 'play' : 'pause',
-          position: null
+          action: newPlayingState ? 'play' : 'pause'
+          // Remove position field as it's not needed for play/pause and can cause validation errors
         }),
       });
 

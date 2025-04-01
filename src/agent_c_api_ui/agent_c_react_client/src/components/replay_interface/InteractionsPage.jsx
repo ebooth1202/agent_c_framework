@@ -5,6 +5,8 @@ import { API_URL } from '@/config/config';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow } from 'date-fns';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Trash2, Play } from 'lucide-react';
 
 const InteractionsPage = () => {
   const [sessions, setSessions] = useState([]);
@@ -38,6 +40,24 @@ const InteractionsPage = () => {
   const handleSessionSelect = (sessionId) => {
     // This navigates to the enhanced version by default
     navigate(`/replay/${sessionId}`);
+  };
+  
+  const handleDeleteSession = async (sessionId) => {
+    try {
+      const response = await fetch(`${API_URL}/interactions/${sessionId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      // Refresh the sessions list
+      fetchSessions();
+    } catch (err) {
+      console.error('Error deleting session:', err);
+      setError(`Failed to delete session ${sessionId}`);
+    }
   };
 
   if (loading) return (
@@ -77,10 +97,34 @@ const InteractionsPage = () => {
               <div className="flex space-x-2">
                 <Button
                   onClick={() => handleSessionSelect(session.id)}
-                  className="flex-1"
+                  className="flex-1 flex items-center justify-center"
+                  variant="default"
                 >
+                  <Play className="mr-2 h-4 w-4" />
                   View Replay
                 </Button>
+                
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Session</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to delete this session? This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => handleDeleteSession(session.id)}>
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </Card>
           ))}

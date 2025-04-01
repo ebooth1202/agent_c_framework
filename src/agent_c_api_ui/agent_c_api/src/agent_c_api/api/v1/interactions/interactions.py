@@ -46,3 +46,13 @@ async def get_session_files(session_id: str):
     if not files:
         raise HTTPException(status_code=404, detail=f"No files found for session {session_id}")
     return files
+
+@router.delete("/{session_id}")
+async def delete_session(session_id: str):
+    """
+    Delete a session directory and all its files.
+    """
+    success = await interaction_service.delete_session(session_id)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Session {session_id} not found or could not be deleted")
+    return {"status": "success", "message": f"Session {session_id} deleted successfully"}
