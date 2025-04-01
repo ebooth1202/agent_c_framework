@@ -16,8 +16,8 @@ from agent_c.agents.gpt import GPTChatAgent
 from agent_c.models.chat_event import ChatEvent
 from agent_c.prompting import PersonaSection, PromptBuilder
 from agent_c.toolsets.tool_chest import ToolChest
-from agent_c_tools.tools.workspaces import WorkspaceTools  # noqa
-from agent_c_tools.tools.workspaces.local_storage import LocalStorageWorkspace
+from agent_c_tools.tools.workspace import WorkspaceTools  # noqa
+from agent_c_tools.tools.workspace.local_storage import LocalStorageWorkspace
 from agent_c_tools.tools.dall_e import DallETools # noqa
 
 class ExampleUI:

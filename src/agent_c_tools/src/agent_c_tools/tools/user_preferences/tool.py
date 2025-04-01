@@ -5,15 +5,15 @@ from agent_c_tools.tools.user_preferences import UserPreference
 from agent_c_tools.tools.user_preferences.prompt import UserPrefSection, UserPrefSectionNoToolUse
 
 
-class PreferenceTools(Toolset):
+class UserPreferencesTools(Toolset):
     """
-    PreferenceTools class provides methods to manage and interact with user preferences.
+    UserPreferencesTools class provides methods to manage and interact with user preferences.
     This includes finding, getting, resetting or listing user preferences and their values.
 
     """
 
     def __init__(self, **kwargs: Any) -> None:
-        """Initialize PreferenceTools with a list of user preferences.
+        """Initialize UserPreferencesTools with a list of user preferences.
 
         Args:
             **kwargs: Arbitrary keyword arguments, expecting 'user_preferences' to be included.
@@ -195,4 +195,4 @@ class PreferenceTools(Toolset):
         return json.dumps({'user_preferences': preferences_list})
 
 
-Toolset.register(PreferenceTools)
+Toolset.register(UserPreferencesTools)

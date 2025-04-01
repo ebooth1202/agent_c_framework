@@ -5,7 +5,7 @@ import wikipedia
 from agent_c import Toolset, json_schema
 from agent_c.util import filter_dict_by_keys
 
-class WikipediaSearch(Toolset):
+class WikipediaTools(Toolset):
 
     def __init__(self, **kwargs):
         super().__init__(name='wikipedia', **kwargs)
@@ -39,4 +39,4 @@ class WikipediaSearch(Toolset):
             return json.dumps(filtered_results)
 
 
-Toolset.register(WikipediaSearch)
+Toolset.register(WikipediaTools)

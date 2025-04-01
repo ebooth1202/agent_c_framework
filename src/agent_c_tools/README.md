@@ -33,5 +33,5 @@ The tools here work and have proven to be stable over time.  Many of them are 'd
   - Seeking Alpha - Get top Stock News
   - Tavily - Use a LLM oriented search engine to return search results
   - Wikipedia - Limited to getting search results, not a specific wikipedia page
-- [workspaces](src/agent_c_tools/tools/workspaces) - A tool for managing workspaces in the agent_c_tools area.  This is a demonstration tool for managing workspaces and tools in the agent_c_tools area.  This allows you to read/write local file storage. Stubs exist for cloud storage areas for deployed agents.
+- [workspaces](src/agent_c_tools/tools/workspace) - A tool for managing workspaces in the agent_c_tools area.  This is a demonstration tool for managing workspaces and tools in the agent_c_tools area.  This allows you to read/write local file storage. Stubs exist for cloud storage areas for deployed agents.
 - [youtube_transcript](src/agent_c_tools/tools/youtube_transcript) - A tool for getting the transcript of a youtube video using the youtube API

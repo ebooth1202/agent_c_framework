@@ -17,7 +17,7 @@ from agent_c.models.events import SessionEvent
 from agent_c.models.input import AudioInput
 from agent_c_api.core.file_handler import FileHandler
 from agent_c_api.core.util.logging_utils import LoggingManager
-from agent_c_tools.tools.workspaces import LocalStorageWorkspace
+from agent_c_tools.tools.workspace import LocalStorageWorkspace
 from agent_c.toolsets import ToolChest, ToolCache, Toolset
 
 from agent_c.chat import ChatSessionManager
@@ -28,7 +28,7 @@ from agent_c.prompting import PromptBuilder, CoreInstructionSection, HelpfulInfo
     EnvironmentInfoSection
 
 from agent_c_tools.tools.user_bio.prompt import UserBioSection
-from agent_c_tools.tools.workspaces.local_storage import LocalProjectWorkspace
+from agent_c_tools.tools.workspace.local_storage import LocalProjectWorkspace
 
 
 class AgentBridge:

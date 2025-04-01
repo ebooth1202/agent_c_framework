@@ -3,7 +3,7 @@
 import base64
 import pytest
 from botocore.exceptions import ClientError
-from agent_c_tools.tools.workspaces.s3_storage import S3StorageWorkspace
+from agent_c_tools.tools.workspace.s3_storage import S3StorageWorkspace
 
 
 @pytest.mark.unit

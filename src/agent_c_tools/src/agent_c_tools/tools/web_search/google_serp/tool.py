@@ -8,7 +8,7 @@ from serpapi import GoogleSearch
 
 from agent_c.toolsets import json_schema, Toolset
 
-class SerpAPITools(Toolset):
+class GoogleSerpTools(Toolset):
     """
     GoogleSearchResults tool lets you use GoogleAPIs using SERPAPI.
     """
@@ -218,4 +218,4 @@ class SerpAPITools(Toolset):
         return json.dumps(organic_results)
 
 
-Toolset.register(SerpAPITools)
+Toolset.register(GoogleSerpTools)

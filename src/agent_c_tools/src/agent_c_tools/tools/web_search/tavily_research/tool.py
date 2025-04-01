@@ -7,7 +7,7 @@ from agent_c import json_schema, Toolset
 from agent_c_tools.tools.web_search.tavily_research.prompt import TavilyResearchPrompt
 
 
-class TavilyTools(Toolset):
+class TavilyResearchTools(Toolset):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs, name='tavily', required_tools=['workspace'], needed_keys=['TAVILI_API_KEY'])
@@ -103,4 +103,4 @@ class TavilyTools(Toolset):
         return json.dumps(search_response)
 
 
-Toolset.register(TavilyTools)
+Toolset.register(TavilyResearchTools)
