@@ -2,6 +2,7 @@ import logging
 from fastapi import APIRouter, HTTPException, Form, UploadFile, File, Depends, Request
 import logging
 
+from agent_c import Toolset
 from agent_c_api.core.agent_manager import UItoAgentBridgeManager
 
 # Always import the core tools - These must be available!
