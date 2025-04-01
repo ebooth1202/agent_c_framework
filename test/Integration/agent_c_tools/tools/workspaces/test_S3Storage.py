@@ -7,7 +7,7 @@ import pytest
 import pytest_asyncio
 from aiobotocore.session import get_session
 from botocore.exceptions import ClientError
-from agent_c_tools.tools.workspaces.s3_storage import S3StorageWorkspace
+from agent_c_tools.tools.workspace.s3_storage import S3StorageWorkspace
 
 
 @pytest.mark.integration
