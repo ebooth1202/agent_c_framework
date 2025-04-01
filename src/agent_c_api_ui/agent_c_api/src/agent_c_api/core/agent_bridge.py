@@ -17,7 +17,7 @@ from agent_c.models.events import SessionEvent
 from agent_c.models.input import AudioInput
 from agent_c_api.core.file_handler import FileHandler
 from agent_c_api.core.util.logging_utils import LoggingManager
-from agent_c_tools.tools.workspace import LocalStorageWorkspace
+from agent_c_tools.tools.workspace.local_storage import LocalProjectWorkspace, LocalStorageWorkspace
 from agent_c.toolsets import ToolChest, ToolCache, Toolset
 
 from agent_c.chat import ChatSessionManager
@@ -214,12 +214,12 @@ class AgentBridge:
         """
         Initialize the agent's workspaces by loading local workspace configurations.
         """
-        local_project = LocalProjectWorkspace()
-        self.workspaces = [local_project]
-        self.logger.info(f"Agent {self.agent_name} initialized workspaces {local_project.workspace_root}")
+        self.workspaces = [LocalProjectWorkspace()]
+        self.logger.info(f"Agent {self.agent_name} initialized workspaces {self.workspaces[0].workspace_root}")
 
         try:
-            local_workspaces = json.load(open(".local_workspaces.json", "r"))
+            with open(".local_workspaces.json", "r") as file:
+                local_workspaces = json.load(file)
             for ws in local_workspaces['local_workspaces']:
                 self.workspaces.append(LocalStorageWorkspace(**ws))
         except FileNotFoundError:
