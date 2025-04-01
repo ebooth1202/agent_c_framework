@@ -1,5 +1,5 @@
 import json
-from duckduckgo_search import AsyncDDGS
+from duckduckgo_search import DDGS
 from agent_c.toolsets import json_schema, Toolset
 
 # A tool belt for asynchronous search functionality using the DuckDuckGo search API.
@@ -32,7 +32,7 @@ class DuckDuckGoTools(Toolset):
         max_results = kwargs.get('max_results', 20)
         safesearch = kwargs.get('safesearch', 'moderate')
 
-        results = await AsyncDDGS().text(query, max_results=max_results, safesearch=safesearch)
+        results = DDGS().text(query, max_results=max_results, safesearch=safesearch)
 
         return json.dumps(results)
 

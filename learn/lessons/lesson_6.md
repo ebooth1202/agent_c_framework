@@ -98,8 +98,8 @@ with open(path_to_write, "w") as file:
 First we need to import the tool and local storage workspace:
 
 ```python
-from agent_c_tools.tools.workspaces import WorkspaceTools  # noqa
-from agent_c_tools.tools.workspaces.local_storage import LocalStorageWorkspace
+from agent_c_tools.tools.workspace import WorkspaceTools  # noqa
+from agent_c_tools.tools.workspace.local_storage import LocalStorageWorkspace
 ```
 
 

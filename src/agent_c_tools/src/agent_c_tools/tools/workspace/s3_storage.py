@@ -5,7 +5,7 @@ import base64
 import json
 from aiobotocore.session import get_session
 from botocore.exceptions import NoCredentialsError, ClientError
-from agent_c_tools.tools.workspaces.base import BaseWorkspace
+from agent_c_tools.tools.workspace.base import BaseWorkspace
 
 
 class S3StorageWorkspace(BaseWorkspace):

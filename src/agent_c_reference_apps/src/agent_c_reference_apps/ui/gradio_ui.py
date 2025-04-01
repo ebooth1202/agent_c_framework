@@ -25,7 +25,7 @@ from agent_c.util.response_format import align_tool_calls, question_response, sy
     combine_debug_info, filtered_responses
 
 from agent_c_reference_apps.ui.markdown_render import MarkdownTokenRenderer
-from agent_c_tools.tools.workspaces.local_storage import LocalProjectWorkspace
+from agent_c_tools.tools.workspace.local_storage import LocalProjectWorkspace
 
 # Note: we load the env file here so that it's loaded when we start loading the libs that depend on API KEYs.   I'm looking at you Eleven Labs
 load_dotenv(override=True)
@@ -50,7 +50,7 @@ from agent_c.util.oai_audio import OAIAudioPlayerAsync
 ENHANCED_DEBUG_INFO = os.getenv('ENHANCED_DEBUG_INFO', 'False').lower() in ('true', '1', 'yes')
 
 # Case Sensitive
-ESSENTIAL_TOOLS = ['MemoryTools', 'WorkspaceTools', 'PreferenceTools', 'VoiceTools']
+ESSENTIAL_TOOLS = ['MemoryTools', 'WorkspaceTools', 'UserPreferencesTools', 'VoiceTools']
 
 
 def get_available_tools():
@@ -442,7 +442,7 @@ class GradioChat:
                         - DataVisualizationTools requires DataFrameTools
                         - DatabaseQueryTools requires DataFrameTools
                         - SECTools requires FAISSVectorStore
-                        - StockAnalysisTools requires SECTools, WebTools, NewsTools, and DataFrameTools
+                        - StockAnalysisTools requires SECTools, WebTools, NewsApiTools, and DataFrameTools
                     """)
 
 

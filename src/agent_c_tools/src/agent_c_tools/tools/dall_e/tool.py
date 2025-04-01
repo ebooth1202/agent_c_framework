@@ -10,8 +10,8 @@ from openai.types import ImagesResponse
 
 from agent_c.models.chat_event import RenderMedia
 from agent_c.toolsets import json_schema, Toolset
-from agent_c_tools.tools.workspaces.tool import WorkspaceTools
-from agent_c_tools.tools.workspaces.local_storage import LocalStorageWorkspace
+from agent_c_tools.tools.workspace.tool import WorkspaceTools
+from agent_c_tools.tools.workspace.local_storage import LocalStorageWorkspace
 from agent_c_tools.tools.dall_e.prompt import DallESection
 
 

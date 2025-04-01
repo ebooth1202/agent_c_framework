@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from agent_c.models.input import AudioInput
 from agent_c.models.input.image_input import ImageInput
 from agent_c_tools import LocalStorageWorkspace
-from agent_c_tools.tools.workspaces.local_storage import LocalProjectWorkspace
+from agent_c_tools.tools.workspace.local_storage import LocalProjectWorkspace
 
 # Note: we load the env file here so that it's loaded when we start loading the libs that depend on API KEYs.   I'm looking at you Eleven Labs
 load_dotenv(override=True)
