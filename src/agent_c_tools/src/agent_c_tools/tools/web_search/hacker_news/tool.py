@@ -4,7 +4,7 @@ from agent_c.toolsets import json_schema, Toolset
 
 
 # A tool belt for asynchronous search functionality using the HackerNews search API.
-class HackerNewsSearch(Toolset):
+class HackerNewsTools(Toolset):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs, name='hacker_news')
@@ -64,4 +64,4 @@ class HackerNewsSearch(Toolset):
         return stories_data
 
 
-Toolset.register(HackerNewsSearch)
+Toolset.register(HackerNewsTools)

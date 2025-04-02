@@ -13,21 +13,26 @@ class WorkspaceSection(PromptSection):
                     "### Available Workspace List \n"
                     "${workspace_list}\n\n"
                     "## Workspace Operations Guide\n"
-                    "- **Paths**: Always use relative paths without leading slashes\n"
+                    
+                    "- **UNC Paths**: Always use UNC-style paths in the format `//WORKSPACE/path/to/file` where WORKSPACE is the workspace name\n"
                     "- **Reading**: Use `read` to get file contents; assume paths exist rather than checking first\n"
-                    "- **Writing**: Use `write` for creating or replacing files; parent directories are created automatically\n"
                     "- **Updating Files**: Use `update` for targeted modifications:\n"
+                    "- **Writing**: Use `write` for creating or replacing files; parent directories are created automatically\n"                    
                     "  - For one or more replacements: provide `updates` array with `old_string` and `new_string` pairs\n"
                     "  - For full rewrites: set `rewrite: true` and provide new content in the first update's `new_string`\n"
                     "- **Navigation**: Use `ls` to list directory contents and `tree` for hierarchical views\n"
                     "- **File Management**: Use `cp` to copy and `mv` to move files or directories\n"
-                    "- **Scratchpad**: The `.scratch` directory exists for your temporary work\n"
-                    "  - If no workspace is specified, ask the user for clarification\n"
-                    "  - Pay attention if the user requests using a different directory as scratchpad\n"
+                    "  - Both source and destination must be in the same workspace\n"    
                     "## CRITICAL: Workspace Traceability rules:\n"
                     "Proper use of the `update` method is essential for efficiency and tracking purposes.\n"
                     "- Changes to existing files should be made using the `update` method with the `updates` array. \n"
-                    "- Setting `rewrite: true` should only be done as a last resort when it's not possible to generate a series of updates.\n")
+                    "- Setting `rewrite: true` should only be done as a last resort when it's not possible to generate a series of updates.\n"
+                    "## Examples Using UNC-Style Paths:\n"
+                    "- To read a file: `read(path=\"//MyWorkspace/folder/file.txt\")`\n"
+                    "- To list directory contents: `ls(path=\"//MyWorkspace/folder\")`\n"
+                    "- To write to a file: `write(path=\"//MyWorkspace/folder/file.txt\", data=\"content\", mode=\"write\")`\n"
+                    "- To copy a file: `cp(src_path=\"//MyWorkspace/source.txt\", dest_path=\"//MyWorkspace/destination.txt\")`\n"
+                    "- To move a file: `mv(src_path=\"//MyWorkspace/source.txt\", dest_path=\"//MyWorkspace/destination.txt\")`\n")
         super().__init__(template=TEMPLATE, required=True, name="Workspaces", render_section_header=True, **data)
 
     @property_bag_item

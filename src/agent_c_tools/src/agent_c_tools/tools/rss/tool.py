@@ -9,7 +9,7 @@ from agent_c_tools.tools.rss.feeds import RSSToolFeed, default_feeds
 from agent_c_tools.tools.rss.prompt import RSSSection
 
 
-class RSSTools(Toolset):
+class RssTools(Toolset):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs, name='rss')
@@ -56,4 +56,4 @@ class RSSTools(Toolset):
 
         return extracted_info
 
-Toolset.register(RSSTools)
+Toolset.register(RssTools)

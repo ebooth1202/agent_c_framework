@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import AgentConfigDisplay from './AgentConfigDisplay';
+import AgentConfigHoverCard from './AgentConfigHoverCard';
 import { Trash2, Activity, Wrench, Info } from 'lucide-react';
 import {
     AlertDialog,
@@ -50,13 +50,6 @@ const StatusBar = ({
     };
 
     const getStatusInfo = () => {
-        // console.log('StatusBar props:', {
-        //     isReady,
-        //     isInitializing,
-        //     isProcessing,
-        //     sessionId,
-        //     settingsVersion
-        // });
         if (isProcessing) {
             return {
                 message: 'Processing...',
@@ -115,7 +108,7 @@ const StatusBar = ({
                         </Tooltip>
                     </TooltipProvider>
                     {isReady && sessionId && (
-                        <AgentConfigDisplay
+                        <AgentConfigHoverCard
                             sessionId={sessionId}
                             className="ml-2"
                             settingsVersion={settingsVersion}

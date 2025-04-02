@@ -51,11 +51,14 @@ class ClaudeChatAgent(BaseAgent):
         # JO: I need these as class level variables to adjust outside a chat call.
         self.max_tokens = kwargs.get("max_tokens", self.CLAUDE_MAX_TOKENS)
         self.budget_tokens = kwargs.get("budget_tokens", 0)
+        self.logger: logging.Logger = logging.getLogger(__name__)
 
 
 
     async def __interaction_setup(self, **kwargs) -> dict[str, Any]:
         model_name: str = kwargs.get("model_name", self.model_name)
+        if model_name is None:
+            raise ValueError('Claude agent is missing a model_name')
         sys_prompt: str = await self._render_system_prompt(**kwargs)
         temperature: float = kwargs.get("temperature", self.temperature)
         max_tokens: int = kwargs.get("max_tokens", self.max_tokens)
@@ -130,7 +133,6 @@ class ClaudeChatAgent(BaseAgent):
         current_block_type: Optional[str] = None
         current_thought: Optional[dict[str, Any]] = None
         current_agent_msg: Optional[dict[str, Any]] = None
-
         delay = 1  # Initial delay between retries
         async with self.semaphore:
             interaction_id = await self._raise_interaction_start(**callback_opts)
@@ -159,7 +161,12 @@ class ClaudeChatAgent(BaseAgent):
                                         await self._raise_thought_delta(delta.thinking, **callback_opts)
                             elif event.type == 'message_stop':
                                 output_tokens = event.message.usage.output_tokens
+                                # self.logger.debug(f"Claude message_stop event: stop_reason={stop_reason}")
+                                # self.logger.debug(f"Claude message_stop event attributes: {dir(event)}")
+                                # self.logger.debug(f"Claude message_stop event dict: {getattr(event, 'to_dict', lambda: 'N/A')()}")
+                                # self.logger.debug(f"Claude message_stop event - about to raise completion_end")
                                 await self._raise_completion_end(opts["completion_opts"], stop_reason=stop_reason, input_tokens=input_tokens, output_tokens=output_tokens, **callback_opts)
+                                # self.logger.debug(f"Claude message_stop event - completed raising completion_end")
 
                                 # TODO: This will need moved when I fix tool call messages
                                 assistant_content = self._format_model_outputs_to_text(model_outputs)

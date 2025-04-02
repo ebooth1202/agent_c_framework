@@ -2,11 +2,11 @@ import logging
 from fastapi import APIRouter, HTTPException, Form, UploadFile, File, Depends, Request
 import logging
 
-from agent_c_api.core.agent_manager import UItoAgentBridgeManager
 from agent_c import Toolset
+from agent_c_api.core.agent_manager import UItoAgentBridgeManager
 
 # Always import the core tools - These must be available!
-from agent_c_tools.tools import *  # noqa
+from agent_c_tools import *  # noqa
 
 # Conditionally import other tool modules
 logger = logging.getLogger(__name__)
@@ -15,22 +15,22 @@ logger = logging.getLogger(__name__)
 try:
     from agent_c_demo.tools import *  # noqa
     AGENT_C_DEMO_AVAILABLE = True
-except ImportError:
-    logger.info("agent_c_demo.tools module not available")
+except ImportError as e:
     AGENT_C_DEMO_AVAILABLE = False
+    logger.warning(f"agent_c_demo.tools module not available: {e}")
 
 try:
     from agent_c_voice.tools import *  # noqa
     AGENT_C_VOICE_AVAILABLE = True
-except ImportError:
-    logger.info("agent_c_voice.tools module not available")
+except ImportError as e:
+    logger.warning(f"agent_c_voice.tools module not available: {e}")
     AGENT_C_VOICE_AVAILABLE = False
 
 try:
     from agent_c_rag.tools import *  # noqa
     AGENT_C_RAG_AVAILABLE = True
-except ImportError:
-    logger.info("agent_c_rag.tools module not available")
+except ImportError as e:
+    logger.warning(f"agent_c_rag.tools module not available: {e}")
     AGENT_C_RAG_AVAILABLE = False
 
 

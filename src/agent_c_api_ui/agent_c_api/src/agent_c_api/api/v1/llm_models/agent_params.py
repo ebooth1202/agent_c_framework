@@ -1,8 +1,9 @@
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, model_validator, ConfigDict
 from typing import Optional
 
 
 class AgentCommonParams(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
     persona_name: Optional[str] = Field("default", description="Name of the persona to use")
     custom_prompt: Optional[str] = Field(None, description="Custom prompt for persona")
     temperature: Optional[float] = Field(None, description="Temperature for chat models")

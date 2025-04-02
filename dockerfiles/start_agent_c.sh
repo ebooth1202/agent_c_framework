@@ -11,6 +11,7 @@ PROJECT_ROOT="$(cd .. && pwd)"
 export AGENT_C_CONFIG_PATH=$HOME/.agent_c
 export AGENT_C_IMAGES_PATH=$HOME/.agent_c/images
 export AGENT_C_PERSONAS_PATH=$HOME/.agent_c/personas
+export AGENT_C_LOGS_PATH=$HOME/.agent_c/personas
 
 # Add mappings for workspace folders (Documents, Desktop, and Downloads)
 export DOCUMENTS_WORKSPACE=$HOME/Documents
@@ -24,6 +25,7 @@ export PROJECT_WORKSPACE_PATH=$PROJECT_ROOT
 mkdir -p "$AGENT_C_CONFIG_PATH"
 mkdir -p "$AGENT_C_IMAGES_PATH"
 mkdir -p "$AGENT_C_PERSONAS_PATH"
+mkdir -p "$AGENT_C_LOGS_PATH"
 
 # Check if config file exists
 if [ ! -f "$AGENT_C_CONFIG_PATH/agent_c.config" ]; then

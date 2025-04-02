@@ -2,7 +2,7 @@ import os
 import logging
 from pathlib import Path
 
-from agent_c_tools.tools.workspaces.local_storage import LocalStorageWorkspace
+from agent_c_tools.tools.workspace.local_storage import LocalStorageWorkspace
 
 
 class LocalProjectWorkspace(LocalStorageWorkspace):

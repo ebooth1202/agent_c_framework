@@ -2,7 +2,7 @@ import json
 import xml.etree.ElementTree as ET
 
 from typing import Optional, List
-from agent_c_tools.tools.workspaces.xml_to_yaml_converter import convert_dynamics_xml_to_yaml, extract_key_info_from_element
+from agent_c_tools.tools.workspace.util.xml_to_yaml_converter import convert_dynamics_xml_to_yaml, extract_key_info_from_element
 
 class XMLNavigator:
     """A tool to navigate large XML files without loading the entire file into memory"""
