@@ -3,6 +3,8 @@
 import logging
 import base64
 import json
+import os
+import inspect
 from aiobotocore.session import get_session
 from botocore.exceptions import NoCredentialsError, ClientError
 from agent_c_tools.tools.workspace.base import BaseWorkspace
@@ -11,10 +13,10 @@ from agent_c_tools.tools.workspace.base import BaseWorkspace
 class S3StorageWorkspace(BaseWorkspace):
     """
     A workspace implementation for Amazon S3.
-    
+
     This class provides methods for interacting with files stored in Amazon S3
     using aiobotocore for asynchronous operations.
-    
+
     Attributes:
         bucket_name (str): The name of the S3 bucket.
         prefix (str): The prefix (folder path) within the bucket.
@@ -24,7 +26,7 @@ class S3StorageWorkspace(BaseWorkspace):
     def __init__(self, bucket_name: str, prefix: str = "", **kwargs):
         """
         Initialize the S3StorageWorkspace.
-        
+
         Args:
             bucket_name (str): The name of the S3 bucket.
             prefix (str): Optional prefix (folder path) within the bucket.
@@ -35,16 +37,34 @@ class S3StorageWorkspace(BaseWorkspace):
         self.prefix = prefix.rstrip('/') + '/' if prefix else ""
         self.session = get_session()
 
+        aws_region_name = os.getenv('AWS_REGION_NAME')
+        aws_secret_access_key = os.getenv('AWS_SECRET_ACCESS_KEY')
+        aws_access_key_id = os.getenv('AWS_ACCESS_KEY_ID')
+
+        if not aws_access_key_id or not aws_secret_access_key or not aws_region_name:
+            error_msg = "AWS credentials not found"
+            logging.error(error_msg)
+            raise ValueError(error_msg)
+
+        aws_session_token = os.getenv('AWS_SESSION_TOKEN')
+
+        self.session.set_credentials(
+            secret_key=aws_secret_access_key,
+            access_key=aws_access_key_id,
+            token=aws_session_token if aws_session_token else None)
+
+        self.session.set_config_variable('region', aws_region_name)
+
         # S3 has a maximum object key length of 1024 bytes
         self.max_filename_length = 1024 - len(self.prefix)
 
     def _get_full_path(self, file_path: str) -> str:
         """
         Generate the full S3 key for a given file path.
-        
+
         Args:
             file_path (str): The file path relative to the workspace.
-            
+
         Returns:
             str: The full S3 key.
         """
@@ -55,10 +75,10 @@ class S3StorageWorkspace(BaseWorkspace):
     async def path_exists(self, file_path: str) -> bool:
         """
         Check if a path exists within the S3 bucket.
-        
+
         Args:
             file_path (str): The path to check for existence.
-            
+
         Returns:
             bool: True if the path exists, False otherwise.
         """
@@ -85,13 +105,13 @@ class S3StorageWorkspace(BaseWorkspace):
     async def read_bytes_internal(self, file_path: str) -> bytes:
         """
         Read bytes directly from a path within the S3 bucket.
-        
+
         Args:
             file_path (str): The path from which to read bytes.
-            
+
         Returns:
             bytes: The content of the file as bytes.
-            
+
         Raises:
             FileNotFoundError: If the file does not exist.
             Exception: For other S3 errors.
@@ -102,26 +122,27 @@ class S3StorageWorkspace(BaseWorkspace):
                 response = await client.get_object(Bucket=self.bucket_name, Key=full_path)
                 async with response['Body'] as stream:
                     return await stream.read()
-            except ClientError as clientError:
-                logging.error(clientError)
-                if clientError.response['Error']['Code'] == 'NoSuchKey':
-                    raise FileNotFoundError(f"File not found: {file_path}") from clientError
+            except ClientError as client_error:
+                logging.error(client_error)
+                if client_error.response['Error']['Code'] == 'NoSuchKey':
+                    error_msg = f"File not found: {file_path}"
+                    raise FileNotFoundError(error_msg) from client_error
                 else:
-                    raise clientError
-            #except client.exceptions.NoSuchKey as exc:
-            #    raise FileNotFoundError(f"File not found: {file_path}") from exc
+                    raise client_error
             except Exception as e:
-                logging.error(e)
-                raise ClientError(f"Error reading file {file_path}: {str(e)}",
-                                  "read_bytes_internal") from e
+                error_msg = f"Error reading file {file_path}: {str(e)}", "read_bytes_internal"
+                logging.error(error_msg)
+                method_name = inspect.currentframe().f_code.co_name
+                raise ClientError(
+                    error_msg, operation_name=method_name) from e
 
     async def read_bytes_base64(self, file_path: str) -> str:
         """
         Read bytes and encode them as base64 from a path within the S3 bucket.
-        
+
         Args:
             file_path (str): The path from which to read bytes.
-            
+
         Returns:
             str: The content of the file as a base64 encoded string.
         """
@@ -131,15 +152,15 @@ class S3StorageWorkspace(BaseWorkspace):
     async def write_bytes(self, file_path: str, mode: str, data: bytes) -> str:
         """
         Write bytes to a path within the S3 bucket.
-        
+
         Args:
             file_path (str): The path where to write bytes.
             mode (str): The mode in which to write the data, can be "write" or "append".
             data (bytes): The data to write into the file.
-            
+
         Returns:
             str: The file path where the data was written.
-            
+
         Raises:
             ValueError: If the workspace is read-only or if the mode is invalid.
             Exception: For S3 errors.
@@ -175,13 +196,13 @@ class S3StorageWorkspace(BaseWorkspace):
     def full_path(self, path: str, mkdirs: bool = True) -> str:
         """
         Generate the full path for a given path in the workspace.
-        
+
         In S3, directories don't need to be explicitly created, so mkdirs is ignored.
-        
+
         Args:
             path (str): The directory or file path.
             mkdirs (bool): Whether to create directories (ignored in S3).
-            
+
         Returns:
             str: The full path within the S3 bucket.
         """
@@ -190,10 +211,10 @@ class S3StorageWorkspace(BaseWorkspace):
     async def ls(self, path: str) -> str:
         """
         List all files in a directory within the S3 bucket.
-        
+
         Args:
             path (str): The directory path to list files from.
-            
+
         Returns:
             str: A newline-separated list of file paths.
         """
@@ -213,8 +234,8 @@ class S3StorageWorkspace(BaseWorkspace):
                                 files.append(rel_path)
 
                 return '\n'.join(sorted(files))
-            except ClientError as clientError:
-                logging.error(clientError)
+            except ClientError as client_error:
+                logging.error(client_error)
                 raise
             except Exception as e:
                 logging.error(e)
@@ -223,10 +244,10 @@ class S3StorageWorkspace(BaseWorkspace):
     async def read(self, path: str) -> str:
         """
         Read text from a path within the S3 bucket.
-        
+
         Args:
             path (str): The path from which to read text.
-            
+
         Returns:
             str: The content of the file as a string.
         """
@@ -236,12 +257,12 @@ class S3StorageWorkspace(BaseWorkspace):
     async def write(self, path: str, mode: str, data: str) -> str:
         """
         Write text to a path within the S3 bucket.
-        
+
         Args:
             path (str): The path where to write text.
             mode (str): The mode in which to open the file.
             data (str): The data to write into the file.
-            
+
         Returns:
             str: The file path where the data was written.
         """
