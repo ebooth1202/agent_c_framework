@@ -104,7 +104,7 @@ class BlobStorageWorkspace(BaseWorkspace):
 
         # Ensure the container exists
         try:
-            if not self.read_only:
+            if not container_client.exists():
                 await container_client.create_container(exist_ok=True)
         except ResourceExistsError:
             pass
@@ -311,10 +311,8 @@ class BlobStorageWorkspace(BaseWorkspace):
 
         # List all blobs with the prefix
         result = StringIO()
-        result.write(f"Contents of {path or '/'}\n")
 
         # Track unique "directory" names at the current level
-        dirs = set()
         files = []
 
         async for blob in container_client.list_blobs(name_starts_with=prefix):
@@ -325,16 +323,7 @@ class BlobStorageWorkspace(BaseWorkspace):
             if not rel_path:
                 continue
 
-            # If the path contains a slash, it's in a subdirectory
-            if '/' in rel_path:
-                dir_name = rel_path.split('/')[0] + '/'
-                dirs.add(dir_name)
-            else:
-                files.append(rel_path)
-
-        # List directories first, then files
-        for dir_name in sorted(dirs):
-            result.write(f"d {dir_name}\n")
+            files.append(rel_path)
 
         for file_name in sorted(files):
             result.write(f"f {file_name}\n")
