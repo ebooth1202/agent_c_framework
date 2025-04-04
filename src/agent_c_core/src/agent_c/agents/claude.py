@@ -93,6 +93,10 @@ class ClaudeChatAgent(BaseAgent):
         opts = {"callback_opts": callback_opts, "completion_opts": completion_opts, 'tool_chest': tool_chest}
         return opts
 
+    @staticmethod
+    def process_escapes(text):
+        return text.replace("\\n", "\n").replace('\\"', '"').replace("\\\\", "\\")
+
     async def chat(self, **kwargs) -> List[dict[str, Any]]:
         """
         Perform the chat operation.
@@ -133,14 +137,21 @@ class ClaudeChatAgent(BaseAgent):
         current_block_type: Optional[str] = None
         current_thought: Optional[dict[str, Any]] = None
         current_agent_msg: Optional[dict[str, Any]] = None
+
+        # quick hack for now (lol)
+        tts_inactive = 0
+        tts_waiting = 1
+        tts_emitting = 2
+        think_tool_state = tts_inactive
+        think_partial: str = ""
+
         delay = 1  # Initial delay between retries
         async with self.semaphore:
             interaction_id = await self._raise_interaction_start(**callback_opts)
             while delay <= self.max_delay:
                 try:
                     await self._raise_completion_start(opts["completion_opts"], **callback_opts)
-                    async with self.client.beta.messages.stream (**opts["completion_opts"]) as stream:
-                        collected_messages = []
+                    async with self.client.beta.messages.stream(**opts["completion_opts"]) as stream:
                         collected_tool_calls = []
                         input_tokens = 0
                         model_outputs = []
@@ -159,14 +170,51 @@ class ClaudeChatAgent(BaseAgent):
                                     else:
                                         current_thought['thinking'] = current_thought['thinking'] + delta.thinking
                                         await self._raise_thought_delta(delta.thinking, **callback_opts)
+                                elif delta.type == "input_json_delta":
+                                    j = delta.partial_json
+
+                                    if think_tool_state == tts_waiting:
+                                        think_partial = think_partial + j
+
+                                        # Check if we've received the opening part of the thought
+                                        prefix = '{"thought": "'
+                                        if prefix in think_partial:
+                                            start_pos = think_partial.find(prefix) + len(prefix)
+                                            content = think_partial[start_pos:]
+
+                                            # Start buffering content for escape sequence handling
+                                            think_partial = ""
+                                            think_escape_buffer = content
+                                            think_tool_state = tts_emitting
+
+                                            # Process and emit if we don't have a partial escape sequence
+                                            if not think_escape_buffer.endswith('\\'):
+                                                processed = self.process_escapes(think_escape_buffer)
+                                                think_escape_buffer = ""  # Clear the buffer after processing
+                                                await self._raise_thought_delta(processed, **callback_opts)
+
+                                    elif think_tool_state == tts_emitting:
+                                        # Add new content to our escape sequence buffer
+                                        think_escape_buffer = think_escape_buffer + j
+
+                                        # If we don't end with backslash, we can process
+                                        if not think_escape_buffer.endswith('\\'):
+                                            processed = self.process_escapes(think_escape_buffer)
+                                            think_escape_buffer = ""  # Clear the buffer after processing
+
+                                            # Check if we've hit the end of the JSON
+                                            if processed.endswith('"}'):
+                                                think_tool_state = tts_inactive
+                                                # Remove closing quote and brace
+                                                processed = processed[:-2]
+
+                                            await self._raise_thought_delta(processed, **callback_opts)
+
+
+
                             elif event.type == 'message_stop':
                                 output_tokens = event.message.usage.output_tokens
-                                # self.logger.debug(f"Claude message_stop event: stop_reason={stop_reason}")
-                                # self.logger.debug(f"Claude message_stop event attributes: {dir(event)}")
-                                # self.logger.debug(f"Claude message_stop event dict: {getattr(event, 'to_dict', lambda: 'N/A')()}")
-                                # self.logger.debug(f"Claude message_stop event - about to raise completion_end")
                                 await self._raise_completion_end(opts["completion_opts"], stop_reason=stop_reason, input_tokens=input_tokens, output_tokens=output_tokens, **callback_opts)
-                                # self.logger.debug(f"Claude message_stop event - completed raising completion_end")
 
                                 # TODO: This will need moved when I fix tool call messages
                                 assistant_content = self._format_model_outputs_to_text(model_outputs)
@@ -188,7 +236,6 @@ class ClaudeChatAgent(BaseAgent):
                                     # Between claude/gpt.  This is being solved in another branch.
                                     # await self.process_tool_response_messages(session_manager, tool_response_messages)
 
-
                                     # TODO: These should probably be part of the model output
                                     messages.extend(tool_response_messages)
                                     await self._raise_tool_call_end(collected_tool_calls, messages[-1]['content'],
@@ -199,6 +246,8 @@ class ClaudeChatAgent(BaseAgent):
                                 current_block_type = event.content_block.type
                                 current_agent_msg = None
                                 current_thought = None
+                                think_tool_state = tts_inactive
+                                think_partial = ""
 
                                 if current_block_type == "text":
                                     content = event.content_block.text
@@ -208,6 +257,9 @@ class ClaudeChatAgent(BaseAgent):
                                         await self._raise_text_delta(content, **callback_opts)
                                 elif current_block_type == "tool_use":
                                     tool_call = event.content_block.model_dump()
+                                    if event.content_block.name == "think":
+                                        think_tool_state = tts_waiting
+
                                     collected_tool_calls.append(tool_call)
                                     await self._raise_tool_call_delta(collected_tool_calls, **callback_opts)
                                 elif current_block_type == "thinking" or current_block_type == "redacted_thinking":
@@ -241,7 +293,7 @@ class ClaudeChatAgent(BaseAgent):
                                 stop_reason = event.delta.stop_reason
 
 
-                except APITimeoutError as e:
+                except APITimeoutError:
                     await self._raise_system_event(f"Timeout error calling `client.messages.stream`. Delaying for {delay} seconds.\n", **callback_opts)
                     await self._exponential_backoff(delay)
                     delay *= 2
@@ -385,7 +437,8 @@ class ClaudeChatAgent(BaseAgent):
         return [{'role': 'assistant', 'content': list(ai_calls)},
                 {'role': 'user', 'content': list(results)}]
 
-    def _format_model_outputs_to_text(self, model_outputs: List[Dict[str, Any]]) -> str:
+    @staticmethod
+    def _format_model_outputs_to_text(model_outputs: List[Dict[str, Any]]) -> str:
         """
         Convert Claude's model outputs into a single text string for session storage.
         CREATED BY JOE: May not be the best way
