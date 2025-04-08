@@ -4,7 +4,8 @@ import json
 import logging
 
 from typing import Any, List, Union, Dict, Optional
-from anthropic import AsyncAnthropic, APITimeoutError, Anthropic
+from anthropic import AsyncAnthropic, APITimeoutError, Anthropic, RateLimitError
+from anthropic.types import OverloadedError
 
 from agent_c.agents.base import BaseAgent
 from agent_c.chat.session_manager import ChatSessionManager
@@ -292,9 +293,9 @@ class ClaudeChatAgent(BaseAgent):
                             elif event.type == 'message_delta':
                                 stop_reason = event.delta.stop_reason
 
-
-                except APITimeoutError:
-                    await self._raise_system_event(f"Timeout error calling `client.messages.stream`. Delaying for {delay} seconds.\n", **callback_opts)
+                except (APITimeoutError, RateLimitError, OverloadedError) as e:
+                    error_type = type(e).__name__
+                    await self._raise_system_event(f"{error_type} during `client.messages.stream`. Delaying for {delay} seconds.\n", **callback_opts)
                     await self._exponential_backoff(delay)
                     delay *= 2
                 except Exception as e:
