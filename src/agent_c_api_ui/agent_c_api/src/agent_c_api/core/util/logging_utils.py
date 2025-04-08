@@ -209,6 +209,7 @@ class LoggingManager:
             "python_multipart": "WARNING",
             "anthropic": "WARNING",
             "openai": "WARNING",
+            "readability": "WARNING",
             # Add others as needed
         }
 
