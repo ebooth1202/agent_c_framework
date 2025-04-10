@@ -24,7 +24,9 @@ const ChatMessage = ({
     return (
       <div className={`flex justify-end items-start gap-2 group ${className}`}>
         <div className="max-w-[80%] rounded-2xl px-4 py-2 shadow-sm bg-blue-500 text-white ml-12 rounded-br-sm relative">
-          {content}
+          <div className="markdown-user-message">
+            <MarkdownMessage content={content} />
+          </div>
           {timestamp && <div className="text-xs opacity-70 mt-1">{formattedTime}</div>}
         </div>
         <User className="h-6 w-6 text-blue-500" />
