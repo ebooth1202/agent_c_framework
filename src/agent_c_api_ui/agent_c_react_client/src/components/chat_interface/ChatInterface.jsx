@@ -11,12 +11,9 @@ import MarkdownMessage from './MarkdownMessage';
 import ThoughtDisplay from './ThoughtDisplay';
 import ModelIcon from './ModelIcon';
 import CopyButton from './CopyButton';
-import AudioRecorder from './AudioRecorder';
-import AudioPlayer from './AudioPlayer';
 import {API_URL} from "@/config/config";
 import {createClipboardContent} from '@/components/chat_interface/utils/htmlChatFormatter';
 import ExportHTMLButton from './ExportHTMLButton';
-import {isModelVoiceCapable} from '@/lib/audioUtils';
 
 /**
  * ChatInterface component provides a complete chat interface with support for
@@ -42,8 +39,6 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [isUploading, setIsUploading] = useState(false);
     const [selectedFileForUpload, setSelectedFileForUpload] = useState(null); // Track selected file
-    const [lastAudioResponse, setLastAudioResponse] = useState(null); // Store the last audio response
-    const [audioResponsePlaying, setAudioResponsePlaying] = useState(false); // Track audio playback state
 
     // Helper function to format a message for copying
     const formatMessageForCopy = useCallback((msg) => {
@@ -667,110 +662,6 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
         }
     };
 
-    /**
-     * Handles audio recording completion and sends the audio data to the API
-     * @param {string} base64Audio - Base64-encoded audio data
-     * @param {string} contentType - MIME type of the audio data
-     */
-    const handleAudioRecorded = async (base64Audio, contentType) => {
-        if (!base64Audio || isStreaming) return;
-
-        try {
-            setIsStreaming(true);
-            setActiveToolCalls(new Map());
-
-            // Add user message indicating voice input
-            setMessages((prev) => [
-                ...prev,
-                {
-                    role: "user",
-                    type: "content",
-                    content: "[Voice message]",
-                    isVoiceMessage: true
-                },
-            ]);
-
-            const formData = new FormData();
-            formData.append("ui_session_id", sessionId);
-            formData.append("audio", base64Audio);
-            formData.append("audio_type", contentType);
-            formData.append("custom_prompt", customPrompt || "");
-
-            // Add the correct parameter based on model type
-            if (modelParameters.temperature !== undefined) {
-                formData.append("temperature", modelParameters.temperature);
-            }
-            if (modelParameters.reasoning_effort !== undefined) {
-                formData.append("reasoning_effort", modelParameters.reasoning_effort);
-            }
-
-            formData.append("llm_model", modelName);
-
-            const response = await fetch(`${API_URL}/chat_audio`, {
-                method: "POST",
-                body: formData,
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const responseData = await response.json();
-
-            // Handle audio response if provided
-            if (responseData.audio_response) {
-                setLastAudioResponse(responseData.audio_response);
-            }
-
-            // Process the text response as usual
-            if (responseData.text_response) {
-                setMessages((prev) => [
-                    ...prev,
-                    {
-                        role: "assistant",
-                        type: "content",
-                        content: responseData.text_response,
-                        vendor: 'openai'
-                    },
-                ]);
-            }
-
-            // Handle token usage if provided
-            if (responseData.token_usage) {
-                setMessages(prev => {
-                    const lastAssistantMessage = [...prev].reverse().find(
-                        (msg) => msg.role === "assistant" && msg.type === "content"
-                    );
-                    if (!lastAssistantMessage) return prev;
-                    return prev.map((msg) => {
-                        if (msg === lastAssistantMessage) {
-                            return {
-                                ...msg,
-                                tokenUsage: {
-                                    prompt_tokens: responseData.token_usage.prompt_tokens || 0,
-                                    completion_tokens: responseData.token_usage.completion_tokens || 0,
-                                    total_tokens: responseData.token_usage.total_tokens || 0,
-                                },
-                            };
-                        }
-                        return msg;
-                    });
-                });
-            }
-        } catch (error) {
-            console.error("Error in voice chat:", error);
-            setMessages((prev) => [
-                ...prev,
-                {
-                    role: "system",
-                    type: "content",
-                    content: `Error processing voice input: ${error.message}`,
-                },
-            ]);
-        } finally {
-            setIsStreaming(false);
-        }
-    };
 
     const handleKeyPress = (e) => {
         if (e.key === "Enter" && !e.shiftKey) {
@@ -999,14 +890,6 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                     </div>
                 )}
 
-                {/* Display audio player for last response if available */}
-                {lastAudioResponse && (
-                    <AudioPlayer
-                        audioContent={lastAudioResponse}
-                        autoPlay={true}
-                    />
-                )}
-
                 <div className="flex gap-2">
     <textarea
         placeholder="Type your message..."
@@ -1025,12 +908,6 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
         placeholder-gray-400 py-2 px-3 resize-none"
     />
                     <div className="flex flex-col gap-2 self-end">
-                        {/* Voice input button - only shown for compatible models */}
-                        <AudioRecorder
-                            onAudioRecorded={handleAudioRecorded}
-                            isModelVoiceCapable={isModelVoiceCapable(modelName)}
-                        />
-
                         <Button
                             onClick={handleSendMessage}
                             disabled={isStreaming}
