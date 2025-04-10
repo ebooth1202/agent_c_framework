@@ -1,3 +1,45 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Custom styles for markdown in user messages */
+.markdown-user-message .prose {
+  color: white;
+  max-width: none;
+}
+
+.markdown-user-message .prose strong {
+  color: white;
+  font-weight: bold;
+}
+
+.markdown-user-message .prose code {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.markdown-user-message .prose pre {
+  background-color: rgba(0, 0, 0, 0.3);
+  margin: 0.5rem 0;
+}
+
+.markdown-user-message .prose a {
+  color: white;
+  text-decoration: underline;
+}
+
+.markdown-user-message .prose ul,
+.markdown-user-message .prose ol {
+  color: white;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.markdown-user-message .prose h1,
+.markdown-user-message .prose h2,
+.markdown-user-message .prose h3,
+.markdown-user-message .prose h4,
+.markdown-user-message .prose h5,
+.markdown-user-message .prose h6 {
+  color: white;
+}

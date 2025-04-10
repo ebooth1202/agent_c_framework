@@ -655,6 +655,50 @@ const EnhancedChatEventReplay = ({
                             // We don't need special handling here as ReplayInterface already flattens these arrays
                         }
                         break;
+                        
+                    case 'tool_select_delta':
+                        // Handle tool selection deltas similar to tool calls
+                        if (event.toolCalls && event.toolCalls.length > 0) {
+                            // Generate a unique group ID for these tool calls
+                            const toolCallGroupId = `tool-select-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
+                            // Always create a new group for tool selections to distinguish from regular tool calls
+                            currentToolCallGroupRef.current = {
+                                id: toolCallGroupId,
+                                toolCalls: [],
+                                timestamp: event.timestamp,
+                                vendor: event.vendor,
+                                isToolSelection: true // Mark as selection
+                            };
+                            toolCallGroupsRef.current.push(currentToolCallGroupRef.current);
+
+                            // Process and normalize the tool selection calls
+                            const normalizedToolCalls = event.toolCalls.map(toolCall => {
+                                // Extract the tool call ID based on vendor
+                                const toolId = toolCall.id ||
+                                    (toolCall.function ? toolCall.function.name + Date.now() : null) ||
+                                    `tool-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
+                                // Normalize arguments based on vendor format
+                                const args = toolCall.input || toolCall.arguments || toolCall.parameters || {};
+
+                                // Create a normalized tool call object
+                                return {
+                                    id: toolId,
+                                    name: toolCall.name || (toolCall.function ? toolCall.function.name : 'unknown-tool'),
+                                    arguments: typeof args === 'string' ? args : JSON.stringify(args),
+                                    type: 'tool_select',
+                                    timestamp: event.timestamp,
+                                    results: null // Will be filled in when results arrive
+                                };
+                            });
+
+                            // Add these tool calls to the current group
+                            normalizedToolCalls.forEach(normalizedToolCall => {
+                                currentToolCallGroupRef.current.toolCalls.push(normalizedToolCall);
+                            });
+                        }
+                        break;
                     
                     default:
                         console.log(`Unhandled event type: ${event.type}`, event);

@@ -11,7 +11,8 @@ import {
   SkipForward,
   SkipBack,
   RefreshCw,
-  ChevronLeft
+  ChevronLeft,
+  FastForward
 } from 'lucide-react';
 import EnhancedChatEventReplay from './EnhancedChatEventReplay';
 
@@ -25,6 +26,8 @@ const ReplayPage = () => {
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [currentEventIndex, setCurrentEventIndex] = useState(0);
   const [sessionInfo, setSessionInfo] = useState(null);
+  const [showingAll, setShowingAll] = useState(false);
+  const [isLoadingAll, setIsLoadingAll] = useState(false);
   const eventSourceRef = useRef(null);
 
   useEffect(() => {
@@ -37,10 +40,33 @@ const ReplayPage = () => {
     };
   }, [sessionId]);
 
-  // Effect for handling the EventSource based on play/pause state
+  // Helper function to reset event state
+  const resetEvents = () => {
+    setEvents([]);
+    setCurrentEventIndex(0);
+    setShowingAll(false);
+  };
+
+  // Effect for handling streaming
   useEffect(() => {
-    if (isPlaying) {
-      startEventStream();
+    // Add debugging for the events array
+    console.log(`Current events array: ${events.length} events`);
+    if (events.length > 0) {
+      // Log a sample event to see its structure
+      console.log('Sample event structure:', JSON.stringify(events[0]).substring(0, 200));
+    }
+
+    if (isPlaying && !showingAll) {
+      // If we're about to start playing, clear events first to avoid duplicate issues
+      if (events.length > 0) {
+        resetEvents();
+        // Use setTimeout to ensure state updates before starting the stream
+        setTimeout(() => {
+          startEventStream();
+        }, 50);
+      } else {
+        startEventStream();
+      }
     } else {
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
@@ -53,7 +79,7 @@ const ReplayPage = () => {
         eventSourceRef.current.close();
       }
     };
-  }, [isPlaying, playbackSpeed, sessionId]);
+  }, [isPlaying, playbackSpeed, sessionId, showingAll]);
 
   const fetchSessionInfo = async () => {
     try {
@@ -83,16 +109,65 @@ const ReplayPage = () => {
       }
 
       const text = await response.text();
-      const eventLines = text.trim().split('\n');
-      const parsedEvents = eventLines
-        .filter(line => line.trim())
-        .map(line => JSON.parse(line));
+      
+      let parsedEvents = [];
+      
+      try {
+        // First try as a single JSON object or array
+        const jsonData = JSON.parse(text);
+        
+        if (Array.isArray(jsonData)) {
+          parsedEvents = jsonData;
+        } else if (jsonData.events && Array.isArray(jsonData.events)) {
+          parsedEvents = jsonData.events;
+        } else if (jsonData.data && Array.isArray(jsonData.data)) {
+          parsedEvents = jsonData.data;
+        } else {
+          parsedEvents = [jsonData];
+        }
+      } catch (jsonError) {
+        // Fall back to NDJSON format
+        try {
+          const eventLines = text.trim().split('\n');
+          parsedEvents = eventLines
+            .filter(line => line.trim())
+            .map(line => JSON.parse(line));
+        } catch (lineError) {
+          console.error("Failed to parse events as NDJSON", lineError);
+          throw new Error("Could not parse event data in any known format");
+        }
+      }
+      
+      // Handle complex event structures
+      const expandedEvents = parsedEvents.flatMap(event => {
+        if (event.type === 'event_array' && Array.isArray(event.events)) {
+          return event.events;
+        }
+        if (event.events && Array.isArray(event.events)) {
+          return event.events;
+        }
+        return event;
+      });
 
-      setEvents(parsedEvents);
+      // Sort by timestamp
+      const sortedEvents = expandedEvents.sort((a, b) => {
+        const getTimestamp = (event) => {
+          if (event.timestamp) return event.timestamp;
+          if (event.raw && event.raw.timestamp) return event.raw.timestamp;
+          if (event.event && event.event.timestamp) return event.event.timestamp;
+          return '';
+        };
+        
+        const timeA = getTimestamp(a);
+        const timeB = getTimestamp(b);
+        return new Date(timeA) - new Date(timeB);
+      });
+
+      setEvents(sortedEvents);
       setLoading(false);
     } catch (err) {
       console.error('Error fetching initial events:', err);
-      setError('Failed to load session events');
+      setError('Failed to load session events: ' + err.message);
       setLoading(false);
     }
   };
@@ -101,59 +176,366 @@ const ReplayPage = () => {
     // Close any existing connection
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
+      eventSourceRef.current = null;
     }
 
     try {
       // Connect to the streaming endpoint
       const streamUrl = `${API_URL}/events/${sessionId}/stream?real_time=true&speed_factor=${playbackSpeed}`;
+      console.log('Connecting to stream:', streamUrl);
+      
+      // Create a new EventSource with the stream URL
       const eventSource = new EventSource(streamUrl);
+
+      // Add an event handler for when the connection opens
+      eventSource.onopen = () => {
+        console.log('EventSource connection opened successfully');
+      };
 
       eventSource.onmessage = (e) => {
         try {
-          const eventData = JSON.parse(e.data);
+          console.log('Received event data:', e.data.substring(0, 100) + '...');
+          
+          // Handle possible data format issues
+          if (!e.data || e.data.trim() === '') {
+            console.warn('Empty event data received');
+            return;
+          }
+          
+          // For SSE, the data field might contain "data: {json}" format
+          // If it has this prefix, extract just the JSON part
+          let dataStr = e.data;
+          if (dataStr.startsWith('data: ')) {
+            dataStr = dataStr.substring(6);
+          }
+          
+          const eventData = JSON.parse(dataStr);
+          
+          // Check if this is a stream_complete message
+          if (eventData.type === 'stream_complete') {
+            console.log('Stream complete message received:', eventData.message);
+            // Close the connection gracefully
+            eventSource.close();
+            setIsPlaying(false);
+            return;
+          }
 
           // Check if this event already exists in our array to avoid duplicates
-          const isDuplicate = events.some(
-            existingEvent =>
-              existingEvent.timestamp === eventData.timestamp &&
-              existingEvent.event?.type === eventData.event?.type
-          );
+          // Get the type from the event data - it could be at different levels depending on the format
+          const eventType = eventData.type || eventData.event?.type || null;
+          const eventTimestamp = eventData.timestamp || '';
+          
+          // Look for any existing event with the same timestamp and type
+          const isDuplicate = events.some(existingEvent => {
+            // Handle different event structures
+            const existingType = existingEvent.type || existingEvent.event?.type || null;
+            const existingTimestamp = existingEvent.timestamp || '';
+            
+            const typeMatch = existingType === eventType;
+            const timestampMatch = existingTimestamp === eventTimestamp;
+            
+            // Only consider it a duplicate if both timestamp and type match
+            return typeMatch && timestampMatch && existingTimestamp !== '';
+          });
 
           if (!isDuplicate) {
-            setEvents(prevEvents => {
-              const newEvents = [...prevEvents, eventData];
-              // Keep events sorted by timestamp
-              return newEvents.sort((a, b) =>
-                new Date(a.timestamp) - new Date(b.timestamp)
-              );
-            });
+            // Handle array events
+            if (Array.isArray(eventData)) {
+              console.log(`Received array of ${eventData.length} events`);
+              // Update events state with the array
+              setEvents(prevEvents => {
+                const combined = [...prevEvents, ...eventData];
+                // Keep events sorted by timestamp
+                return combined.sort((a, b) =>
+                  new Date(a.timestamp || 0) - new Date(b.timestamp || 0)
+                );
+              });
+              
+              // Advance current event index to the end of the array
+              setCurrentEventIndex(prevIndex => {
+                return prevIndex + eventData.length;
+              });
+            } 
+            // Handle event array container
+            else if (eventData.events && Array.isArray(eventData.events)) {
+              console.log(`Received event container with ${eventData.events.length} events`);
+              // Update events state with the events array
+              setEvents(prevEvents => {
+                const combined = [...prevEvents, ...eventData.events];
+                // Keep events sorted by timestamp
+                return combined.sort((a, b) =>
+                  new Date(a.timestamp || 0) - new Date(b.timestamp || 0)
+                );
+              });
+              
+              // Advance current event index to the end of the array
+              setCurrentEventIndex(prevIndex => {
+                return prevIndex + eventData.events.length;
+              });
+            }
+            // Handle single event
+            else {
+              setEvents(prevEvents => {
+                const newEvents = [...prevEvents, eventData];
+                // Keep events sorted by timestamp
+                return newEvents.sort((a, b) =>
+                  new Date(a.timestamp || 0) - new Date(b.timestamp || 0)
+                );
+              });
 
-            // Advance current event index to show the latest event if we're playing
-            setCurrentEventIndex(prevIndex => {
-              return prevIndex + 1;
-            });
+              // Advance current event index to show the latest event if we're playing
+              setCurrentEventIndex(prevIndex => {
+                return prevIndex + 1;
+              });
+            }
+          } else {
+            console.log('Skipped duplicate event');
           }
         } catch (err) {
-          console.error('Error processing event data:', err);
+          console.error('Error processing event data:', err, e.data);
         }
       };
 
       eventSource.onerror = (err) => {
         console.error('EventSource error:', err);
+        
+        // Check if the connection was closed due to error
+        if (eventSource.readyState === EventSource.CLOSED) {
+          console.log('EventSource connection was closed due to error');
+        }
+        
+        // Handle the error and implement a fallback strategy
+        console.log('Stream connection failed, falling back to manual events loading');
+        
+        // Close the existing connection to clean up
         eventSource.close();
+        eventSourceRef.current = null;
+        
+        // Pause the playback since streaming failed
         setIsPlaying(false);
+        
+        // Show an error message but don't set the error state (to avoid full page error)
+        console.error('Streaming error: Using cached events instead');
+        
+        // We keep the current events and allow manual navigation
       };
 
+      // Store the event source in the ref so we can close it later
       eventSourceRef.current = eventSource;
 
     } catch (err) {
       console.error('Failed to establish event stream:', err);
-      setError('Failed to establish event stream connection');
+      setError('Failed to establish event stream connection. Try using "Show All" instead.');
       setIsPlaying(false);
     }
   };
 
+  // Function to extract events from various container formats
+  const extractEvents = (data) => {
+    if (Array.isArray(data)) {
+      // It's already an array of events
+      return data;
+    }
+    
+    // Check for an events array property
+    if (data.events && Array.isArray(data.events)) {
+      return data.events;
+    }
+    
+    // Check for a data array property
+    if (data.data && Array.isArray(data.data)) {
+      return data.data;
+    }
+    
+    // Check for a raw array property
+    if (data.raw && Array.isArray(data.raw)) {
+      return data.raw;
+    }
+    
+    // If it's a single event object with no array property
+    return [data];
+  };
+  
+  // Fetch all events at once for "Show All" mode
+  const fetchAllEvents = async () => {
+    setIsLoadingAll(true);
+    setError(null); // Clear any previous errors
+    
+    try {
+      // Close any existing event stream
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+      
+      // Pause playback when fetching all events
+      setIsPlaying(false);
+      
+      console.log("Fetching all events for session:", sessionId);
+      // Set a high limit to get all events
+      const url = `${API_URL}/events/${sessionId}?limit=100000`;
+      console.log("Request URL:", url);
+      
+      const eventsResponse = await fetch(url);
+      if (!eventsResponse.ok) {
+        throw new Error(`HTTP error! status: ${eventsResponse.status}`);
+      }
+
+      // Get the response content type to determine parsing strategy
+      const contentType = eventsResponse.headers.get('content-type') || '';
+      console.log("Response content type:", contentType);
+      
+      // Get the response as text first
+      const text = await eventsResponse.text();
+      console.log("Fetched response length:", text.length);
+      
+      if (text.length === 0) {
+        console.warn("Empty response when fetching events");
+        setError('No events found. The server returned an empty response.');
+        setIsLoadingAll(false);
+        return;
+      }
+      
+      let parsedEvents = [];
+      
+      // Try different parsing strategies
+      try {
+        // First try as a single JSON object or array
+        const jsonData = JSON.parse(text);
+        console.log("Successfully parsed JSON, type:", Array.isArray(jsonData) ? "array" : typeof jsonData);
+        
+        // Extract events based on the structure
+        parsedEvents = extractEvents(jsonData);
+      } catch (jsonError) {
+        console.log("Failed to parse as single JSON, trying line-by-line", jsonError);
+        
+        // Fall back to NDJSON format (one JSON object per line)
+        try {
+          const eventLines = text.trim().split('\n');
+          console.log("Found", eventLines.length, "lines in NDJSON format");
+          
+          // Parse each line as JSON and filter out any errors
+          const lineEvents = [];
+          eventLines.forEach((line, i) => {
+            try {
+              if (line.trim()) {
+                const eventData = JSON.parse(line);
+                lineEvents.push(eventData);
+              }
+            } catch (lineErr) {
+              console.error(`Error parsing line ${i}:`, lineErr, line.substring(0, 100));
+            }
+          });
+          
+          parsedEvents = lineEvents;
+        } catch (lineError) {
+          console.error("Failed to parse events as NDJSON", lineError);
+          throw new Error("Could not parse event data in any known format");
+        }
+      }
+      
+      console.log(`Initially parsed ${parsedEvents.length} events`);
+      
+      // Handle complicated nested structures with multiple levels of events
+      let expandedEvents = [];
+      const processEvent = (event) => {
+        // Check if this is an event array container
+        if (event.type === 'event_array' && Array.isArray(event.events)) {
+          console.log(`Found event_array with ${event.events.length} events`);
+          event.events.forEach(processEvent);
+        }
+        // Check if this has a raw.events array
+        else if (event.raw && Array.isArray(event.raw)) {
+          console.log(`Found event with raw array of ${event.raw.length} events`);
+          event.raw.forEach(processEvent);
+        }
+        // Check if this has an events array property
+        else if (event.events && Array.isArray(event.events)) {
+          console.log(`Found events array with ${event.events.length} events`);
+          event.events.forEach(processEvent);
+        }
+        // It's a regular event, add it to our collection
+        else {
+          expandedEvents.push(event);
+        }
+      };
+      
+      // Process each event to expand nested arrays
+      parsedEvents.forEach(processEvent);
+      
+      if (expandedEvents.length > parsedEvents.length) {
+        console.log(`Expanded from ${parsedEvents.length} to ${expandedEvents.length} total events`);
+        parsedEvents = expandedEvents;
+      }
+      
+      if (parsedEvents.length === 0) {
+        console.warn("No events were found after parsing");
+        setError('No events were found. Try regular playback instead.');
+        setIsLoadingAll(false);
+        return;
+      }
+      
+      console.log(`Final count: ${parsedEvents.length} events ready for display`);
+      
+      // Sort events by timestamp, handling various timestamp locations
+      const sortedEvents = parsedEvents.sort((a, b) => {
+        // Extract timestamp from either direct property or nested event structure
+        const getTimestamp = (event) => {
+          if (event.timestamp) return event.timestamp;
+          if (event.raw && event.raw.timestamp) return event.raw.timestamp;
+          if (event.event && event.event.timestamp) return event.event.timestamp;
+          return '';
+        };
+        
+        const timeA = getTimestamp(a);
+        const timeB = getTimestamp(b);
+        return new Date(timeA || 0) - new Date(timeB || 0);
+      });
+      
+      // Update the events array
+      console.log("Setting events array with", sortedEvents.length, "events");
+      setEvents(sortedEvents);
+      
+      // Use a timeout to ensure state updates have propagated
+      setTimeout(() => {
+        // Set to show the last event
+        setCurrentEventIndex(sortedEvents.length - 1);
+        setShowingAll(true);
+        setIsLoadingAll(false);
+        console.log("Show All completed. Current index set to", sortedEvents.length - 1);
+      }, 200);
+      
+    } catch (error) {
+      console.error("Error fetching all events:", error);
+      setError('Failed to load all events: ' + error.message);
+      setIsLoadingAll(false);
+    }
+  };
+
+  // Reset from "Show All" mode back to streaming mode
+  const handleResetToStreaming = async () => {
+    setShowingAll(false);
+    setIsPlaying(false);
+    
+    // Reload initial events to reset the state
+    await fetchInitialEvents();
+    
+    // Reset to the first event
+    setCurrentEventIndex(0);
+  };
+
   const handlePlayPause = async () => {
+    // If showing all events, just toggle the play state locally
+    if (showingAll) {
+      setIsPlaying(!isPlaying);
+      return;
+    }
+    
+    // If we're starting playback, reset events to avoid any issues with duplicates
+    if (!isPlaying) {
+      resetEvents();
+    }
+    
     const newPlayingState = !isPlaying;
     setIsPlaying(newPlayingState);
 
@@ -339,20 +721,77 @@ const ReplayPage = () => {
           </div>
         </Card>
       )}
+      {/* Dedicated Show All Section */}
+      <Card className="p-4 mb-4 border-2 border-blue-200 bg-blue-50">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold">Advanced Replay Options</h3>
+            <p className="text-sm text-gray-600 mt-1">
+              {showingAll 
+                ? "All events have been loaded. You can navigate through the entire session." 
+                : "Want to see the entire conversation at once? Use the Show All button to load all events instantly."}
+            </p>
+          </div>
+          
+          {showingAll ? (
+            <Button
+              variant="outline"
+              onClick={handleResetToStreaming}
+              aria-label="Reset to streaming mode"
+              className="whitespace-nowrap"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Reset to Stream Mode
+            </Button>
+          ) : (
+            <Button
+              variant="default"
+              onClick={fetchAllEvents}
+              disabled={isLoadingAll}
+              aria-label="Show all events"
+              className="bg-blue-500 hover:bg-blue-600 text-white whitespace-nowrap"
+            >
+              {isLoadingAll ? (
+                <span className="flex items-center gap-2">
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                  Loading All Events...
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <FastForward className="h-4 w-4" />
+                  Show All Events
+                </span>
+              )}
+            </Button>
+          )}
+        </div>
+      </Card>
 
       <Card className="p-4 mb-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="ghost"
-            onClick={handlePlayPause}
-            aria-label={isPlaying ? "Pause playback" : "Play playback"}
-          >
-            {isPlaying ? (
-              <PauseCircle className="h-6 w-6" />
-            ) : (
-              <PlayCircle className="h-6 w-6" />
-            )}
-          </Button>
+        <h3 className="text-lg font-semibold mb-3">Playback Controls</h3>
+        <div className="flex flex-wrap items-center gap-2 border-t pt-3">
+          {showingAll ? (
+            <Button
+              variant="ghost"
+              onClick={handleResetToStreaming}
+              aria-label="Reset to streaming mode"
+            >
+              <RefreshCw className="h-5 w-5" />
+              <span className="ml-1">Reset</span>
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              onClick={handlePlayPause}
+              aria-label={isPlaying ? "Pause playback" : "Play playback"}
+            >
+              {isPlaying ? (
+                <PauseCircle className="h-6 w-6" />
+              ) : (
+                <PlayCircle className="h-6 w-6" />
+              )}
+            </Button>
+          )}
 
           <Button
             variant="ghost"
@@ -372,13 +811,17 @@ const ReplayPage = () => {
             <SkipForward className="h-5 w-5" />
           </Button>
 
-          <Button
-            variant="ghost"
-            onClick={handleRestart}
-            aria-label="Restart playback"
-          >
-            <RefreshCw className="h-5 w-5" />
-          </Button>
+          {!showingAll && (
+            <Button
+              variant="ghost"
+              onClick={handleRestart}
+              aria-label="Restart playback"
+            >
+              <RefreshCw className="h-5 w-5" />
+            </Button>
+          )}
+
+
 
           <div className="flex items-center gap-2 ml-4">
             <span className="text-sm">Speed: {playbackSpeed}x</span>
@@ -396,18 +839,37 @@ const ReplayPage = () => {
           <div className="flex items-center gap-2 ml-auto">
             <span className="text-sm">
               Event: {currentEventIndex + 1} of {events.length}
+              {showingAll && " (All Loaded)"}
             </span>
           </div>
         </div>
       </Card>
 
-      <EnhancedChatEventReplay
-        events={events}
-        currentEventIndex={currentEventIndex}
-        isPlaying={isPlaying}
-        playbackSpeed={playbackSpeed}
-        onEventIndexChange={setCurrentEventIndex}
-      />
+      {/* Only render chat events if we're playing, have clicked "Show All", 
+          or have manually moved through events (currentEventIndex > 0) */}
+      {(isPlaying || showingAll || currentEventIndex > 0) && events.length > 0 && (
+        <EnhancedChatEventReplay
+          events={events}
+          currentEventIndex={Math.min(currentEventIndex, events.length - 1)}
+          isPlaying={isPlaying}
+          playbackSpeed={playbackSpeed}
+          onEventIndexChange={setCurrentEventIndex}
+        />
+      )}
+      
+      {/* Show a message when no events are loaded but we're trying to display them */}
+      {((isPlaying || showingAll || currentEventIndex > 0) && events.length === 0) && (
+        <Card className="p-8 text-center">
+          <p className="text-gray-500 mb-4">No events found for this session. Try reloading the page.</p>
+        </Card>
+      )}
+      
+      {/* Show a prompt when no events are being displayed by choice */}
+      {!isPlaying && !showingAll && currentEventIndex === 0 && (
+        <Card className="p-8 text-center">
+          <p className="text-gray-500 mb-4">Click Play to start the replay or Show All to view the entire session</p>
+        </Card>
+      )}
     </div>
   );
 };
