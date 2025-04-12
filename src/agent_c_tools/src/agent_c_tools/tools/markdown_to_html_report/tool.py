@@ -359,21 +359,24 @@ class MarkdownToHtmlReportTools(Toolset):
                     # Create proper UNC item path - don't add extra slash if dir already ends with /
                     item_path = f"{normalized_dir_path}{item_name}"
 
-                    try_ls_result = await self.workspace_tool.ls(path=item_path)
-                    try_ls_data = json.loads(try_ls_result)
-                    is_directory = 'error' not in try_ls_data
-
-                    if is_directory:
-                        # Recursively process subdirectory
-                        new_rel_path = f"{rel_path}/{item_name}" if rel_path else item_name
-                        await process_directory(item_path, new_rel_path)
-                    elif self._is_markdown_file(item_name):
+                    # First check if it's a markdown file by extension - only process .md and .markdown files
+                    if self._is_markdown_file(item_name):
                         # Add markdown file to our collection
                         file_rel_path = f"{rel_path}/{item_name}" if rel_path else item_name
                         # Normalize path separators in keys
                         normalized_file_rel_path = file_rel_path.replace('\\', '/')
                         markdown_files[normalized_file_rel_path] = item_path
-                        logger.debug(f"Found markdown file: {normalized_file_rel_path}")
+                        # logger.debug(f"Found markdown file: {normalized_file_rel_path}")
+                    else:
+                        # Only check if it's a directory - we don't process non-markdown files
+                        is_dir_result = await self.workspace_tool.is_directory(path=item_path)
+                        is_dir_data = json.loads(is_dir_result)
+
+                        if 'error' not in is_dir_data and is_dir_data.get('is_directory', False):
+                            # Recursively process subdirectory
+                            new_rel_path = f"{rel_path}/{item_name}" if rel_path else item_name
+                            await process_directory(item_path, new_rel_path)
+                        # No else clause here - we don't add non-markdown files
             except Exception as e:
                 logger.error(f"Error processing directory {normalized_dir_path}: {e}")
 
@@ -403,6 +406,11 @@ class MarkdownToHtmlReportTools(Toolset):
 
         # Sort paths to ensure proper order (parent folders before children)
         for rel_path, unc_path in sorted(markdown_files.items()):
+            # Double-check that it's a markdown file before processing
+            if not self._is_markdown_file(Path(rel_path).name):
+                logger.debug(f"Skipping non-markdown file: {rel_path}")
+                continue
+
             # Normalize the UNC path for consistent handling
             normalized_unc_path = unc_path.replace('\\', '/')
 
@@ -571,25 +579,27 @@ class MarkdownToHtmlReportTools(Toolset):
     async def _get_html_template(self) -> str:
         """Get the HTML template for the markdown viewer."""
         try:
-            # First try to get the template from the workspace
-            workspace_template_paths = [
-                "//tools/src/agent_c_tools/tools/markdown_viewer/markdown-viewer-template.html",
-                "//tools/src/markdown-viewer-template.html",
-                "//tools/markdown-viewer-template.html"
-            ]
+            # To get the template from the workspace
+            # We're going to use local file only for now
+            # workspace_template_paths = [
+            #     "//tools/src/agent_c_tools/tools/markdown_viewer/markdown-viewer-template.html",
+            #     "//tools/src/markdown-viewer-template.html",
+            #     "//tools/markdown-viewer-template.html"
+            # ]
+            #
+            # # Try reading from workspace first
+            # for template_path in workspace_template_paths:
+            #     try:
+            #         read_result = await self.workspace_tool.read(path=template_path)
+            #         read_data = json.loads(read_result)
+            #
+            #         if 'error' not in read_data:
+            #             logger.info(f"Found template in workspace: {template_path}")
+            #             return read_data.get('contents', '')
+            #     except Exception:
+            #         # Continue to the next path if this one fails
+            #         pass
 
-            # Try reading from workspace first
-            for template_path in workspace_template_paths:
-                try:
-                    read_result = await self.workspace_tool.read(path=template_path)
-                    read_data = json.loads(read_result)
-
-                    if 'error' not in read_data:
-                        logger.info(f"Found template in workspace: {template_path}")
-                        return read_data.get('contents', '')
-                except Exception:
-                    # Continue to the next path if this one fails
-                    pass
 
             # If no workspace template found, try local file system
             local_template_path = Path(__file__).parent / "markdown-viewer-template.html"
