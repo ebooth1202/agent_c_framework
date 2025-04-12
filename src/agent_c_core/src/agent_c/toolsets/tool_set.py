@@ -1,6 +1,7 @@
 import os
 import copy
 import inspect
+import re
 from typing import Union, List, Dict, Any
 
 from agent_c.models.events import RenderMediaEvent, MessageEvent, TextDeltaEvent
@@ -81,6 +82,37 @@ class Toolset:
         self.output_format: str = kwargs.get('output_format', 'raw')
         self.tool_role: str = kwargs.get('tool_role', 'tool')
 
+    def _format_markdown(self, markdown: str) -> str:
+        """
+        Formats markdown to ensure proper rendering by fixing spacing issues.
+
+        Args:
+            markdown (str): The markdown string to format.
+
+        Returns:
+            str: Properly formatted markdown string.
+        """
+        if not markdown:
+            return ''
+
+        # Step 1: Trim leading/trailing whitespace
+        formatted = markdown.strip()
+
+        # Step 2: Fix headers - remove spaces between newlines and # symbols
+        formatted = re.sub(r'\n\s+#', r'\n#', formatted)
+
+        # Step 3: Fix list items - remove spaces between newlines and list markers
+        formatted = re.sub(r'\n\s+[-*]', r'\n-', formatted)
+
+        # Step 4: Fix the first line if it starts with space+#
+        formatted = re.sub(r'^\s+#', '#', formatted)
+
+        # Step 5: Remove extra spaces at the beginning of lines that aren't headers or list items
+        formatted = re.sub(r'\n\s+([^-#*])', r'\n\1', formatted)
+
+        return formatted
+
+
     async def _raise_render_media(self, **kwargs: Any) -> None:
         """
         Raises a render media event.
@@ -90,7 +122,12 @@ class Toolset:
         """
         kwargs['role'] = kwargs.get('role', self.tool_role)
         kwargs['session_id'] = kwargs.get('session_id', self.session_manager.chat_session.session_id)
-        
+
+        # Format markdown content if content_type is text/markdown
+        content_type = kwargs.get('content_type')
+        if content_type == 'text/markdown' and 'content' in kwargs:
+            kwargs['content'] = self._format_markdown(kwargs['content'])
+
         # Create the event object
         render_media_event = RenderMediaEvent(**kwargs)
 

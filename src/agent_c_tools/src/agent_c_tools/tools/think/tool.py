@@ -32,12 +32,12 @@ class ThinkTools(Toolset):
     )
     async def think(self, **kwargs) -> str:
         thought = markdown.markdown(kwargs.get('thought'))
-        await self._raise_render_media(
-            sent_by_class=self.__class__.__name__,
-            sent_by_function='think',
-            content_type="text/html",
-            content=f"<div>{thought}</div>"
-        )
+        # await self._raise_render_media(
+        #     sent_by_class=self.__class__.__name__,
+        #     sent_by_function='think',
+        #     content_type="text/html",
+        #     content=f"<div>{thought}</div>"
+        # )
         return ''
 
     # TODO: remove this when the new tolls go in.

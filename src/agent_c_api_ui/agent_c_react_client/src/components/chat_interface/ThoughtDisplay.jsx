@@ -3,6 +3,7 @@ import {ChevronDown} from 'lucide-react';
 import {Card} from "@/components/ui/card";
 import ModelIcon from './ModelIcon';
 import CopyButton from './CopyButton';
+import MarkdownMessage from "@/components/chat_interface/MarkdownMessage";
 
 const ThoughtDisplay = ({content, vendor}) => {
     const [isExpanded, setIsExpanded] = useState(true);
@@ -35,6 +36,7 @@ const ThoughtDisplay = ({content, vendor}) => {
                 <div className="border-t border-yellow-100 px-4 py-3">
                     <div className="text-yellow-700 text-sm whitespace-pre-wrap font-mono overflow-auto max-h-80">
                         {content}
+                        {/*<MarkdownMessage content={content}/>*/}
                     </div>
                 </div>
             )}

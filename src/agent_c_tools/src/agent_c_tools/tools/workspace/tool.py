@@ -262,6 +262,39 @@ class WorkspaceTools(Toolset):
         return await src_workspace.cp(src_relative_path, dest_relative_path)
 
     @json_schema(
+        'Check if a path is a directory using UNC-style path',
+        {
+            'path': {
+                'type': 'string',
+                'description': 'UNC-style path (//WORKSPACE/path) to check',
+                'required': True
+            }
+        }
+    )
+    async def is_directory(self, **kwargs: Any) -> str:
+        """Asynchronously checks if a path is a directory.
+
+        Args:
+            path (str): UNC-style path (//WORKSPACE/path) to check
+
+        Returns:
+            str: JSON string with the result or an error message.
+        """
+        unc_path = kwargs.get('path', '')
+
+        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
+        if error:
+            return json.dumps({'error': error})
+
+        try:
+            result = await workspace.is_directory(relative_path)
+            return json.dumps({'is_directory': result})
+        except Exception as e:
+            error_msg = f'Error checking if path is a directory: {e}'
+            self.logger.error(error_msg)
+            return json.dumps({'error': error_msg})
+    
+    @json_schema(
         'Move a file or directory using UNC-style paths',
         {
             'src_path': {

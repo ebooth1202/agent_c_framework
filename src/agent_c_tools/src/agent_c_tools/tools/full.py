@@ -13,6 +13,7 @@ from agent_c_tools.tools.weather import Weather
 from agent_c_tools.tools.random_number import RandomNumberTools
 from agent_c_tools.tools.think import ThinkTools
 from agent_c_tools.tools.dynamics import DynamicsTools
+from agent_c_tools.tools.markdown_to_html_report import MarkdownToHtmlReportTools
 
 __all__ = [
     # Workspace tools
@@ -47,5 +48,6 @@ __all__ = [
     'WebTools',
     'Weather',
     'RandomNumberTools',
-    'ThinkTools'
+    'ThinkTools',
+    'MarkdownToHtmlReportTools'
 ]
