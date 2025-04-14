@@ -13,6 +13,7 @@ from agent_c.chat.session_manager import ChatSessionManager
 from agent_c.models.input import FileInput
 from agent_c.models.input.audio_input import AudioInput
 from agent_c.models.input.image_input import ImageInput
+from agent_c.util.logging_utils import LoggingManager
 from agent_c.util.token_counter import TokenCounter
 
 
@@ -58,6 +59,12 @@ class ClaudeChatAgent(BaseAgent):
         self.client: AsyncAnthropic = kwargs.get("client", AsyncAnthropic())
         self.supports_multimodal = True
         self.can_use_tools = True
+
+        # Initialize logger
+        logging_manager = LoggingManager(__name__)
+        self.logger = logging_manager.get_logger()
+
+
         # JO: I need these as class level variables to adjust outside a chat call.
         self.max_tokens = kwargs.get("max_tokens", self.CLAUDE_MAX_TOKENS)
         self.budget_tokens = kwargs.get("budget_tokens", 0)

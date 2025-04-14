@@ -41,7 +41,8 @@ class MermaidChartTools(Toolset):
         await self._raise_text_delta_event(content=f"\n\nRender complete, cached as: `{cache_key}`.")
         await self._raise_render_media(content_type="image/svg+xml", url=svg_link,
                                        name=svg_name, content=rendered_graph.svg_response.text)
-
+        if rendered_graph.svg_graph.svg_response.text is None:
+            self.logger.debug("`rendered_graph.svg_response.text` is None, therefore, graph won't display.")
         return f"Render complete, cached as: `{cache_key}`. IF your client supports SVG, it will have been displayed by now."
 
 
