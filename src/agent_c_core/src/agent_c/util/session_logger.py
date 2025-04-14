@@ -33,13 +33,33 @@ class SessionLogger:
     def _ensure_directory_exists(self):
         """
         Ensures the log directory exists, creating it if necessary.
+        Returns True if directory exists or was created, False otherwise.
         """
-        if not self.directory_created:
-            self.log_file_path.parent.mkdir(parents=True, exist_ok=True)
-            self.directory_created = True
-            logging.info(f"Created log directory for {self.log_file_path}")
+        if self.directory_created:
+            # Double-check directory still exists
+            if self.log_file_path.parent.exists():
+                return True
+            else:
+                # Directory was deleted after creation
+                self.directory_created = False
 
-    async def log_event(self, event: Any) -> None:
+        try:
+            # Create the directory
+            self.log_file_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # Verify the directory was created
+            if self.log_file_path.parent.exists():
+                self.directory_created = True
+                logging.info(f"Created log directory for {self.log_file_path}")
+                return True
+            else:
+                logging.error(f"Failed to create log directory for {self.log_file_path}")
+                return False
+        except Exception as e:
+            logging.exception(f"Error creating log directory: {e}")
+            return False
+
+    async def log_event(self, event: Any) -> bool:
         """
         Log a single event to the file with timestamp.
         
@@ -47,7 +67,9 @@ class SessionLogger:
             event: The event to log. Can be any object that can be serialized to JSON.
         """
         try:
-            self._ensure_directory_exists()
+            if not self._ensure_directory_exists():
+                logging.error("Could not ensure log directory exists, event not logged")
+                return False
 
             # Convert datetime to ISO format string
             timestamp = datetime.datetime.now().isoformat()
@@ -64,9 +86,11 @@ class SessionLogger:
             # Write the entry to the log file
             with open(self.log_file_path, 'a', encoding='utf-8') as f:
                 f.write(json.dumps(log_entry) + '\n')
-                
+
+            return True
         except Exception as e:
             logging.exception(f"Error logging event: {e}")
+            return False
     
     async def log_system_prompt(self, prompt: str) -> None:
         """

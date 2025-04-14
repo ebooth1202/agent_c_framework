@@ -812,7 +812,6 @@ class AgentBridge:
             "tool_select_delta": self._handle_tool_select_delta,
             "message": self._handle_message,
         }
-        self.logger.debug(f"Consolidated callback received event type: {event.type}")
 
         handler = handlers.get(event.type)
         if handler:
@@ -820,13 +819,16 @@ class AgentBridge:
                 payload = await handler(event)
                 if payload is not None and hasattr(self, "_stream_queue"):
                     await self._stream_queue.put(payload)
-                    self.logger.debug(f"Added {event.type} payload to stream queue")
-                    # If this is the end-of-stream event, push a termination marker.
 
+                    # If this is the end-of-stream event, push finaly payload and then a termination marker.
                     if event.type == "interaction" and not event.started:
-                        # Push a None to signal the end of the stream.
+                        await self._stream_queue.put(payload)
                         await self._stream_queue.put(None)
-                        self.logger.debug("Added stream termination marker to queue")
+
+                else:
+                    self.logger.debug(f"Payload is None: {payload is None}, hasattr(self, '_stream_queue'): {hasattr(self, "_stream_queue")}")
+
+
             except Exception as e:
                 self.logger.error(f"Error in event handler {handler.__name__} for {event.type}: {str(e)}")
         else:
