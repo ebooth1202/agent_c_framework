@@ -196,11 +196,14 @@ class BaseAgent:
             try:
                 await self.streaming_callback(event)
             except Exception as e:
-                logging.exception(f"Streaming callback exploded: {e}")
+                logging.exception(f"Streaming callback error for event: {e}.  Event Type Found: {event.type if hasattr(event, 'type') else None}")
         
         # Then, log the event if we have a logger
         if hasattr(self, 'session_logger') and self.session_logger:
-            await self.session_logger.log_event(event)
+            try:
+                await self.session_logger.log_event(event)
+            except Exception as e:
+                logging.exception(f"Session logger error for event type: {e}. Event Type Found: {event.type if hasattr(event, 'type') else None}")
 
     async def _raise_system_event(self, content: str, **data):
         """

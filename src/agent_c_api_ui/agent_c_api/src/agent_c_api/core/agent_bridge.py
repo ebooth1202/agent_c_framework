@@ -435,6 +435,11 @@ class AgentBridge:
 
         self.logger.info(f"Agent initialized using the following parameters: {agent_params}")
 
+    async def reset_streaming_state(self):
+        """Reset streaming state to ensure clean session"""
+        self.logger.info(f"Resetting streaming state for session {self.session_id}")
+        self._stream_queue = asyncio.Queue()
+
     async def __build_prompt_metadata(self) -> Dict[str, Any]:
         """
         Build metadata for prompts including user and session information.
@@ -807,21 +812,23 @@ class AgentBridge:
             "tool_select_delta": self._handle_tool_select_delta,
             "message": self._handle_message,
         }
+        self.logger.debug(f"Consolidated callback received event type: {event.type}")
 
         handler = handlers.get(event.type)
         if handler:
-            # Each handler method is responsible for formatting the payload.
-            payload = await handler(event)
-            if payload is not None and hasattr(self, "_stream_queue"):
-                # Don't put tool_call_delta and tool_select_delta in the stream queue
-                # if event.type not in ["tool_call_delta", "tool_select_delta"]:
-                await self._stream_queue.put(payload)
+            try:
+                payload = await handler(event)
+                if payload is not None and hasattr(self, "_stream_queue"):
+                    await self._stream_queue.put(payload)
+                    self.logger.debug(f"Added {event.type} payload to stream queue")
+                    # If this is the end-of-stream event, push a termination marker.
 
-            # If this is the end-of-stream event, push a termination marker.
-            # Client must handle a None payload to know the stream has ended.
-            if event.type == "interaction" and not event.started:
-                # Push a None to signal the end of the stream.
-                await self._stream_queue.put(None)
+                    if event.type == "interaction" and not event.started:
+                        # Push a None to signal the end of the stream.
+                        await self._stream_queue.put(None)
+                        self.logger.debug("Added stream termination marker to queue")
+            except Exception as e:
+                self.logger.error(f"Error in event handler {handler.__name__} for {event.type}: {str(e)}")
         else:
             self.logger.warning(f"Unhandled event type: {event.type}")
 
@@ -853,6 +860,8 @@ class AgentBridge:
         Raises:
             Exception: Any errors during chat processing
         """
+        await self.reset_streaming_state()
+
         queue = asyncio.Queue()
         self._stream_queue = queue  # Make the queue available to the callback
 
@@ -913,14 +922,24 @@ class AgentBridge:
 
             while True:
                 try:
-                    content = await queue.get()
-                    if content is None:
+                    try:
+                        content = await asyncio.wait_for(queue.get(), timeout=30.0)
+                        if content is None:
+                            self.logger.info("Received stream termination signal")
+                            break
+                        # self.logger.info(f"Yielding chunk: {content.replace("\n","")}")
+                        yield content
+                        queue.task_done()
+                    except asyncio.TimeoutError:
+                        self.logger.warning("Timeout waiting for stream content, terminating stream")
                         break
-                    # self.logger.info(f"Yielding chunk: {content.replace("\n","")}")
-                    yield content
-                    queue.task_done()
-                except asyncio.CancelledError:
-                    self.logger.info("Stream was cancelled")
+                    except asyncio.CancelledError:
+                        self.logger.info("Stream was cancelled")
+                        break
+                except Exception as e:
+                    self.logger.error(f"Unexpected error in stream processing: {str(e)}")
+                    # Yield error message and break
+                    yield json.dumps({"type": "error", "data": f"Stream processing error: {str(e)}"}) + "\n"
                     break
 
             await chat_task
