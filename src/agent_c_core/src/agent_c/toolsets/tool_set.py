@@ -197,6 +197,15 @@ class Toolset:
         """
         return {self.name: self}
 
+    def tool_schemas(self) -> List[Dict[str, Any]]:
+        """
+        Returns the OpenAI schemas for the toolset.
+
+        Returns:
+            List[Dict[str, Any]]: A list of OpenAI schemas for the registered methods in the Toolset.
+        """
+        return self.__openai_schemas()
+
     def __openai_schemas(self) -> List[Dict[str, Any]]:
         """
         Generate OpenAI-compatible schemas based on method metadata.

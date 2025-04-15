@@ -19,15 +19,12 @@ class EnvironmentInfoSection(PromptSection):
     Attributes:
         session_manager (ChatSessionManager): Manages the chat session and its metadata.
         env_rules (Optional[Dict[str, str]]): Rules dictating agent behavior based on the environment.
-        voice_tools (Optional[Any]): Object representing voice tool configurations, if available.
 
     Args:
         **data (Any): Additional keyword arguments passed to the PromptSection during initialization.
     """
     session_manager: ChatSessionManager
     env_rules: Optional[Dict[str, str]] = None
-    voice_tools: Optional[Any] = None
-    agent_voice: Optional[str]
 
     def __init__(self, **data: Any) -> None:
         """
@@ -38,7 +35,7 @@ class EnvironmentInfoSection(PromptSection):
                           This can include overrides for the 'template', 'voice_tools', and 'env_rules' attributes.
         """
         TEMPLATE: str = (
-            "current time: ${timestamp}.\nenvironment: ${env_name}\n${voice_mode_hint}\n${session_info}"
+            "current time: ${timestamp}.\nenvironment: ${env_name}\n${session_info}"
         )
         super().__init__(template=TEMPLATE, name="Runtime Environment", **data)
 
@@ -126,46 +123,3 @@ class EnvironmentInfoSection(PromptSection):
         inst = self.env_rules.get(env, '') if self.env_rules is not None else ""
 
         return f"{env}. {inst}"
-
-    @property_bag_item
-    async def voice_mode_hint(self) -> str:
-        """
-        Provides a hint based on whether voice tools are enabled or disabled.
-
-        Outputs different instructions for the assistant depending on voice mode.
-
-        Returns:
-            str: Formatted instructions for the current voice mode (enabled or disabled).
-        """
-        if self.voice_tools:
-            # Gather voice-related information
-            labels = self.voice_tools.voice.labels
-            label_str = '\n'.join([f'{k}: {v}' for k, v in labels.items()])
-
-            return (
-                "\nVoice mode: **Enabled**\n"
-                "Assistant instructions:\n"
-                "- Format your output for speech, not reading.\n"
-                "- Avoid Markdown formatting, and other tokens that a text-to-speech engine might struggle with.\n"
-                "- Do not output URLs or links in this mode. Offer to read them for the user instead.\n\n"
-                f"Current speaking voice:\nID: {self.voice_tools.voice.voice_id}\n"
-                f"Name: {self.voice_tools.voice.name}\n"
-                f"Labels: {label_str}\n"
-                f"Category: {self.voice_tools.voice.category}\n"
-            )
-        elif self.agent_voice is not None:
-            return (
-                "\nVoice mode: **Enabled**\n"
-                "Assistant instructions:\n"
-                "- Format your output for speech, not reading.\n"
-                "- Avoid Markdown formatting, and other tokens that a text-to-speech engine might struggle with.\n"
-                "- Do not output URLs or links in this mode. Offer to read them for the user instead."
-                "- Keep your responses brief and conversational, allows the user to 'drill down' from a higher level rather than info dumping\n\n"
-                f"Current speaking voice: {self.agent_voice}\n"
-            )
-        else:
-            return (
-                "\nVoice mode: disabled\n"
-                "Assistant instructions:\n"
-                "- Format your output for reading using Markdown formatting.\n"
-            )

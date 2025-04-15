@@ -56,7 +56,7 @@ class BaseWorkspace:
         """
         raise NotImplementedError
 
-    async def tree(self, relative_path: str) -> str:
+    async def tree(self, relative_path: str, folder_depth: int, file_depth: int) -> str:
         raise NotImplementedError
 
     async def read_bytes_internal(self, file_path: str) -> bytes:

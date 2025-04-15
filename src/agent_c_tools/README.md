@@ -1,6 +1,9 @@
 # Agent C - Reference tools
 The tools in this directory are here to demonstrate the capabilities of the Agent C SDK.
 
+## MCP Server
+This package includes a robust MCP ToolChest Server implementation for exposing Agent C tools via the Model Context Protocol (MCP). See [README_mcp_server.md](README_mcp_server.md) for details.
+
 When using the toolman persona, it will *NOT* create tools here, instead they will be created in the agent_c_demo area `agent_c_demo`.  
 
 The tools here work and have proven to be stable over time.  Many of them are 'demonstration' or 'tutorial' level tools.

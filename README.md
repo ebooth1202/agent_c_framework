@@ -15,9 +15,9 @@ All components are designed to be non-blocking and fully asynchronous.
 
 Choose the setup path that best matches your needs:
 
-### 🚀 Quick Start (No Development)
+### 🚀 Quick Start (Recommended for Most Users)
 
-If you just want to use Agent C without modifying code:
+The Web UI is the recommended way to use Agent C:
 
 1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or Rancher Desktop)
 2. Run the appropriate startup script:
@@ -31,9 +31,13 @@ If you just want to use Agent C without modifying code:
 6. Agent C will open automatically in your browser
 7. Bookmark this page to access Agent C until you remove the Docker containers
 
+For detailed information about the Web UI and its features, see the [Web UI Documentation](docs/web_ui_README.md).
+
 ### 💻 Developer Setup
 
 #### Prerequisites
+
+**EXPAND THE ONE FOR YOUR OS AND READ**
 
 <details>
 <summary><b>Windows Prerequisites</b> (click to expand)</summary>
@@ -86,9 +90,9 @@ cd agent_c_framework
 
 Python projects typically use "virtual environments" to keep dependencies isolated. This prevents conflicts between different projects on your system.
 
-**Option A: Automatic Setup (Recommended for Beginners)**
+**Use the Setup Scripts (Recommended)**
 
-Run the setup script for your platform:
+Run the setup script for your platform - these scripts are kept up-to-date with the latest requirements:
 
 ```bash
 # On Windows
@@ -98,33 +102,7 @@ Run the setup script for your platform:
 ./scripts/initial_setup.sh
 ```
 
-**Option B: Manual Setup**
-
-If you prefer to understand each step or if the script doesn't work:
-
-1. Create a virtual environment:
-   ```bash
-   python -m venv venv
-   ```
-
-2. Activate the virtual environment:
-   ```bash
-   # On Windows
-   venv\Scripts\activate.bat
-
-   # On Mac/Linux
-   source venv/bin/activate
-   ```
-
-3. Install the project packages:
-   ```bash
-   cd src
-   pip install -e agent_c_core
-   pip install -e agent_c_tools
-   pip install -e agent_c_reference_apps
-   ```
-
-> **Note**: The `-e` flag installs packages in "editable" mode, so your code changes are immediately available without reinstalling.
+If you need to understand what dependencies are being installed, please review these setup scripts to see the exact packages and versions being used.
 
 #### Step 3: Get an OpenAI API Key
 
@@ -151,27 +129,29 @@ Agent C requires an OpenAI API key to function:
 
 ## Running Agent C
 
-You can run Agent C in two modes:
+### Recommended: Web Interface (Docker)
 
-### Command Line Interface
+The recommended way to run Agent C is through the Web UI using Docker:
+
+```bash
+# On Windows
+dockerfiles\start_agent_c.bat
+
+# On Mac/Linux
+./dockerfiles/start_agent_c.sh
+```
+
+This provides a full-featured experience with an intuitive interface for configuring and using agents. For detailed information about the Web UI features, see the [Web UI Documentation](docs/web_ui_README.md).
+
+### Alternative: Command Line Interface
+
+For development or scripting purposes, you can also use the CLI mode:
 
 ```bash
 agent_c-cli [options]
 ```
 
-### Web Interface
-
-```bash
-agent_c-web [options]
-```
-
-### Common Command Line Options
-
-- `--model [model_name]`: Override the default AI model
-- `--prompt_file [/path/to/file]`: Supply a custom persona prompt file
-- `--userid [user_id]`: Set a specific user ID for the chat session
-
-### CLI Commands (Available Within the CLI App)
+#### CLI Commands (Available Within the CLI App)
 
 When using the CLI version, you can use these special commands:
 

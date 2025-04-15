@@ -12,7 +12,6 @@ from dotenv import load_dotenv
 
 from agent_c.models.input import AudioInput
 from agent_c.models.input.image_input import ImageInput
-from agent_c_tools import LocalStorageWorkspace
 from agent_c_tools.tools.workspace.local_storage import LocalProjectWorkspace
 
 # Note: we load the env file here so that it's loaded when we start loading the libs that depend on API KEYs.   I'm looking at you Eleven Labs
@@ -33,7 +32,8 @@ from agent_c.prompting import CoreInstructionSection, HelpfulInfoStartSection, E
 
 # Ensure all our toolsets get registered
 #from agent_c_tools.tools import *  # noqa
-from agent_c_tools import WorkspaceTools, ThinkTools, LocalStorageWorkspace
+from agent_c_tools import WorkspaceTools, ThinkTools
+from agent_c_tools.tools.workspace.local_storage import LocalStorageWorkspace
 from agent_c_tools.tools.user_bio.prompt import UserBioSection
 
 

@@ -16,8 +16,8 @@ dependencies = [
     "sounddevice",
     "numpy",
     "soundfile",
-    "pyyaml"
-
+    "pyyaml",
+    "mcp>=1.6.0"
 ]
 requires-python = ">=3.10"
 authors = [
@@ -38,5 +38,4 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://github.com/centricconsulting/agent_c_framework"
-
 

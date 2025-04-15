@@ -1,3 +1,4 @@
+import inspect
 import logging
 from functools import wraps
 from string import Template
@@ -42,9 +43,12 @@ class PromptSection(BaseModel):
     render_section_header: bool = True
     required: bool = False
 
-    async def get_dynamic_properties(self) -> Dict[str, Any]:
+    async def get_dynamic_properties(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Retrieves the dynamic properties of the PromptSection.
+
+        Args:
+            data: Dict[str, Any]: The data dictionary to pass to attributes that accept it
 
         Returns:
             Dict[str, Any]: A dictionary of dynamic property names and their values.
@@ -58,13 +62,21 @@ class PromptSection(BaseModel):
             attr = getattr(self, attr_name)
             if callable(attr) and getattr(attr, 'is_property_bag_item', False):
                 try:
-                    dynamic_props[attr_name] = await attr()
+                    sig = inspect.signature(attr)
+                    # If it has exactly one parameter (excluding 'self'), pass data
+                    param_count = len(sig.parameters)
+                    if param_count == 0:
+                        dynamic_props[attr_name] = await attr()
+                    elif param_count == 1:
+                        dynamic_props[attr_name] = await attr(data)
+                    else:
+                        logging.exception(f"Dynamic property '{attr_name}' has too many parameters: {param_count}")
                 except Exception as e:
                     logging.exception(f"Error getting dynamic property '{attr_name}': {e}")
         return dynamic_props
 
     async def render(self, data: Dict[str, Any]) -> str:
-        section_data: Dict[str, Any] = {**data, ** await self.get_dynamic_properties()}
+        section_data: Dict[str, Any] = {**data, ** await self.get_dynamic_properties(data)}
         template: Template = Template(self.template)
         result = template.substitute(section_data)
         return result
