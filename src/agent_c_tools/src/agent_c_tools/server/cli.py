@@ -7,7 +7,7 @@ import logging
 import sys
 import argparse
 
-from agent_c.toolsets import ToolChest
+from agent_c.toolsets import ToolChest, MCPToolChest
 from agent_c_tools.server.mcp_server import MCPToolChestServer
 
 
@@ -56,14 +56,26 @@ def run_server(args: argparse.Namespace) -> None:
     if args.allow_tool:
         server_config["allowed_tools"] = args.allow_tool
     
-    # Prepare the tool chest synchronously - initialization will happen in the server
-    tool_chest = ToolChest()
+    # Determine MCP servers configuration file
+    mcp_servers_config_path = args.mcp_servers_config
+    if mcp_servers_config_path:
+        logger.info(f"Using MCP servers configuration from {mcp_servers_config_path}")
+    
+    # Prepare the tool chest
+    # Use MCPToolChest if MCP servers are configured or if explicitly requested
+    if mcp_servers_config_path or args.use_mcp_toolchest:
+        logger.info("Using MCPToolChest for enhanced MCP server support")
+        tool_chest = MCPToolChest()
+    else:
+        logger.info("Using standard ToolChest")
+        tool_chest = ToolChest()
     
     # Create the server - tool initialization will happen inside the server
     server = MCPToolChestServer(
         tool_chest=tool_chest,
         config_path=config_path,
-        server_config=server_config
+        server_config=server_config,
+        mcp_servers_config_path=mcp_servers_config_path
     )
     
     # Run the server - this will block until the server is stopped
@@ -84,10 +96,11 @@ def parse_args() -> argparse.Namespace:
     """
     parser = argparse.ArgumentParser(description="Run the Agent C Tools MCP server.")
     
+    # Server configuration options
     parser.add_argument(
         "--config", 
         type=str, 
-        help="Path to configuration file"
+        help="Path to server configuration file"
     )
     parser.add_argument(
         "--host", 
@@ -104,6 +117,8 @@ def parse_args() -> argparse.Namespace:
         type=str, 
         help="Server name (default: agent_c_tools)"
     )
+    
+    # Tool configuration options
     parser.add_argument(
         "--allow-tool", 
         type=str, 
@@ -122,6 +137,20 @@ def parse_args() -> argparse.Namespace:
         action="append", 
         help="Import a package with tools (can be used multiple times)"
     )
+    
+    # MCP-specific options
+    parser.add_argument(
+        "--mcp-servers-config", 
+        type=str, 
+        help="Path to MCP servers configuration file (YAML or JSON)"
+    )
+    parser.add_argument(
+        "--use-mcp-toolchest", 
+        action="store_true", 
+        help="Always use MCPToolChest even without MCP server configurations"
+    )
+    
+    # Other options
     parser.add_argument(
         "--verbose", 
         "-v", 

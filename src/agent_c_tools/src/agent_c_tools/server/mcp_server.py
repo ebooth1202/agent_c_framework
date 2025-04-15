@@ -22,10 +22,11 @@ from mcp.server.fastmcp import FastMCP, Context
 # MCP parameter handling is done through standard type annotations and dictionaries
 
 from agent_c import ToolChest, MCPToolChest, ToolCache, Toolset, ChatSessionManager
+from agent_c.toolsets.mcp_server import MCPServer as AgentCMCPServer
 from agent_c_tools.tools.workspace.local_storage import LocalStorageWorkspace
 
 
-from agent_c_tools.server.config import ServerConfig
+from agent_c_tools.server.config import ServerConfig, MCPServersConfig
 from agent_c_tools.server.discovery import discover_and_load_tools
 
 logger = logging.getLogger(__name__)
@@ -74,7 +75,8 @@ class MCPToolChestServer:
     def __init__(self,
                  tool_chest: Optional[Union[ToolChest, MCPToolChest]] = None,
                  config_path: Optional[str] = None,
-                 server_config: Optional[Dict[str, Any]] = None):
+                 server_config: Optional[Dict[str, Any]] = None,
+                 mcp_servers_config_path: Optional[str] = None):
         """Initialize an MCP server for a ToolChest.
         
         Args:
@@ -86,6 +88,7 @@ class MCPToolChestServer:
                 - port: Port to listen on (default: 8000)
                 - allowed_tools: Specific tools to expose (if None, all tools are exposed)
                 - dependencies: Additional dependencies to load
+            mcp_servers_config_path: Optional path to an MCP servers configuration file
         """
         # Initialize configuration
         self.config = ServerConfig()
@@ -103,8 +106,30 @@ class MCPToolChestServer:
                 elif hasattr(self.config, key):
                     setattr(self.config, key, value)
         
-        # Initialize tool chest if not provided
-        self.tool_chest = tool_chest or ToolChest()
+        # Load MCP servers configuration if provided
+        if mcp_servers_config_path:
+            try:
+                self.config.mcp_servers = MCPServersConfig.from_file(mcp_servers_config_path)
+            except (FileNotFoundError, ValueError) as e:
+                logger.warning(f"Could not load MCP servers config file: {e}")
+        
+        # Initialize tool chest
+        if tool_chest is None:
+            # If no tool chest provided, create an MCPToolChest
+            self.tool_chest = MCPToolChest()
+        elif isinstance(tool_chest, ToolChest) and not isinstance(tool_chest, MCPToolChest):
+            # If a regular ToolChest was provided, convert it to an MCPToolChest
+            mcp_tool_chest = MCPToolChest()
+            # Copy over any existing tools
+            for toolset in tool_chest.active_tools.values():
+                mcp_tool_chest.add_tool_instance(toolset)
+            self.tool_chest = mcp_tool_chest
+        else:
+            # Use the provided tool chest as is
+            self.tool_chest = tool_chest
+        
+        # Apply MCP server configurations if any
+        self._apply_mcp_server_configs()
         
         # Initialize MCP server
         self.mcp_server = FastMCP(
@@ -140,7 +165,34 @@ class MCPToolChestServer:
         finally:
             # Clean up resources here
             logger.info("Cleaning up MCP server resources")
+            
+            # If using MCPToolChest, shut down MCP servers
+            if isinstance(self.tool_chest, MCPToolChest):
+                logger.info("Shutting down MCP servers...")
+                try:
+                    await self.tool_chest.shutdown()
+                except Exception as e:
+                    logger.error(f"Error shutting down MCP servers: {e}")
 
+    def _apply_mcp_server_configs(self) -> None:
+        """Apply MCP server configurations from the ServerConfig to the MCPToolChest.
+        
+        This method adds all configured MCP servers to the MCPToolChest instance.
+        """
+        if not isinstance(self.tool_chest, MCPToolChest):
+            logger.warning("Cannot apply MCP server configs - tool chest is not an MCPToolChest")
+            return
+        
+        # Add each configured server to the MCPToolChest
+        for server_id, server_config in self.config.mcp_servers.servers.items():
+            logger.info(f"Adding MCP server configuration for {server_id}")
+            self.tool_chest.add_server(
+                server_id,
+                command=server_config.command,
+                args=server_config.args,
+                env=server_config.env
+            )
+    
     async def _discover_and_load_tools(self) -> None:
         """Discover and load tools based on configuration.
         
@@ -159,10 +211,29 @@ class MCPToolChestServer:
             return
             
         if isinstance(self.tool_chest, MCPToolChest):
-            logger.info("Using provided MCPToolChest - skipping tool discovery")
+            logger.info("Using MCPToolChest - initializing tools and connecting to MCP servers")
+            # Create tool options for initialization
+            tool_cache_dir = ".tool_cache"
+            tool_cache = ToolCache(cache_dir=tool_cache_dir)
+            session_manager = ChatSessionManager()
+            workspaces = []
+
+            try:
+                local_workspaces = json.load(open(".local_workspaces.json", "r"))
+                for ws in local_workspaces['local_workspaces']:
+                    workspaces.append(LocalStorageWorkspace(**ws))
+            except FileNotFoundError:
+                pass
+
+            await session_manager.init("TEMP_PLACEHOLDER", "TEMP_PLACEHOLDER")
+            tool_opts = {'tool_cache': tool_cache, 'session_manager': session_manager,
+                         'workspaces': workspaces}
+            
+            # Initialize the MCPToolChest, which will connect to MCP servers
+            await self.tool_chest.init_tools(**tool_opts)
             return
         
-        # If we get here, we need to discover and load tools
+        # If we get here, we need to discover and load tools for a regular ToolChest
         logger.info("Discovering and loading tools")
         
         # Create tool options for initialization
@@ -417,6 +488,7 @@ class MCPToolChestServer:
         
         Note: This method is primarily for API compatibility. The actual server
         shutdown happens when the FastMCP.run() method exits (via Ctrl-C or other means).
+        The shutdown of MCP servers happens in the lifespan context manager.
         """
         if not self.running:
             logger.warning("MCP server is not running")
@@ -425,6 +497,7 @@ class MCPToolChestServer:
         logger.info("Stopping MCP server")
         self.running = False
         logger.info("MCP server stopped")
+
         
         # The actual shutdown of the server happens through FastMCP's own mechanisms
     

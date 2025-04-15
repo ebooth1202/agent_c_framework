@@ -6,6 +6,7 @@ server configuration from files, environment variables, and direct settings.
 
 import os
 import re
+import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Pattern, Union
 import yaml
@@ -108,6 +109,66 @@ class SecurityConfig:
 
 
 @dataclass
+class MCPServerConfig:
+    """Configuration for an individual MCP server."""
+    command: str
+    args: List[str] = field(default_factory=list)
+    env: Dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class MCPServersConfig:
+    """Configuration for MCP servers to connect to."""
+    servers: Dict[str, MCPServerConfig] = field(default_factory=dict)
+    config_file: Optional[str] = None
+    
+    @classmethod
+    def from_file(cls, config_path: str) -> 'MCPServersConfig':
+        """Load MCP servers configuration from a file.
+        
+        Args:
+            config_path: Path to a configuration file (YAML or JSON)
+            
+        Returns:
+            MCPServersConfig loaded from the file
+            
+        Raises:
+            FileNotFoundError: If the file does not exist
+            ValueError: If the file format is invalid
+        """
+        path = Path(config_path)
+        
+        if not path.exists():
+            raise FileNotFoundError(f"MCP servers configuration file not found: {config_path}")
+        
+        with open(path, 'r') as f:
+            if path.suffix.lower() in ('.yaml', '.yml'):
+                config_dict = yaml.safe_load(f)
+            elif path.suffix.lower() == '.json':
+                config_dict = json.load(f)
+            else:
+                raise ValueError(f"Unsupported configuration file format: {path.suffix}")
+        
+        # Process environment variables and other special values
+        config_dict = _process_config_values(config_dict)
+        
+        # Create servers dictionary
+        servers = {}
+        for server_id, server_config in config_dict.get("servers", {}).items():
+            servers[server_id] = MCPServerConfig(
+                command=server_config.get("command"),
+                args=server_config.get("args", []),
+                env=server_config.get("env", {})
+            )
+        
+        # Create and return MCPServersConfig
+        return cls(
+            servers=servers,
+            config_file=str(path)
+        )
+
+
+@dataclass
 class ToolsConfig:
     """Configuration for tool discovery and loading."""
     discover: List[str] = field(default_factory=lambda: ["agent_c_tools.tools"])
@@ -123,6 +184,7 @@ class ServerConfig:
     port: int = 8027
     security: SecurityConfig = field(default_factory=SecurityConfig)
     tools: ToolsConfig = field(default_factory=ToolsConfig)
+    mcp_servers: MCPServersConfig = field(default_factory=MCPServersConfig)
     
     @classmethod
     def from_file(cls, config_path: str) -> 'ServerConfig':
@@ -157,7 +219,8 @@ class ServerConfig:
         # Extract server configuration
         server_config = config_dict.get('server', {})
         security_config = server_config.pop('security', {})
-        tools_config = config_dict.get('tools', {})
+        tools_config = server_config.pop('tools', {})
+        mcp_servers_config = server_config.pop('mcp_servers', {})
         
         # Create security config
         security = SecurityConfig(
@@ -171,11 +234,43 @@ class ServerConfig:
             config=tools_config.get('config', {})
         )
         
+        # Create MCP servers config
+        mcp_servers = MCPServersConfig()
+        if 'config_file' in mcp_servers_config:
+            try:
+                mcp_servers = MCPServersConfig.from_file(mcp_servers_config['config_file'])
+            except (FileNotFoundError, ValueError) as e:
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Could not load MCP servers config file: {e}")
+        elif 'servers' in mcp_servers_config:
+            servers = {}
+            for server_id, server_config in mcp_servers_config.get('servers', {}).items():
+                servers[server_id] = MCPServerConfig(
+                    command=server_config.get('command'),
+                    args=server_config.get('args', []),
+                    env=server_config.get('env', {})
+                )
+            mcp_servers = MCPServersConfig(servers=servers)
+        
         # Create and return server config
+        # Extract only the parameters that the ServerConfig constructor expects
+        # to avoid "unexpected keyword argument" errors
+        name = server_config.pop('name', 'agent_c')
+        host = server_config.pop('host', '127.0.0.1')
+        port = server_config.pop('port', 8027)
+        
+        # If there are any keys left in server_config, log a warning as they will be ignored
+        if server_config:
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Ignoring unexpected server configuration keys: {', '.join(server_config.keys())}")
+        
         return cls(
-            **server_config,
+            name=name,
+            host=host,
+            port=port,
             security=security,
-            tools=tools
+            tools=tools,
+            mcp_servers=mcp_servers
         )
     
     @classmethod
@@ -189,6 +284,7 @@ class ServerConfig:
             MCP_SERVER_ALLOWED_TOOLS: Comma-separated list of allowed tool patterns
             MCP_SERVER_DISCOVER: Comma-separated list of packages to discover tools from
             MCP_SERVER_IMPORTS: Comma-separated list of packages to import
+            MCP_SERVERS_CONFIG_FILE: Path to MCP servers configuration file
             
         Returns:
             ServerConfig loaded from environment variables
@@ -206,12 +302,23 @@ class ServerConfig:
         imports = os.environ.get('MCP_SERVER_IMPORTS', "")
         imports = [i.strip() for i in imports.split(',')] if imports else []
         
+        # Handle MCP servers config file
+        mcp_servers = MCPServersConfig()
+        mcp_servers_config_file = os.environ.get('MCP_SERVERS_CONFIG_FILE')
+        if mcp_servers_config_file:
+            try:
+                mcp_servers = MCPServersConfig.from_file(mcp_servers_config_file)
+            except (FileNotFoundError, ValueError) as e:
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Could not load MCP servers config file: {e}")
+        
         return cls(
             name=name,
             host=host,
             port=port,
             security=SecurityConfig(allowed_tools=allowed_tools),
-            tools=ToolsConfig(discover=discover, imports=imports)
+            tools=ToolsConfig(discover=discover, imports=imports),
+            mcp_servers=mcp_servers
         )
     
     def to_dict(self) -> Dict[str, Any]:
@@ -220,10 +327,22 @@ class ServerConfig:
         Returns:
             Dictionary representation of the configuration
         """
-        return {
+        result = {
             "name": self.name,
             "host": self.host,
             "port": self.port,
             "allowed_tools": self.security.allowed_tools,
             "dependencies": []  # No dependencies by default
         }
+        
+        # Add MCP servers configuration if any servers are defined
+        if self.mcp_servers.servers:
+            result["mcp_servers"] = {
+                server_id: {
+                    "command": server.command,
+                    "args": server.args,
+                    "env": server.env
+                } for server_id, server in self.mcp_servers.servers.items()
+            }
+            
+        return result
