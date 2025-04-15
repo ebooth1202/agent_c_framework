@@ -18,7 +18,12 @@ class Weather:
 
     async def get_forecast(self, location: str) -> Forecast | str:
         url = f'https://{self.locale.value}.wttr.in/{quote_plus(location)}?format=j1'
-        return await self._fetch_url(url)
+        try:
+            return await self._fetch_url(url)
+        except Exception as e:
+            message = f"Error fetching weather from: {url}.  Message: {str(e)}"
+            self.logger.error(message)
+            return message
 
     async def _fetch_url(self, url: str, raw: bool = False, max_retries: int = 3) -> str:
         headers = {

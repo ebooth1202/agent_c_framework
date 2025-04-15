@@ -2,7 +2,7 @@ import React, {useState, useRef, useEffect, useCallback} from "react";
 import {Card} from "@/components/ui/card";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
-import {Send, Upload, User} from "lucide-react";
+import {Send, Upload, User, Mic} from "lucide-react";
 import {ScrollArea} from "@/components/ui/scroll-area";
 import ToolCallDisplay from "./ToolCallDisplay";
 import MediaMessage from './MediaMessage';
@@ -12,7 +12,7 @@ import ThoughtDisplay from './ThoughtDisplay';
 import ModelIcon from './ModelIcon';
 import CopyButton from './CopyButton';
 import {API_URL} from "@/config/config";
-import { createClipboardContent } from '@/components/chat_interface/utils/htmlChatFormatter';
+import {createClipboardContent} from '@/components/chat_interface/utils/htmlChatFormatter';
 import ExportHTMLButton from './ExportHTMLButton';
 
 /**
@@ -662,6 +662,7 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
         }
     };
 
+
     const handleKeyPress = (e) => {
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
@@ -701,7 +702,16 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                                 <div key={idx} className="flex justify-end items-start gap-2 group">
                                     <div
                                         className="max-w-[80%] rounded-2xl px-4 py-2 shadow-sm bg-blue-500 text-white ml-12 rounded-br-sm relative">
-                                        {msg.content}
+                                        {msg.isVoiceMessage ? (
+                                            <div className="flex items-center space-x-2">
+                                                <Mic className="h-4 w-4 text-white"/>
+                                                <span className="text-white">Voice message</span>
+                                            </div>
+                                        ) : (
+                                            <div className="markdown-user-message">
+                                                <MarkdownMessage content={msg.content}/>
+                                            </div>
+                                        )}
 
                                         {/* Copy button that appears on hover */}
                                         <div
@@ -801,7 +811,7 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                         toolSelectionState.inProgress && (
                             <div className="flex items-center gap-2 text-sm text-gray-500 italic my-1 ml-8">
                                 <div className="animate-pulse h-2 w-2 bg-purple-400 rounded-full"></div>
-                                <span>Preparing to use: {toolSelectionState.toolName.replace(/-/g, ' ')}</span>
+                                <span>Using: {toolSelectionState.toolName.replace(/-/g, ' ')}</span>
                             </div>
                         )
                     }
@@ -897,14 +907,16 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
         hover:bg-white/80 focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50
         placeholder-gray-400 py-2 px-3 resize-none"
     />
-                    <Button
-                        onClick={handleSendMessage}
-                        disabled={isStreaming}
-                        size="icon"
-                        className="shrink-0 rounded-xl bg-blue-500 hover:bg-blue-600 transition-colors self-end"
-                    >
-                        <Send className="h-4 w-4"/>
-                    </Button>
+                    <div className="flex flex-col gap-2 self-end">
+                        <Button
+                            onClick={handleSendMessage}
+                            disabled={isStreaming}
+                            size="icon"
+                            className="shrink-0 rounded-xl bg-blue-500 hover:bg-blue-600 transition-colors"
+                        >
+                            <Send className="h-4 w-4"/>
+                        </Button>
+                    </div>
                 </div>
             </div>
         </Card>

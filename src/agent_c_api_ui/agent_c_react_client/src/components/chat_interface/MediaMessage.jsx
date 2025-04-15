@@ -3,6 +3,7 @@ import {Monitor, ChevronDown, Maximize2, Info} from 'lucide-react';
 import {Dialog, DialogContent} from "@/components/ui/dialog";
 import {Card} from "@/components/ui/card";
 import CopyButton from './CopyButton';
+import MarkdownMessage from "@/components/chat_interface/MarkdownMessage";
 
 const MediaMessage = ({message}) => {
     const [isExpanded, setIsExpanded] = useState(true);
@@ -27,6 +28,9 @@ const MediaMessage = ({message}) => {
         // For HTML, return the HTML code
         if (message.contentType === "text/html") {
             return message.content;
+        }
+        if (message.contentType === "text/markdown") {
+            return message.content; // Return raw markdown for copying
         }
         // For images, we can't copy the binary data directly,
         // so we'll create a data URL that could be used in an img tag
@@ -69,6 +73,15 @@ const MediaMessage = ({message}) => {
                 </MediaContentWrapper>
             );
         }
+        if (message.contentType === "text/markdown") {
+            return (
+                <MediaContentWrapper>
+                    <div className="markdown-content">
+                        <MarkdownMessage content={message.content}/>
+                    </div>
+                </MediaContentWrapper>
+            );
+        }
 
         if (message.contentType?.startsWith('image/')) {
             return (
@@ -94,7 +107,7 @@ const MediaMessage = ({message}) => {
 
         return (
             <div className="mt-4 pt-3 border-t border-amber-100 flex items-center gap-2 text-xs text-amber-600">
-                <Info className="h-4 w-4 shrink-0" />
+                <Info className="h-4 w-4 shrink-0"/>
                 <span className="font-medium">
                     {sent_by_class}
                     {sent_by_class && sent_by_function && <span className="mx-2">•</span>}
@@ -128,7 +141,11 @@ const MediaMessage = ({message}) => {
     );
 
     const getContentTypeDisplay = () => {
-        return message.contentType.split('/')[1].toUpperCase();
+        // Handle both full MIME types and short versions
+        if (message.contentType.includes('/')) {
+            return message.contentType.split('/')[1].toUpperCase();
+        }
+        return message.contentType.toUpperCase();
     };
 
     return (

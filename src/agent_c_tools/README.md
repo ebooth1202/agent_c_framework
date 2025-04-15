@@ -23,7 +23,7 @@ The tools here work and have proven to be stable over time.  Many of them are 'd
 - [user_bio](src/agent_c_tools/tools/user_bio) - A skeleton tool for updating a users first and last name to demonstrate how you can capture/use user bio information
 - [user_preferences](src/agent_c_tools/tools/user_preferences) - A for updating a users preferences to demonstrate how you can capture/use user preferences using key/value pairs
 - [weather](src/agent_c_tools/tools/weather) - A tool for getting the current weather for a location using the python's weather API and library
-- [web](src/agent_c_tools/tools/web) - A tool for scraping web pages using headless Selenium browser
+- [web](src/agent_c_tools/tools/web) - A tool for scraping web pages using headless Selenium browser. Can format pages as markdown and save to workspaces.
 - [web_search](src/agent_c_tools/tools/web_search) - A collection of tools for searching elements of the web
   - duckduckgo - DuckDuckGo search engine queries
   - google via google serpapi - Google search engine via specified API

@@ -199,6 +199,23 @@ class LocalStorageWorkspace(BaseWorkspace):
     async def path_exists(self, file_path: str) -> bool:
         norm_path = self._normalize_input_path(file_path)
         return self.workspace_root.joinpath(norm_path).exists()
+        
+    async def is_directory(self, file_path: str) -> bool:
+        """Check if the given path is a directory.
+        
+        Args:
+            file_path (str): The path to check, relative to the workspace root
+            
+        Returns:
+            bool: True if the path is a directory, False otherwise
+        """
+        norm_path = self._normalize_input_path(file_path)
+        if not self._is_path_within_workspace(norm_path):
+            self.logger.error(f'The path {file_path} is not within the workspace.')
+            return False
+            
+        full_path = self.workspace_root.joinpath(norm_path)
+        return full_path.is_dir()
 
     async def write(self, file_path: str, mode: str, data: str) -> str:
         if self.read_only:

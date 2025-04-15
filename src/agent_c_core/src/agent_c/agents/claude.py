@@ -2,16 +2,27 @@ import asyncio
 import copy
 import json
 import logging
+from enum import Enum, auto
 
-from typing import Any, List, Union, Dict, Optional
-from anthropic import AsyncAnthropic, APITimeoutError, Anthropic
+from typing import Any, List, Union, Dict, Tuple
+from anthropic import AsyncAnthropic, APITimeoutError, Anthropic, RateLimitError
+from anthropic.types import OverloadedError
 
 from agent_c.agents.base import BaseAgent
 from agent_c.chat.session_manager import ChatSessionManager
 from agent_c.models.input import FileInput
 from agent_c.models.input.audio_input import AudioInput
 from agent_c.models.input.image_input import ImageInput
+from agent_c.util.logging_utils import LoggingManager
 from agent_c.util.token_counter import TokenCounter
+
+
+class ThinkToolState(Enum):
+    """Enum representing the state of the think tool processing."""
+    INACTIVE = auto()   # Not currently processing a think tool
+    WAITING = auto()    # Waiting for the JSON to start
+    EMITTING = auto()   # Processing and emitting think tool content
+
 
 class ClaudeChatAgent(BaseAgent):
     CLAUDE_MAX_TOKENS: int = 64000
@@ -48,11 +59,15 @@ class ClaudeChatAgent(BaseAgent):
         self.client: AsyncAnthropic = kwargs.get("client", AsyncAnthropic())
         self.supports_multimodal = True
         self.can_use_tools = True
+
+        # Initialize logger
+        logging_manager = LoggingManager(__name__)
+        self.logger = logging_manager.get_logger()
+
+
         # JO: I need these as class level variables to adjust outside a chat call.
         self.max_tokens = kwargs.get("max_tokens", self.CLAUDE_MAX_TOKENS)
         self.budget_tokens = kwargs.get("budget_tokens", 0)
-        self.logger: logging.Logger = logging.getLogger(__name__)
-
 
 
     async def __interaction_setup(self, **kwargs) -> dict[str, Any]:
@@ -93,165 +108,330 @@ class ClaudeChatAgent(BaseAgent):
         opts = {"callback_opts": callback_opts, "completion_opts": completion_opts, 'tool_chest': tool_chest}
         return opts
 
+
+    @staticmethod
+    def process_escapes(text):
+        return text.replace("\\n", "\n").replace('\\"', '"').replace("\\\\", "\\")
+
+
     async def chat(self, **kwargs) -> List[dict[str, Any]]:
-        """
-        Perform the chat operation.
-
-        Parameters:
-        session_id: str
-            Unique identifier for the session.
-        model_name: str, default is self.model_name
-            The language model to be used.
-        prompt_metadata: dict, default is empty dict
-            Metadata to be used for rendering the prompt via the PromptBuilder
-        model_name: str, default is self.model_name
-            The name of the Claude model to use.
-            - Can be one of "opus", "sonnet", or "haiku". In which case ANTHROPIC_MODEL_PATTERN will bs used
-              to generate the model name.
-            - A full Claude model name can also be used.
-        session_manager: ChatSessionManager, default is None
-            A session manager to use for the message memory / session info
-        session_id: str, default is "none"
-            The session id to use for the chat, if you haven't provided a session manager.
-        agent_role: str, default is "assistant"
-            The role of the agent in the chat event stream
-        messages: List[dict[str, Any]], default is None
-            A list of messages to use for the chat.
-            If this is not provided, but a session manager is, the messages will be constructed from the session.
-        output_format: str, default is "markdown"
-            The format to signal the client to expect
-
-
-        Returns: A list of messages.
-        """
+        """Main method for interacting with Claude API. Split into smaller helper methods for clarity."""
         opts = await self.__interaction_setup(**kwargs)
         callback_opts = opts["callback_opts"]
         tool_chest = opts['tool_chest']
-
         session_manager: Union[ChatSessionManager, None] = kwargs.get("session_manager", None)
         messages = opts["completion_opts"]["messages"]
-        current_block_type: Optional[str] = None
-        current_thought: Optional[dict[str, Any]] = None
-        current_agent_msg: Optional[dict[str, Any]] = None
+
         delay = 1  # Initial delay between retries
         async with self.semaphore:
             interaction_id = await self._raise_interaction_start(**callback_opts)
             while delay <= self.max_delay:
                 try:
-                    await self._raise_completion_start(opts["completion_opts"], **callback_opts)
-                    async with self.client.beta.messages.stream (**opts["completion_opts"]) as stream:
-                        collected_messages = []
-                        collected_tool_calls = []
-                        input_tokens = 0
-                        model_outputs = []
+                    # Stream handling encapsulated in a helper method
+                    result, state = await self._handle_claude_stream(
+                        opts["completion_opts"],
+                        tool_chest,
+                        session_manager,
+                        messages,
+                        callback_opts,
+                        interaction_id
+                    )
+                    if state['complete'] and state['stop_reason'] != 'tool_use':
+                        return result
 
-                        async for event in stream:
-                            if event.type == "message_start":
-                                input_tokens = event.message.usage.input_tokens
-
-                            elif event.type == "content_block_delta":
-                                delta = event.delta
-                                if delta.type == "signature_delta":
-                                    current_thought['signature'] = delta.signature
-                                elif delta.type == "thinking_delta":
-                                    if current_block_type == "redacted_thinking":
-                                        current_thought['data'] = current_thought['data'] + delta.data
-                                    else:
-                                        current_thought['thinking'] = current_thought['thinking'] + delta.thinking
-                                        await self._raise_thought_delta(delta.thinking, **callback_opts)
-                            elif event.type == 'message_stop':
-                                output_tokens = event.message.usage.output_tokens
-                                # self.logger.debug(f"Claude message_stop event: stop_reason={stop_reason}")
-                                # self.logger.debug(f"Claude message_stop event attributes: {dir(event)}")
-                                # self.logger.debug(f"Claude message_stop event dict: {getattr(event, 'to_dict', lambda: 'N/A')()}")
-                                # self.logger.debug(f"Claude message_stop event - about to raise completion_end")
-                                await self._raise_completion_end(opts["completion_opts"], stop_reason=stop_reason, input_tokens=input_tokens, output_tokens=output_tokens, **callback_opts)
-                                # self.logger.debug(f"Claude message_stop event - completed raising completion_end")
-
-                                # TODO: This will need moved when I fix tool call messages
-                                assistant_content = self._format_model_outputs_to_text(model_outputs)
-                                await self._save_interaction_to_session(session_manager, assistant_content)
-
-                                messages.append({'role': 'assistant', 'content': model_outputs})
-
-                                if stop_reason != 'tool_use':
-                                    await self._raise_history_event(messages, **callback_opts)
-                                    await self._raise_interaction_end(id=interaction_id, **callback_opts)
-                                    return messages
-                                else:
-                                    await self._raise_tool_call_start(collected_tool_calls, vendor="anthropic",
-                                                                      **callback_opts)
-
-                                    # JOE: Fancy footwork for grabbing tool calls/results and adding them to messages for session history
-                                    tool_response_messages = await self.__tool_calls_to_messages(collected_tool_calls, tool_chest)
-                                    # For now we're not going to save tool calls/results to session history.  Too much incompatibility
-                                    # Between claude/gpt.  This is being solved in another branch.
-                                    # await self.process_tool_response_messages(session_manager, tool_response_messages)
-
-
-                                    # TODO: These should probably be part of the model output
-                                    messages.extend(tool_response_messages)
-                                    await self._raise_tool_call_end(collected_tool_calls, messages[-1]['content'],
-                                                                    vendor="anthropic", **callback_opts)
-                                    await self._raise_history_event(messages, **callback_opts)
-
-                            elif event.type == "content_block_start":
-                                current_block_type = event.content_block.type
-                                current_agent_msg = None
-                                current_thought = None
-
-                                if current_block_type == "text":
-                                    content = event.content_block.text
-                                    current_agent_msg = copy.deepcopy(event.content_block.model_dump())
-                                    model_outputs.append(current_agent_msg)
-                                    if len(content) > 0:
-                                        await self._raise_text_delta(content, **callback_opts)
-                                elif current_block_type == "tool_use":
-                                    tool_call = event.content_block.model_dump()
-                                    collected_tool_calls.append(tool_call)
-                                    await self._raise_tool_call_delta(collected_tool_calls, **callback_opts)
-                                elif current_block_type == "thinking" or current_block_type == "redacted_thinking":
-                                    current_thought = copy.deepcopy(event.content_block.model_dump())
-                                    model_outputs.append(current_thought)
-
-                                    if current_block_type == "redacted_thinking":
-                                        content = "*redacted*"
-                                    else:
-                                        content = current_thought['thinking']
-
-                                    await self._raise_thought_delta(content, **callback_opts)
-                                else:
-                                    await self._raise_system_event(f"content_block_start Unknown content type: {current_block_type}", **callback_opts)
-                            elif event.type == "input_json":
-                                collected_tool_calls[-1]['input'] = event.snapshot
-
-                            elif event.type == "text":
-                                if current_block_type == "text":
-                                    current_agent_msg['text'] = current_agent_msg['text'] + event.text
-                                    await self._raise_text_delta(event.text, **callback_opts)
-                                elif current_block_type == "thinking" or current_block_type == "redacted_thinking":
-                                    if current_block_type == "redacted_thinking":
-                                        current_thought['data'] = current_thought['data'] + event.data
-                                    else:
-                                        current_thought['thinking'] = current_thought['thinking'] + event.text
-                                        await self._raise_thought_delta(event.text, **callback_opts)
-
-
-                            elif event.type == 'message_delta':
-                                stop_reason = event.delta.stop_reason
-
-
-                except APITimeoutError as e:
-                    await self._raise_system_event(f"Timeout error calling `client.messages.stream`. Delaying for {delay} seconds.\n", **callback_opts)
-                    await self._exponential_backoff(delay)
-                    delay *= 2
+                    messages = result
+                except (APITimeoutError, RateLimitError, OverloadedError) as e:
+                    # Exponential backoff handled in a helper method
+                    delay = await self._handle_retryable_error(e, delay, callback_opts)
                 except Exception as e:
                     await self._raise_system_event(f"Exception calling `client.messages.stream`.\n\n{e}\n", **callback_opts)
                     await self._raise_completion_end(opts["completion_opts"], stop_reason="exception", **callback_opts)
-
                     return []
 
         return messages
+
+
+    async def _handle_retryable_error(self, error, delay, callback_opts):
+        """Handle retryable errors with exponential backoff."""
+        error_type = type(error).__name__
+        await self._raise_system_event(
+            f"{error_type} during `client.messages.stream`. Delaying for {delay} seconds.\n",
+            **callback_opts
+        )
+        await self._exponential_backoff(delay)
+        return delay * 2  # Return the new delay for the next attempt
+
+
+    async def _handle_claude_stream(self, completion_opts, tool_chest, session_manager,
+                                   messages, callback_opts, interaction_id) -> Tuple[List[dict[str, Any]], dict[str, Any]]:
+        """Handle the Claude API streaming response."""
+        await self._raise_completion_start(completion_opts, **callback_opts)
+
+        # Initialize state trackers
+        state = self._init_stream_state()
+        state['interaction_id'] = interaction_id
+
+        async with self.client.beta.messages.stream(**completion_opts) as stream:
+            async for event in stream:
+                await self._process_stream_event(event, state, tool_chest, session_manager,
+                                               messages, callback_opts)
+
+                # If we've reached the end of a non-tool response, return
+                if state['complete'] and state['stop_reason'] != 'tool_use':
+                    await self._raise_history_event(messages, **callback_opts)
+                    await self._raise_interaction_end(id=state['interaction_id'], **callback_opts)
+                    return messages, state
+
+                # If we've reached the end of a tool call response, continue after processing tool calls
+                elif state['complete'] and state['stop_reason'] == 'tool_use':
+                    await self._finalize_tool_calls(state, tool_chest, session_manager,
+                                                  messages, callback_opts)
+                    await self._raise_history_event(messages, **callback_opts)
+                    return  messages, state
+
+        return messages, state
+
+
+    def _init_stream_state(self) -> Dict[str, Any]:
+        """Initialize the state object for stream processing."""
+        return {
+            "collected_messages": [],
+            "collected_tool_calls": [],
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "model_outputs": [],
+            "current_block_type": None,
+            "current_thought": None,
+            "current_agent_msg": None,
+            "think_tool_state": ThinkToolState.INACTIVE,
+            "think_partial": "",
+            "think_escape_buffer": "",  # Added to track escape buffer
+            "stop_reason": None,
+            "complete": False,
+            "interaction_id": None
+        }
+
+
+    async def _process_stream_event(self, event, state, tool_chest, session_manager,
+                                   messages, callback_opts):
+        """Process a single event from the Claude stream."""
+        event_type = event.type
+
+        if event_type == "message_start":
+            await self._handle_message_start(event, state, callback_opts)
+        elif event_type == "content_block_delta":
+            await self._handle_content_block_delta(event, state, callback_opts)
+        elif event_type == "message_stop":
+            await self._handle_message_stop(event, state, tool_chest, session_manager,
+                                          messages, callback_opts)
+        elif event_type == "content_block_start":
+            await self._handle_content_block_start(event, state, callback_opts)
+        elif event_type == "input_json":
+            self._handle_input_json(event, state)
+        elif event_type == "text":
+            await self._handle_text_event(event, state, callback_opts)
+        elif event_type == "message_delta":
+            self._handle_message_delta(event, state)
+
+
+    async def _handle_message_start(self, event, state, callback_opts):
+        """Handle the message_start event."""
+        state["input_tokens"] = event.message.usage.input_tokens
+
+
+    async def _handle_content_block_delta(self, event, state, callback_opts):
+        """Handle content_block_delta events."""
+        delta = event.delta
+
+        if delta.type == "signature_delta":
+            state['current_thought']['signature'] = delta.signature
+        elif delta.type == "thinking_delta":
+            await self._handle_thinking_delta(delta, state, callback_opts)
+        elif delta.type == "input_json_delta":
+            await self._handle_think_tool_json(delta, state, callback_opts)
+
+
+    async def _handle_thinking_delta(self, delta, state, callback_opts):
+        """Handle thinking delta events."""
+        if state['current_block_type'] == "redacted_thinking":
+            state['current_thought']['data'] = state['current_thought']['data'] + delta.data
+        else:
+            state['current_thought']['thinking'] = state['current_thought']['thinking'] + delta.thinking
+            await self._raise_thought_delta(delta.thinking, **callback_opts)
+
+
+    async def _handle_think_tool_json(self, delta, state, callback_opts):
+        """Handle the special case of processing the think tool JSON."""
+        j = delta.partial_json
+        think_tool_state = state['think_tool_state']
+
+        if think_tool_state == ThinkToolState.WAITING:
+            state['think_partial'] = state['think_partial'] + j
+
+            # Check if we've received the opening part of the thought
+            prefix = '{"thought": "'
+            if prefix in state['think_partial']:
+                await self._start_emitting_thought(state, callback_opts)
+
+        elif think_tool_state == ThinkToolState.EMITTING:
+            # Add new content to our escape sequence buffer
+            state['think_escape_buffer'] = state['think_escape_buffer'] + j
+
+            # If we don't end with backslash, we can process
+            if not state['think_escape_buffer'].endswith('\\'):
+                await self._process_thought_buffer(state, callback_opts)
+
+
+    async def _start_emitting_thought(self, state, callback_opts):
+        """Start emitting thought content after finding the opening JSON."""
+        prefix = '{"thought": "'
+        start_pos = state['think_partial'].find(prefix) + len(prefix)
+        content = state['think_partial'][start_pos:]
+
+        # Start buffering content for escape sequence handling
+        state['think_partial'] = ""
+        state['think_escape_buffer'] = content
+        state['think_tool_state'] = ThinkToolState.EMITTING
+
+        # Process and emit if we don't have a partial escape sequence
+        if not state['think_escape_buffer'].endswith('\\'):
+            await self._process_thought_buffer(state, callback_opts)
+
+
+    async def _process_thought_buffer(self, state, callback_opts):
+        """Process the thought buffer, handling escape sequences."""
+        processed = self.process_escapes(state['think_escape_buffer'])
+        state['think_escape_buffer'] = ""  # Clear the buffer after processing
+
+        # Check if we've hit the end of the JSON
+        if processed.endswith('"}'):
+            state['think_tool_state'] = ThinkToolState.INACTIVE
+            # Remove closing quote and brace
+            processed = processed[:-2]
+
+        await self._raise_thought_delta(processed, **callback_opts)
+
+
+    async def _handle_message_stop(self, event, state, tool_chest, session_manager,
+                                  messages, callback_opts):
+        """Handle the message_stop event."""
+        state['output_tokens'] = event.message.usage.output_tokens
+        state['complete'] = True
+
+        # Completion end event
+        await self._raise_completion_end(
+            callback_opts.get('completion_opts', {}),
+            stop_reason=state['stop_reason'],
+            input_tokens=state['input_tokens'],
+            output_tokens=state['output_tokens'],
+            **callback_opts
+        )
+
+        # Save interaction to session
+        assistant_content = self._format_model_outputs_to_text(state['model_outputs'])
+        await self._save_interaction_to_session(session_manager, assistant_content)
+
+        # Update messages
+        messages.append({'role': 'assistant', 'content': state['model_outputs']})
+
+
+    async def _handle_content_block_start(self, event, state, callback_opts):
+        """Handle the content_block_start event."""
+        state['current_block_type'] = event.content_block.type
+        state['current_agent_msg'] = None
+        state['current_thought'] = None
+        state['think_tool_state'] = ThinkToolState.INACTIVE
+        state['think_partial'] = ""
+
+        if state['current_block_type'] == "text":
+            await self._handle_text_block_start(event, state, callback_opts)
+        elif state['current_block_type'] == "tool_use":
+            await self._handle_tool_use_block(event, state, callback_opts)
+        elif state['current_block_type'] in ["thinking", "redacted_thinking"]:
+            await self._handle_thinking_block(event, state, callback_opts)
+        else:
+            await self._raise_system_event(
+                f"content_block_start Unknown content type: {state['current_block_type']}",
+                **callback_opts
+            )
+
+
+    async def _handle_text_block_start(self, event, state, callback_opts):
+        """Handle text block start event."""
+        content = event.content_block.text
+        state['current_agent_msg'] = copy.deepcopy(event.content_block.model_dump())
+        state['model_outputs'].append(state['current_agent_msg'])
+        if len(content) > 0:
+            await self._raise_text_delta(content, **callback_opts)
+
+
+    async def _handle_tool_use_block(self, event, state, callback_opts):
+        """Handle tool use block event."""
+        tool_call = event.content_block.model_dump()
+        if event.content_block.name == "think":
+            state['think_tool_state'] = ThinkToolState.WAITING
+
+        state['collected_tool_calls'].append(tool_call)
+        await self._raise_tool_call_delta(state['collected_tool_calls'], **callback_opts)
+
+
+    async def _handle_thinking_block(self, event, state, callback_opts):
+        """Handle thinking block event."""
+        state['current_thought'] = copy.deepcopy(event.content_block.model_dump())
+        state['model_outputs'].append(state['current_thought'])
+
+        if state['current_block_type'] == "redacted_thinking":
+            content = "*redacted*"
+        else:
+            content = state['current_thought']['thinking']
+
+        await self._raise_thought_delta(content, **callback_opts)
+
+
+    def _handle_input_json(self, event, state):
+        """Handle input_json event."""
+        if state['collected_tool_calls']:
+            state['collected_tool_calls'][-1]['input'] = event.snapshot
+
+
+    async def _handle_text_event(self, event, state, callback_opts):
+        """Handle text event."""
+        if state['current_block_type'] == "text":
+            state['current_agent_msg']['text'] = state['current_agent_msg']['text'] + event.text
+            await self._raise_text_delta(event.text, **callback_opts)
+        elif state['current_block_type'] in ["thinking", "redacted_thinking"]:
+            if state['current_block_type'] == "redacted_thinking":
+                state['current_thought']['data'] = state['current_thought']['data'] + event.data
+            else:
+                state['current_thought']['thinking'] = state['current_thought']['thinking'] + event.text
+                await self._raise_thought_delta(event.text, **callback_opts)
+
+
+    def _handle_message_delta(self, event, state):
+        """Handle message_delta event."""
+        state['stop_reason'] = event.delta.stop_reason
+
+
+    async def _finalize_tool_calls(self, state, tool_chest, session_manager, messages, callback_opts):
+        """Finalize tool calls after receiving a complete message."""
+        await self._raise_tool_call_start(state['collected_tool_calls'], vendor="anthropic", **callback_opts)
+
+        # Process tool calls and get response messages
+        tool_response_messages = await self.__tool_calls_to_messages(
+            state['collected_tool_calls'],
+            tool_chest
+        )
+
+        # Add tool response messages to the conversation history
+        messages.extend(tool_response_messages)
+
+        await self._raise_tool_call_end(
+            state['collected_tool_calls'],
+            messages[-1]['content'],
+            vendor="anthropic",
+            **callback_opts
+        )
+
 
     def _generate_multi_modal_user_message(self, user_input: str, images: List[ImageInput], audio: List[AudioInput],
                                            files: List[FileInput]) -> Union[List[dict[str, Any]], None]:
@@ -333,33 +513,6 @@ class ClaudeChatAgent(BaseAgent):
                 f"Claude does not directly support audio input. Mentioned {len(audio)} audio clips in text.")
 
         return [{"role": "user", "content": contents}]
-
-    async def one_shot(self, **kwargs) -> str:
-        """
-               Perform the chat operation as a one shot.
-
-               Parameters:
-               model_name: str, default is self.model_name
-                   The language model to be used.
-               prompt_metadata: dict, default is empty dict
-                   Metadata to be used for rendering the prompt via the PromptBuilder
-               session_manager: ChatSessionManager, default is None
-                   A session manager to use for the message memory / session info
-               session_id: str, default is "none"
-                   The session id to use for the chat, if you haven't provided a session manager.
-               agent_role: str, default is "assistant"
-                   The role of the agent in the chat event stream
-               messages: List[dict[str, Any]], default is None
-                   A list of messages to use for the chat.
-                   If this is not provided, but a session manager is, the messages will be constructed from the session.
-               output_format: str, default is "raw"
-                   The format to signal the client to expect
-
-               Returns: The text of the model response.
-               """
-        kwargs['output_format'] = kwargs.get('output_format', 'raw')
-        messages = await self.chat(**kwargs)
-        return messages[-1]['content']
 
     async def __tool_calls_to_messages(self, tool_calls, tool_chest):
         async def make_call(tool_call):

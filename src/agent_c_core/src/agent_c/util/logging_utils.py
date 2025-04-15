@@ -1,4 +1,3 @@
-# agent_c_api/core/util/logging_utils.py
 import logging
 import os
 import sys
@@ -85,7 +84,7 @@ class LoggingManager:
     LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     LOG_LEVEL = os.getenv('LOG_LEVEL', 'DEBUG').upper() # This is where we can change debug log levels.
     FILE_LOG_ENABLED = os.getenv('FILE_LOG_ENABLED', 'true').lower() == 'true'
-    LOG_FILE = os.getenv('LOG_FILE', 'logs\\agent_c_api.log')
+    LOG_FILE = os.getenv('LOG_FILE', 'logs\\agent_c_core.log')
 
     # Track created loggers to avoid duplicate handlers
     _loggers: Dict[str, logging.Logger] = {}
@@ -219,7 +218,6 @@ class LoggingManager:
             "python_multipart": "WARNING",
             "anthropic": "WARNING",
             "openai": "WARNING",
-            "readability": "WARNING",
             # Add others as needed
         }
 
