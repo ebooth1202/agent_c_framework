@@ -7,6 +7,8 @@ import traceback
 from typing import Union, List, Dict, Any, AsyncGenerator, Optional
 from datetime import datetime, timezone
 
+from agent_c_api.config.env_config import settings
+
 from agent_c.models.input.image_input import ImageInput
 from agent_c.models.input.audio_input import AudioInput
 from agent_c.models.input.file_input import FileInput
@@ -926,7 +928,7 @@ class AgentBridge:
             while True:
                 try:
                     try:
-                        timeout=300.0
+                        timeout = getattr(settings, "CALLBACK_TIMEOUT")  # Get timeout from settings with fallback
                         content = await asyncio.wait_for(queue.get(), timeout=timeout)
                         if content is None:
                             self.logger.info("Received stream termination signal")
