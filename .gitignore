@@ -11,7 +11,7 @@ temp/*
 logs/*
 #py-env
 .python-version
-
+uploads/*
 # C extensions
 *.so
 .chat_input
