@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 # Try to import each optional module
 try:
+
     from agent_c_demo.tools import *  # noqa
     AGENT_C_DEMO_AVAILABLE = True
 except ImportError as e:
