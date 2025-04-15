@@ -39,6 +39,9 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     RELOAD: bool = False
+    
+    # Agent settings
+    CALLBACK_TIMEOUT: float = 300.0  # Timeout in seconds for stream callbacks
 
     # Allows you to override settings via a .env file
     model_config = SettingsConfigDict(
