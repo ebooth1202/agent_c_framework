@@ -515,28 +515,8 @@ class ClaudeChatAgent(BaseAgent):
         return [{"role": "user", "content": contents}]
 
     async def __tool_calls_to_messages(self, tool_calls, tool_chest):
-        async def make_call(tool_call):
-            fn = tool_call['name']
-            args = tool_call['input']
-            ai_call = copy.deepcopy(tool_call)
-            try:
-                function_response = await self._call_function(tool_chest, fn, args)
-                call_resp = {"type": "tool_result", "tool_use_id": tool_call['id'],"content": function_response}
-            except Exception as e:
-                call_resp = {"role": "tool", "tool_call_id": tool_call['id'], "name": fn,
-                             "content": f"Exception: {e}"}
-
-            return ai_call, call_resp
-
-        # Schedule all the calls concurrently
-        tasks = [make_call(tool_call) for tool_call in tool_calls]
-        completed_calls = await asyncio.gather(*tasks)
-
-        # Unpack the resulting ai_calls and resp_calls
-        ai_calls, results = zip(*completed_calls)
-
-        return [{'role': 'assistant', 'content': list(ai_calls)},
-                {'role': 'user', 'content': list(results)}]
+        # Use the new centralized tool call handling in ToolChest
+        return await tool_chest.call_tools(tool_calls, format_type="claude")
 
     def _format_model_outputs_to_text(self, model_outputs: List[Dict[str, Any]]) -> str:
         """

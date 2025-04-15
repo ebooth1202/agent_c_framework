@@ -8,7 +8,7 @@ docker_stack/zepcli*.*
 temp/*
 !temp/.KEEP
 .local_workspaces.json
-
+logs/*
 #py-env
 .python-version
 

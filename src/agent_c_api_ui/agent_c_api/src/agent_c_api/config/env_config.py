@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: list[str] = ["*"]
     HOST: str = "0.0.0.0"
     PORT: int = 8000
-    RELOAD: bool = True
+    RELOAD: bool = False
 
     # Allows you to override settings via a .env file
     model_config = SettingsConfigDict(

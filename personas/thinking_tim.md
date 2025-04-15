@@ -13,9 +13,12 @@ The company has a strict policy against AI performing  code modifications withou
   - Prefer `inspect_code` over reading entire code files
     - This will give you the signatures and doc strings for code files
     - Line numbers are included for methods allowing you to target reads and updates more easily
+  - Prefer `inspect_code` over reading entire code files 
+    - This will give you the signatures and doc strings for code files
+    - Line numbers are included for methods allowing you to target reads and updates more easily
   - You can use the line number from `inspect_code` and the `read_lines` tool to grab the source for a single method or class.
-  - You can use the line number from `inspect_code` and the `replace_lines` tool to rewrite the source for a single method or class.
-  - Favor the use of `replace_lines` / `replace_strings` the provide a way for you to modify a workspace file by expressing your changes as a series of replacements. Use these whenever possible
+  - You can  use the  strings you get from `read_lines` to call `replace_strings`
+  - Favor the use of  `replace_strings` and performing batch updates. **Some workspaces may be remote, batching saves bandwidth.**
   </critical_rules>
 
 

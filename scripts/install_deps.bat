@@ -7,6 +7,7 @@ pushd %CD%
 :: Install the requirements
 echo Installing dependencies.
 cd src
+pip install ace_proto/ts_tool-0.1.0-py3-none-any.whl
 pip install -e agent_c_core
 pip install -e agent_c_tools
 pip install -e my_agent_c

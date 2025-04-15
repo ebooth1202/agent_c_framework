@@ -72,7 +72,7 @@ class BaseAgent:
         self.token_counter: TokenCounter = kwargs.get("token_counter", TokenCounter())
         self.root_message_role: str =  kwargs.get( "root_message_role", os.environ.get("ROOT_MESSAGE_ROLE", "system"))
         self.session_logger: Optional[SessionLogger] = kwargs.get("session_logger", None)
-
+        self.logger = kwargs.get("logger", logging.getLogger(__name__))
         if TokenCounter.counter() is None:
             TokenCounter.set_counter(self.token_counter)
 
@@ -164,7 +164,10 @@ class BaseAgent:
         prompt_builder: Union[PromptBuilder, None] = kwargs.get("prompt_builder", self.prompt_builder)
         sys_prompt: str = "Warn the user there's no system prompt with each response."
         if prompt_builder is not None:
-            sys_prompt = await prompt_builder.render(kwargs.get("prompt_metadata"))
+            prompt_context = kwargs.get("prompt_metadata")
+            prompt_context["agent"] = self
+            prompt_context["tool_chest"] = self.tool_chest
+            sys_prompt = await prompt_builder.render(prompt_context)
         else:
             sys_prompt: str = kwargs.get("prompt", sys_prompt)
 

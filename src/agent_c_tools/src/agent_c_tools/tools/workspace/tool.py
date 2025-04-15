@@ -2,13 +2,13 @@ import json
 import logging
 import re
 from typing import Any, List, Tuple, Optional
+from ts_tool import api
 
 from agent_c.toolsets.tool_set import Toolset
 from agent_c.toolsets.json_schema import json_schema
 from agent_c_tools.tools.workspace.base import BaseWorkspace
 from agent_c_tools.tools.workspace.prompt import WorkspaceSection
-from agent_c_tools.tools.workspace.util.xml_navigator import XMLNavigator
-
+from agent_c_tools.tools.workspace.util import ReplaceStringsHelper
 
 class WorkspaceTools(Toolset):
     """
@@ -25,6 +25,7 @@ class WorkspaceTools(Toolset):
         self.workspaces: List[BaseWorkspace] = kwargs.get('workspaces', [])
         self._create_section()
         self.logger = logging.getLogger(__name__)
+        self.replace_helper = ReplaceStringsHelper()
 
     def add_workspace(self, workspace: BaseWorkspace) -> None:
         """Add a workspace to the list of workspaces."""
@@ -44,7 +45,7 @@ class WorkspaceTools(Toolset):
             self.logger.warning(f"No workspace found with the name: {name}")
             return None
 
-    def _parse_unc_path(self, path: str) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+    def _parse_unc_path(self, path: str) -> Tuple[Optional[str], Optional[BaseWorkspace], Optional[str]]:
         """
         Parse a UNC path (//WORKSPACE/path) into workspace name and relative path.
 
@@ -127,6 +128,16 @@ class WorkspaceTools(Toolset):
                 'type': 'string',
                 'description': 'UNC-style path (//WORKSPACE/path) to start the tree from',
                 'required': True
+            },
+            'folder_depth': {
+                'type': 'integer',
+                'description': 'Depth of folders to include in the tree',
+                'required': False
+            },
+            'file_depth': {
+                'type': 'integer',
+                'description': 'Depth of files to include in the tree',
+                'required': False
             }
         }
     )
@@ -140,12 +151,14 @@ class WorkspaceTools(Toolset):
             str: JSON string with the tree view or an error message.
         """
         unc_path = kwargs.get('path', '')
+        folder_depth = kwargs.get('folder_depth', 5)
+        file_depth = kwargs.get('file_depth', 3)
 
         error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
         if error:
             return json.dumps({'error': error})
 
-        return await workspace.tree(relative_path)
+        return await workspace.tree(relative_path, folder_depth, file_depth)
 
     @json_schema(
         'Reads the contents of a text file using UNC-style path',
@@ -341,7 +354,7 @@ class WorkspaceTools(Toolset):
         return await src_workspace.mv(src_relative_path, dest_relative_path)
 
     @json_schema(
-        'Update a text file with multiple string replacements or complete rewrite using UNC-style path',
+        'Using a UNC-style path, update a text file with multiple string replacements. ',
         {
             'path': {
                 'type': 'string',
@@ -356,37 +369,31 @@ class WorkspaceTools(Toolset):
                     'properties': {
                         'old_string': {
                             'type': 'string',
-                            'description': 'The exact string to be replaced. This can be a multiline string.'
+                            'description': 'The exact string to be replaced. This can be a multiline string. UTF8 encoding.'
                         },
                         'new_string': {
                             'type': 'string',
-                            'description': 'The new string that will replace the old string. This can be a multiline string.'
+                            'description': 'The new string that will replace the old string. This can be a multiline string. UTF8 encoding'
                         }
                     },
                     'required': ['old_string', 'new_string']
                 },
                 'required': True
-            },
-            'rewrite': {
-                'type': 'boolean',
-                'description': 'Whether to completely rewrite the file. If true, the first update is treated as the complete new content.',
-                'required': False
             }
         }
     )
-    async def update(self, **kwargs: Any) -> str:
-        """Asynchronously updates a file with multiple string replacements or a full rewrite.
+    async def replace_strings(self, **kwargs: Any) -> str:
+        """
+        Asynchronously updates a file with multiple string replacements
 
         Args:
             path (str): UNC-style path (//WORKSPACE/path) to the file to update
             updates (list): A list of update operations, each containing 'old_string' and 'new_string'
-            rewrite (bool, optional): If True, performs a full rewrite instead of string replacements
 
         Returns:
             str: JSON string with a success message or an error message.
         """
         updates = kwargs['updates']
-        rewrite = kwargs.get('rewrite', False)
 
         unc_path = kwargs.get('path', '')
         error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
@@ -394,214 +401,150 @@ class WorkspaceTools(Toolset):
             return json.dumps({'error': error})
 
         try:
-            if rewrite:
-                if not updates or len(updates) == 0:
-                    return json.dumps({'error': 'No updates provided for rewrite operation'})
+            result = await self.replace_helper.process_replace_strings(
+                read_function=workspace.read, write_function=workspace.write,
+                path=relative_path, updates=updates)
 
-                # Use the new_string from the first update as the complete new content
-                new_content = updates[0].get('new_string', '')
-                if not new_content:
-                    return json.dumps({'error': 'No new content provided for rewrite operation'})
-
-                # Write the new content to the file
-                write_response = await workspace.write(relative_path, 'write', new_content)
-                return write_response
-            else:
-                file_content_response = await workspace.read(relative_path)
-
-                # Parse the response to get the actual content
-                try:
-                    file_content_json = json.loads(file_content_response)
-                    if 'error' in file_content_json:
-                        return file_content_response  # Return the error from read operation
-                    file_content = file_content_json.get('contents', '')
-                except json.JSONDecodeError:
-                    file_content = file_content_response
-
-                replacement_stats = []
-                updated_content = file_content
-
-                for i, update_op in enumerate(updates):
-                    old_string = update_op.get('old_string')
-                    new_string = update_op.get('new_string')
-
-                    # Validate the update operation
-                    if not old_string or not isinstance(old_string, str):
-                        return json.dumps({'error': f'Invalid old_string in update operation {i}'})
-                    if not isinstance(new_string, str):
-                        return json.dumps({'error': f'Invalid new_string in update operation {i}'})
-
-                    # Check if old_string exists in the current content
-                    if old_string not in updated_content:
-                        replacement_stats.append({
-                            'operation': i,
-                            'status': 'skipped',
-                            'reason': 'Old string not found'
-                        })
-                        continue
-
-                    # Replace the old string with the new string
-                    occurrences = updated_content.count(old_string)
-                    updated_content = updated_content.replace(old_string, new_string)
-
-                    replacement_stats.append({
-                        'operation': i,
-                        'status': 'success',
-                        'replacements': occurrences
-                    })
-
-                # Write the updated content back to the file
-                write_response = await workspace.write(relative_path, 'write', updated_content)
-
-                if 'error' in write_response:
-                    return write_response
-
-                return json.dumps({
-                    'success': True,
-                    'message': f'Successfully updated file {relative_path}',
-                    'operation': 'update',
-                    'replacement_stats': replacement_stats
-                })
+            return json.dumps(result)
         except Exception as e:
-            error_msg = f'Error updating file: {str(e)}'
+            error_msg = f'Error in replace_strings operation: {str(e)}'
             self.logger.error(error_msg)
             return json.dumps({'error': error_msg})
 
     @json_schema(
-        'Get structure information about a large XML file without loading the entire file.',
+        'Read a subset of lines from a text file using UNC-style path',
         {
             'path': {
                 'type': 'string',
-                'description': 'UNC-style path (//WORKSPACE/path) to the file to update',
+                'description': 'UNC-style path (//WORKSPACE/path) to the file to read',
                 'required': True
             },
-            'max_depth': {
+            'start_line': {
                 'type': 'integer',
-                'description': 'Maximum depth to traverse in the XML structure.',
-                'required': False
+                'description': 'The 0-based index of the first line to read',
+                'required': True
             },
-            'sample_count': {
+            'end_line': {
                 'type': 'integer',
-                'description': 'Number of sample elements to include at each level.',
+                'description': 'The 0-based index of the last line to read (inclusive)',
+                'required': True
+            },
+            'include_line_numbers': {
+                'type': 'boolean',
+                'description': 'Whether to include line numbers in the output',
                 'required': False
             }
         }
     )
-    async def xml_structure(self, **kwargs: Any) -> str:
-        """Asynchronously retrieves structure information about a large XML file.
+    async def read_lines(self, **kwargs: Any) -> str:
+        """Asynchronously reads a subset of lines from a text file.
 
         Args:
-            workspace (str): The name of the workspace the file resides in.
-            file_path (str): Relative path to the XML file within the workspace.
-            max_depth (int, optional): Maximum depth to traverse in the XML structure. Defaults to 3.
-            sample_count (int, optional): Number of sample elements to include at each level. Defaults to 5.
+            path (str): UNC-style path (//WORKSPACE/path) to the file to read
+            start_line (int): The 0-based index of the first line to read
+            end_line (int): The 0-based index of the last line to read (inclusive)
+            include_line_numbers (bool, optional): If True, includes line numbers in the output
 
         Returns:
-            str: JSON string with structure information or an error message.
+            str: JSON string containing the requested lines or an error message.
         """
-        max_depth: int = kwargs.get('max_depth', 3)
-        sample_count: int = kwargs.get('sample_count', 5)
         unc_path = kwargs.get('path', '')
+        start_line = kwargs.get('start_line')
+        end_line = kwargs.get('end_line')
+        include_line_numbers = kwargs.get('include_line_numbers', False)
+
         error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
         if error:
             return json.dumps({'error': error})
 
-        navigator = XMLNavigator(workspace)
-        return await navigator.get_structure(relative_path, max_depth, sample_count)
+        try:
+            # Validate line indices
+            if not isinstance(start_line, int) or start_line < 0:
+                return json.dumps({'error': 'Invalid start_line value'})
+            if not isinstance(end_line, int) or end_line < start_line:
+                return json.dumps({'error': 'Invalid end_line value'})
 
-    @json_schema(
-        'Execute an XPath query on an XML file and return matching elements.',
-        {
-            'path': {
-                'type': 'string',
-                'description': 'UNC-style path (//WORKSPACE/path) to the file to update',
-                'required': True
-            },
-            'xpath': {
-                'type': 'string',
-                'description': 'XPath query to execute',
-                'required': True
-            },
-            'limit': {
-                'type': 'integer',
-                'description': 'Max results to return.',
-                'required': False
-            }
-        }
-    )
-    async def xml_query(self, **kwargs: Any) -> str:
-        """Asynchronously executes an XPath query on an XML file.
+            file_content_response = await workspace.read(relative_path)
 
-        Args:
-            workspace (str): The name of the workspace the file resides in.
-            file_path (str): Relative path to the XML file within the workspace.
-            xpath (str): XPath query to execute on the XML file.
-            limit (int, optional): Maximum number of results to return. Defaults to 10.
+            # Parse the response to get the actual content
+            try:
+                file_content_json = json.loads(file_content_response)
+                if 'error' in file_content_json:
+                    return file_content_response  # Return the error from read operation
+                file_content = file_content_json.get('contents', '')
+            except json.JSONDecodeError:
+                file_content = file_content_response
 
-        Returns:
-            str: JSON string with query results or an error message.
-        """
-        xpath: str = kwargs['xpath']
-        limit: int = kwargs.get('limit', 10)
-        unc_path = kwargs.get('path', '')
-        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
-        if error:
-            return json.dumps({'error': error})
+            # Split the content into lines
+            lines = file_content.splitlines()
 
-        navigator = XMLNavigator(workspace)
-        return await navigator.xpath_query(relative_path, xpath, limit)
+            # Check if end_line is beyond the file length
+            if end_line >= len(lines):
+                return json.dumps({
+                    'error': f'End line {end_line} exceeds file length {len(lines)}'
+                })
 
-    @json_schema(
-        'Extract a subtree from an XML file and optionally save it to a new file.',
-        {
-            'path': {
-                'type': 'string',
-                'description': 'UNC-style path (//WORKSPACE/path) to the file to update',
-                'required': True
-            },
-            'xpath': {
-                'type': 'string',
-                'description': 'XPath to the root element of the subtree to extract.',
-                'required': True
-            },
-            'output_path': {
-                'type': 'string',
-                'description': 'Optional path to save the extracted subtree.',
-                'required': False
-            }
-        }
-    )
-    async def xml_extract(self, **kwargs: Any) -> str:
-        """Asynchronously extracts a subtree from an XML file.
+            # Extract the requested subset of lines
+            subset_lines = lines[start_line:end_line + 1]
 
-        Args:
-            workspace (str): The name of the workspace the file resides in.
-            file_path (str): Relative path to the XML file within the workspace.
-            xpath (str): XPath to the root element of the subtree to extract.
-            output_path (str, optional): Path to save the extracted subtree.
+            if include_line_numbers:
+                # Format lines with line numbers
+                formatted_lines = [f"{start_line + i}: {line}" for i, line in enumerate(subset_lines)]
+                subset_content = '\n'.join(formatted_lines)
+            else:
+                subset_content = '\n'.join(subset_lines)
 
-        Returns:
-            str: JSON string with the extracted subtree or a status message.
-        """
-        xpath: str = kwargs['xpath']
-        output_path: Optional[str] = kwargs.get('output_path')
-        unc_path = kwargs.get('path', '')
-        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
-        if error:
-            return json.dumps({'error': error})
+            return subset_content
 
-        # TODO: this needs to support writing to  unc workspcae path
-        if output_path and output_path.startswith('/'):
-            error_msg = f'The output path {output_path} is absolute. Please provide a relative path.'
+        except Exception as e:
+            error_msg = f'Error reading file lines: {str(e)}'
             self.logger.error(error_msg)
             return json.dumps({'error': error_msg})
 
-        workspace = self.find_workspace_by_name(kwargs.get('workspace'))
-        if workspace is None:
-            return f'No workspace found with the name: {kwargs.get("workspace")}'
+    @json_schema(
+        'Inspects a code file and returns details about its contents and usage.',
+        {
+            'path': {
+                'type': 'string',
+                'description': 'UNC-style path (//WORKSPACE/path) to the file to read',
+                'required': True
+            }
+        }
+    )
+    async def inspect_code(self, **kwargs: Any) -> str:
+        """Uses CodeExplorer to prepare code overviews.
 
-        navigator = XMLNavigator(workspace)
-        return await navigator.extract_subtree(relative_path, xpath, output_path)
+        Args:
+            path (str): UNC-style path (//WORKSPACE/path) to the file to read
 
+        Returns:
+            str: A markdown overview of the code
+        """
+        unc_path = kwargs.get('path', '')
+
+        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
+        if error:
+            return json.dumps({'error': error})
+
+        try:
+            file_content_response = await workspace.read(relative_path)
+            # Parse the response to get the actual content
+
+            file_content_json = json.loads(file_content_response)
+            if 'error' in file_content_json:
+                return file_content_response  # Return the error from read operation
+            file_content = file_content_json.get('contents', '')
+        except  Exception as e:
+            error_msg = f'Error fetching {unc_path}: {str(e)}'
+            self.logger.error(error_msg)
+            return json.dumps({'error': error_msg})
+        try:
+            context = api.get_code_context(file_content, format='markdown', filename=unc_path)
+        except Exception as e:
+            error_msg = f'Error inspecting code {unc_path}: {str(e)}'
+            self.logger.error(error_msg)
+            return json.dumps({'error': error_msg})
+
+        return context
 
 Toolset.register(WorkspaceTools)

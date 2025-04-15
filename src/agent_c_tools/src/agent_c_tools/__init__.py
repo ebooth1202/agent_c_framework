@@ -41,7 +41,8 @@ def _discover_tools():
 _tools_mapping = _discover_tools()
 
 __all__ = list(_tools_mapping.keys())
-
+from agent_c_tools.tools.workspace.tool import WorkspaceTools
+from agent_c_tools.tools.think.tool import ThinkTools
 
 def __getattr__(name: str):
     if name in _tools_mapping:
