@@ -361,6 +361,57 @@ class TestS3StorageWorkspace:
         mock_cp.assert_called_once_with("source.txt", "destination.txt")
         mock_delete.assert_called_once_with("source.txt")
 
+    @pytest.mark.asyncio
+    async def test_is_directory(self, mocker):
+        """Test the is_directory method."""
+        # Test case 1: Path is a directory with explicit marker (trailing slash)
+        self.mock_client.head_object = mocker.AsyncMock(return_value={})
+        assert await self.workspace.is_directory("folder/") is True
+        self.mock_client.head_object.assert_called_once_with(
+            Bucket=self.bucket_name, Key="test/prefix/folder/"
+        )
+
+        # Test case 2: Path is a directory as a prefix (no explicit marker)
+        self.mock_client.head_object.reset_mock()
+        self.mock_client.head_object.side_effect = ClientError(
+            {"Error": {"Code": "NoSuchKey", "Message": "Not found"}},
+            "head_object"
+        )
+        self.mock_client.list_objects_v2 = mocker.AsyncMock(return_value={
+            "Contents": [{"Key": "test/prefix/folder/file.txt"}]
+        })
+        assert await self.workspace.is_directory("folder") is True
+        self.mock_client.head_object.assert_called_once()
+        self.mock_client.list_objects_v2.assert_called_once_with(
+            Bucket=self.bucket_name, Prefix="test/prefix/folder/", MaxKeys=1
+        )
+
+        # Test case 3: Path is not a directory
+        self.mock_client.head_object.reset_mock()
+        self.mock_client.list_objects_v2.reset_mock()
+        self.mock_client.list_objects_v2.return_value = {}
+        assert await self.workspace.is_directory("nonexistent_folder") is False
+
+        # Test case 4: ClientError with unexpected code during head_object
+        self.mock_client.head_object.reset_mock()
+        self.mock_client.head_object.side_effect = ClientError(
+            {"Error": {"Code": "AccessDenied", "Message": "Access Denied"}},
+            "head_object"
+        )
+        assert await self.workspace.is_directory("access_denied_folder") is False
+
+        # Test case 5: ClientError during list_objects_v2
+        self.mock_client.head_object.reset_mock()
+        self.mock_client.head_object.side_effect = ClientError(
+            {"Error": {"Code": "NoSuchKey", "Message": "Not found"}},
+            "head_object"
+        )
+        self.mock_client.list_objects_v2.side_effect = ClientError(
+            {"Error": {"Code": "AccessDenied", "Message": "Access Denied"}},
+            "list_objects_v2"
+        )
+        assert await self.workspace.is_directory("list_error_folder") is False
+
 
 if __name__ == "__main__":
     pytest.main()
