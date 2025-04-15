@@ -926,7 +926,8 @@ class AgentBridge:
             while True:
                 try:
                     try:
-                        content = await asyncio.wait_for(queue.get(), timeout=30.0)
+                        timeout=300.0
+                        content = await asyncio.wait_for(queue.get(), timeout=timeout)
                         if content is None:
                             self.logger.info("Received stream termination signal")
                             break
@@ -934,7 +935,7 @@ class AgentBridge:
                         yield content
                         queue.task_done()
                     except asyncio.TimeoutError:
-                        self.logger.warning("Timeout waiting for stream content, terminating stream")
+                        self.logger.warning(f"Timeout waiting for stream content {timeout} seconds, terminating stream")
                         break
                     except asyncio.CancelledError:
                         self.logger.info("Stream was cancelled")
