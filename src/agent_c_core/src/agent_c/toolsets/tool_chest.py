@@ -45,6 +45,7 @@ class ToolChest:
         self.logger = logging.getLogger(__name__)
         self.__tool_sections: List[PromptSection] = []
         self.__active_open_ai_schemas: List[dict] = []
+        self._tool_name_to_instance_map: Dict[str, Toolset] = {}
 
     # Placeholder
     def activate_tool(self, tool_name: str) -> bool:
@@ -133,6 +134,8 @@ class ToolChest:
         """
         self.__tool_instances[instance.name] = instance
         self.__active_open_ai_schemas += instance.openai_schemas
+        for schema in instance.openai_schemas:
+            self._tool_name_to_instance_map[schema['function']['name']] = instance
 
     async def init_tools(self, **kwargs):
         """
@@ -143,6 +146,7 @@ class ToolChest:
         Args:
             **kwargs: Arbitrary keyword arguments to pass to the tool instances during initialization.
         """
+        added = []
         for tool_class in self.__tool_classes:
             tool_obj: Union[Toolset, None] = None
             try:
@@ -151,11 +155,18 @@ class ToolChest:
                 self.logger.warning(f"Error initializing tool {tool_class.__name__}: {str(e)}")
 
             if tool_obj is not None and tool_obj.tool_valid:
+                if not tool_obj.name in self.__tool_instances:
+                    added.append(tool_obj)
+                    self.logger.info(f"Added toolset {tool_obj.name} to the tool chest.")
+
                 self.__tool_instances[tool_obj.name] = tool_obj
                 await tool_obj.post_init()
 
         self.__tool_sections = [toolbelt.section for toolbelt in self.__tool_instances.values() if toolbelt.section is not None]
-        for toolset in self.__tool_instances.values():
+        for toolset in added:
+            for schema in toolset.openai_schemas:
+                self._tool_name_to_instance_map[schema['function']['name']] = toolset
+
             self.__active_open_ai_schemas += toolset.openai_schemas
 
     async def call_tools(self, tool_calls: List[dict], format_type: str = "claude") -> List[dict]:
@@ -255,17 +266,17 @@ class ToolChest:
         Returns:
             Any: The result of the function call
         """
-        # Handle the special case for the think tool
-        if function_id.lower() == "think":
-            toolset = "think"
-            function_name = "think"
+
+        src_obj: Toolset = self._tool_name_to_instance_map.get(function_id)
+        if src_obj is not None:
+            function_name = function_id
         else:
             toolset, function_name = function_id.split(Toolset.tool_sep, 1)
+            src_obj: Toolset = self.active_tools[toolset]
         
         try:
-            src_obj: Toolset = self.active_tools[toolset]
             if src_obj is None:
-                return f"{toolset} is not a valid toolset."
+                return f"{function_name} is not on a valid toolset."
 
             function_to_call: Any = getattr(src_obj, function_name)
             return await function_to_call(**function_args)

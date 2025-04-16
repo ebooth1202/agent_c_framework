@@ -5,7 +5,7 @@ from agent_c.toolsets import json_schema, Toolset
 # A tool belt for asynchronous search functionality using the DuckDuckGo search API.
 class DuckDuckGoTools(Toolset):
     def __init__(self, **kwargs):
-        super().__init__(**kwargs, name='duckduckgo')
+        super().__init__(**kwargs, name='ddg')
 
     @json_schema(
         'Perform a web search using DuckDuckGo.',

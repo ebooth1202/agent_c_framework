@@ -29,7 +29,7 @@ class MCPToolset(Toolset):
         """
         # Initialize with a name based on the server ID
         name = kwargs.pop("name", f"mcp_{server.server_id}")
-        super().__init__(name=name, **kwargs)
+        super().__init__(name=name, use_prefix=False, **kwargs)
         self.openai_schemas = []
         self.server = server
         self.logger = logging.getLogger(f"agent_c.mcp_toolset.{server.server_id}")
@@ -53,7 +53,6 @@ class MCPToolset(Toolset):
             method_name = f"{tool_name.replace('-', '_')}"
             setattr(self, method_name, method)
             schema = copy.deepcopy(method.schema)
-            schema['function']['name'] = f"{self.name}{Toolset.tool_sep}{schema['function']['name']}"
             self.openai_schemas.append(schema)
             self.logger.info(f"Created method {method_name} for MCP tool {tool_name}")
     

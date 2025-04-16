@@ -25,7 +25,7 @@ class WebTools(Toolset):
     """
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs, name='web', required_tools=['workspace'])
+        super().__init__(**kwargs, name='web', required_tools=['workspace'], use_prefix=False)
         self.default_formatter: ContentFormatter = kwargs.get('wt_default_formatter', ReadableFormatter(re.compile(r".*")))
         self.formatters: List[ContentFormatter] = kwargs.get('wt_formatters', [])
         self.driver = self.__init__wd()

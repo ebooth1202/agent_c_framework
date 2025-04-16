@@ -8,7 +8,7 @@ from agent_c.util.string import to_snake_case
 class MermaidChartTools(Toolset):
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs, name='mermaidchart', tool_role='mermaid_chart', section=MermaidChatSection())
+        super().__init__(**kwargs, name='mermaid', tool_role='mermaid_chart', section=MermaidChatSection())
 
     @json_schema(
         'Render a mermaid.js graph and return the SVG link.',

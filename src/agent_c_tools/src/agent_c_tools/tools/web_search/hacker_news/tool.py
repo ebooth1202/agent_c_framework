@@ -7,7 +7,7 @@ from agent_c.toolsets import json_schema, Toolset
 class HackerNewsTools(Toolset):
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs, name='hacker_news')
+        super().__init__(**kwargs, name='hn')
         self.base_url = 'https://hacker-news.firebaseio.com/v0/'
 
     @json_schema(
