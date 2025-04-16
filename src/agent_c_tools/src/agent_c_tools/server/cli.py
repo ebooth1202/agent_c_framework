@@ -6,6 +6,10 @@ making it easy to start a server from the command line with various configuratio
 import logging
 import sys
 import argparse
+import json
+import tempfile
+import yaml
+import os
 
 from agent_c.toolsets import ToolChest, MCPToolChest
 from agent_c_tools.server.mcp_server import MCPToolChestServer
@@ -60,15 +64,68 @@ def run_server(args: argparse.Namespace) -> None:
     mcp_servers_config_path = args.mcp_servers_config
     if mcp_servers_config_path:
         logger.info(f"Using MCP servers configuration from {mcp_servers_config_path}")
+        
+    # Handle SSE server configuration from command line
+    if args.sse_url:
+        logger.info(f"Adding SSE MCP server configuration for {args.sse_server_id}")
+        # If no config path provided, create an empty one
+        if not config_path:
+            import tempfile
+            import yaml
+            
+            # Create a temporary config file with the SSE server configuration
+            temp_config = {
+                "server": {
+                    "mcp_servers": {
+                        "servers": {
+                            args.sse_server_id: {
+                                "transport_type": "sse",
+                                "url": args.sse_url
+                            }
+                        }
+                    }
+                }
+            }
+            
+            # Add headers if provided
+            if args.sse_headers:
+                try:
+                    import json
+                    headers = json.loads(args.sse_headers)
+                    temp_config["server"]["mcp_servers"]["servers"][args.sse_server_id]["headers"] = headers
+                except json.JSONDecodeError:
+                    logger.warning(f"Invalid JSON in --sse-headers, ignoring")
+            
+            # Add timeout if provided
+            if args.sse_timeout is not None:
+                temp_config["server"]["mcp_servers"]["servers"][args.sse_server_id]["timeout"] = args.sse_timeout
+            
+            # Write temporary config file
+            temp_file = tempfile.NamedTemporaryFile(suffix=".yaml", delete=False)
+            with open(temp_file.name, "w") as f:
+                yaml.dump(temp_config, f)
+            
+            config_path = temp_file.name
+            logger.info(f"Created temporary config file at {config_path}")
+        else:
+            # We have an existing config file, so we'll just set environment variables
+            # to add the SSE server configuration
+            import os
+            import json
+            
+            os.environ["MCP_SERVER_SSE_URL"] = args.sse_url
+            os.environ["MCP_SERVER_SSE_ID"] = args.sse_server_id
+            
+            if args.sse_headers:
+                os.environ["MCP_SERVER_SSE_HEADERS"] = args.sse_headers
+            
+            if args.sse_timeout is not None:
+                os.environ["MCP_SERVER_SSE_TIMEOUT"] = str(args.sse_timeout)
     
-    # Prepare the tool chest
-    # Use MCPToolChest if MCP servers are configured or if explicitly requested
-    if mcp_servers_config_path or args.use_mcp_toolchest:
-        logger.info("Using MCPToolChest for enhanced MCP server support")
-        tool_chest = MCPToolChest()
-    else:
-        logger.info("Using standard ToolChest")
-        tool_chest = ToolChest()
+
+
+    tool_chest = MCPToolChest()
+
     
     # Create the server - tool initialization will happen inside the server
     server = MCPToolChestServer(
@@ -148,6 +205,29 @@ def parse_args() -> argparse.Namespace:
         "--use-mcp-toolchest", 
         action="store_true", 
         help="Always use MCPToolChest even without MCP server configurations"
+    )
+    
+    # SSE transport options
+    parser.add_argument(
+        "--sse-url", 
+        type=str, 
+        help="URL for SSE transport to an MCP server"
+    )
+    parser.add_argument(
+        "--sse-server-id", 
+        type=str, 
+        default="default_sse_server",
+        help="ID for the SSE MCP server (default: default_sse_server)"
+    )
+    parser.add_argument(
+        "--sse-headers", 
+        type=str, 
+        help="JSON string of headers for SSE transport (e.g., '{\"Authorization\": \"Bearer token\"}')"
+    )
+    parser.add_argument(
+        "--sse-timeout", 
+        type=float, 
+        help="Timeout in seconds for SSE transport"
     )
     
     # Other options

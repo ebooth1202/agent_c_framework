@@ -7,10 +7,10 @@ server configuration from files, environment variables, and direct settings.
 import os
 import re
 import logging
+import json
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Pattern, Union
 import yaml
-import json
 from pathlib import Path
 
 
@@ -110,10 +110,24 @@ class SecurityConfig:
 
 @dataclass
 class MCPServerConfig:
-    """Configuration for an individual MCP server."""
-    command: str
+    """Configuration for an individual MCP server.
+    
+    This class supports both STDIO and SSE transport configurations. For STDIO transport,
+    provide command, args, and env. For SSE transport, provide url and optionally headers
+    and timeout.
+    """
+    # Common fields
+    transport_type: str = "stdio"  # "stdio" or "sse"
+    
+    # STDIO transport fields
+    command: Optional[str] = None
     args: List[str] = field(default_factory=list)
     env: Dict[str, str] = field(default_factory=dict)
+    
+    # SSE transport fields
+    url: Optional[str] = None
+    headers: Dict[str, str] = field(default_factory=dict)
+    timeout: Optional[float] = None
 
 
 @dataclass
@@ -155,10 +169,25 @@ class MCPServersConfig:
         # Create servers dictionary
         servers = {}
         for server_id, server_config in config_dict.get("servers", {}).items():
+            # Determine transport type
+            transport_type = server_config.get("transport_type", "stdio")
+            
+            # For SSE transport, url is required
+            if transport_type == "sse" and "url" not in server_config:
+                raise ValueError(f"MCP server {server_id} is configured for SSE transport but no URL is provided")
+            
+            # For STDIO transport, command is required
+            if transport_type == "stdio" and not server_config.get("command"):
+                raise ValueError(f"MCP server {server_id} is configured for STDIO transport but no command is provided")
+                
             servers[server_id] = MCPServerConfig(
+                transport_type=transport_type,
                 command=server_config.get("command"),
                 args=server_config.get("args", []),
-                env=server_config.get("env", {})
+                env=server_config.get("env", {}),
+                url=server_config.get("url"),
+                headers=server_config.get("headers", {}),
+                timeout=server_config.get("timeout")
             )
         
         # Create and return MCPServersConfig
@@ -245,10 +274,29 @@ class ServerConfig:
         elif 'servers' in mcp_servers_config:
             servers = {}
             for server_id, server_config in mcp_servers_config.get('servers', {}).items():
+                # Determine transport type
+                transport_type = server_config.get('transport_type', 'stdio')
+                
+                # For SSE transport, url is required
+                if transport_type == 'sse' and 'url' not in server_config:
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"MCP server {server_id} is configured for SSE transport but no URL is provided")
+                    continue
+                
+                # For STDIO transport, command is required
+                if transport_type == 'stdio' and not server_config.get('command'):
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"MCP server {server_id} is configured for STDIO transport but no command is provided")
+                    continue
+                    
                 servers[server_id] = MCPServerConfig(
+                    transport_type=transport_type,
                     command=server_config.get('command'),
                     args=server_config.get('args', []),
-                    env=server_config.get('env', {})
+                    env=server_config.get('env', {}),
+                    url=server_config.get('url'),
+                    headers=server_config.get('headers', {}),
+                    timeout=server_config.get('timeout')
                 )
             mcp_servers = MCPServersConfig(servers=servers)
         
@@ -311,6 +359,29 @@ class ServerConfig:
             except (FileNotFoundError, ValueError) as e:
                 logger = logging.getLogger(__name__)
                 logger.warning(f"Could not load MCP servers config file: {e}")
+        
+        # Handle direct SSE server configuration via environment variables
+        mcp_server_sse_url = os.environ.get('MCP_SERVER_SSE_URL')
+        if mcp_server_sse_url:
+            server_id = os.environ.get('MCP_SERVER_SSE_ID', 'default_sse_server')
+            headers_str = os.environ.get('MCP_SERVER_SSE_HEADERS', '{}')
+            try:
+                headers = json.loads(headers_str)
+            except json.JSONDecodeError:
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Invalid JSON in MCP_SERVER_SSE_HEADERS, using empty headers")
+                headers = {}
+            
+            timeout_str = os.environ.get('MCP_SERVER_SSE_TIMEOUT')
+            timeout = float(timeout_str) if timeout_str else None
+            
+            # Add the SSE server configuration
+            mcp_servers.servers[server_id] = MCPServerConfig(
+                transport_type='sse',
+                url=mcp_server_sse_url,
+                headers=headers,
+                timeout=timeout
+            )
         
         return cls(
             name=name,

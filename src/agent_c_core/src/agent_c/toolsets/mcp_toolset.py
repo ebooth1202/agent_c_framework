@@ -3,7 +3,7 @@
 This module provides the MCPToolset class which represents tools from an MCP server
 as a standard Agent C toolset.
 """
-
+import copy
 import inspect
 import json
 import logging
@@ -30,7 +30,7 @@ class MCPToolset(Toolset):
         # Initialize with a name based on the server ID
         name = kwargs.pop("name", f"mcp_{server.server_id}")
         super().__init__(name=name, **kwargs)
-        
+        self.openai_schemas = []
         self.server = server
         self.logger = logging.getLogger(f"agent_c.mcp_toolset.{server.server_id}")
         
@@ -43,16 +43,18 @@ class MCPToolset(Toolset):
         This method creates a Python method for each tool in the MCP server,
         with appropriate docstrings and type hints to work with Agent C.
         """
+
+
         for tool_name, tool_info in self.server.tools.items():
             # Create a method that will call the MCP tool
             method = self._create_tool_method(tool_name, tool_info)
             
             # Add the method to the class instance
-            method_name = f"mcp_{tool_name.replace('-', '_')}"
+            method_name = f"{tool_name.replace('-', '_')}"
             setattr(self, method_name, method)
-            
-            # Apply json_schema decorator to the method for proper Agent C integration
-            # This part is handled by the Toolset class's __init__ method
+            schema = copy.deepcopy(method.schema)
+            schema['function']['name'] = f"{self.name}{Toolset.tool_sep}{schema['function']['name']}"
+            self.openai_schemas.append(schema)
             self.logger.info(f"Created method {method_name} for MCP tool {tool_name}")
     
     def _create_tool_method(self, tool_name: str, tool_info: Dict[str, Any]) -> Callable:
@@ -72,12 +74,25 @@ class MCPToolset(Toolset):
         # Generate function signature from the schema
         param_names = []
         param_docs = []
+        properties = {}
+        required = []
+
         if "properties" in schema:
             param_names = list(schema["properties"].keys())
             for param_name, param_props in schema["properties"].items():
                 param_desc = param_props.get("description", f"Parameter {param_name}")
                 param_type = param_props.get("type", "any")
                 param_docs.append(f"    {param_name}: {param_desc} ({param_type})")
+                
+                # Create property definition for schema
+                properties[param_name] = {
+                    "type": param_props.get("type", "string"),
+                    "description": param_desc
+                }
+                
+                # Add to required list if marked as required
+                if param_name in schema.get("required", []):
+                    required.append(param_name)
         
         # Build a proper docstring with parameter descriptions
         full_docstring = f"{description}\n\nArgs:\n{chr(10).join(param_docs)}\n\nReturns:\n    The result from the MCP tool execution"
@@ -102,8 +117,26 @@ class MCPToolset(Toolset):
         
         # Set docstring and metadata for proper display in schemas
         mcp_tool_method.__doc__ = full_docstring
-        mcp_tool_method.__name__ = f"mcp_{tool_name.replace('-', '_')}"
+        mcp_tool_method.__name__ = f"{tool_name.replace('-', '_')}"
         
-        # Set additional metadata for schema generation
-        # This gets automatically picked up by Toolset's __init__ for schema generation
+        # Create and attach schema attribute to the method (similar to what json_schema decorator does)
+        method_schema = {
+            "type": "function",
+            "function": {
+                "name": mcp_tool_method.__name__,
+                "description": description,
+                "parameters": {
+                    "type": "object",
+                    "properties": properties
+                }
+            }
+        }
+        
+        # Add required parameters if any
+        if required:
+            method_schema["function"]["parameters"]["required"] = required
+            
+        # Attach schema to the method - this is what Toolset.__openai_schemas() looks for
+        mcp_tool_method.schema = method_schema
+        
         return mcp_tool_method

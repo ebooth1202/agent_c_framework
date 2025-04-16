@@ -89,7 +89,9 @@ Example MCP servers configuration file (mcp_servers_config.yaml):
 ```yaml
 # MCP servers configuration
 servers:
+  # STDIO transport (process-based) MCP servers
   calculator:
+    transport_type: "stdio"  # Optional, stdio is the default
     command: python
     args: ["-m", "calculator_server"]
     env:
@@ -101,12 +103,21 @@ servers:
     env:
       ROOT_DIR: "/path/to/files"
       
-  # External MCP server with tool discovery
-  external_tools:
-    command: null  # No local command - connect to existing server
-    args: []
-    env:
-      MCP_SERVER_URL: "http://external-server:8000"
+  # SSE transport (HTTP-based) MCP servers
+  claude_api:
+    transport_type: "sse"
+    url: "https://api.anthropic.com/v1/mcp/sse"
+    headers:
+      Authorization: "Bearer ${ANTHROPIC_API_KEY}"
+      Content-Type: "application/json"
+    timeout: 60.0
+      
+  custom_tools:
+    transport_type: "sse"
+    url: "http://localhost:8080/mcp/sse"
+    headers:
+      Authorization: "Bearer ${CUSTOM_API_KEY}"
+    timeout: 30.0
 ```
 
 ## Command Line Options
@@ -126,6 +137,14 @@ Options:
   --import-package TEXT         Import a package with tools (can be used multiple times)
   --mcp-servers-config PATH     Path to MCP servers configuration file (YAML or JSON)
   --use-mcp-toolchest           Always use MCPToolChest even without MCP server configurations
+  
+  # SSE transport options
+  --sse-url TEXT                URL for SSE transport to an MCP server
+  --sse-server-id TEXT          ID for the SSE MCP server (default: default_sse_server)
+  --sse-headers TEXT            JSON string of headers for SSE transport
+                                (e.g., '{"Authorization": "Bearer token"}')
+  --sse-timeout FLOAT           Timeout in seconds for SSE transport
+  
   --verbose, -v                 Enable verbose logging
   --help                        Show this message and exit
 ```
@@ -263,6 +282,13 @@ The server supports configuration via environment variables:
 - `MCP_SERVER_DISCOVER`: Comma-separated list of packages to discover tools from
 - `MCP_SERVER_IMPORTS`: Comma-separated list of packages to import
 - `MCP_SERVERS_CONFIG_FILE`: Path to MCP servers configuration file
+
+### SSE Transport Environment Variables
+
+- `MCP_SERVER_SSE_URL`: URL for SSE transport to an MCP server
+- `MCP_SERVER_SSE_ID`: ID for the SSE MCP server (default: default_sse_server)
+- `MCP_SERVER_SSE_HEADERS`: JSON string of headers for SSE transport
+- `MCP_SERVER_SSE_TIMEOUT`: Timeout in seconds for SSE transport
 
 ## Contributing
 

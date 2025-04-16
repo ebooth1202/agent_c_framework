@@ -178,6 +178,7 @@ class MCPToolChestServer:
         """Apply MCP server configurations from the ServerConfig to the MCPToolChest.
         
         This method adds all configured MCP servers to the MCPToolChest instance.
+        Supports both STDIO and SSE transport types.
         """
         if not isinstance(self.tool_chest, MCPToolChest):
             logger.warning("Cannot apply MCP server configs - tool chest is not an MCPToolChest")
@@ -185,13 +186,43 @@ class MCPToolChestServer:
         
         # Add each configured server to the MCPToolChest
         for server_id, server_config in self.config.mcp_servers.servers.items():
-            logger.info(f"Adding MCP server configuration for {server_id}")
-            self.tool_chest.add_server(
-                server_id,
-                command=server_config.command,
-                args=server_config.args,
-                env=server_config.env
-            )
+            logger.info(f"Adding MCP server configuration for {server_id} using {server_config.transport_type} transport")
+            
+            # Handle different transport types
+            if server_config.transport_type == 'stdio':
+                # For STDIO transport
+                if not server_config.command:
+                    logger.warning(f"Skipping MCP server {server_id} - no command provided for STDIO transport")
+                    continue
+                    
+                self.tool_chest.add_server(
+                    server_id,
+                    command=server_config.command,
+                    args=server_config.args,
+                    env=server_config.env
+                )
+            elif server_config.transport_type == 'sse':
+                # For SSE transport
+                if not server_config.url:
+                    logger.warning(f"Skipping MCP server {server_id} - no URL provided for SSE transport")
+                    continue
+                    
+                # Add SSE server configuration
+                config = {
+                    'transport_type': 'sse',
+                    'url': server_config.url,
+                }
+                
+                # Add optional fields if provided
+                if server_config.headers:
+                    config['headers'] = server_config.headers
+                if server_config.timeout is not None:
+                    config['timeout'] = server_config.timeout
+                    
+                self.tool_chest.add_server(server_id, **config)
+            else:
+                logger.warning(f"Unsupported transport type '{server_config.transport_type}' for MCP server {server_id}")
+                continue
     
     async def _discover_and_load_tools(self) -> None:
         """Discover and load tools based on configuration.
@@ -210,29 +241,7 @@ class MCPToolChestServer:
                     self.tool_chest._ToolChest__active_open_ai_schemas += toolset.openai_schemas
             return
             
-        if isinstance(self.tool_chest, MCPToolChest):
-            logger.info("Using MCPToolChest - initializing tools and connecting to MCP servers")
-            # Create tool options for initialization
-            tool_cache_dir = ".tool_cache"
-            tool_cache = ToolCache(cache_dir=tool_cache_dir)
-            session_manager = ChatSessionManager()
-            workspaces = []
 
-            try:
-                local_workspaces = json.load(open(".local_workspaces.json", "r"))
-                for ws in local_workspaces['local_workspaces']:
-                    workspaces.append(LocalStorageWorkspace(**ws))
-            except FileNotFoundError:
-                pass
-
-            await session_manager.init("TEMP_PLACEHOLDER", "TEMP_PLACEHOLDER")
-            tool_opts = {'tool_cache': tool_cache, 'session_manager': session_manager,
-                         'workspaces': workspaces}
-            
-            # Initialize the MCPToolChest, which will connect to MCP servers
-            await self.tool_chest.init_tools(**tool_opts)
-            return
-        
         # If we get here, we need to discover and load tools for a regular ToolChest
         logger.info("Discovering and loading tools")
         
