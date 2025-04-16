@@ -132,6 +132,7 @@ class ToolChest:
             instance (Toolset): The instance of the tool to add.
         """
         self.__tool_instances[instance.name] = instance
+        self.__active_open_ai_schemas += instance.openai_schemas
 
     async def init_tools(self, **kwargs):
         """
