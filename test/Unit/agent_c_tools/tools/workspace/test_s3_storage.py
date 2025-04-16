@@ -374,7 +374,7 @@ class TestS3StorageWorkspace:
         # Test case 2: Path is a directory as a prefix (no explicit marker)
         self.mock_client.head_object.reset_mock()
         self.mock_client.head_object.side_effect = ClientError(
-            {"Error": {"Code": "NoSuchKey", "Message": "Not found"}},
+            {"Error": {"Code": "404", "Message": "Not found"}},
             "head_object"
         )
         self.mock_client.list_objects_v2 = mocker.AsyncMock(return_value={
