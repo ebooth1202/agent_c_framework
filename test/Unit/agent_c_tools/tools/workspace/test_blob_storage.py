@@ -2,9 +2,9 @@
 
 import base64
 import pytest
-from agent_c_tools.tools.workspace.blob_storage import BlobStorageWorkspace
-from azure.core.exceptions import ResourceNotFoundError
 from azure.storage.blob.aio import ContainerClient as AsyncContainerClient
+from azure.core.exceptions import ResourceNotFoundError, AzureError
+from agent_c_tools.tools.workspace.blob_storage import BlobStorageWorkspace
 
 
 @pytest.mark.unit
@@ -239,3 +239,50 @@ class TestBlobStorageWorkspace:
         workspace.read_only = True
         with pytest.raises(ValueError, match="Cannot move files in a read-only workspace"):
             await workspace.mv("source/path", "dest/path")
+
+    @pytest.mark.asyncio
+    async def test_is_directory(self, workspace_setup, mocker):
+        """Test the is_directory method."""
+        workspace, _, mock_container_client = workspace_setup
+
+        # Case 1: Directory exists (blobs with prefix exist)
+        # Set up the container client to return a non-empty list of blobs
+        mock_container_client.list_blobs.return_value = self.MockAsyncIterator([
+            self.MockBlob("test/prefix/folder/file.txt")
+        ])
+        workspace._get_container_client = mocker.AsyncMock(
+            return_value=mock_container_client)
+
+        # Test that the method returns True when blobs exist with the prefix
+        assert await workspace.is_directory("folder") is True
+
+        # Case 2: Directory does not exist (no blobs with prefix)
+        # Set up the container client to return an empty list
+        mock_container_client.list_blobs.return_value = self.MockAsyncIterator([
+        ])
+
+        # Set up the blob client to simulate no directory marker
+        mock_blob_client = mocker.AsyncMock()
+        mock_blob_client.get_blob_properties.side_effect = ResourceNotFoundError
+        workspace._get_blob_client = mocker.AsyncMock(
+            return_value=mock_blob_client)
+
+        # Test that the method returns False when no blobs or markers exist
+        assert await workspace.is_directory("nonexistent") is False
+
+        # Case 3: Directory exists (zero-length blob marker)
+        # Setup for marker blob check
+        mock_properties = mocker.MagicMock()
+        mock_properties.size = 0
+        mock_blob_client.get_blob_properties.side_effect = None
+        mock_blob_client.get_blob_properties.return_value = mock_properties
+
+        # Test that the method returns True when a directory marker exists
+        assert await workspace.is_directory("marker_dir") is True
+
+        # Case 4: Error handling
+        mock_blob_client.get_blob_properties.side_effect = AzureError(
+            "Test error message")
+
+        # Test that the method handles errors gracefully
+        assert await workspace.is_directory("error_dir") is False

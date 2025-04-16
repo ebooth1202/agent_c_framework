@@ -426,3 +426,44 @@ class BlobStorageWorkspace(BaseWorkspace):
         await src_blob_client.delete_blob()
 
         return f"Successfully moved {src_path} to {dest_path}"
+
+    async def is_directory(self, path: str) -> bool:
+        """
+        Check if a given path is a directory within the workspace.
+
+        In Azure Blob Storage, directories are virtual and represented by blob names
+        ending with a trailing slash or by the presence of blobs with the path as prefix.
+
+        Args:
+            path (str): The path to check
+
+        Returns:
+            bool: True if the path represents a directory, False otherwise
+        """
+        container_client = await self._get_container_client()
+        normalized_path = self._normalize_path(path)
+
+        # Ensure path ends with a slash for directory check
+        if not normalized_path.endswith('/'):
+            normalized_path += '/'
+
+        # Check if there are any blobs with this prefix
+        blobs = container_client.list_blobs(name_starts_with=normalized_path)
+
+        # Check if at least one blob exists with this prefix
+        async for _ in blobs:
+            return True
+
+        # Special case: check if there's a zero-length blob with the trailing slash
+        # Some systems create these as directory markers
+        try:
+            blob_client = await self._get_blob_client(path + '/')
+            properties = await blob_client.get_blob_properties()
+            if properties.size == 0:
+                return True
+        except ResourceNotFoundError:
+            pass
+        except AzureError as e:
+            self.logger.error("Error checking directory existence: %s", e)
+
+        return False
