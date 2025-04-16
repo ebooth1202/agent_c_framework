@@ -373,6 +373,9 @@ class MCPServer:
             ValueError: If the tool does not exist
         """
         if not self.connected or not self.session:
+            await self.connect()
+
+        if not self.connected or not self.session:
             raise RuntimeError(f"Server {self.server_id} is not connected")
         
         if tool_name not in self.tools:

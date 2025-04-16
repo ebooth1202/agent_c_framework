@@ -17,7 +17,7 @@ class MarkdownToHtmlReportTools(Toolset):
     """Toolset for generating interactive HTML viewers from markdown files in a workspace."""
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs, name="markdown_viewer")
+        super().__init__(**kwargs, name="markdown_viewer", use_prefix=False)
         # Get workspace tools for file operations
         self.workspace_tool = self.tool_chest.active_tools.get('workspace')
         if not self.workspace_tool:
@@ -57,7 +57,7 @@ class MarkdownToHtmlReportTools(Toolset):
             }
         }
     )
-    async def generate_report(self, **kwargs) -> str:
+    async def generate_md_viewer(self, **kwargs) -> str:
         """Generate an interactive HTML viewer for markdown files in a workspace directory.
 
         Args:

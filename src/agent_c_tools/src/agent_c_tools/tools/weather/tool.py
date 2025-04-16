@@ -9,7 +9,7 @@ from agent_c import json_schema, Toolset
 class WeatherTools(Toolset):
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs, name='weather')
+        super().__init__(**kwargs, name='weather', use_prefix=False)
         self.logger: logging.Logger = logging.getLogger(__name__)
 
     @json_schema(

@@ -12,7 +12,7 @@ from agent_c.chat.session_manager import ChatSessionManager
 
 class Toolset:
     tool_registry: List[Any] = []
-    tool_sep: str = "-"
+    tool_sep: str = "_"
 
     @classmethod
     def register(cls, tool_cls: Any) -> None:
@@ -51,6 +51,7 @@ class Toolset:
 
         self.session_manager: ChatSessionManager = kwargs.get("session_manager")
         self.tool_chest: 'ToolChest' = kwargs.get("tool_chest")
+        self.use_prefix: bool = kwargs.get("use_prefix", True)
 
         # Handle required tools activation
         required_tools: List[str] = kwargs.get("required_tools", [])
@@ -81,6 +82,34 @@ class Toolset:
         self.streaming_callback = kwargs.get('streaming_callback')
         self.output_format: str = kwargs.get('output_format', 'raw')
         self.tool_role: str = kwargs.get('tool_role', 'tool')
+
+    @property
+    def prefix(self) -> str:
+        """
+        Returns the prefix for the toolset.
+
+        Returns:
+            str: The prefix for the toolset.
+        """
+        if self.use_prefix:
+            return f"{self.name}{Toolset.tool_sep}"
+
+        return ""
+
+    async def call(self, tool_name: str, args: dict[str, Any]):
+        """
+        Calls a tool on this toolset with the given name and arguments.
+
+        Args:
+            tool_name (str): The name of the tool to call.
+            args (dict[str, Any]): The arguments to pass to the tool.
+
+        Returns:
+            Any: The result of the tool call.
+        """
+        function_name = tool_name.removeprefix(self.prefix)
+        function_to_call: Any = getattr(self, function_name)
+        return await function_to_call(**args)
 
     def _format_markdown(self, markdown: str) -> str:
         """
@@ -217,7 +246,8 @@ class Toolset:
         for name, method in inspect.getmembers(self, predicate=inspect.ismethod):
             if hasattr(method, 'schema'):
                 schema = copy.deepcopy(method.schema)
-                schema['function']['name'] = f"{self.name}{Toolset.tool_sep}{schema['function']['name']}"
+                if self.use_prefix:
+                    schema['function']['name'] = f"{self.prefix}{schema['function']['name']}"
                 openai_schemas.append(schema)
 
         return openai_schemas
