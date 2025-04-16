@@ -83,6 +83,34 @@ class Toolset:
         self.output_format: str = kwargs.get('output_format', 'raw')
         self.tool_role: str = kwargs.get('tool_role', 'tool')
 
+    @property
+    def prefix(self) -> str:
+        """
+        Returns the prefix for the toolset.
+
+        Returns:
+            str: The prefix for the toolset.
+        """
+        if self.use_prefix:
+            return f"{self.name}{Toolset.tool_sep}"
+
+        return ""
+
+    async def call(self, tool_name: str, args: dict[str, Any]):
+        """
+        Calls a tool on this toolset with the given name and arguments.
+
+        Args:
+            tool_name (str): The name of the tool to call.
+            args (dict[str, Any]): The arguments to pass to the tool.
+
+        Returns:
+            Any: The result of the tool call.
+        """
+        function_name = tool_name.removeprefix(self.prefix)
+        function_to_call: Any = getattr(self, function_name)
+        return await function_to_call(**args)
+
     def _format_markdown(self, markdown: str) -> str:
         """
         Formats markdown to ensure proper rendering by fixing spacing issues.
@@ -219,7 +247,7 @@ class Toolset:
             if hasattr(method, 'schema'):
                 schema = copy.deepcopy(method.schema)
                 if self.use_prefix:
-                    schema['function']['name'] = f"{self.name}{Toolset.tool_sep}{schema['function']['name']}"
+                    schema['function']['name'] = f"{self.prefix}{schema['function']['name']}"
                 openai_schemas.append(schema)
 
         return openai_schemas

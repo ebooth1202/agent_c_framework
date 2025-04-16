@@ -268,20 +268,12 @@ class ToolChest:
         """
 
         src_obj: Toolset = self._tool_name_to_instance_map.get(function_id)
-        if src_obj is not None:
-            function_name = function_id
-        else:
-            toolset, function_name = function_id.split(Toolset.tool_sep, 1)
-            src_obj: Toolset = self.active_tools[toolset]
-        
+        if src_obj is None:
+            return f"{function_id} is not on a valid toolset."
         try:
-            if src_obj is None:
-                return f"{function_name} is not on a valid toolset."
-
-            function_to_call: Any = getattr(src_obj, function_name)
-            return await function_to_call(**function_args)
+            return await src_obj.call(function_id, function_args)
         except Exception as e:
-            logging.exception(f"Failed calling {function_name} on {toolset}. {e}")
-            return f"Important! Tell the user an error occurred calling {function_name} on {toolset}. {e}"
+            logging.exception(f"Failed calling {function_id} on {src_obj.name}. {e}", stacklevel=3)
+            return f"Important! Tell the user an error occurred calling {function_id} on {src_obj.name}. {e}"
 
 
