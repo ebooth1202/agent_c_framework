@@ -321,7 +321,6 @@ class AgentBridge:
             tool_opts = {
                 'tool_cache': self.tool_cache,
                 'session_manager': self.session_manager,
-                'user_preferences': self.user_prefs,
                 'workspaces': self.workspaces,
                 'streaming_callback': self.consolidated_streaming_callback
             }

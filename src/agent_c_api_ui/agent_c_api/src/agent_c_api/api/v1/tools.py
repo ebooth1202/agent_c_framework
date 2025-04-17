@@ -16,21 +16,15 @@ logger = logging.getLogger(__name__)
 # Try to import each optional module
 try:
 
-    from agent_c_demo.tools import *  # noqa
+    from agent_c_demo.gtools import *  # noqa
     AGENT_C_DEMO_AVAILABLE = True
 except ImportError as e:
     AGENT_C_DEMO_AVAILABLE = False
     logger.warning(f"agent_c_demo.tools module not available: {e}")
 
-try:
-    from agent_c_voice.tools import *  # noqa
-    AGENT_C_VOICE_AVAILABLE = True
-except ImportError as e:
-    logger.warning(f"agent_c_voice.tools module not available: {e}")
-    AGENT_C_VOICE_AVAILABLE = False
 
 try:
-    from agent_c_rag.tools import *  # noqa
+    from agent_c_rag.gtools import *  # noqa
     AGENT_C_RAG_AVAILABLE = True
 except ImportError as e:
     logger.warning(f"agent_c_rag.tools module not available: {e}")
