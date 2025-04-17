@@ -282,6 +282,46 @@ class TestS3WorkspaceIntegration:
         assert dest_content == "Content to move", "Destination content should match"
 
     @pytest.mark.asyncio
+    async def test_is_directory(self, workspace):
+        """
+        Test the is_directory method with actual S3 resources.
+        """
+        # Create test directories and files
+        directory_structure = [
+            "dir_test/file1.txt",
+            "dir_test/subdir/file2.txt",
+            "dir_test/empty_dir/"
+        ]
+
+        # Create files and directories
+        for path in directory_structure:
+            if path.endswith('/'):
+                # Create empty directory marker (S3 doesn't have directories, just objects with '/' at the end)
+                await workspace.write_bytes(path, "write", b"")
+            else:
+                # Create regular file
+                await workspace.write(path, "write", f"Content for {path}")
+
+        # Test cases
+        # 1. Test existing directory with trailing slash
+        assert await workspace.is_directory("dir_test/") is True
+
+        # 2. Test existing directory without trailing slash
+        assert await workspace.is_directory("dir_test") is True
+
+        # 3. Test subdirectory
+        assert await workspace.is_directory("dir_test/subdir") is True
+
+        # 4. Test empty directory with explicit marker
+        assert await workspace.is_directory("dir_test/empty_dir") is True
+
+        # 5. Test file (should return False)
+        assert await workspace.is_directory("dir_test/file1.txt") is False
+
+        # 6. Test non-existent directory
+        assert await workspace.is_directory("dir_test/nonexistent_dir") is False
+
+    @pytest.mark.asyncio
     async def integration_test_cleanup(self, bucket_name):
         """
         Method for cleaning up S3 bucket after integration tests.

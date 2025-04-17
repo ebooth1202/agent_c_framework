@@ -3,6 +3,7 @@ from io import StringIO
 from unidiff import PatchSet
 from tempfile import NamedTemporaryFile
 
+
 class BaseWorkspace:
     """
     This is a base class for workspace representations.
@@ -149,7 +150,39 @@ class BaseWorkspace:
         raise NotImplementedError
 
     async def cp(self, src_path: str, dest_path: str) -> str:
+        """
+        Abstract method to copy a file from one path to another within the workspace.
+
+        Args:
+            src_path (str): The source path of the file to copy.
+            det_path (str): The destination path where the file should be copied.
+
+        Raises:
+            NotImplementedError: This method should be implemented by subclasses.
+        """
         raise NotImplementedError
 
     async def mv(self, src_path: str, dest_path: str) -> str:
+        """
+        Abstract method to move a file from one path to another within the workspace.
+
+        Args:
+            src_path (str): The source path of the file to move.
+            dest_path (str): The destination path where the file should be moved.
+
+        Raises:
+            NotImplementedError: This method should be implemented by subclasses.
+        """
+        raise NotImplementedError
+
+    async def is_directory(self, path: str) -> bool:
+        """
+        Abstract method to check if a given path is a directory.
+
+        Args:
+            path (str): The path to check.
+
+        Raises:
+            NotImplementedError: This method should be implemented by subclasses.
+        """
         raise NotImplementedError

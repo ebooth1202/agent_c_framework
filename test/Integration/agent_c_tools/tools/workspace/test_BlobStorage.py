@@ -59,6 +59,8 @@ class TestBlobStorageWorkspaceIntegration:
         # Cleanup after tests
         try:
             await container_client.delete_container()
+            await service_client.close()
+            await container_client.close()
         except AzureError as e:
             print(f"Error during container cleanup: {e}")
 
@@ -182,3 +184,35 @@ class TestBlobStorageWorkspaceIntegration:
         assert not await workspace.path_exists(src_path), "Source file should not exist after move"
         dest_content = await workspace.read(dest_path)
         assert dest_content == "Content to move", "Destination content should match"
+
+    @pytest.mark.asyncio
+    async def test_is_directory(self, workspace):
+        """Test checking if a path is a directory."""
+        # Create a directory structure with files
+        dir_path = "dir_test/"
+        file_in_dir = "dir_test/file.txt"
+        standalone_file = "standalone_file.txt"
+
+        # Create the files
+        await workspace.write(file_in_dir, "write", "Content for directory test")
+        await workspace.write(standalone_file, "write", "Content for standalone file")
+
+        # Test directory detection
+        assert await workspace.is_directory(dir_path) is True, \
+            "Should recognize a path with child files as a directory"
+        assert await workspace.is_directory("dir_test") is True, \
+            "Should recognize directory without trailing slash"
+        assert await workspace.is_directory(standalone_file) is False, \
+            "Should not recognize a file as a directory"
+        assert await workspace.is_directory("nonexistent_dir/") is False, \
+            "Should not recognize a nonexistent path as a directory"
+
+        # Create an empty directory (marker blob with trailing slash)
+        empty_dir = "empty_dir/"
+        empty_blob_client = await workspace._get_blob_client(empty_dir)
+        await empty_blob_client.upload_blob(b"", overwrite=True)
+
+        assert await workspace.is_directory(empty_dir) is True, \
+            "Should recognize an empty directory with marker blob"
+
+        empty_blob_client.close()

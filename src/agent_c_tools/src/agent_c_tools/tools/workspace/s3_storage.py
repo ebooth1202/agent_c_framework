@@ -352,3 +352,49 @@ class S3StorageWorkspace(BaseWorkspace):
         await self.cp(src_path, dest_path)
         await self._delete_file(src_path)
         return dest_path
+
+    async def is_directory(self, path: str) -> bool:
+        """
+        Check if a given path is a directory in the S3 bucket.
+
+        In S3, directories are virtual and are represented either as:
+        1. Objects with keys ending in '/'
+        2. Prefixes to existing objects
+
+        Args:
+            path (str): The path to check.
+
+        Returns:
+            bool: True if the path is a directory, False otherwise.
+        """
+        # Normalize path to ensure it ends with a slash for directory check
+        normalized_path = path.rstrip('/') + '/'
+        full_path = self._get_full_path(normalized_path)
+
+        async with self.session.create_client('s3') as client:
+            try:
+                # First check if an object with trailing slash exists (explicit directory marker)
+                try:
+                    await client.head_object(Bucket=self.bucket_name, Key=full_path)
+                    return True
+                except ClientError as marker_error:
+                    # If no explicit directory marker, check if it's a prefix
+                    if marker_error.response['Error']['Code'] == '404':
+                        try:
+                            response = await client.list_objects_v2(
+                                Bucket=self.bucket_name,
+                                Prefix=full_path,
+                                MaxKeys=1
+                            )
+                            return 'Contents' in response
+                        except ClientError as prefix_error:
+                            logging.error(
+                                "Error checking directory prefix: %s", prefix_error)
+                            return False
+                    else:
+                        logging.error(
+                            "Unexpected ClientError: %s", marker_error)
+                        return False
+            except ClientError as client_error:
+                logging.error("AWS client error: %s", client_error)
+                return False
