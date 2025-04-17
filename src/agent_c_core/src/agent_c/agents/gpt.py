@@ -495,42 +495,4 @@ class GPTChatAgent(BaseAgent):
             await self._raise_system_event(f"An error occurred while processing tool calls: {e}", **callback_opts)
 
     async def __tool_calls_to_messages(self, tool_calls, tool_chest):
-        """
-        Convert tool calls to message format and execute them.
-        """
-
-        async def make_call(tool_call):
-            fn = tool_call['name']
-            args = json.loads(tool_call['arguments'])
-            ai_call = {
-                "id": tool_call['id'],
-                "function": {"name": fn, "arguments": tool_call['arguments']},
-                'type': 'function'
-            }
-
-            try:
-                function_response = await self._call_function(tool_chest, fn, args)
-                call_resp = {
-                    "role": "tool",
-                    "tool_call_id": tool_call['id'],
-                    "name": fn,
-                    "content": function_response
-                }
-            except Exception as e:
-                call_resp = {
-                    "role": "tool",
-                    "tool_call_id": tool_call['id'],
-                    "name": fn,
-                    "content": f"Exception: {e}"
-                }
-
-            return ai_call, call_resp
-
-        # Schedule all the calls concurrently
-        tasks = [make_call(tool_call) for tool_call in tool_calls]
-        completed_calls = await asyncio.gather(*tasks)
-
-        # Unpack the resulting ai_calls and resp_calls
-        ai_calls, results = zip(*completed_calls)
-
-        return [{'role': 'assistant', 'tool_calls': list(ai_calls), 'content': ''}] + list(results)
+        return await tool_chest.call_tools(tool_calls, format_type="openai")

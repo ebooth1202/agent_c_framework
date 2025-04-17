@@ -16,18 +16,18 @@ logger = logging.getLogger(__name__)
 # Try to import each optional module
 try:
 
-    from agent_c_demo.gtools import *  # noqa
+    from agent_c_demo.tools import *  # noqa
     AGENT_C_DEMO_AVAILABLE = True
 except ImportError as e:
     AGENT_C_DEMO_AVAILABLE = False
-    logger.warning(f"agent_c_demo.tools module not available: {e}")
+    logger.warning(f"Agent_C Demo Tools are not installed in this configuration")
 
 
 try:
-    from agent_c_rag.gtools import *  # noqa
+    from agent_c_rag.tools import *  # noqa
     AGENT_C_RAG_AVAILABLE = True
 except ImportError as e:
-    logger.warning(f"agent_c_rag.tools module not available: {e}")
+    logger.warning(f"Agent_C RAG Tools are not installed in this configuration")
     AGENT_C_RAG_AVAILABLE = False
 
 
