@@ -1,18 +1,15 @@
 import uvicorn
 import logging
 import time
-from typing import Dict, Any
 
 from dotenv import load_dotenv
 from fastapi.logger import logger as fastapi_logger
 
 from agent_c_api.core.util.logging_utils import LoggingManager
+
 from agent_c_api.config.env_config import settings
 from agent_c_api.api import router
 from agent_c_api.core.setup import create_application
-
-# Import the profiler middleware
-from fastapi_profiler import PyInstrumentProfilerMiddleware
 
 load_dotenv(override=True)
 
@@ -27,6 +24,7 @@ _timing = {
 LoggingManager.configure_root_logger()
 
 # Configure external loggers
+# There are some loggers that we've configured to only show errors
 LoggingManager.configure_external_loggers()
 
 # Custom overrides for Logging
@@ -40,6 +38,7 @@ logging_manager = LoggingManager("agent_c_api")
 logger = logging_manager.get_logger()
 
 # Set FastAPI logger to use our configuration
+# This ensures FastAPI's own logs use our formatting
 fastapi_logger.handlers = []
 for handler in logger.handlers:
     fastapi_logger.addHandler(handler)
@@ -58,66 +57,25 @@ uvicorn_logger.propagate = False
 logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
 logging.getLogger("uvicorn.error").setLevel(logging.ERROR)
 
-# Handle optional module imports
-optional_modules = {
-    "mermaidjs": "Mermaid JS visualization",
-    "agent_c_demo.tools": "Demo tools",
-    "agent_c_voice.tools": "Voice processing tools",
-    "agent_c_rag.tools": "RAG tools"
-}
-
-available_modules = {}
-
-for module_name, description in optional_modules.items():
-    try:
-        module = __import__(module_name, fromlist=[''])
-        available_modules[module_name] = module
-        logger.debug(f"Optional module loaded: {module_name}")
-    except ImportError:
-        logger.info(f"{description} not available: No module named '{module_name}'")
-
 logger.info(f"Creating API application")
 _timing["app_creation_start"] = time.time()
 app = create_application(router=router, settings=settings)
 _timing["app_creation_end"] = time.time()
-logger.info(f"Application creation took {_timing['app_creation_end'] - _timing['app_creation_start']:.2f} seconds")
 logger.info(f"Registered {len(app.routes)} routes")
-
-# Add the PyInstrument profiler middleware if profiling is enabled
-if settings.PROFILING_ENABLED:
-    logger.info("Profiling enabled: Adding PyInstrumentProfilerMiddleware")
-    app.add_middleware(
-        PyInstrumentProfilerMiddleware,
-        server_app=app,  # Required to output the profile on server shutdown
-        profiler_output_type="html",  # Output format: "text", "html", "json", or "speedscope"
-        is_print_each_request=False,  # Set to True to print profiling info for each request
-        open_in_browser=True,  # Set to True to open the HTML report in browser when server shuts down
-        html_file_name="api_profile.html",  # Name of the output file
-    )
-
+logger.info(f"API application created in {(_timing['app_creation_end'] - _timing['app_creation_start']):.2f} seconds")
+logger.info(f"FastAPI Reload Setting is: {settings.RELOAD}.  Starting Uvicorn")
 
 def run():
     """Entrypoint for the API"""
-    global _timing
-    # Reset the start time right before starting the server
-    _timing["start_time"] = time.time()
-
-    logger.info(f"Starting API server on {settings.HOST}:{settings.PORT}")
-    logger.info(f"Starting Uvicorn with settings.RELOAD={settings.RELOAD}")
-
-    log_level = LoggingManager.LOG_LEVEL.lower() if hasattr(LoggingManager, 'LOG_LEVEL') else "info"
-
+    # If reload is enabled, we must use the import string
     if settings.RELOAD:
-        # In reload mode, we use the module import string
         uvicorn.run("agent_c_api.main:app", host=settings.HOST, port=settings.PORT,
-                    reload=True, log_level=log_level)
+                    reload=settings.RELOAD, log_level=LoggingManager.LOG_LEVEL.lower() if hasattr(LoggingManager, 'LOG_LEVEL') else "info")
     else:
-        # In non-reload mode, use the app object directly
-        config = uvicorn.Config(app, host=settings.HOST, port=settings.PORT,
-                                log_level=log_level)
-        server = uvicorn.Server(config)
-        server.run()
-
+        # Otherwise, we can use the app object directly for better debugging
+        uvicorn.run(app, host=settings.HOST, port=settings.PORT,
+                    log_level=LoggingManager.LOG_LEVEL.lower() if hasattr(LoggingManager, 'LOG_LEVEL') else "info")
+    logger.info(f"Exiting Run Loop: {time.time()}")
 
 if __name__ == "__main__":
     run()
