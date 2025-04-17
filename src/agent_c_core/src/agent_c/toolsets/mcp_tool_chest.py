@@ -32,7 +32,7 @@ class MCPToolChest(ToolChest):
             **kwargs: Arguments to pass to the ToolChest base class
         """
         super().__init__(**kwargs)
-        self.mcp_servers: Dict[str, MCPServer] = {}
+        self.mcp_servers: Dict[str, MCPServer] = kwargs.get("mcp_servers", {})
         self.logger = logging.getLogger("agent_c.mcp_tool_chest")
     
     def load_config(self, config_path: str):

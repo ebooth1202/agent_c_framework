@@ -72,50 +72,33 @@ class WebTools(Toolset):
         formatter = next((f for f in self.formatters if f.match(url)), self.default_formatter)
         return formatter.format(content, url)
 
+    # @json_schema(
+    #     'This will trigger the client to display a wab page for the user.',
+    #     {
+    #         'url': {
+    #             'type': 'string',
+    #             'description': 'The URL of the web page you would like to display for the user',
+    #             'required': True
+    #         }
+    #     }
+    # )
+    # async def open_webpage(self, **kwargs) -> str:
+    #     url: str = kwargs.get('url')
+    #     if url is None:
+    #         return 'url is required'
+    #
+    #     await self._raise_render_media(content_type="text/html", url=url)
+    #
+    #     return f"Client displaying web page: {url}"
+
+
     @json_schema(
-        'This will trigger the client to display a wab page for the user.',
-        {
-            'url': {
-                'type': 'string',
-                'description': 'The URL of the web page you would like to display for the user',
-                'required': True
-            }
-        }
-    )
-    async def open_webpage(self, **kwargs) -> str:
-        url: str = kwargs.get('url')
-        if url is None:
-            return 'url is required'
-
-        await self._raise_render_media(content_type="text/html", url=url)
-
-        return f"Client displaying web page: {url}"
-
-
-    @json_schema(
-        'This tool allows you to fetch the content of a web page and convert it to Markdown format.',
+        'This tool allows you to fetch the content of a web page in Markdown format.',
         {
             'url': {
                 'type': 'string',
                 'description': 'The URL of the web page you would like to fetch',
                 'required': True
-            },
-            'save_to_workspace': {
-                'type': 'boolean',
-                'description': 'Whether to save the markdown content to a workspace',
-                'required': False,
-                'default': False
-            },
-            'workspace_name': {
-                'type': 'string',
-                'description': 'Workspace name to use for saving the markdown file',
-                'required': False,
-                'default': 'project'
-            },
-            'file_path': {
-                'type': 'string',
-                'description': 'File path within the workspace to save the markdown file',
-                'required': False
             }
         }
     )
@@ -139,9 +122,6 @@ class WebTools(Toolset):
         url: str = kwargs.get('url')
         raw: bool = kwargs.get("raw", False)
         default_expire: int = kwargs.get("expire_secs", 3600)
-        save_to_workspace: bool = kwargs.get("save_to_workspace", False)
-        workspace_name: str = kwargs.get("workspace_name", "project")
-        file_path: str = kwargs.get("file_path", None)
 
         if url is None:
             return 'url is required'
@@ -174,59 +154,7 @@ class WebTools(Toolset):
                     self.tool_cache.set(url, response_content, expire=default_expire)
                     logging.debug(f'URL cached with default expiration: {url}')
 
-                # If save_to_workspace is true, save the content to the specified workspace
-                if save_to_workspace:
-                    try:
-                        # If file_path is not provided, generate one based on the URL
-                        if file_path is None:
-                            # Extract domain from URL and create a clean filename
-                            from urllib.parse import urlparse
-                            parsed_url = urlparse(url)
-                            domain = parsed_url.netloc.replace('.', '_')
-                            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-
-                            file_path = f"{domain}_{timestamp}.md"
-                        
-                        # Ensure file has .md extension
-                        if not file_path.endswith('.md'):
-                            file_path = f"{file_path}.md"
-                        
-                        # Get workspace toolset
-                        workspace_tool = self.tool_chest.active_tools.get("workspace")
-                        if workspace_tool is None:
-                            return json.dumps({
-                                'error': "Workspace tool not available. Cannot save markdown.",
-                                'content': response_content
-                            })
-                        
-                        # Find the workspace and save the content
-                        workspace_obj = workspace_tool.find_workspace_by_name(workspace_name)
-                        if workspace_obj is None:
-                            return json.dumps({
-                                'error': f"No workspace found with the name: {workspace_name}",
-                                'content': response_content
-                            })
-                        
-                        # Save the markdown content to the workspace
-                        result = await workspace_obj.write(file_path=file_path, mode='write', data=response_content)
-                        logging.info(f'Saved webpage content to workspace: {workspace_name} with file name: {file_path}')
-                        
-                        return json.dumps({
-                            'result': result,
-                            'message': f"Webpage content saved to {workspace_name}/{file_path}",
-                            'file_path': file_path,
-                            'workspace_name': workspace_name
-                        })
-                        
-                    except Exception as e:
-                        logging.error(f'Error saving to workspace: {str(e)}')
-                        return json.dumps({
-                            'error': f'Error saving to workspace: {str(e)}',
-                            'content': response_content,
-                            'result': result if result is not None else None
-                        })
-                else:
-                    return response_content
+                return response_content
             except httpx.HTTPStatusError as e:
                 logging.error(f'HTTP error occurred: {e}')
                 return f'HTTP error occurred: {e}'

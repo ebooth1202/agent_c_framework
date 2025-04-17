@@ -194,5 +194,5 @@ class UserPreferencesTools(Toolset):
 
         return json.dumps({'user_preferences': preferences_list})
 
-
-Toolset.register(UserPreferencesTools)
+# This is broken so disabling it.
+# Toolset.register(UserPreferencesTools)

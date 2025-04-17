@@ -15,20 +15,22 @@ class WorkspaceSection(PromptSection):
                     "## Workspace Operations Guide\n"
                     "- **UNC Paths**: Always use UNC-style paths in the format `//WORKSPACE/path/to/file` where WORKSPACE is the workspace name\n"
                     "- **Reading**: Use `read` to get file contents; assume paths exist rather than checking first\n"
-                    "- **Updating Files**: Use `replace_strings` or `replace_lines` for targeted modifications.\n"
+                    "               Use `read_lines` to read a portion of a file\n"
                     "- **Writing**: Use `write` for creating or replacing files; parent directories are created automatically\n"
-                    "- **Appending**: Use `replace_lines` tool with a `start_line` value of `-1` to append to a file\n"
-                    "- **Navigation**: Use `ls` to list directory contents and `tree` for hierarchical views\n"
+                    "- **Appending**: Use `write` with the optional `mode` parameter set to `append`\n"
+                    "- **Navigation**: Use `tree` for broader holistic views. Us `ls` to list a specific directory contents\n"
                     "- **File Management**: Use `cp` to copy and `mv` to move files or directories\n"
                     "  - Both source and destination must be in the same workspace\n"    
                     "## CRITICAL: Workspace Traceability rules:\n"
-                    "Proper use of the `replace_*` methods are essential for efficiency and tracking purposes.\n"
-                    "- Changes to existing files should be made using the `replace_*` methods. \n"
-                    "- If you *must* write and entire file use the `write` tool.\n"
-                    "## Examples Using UNC-Style Paths:\n"
-                    "- To read a file: `read(path=\"//MyWorkspace/folder/file.txt\")`\n"
-                    "- To list directory contents: `ls(path=\"//MyWorkspace/folder\")`\n"
-                    "- To write to a file: `write(path=\"//MyWorkspace/folder/file.txt\", data=\"content\", mode=\"write\")`\n")
+                    "- Prefer `inspect_code` over reading entire code files in Python, or C# code.\n" 
+                    "   - This will give you the signatures and doc strings for code files"
+                    "   - Line numbers are included for methods allowing you to target reads and updates more easily"
+                    "- You can use the line number from `inspect_code` and the `read_lines` tool to grab the source for a single method or class."
+                    "- You can use the strings you get from `read_lines` to call `replace_strings`"
+                    "- Small changes to existing files should be made using the `replace_strings` methods. If possible\n"
+                    "  - Make ALL changes to the same file at once.\n"
+                    "  - Batching saves money and time!.\n"
+                    "- If you *must* write and entire file use the `write` tool.\n")
         super().__init__(template=TEMPLATE, required=True, name="Workspaces", render_section_header=True, **data)
 
     @property_bag_item

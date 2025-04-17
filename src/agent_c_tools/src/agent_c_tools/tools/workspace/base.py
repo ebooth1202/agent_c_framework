@@ -29,7 +29,7 @@ class BaseWorkspace:
                       - 'description' (str): The description of the workspace.
                       - 'read_only' (bool): If the workspace should be read-only.
         """
-        self.name: Optional[str] = kwargs.get('name')
+        self.name: str = kwargs.get('name','').lower()
         self.description: Optional[str] = kwargs.get('description')
         self.type_name: str = type_name
         self.read_only: bool = kwargs.get('read_only', False)

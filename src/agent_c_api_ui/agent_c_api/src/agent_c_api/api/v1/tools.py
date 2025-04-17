@@ -7,7 +7,8 @@ from agent_c_api.core.agent_manager import UItoAgentBridgeManager
 
 # Always import the core tools - These must be available!
 from agent_c_tools import *  # noqa
-from agent_c_tools import WorkspaceTools, ThinkTools, XmlExplorerTools
+from agent_c_tools.tools.in_process import *
+
 
 # Conditionally import other tool modules
 logger = logging.getLogger(__name__)

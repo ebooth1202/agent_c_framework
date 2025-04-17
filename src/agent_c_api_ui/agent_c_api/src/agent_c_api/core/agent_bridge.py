@@ -22,16 +22,14 @@ from agent_c_api.core.util.logging_utils import LoggingManager
 from agent_c_tools.tools.workspace import LocalStorageWorkspace
 from agent_c_tools.tools.random_number import RandomNumberTools
 from agent_c.toolsets import ToolChest, ToolCache, Toolset
+from agent_c.toolsets.mcp_tool_chest import MCPToolChest, MCPServer
 
 from agent_c.chat import ChatSessionManager
 
-from agent_c_tools.tools.user_preferences import AssistantPersonalityPreference, AddressMeAsPreference, UserPreference
-from agent_c.prompting import PromptBuilder, CoreInstructionSection, HelpfulInfoStartSection, \
-    EndOperatingGuideLinesSection, \
-    EnvironmentInfoSection
-
-from agent_c_tools.tools.user_bio.prompt import UserBioSection
+#from agent_c_tools.tools.user_preferences import AssistantPersonalityPreference, AddressMeAsPreference, UserPreference
+from agent_c.prompting import PromptBuilder, CoreInstructionSection
 from agent_c_tools.tools.workspace.local_storage import LocalProjectWorkspace
+from agent_c_tools.tools import *
 
 
 class AgentBridge:
@@ -121,7 +119,7 @@ class AgentBridge:
         # In the future, I'll probably change this to a UUID
         # - User Preferences: A list of user preferences that the agent can use, this is a list of UserPreference objects.
         self.user_id = user_id
-        self.user_prefs: List[UserPreference] = [AddressMeAsPreference(), AssistantPersonalityPreference()]
+        # self.user_prefs: List[UserPreference] = [AddressMeAsPreference(), AssistantPersonalityPreference()]
         self.session_manager = session_manager
 
         # Agent persona management, pass in the persona name and we'll initialize the persona text now
@@ -155,7 +153,7 @@ class AgentBridge:
         self.tool_cache = ToolCache(cache_dir=self.tool_cache_dir)
 
         if essential_tools is None:
-            self.essential_tools = ['MemoryTools', 'WorkspaceTools', 'ThinkTools', 'RandomNumberTools', 'MarkdownToHtmlReportTools']
+            self.essential_tools = ['WorkspaceTools', 'ThinkTools', 'RandomNumberTools', 'MarkdownToHtmlReportTools']
         else:
             self.essential_tools = essential_tools
         self.additional_tools = additional_tools or []
@@ -384,19 +382,18 @@ class AgentBridge:
             None
         """
         operating_sections = [
-            CoreInstructionSection(template="<operating_guidelines>\n"),
-            DynamicPersonaSection(),
-            EndOperatingGuideLinesSection()
-        ]
-        operating_sections.extend(self.tool_chest.active_tool_sections)
-
-        info_sections = [
-            HelpfulInfoStartSection(),
-            EnvironmentInfoSection(session_manager=self.session_manager, voice_tools=None, agent_voice=None),
-            UserBioSection(session_manager=self.session_manager)
+            CoreInstructionSection(),
+            DynamicPersonaSection()
         ]
 
-        prompt_builder = PromptBuilder(sections=operating_sections + info_sections)
+        # info_sections = [
+        #     HelpfulInfoStartSection(),
+        #     EnvironmentInfoSection(session_manager=self.session_manager, voice_tools=None, agent_voice=None),
+        #     UserBioSection(session_manager=self.session_manager)
+        # ]
+
+        sections = operating_sections # + info_sections
+        prompt_builder = PromptBuilder(sections=sections, tool_sections=self.tool_chest.active_tool_sections)
 
         # Prepare common parameters that apply to both backends
         agent_params = {
