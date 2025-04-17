@@ -7,7 +7,8 @@ from agent_c_api.core.agent_manager import UItoAgentBridgeManager
 
 # Always import the core tools - These must be available!
 from agent_c_tools import *  # noqa
-from agent_c_tools import WorkspaceTools, ThinkTools, XmlExplorerTools
+from agent_c_tools.tools.in_process import *
+
 
 # Conditionally import other tool modules
 logger = logging.getLogger(__name__)
@@ -21,12 +22,6 @@ except ImportError as e:
     AGENT_C_DEMO_AVAILABLE = False
     logger.warning(f"Agent_C Demo Tools are not installed in this configuration")
 
-try:
-    from agent_c_voice.tools import *  # noqa
-    AGENT_C_VOICE_AVAILABLE = True
-except ImportError as e:
-    logger.warning(f"Agent_C Voice Tools are not installed in this configuration")
-    AGENT_C_VOICE_AVAILABLE = False
 
 try:
     from agent_c_rag.tools import *  # noqa

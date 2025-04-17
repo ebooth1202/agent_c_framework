@@ -39,7 +39,8 @@ class WorkspaceTools(Toolset):
     def find_workspace_by_name(self, name):
         """Find a workspace by its name."""
         try:
-            return next(workspace for workspace in self.workspaces if workspace.name == name)
+            norm_name = name.lower()
+            return next(workspace for workspace in self.workspaces if workspace.name == norm_name)
         except StopIteration:
             # Handle the case where no workspace with the given name is found
             self.logger.warning(f"No workspace found with the name: {name}")

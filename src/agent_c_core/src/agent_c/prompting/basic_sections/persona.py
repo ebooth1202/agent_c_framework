@@ -66,23 +66,7 @@ class DynamicPersonaSection(PromptSection):
         data['template'] = data.get('template', TEMPLATE)
 
         # Initialize the base PromptSection with specific attributes
-        super().__init__(name="Your Persona", render_section_header=True, **data)
-
-
-    def _get_workspace_from_context(self, ws_name: str, context: Dict[str, Any]) -> Optional[str]:
-        """
-        Retrieve the workspace name from the context if it exists.
-
-        Args:
-            ws_name (str): The name of the workspace to retrieve.
-            context (Dict[str, Any]): The context dictionary
-
-        Returns:
-            Optional[str]: The workspace name if found in the context, otherwise None.
-        """
-        if ws_name in context:
-            return context[ws_name]
-        return None
+        super().__init__(name="Agent Persona, RULES and Task Context", render_section_header=True, **data)
 
     @staticmethod
     def timestamp() -> str:

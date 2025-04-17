@@ -12,7 +12,7 @@ class PromptBuilder:
         sections (List[PromptSection]): A list of PromptSection objects that define the structure of the prompt.
     """
 
-    def __init__(self, sections: List[PromptSection]) -> None:
+    def __init__(self, sections: List[PromptSection], tool_sections: List[PromptSection]) -> None:
         """
         Initialize the PromptBuilder with a list of sections.
 
@@ -20,6 +20,7 @@ class PromptBuilder:
             sections (List[PromptSection]): A list of PromptSection objects.
         """
         self.sections: List[PromptSection] = sections
+        self.tool_sections: List[PromptSection] = tool_sections
 
     @staticmethod
     def _get_template_variables(template: str) -> Set[str]:
@@ -49,25 +50,37 @@ class PromptBuilder:
             Exception: If an unexpected error occurs during rendering.
         """
         rendered_sections: List[str] = []
-        for section in self.sections:
-            try:
-                rendered_section: str = await section.render(data)
+        section_lists = [self.sections, self.tool_sections]
+        section_list_titles= ["Core Operating Guidelines", "Additional Tool Operation Guidelines"]
 
-                if section.render_section_header:
-                    rendered_section = f"\n## {section.name}\n{rendered_section}"
+        for index, section_list in enumerate(section_lists):
+            if len(section_list) == 0:
+                continue
 
-                rendered_sections.append(rendered_section)
-            except KeyError as e:
-                missing_vars: Set[str] = self._get_template_variables(section.template)
-                logging.error(
-                    f"Missing required keys for section '{section.name}'. Required: {missing_vars}. Data provided: {data.keys()}"
-                )
-                if section.required:
-                    raise
-            except Exception as e:
-                logging.exception(f"Error rendering section '{section.name}': {e}")
-                if section.required:
-                    raise
+            rendered_sections.append(f"# {section_list_titles[index]}\n\n")
+
+            header_prefix = "#" * (index + 1)
+
+            for section in section_list:
+                try:
+                    rendered_section: str = await section.render(data)
+                    rendered_section += "\n\n"
+
+                    if section.render_section_header:
+                        rendered_section = f"{header_prefix} {section.name}\n{rendered_section}"
+
+                    rendered_sections.append(rendered_section)
+                except KeyError as e:
+                    missing_vars: Set[str] = self._get_template_variables(section.template)
+                    logging.error(
+                        f"Missing required keys for section '{section.name}'. Required: {missing_vars}. Data provided: {data.keys()}"
+                    )
+                    if section.required:
+                        raise
+                except Exception as e:
+                    logging.exception(f"Error rendering section '{section.name}': {e}")
+                    if section.required:
+                        raise
 
         result = "\n".join(rendered_sections)
         return result

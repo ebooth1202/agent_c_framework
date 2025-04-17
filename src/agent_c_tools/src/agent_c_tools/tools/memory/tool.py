@@ -125,5 +125,5 @@ class MemoryTools(Toolset):
 
         return f"Value for {key} cleared from {location} metadata"
 
-
-Toolset.register(MemoryTools)
+# This is broken so disabling it.
+#Toolset.register(MemoryTools)

@@ -55,5 +55,5 @@ class UserBioTools(Toolset):
 
         return "User records updated"
 
-
-Toolset.register(UserBioTools)
+# This is broken so disabling it.
+# Toolset.register(UserBioTools)

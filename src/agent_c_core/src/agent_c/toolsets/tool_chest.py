@@ -111,10 +111,8 @@ class ToolChest:
         Returns:
             List[PromptSection]: List of active tool sections.
         """
-        if len(self.__tool_sections) == 0:
-            return []
 
-        return [BeginToolGuideLinesSection()] + self.__tool_sections + [EndToolGuideLinesSection()]
+        return self.__tool_sections
 
     def add_tool_class(self, cls: Type[Toolset]):
         """
