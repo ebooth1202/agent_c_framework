@@ -2,6 +2,7 @@ import uvicorn
 import logging
 import time
 from typing import Dict, Any
+from pyinstrument import Profiler
 
 from dotenv import load_dotenv
 from fastapi.logger import logger as fastapi_logger
@@ -11,8 +12,11 @@ from agent_c_api.config.env_config import settings
 from agent_c_api.api import router
 from agent_c_api.core.setup import create_application
 
-# Import the profiler middleware
-from fastapi_profiler import PyInstrumentProfilerMiddleware
+# Start profiling right at the beginning
+startup_profiler = None
+if settings.PROFILING_ENABLED:
+    startup_profiler = Profiler(async_mode="enabled")
+    startup_profiler.start()
 
 load_dotenv(override=True)
 
@@ -83,17 +87,41 @@ _timing["app_creation_end"] = time.time()
 logger.info(f"Application creation took {_timing['app_creation_end'] - _timing['app_creation_start']:.2f} seconds")
 logger.info(f"Registered {len(app.routes)} routes")
 
-# Add the PyInstrument profiler middleware if profiling is enabled
-if settings.PROFILING_ENABLED:
-    logger.info("Profiling enabled: Adding PyInstrumentProfilerMiddleware")
-    app.add_middleware(
-        PyInstrumentProfilerMiddleware,
-        server_app=app,  # Required to output the profile on server shutdown
-        profiler_output_type="html",  # Output format: "text", "html", "json", or "speedscope"
-        is_print_each_request=False,  # Set to True to print profiling info for each request
-        open_in_browser=True,  # Set to True to open the HTML report in browser when server shuts down
-        html_file_name="api_profile.html",  # Name of the output file
-    )
+# Add middleware for per-request profiling
+# if settings.PROFILING_ENABLED:
+#     from fastapi_profiler import PyInstrumentProfilerMiddleware
+#
+#     logger.info("Adding request profiler middleware")
+#     app.add_middleware(
+#         PyInstrumentProfilerMiddleware,
+#         server_app=app,
+#         profiler_output_type="html",
+#         is_print_each_request=False,
+#         open_in_browser=False,
+#         html_file_name="request_profile.html",
+#     )
+
+
+# Add a startup event handler to capture when the application is fully started
+@app.middleware("http")
+async def first_request_middleware(request, call_next):
+    # This will execute on the first request
+    global startup_profiler
+    if startup_profiler and hasattr(app.state, "startup_profile_captured") is False:
+        # Stop the profiler and generate report
+        startup_profiler.stop()
+        startup_profiler.write_html("startup_profile.html")
+        logger.info("Startup profile captured and saved to startup_profile.html")
+        # Open in browser if desired
+        if settings.PROFILING_ENABLED:
+            try:
+                startup_profiler.open_in_browser()
+            except Exception as e:
+                logger.warning(f"Could not open profile in browser: {e}")
+        app.state.startup_profile_captured = True
+
+    response = await call_next(request)
+    return response
 
 
 def run():
