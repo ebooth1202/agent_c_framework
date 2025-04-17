@@ -43,6 +43,9 @@ class Settings(BaseSettings):
     # Agent settings
     CALLBACK_TIMEOUT: float = 300.0  # Timeout in seconds for stream callbacks
 
+    # Profile API App
+    PROFILING_ENABLED: bool = False
+
     # Allows you to override settings via a .env file
     model_config = SettingsConfigDict(
         env_file=str(BASE_DIR.parent.parent.parent.parent / ".env"), # Get the .env file from the root of the project
