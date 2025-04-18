@@ -221,6 +221,13 @@ const EnhancedChatEventReplay = ({
     // State for processed messages
     const [messages, setMessages] = useState([]);
 
+    // State for tool selection (similar to ChatInterface)
+    const [toolSelectionState, setToolSelectionState] = useState({
+        inProgress: false,
+        toolName: null,
+        timestamp: null
+    });
+
     // References for accumulating text - MODIFIED to track multiple assistant messages
     const assistantMessagesRef = useRef([]);
     const currentAssistantMessageRef = useRef(null);
@@ -308,6 +315,11 @@ const EnhancedChatEventReplay = ({
         previousEventTypeRef.current = null;
         toolCallGroupsRef.current = [];
         currentToolCallGroupRef.current = null;
+        setToolSelectionState({
+            inProgress: false,
+            toolName: null,
+            timestamp: null
+        });
 
         // Track which model cards we've already added
         const modelCardTracker = new Set();
@@ -428,6 +440,13 @@ const EnhancedChatEventReplay = ({
                             currentAssistantMessageRef.current.isComplete = true;
                             currentAssistantMessageRef.current = null;
                         }
+
+                        // Reset tool selection state
+                        setToolSelectionState({
+                            inProgress: false,
+                            toolName: null,
+                            timestamp: null
+                        });
 
                         // Process the tool call
                         if (event.toolCalls && event.toolCalls.length > 0) {
@@ -604,6 +623,13 @@ const EnhancedChatEventReplay = ({
 
                             // Mark the current tool call group as complete
                             currentToolCallGroupRef.current = null;
+
+                            // Reset tool selection state
+                            setToolSelectionState({
+                                inProgress: false,
+                                toolName: null,
+                                timestamp: null
+                            });
                         }
                         break;
 
@@ -624,6 +650,13 @@ const EnhancedChatEventReplay = ({
 
                         // Mark the current tool call group as complete
                         currentToolCallGroupRef.current = null;
+
+                        // Reset tool selection state
+                        setToolSelectionState({
+                            inProgress: false,
+                            toolName: null,
+                            timestamp: null
+                        });
                         break;
                     case "render_media":
                         // Add a new media message
@@ -655,53 +688,25 @@ const EnhancedChatEventReplay = ({
                             // We don't need special handling here as ReplayInterface already flattens these arrays
                         }
                         break;
-                        
+
                     case 'tool_select_delta':
-                        // Handle tool selection deltas similar to tool calls
-                        if (event.toolCalls && event.toolCalls.length > 0) {
-                            // Generate a unique group ID for these tool calls
-                            const toolCallGroupId = `tool-select-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-
-                            // Always create a new group for tool selections to distinguish from regular tool calls
-                            currentToolCallGroupRef.current = {
-                                id: toolCallGroupId,
-                                toolCalls: [],
-                                timestamp: event.timestamp,
-                                vendor: event.vendor,
-                                isToolSelection: true // Mark as selection
-                            };
-                            toolCallGroupsRef.current.push(currentToolCallGroupRef.current);
-
-                            // Process and normalize the tool selection calls
-                            const normalizedToolCalls = event.toolCalls.map(toolCall => {
-                                // Extract the tool call ID based on vendor
-                                const toolId = toolCall.id ||
-                                    (toolCall.function ? toolCall.function.name + Date.now() : null) ||
-                                    `tool-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-
-                                // Normalize arguments based on vendor format
-                                const args = toolCall.input || toolCall.arguments || toolCall.parameters || {};
-
-                                // Create a normalized tool call object
-                                return {
-                                    id: toolId,
-                                    name: toolCall.name || (toolCall.function ? toolCall.function.name : 'unknown-tool'),
-                                    arguments: typeof args === 'string' ? args : JSON.stringify(args),
-                                    type: 'tool_select',
-                                    timestamp: event.timestamp,
-                                    results: null // Will be filled in when results arrive
-                                };
-                            });
-
-                            // Add these tool calls to the current group
-                            normalizedToolCalls.forEach(normalizedToolCall => {
-                                currentToolCallGroupRef.current.toolCalls.push(normalizedToolCall);
-                            });
+                        // FIXED: Now just update UI state instead of creating a tool call group
+                        try {
+                            if (event.toolCalls && event.toolCalls.length > 0) {
+                                const toolData = event.toolCalls[0];
+                                setToolSelectionState({
+                                    inProgress: true,
+                                    toolName: toolData.name || "unknown tool",
+                                    timestamp: Date.now()
+                                });
+                            }
+                        } catch (err) {
+                            console.error("Error parsing tool selection data:", err);
                         }
                         break;
-                    
+
                     default:
-                        console.log(`Unhandled event type: ${event.type}`, event);
+                        console.warn(`Unhandled event type: ${event.type}`, event);
                 }
             } catch (error) {
                 console.error('Error processing event:', error, event);
@@ -738,6 +743,7 @@ const EnhancedChatEventReplay = ({
         });
 
         // Add each tool call group as a separate message
+        // FIXED: Only add real tool calls (not tool selections)
         toolCallGroupsRef.current.forEach(toolCallGroup => {
             if (toolCallGroup.toolCalls && toolCallGroup.toolCalls.length > 0) {
                 newMessages.push({
@@ -803,6 +809,11 @@ const EnhancedChatEventReplay = ({
         previousEventTypeRef.current = null;
         toolCallGroupsRef.current = [];
         currentToolCallGroupRef.current = null;
+        setToolSelectionState({
+            inProgress: false,
+            toolName: null,
+            timestamp: null
+        });
         onEventIndexChange(0);
     };
 
@@ -900,6 +911,14 @@ const EnhancedChatEventReplay = ({
                     }
                     return null;
                 })}
+
+                {/* Show tool selection indicator - similar to ChatInterface */}
+                {toolSelectionState.inProgress && (
+                    <div className="flex items-center gap-2 text-sm text-gray-500 italic my-1 ml-8">
+                        <div className="animate-pulse h-2 w-2 bg-purple-400 rounded-full"></div>
+                        <span>Preparing to use: {toolSelectionState.toolName?.replace(/-/g, ' ') || 'tool'}</span>
+                    </div>
+                )}
             </div>
         </div>
     );
