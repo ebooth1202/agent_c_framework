@@ -190,7 +190,7 @@ class WebTools(Toolset):
 
         response_content = await self.fetch_webpage(url=url, raw=raw, expire_secs=default_expire)
 
-        if isinstance(response_content, str) and response_content.contains('An error occurred:'):
+        if isinstance(response_content, str) and 'An error occurred:' in response_content:
             return f"An error occured fetching web page: {response_content}"
 
         try:
