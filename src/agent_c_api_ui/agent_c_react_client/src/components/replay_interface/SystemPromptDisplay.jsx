@@ -18,7 +18,7 @@ const SystemPromptDisplay = ({ content }) => {
     }
 
     // Ensure content is a string
-    const contentStr = typeof content === 'string' ? content : String(content);
+    const contentStr = typeof content === 'string' ? content.trim() : String(content).trim();
 
     // Check if content starts with what looks like an XML/HTML tag
     const startsWithXmlTag = /^\s*<[a-zA-Z_][a-zA-Z0-9_]*>/.test(contentStr);
@@ -32,8 +32,9 @@ const SystemPromptDisplay = ({ content }) => {
       setUseMarkdown(true);
       setDisplayContent(contentStr);
     }
-
-    console.log('Content processed, using markdown:', !startsWithXmlTag);
+    //
+    // console.log('System Prompt Content processed, using markdown:', !startsWithXmlTag);
+    // console.log('System Prompt Event in SystemPromptDisplay.jsx - content:', contentStr);
   }, [content]);
 
   return (
@@ -61,7 +62,7 @@ const SystemPromptDisplay = ({ content }) => {
           <div className="bg-gray-50 p-2 rounded max-h-96 overflow-auto">
             {displayContent ? (
               useMarkdown ? (
-                <MarkdownMessage message={displayContent} />
+                <MarkdownMessage content={displayContent} />
               ) : (
                 <div>
                   <div className="mb-2 text-sm text-gray-500">System prompt content:</div>
