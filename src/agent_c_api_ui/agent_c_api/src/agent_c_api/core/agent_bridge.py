@@ -349,6 +349,18 @@ class AgentBridge:
             print(f"Error initializing tools: {e}")
         return
 
+    async def _sys_prompt_builder(self) -> PromptBuilder:
+        operating_sections = [
+            CoreInstructionSection(),
+            ThinkSection(),
+            DynamicPersonaSection()
+        ]
+
+        sections = operating_sections  # + info_sections
+        prompt_builder = PromptBuilder(sections=sections, tool_sections=self.tool_chest.active_tool_sections)
+
+        return prompt_builder
+
     async def initialize_agent_parameters(self):
         """
         Initialize the internal agent with prompt builders, tools, and configurations.
@@ -380,20 +392,8 @@ class AgentBridge:
         Returns:
             None
         """
-        operating_sections = [
-            CoreInstructionSection(),
-            ThinkSection(),
-            DynamicPersonaSection()
-        ]
 
-        # info_sections = [
-        #     HelpfulInfoStartSection(),
-        #     EnvironmentInfoSection(session_manager=self.session_manager, voice_tools=None, agent_voice=None),
-        #     UserBioSection(session_manager=self.session_manager)
-        # ]
-
-        sections = operating_sections # + info_sections
-        prompt_builder = PromptBuilder(sections=sections, tool_sections=self.tool_chest.active_tool_sections)
+        prompt_builder = await self._sys_prompt_builder()
 
         # Prepare common parameters that apply to both backends
         agent_params = {
