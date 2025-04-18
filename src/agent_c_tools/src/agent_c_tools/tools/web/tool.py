@@ -178,7 +178,7 @@ class WebTools(Toolset):
         url: str = kwargs.get('url')
         raw: bool = kwargs.get("raw", False)
         default_expire: int = kwargs.get("expire_secs", 3600)
-        return_to_llm: bool = kwargs.get("save_to_workspace", False)
+        return_to_llm: bool = kwargs.get("save_to_workspace", True)
         workspace_name: str = kwargs.get("workspace_name", "project")
         file_path: str = kwargs.get("file_path", None)
 
