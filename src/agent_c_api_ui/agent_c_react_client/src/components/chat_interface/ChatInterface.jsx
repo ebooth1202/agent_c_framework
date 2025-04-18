@@ -811,7 +811,7 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                         toolSelectionState.inProgress && (
                             <div className="flex items-center gap-2 text-sm text-gray-500 italic my-1 ml-8">
                                 <div className="animate-pulse h-2 w-2 bg-purple-400 rounded-full"></div>
-                                <span>Using: {toolSelectionState.toolName.replace(/-/g, ' ')}</span>
+                                <span>Preparing to use: {toolSelectionState.toolName.replace(/-/g, ' ')}</span>
                             </div>
                         )
                     }
