@@ -23,7 +23,7 @@ from agent_c_tools.tools.workspace import LocalStorageWorkspace
 from agent_c_tools.tools.random_number import RandomNumberTools
 from agent_c.toolsets import ToolChest, ToolCache, Toolset
 from agent_c.toolsets.mcp_tool_chest import MCPToolChest, MCPServer
-
+from agent_c_tools.tools.think.prompt import ThinkSection
 from agent_c.chat import ChatSessionManager
 
 #from agent_c_tools.tools.user_preferences import AssistantPersonalityPreference, AddressMeAsPreference, UserPreference
@@ -382,6 +382,7 @@ class AgentBridge:
         """
         operating_sections = [
             CoreInstructionSection(),
+            ThinkSection(),
             DynamicPersonaSection()
         ]
 
