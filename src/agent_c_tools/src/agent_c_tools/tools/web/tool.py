@@ -4,7 +4,7 @@ import json
 import logging
 import datetime
 
-from typing import List, Optional
+from typing import List, Optional, Dict
 from urllib.parse import urlparse
 
 from selenium import webdriver
@@ -13,6 +13,7 @@ from selenium.webdriver.chrome.options import Options
 from agent_c import json_schema, Toolset
 from agent_c_tools.tools.web.formatters import *
 from agent_c_tools.tools.web.util.expires_header import expires_header_to_cache_seconds
+
 
 class WebTools(Toolset):
     """
@@ -26,10 +27,10 @@ class WebTools(Toolset):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs, name='web', required_tools=['workspace'], use_prefix=False)
-        self.default_formatter: ContentFormatter = kwargs.get('wt_default_formatter', ReadableFormatter(re.compile(r".*")))
+        self.default_formatter: ContentFormatter = kwargs.get('wt_default_formatter',
+                                                              ReadableFormatter(re.compile(r".*")))
         self.formatters: List[ContentFormatter] = kwargs.get('wt_formatters', [])
         self.driver = self.__init__wd()
-
 
     def __init__wd(self):
         try:
@@ -72,28 +73,8 @@ class WebTools(Toolset):
         formatter = next((f for f in self.formatters if f.match(url)), self.default_formatter)
         return formatter.format(content, url)
 
-    # @json_schema(
-    #     'This will trigger the client to display a wab page for the user.',
-    #     {
-    #         'url': {
-    #             'type': 'string',
-    #             'description': 'The URL of the web page you would like to display for the user',
-    #             'required': True
-    #         }
-    #     }
-    # )
-    # async def open_webpage(self, **kwargs) -> str:
-    #     url: str = kwargs.get('url')
-    #     if url is None:
-    #         return 'url is required'
-    #
-    #     await self._raise_render_media(content_type="text/html", url=url)
-    #
-    #     return f"Client displaying web page: {url}"
-
-
     @json_schema(
-        'This tool allows you to fetch the content of a web page in Markdown format.',
+        'Fetch the content of a web page and return it to the LLM in Markdown format. Do not save it to the workspace.',
         {
             'url': {
                 'type': 'string',
@@ -132,7 +113,8 @@ class WebTools(Toolset):
 
         async with httpx.AsyncClient() as client:
             try:
-                headers = {"User-Agent": "Mozilla/5.0 (iPad; CPU OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"}
+                headers = {
+                    "User-Agent": "Mozilla/5.0 (iPad; CPU OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"}
                 response = await client.get(url, headers=headers)
                 if response.status_code == 403 and self.driver is not None:
                     self.driver.get(url)
@@ -156,14 +138,115 @@ class WebTools(Toolset):
 
                 return response_content
             except httpx.HTTPStatusError as e:
-                logging.error(f'HTTP error occurred: {e}')
+                logging.error(f'An error occurred: - HTTP error: {e}')
                 return f'HTTP error occurred: {e}'
             except httpx.RequestError as e:
-                logging.error(f'Request error occurred: {e}')
+                logging.error(f'An error occurred - Request error: {e}')
                 return f'Request error occurred: {e}'
             except Exception as e:
-                logging.error(f'An error occurred: {e}')
+                logging.error(f'An error occurred - General error: {e}')
                 return f'An error occurred: {e}'
+
+    @json_schema(
+        'Fetch and save webpage. Fetch the content of a web page, save it to a workspace and optionally return it to the LLM in Markdown format.',
+        {
+            'url': {
+                'type': 'string',
+                'description': 'The URL of the web page you would like to fetch',
+                'required': True
+            },
+            'return_to_llm': {
+                'type': 'boolean',
+                'description': 'Whether return the browser page content to the LLM',
+                'required': False,
+                'default': True
+            },
+            'workspace_name': {
+                'type': 'string',
+                'description': 'Workspace name to use for saving the markdown file',
+                'required': True,
+                'default': 'project'
+            },
+            'file_path': {
+                'type': 'string',
+                'description': 'File path within the workspace to save the markdown file',
+                'required': False
+            }
+        }
+    )
+    async def fetch_and_save(self, **kwargs):
+        url: str = kwargs.get('url')
+        raw: bool = kwargs.get("raw", False)
+        default_expire: int = kwargs.get("expire_secs", 3600)
+        return_to_llm: bool = kwargs.get("save_to_workspace", True)
+        workspace_name: str = kwargs.get("workspace_name", "project")
+        file_path: str = kwargs.get("file_path", None)
+
+        if url is None:
+            return 'url is required'
+
+        if workspace_name is None:
+            return 'workspace_name is required'
+
+        response_content = await self.fetch_webpage(url=url, raw=raw, expire_secs=default_expire)
+
+        if isinstance(response_content, str) and response_content.contains('An error occurred:'):
+            return f"An error occured fetching web page: {response_content}"
+
+        try:
+            # If file_path is not provided, generate one based on the URL
+            if file_path is None:
+                # Extract domain from URL and create a clean filename
+                from urllib.parse import urlparse
+                parsed_url = urlparse(url)
+                domain = parsed_url.netloc.replace('.', '_')
+                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+
+                file_path = f"{domain}_{timestamp}.md"
+
+            # Ensure file has .md extension
+            if not file_path.endswith('.md'):
+                file_path = f"{file_path}.md"
+
+            # Get workspace toolset
+            workspace_tool = self.tool_chest.active_tools.get("workspace")
+            if workspace_tool is None:
+                return json.dumps({
+                    'error': "Workspace tool not available. Cannot save markdown.",
+                    'content': response_content
+                })
+
+            # Find the workspace and save the content
+            workspace_obj = workspace_tool.find_workspace_by_name(workspace_name)
+            if workspace_obj is None:
+                return json.dumps({
+                    'error': f"No workspace found with the name: {workspace_name}",
+                    'content': response_content
+                })
+
+            # Save the markdown content to the workspace
+            result = await workspace_obj.write(file_path=file_path, mode='write', data=response_content)
+            logging.info(f'Saved webpage content to workspace: {workspace_name} with file name: {file_path}')
+
+            return_dict: Dict[str, str] = {
+                'save_result': result,
+                'message': f"Webpage content saved to {workspace_name}/{file_path}",
+                'file_path': file_path,
+                'workspace_name': workspace_name
+            }
+
+            if return_to_llm:
+                return_dict['content'] = response_content
+
+            return json.dumps(return_dict)
+
+        except Exception as e:
+            logging.error(f'Error saving to workspace: {str(e)}')
+            return json.dumps({
+                'error': f'Error saving to workspace: {str(e)}',
+                'content': response_content,
+                'result': result if result is not None else None
+            })
 
 
 Toolset.register(WebTools)
