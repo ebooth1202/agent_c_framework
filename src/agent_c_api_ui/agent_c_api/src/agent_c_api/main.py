@@ -64,6 +64,7 @@ _timing["app_creation_end"] = time.time()
 logger.info(f"Registered {len(app.routes)} routes")
 logger.info(f"API application created in {(_timing['app_creation_end'] - _timing['app_creation_start']):.2f} seconds")
 logger.info(f"FastAPI Reload Setting is: {settings.RELOAD}.  Starting Uvicorn")
+logger.info(f"Starting Agent_C API server on {settings.HOST}:{settings.PORT}")
 
 def run():
     """Entrypoint for the API"""
