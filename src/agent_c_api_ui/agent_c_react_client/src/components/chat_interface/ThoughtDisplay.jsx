@@ -68,7 +68,7 @@ const ThoughtDisplay = ({content, vendor}) => {
     }, [content]);
 
     return (
-        <Card className="bg-yellow-50 border-yellow-100 shadow-sm overflow-hidden mb-3 relative">
+        <Card className="bg-yellow-50 border-yellow-100 shadow-sm overflow-hidden mb-3 relative max-w-[80%] ml-8">
             <div className="px-4 py-3 flex items-center justify-between cursor-pointer"
                  onClick={() => setIsExpanded(!isExpanded)}>
                 <div className="flex items-center gap-2">

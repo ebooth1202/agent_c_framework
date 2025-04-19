@@ -75,7 +75,7 @@ const ToolCallItem = ({ tool, results }) => {
                   size="xs"
                 />
               </div>
-              <pre className="text-sm font-mono bg-blue-50 p-2 rounded-md whitespace-pre-wrap overflow-x-auto">
+              <pre className="text-sm font-mono bg-blue-50 p-2 rounded-md whitespace-pre-wrap overflow-x-auto max-w-full">
                 {formattedArguments}
               </pre>
             </div>
@@ -93,7 +93,7 @@ const ToolCallItem = ({ tool, results }) => {
                   size="xs"
                 />
               </div>
-              <pre className="text-sm font-mono bg-blue-50 p-2 rounded-md whitespace-pre-wrap overflow-x-auto">
+              <pre className="text-sm font-mono bg-blue-50 p-2 rounded-md whitespace-pre-wrap overflow-x-auto max-w-full">
                 {formattedResults}
               </pre>
             </div>

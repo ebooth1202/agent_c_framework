@@ -56,7 +56,7 @@ const StatusBar = ({
     const statusInfo = getStatusInfo();
 
     return (
-        <div className="flex items-center justify-between py-2 px-3 bg-background/95 backdrop-blur-sm rounded-lg shadow-sm border text-sm">
+        <div className="flex items-center justify-between py-2 px-3 bg-background/95 backdrop-blur-sm rounded-lg shadow-sm text-sm">
             <div className="flex items-center space-x-6">
                 <div className="flex items-center space-x-2">
                     <TooltipProvider>

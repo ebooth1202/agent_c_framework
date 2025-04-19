@@ -692,9 +692,9 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                     className="border-gray-300"
                 />
             </div>
-            <ScrollArea className="flex-1 px-4 py-3">
+            <ScrollArea className="flex-1 px-4 py-3" type="auto">
 
-                <div className="space-y-4">
+                <div className="space-y-4 w-full overflow-x-hidden">
                     {messages.map((msg, idx) => {
                         // === USER MESSAGES ===
                         if (msg.role === "user") {

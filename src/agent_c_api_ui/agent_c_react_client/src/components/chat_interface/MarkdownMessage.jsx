@@ -7,11 +7,20 @@ import CopyButton from './CopyButton';
 const MarkdownMessage = ({content}) => {
     // Memoize the markdown content to prevent unnecessary re-renders
     const memoizedContent = useMemo(() => {
-
         if (content === undefined || content === null) {
             return '';
         }
-        // Ensure proper spacing around headers
+        
+        // For thought display, we want minimal processing to avoid excessive newlines
+        const isThoughtContent = content.includes('Thinking Process') || 
+                               document.querySelector('.bg-yellow-50.border-yellow-100') !== null;
+        
+        if (isThoughtContent) {
+            // Minimal processing for thought content
+            return typeof content === 'string' ? content : String(content);
+        }
+        
+        // For regular markdown messages, ensure proper spacing around headers
         let processedContent = content.replace(/\n(#{1,6})\s*([^\n]+)/g, '\n\n$1 $2\n');
 
         // Ensure proper list formatting
@@ -20,7 +29,7 @@ const MarkdownMessage = ({content}) => {
         // Add extra newline before lists
         processedContent = processedContent.replace(/\n[-*]/g, '\n\n*');
 
-        return typeof processedContent === 'string' ? content : String(content);
+        return typeof processedContent === 'string' ? processedContent : String(processedContent);
     }, [content]);
 
     return (
