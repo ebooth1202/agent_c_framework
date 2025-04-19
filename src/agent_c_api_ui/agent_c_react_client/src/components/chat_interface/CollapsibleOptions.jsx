@@ -55,10 +55,10 @@ const CollapsibleOptions = ({
                                 isInitialized
                             }) => {
     return (
-        <Card className="w-full mb-4 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border dark:border-gray-700 shadow-lg">
+        <Card className="w-full mb-2 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border dark:border-gray-700 shadow-sm">
             <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-                <div className="p-4 flex items-center justify-between">
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Options Panel</h2>
+                <div className="py-2 px-3 flex items-center justify-between">
+                    <h2 className="text-base font-medium text-gray-900 dark:text-gray-100">Options Panel</h2>
                     <CollapsibleTrigger asChild>
                         <Button variant="ghost" size="sm" className="w-9 p-0">
                             {isOpen ? <ChevronUp className="h-4 w-4"/> : <ChevronDown className="h-4 w-4"/>}

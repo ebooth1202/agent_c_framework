@@ -139,12 +139,12 @@ function PersonaSelector({
                         >
                             <SelectValue placeholder="Select a persona"/>
                         </SelectTrigger>
-                        <SelectContent className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border dark:border-gray-700 shadow-lg rounded-xl">
+                        <SelectContent className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border dark:border-gray-700 shadow-lg rounded-xl text-gray-900 dark:text-gray-100">
                             {personas.map((p) => (
                                 <SelectItem
                                     key={p.name}
                                     value={p.name}
-                                    className="hover:bg-blue-50/80 dark:hover:bg-blue-800/50 focus:bg-blue-50 dark:focus:bg-blue-800/50 transition-colors rounded-lg mx-1 my-0.5"
+                                    className="hover:bg-blue-50/80 dark:hover:bg-blue-800/50 focus:bg-blue-50 dark:focus:bg-blue-800/50 transition-colors rounded-lg mx-1 my-0.5 text-gray-900 dark:text-gray-100"
                                 >
                                     {p.name}
                                 </SelectItem>
@@ -185,7 +185,7 @@ function PersonaSelector({
                             >
                                 <SelectValue placeholder="Select model"/>
                             </SelectTrigger>
-                            <SelectContent className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border dark:border-gray-700 shadow-lg rounded-xl">
+                            <SelectContent className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border dark:border-gray-700 shadow-lg rounded-xl text-gray-900 dark:text-gray-100">
                                 {Object.entries(modelConfigs.reduce((acc, model) => {
                                     if (!acc[model.backend]) acc[model.backend] = [];
                                     acc[model.backend].push(model);
@@ -195,7 +195,7 @@ function PersonaSelector({
                                         <SelectItem
                                             value={`header-${vendor}`}
                                             disabled
-                                            className="opacity-50 pointer-events-none px-2 py-1.5 text-sm font-semibold text-muted-foreground"
+                                            className="opacity-50 pointer-events-none px-2 py-1.5 text-sm font-semibold text-gray-500 dark:text-gray-400"
                                         >
                                             {vendor.toUpperCase()}
                                         </SelectItem>
@@ -205,14 +205,14 @@ function PersonaSelector({
                                                     <TooltipTrigger asChild>
                                                         <SelectItem
                                                             value={model.id}
-                                                            className="hover:bg-blue-50/80 dark:hover:bg-blue-800/50 focus:bg-blue-50 dark:focus:bg-blue-800/50 transition-colors rounded-lg mx-1 my-0.5 pl-4"
+                                                            className="hover:bg-blue-50/80 dark:hover:bg-blue-800/50 focus:bg-blue-50 dark:focus:bg-blue-800/50 transition-colors rounded-lg mx-1 my-0.5 pl-4 text-gray-900 dark:text-gray-100"
                                                         >
                                                             {model.label}
                                                         </SelectItem>
                                                     </TooltipTrigger>
-                                                    <TooltipContent>
+                                                    <TooltipContent className="text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800">
                                                         <p>{model.description}</p>
-                                                        <p className="text-xs text-muted-foreground mt-1">
+                                                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                                                             Type: {model.model_type}
                                                         </p>
                                                     </TooltipContent>

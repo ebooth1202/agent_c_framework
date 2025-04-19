@@ -44,7 +44,7 @@ const ChatPage = () => {
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
       <div className="flex flex-col space-y-4 mb-4">
         {error && (
           <Alert variant="destructive" className="mb-4">
@@ -61,42 +61,34 @@ const ChatPage = () => {
             </AlertDescription>
           </Alert>
         )}
-        {isReady && (
-          <StatusBar
-            isReady={isReady}
-            activeTools={activeTools}
-            onSessionsDeleted={handleSessionsDeleted}
-            sessionId={sessionId}
-            settingsVersion={settingsVersion}
-            isProcessing={isStreaming}
-          />
-        )}
       </div>
 
       {sessionId && isInitialized && (
-        <div className="flex-1 flex flex-col min-h-0">
-          <CollapsibleOptions
-            isOpen={isOptionsOpen}
-            setIsOpen={setIsOptionsOpen}
-            persona={persona}
-            personas={personas}
-            availableTools={availableTools}
-            customPrompt={customPrompt}
-            temperature={temperature}
-            modelName={modelName}
-            modelConfigs={modelConfigs}
-            sessionId={sessionId}
-            isReady={isReady}
-            onEquipTools={handleEquipTools}
-            activeTools={activeTools}
-            modelParameters={modelParameters}
-            selectedModel={selectedModel}
-            onUpdateSettings={updateAgentSettings}
-            isInitialized={isInitialized}
-            onProcessingStatus={handleProcessingStatus}
-          />
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <div className="flex-shrink-0">
+            <CollapsibleOptions
+              isOpen={isOptionsOpen}
+              setIsOpen={setIsOptionsOpen}
+              persona={persona}
+              personas={personas}
+              availableTools={availableTools}
+              customPrompt={customPrompt}
+              temperature={temperature}
+              modelName={modelName}
+              modelConfigs={modelConfigs}
+              sessionId={sessionId}
+              isReady={isReady}
+              onEquipTools={handleEquipTools}
+              activeTools={activeTools}
+              modelParameters={modelParameters}
+              selectedModel={selectedModel}
+              onUpdateSettings={updateAgentSettings}
+              isInitialized={isInitialized}
+              onProcessingStatus={handleProcessingStatus}
+            />
+          </div>
 
-          <div className="flex-1 min-h-0">
+          <div className="flex-1 overflow-hidden flex flex-col">
             <ChatInterface
               sessionId={sessionId}
               customPrompt={customPrompt}
@@ -105,6 +97,17 @@ const ChatPage = () => {
               selectedModel={selectedModel}
               onProcessingStatus={handleProcessingStatus}
             />
+            {isReady && (
+              <div className="mt-2">
+                <StatusBar
+                  isReady={isReady}
+                  activeTools={activeTools}
+                  sessionId={sessionId}
+                  settingsVersion={settingsVersion}
+                  isProcessing={isStreaming}
+                />
+              </div>
+            )}
           </div>
         </div>
       )}

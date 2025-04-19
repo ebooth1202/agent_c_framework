@@ -1,53 +1,24 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import AgentConfigHoverCard from './AgentConfigHoverCard';
-import { Trash2, Activity, Wrench, Info } from 'lucide-react';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { Activity, Wrench, Info } from 'lucide-react';
 import {
     Tooltip,
     TooltipContent,
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {API_URL} from "@/config/config";
+
 
 const StatusBar = ({
     isReady,
     activeTools = [],
-    onSessionsDeleted,
     isInitializing = false,
     isProcessing = false,
     sessionId,
     settingsVersion
 }) => {
-    const handleDeleteSessions = async () => {
-        try {
-            const response = await fetch(`${API_URL}/sessions`, {
-                method: 'DELETE',
-            });
 
-            if (!response.ok) {
-                throw new Error('Failed to delete sessions');
-            }
-
-            const data = await response.json();
-            if (onSessionsDeleted) {
-                onSessionsDeleted();
-            }
-        } catch (error) {
-            console.error('Error deleting sessions:', error);
-        }
-    };
 
     const getStatusInfo = () => {
         if (isProcessing) {
@@ -85,7 +56,7 @@ const StatusBar = ({
     const statusInfo = getStatusInfo();
 
     return (
-        <div className="flex items-center justify-between p-4 bg-background/95 backdrop-blur-sm rounded-lg shadow-sm border">
+        <div className="flex items-center justify-between py-2 px-3 bg-background/95 backdrop-blur-sm rounded-lg shadow-sm border text-sm">
             <div className="flex items-center space-x-6">
                 <div className="flex items-center space-x-2">
                     <TooltipProvider>
@@ -135,38 +106,6 @@ const StatusBar = ({
                     </div>
                 )}
             </div>
-
-            {isReady && (
-                <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                        <Button
-                            variant="destructive"
-                            size="sm"
-                            className="flex items-center space-x-2 bg-red-500 hover:bg-red-600 rounded-full"
-                        >
-                            <Trash2 className="w-4 h-4" />
-                            <span>Delete All Sessions</span>
-                        </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="bg-background">
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                This action will delete all active chat sessions and cannot be undone.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel className="border border-input rounded-full">Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                                onClick={handleDeleteSessions}
-                                className="bg-red-500 hover:bg-red-600 text-white rounded-full"
-                            >
-                                Delete
-                            </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-            )}
         </div>
     );
 };

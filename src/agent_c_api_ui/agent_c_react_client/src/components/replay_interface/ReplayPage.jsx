@@ -12,8 +12,20 @@ import {
   SkipBack,
   RefreshCw,
   ChevronLeft,
-  FastForward
+  FastForward,
+  Trash2
 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import EnhancedChatEventReplay from './EnhancedChatEventReplay';
 
 const ReplayPage = () => {
@@ -667,6 +679,25 @@ const ReplayPage = () => {
     navigate('/interactions');
   };
 
+  const handleDeleteSessions = async () => {
+    try {
+      const response = await fetch(`${API_URL}/sessions`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete sessions');
+      }
+
+      const data = await response.json();
+      // Navigate back to the interactions page after deletion
+      navigate('/interactions');
+    } catch (error) {
+      console.error('Error deleting sessions:', error);
+      setError('Failed to delete sessions: ' + error.message);
+    }
+  };
+
   if (loading) return (
     <div className="flex items-center justify-center h-screen">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -723,47 +754,81 @@ const ReplayPage = () => {
       )}
       {/* Dedicated Show All Section */}
       <Card className="p-4 mb-4 border-2 border-blue-200 bg-blue-50">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold">Advanced Replay Options</h3>
-            <p className="text-sm text-gray-600 mt-1">
-              {showingAll 
-                ? "All events have been loaded. You can navigate through the entire session." 
-                : "Want to see the entire conversation at once? Use the Show All button to load all events instantly."}
-            </p>
+        <div className="flex flex-col space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold">Advanced Replay Options</h3>
+              <p className="text-sm text-gray-600 mt-1">
+                {showingAll 
+                  ? "All events have been loaded. You can navigate through the entire session." 
+                  : "Want to see the entire conversation at once? Use the Show All button to load all events instantly."}
+              </p>
+            </div>
+            
+            {showingAll ? (
+              <Button
+                variant="outline"
+                onClick={handleResetToStreaming}
+                aria-label="Reset to streaming mode"
+                className="whitespace-nowrap"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Reset to Stream Mode
+              </Button>
+            ) : (
+              <Button
+                variant="default"
+                onClick={fetchAllEvents}
+                disabled={isLoadingAll}
+                aria-label="Show all events"
+                className="bg-blue-500 hover:bg-blue-600 text-white whitespace-nowrap"
+              >
+                {isLoadingAll ? (
+                  <span className="flex items-center gap-2">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                    Loading All Events...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <FastForward className="h-4 w-4" />
+                    Show All Events
+                  </span>
+                )}
+              </Button>
+            )}
           </div>
           
-          {showingAll ? (
-            <Button
-              variant="outline"
-              onClick={handleResetToStreaming}
-              aria-label="Reset to streaming mode"
-              className="whitespace-nowrap"
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Reset to Stream Mode
-            </Button>
-          ) : (
-            <Button
-              variant="default"
-              onClick={fetchAllEvents}
-              disabled={isLoadingAll}
-              aria-label="Show all events"
-              className="bg-blue-500 hover:bg-blue-600 text-white whitespace-nowrap"
-            >
-              {isLoadingAll ? (
-                <span className="flex items-center gap-2">
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                  Loading All Events...
-                </span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  <FastForward className="h-4 w-4" />
-                  Show All Events
-                </span>
-              )}
-            </Button>
-          )}
+          <div className="flex justify-end border-t pt-3">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="flex items-center space-x-1 bg-red-500/90 hover:bg-red-600"
+                >
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  <span>Delete All Sessions</span>
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="bg-background">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action will delete all active chat sessions and cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel className="border border-input rounded-md">Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDeleteSessions}
+                    className="bg-red-500 hover:bg-red-600 text-white rounded-md"
+                  >
+                    Delete All Sessions
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
       </Card>
 
