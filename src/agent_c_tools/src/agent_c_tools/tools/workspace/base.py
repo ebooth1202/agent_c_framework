@@ -33,7 +33,7 @@ class BaseWorkspace:
         self.description: Optional[str] = kwargs.get('description')
         self.type_name: str = type_name
         self.read_only: bool = kwargs.get('read_only', False)
-        self.write_status: str = "read only" if self.read_only else "read write"
+        self.write_status: str = "RO" if self.read_only else "R/W"
         self.max_filename_length: int = -1
 
     def __str__(self) -> str:
