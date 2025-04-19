@@ -22,7 +22,7 @@ const Layout = ({children}) => {
             </header>
             <main className="container mx-auto px-6 py-4 max-w-7xl text-gray-900 dark:text-gray-100">{children}</main>
             <footer className="container mx-auto px-6 py-4 max-w-7xl text-center text-gray-600 dark:text-gray-400">
-                &copy; {new Date().getFullYear()} Agent C
+                &copy; {new Date().getFullYear()}
             </footer>
         </div>
     );

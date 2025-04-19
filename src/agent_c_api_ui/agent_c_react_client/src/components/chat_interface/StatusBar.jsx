@@ -85,7 +85,7 @@ const StatusBar = ({
     const statusInfo = getStatusInfo();
 
     return (
-        <div className="flex items-center justify-between p-4 bg-white/95 backdrop-blur-sm rounded-lg shadow-sm border">
+        <div className="flex items-center justify-between p-4 bg-background/95 backdrop-blur-sm rounded-lg shadow-sm border">
             <div className="flex items-center space-x-6">
                 <div className="flex items-center space-x-2">
                     <TooltipProvider>
@@ -117,18 +117,18 @@ const StatusBar = ({
                 </div>
 
                 {isReady && activeTools && activeTools.length > 0 && (
-                    <div className="flex items-center space-x-2 px-4 py-1.5 bg-blue-50 rounded-full border border-blue-100">
-                        <Wrench className="w-4 h-4 text-blue-500" />
-                        <span className="text-sm text-blue-700">
+                    <div className="flex items-center space-x-2 px-4 py-1.5 bg-blue-50/10 rounded-full border border-blue-200/20 dark:bg-blue-950/20 dark:border-blue-800/30">
+                        <Wrench className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+                        <span className="text-sm text-blue-700 dark:text-blue-300">
                             Active Tools: {activeTools.length}
                         </span>
                         <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <Info className="w-4 h-4 text-blue-400 cursor-help" />
+                                    <Info className="w-4 h-4 text-blue-400 dark:text-blue-300 cursor-help" />
                                 </TooltipTrigger>
-                                <TooltipContent className="bg-white border shadow-md">
-                                    <p className="max-w-xs text-gray-700">{activeTools.join(', ')}</p>
+                                <TooltipContent className="bg-background border shadow-md">
+                                    <p className="max-w-xs text-muted-foreground">{activeTools.join(', ')}</p>
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
@@ -148,7 +148,7 @@ const StatusBar = ({
                             <span>Delete All Sessions</span>
                         </Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent className="bg-white">
+                    <AlertDialogContent className="bg-background">
                         <AlertDialogHeader>
                             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                             <AlertDialogDescription>
@@ -156,7 +156,7 @@ const StatusBar = ({
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                            <AlertDialogCancel className="border-gray-200 rounded-full">Cancel</AlertDialogCancel>
+                            <AlertDialogCancel className="border border-input rounded-full">Cancel</AlertDialogCancel>
                             <AlertDialogAction
                                 onClick={handleDeleteSessions}
                                 className="bg-red-500 hover:bg-red-600 text-white rounded-full"
