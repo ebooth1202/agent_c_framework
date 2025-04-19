@@ -1,15 +1,14 @@
-from typing import Any
+from typing import Any, Optional
 
 from agent_c.prompting.prompt_section import PromptSection, property_bag_item
 
 
 class WorkspaceSection(PromptSection):
-    workspaces: str
+    tool: Any  # Reference to the workspace tool
 
     def __init__(self, **data: Any):
         TEMPLATE = ("The workspace tools provide you a way to work with files in one or more workspaces.\n"
-                    "Available workspaces are listed below with their name, read/write status, type, and description.\n"
-                    "Always use this list when referencing workspaces in your operations:\n\n"
+                    "Available workspaces are listed below\n"
                     "### Available Workspace List \n"
                     "${workspace_list}\n\n"
                     "## Workspace Operations Guide\n"
@@ -21,6 +20,7 @@ class WorkspaceSection(PromptSection):
                     "- **Navigation**: Use `tree` for broader holistic views. Us `ls` to list a specific directory contents\n"
                     "- **File Management**: Use `cp` to copy and `mv` to move files or directories\n"
                     "  - Both source and destination must be in the same workspace\n"    
+                    "- Workspace text files are UTF-8 encoded\n"
                     "## CRITICAL: Workspace Traceability rules:\n"
                     "- Prefer `inspect_code` over reading entire code files in Python, or C# code.\n" 
                     "   - This will give you the signatures and doc strings for code files"
@@ -35,4 +35,18 @@ class WorkspaceSection(PromptSection):
 
     @property_bag_item
     async def workspace_list(self):
-        return self.workspaces
+        """Generate a compact table-like representation of available workspaces."""
+        if not hasattr(self, 'tool') or not self.tool:
+            return "No workspaces available"
+        
+        # Create a compact table-like format for workspaces
+        workspaces = self.tool.workspaces
+        
+        if not workspaces:
+            return "No workspaces available"
+            
+        lines = []
+        for space in workspaces:
+            lines.append(f"- `{space.name}` ({space.write_status}) - {space.description}")
+            
+        return "\n".join(lines)

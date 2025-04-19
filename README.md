@@ -38,6 +38,9 @@ For detailed information about the Web UI and its features, see the [Web UI Docu
 #### Prerequisites
 
 **EXPAND THE ONE FOR YOUR OS AND READ**
+Notice: ALL platforms MUST use Python 3.12.x NOT 3.13 not 3.10
+
+If you are NOT a Python developer who is used to working with Python virtual environments you are STRONGLY urged to use PyCharm as an IDE until you've gotten more comfortable with Python. Almost every single developer that has had issues getting started was using VSCode. The only exceptions have been those using PyCharm, but having the wrong version of Python. 
 
 <details>
 <summary><b>Windows Prerequisites</b> (click to expand)</summary>

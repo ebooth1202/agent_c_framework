@@ -1,7 +1,7 @@
 import json
 import logging
 import re
-from typing import Any, List, Tuple, Optional
+from typing import Any, List, Tuple, Optional, Dict
 from ts_tool import api
 
 from agent_c.toolsets.tool_set import Toolset
@@ -33,8 +33,7 @@ class WorkspaceTools(Toolset):
         self._create_section()
 
     def _create_section(self):
-        spaces: str = "\n".join([str(space) for space in self.workspaces])
-        self.section = WorkspaceSection(workspaces=spaces)
+        self.section = WorkspaceSection(tool=self)
 
     def find_workspace_by_name(self, name):
         """Find a workspace by its name."""
@@ -481,9 +480,7 @@ class WorkspaceTools(Toolset):
 
             # Check if end_line is beyond the file length
             if end_line >= len(lines):
-                return json.dumps({
-                    'error': f'End line {end_line} exceeds file length {len(lines)}'
-                })
+                end_line = len(lines) - 1
 
             # Extract the requested subset of lines
             subset_lines = lines[start_line:end_line + 1]
@@ -547,5 +544,106 @@ class WorkspaceTools(Toolset):
             return json.dumps({'error': error_msg})
 
         return context
+
+    @json_schema(
+        'Find strings in a file using exact match or regex pattern',
+        {
+            'path': {
+                'type': 'string',
+                'description': 'UNC-style path (//WORKSPACE/path) to the file to search in',
+                'required': True
+            },
+            'search_string': {
+                'type': 'string',
+                'description': 'The string or pattern to search for',
+                'required': True
+            },
+            'use_regex': {
+                'type': 'boolean',
+                'description': 'Whether to treat the search string as a regex pattern. False the the default',
+                'required': False
+            },
+            'max_results': {
+                'type': 'integer',
+                'description': 'Maximum number of results to return (0 for all matches) 0 is the default',
+                'required': False
+            }
+        }
+    )
+    async def find_strings(self, **kwargs: Any) -> str:
+        """Finds strings in a file using exact match or regex pattern.
+
+        Args:
+            path (str): UNC-style path (//WORKSPACE/path) to the file to search in
+            search_string (str): The string or pattern to search for
+            use_regex (bool, optional): Whether to treat the search string as a regex pattern
+            max_results (int, optional): Maximum number of results to return (0 for all matches)
+
+        Returns:
+            str: Multi-line string with line numbers and matching lines or an error message.
+        """
+        unc_path = kwargs.get('path', '')
+        search_string = kwargs.get('search_string', '')
+        use_regex = kwargs.get('use_regex', False)
+        max_results = kwargs.get('max_results', 0)
+
+        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
+        if error:
+            return json.dumps({'error': error})
+
+        try:
+            if not search_string:
+                return json.dumps({'error': 'Search string cannot be empty'})
+
+            file_content_response = await workspace.read(relative_path)
+
+            # Parse the response to get the actual content
+            try:
+                file_content_json = json.loads(file_content_response)
+                if 'error' in file_content_json:
+                    return file_content_response  # Return the error from read operation
+                file_content = file_content_json.get('contents', '')
+            except json.JSONDecodeError:
+                file_content = file_content_response
+
+            # Split the content into lines
+            lines = file_content.splitlines()
+            matches = []
+
+            # Compile the regex pattern if using regex
+            pattern = None
+            if use_regex:
+                try:
+                    pattern = re.compile(search_string)
+                except re.error as e:
+                    return json.dumps({'error': f'Invalid regex pattern: {str(e)}'})
+
+            # Search for matches in each line
+            for i, line in enumerate(lines):
+                if use_regex:
+                    if pattern.search(line):
+                        matches.append(f"{i}: {line}")
+                else:
+                    if search_string in line:
+                        matches.append(f"{i}: {line}")
+
+                # Check if we've reached the maximum number of results
+                if max_results > 0 and len(matches) >= max_results:
+                    break
+
+            if not matches:
+                return json.dumps({
+                    'message': f'No matches found for "{search_string}" in {unc_path}',
+                    'matches': []
+                })
+
+            # Join the matches into a multi-line string
+            result = '\n'.join(matches)
+            return result
+
+        except Exception as e:
+            error_msg = f'Error finding strings: {str(e)}'
+            self.logger.error(error_msg)
+            return json.dumps({'error': error_msg})
 
 Toolset.register(WorkspaceTools)

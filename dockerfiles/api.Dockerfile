@@ -16,6 +16,7 @@ COPY src/agent_c_tools ./src/agent_c_tools
 COPY src/agent_c_api_ui/agent_c_api ./src/agent_c_api_ui/agent_c_api
 COPY compose_workspaces.json /app/.local_workspaces.json
 COPY .agentcignore /app/.agentcignore
+COPY docs /app/docs
 
 # Copy in the personas - right now we mount in docker-compose
 COPY personas /app/personas

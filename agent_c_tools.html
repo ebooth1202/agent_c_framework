@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Viewer</title>
+    <!-- Highlight.js for syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <!-- Load additional languages -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/csharp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/java.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/typescript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/json.min.js"></script>
+    
+    <!-- Marked.js for markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@4.0.0/marked.min.js"></script>
+    
+    <!-- Mermaid for diagrams -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    
+    <style>
+        :root {
+            --primary-color: #0366d6;
+            --sidebar-width: 300px;
+            --sidebar-min-width: 100px;
+            --sidebar-max-width: 600px;
+            --sidebar-bg: #f6f8fa;
+            --border-color: #e1e4e8;
+            --code-bg: #f6f8fa;
+            --text-color: #24292e;
+            --heading-color: #24292e;
+            --link-color: #0366d6;
+            --folder-icon-color: #79b8ff;
+            --file-icon-color: #959da5;
+            --toggle-btn-color: #586069;
+            --toggle-btn-hover-color: #24292e;
+            --resize-handle-width: 8px;
+            --fullscreen-bg: rgba(0, 0, 0, 0.8);
+            --z-index-fullscreen: 1000;
+            --z-index-drag-handle: 10;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        #sidebar {
+            width: var(--sidebar-width);
+            min-width: var(--sidebar-min-width);
+            max-width: var(--sidebar-max-width);
+            height: 100%;
+            overflow-y: auto;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            padding: 20px 0;
+            box-sizing: border-box;
+            transition: transform 0.3s ease;
+            position: relative;
+            flex-shrink: 0;
+        }
+        
+        #sidebar-resize-handle {
+            position: absolute;
+            top: 0;
+            right: -5px;
+            width: var(--resize-handle-width);
+            height: 100%;
+            cursor: col-resize;
+            z-index: var(--z-index-drag-handle);
+        }
+        
+        #content {
+            flex-grow: 1;
+            height: 100%;
+            overflow-y: auto;
+            padding: 20px 40px;
+            box-sizing: border-box;
+        }
+        
+        #sidebar-toggle {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background-color: var(--sidebar-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            padding: 5px 8px;
+            cursor: pointer;
+            color: var(--toggle-btn-color);
+            font-weight: bold;
+            font-size: 14px;
+            z-index: 5;
+            transition: color 0.3s ease;
+        }
+        
+        #sidebar-toggle:hover {
+            color: var(--toggle-btn-hover-color);
+        }
+        
+        .tree-view {
+            list-style-type: none;
+            padding-left: 15px;
+            margin: 0;
+        }
+        
+        .tree-view li {
+            margin: 5px 0;
+            position: relative;
+        }
+        
+        .folder {
+            cursor: pointer;
+            user-select: none;
+            padding: 5px 8px;
+            border-radius: 3px;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+        }
+        
+        .folder:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+        
+        .folder:before {
+            content: '📁';
+            margin-right: 8px;
+            color: var(--folder-icon-color);
+        }
+
+        .folder.open:before {
+            content: '📂';
+        }
+
+        .file {
+            padding: 5px 8px;
+            cursor: pointer;
+            user-select: none;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+        }
+
+        .file:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        .file:before {
+            content: '📄';
+            margin-right: 8px;
+            color: var(--file-icon-color);
+        }
+        
+        .file.active {
+            background-color: rgba(3, 102, 214, 0.1);
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        /* Markdown content styling */
+        #markdown-content h1 {
+            padding-bottom: 0.3em;
+            font-size: 2em;
+            border-bottom: 1px solid var(--border-color);
+            margin-top: 24px;
+            margin-bottom: 16px;
+            font-weight: 600;
+            line-height: 1.25;
+            color: var(--heading-color);
+        }
+        
+        #markdown-content h2 {
+            padding-bottom: 0.3em;
+            font-size: 1.5em;
+            border-bottom: 1px solid var(--border-color);
+            margin-top: 24px;
+            margin-bottom: 16px;
+            font-weight: 600;
+            line-height: 1.25;
+            color: var(--heading-color);
+        }
+        
+        #markdown-content h3 {
+            font-size: 1.25em;
+            margin-top: 24px;
+            margin-bottom: 16px;
+            font-weight: 600;
+            line-height: 1.25;
+            color: var(--heading-color);
+        }
+        
+        #markdown-content a {
+            color: var(--link-color);
+            text-decoration: none;
+        }
+        
+        #markdown-content a:hover {
+            text-decoration: underline;
+        }
+        
+        #markdown-content code {
+            font-family: SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+            padding: 0.2em 0.4em;
+            margin: 0;
+            font-size: 85%;
+            background-color: var(--code-bg);
+            border-radius: 3px;
+        }
+        
+        #markdown-content pre {
+            background-color: var(--code-bg);
+            border-radius: 6px;
+            padding: 16px;
+            overflow: auto;
+            margin-top: 0;
+            margin-bottom: 16px;
+        }
+        
+        #markdown-content pre code {
+            padding: 0;
+            margin: 0;
+            background-color: transparent;
+            font-size: 85%;
+            line-height: 1.5;
+            display: block;
+            overflow-x: auto;
+        }
+        
+        #markdown-content blockquote {
+            padding: 0 1em;
+            color: #6a737d;
+            border-left: 0.25em solid #dfe2e5;
+            margin: 0 0 16px 0;
+        }
+        
+        #markdown-content table {
+            display: block;
+            width: 100%;
+            overflow: auto;
+            border-spacing: 0;
+            border-collapse: collapse;
+            margin-top: 0;
+            margin-bottom: 16px;
+        }
+        
+        #markdown-content table tr {
+            background-color: #fff;
+            border-top: 1px solid #c6cbd1;
+        }
+        
+        #markdown-content table tr:nth-child(2n) {
+            background-color: #f6f8fa;
+        }
+        
+        #markdown-content table th, #markdown-content table td {
+            padding: 6px 13px;
+            border: 1px solid #dfe2e5;
+        }
+        
+        #markdown-content table th {
+            font-weight: 600;
+        }
+        
+        /* Method signature specific styling */
+        #markdown-content pre code.hljs {
+            padding: 16px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', 'Andale Mono', 'Ubuntu Mono', monospace;
+        }
+        
+        /* C# specific styles */
+        #markdown-content .hljs-keyword {
+            color: #0000ff;
+            font-weight: bold;
+        }
+        
+        #markdown-content .hljs-type,
+        #markdown-content .hljs-class {
+            color: #267f99;
+        }
+        
+        #markdown-content .hljs-string {
+            color: #a31515;
+        }
+        
+        #markdown-content .hljs-function {
+            color: #795e26;
+        }
+        
+        /* Method documentation styling */
+        #markdown-content .method-description {
+            margin-bottom: 24px;
+            padding-left: 16px;
+            border-left: 4px solid #e1e4e8;
+        }
+        
+        /* Full screen overlay for images and diagrams */
+        .fullscreen-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--fullscreen-bg);
+            z-index: var(--z-index-fullscreen);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        
+        .fullscreen-content {
+            max-width: 95%;
+            max-height: 90%;
+            overflow: auto;
+            background-color: white;
+            padding: 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .fullscreen-content img {
+            max-width: 100%;
+            max-height: 85vh;
+            object-fit: contain;
+        }
+        
+        .fullscreen-content .mermaid {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        
+        .fullscreen-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-size: 30px;
+            cursor: pointer;
+            background: rgba(0, 0, 0, 0.5);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            line-height: 1;
+        }
+        
+        .fullscreen-trigger {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: rgba(0, 0, 0, 0.2);
+            color: white;
+            padding: 5px;
+            border-radius: 3px;
+            cursor: pointer;
+            display: none;
+            font-size: 16px;
+            z-index: 10;
+        }
+        
+        #markdown-content .mermaid-wrapper {
+            position: relative;
+            margin-bottom: 16px;
+        }
+        
+        #markdown-content .mermaid-wrapper:hover .fullscreen-trigger,
+        #markdown-content p:has(img):hover .fullscreen-trigger {
+            display: block;
+        }
+        
+        #markdown-content p:has(img) {
+            position: relative;
+            display: inline-block;
+        }
+        
+        /* Responsive layout */
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+            
+            #sidebar {
+                width: 100% !important; /* Override any inline styles */
+                height: auto;
+                max-height: 30vh;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+            
+            #sidebar-resize-handle {
+                display: none;
+            }
+            
+            #content {
+                height: auto;
+                max-height: 70vh;
+            }
+            
+            .fullscreen-content {
+                max-width: 100%;
+                max-height: 80vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+		<button id="sidebar-toggle" title="Toggle Sidebar">.</button> <!--Hide button, disabling for now-->
+        <div id="sidebar-resize-handle" title="Drag to resize"></div>
+        <h3 style="margin: 0 16px 16px 16px;">Agent C Tool Documentation</h3>
+		<div><svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
+  <!-- Orange concentric arcs (target/bullseye) -->
+  <path d="M250 150 A100 100 0 0 0 150 250 A100 100 0 0 0 250 350" stroke="#FF6A00" stroke-width="30" fill="none" />
+  <path d="M250 180 A70 70 0 0 0 180 250 A70 70 0 0 0 250 320" stroke="#FF6A00" stroke-width="20" fill="none" />
+  
+  <!-- Purple center circle -->
+  <circle cx="250" cy="250" r="40" fill="#4B0082" />
+  
+  <!-- Connecting lines and nodes -->
+  <line x1="290" y1="250" x2="350" y2="250" stroke="#4B0082" stroke-width="10" />
+  <circle cx="350" cy="250" r="15" fill="#4B0082" />
+  
+  <line x1="277" y1="213" x2="327" y2="163" stroke="#4B0082" stroke-width="10" />
+  <circle cx="327" cy="163" r="15" fill="#4B0082" />
+  
+  <line x1="277" y1="287" x2="327" y2="337" stroke="#4B0082" stroke-width="10" />
+  <circle cx="327" cy="337" r="15" fill="#4B0082" />
+  
+  <line x1="250" y1="290" x2="250" y2="350" stroke="#4B0082" stroke-width="10" />
+  <circle cx="250" cy="350" r="15" fill="#4B0082" />
+  
+  <!-- Text: "AGENT C" -->
+  <text x="250" y="420" font-family="Arial, sans-serif" font-weight="bold" font-size="60" fill="#4B0082" text-anchor="middle">AGENT C</text>
+  
+  <!-- Text: "CENTRIC CONSULTING" -->
+  <text x="250" y="460" font-family="Arial, sans-serif" font-weight="bold" font-size="24" fill="#4B0082" text-anchor="middle">CENTRIC CONSULTING</text>
+</svg></div>
+        <ul id="tree-view" class="tree-view"></ul>
+    </div>
+    <div id="content">
+        <div id="markdown-content"></div>
+    </div>
+    
+    <script>
+        // File structure will be injected here by the generator script
+        const fileStructure = [{"name": "README.md", "type": "file", "path": "README.md", "content": "# Agent C Tools Documentation\n\n## Overview\nThis directory contains documentation for the various tools available in the Agent C framework. These tools provide agents with capabilities to interact with external systems, process data, and perform specialized tasks.\n\n## Available Tools\n\n### Information Retrieval\n- [Web Search](javascript:void(openMarkdownFile(\"README_WEB_SEARCH.md\"))): Access multiple search engines and information sources\n- [Web Browser](javascript:void(openMarkdownFile(\"README_WEB.md\"))): Fetch and process web page content\n- [RSS Feed](javascript:void(openMarkdownFile(\"README_RSS.md\"))): Access pre-configured RSS feeds for news and updates\n- [Weather](javascript:void(openMarkdownFile(\"README_WEATHER.md\"))): Retrieve current weather conditions and forecasts for specified locations\n- [XML Explorer](javascript:void(openMarkdownFile(\"README_XML_EXPLORER.md\"))): Parse, query, and extract data from XML documents\n\n### Memory and Data Management\n- [Memory](javascript:void(openMarkdownFile(\"README_MEMORY.md\"))): Store and retrieve persistent data across conversations\n- [Workspace](javascript:void(openMarkdownFile(\"README_WORKSPACE.md\"))): Read, write, and manipulate files in various storage locations\n\n### Data Visualization and Presentation\n- [Mermaid Chart](javascript:void(openMarkdownFile(\"README_MERMAID_CHART.md\"))): Create and render diagrams using Mermaid.js syntax\n- [Markdown to HTML Report](javascript:void(openMarkdownFile(\"README_MARKDOWN_TO_HTML_REPORT.md\"))): Create interactive HTML viewers from markdown files\n\n### Utilities\n- [Think](javascript:void(openMarkdownFile(\"README_THINK.md\"))): Provide a dedicated space for agent reasoning and reflection\n- [Random Number](javascript:void(openMarkdownFile(\"README_RANDOM_NUMBER.md\"))): Generate random numbers for various applications\n\n### Business Integration\n- [Dynamics CRM](javascript:void(openMarkdownFile(\"README_DYNAMICS.md\"))): Interact with Microsoft Dynamics 365 CRM systems\n\n### Content Generation\n- [DALL-E](javascript:void(openMarkdownFile(\"README_DALL_E.md\"))): Generate images from text descriptions using OpenAI's DALL-E model\n\n## Tool Configuration\n\nMany tools require specific configuration, such as API keys or environment variables. Each tool's documentation includes a \"Configuration Requirements\" section detailing these needs.\n\nCommon configuration requirements include:\n\n1. API keys for external services (OpenAI, Google, etc.)\n2. Environment variables set in your `.env` file\n3. Workspace paths for file storage\n\n## Adding Tools to Agents\n\nTo equip an agent with tools:\n\n1. Reference the specific tools needed in your agent's persona\n2. Ensure the agent verifies it has access to these tools\n3. Include proper error handling for cases where tools are unavailable\n\nExample agent tool verification:\n\n```\nFirst, I should check that I have the tools I need:\n- workspace tool for file operations\n- web_search for research\n- memory for maintaining context\n\nIf any of these tools are missing, I will inform the user that I cannot proceed without them.\n```\n\n## Security Considerations\n\nWhen using tools, be mindful of:\n\n- Data privacy: Only store necessary information in memory tools\n- API usage: Many tools consume API credits that may have associated costs\n- File system access: Workspace operations should be limited to appropriate directories\n\n## Extending the Toolset\n\nAgent C supports custom tool development. If you're interested in creating new tools, refer to the developer documentation for details on the Toolset interface and implementation patterns."}, {"name": "README_DALL_E.md", "type": "file", "path": "README_DALL_E.md", "content": "# DALL-E Image Generation Tool\n\n## What This Tool Does\n\nThe DALL-E Image Generation Tool enables agents to create custom images based on your text descriptions. This powerful capability transforms your ideas and concepts into visual content without requiring any artistic skills or external design tools.\n\n## Key Capabilities\n\nAgents equipped with this tool can create a wide variety of images based on your descriptions:\n\n- **Custom Illustrations**: Generate unique artwork for presentations, documents, or creative projects\n- **Conceptual Visualizations**: Bring abstract ideas to life with visual representations\n- **Scene Creation**: Produce images of specific scenarios or environments\n- **Product Visualization**: Create mock-ups or concept art for product ideas\n- **Custom Photography**: Generate photo-realistic images in different styles and settings\n\n## Practical Use Cases\n\n- **Content Creation**: Generate custom images for blog posts, social media, or presentations\n- **Brainstorming**: Visualize concepts during creative or planning sessions\n- **Marketing Materials**: Create custom visuals for campaigns or promotional content\n- **Storyboarding**: Generate scenes to plan video or animation sequences\n- **Educational Content**: Illustrate complex concepts for teaching materials\n\n## Example Interactions\n\n### Basic Image Creation\n\n**User**: \"Create an image of a cozy cabin in the woods surrounded by pine trees with smoke coming from the chimney.\"\n\n**Agent**: *Generates and displays a detailed image of a cabin in a forest setting, with visible smoke rising from its chimney.*\n\n### Stylistic Customization\n\n**User**: \"I need a professional-looking portrait of a female CEO in a modern office, but make it look natural, not too artificial.\"\n\n**Agent**: *Creates a natural-style portrait image in portrait orientation, explaining that it used the natural style and tall ratio for best results.*\n\n### Conceptual Visualization\n\n**User**: \"Generate an image showing the concept of 'digital transformation' for my presentation.\"\n\n**Agent**: *Produces a conceptual image that visualizes digital transformation, perhaps showing traditional objects morphing into digital versions, with explanations of the visual metaphors used.*\n\n## Configuration Requirements\n\nThis tool requires an OpenAI API key with DALL-E-3 access. Your administrator or IT department should ensure this is properly configured for your agent.\n\n## Important Considerations\n\n### Image Quality Options\n\n- **Standard Quality**: Good for most everyday purposes\n- **HD Quality**: Higher detail level, ideal for professional use or when fine details matter\n\n### Image Formats\n\nYou can request different aspect ratios to suit your needs:\n- **Square**: Equal height and width (default)\n- **Wide**: Landscape orientation, good for scenes or desktop wallpapers\n- **Tall**: Portrait orientation, ideal for phone wallpapers or profile pictures\n\n### Style Options\n\n- **Vivid**: Creates hyper-real, dramatic images with bold colors and contrast (default)\n- **Natural**: Produces more realistic, less stylized images\n\n### Tips for Best Results\n\n- Provide detailed descriptions including subject, setting, lighting, and mood\n- Specify the purpose of the image to help the agent choose appropriate settings\n- Mention specific artistic styles if you want the image to have a particular look\n- Consider requesting multiple variations if you're not sure exactly what you want\n\n### Limitations\n\n- The tool cannot generate images containing explicit content, violence, or specific public figures\n- Very complex scenes with many specific elements might not render exactly as described\n- Generated images do not include readable text (text may appear distorted)\n- Each image generation uses API credits from your organization's account"}, {"name": "README_DYNAMICS.md", "type": "file", "path": "README_DYNAMICS.md", "content": "# Dynamics CRM Tool\n\n## What This Tool Does\n\nThe Dynamics CRM Tool connects agents to your Microsoft Dynamics 365 customer relationship management system. This integration allows you to access, search, and update your customer data without leaving the conversation, making it easy to get the information you need when you need it.\n\n## Key Capabilities\n\nAgents equipped with this tool can help you work with your CRM data in various ways:\n\n- **Customer Lookup**: Quickly find accounts, contacts, and leads by name or other criteria\n- **Opportunity Tracking**: Access details about sales opportunities, their status, and next steps\n- **Task Management**: Create and review tasks related to customer interactions\n- **Meeting Scheduling**: Add appointments directly to the CRM for proper tracking\n- **Note Creation**: Record important information as annotations on customer records\n- **Call Logging**: Document phone conversations with customers or prospects\n- **Data Analysis**: Export and summarize CRM data for reporting purposes\n\n## Practical Use Cases\n\n- **Sales Preparation**: Get up-to-date customer information before meetings or calls\n- **Account Management**: Review recent activities and notes for key accounts\n- **Lead Qualification**: Check details on new leads and their potential value\n- **Meeting Follow-up**: Record notes and create follow-up tasks after customer interactions\n- **Pipeline Review**: Analyze your sales pipeline by reviewing opportunity status\n- **Customer Service**: Access customer history when addressing support inquiries\n\n## Example Interactions\n\n### Customer Information Lookup\n\n**User**: \"Can you find information about Acme Corporation in our CRM?\"\n\n**Agent**: *Searches the CRM and provides key account details including contacts, recent activities, and current opportunities.*\n\n### Meeting Documentation\n\n**User**: \"I just finished a call with John Smith from Contoso. Can you add notes to their account that they're interested in our premium service tier and create a follow-up task for next week?\"\n\n**Agent**: *Creates an annotation with the meeting notes attached to the Contoso account and adds a follow-up task assigned to the user scheduled for next week.*\n\n### Sales Pipeline Analysis\n\n**User**: \"Show me all open opportunities worth over $50,000 that are expected to close this quarter.\"\n\n**Agent**: *Queries the CRM for matching opportunities and presents a summary of high-value deals closing soon, with details on each opportunity's status.*\n\n## Configuration Requirements\n\nYour administrator needs to configure this tool with your organization's Dynamics 365 credentials and endpoint information. Once properly set up, the tool handles authentication automatically.\n\n## Important Considerations\n\n### Data Access\n\nThe agent can only access information that your Dynamics 365 user account has permission to view. The tool inherits all security settings and restrictions from your CRM environment.\n\n### Search Tips\n\nFor best results when searching:\n- Provide specific names or identifiers when possible\n- Mention what type of record you're looking for (account, contact, opportunity)\n- Include additional details to narrow down results for common names\n\n### Creating Records\n\nWhen creating new CRM entries (like notes, tasks, or appointments):\n- Specify which customer or opportunity the record relates to\n- Include relevant details like dates, descriptions, and priorities\n- Mention any specific fields that should be completed\n\n### Large Data Requests\n\nWhen requesting large amounts of data (like \"all accounts\"), the agent will typically save the results as an Excel file rather than displaying everything in the chat. You'll receive a link to this file.\n\n### Privacy and Security\n\n- All CRM interactions follow your organization's data policies\n- CRM data remains within your organizational boundaries\n- The agent uses secure authentication methods to access your CRM"}, {"name": "README_MARKDOWN_TO_HTML_REPORT.md", "type": "file", "path": "README_MARKDOWN_TO_HTML_REPORT.md", "content": "# Markdown to HTML Report Tool\n\n## What This Tool Does\n\nThe Markdown to HTML Report Tool transforms collections of markdown files into professional, interactive web pages that you can easily navigate and share. This capability allows you to convert simple text documents into polished, organized documentation that's accessible through any web browser.\n\n## Key Capabilities\n\nAgents equipped with this tool can help you create interactive documentation from markdown files:\n\n- **Documentation Portals**: Convert multiple related documents into a single navigable website\n- **Knowledge Collections**: Organize research or reference materials into a structured format\n- **Project Documentation**: Transform project notes and documentation into professional reports\n- **Training Materials**: Create easy-to-navigate learning resources from markdown content\n- **Client Deliverables**: Package analysis results or findings into a polished, shareable format\n\n## Practical Use Cases\n\n- **Technical Documentation**: Convert development docs into a reference portal with navigation\n- **Research Summaries**: Organize research findings into an interconnected knowledge base\n- **Client Reports**: Transform analysis notes into professional deliverables\n- **Team Wikis**: Build internal knowledge bases from collections of markdown files\n- **Product Documentation**: Create user guides from markdown documentation files\n\n## Example Interactions\n\n### Creating Documentation from Project Files\n\n**User**: \"Can you generate an HTML report from all the markdown files in our project's documentation folder?\"\n\n**Agent**: *Creates an interactive HTML viewer containing all documentation files, preserving their structure and links between documents, then provides a link to access the report.*\n\n### Creating a Research Knowledge Base\n\n**User**: \"I have a collection of research notes in markdown format in my 'research' folder. Can you create a navigable HTML report from them called 'Research Findings' but exclude my 'draft.md' and 'personal_notes.md' files?\"\n\n**Agent**: *Generates a custom HTML report with the specified title, excluding the mentioned files, and provides access instructions.*\n\n### Packaging Client Deliverables\n\n**User**: \"I need to send our client a report based on the analysis markdown files we've created. Can you package them as a professional-looking HTML page?\"\n\n**Agent**: *Converts the analysis files into a polished HTML report with proper navigation and structure, then explains how the client can access and use the report.*\n\n## Configuration Requirements\n\nNo special configuration is required to use this tool. The agent will need access to the workspace containing your markdown files.\n\n## Important Considerations\n\n### File Organization\n\nThe HTML report will preserve your folder structure, so organizing your markdown files in a logical hierarchy will result in a better navigation experience in the final report.\n\n### Customization Options\n\nWhen requesting a report, you can specify:\n- A custom title for the report\n- Specific files to exclude from the report\n- The location where you want the HTML file saved\n\n### Features of Generated Reports\n\nThe HTML reports include several helpful features:\n- A sidebar showing the complete file structure\n- Dark/light mode toggle for comfortable reading\n- Preservation of links between documents\n- Mobile-responsive design for viewing on any device\n- Collapsible navigation sections for easier browsing\n\n### Sharing Reports\n\nThe generated HTML file is self-contained and can be shared with others by:\n- Emailing the HTML file\n- Uploading to a shared drive or website\n- Presenting directly from your device in meetings"}, {"name": "README_MEMORY.md", "type": "file", "path": "README_MEMORY.md", "content": "# Memory Tool\n\n## What This Tool Does\n\nThe Memory Tool enables agents to remember information about you and your preferences across conversations. This capability allows for more personalized, context-aware interactions where the agent builds understanding of your needs over time without requiring you to repeat information.\n\n## Key Capabilities\n\nAgents equipped with this tool can enhance your experience through:\n\n- **Personalization**: Remember your preferences, style choices, and past requests\n- **Conversation Continuity**: Maintain context across multiple interactions\n- **Progress Tracking**: Remember where you left off in multi-step processes\n- **Preference Learning**: Gradually build understanding of your communication style\n- **Context Awareness**: Recall important details without requiring repetition\n\n## Practical Use Cases\n\n- **Project Management**: Track progress across multiple sessions without starting over\n- **Learning Support**: Remember your skill level and topics you've already covered\n- **Personalized Assistance**: Tailor recommendations based on your established preferences\n- **Custom Work Settings**: Maintain awareness of your tools, environment, and workflows\n- **Relationship Building**: Create more natural interactions through consistent memory\n\n## Example Interactions\n\n### Name and Preference Memory\n\n**User**: \"Please call me Alex, and I prefer concise responses with bullet points.\"\n\n**Agent**: *Acknowledges the preference and stores this information for future interactions. In subsequent conversations, the agent addresses you as Alex and formats responses with bullet points without being reminded.*\n\n### Project Continuity\n\n**User**: *Returns after a previous session working on a marketing strategy* \"Let's continue where we left off.\"\n\n**Agent**: *Recalls the specific project details, progress made so far, and outstanding items without requiring a recap, allowing seamless continuation of work.*\n\n### Learning Progress\n\n**User**: *In a new conversation* \"Can we continue my Python tutorial?\"\n\n**Agent**: *Remembers which concepts have been covered, your skill level, and particular areas of interest or difficulty, picking up the learning path appropriately.*\n\n## Configuration Requirements\n\nNo special configuration is required. The memory capability works automatically behind the scenes.\n\n## Important Considerations\n\n### Types of Memory\n\nThe tool uses two types of memory to support different needs:\n\n- **Session Memory**: Information remembered only during the current conversation\n- **User Memory**: Information remembered across all your conversations with the agent\n\n### Privacy and Control\n\n- You can ask the agent to forget specific preferences by directly requesting it\n- You can request information about what the agent remembers about you\n- Memory is specific to you and your interactions with the agent\n\n### Memory Limitations\n\n- The agent primarily remembers information you explicitly share or preferences you state\n- Very detailed or highly specific information might need occasional reminders\n- The agent will prioritize remembering information that's most relevant to providing better assistance\n\n### Best Practices\n\n- Explicitly state important preferences you want the agent to remember\n- When starting a new project, clearly indicate if it should be kept separate from previous work\n- For complex processes, periodically ask the agent to summarize what it remembers about your current status"}, {"name": "README_MERMAID_CHART.md", "type": "file", "path": "README_MERMAID_CHART.md", "content": "# Mermaid Chart Tool\n\n## What This Tool Does\n\nThe Mermaid Chart Tool allows agents to create professional diagrams and visualizations during your conversation. This capability transforms text descriptions into clear visual representations of processes, relationships, systems, and data, making complex information easier to understand and share.\n\n## Key Capabilities\n\nAgents equipped with this tool can create a variety of diagrams to help visualize concepts:\n\n- **Flow Charts**: Show process steps and decision points\n- **Sequence Diagrams**: Illustrate interactions between different systems or people\n- **Gantt Charts**: Visualize project timelines and schedules\n- **Entity Relationship Diagrams**: Display database structures and relationships\n- **Class Diagrams**: Represent software architecture and components\n- **State Diagrams**: Show different states and transitions in a system\n- **Pie Charts**: Present proportional data visually\n- **User Journey Maps**: Map out user experience flows\n\n## Practical Use Cases\n\n- **Process Documentation**: Visualize workflows, approval processes, or procedures\n- **Project Planning**: Create visual timelines or decision trees\n- **System Architecture**: Illustrate how different components interact\n- **Data Relationships**: Show connections between different data elements\n- **Decision Making**: Map out options and consequences visually\n- **Presentation Materials**: Generate professional diagrams for reports or slides\n\n## Example Interactions\n\n### Basic Process Visualization\n\n**User**: \"Can you create a flowchart showing the steps in an employee onboarding process?\"\n\n**Agent**: *Creates and displays a flowchart showing the sequence of steps from job offer acceptance through training and team integration, with decision points for necessary approvals.*\n\n### System Interaction Diagram\n\n**User**: \"I need a diagram showing how our web application communicates with our database and payment processor.\"\n\n**Agent**: *Generates a sequence diagram illustrating the data flow between the user interface, application server, database, and payment service, showing the order of operations.*\n\n### Project Timeline Visualization\n\n**User**: \"Create a Gantt chart for my product launch with research, development, testing, and marketing phases.\"\n\n**Agent**: *Produces a Gantt chart showing the timeline of project phases with appropriate duration and dependencies between tasks.*\n\n## Configuration Requirements\n\nNo special configuration is required to use this tool. Diagrams are created and displayed directly in your conversation.\n\n## Important Considerations\n\n### Diagram Complexity\n\nFor best results:\n- Start with a clear description of what you want to visualize\n- For complex diagrams, build them incrementally with feedback at each stage\n- Specify the type of diagram that would work best (or ask the agent for recommendations)\n\n### Customization Options\n\nYou can request specific elements in your diagrams:\n- Custom labels and descriptions\n- Specific color schemes or styling\n- Different layouts or orientations\n- Additional detail or simplification as needed\n\n### Saving and Sharing\n\nDiagrams appear directly in your conversation and can be:\n- Copied as images for use in other applications\n- Saved to your device (depending on your interface)\n- Recreated later by referencing previous conversations\n\n### Making Modifications\n\nIf you need changes to a diagram:\n- Describe the specific elements you want added, removed, or modified\n- The agent can generate a new version with your requested changes\n- For major revisions, consider starting with a simpler version and adding complexity"}, {"name": "README_RANDOM_NUMBER.md", "type": "file", "path": "README_RANDOM_NUMBER.md", "content": "# Random Number Generator Tool\n\n## What This Tool Does\n\nThe Random Number Generator Tool allows agents to create truly random numbers during your conversation. This capability brings an element of chance and unpredictability when needed for decision-making, games, simulations, or any situation where an unbiased random selection is valuable.\n\n## Key Capabilities\n\nAgents equipped with this tool can help with randomized scenarios:\n\n- **Number Generation**: Create random numbers within any specified range\n- **Fair Selection**: Make unbiased random choices from options\n- **Decision Support**: Introduce randomness into decision processes\n- **Game Elements**: Add chance-based outcomes to interactive games\n- **Statistical Sampling**: Generate random values for simulations or models\n\n## Practical Use Cases\n\n- **Decision Making**: Randomly select from equally valid options when you're undecided\n- **Games and Activities**: Generate random numbers for games, contests, or raffles\n- **Learning Tools**: Create random practice problems or quiz questions\n- **Creative Inspiration**: Get random prompts or starting points for creative work\n- **Simulations**: Add realistic variability to hypothetical scenarios\n\n## Example Interactions\n\n### Simple Random Selection\n\n**User**: \"I can't decide which of these five restaurants to try tonight. Can you randomly pick one for me?\"\n\n**Agent**: *Generates a random number between 1 and 5, then uses that to select one of the restaurants.*\n\n### Game Support\n\n**User**: \"I'm playing a board game and need to roll a six-sided die.\"\n\n**Agent**: *Generates and displays a random number between 1 and 6, simulating a die roll.*\n\n### Decision Making with Randomization\n\n**User**: \"I need to randomly assign 15 team members to 3 project groups. Can you help with that?\"\n\n**Agent**: *Uses random number generation to create fair, random team assignments, ensuring balanced groups.*\n\n## Configuration Requirements\n\nNo special configuration is required to use this tool. The random number generation happens instantly during your conversation.\n\n## Important Considerations\n\n### Customization Options\n\nWhen requesting random numbers, you can specify:\n- A minimum value (smallest possible number)\n- A maximum value (largest possible number)\n- How many random numbers you need\n\n### Fairness and Bias\n\n- The generator produces true random numbers with equal probability for all values in the range\n- Each number generation is independent of previous results\n- No patterns or biases affect the outcomes\n\n### Reproducibility\n\nIf you need the same \"random\" numbers repeatedly (for example, in educational demonstrations):\n- The agent can use a \"seed\" value to generate predictable random sequences\n- This is useful for creating reproducible examples or simulations\n\n### Applications Beyond Numbers\n\nRandom number generation can be applied to many scenarios beyond just producing numbers:\n- Randomly selecting items from lists\n- Creating random groupings or pairings\n- Generating random schedules or sequences\n- Simulating chance-based events with defined probabilities"}, {"name": "README_RSS.md", "type": "file", "path": "README_RSS.md", "content": "# RSS Feed Tool\n\n## What This Tool Does\n\nThe RSS Feed Tool enables agents to access current news, articles, and updates from trusted sources across various industries and topics. This capability allows you to get the latest information during your conversation without having to search the web yourself or switch between applications.\n\n## Key Capabilities\n\nAgents equipped with this tool can provide you with up-to-date information from various sources:\n\n- **Breaking News**: Access the latest headlines and developments from major news outlets\n- **Industry Updates**: Stay informed about developments in technology, finance, and business\n- **Blog Content**: Get insights from leading organizations and thought leaders\n- **Market Information**: Track financial market news and analysis\n- **Specialized Publications**: Access content from domain-specific sources and publications\n\n## Practical Use Cases\n\n- **Current Events Awareness**: Get briefed on the latest news and headlines\n- **Research Support**: Gather recent information on specific topics or industries\n- **Market Intelligence**: Stay updated on financial markets and business trends\n- **Technology Tracking**: Follow developments in AI, cloud computing, and data science\n- **Content Curation**: Discover and discuss recent articles on topics of interest\n\n## Example Interactions\n\n### News Briefing\n\n**User**: \"What are the top news stories today?\"\n\n**Agent**: *Retrieves and summarizes recent headlines from major news sources, providing a concise overview of current events with details on the most significant stories.*\n\n### Industry Research\n\n**User**: \"I'm preparing for a meeting about cloud computing trends. Can you share any recent news from AWS or Azure?\"\n\n**Agent**: *Accesses RSS feeds from AWS and Azure blogs, presenting recent announcements, product launches, or technical articles relevant to cloud computing trends.*\n\n### Financial Updates\n\n**User**: \"Give me an update on today's market news.\"\n\n**Agent**: *Retrieves current financial news from sources like Seeking Alpha, summarizing market movements, significant company developments, and economic indicators.*\n\n## Configuration Requirements\n\nNo special configuration is required to use this tool. The agent has access to a pre-configured set of trusted information sources.\n\n## Important Considerations\n\n### Available Information Sources\n\nThe tool includes feeds from various categories:\n\n- **General News**: CNN, LA Times, ProPublica\n- **Technology**: OpenAI Blog, MIT News, KDnuggets, Towards AI, Towards Data Science\n- **Cloud Computing**: AWS Blog, Azure Blog\n- **Business & Consulting**: Centric Consulting, Markovate, RTS Labs\n- **Financial Markets**: Seeking Alpha (various feeds)\n\n### Information Freshness\n\n- The tool accesses live RSS feeds to provide the most current information available\n- Publication times are included so you can see how recent the information is\n- Some sources update more frequently than others\n\n### Content Limitations\n\n- Information is limited to what's published in the RSS feeds of configured sources\n- Full articles may require following external links\n- The agent provides summaries and key points from articles when possible\n\n### Best Practices\n\n- Specify what type of information you're looking for (news, technology updates, market information)\n- Ask for information from specific sources if you have preferences\n- Request summaries when you want a quick overview of multiple stories\n- Ask for details on specific stories that interest you"}, {"name": "README_THINK.md", "type": "file", "path": "README_THINK.md", "content": "# Think Tool\n\n## What This Tool Does\n\nThe Think Tool gives agents the ability to carefully consider information and reason through complex problems before responding. This internal reflection capability allows for more thoughtful, comprehensive, and accurate assistance by enabling agents to work through challenging questions in a structured way.\n\n## Key Capabilities\n\nWhile largely invisible to you as a user, this tool enhances how agents serve you by enabling:\n\n- **Deep Analysis**: Thorough examination of complex problems from multiple angles\n- **Step-by-Step Reasoning**: Breaking down complex tasks into logical sequences\n- **Error Checking**: Reviewing calculations and logic before presenting conclusions\n- **Planning**: Organizing multi-stage approaches to your questions or requests\n- **Context Management**: Keeping track of important details during lengthy conversations\n\n## Practical User Benefits\n\n- **More Accurate Responses**: Receive better answers as agents can think through problems fully\n- **Better Problem Solving**: Get assistance with complex challenges requiring careful reasoning\n- **Transparency**: When appropriate, agents can share their reasoning process\n- **Improved Planning**: Receive well-structured plans for multi-step projects or tasks\n- **Reduced Errors**: Experience fewer mistakes in calculations or logical reasoning\n\n## Example Improvements\n\n### Complex Analysis\n\n**Without Think Tool**: *The agent might jump to conclusions about financial data or miss important connections between different metrics.*\n\n**With Think Tool**: *The agent carefully analyzes financial trends, considers seasonal factors, examines relationships between different metrics, and provides a comprehensive assessment of the situation.*\n\n### Multi-step Problem Solving\n\n**Without Think Tool**: *The agent might suggest solutions without fully considering all requirements or constraints.*\n\n**With Think Tool**: *The agent breaks down problems into components, identifies dependencies, plans a logical approach, and delivers a well-reasoned solution that addresses all aspects of your request.*\n\n### Technical Troubleshooting\n\n**Without Think Tool**: *The agent might suggest generic solutions without systematically evaluating the specific issue.*\n\n**With Think Tool**: *The agent methodically considers possible causes, eliminates unlikely scenarios, and recommends targeted solutions based on a logical diagnostic process.*\n\n## Configuration Requirements\n\nNo special configuration is required. This capability is built into agents using Claude 3.7-Sonnet and above.\n\n## Important Considerations\n\n### When It's Used\n\nAgents typically use this thinking capability when:\n- You ask complex questions requiring careful analysis\n- Your request involves multiple steps or considerations\n- The task involves calculations or logical reasoning\n- There are trade-offs or multiple factors to consider\n\n### Visibility of Thinking\n\n- In most cases, the thinking process happens behind the scenes\n- For complex problems, the agent may share parts of its reasoning to show how it reached a conclusion\n- You can always ask the agent to explain its reasoning if you're curious about how it arrived at an answer\n\n### Benefits of Thorough Thinking\n\n- More reliable answers, especially for complex questions\n- More comprehensive solutions that consider multiple factors\n- Better structured explanations and instructions\n- Fewer logical errors or oversights in responses"}, {"name": "README_WEATHER.md", "type": "file", "path": "README_WEATHER.md", "content": "# Weather Tool\n\n## What This Tool Does\n\nThe Weather Tool enables agents to provide current weather conditions and forecasts for any location worldwide. This capability gives you instant access to up-to-date weather information during your conversation without needing to switch to a separate weather app or website.\n\n## Key Capabilities\n\nAgents equipped with this tool can provide comprehensive weather information including:\n\n- **Current Conditions**: Get real-time temperature, sky conditions, and \"feels like\" temperature\n- **Weather Details**: Access humidity levels, wind speed and direction, and visibility\n- **Health Indicators**: Check UV index for sun protection planning\n- **Visual Context**: Weather descriptions include helpful emoji for quick visual reference\n- **Forward Planning**: View forecasts for upcoming days with high and low temperatures\n\n## Practical Use Cases\n\n- **Travel Planning**: Check weather conditions for destinations before or during trips\n- **Daily Preparation**: Get informed about the day's weather to dress appropriately\n- **Event Planning**: Check forecasts for upcoming outdoor activities or events\n- **Weather-dependent Decisions**: Make informed choices about outdoor work, exercise, or leisure activities\n- **Safety Awareness**: Stay informed about potential weather-related hazards\n\n## Example Interactions\n\n### Basic Weather Check\n\n**User**: \"What's the weather like in Chicago today?\"\n\n**Agent**: *Provides current temperature, conditions, and feels-like temperature for Chicago, along with today's forecast for high and low temperatures and any notable conditions.*\n\n### Travel Planning\n\n**User**: \"I'm traveling to Barcelona next week. What's the weather forecast looking like?\"\n\n**Agent**: *Retrieves and shares the multi-day forecast for Barcelona, highlighting temperature trends and any significant weather patterns expected during the coming week.*\n\n### Detailed Weather Information\n\n**User**: \"I'm planning to go hiking near Seattle tomorrow. Can you give me detailed weather information including wind and UV index?\"\n\n**Agent**: *Provides comprehensive weather data for the Seattle area, with emphasis on hiking-relevant factors like wind conditions, UV index, and any precipitation forecasts.*\n\n## Configuration Requirements\n\nNo special configuration is required to use this tool. Weather information is available for locations worldwide without needing any accounts or API keys.\n\n## Important Considerations\n\n### Location Specificity\n\nFor best results:\n- Provide specific city names when possible\n- For common city names (like Springfield), include state/province or country\n- You can ask for weather by neighborhood, landmark, or airport code\n\n### Available Weather Information\n\nThe tool provides these key weather elements:\n- Current temperature (Fahrenheit or Celsius)\n- Weather condition with descriptive emoji\n- \"Feels like\" temperature accounting for humidity and wind\n- Humidity percentage\n- Wind speed and direction\n- Visibility distance\n- UV index for sun exposure planning\n- Daily forecasts with high and low temperatures\n\n### International Support\n\n- Weather information is available globally for virtually any location\n- You can specify temperature units (Fahrenheit or Celsius) if you have a preference\n- Times and dates reflect the local time zone of the requested location\n\n### Data Source\n\nWeather information comes from wttr.in, a reliable public weather service. As with any forecast, accuracy may vary, particularly for predictions several days in advance."}, {"name": "README_WEB.md", "type": "file", "path": "README_WEB.md", "content": "# Web Tool\n\n## What This Tool Does\n\nThe Web Tool enables agents to access and interact with web pages during your conversation. This capability allows you to get information from specific websites without having to leave the chat, switch applications, or copy-paste content back and forth.\n\n## Key Capabilities\n\nAgents equipped with this tool can help you work with web content in various ways:\n\n- **Information Extraction**: Get clean, readable content from articles, blog posts, and web pages\n- **Research Assistance**: Access specific information from websites you're interested in\n- **Content Summarization**: Obtain and summarize key points from longer web articles\n- **Reference Collection**: Save important web content for later use in your projects\n- **Visual Access**: View the original web page when needed for visual elements or interaction\n\n## Practical Use Cases\n\n- **Knowledge Gathering**: Access specific articles or documentation during research\n- **Current Information**: Get up-to-date content from specific web pages\n- **Content Analysis**: Review articles or blog posts without switching between apps\n- **Documentation Reference**: Access technical documentation during problem-solving\n- **Learning Support**: Retrieve tutorial content or educational resources\n\n## Example Interactions\n\n### Retrieving Article Content\n\n**User**: \"Can you get the content from this article and summarize the key points? https://example.com/article-on-climate-technology\"\n\n**Agent**: *Retrieves the article content, removes ads and navigation elements, and presents a clean version of the text along with a summary of the main points.*\n\n### Research Support\n\n**User**: \"I'm researching artificial intelligence regulations. Can you check what the EU AI Act page says about high-risk AI systems?\"\n\n**Agent**: *Fetches content from the relevant EU website, extracts the specific information about high-risk AI systems, and presents it in a readable format.*\n\n### Documentation Access\n\n**User**: \"I'm trying to use the pandas library in Python but I'm stuck on how to merge dataframes. Can you check the pandas documentation for me?\"\n\n**Agent**: *Retrieves the relevant documentation page, extracts the information about dataframe merging, and presents the explanation with examples in a clear format.*\n\n## Configuration Requirements\n\nNo special configuration is required to use this tool. The agent can access public web pages without additional setup.\n\n## Important Considerations\n\n### Content Access\n\n- The tool works best with text-based content like articles, documentation, and blog posts\n- Some websites may block automated access, preventing the agent from retrieving content\n- The agent can only access publicly available content, not pages behind logins or paywalls\n\n### Content Processing\n\nWhen retrieving web content, the agent:\n- Removes ads, navigation menus, and other clutter\n- Preserves important text content and basic formatting\n- Converts complex layouts into readable formats\n- May not preserve all images or interactive elements\n\n### Web Page Display\n\nYou can ask the agent to show you the original web page when:\n- Visual elements are important for understanding\n- You need to interact with the page directly\n- The content formatting is complex or specialized\n\n### Content Storage\n\nFor important web information:\n- You can request that the agent save the content to a workspace for later reference\n- The agent will provide information about where the content is stored\n- Saved content is converted to markdown format for easy reading and reference"}, {"name": "README_WEB_SEARCH.md", "type": "file", "path": "README_WEB_SEARCH.md", "content": "# Web Search Tool\n\n## What This Tool Does\n\nThe Web Search Tool enables agents to search the internet for current information, news, events, and research on virtually any topic. This capability allows you to access up-to-date information that goes beyond what the agent was trained on, ensuring you get the most current and relevant information without having to conduct searches yourself.\n\n## Key Capabilities\n\nAgents equipped with this tool can help you find information from a variety of sources:\n\n- **General Web Results**: Find relevant websites, articles, and resources on any topic\n- **Current News**: Access the latest news articles about specific topics or general headlines\n- **Research Content**: Gather in-depth information from reputable sources for research purposes\n- **Financial Information**: Find market news and stock-specific updates\n- **Events Information**: Discover upcoming events in specific locations\n- **Trending Topics**: See what topics are currently popular or trending\n- **Technical Information**: Access specific documentation, discussions, or solutions\n\n## Practical Use Cases\n\n- **Current Events**: Stay informed about breaking news and recent developments\n- **Research Support**: Gather information from multiple sources on specific topics\n- **Decision Making**: Access up-to-date information to inform choices and plans\n- **Learning**: Find educational content and resources on subjects you're exploring\n- **Travel Planning**: Research destinations, events, and flight information\n- **Market Intelligence**: Monitor financial news and company developments\n\n## Example Interactions\n\n### Current Information Research\n\n**User**: \"What are the latest developments in quantum computing?\"\n\n**Agent**: *Searches the web for recent quantum computing news and research, then provides a summary of the most significant recent advances, breakthroughs, and announcements from credible sources.*\n\n### Problem-Solving Support\n\n**User**: \"I'm getting an 'ERR_CONNECTION_REFUSED' error on my website. What might be causing this?\"\n\n**Agent**: *Searches for technical information about this specific error, then synthesizes solutions from various sources to provide troubleshooting steps and potential fixes.*\n\n### Travel Research\n\n**User**: \"I'm planning a trip to Barcelona in October. What events will be happening then, and what's the typical weather?\"\n\n**Agent**: *Searches for upcoming events in Barcelona during October and current weather trend information, then provides a comprehensive overview of cultural events, festivals, and typical weather conditions.*\n\n## Configuration Requirements\n\nThis tool requires API keys for certain search providers. Your administrator should ensure the appropriate API keys are configured for the search capabilities you need.\n\n## Important Considerations\n\n### Information Sources\n\nThe tool can access information from various sources including:\n- General web search results (Google)\n- News articles from multiple publishers\n- Wikipedia articles for background information\n- Research databases for academic or specialized content\n- Financial news sources for market information\n- Technical forums for specialized topics\n\n### Information Currency\n\n- Search results reflect what's currently available online\n- The agent can find information published minutes ago to years ago\n- For very recent events (within hours), news search is typically most effective\n- Historical information can be found but may require more specific search terms\n\n### Search Effectiveness\n\nFor best results when requesting searches:\n- Be specific about what information you're looking for\n- Mention time frames if relevant (e.g., \"in the past month\")\n- Specify if you want a particular type of information (news, research papers, etc.)\n- Indicate if you need information from specific sources or domains\n\n### Limitations\n\n- While the agent can search the web, it cannot access information behind logins or paywalls\n- Very recent breaking news (within minutes) may not yet be indexed by search engines\n- The agent summarizes information from multiple sources but may not capture every detail\n- Search operations use API credits which may have associated usage limits"}, {"name": "README_WORKSPACE.md", "type": "file", "path": "README_WORKSPACE.md", "content": "# Workspace Tool\n\n## What This Tool Does\n\nThe Workspace Tool gives agents the ability to work with files and folders on your behalf. This capability allows you to save, retrieve, and manage documents, code, data, and other files during your conversations, creating a persistent workspace where your work remains accessible across multiple sessions.\n\n## Key Capabilities\n\nAgents equipped with this tool can help you work with files and documents:\n\n- **Document Management**: Save notes, reports, and documents for later reference\n- **File Operations**: Create, read, update, and organize files and folders\n- **Code Handling**: Work with programming files, making targeted changes and improvements\n- **Data Storage**: Maintain datasets, configurations, and project files\n- **Persistent Memory**: Access your previous work across separate conversations\n\n## Practical Use Cases\n\n- **Project Development**: Maintain code, documentation, and project files in a structured workspace\n- **Content Creation**: Draft, revise, and organize written content over multiple sessions\n- **Data Analysis**: Store datasets and analysis results for ongoing work\n- **Learning Activities**: Keep track of notes, exercises, and resources for educational pursuits\n- **Document Collaboration**: Share and revise documents with the agent's assistance\n\n## Example Interactions\n\n### Document Creation and Revision\n\n**User**: \"Let's create a project proposal based on the notes we discussed yesterday. Can you find those notes and use them as a starting point?\"\n\n**Agent**: *Retrieves previously saved notes from the workspace, creates a draft proposal document, and saves it for further revision.*\n\n### Code Development\n\n**User**: \"I need to update the error handling in my Python script. Can you open the main.py file and improve the try-except blocks?\"\n\n**Agent**: *Reads the specified code file, analyzes the current error handling, makes targeted improvements, and saves the updated version while explaining the changes.*\n\n### Research Organization\n\n**User**: \"I've been collecting research on renewable energy. Can you organize all the text files in my research folder by energy type?\"\n\n**Agent**: *Examines the files in the research folder, creates a more organized folder structure based on energy types, and moves the files accordingly.*\n\n## Configuration Requirements\n\nWorkspaces are configured by your administrator. Typically, you'll have access to one or more workspaces such as:\n- A personal workspace for your private files\n- Possibly shared workspaces for team collaboration\n- Special-purpose workspaces for specific projects or applications\n\n## Important Considerations\n\n### Working with Files\n\nWhen requesting file operations:\n- Specify which workspace and file path you're referring to\n- Be clear about what changes you want made to files\n- For code files, consider asking the agent to explain its planned changes before committing them\n\n### File Organization\n\nFor effective workspace management:\n- Consider establishing a consistent folder structure for your projects\n- Use descriptive filenames that indicate content and purpose\n- Ask the agent for help organizing files if your workspace becomes cluttered\n\n### File Persistence\n\n- Files saved in workspaces remain available in future conversations\n- You can continue work on documents across multiple sessions\n- The agent can recall and reference previous work stored in your workspace\n\n### Workspace Limitations\n\n- Each workspace has boundaries set by your administrator\n- The agent can only access files within configured workspaces\n- Very large files or certain file types may have handling limitations\n- The agent cannot transfer files between separate workspaces"}, {"name": "README_XML_EXPLORER.md", "type": "file", "path": "README_XML_EXPLORER.md", "content": "# XML Explorer Tool\n\n## What This Tool Does\n\nThe XML Explorer Tool enables agents to work with XML files of any size, helping you examine, extract, and understand complex data without technical XML expertise. This capability allows you to navigate and use information stored in XML formats, which are commonly used for configuration files, data exchange, and system exports.\n\n## Key Capabilities\n\nAgents equipped with this tool can help you work with XML data in several ways:\n\n- **Structure Analysis**: Understand how information is organized in complex XML files\n- **Targeted Data Extraction**: Pull out specific pieces of information without wading through the entire file\n- **Format Conversion**: Transform XML into more readable formats like YAML for easier understanding\n- **Large File Handling**: Work with XML files of any size, even very large ones\n- **Selective Processing**: Focus on just the parts of XML data that matter to you\n\n## Practical Use Cases\n\n- **Configuration Management**: Examine and modify system configuration files in XML format\n- **Data Import/Export**: Extract specific information from exported XML data\n- **System Integration**: Work with XML feeds or APIs from other systems\n- **Document Analysis**: Navigate complex XML-based document formats\n- **Database Exports**: Process and analyze data exported from databases in XML format\n\n## Example Interactions\n\n### Understanding XML Structure\n\n**User**: \"I have this large XML export from our CRM system but I'm not sure what's in it. Can you help me understand its structure?\"\n\n**Agent**: *Analyzes the XML file and provides a clear overview of the main elements, their frequency, and how they're organized, giving you a map of what information is available.*\n\n### Finding Specific Information\n\n**User**: \"In this product catalog XML, can you find all products in the 'electronics' category with a price below $500?\"\n\n**Agent**: *Searches through the XML file for the specific products matching your criteria and presents them in an easy-to-read format with the relevant details.*\n\n### Data Extraction for Analysis\n\n**User**: \"I need to analyze customer feedback from this XML export. Can you extract all the customer comments and their satisfaction ratings?\"\n\n**Agent**: *Extracts the specific feedback elements from the XML, converts them to a more readable format, and helps organize the information for your analysis.*\n\n## Configuration Requirements\n\nNo special configuration is required to use this tool. The agent needs access to your XML files in a workspace.\n\n## Important Considerations\n\n### Working with Large Files\n\nA key advantage of this tool is its ability to work with XML files of any size:\n- Files that would normally be too large to open can be analyzed efficiently\n- The agent can extract just the parts you need without processing the entire file\n- Performance remains consistent regardless of file size\n\n### XML Knowledge Level\n\nYou don't need to understand XML or XPath to use this tool effectively:\n- Simply describe what information you're looking for in plain language\n- The agent will handle the technical details of navigating the XML structure\n- For users with XML knowledge, you can provide specific XPath queries if you prefer\n\n### Data Conversion\n\nThe tool can make XML data more accessible by:\n- Converting complex XML structures to more readable YAML format\n- Presenting information in tables or lists instead of raw XML\n- Organizing extracted data in ways that highlight the most important information\n\n### Common XML Document Types\n\nThis tool is particularly useful for working with:\n- Configuration files for software systems\n- Data exports from databases or CRM systems\n- Industry-standard data exchange formats\n- Web feeds and API responses\n- Document formats based on XML (like Office documents)"}, {"name": "centric", "type": "folder", "path": "centric", "children": [{"name": "README_TASK_MANAGEMENT.md", "type": "file", "path": "centric/README_TASK_MANAGEMENT.md", "content": "# Task Management Tool\n\n## What This Tool Does\n\nThe Task Management Tool enables agents to coordinate complex workflows by creating, organizing, and executing tasks. This powerful system helps break down large projects into manageable components with clear dependencies, ensuring tasks are completed in the correct order while tracking progress and maintaining relationships between related work items.\n\n## Key Capabilities\n\nAgents equipped with this tool can perform sophisticated task management operations, including:\n\n- **Task Creation and Assignment**: Define work items with detailed descriptions and assign them to specific agents\n- **Dependency Management**: Create prerequisite relationships between tasks that require outputs from earlier steps\n- **Hierarchical Organization**: Structure tasks with parent-child relationships for logical grouping and ordered execution\n- **Status Tracking**: Monitor task progress through their lifecycle (pending, in-progress, completed, failed, blocked)\n- **Parallel Execution**: Automatically identify and execute independent tasks simultaneously when possible\n- **Result Sharing**: Pass results from completed tasks to dependent tasks that need that information\n- **Task Export/Import**: Save task structures as templates that can be reused for similar projects\n\n## Practical Use Cases\n\n- **Research Projects**: Break complex research questions into logical steps with proper sequencing\n- **Content Creation**: Manage multi-stage content development workflows (research, drafting, editing, publishing)\n- **Data Analysis Pipelines**: Structure data processing tasks with proper dependencies between stages\n- **Customer Service**: Coordinate multiple agents handling different aspects of complex customer requests\n- **Project Planning**: Create and monitor task structures for project roadmaps and implementations\n- **Product Development**: Manage the progression of features through design, development, and testing\n\n## Example Interactions\n\n### Creating a Task Structure\n\n**User**: \"I need help creating a blog post about artificial intelligence. Can you set up a task management system for this?\"\n\n**Agent**: *Creates a structured task hierarchy with parent task \"Blog Post Creation\" and child tasks for \"Research AI Topics\", \"Create Outline\", \"Write First Draft\", \"Edit and Revise\", and \"Publish\". Sets appropriate prerequisites so tasks execute in correct order.*\n\n### Executing a Task Workflow\n\n**User**: \"I'd like to analyze this dataset on customer churn. Can you set up and run a complete analysis workflow?\"\n\n**Agent**: *Creates a series of dependent tasks for data cleaning, exploratory analysis, feature engineering, model building, and results visualization. Then executes these tasks in the proper sequence, with each step building on the previous one's results.*\n\n### Managing Complex Projects\n\n**User**: \"Help me organize my marketing campaign launch with proper task dependencies and assignments.\"\n\n**Agent**: *Creates a comprehensive task structure with multiple parallel workstreams (content creation, platform setup, audience targeting) and dependencies between key milestones. Assigns specialized agents to different components and tracks overall progress.*\n\n## Configuration Requirements\n\nThis tool requires the following components:\n\n- **Workspace Tool**: For saving and loading task templates\n- **Simplified Agent Tool**: For executing tasks and delegating work to specialized agents\n\nThese dependencies are included in the standard Agent C environment. No external API keys or additional configuration is required.\n\n## Important Considerations\n\n### Task Relationships\n\nUnderstanding the two types of task relationships is essential for effective use:\n\n- **Parent-Child**: Used for organizing tasks hierarchically and enforcing order without data sharing\n- **Prerequisites**: Used when tasks need results or data from previous tasks to function properly\n\n### Task Status Flow\n\nTasks follow a specific lifecycle:\n- Tasks start as PENDING (ready to run) or BLOCKED (waiting on prerequisites)\n- Parent tasks remain BLOCKED until all child tasks complete\n- Tasks with prerequisites remain BLOCKED until all prerequisites complete\n\n### Best Practices\n\n- Create parent tasks before child tasks\n- Create prerequisite tasks before dependent tasks\n- Include detailed descriptions and success criteria in task definitions\n- Match task assignments to agent capabilities\n- Use metadata to provide context and additional information for task execution"}, {"name": "agent_as_tool.md", "type": "file", "path": "centric/agent_as_tool.md", "content": "# Agent as Tool\n\n## What This Tool Does\n\nThe Agent as Tool capability enables agents to create, manage, and communicate with other specialized agents. This powerful feature allows your main agent (often called the \"Majordomo\" or \"Domo\") to delegate tasks to purpose-built sub-agents, creating a collaborative team of AI assistants working together to solve complex problems.\n\n## Key Capabilities\n\n- **Create specialized agents** for specific tasks or domains\n- **Delegate work** to the most appropriate agent for each task\n- **Enable collaboration** between multiple agents with different capabilities\n- **Maintain conversation context** across a network of agents\n- **Visualize agent relationships** to understand the team structure\n- **Save and load agent configurations** for reuse across sessions\n\n## Practical Use Cases\n\n### Multi-domain Problem Solving\n\nWhen your questions span multiple areas of expertise, the Majordomo can create and coordinate specialized agents. For example, a project involving financial analysis, legal considerations, and market research could leverage specialized agents for each domain.\n\n### Complex Workflow Orchestration\n\nFor multi-step processes that require different skills at each stage, the Majordomo can create a workflow of specialized agents. For instance, one agent might gather data, another might analyze it, and a third might generate a report.\n\n### Simultaneous Task Processing\n\nMultiple agents can work on different aspects of a problem simultaneously, then combine their insights. This parallel processing can be particularly valuable for time-sensitive tasks.\n\n## Example Interactions\n\n### Creating a Specialized Agent\n\n**User**: \"I need to analyze some financial data and then create a presentation about it.\"\n\n**Agent**: \"I can help with that! I'll create a Financial Analysis agent to examine your data in depth and a Presentation specialist to craft compelling slides based on the findings. Would you like to proceed with this approach?\"\n\n### Agent Collaboration\n\n**User**: \"I'm trying to decide which programming language to learn next.\"\n\n**Agent**: \"To give you the best recommendation, I'll consult with specialized agents who focus on different programming ecosystems. One moment while I gather insights from experts in web development, data science, and enterprise software...\"\n\n*[After consultation]*\n\n\"Based on your background and goals, our team recommends Python as your next language. The Data Science agent highlighted its versatility in analytics, while the Web Development agent noted its growing use in backend systems...\"\n\n## Configuration Requirements\n\nThe Agent as Tool capability works within the Agent C framework without requiring external API keys or special configuration. It's already integrated into the system.\n\n## Important Considerations\n\n### Performance Impact\n\nCreating multiple agents may require additional computational resources and might introduce slight delays in responses as information is passed between agents.\n\n### Conversation Clarity\n\nThe Majordomo will typically summarize the contributions of sub-agents rather than having each agent respond directly, keeping the conversation clear and focused.\n\n### Privacy\n\nInformation shared with the Majordomo may be passed to sub-agents as needed to complete tasks. All agents operate within the same security framework and privacy boundaries.\n\n### Persistence\n\nBy default, created agents exist only for the duration of your session. However, you can request that agent configurations be saved for future sessions if you frequently need the same specialized assistance."}, {"name": "data_vis.md", "type": "file", "path": "centric/data_vis.md", "content": "# Data Visualization Tool\n\n## What This Tool Does\n\nThe Data Visualization Tool enables agents to create professional-quality charts and visual representations of data. This capability allows agents to transform raw numbers and statistics into intuitive, easy-to-understand visual formats that reveal patterns, trends, and insights at a glance.\n\n## Key Capabilities\n\nAgents equipped with this tool can create a variety of visualizations, including:\n\n- **Bar Charts**: Compare values across different categories\n- **Line Charts**: Show trends over time or continuous variables\n- **Pie Charts**: Display proportions and percentages of a whole\n- **Histograms**: Visualize distributions and frequency of data points\n- **Box Plots**: Summarize statistical distributions with quartiles\n- **Scatter Plots**: Reveal relationships between two variables\n- **Violin Plots**: Display probability density of data at different values\n- **Heatmaps**: Represent data values as colors to show patterns in matrices\n- **Pair Plots**: Explore relationships between multiple variables simultaneously\n\n## Practical Use Cases\n\n- **Business Intelligence**: Visualize sales trends, market share, or customer demographics\n- **Research Presentations**: Create publication-quality figures for reports or presentations\n- **Financial Analysis**: Chart investment performance, budget allocations, or expense breakdowns\n- **Project Management**: Track progress, resource utilization, or milestone completion\n- **Survey Analysis**: Visualize response distributions and demographic breakdowns\n\n## Example Interactions\n\n### Basic Chart Creation\n\n**User**: \"Create a bar chart showing monthly sales for 2024 using this spreadsheet.\"\n\n**Agent**: *Analyzes the data, generates an appropriate bar chart, and provides insights about notable peaks or trends in the monthly sales.*\n\n### Comparative Visualization\n\n**User**: \"Using the customer satisfaction data I shared, create a box plot comparing ratings across our four product lines.\"\n\n**Agent**: *Creates a box plot showing the distribution of satisfaction scores for each product line, highlighting which products have higher ratings and which have more consistent feedback.*\n\n### Advanced Multi-chart Analysis\n\n**User**: \"Take this marketing campaign data and create a dashboard with charts showing conversion rates by channel, cost per acquisition trends over time, and a breakdown of audience demographics.\"\n\n**Agent**: *Produces a set of coordinated visualizations that tell a complete story about the marketing campaigns' performance across different dimensions.*\n\n## Configuration Requirements\n\nThis tool uses Python visualization libraries (such as Matplotlib, Seaborn, and Plotly) that are included in the Agent C environment. No external API keys or additional configuration is required.\n\n## Important Considerations\n\n### Visualization Output\n\nCreated visualizations are typically saved as image files (PNG, JPEG, SVG) or interactive HTML files. The agent will provide access to these files after creating them.\n\n### Data Preparation\n\nFor best results:\n- Ensure data is clean and properly formatted\n- Specify any particular aspects of the data you want to highlight\n- Mention any specific visualization preferences (colors, styles, etc.)\n\n### Performance\n\nCreating complex visualizations with very large datasets may take additional processing time. For extremely large datasets, the agent might suggest working with aggregated data or samples.\n\n### Customization\n\nYou can request specific customizations for any visualization, including:\n- Color schemes and styles\n- Annotations and highlights\n- Axis scales and labels\n- Titles and legends"}, {"name": "dataframe.md", "type": "file", "path": "centric/dataframe.md", "content": "# DataFrame Tool\n\n## What This Tool Does\n\nThe DataFrame Tool empowers agents to work with tabular data, allowing them to manipulate, analyze, and transform datasets on your behalf. This tool leverages the powerful pandas library to handle structured data efficiently.\n\n## Key Capabilities\n\nWith the DataFrame Tool, agents can:\n\n- **Load data** from various sources including CSV files, Excel spreadsheets, JSON data, and databases\n- **Clean and transform data** by handling missing values, removing duplicates, and reformatting columns\n- **Filter and sort data** based on specific conditions or criteria\n- **Compute statistics** such as means, medians, correlations, and aggregations\n- **Join and merge datasets** from multiple sources\n- **Reshape data** between wide and long formats\n- **Extract insights** from complex datasets\n- **Save and export data** to various formats\n\n## Practical Use Cases\n\n- **Business Intelligence**: Analyze sales data, customer metrics, or operational KPIs\n- **Financial Analysis**: Process transaction data, perform portfolio analysis, or calculate financial metrics\n- **Research**: Analyze experimental data, survey results, or observational studies\n- **Data Preparation**: Clean and transform data for machine learning models or other analytical tools\n- **Reporting**: Generate summaries and extract key information from large datasets\n\n## Example Interactions\n\n### Basic Data Analysis\n\n**User**: \"Load this CSV file and show me the average sales by region for Q1 2025.\"\n\n**Agent**: *Loads the CSV, calculates regional averages, and presents a concise summary table with insights about the highest and lowest performing regions.*\n\n### Data Transformation\n\n**User**: \"Take this customer data and create a new column that categorizes customers as 'High Value' if they spent over $1000 in the last month.\"\n\n**Agent**: *Processes the data, adds the requested categorization column, and provides a summary of how many customers fall into each category.*\n\n### Multi-step Analysis\n\n**User**: \"Import these two Excel files containing product inventory and sales data. Then find which products are selling well but have low inventory levels.\"\n\n**Agent**: *Loads both files, joins the datasets on product ID, calculates inventory-to-sales ratios, and identifies products that need attention.*\n\n## Configuration Requirements\n\nThis tool uses pandas and related Python libraries that are included in the Agent C environment. No external API keys or additional configuration is required.\n\n## Important Considerations\n\n### Data Preparation\n\nFor best results:\n- Ensure data files are properly formatted\n- Inform the agent about any special formatting, missing values, or data types\n- Provide context about what the data represents\n\n### Performance\n\nProcessing very large datasets (millions of rows) may take additional time. For extremely large datasets, consider asking the agent to work with a sample of the data first.\n\n### Privacy and Security\n\nAny data processed using this tool stays within your Agent C environment and is not transmitted to external services. However, be mindful of sharing sensitive information in your datasets.\n\n### Persistence\n\nDataFrames created during a session can be saved to files for future use. Otherwise, they exist only for the duration of your conversation with the agent."}, {"name": "email_flatten.md", "type": "file", "path": "centric/email_flatten.md", "content": "# Email Flatten Tool\n\n## What This Tool Does\n\nThe Email Flatten tool allows agents to process complex email threads and convert them into a straightforward, easy-to-understand format. It transforms nested and quoted email chains into a clean, chronological conversation, making it simpler for both agents and humans to extract information and insights from lengthy email exchanges.\n\n## Key Capabilities\n\n- **Thread Linearization**: Converts messy, nested email threads into a clear, chronological conversation format\n- **Quote Removal**: Intelligently removes redundant quoted text that appears multiple times in a thread\n- **Signature Filtering**: Identifies and removes email signatures to focus on the actual message content\n- **Metadata Preservation**: Maintains important information like sender, recipient, timestamp, and subject\n- **Format Normalization**: Handles various email formats (plain text, HTML, MIME) and converts them to a consistent structure\n- **Conversation Highlighting**: Identifies and emphasizes key parts of the conversation such as questions or action items\n\n## Practical Applications\n\n- **Customer Support Analysis**: Quickly understand the history of a customer issue without wading through redundant content\n- **Legal and Compliance Review**: Extract relevant information from email chains for discovery or compliance purposes\n- **Action Item Extraction**: Identify tasks and commitments hidden within lengthy email threads\n- **Communication Summarization**: Create concise summaries of extended email conversations\n- **Meeting Preparation**: Quickly get up to speed on previous discussions before joining a conversation\n- **NLP Processing Preparation**: Clean and structure email data for further analysis like sentiment analysis or topic modeling\n\n## Example Interactions\n\n**User Request:**\n```\nCan you analyze this email thread and tell me what the main discussion points are?\n[Pasted email thread with multiple replies and quoted text]\n```\n\n**Agent Response:**\n```\nI've processed the email thread and organized it chronologically. Here's the conversation flow:\n\n1. John (Monday 9:15 AM): Initial project proposal with timeline and budget\n2. Sarah (Monday 11:30 AM): Questions about resource allocation\n3. John (Monday 2:45 PM): Clarification on team assignments\n4. Mark (Tuesday 8:20 AM): Concerns about timeline feasibility\n5. Sarah (Tuesday 10:05 AM): Suggestion for revised milestone dates\n\nThe main discussion points are:\n- Project resource requirements (especially the development team size)\n- Timeline concerns for the Q3 deliverables\n- Budget allocation between phases 1 and 2\n\nWould you like me to extract specific details on any of these topics?\n```\n\n## Configuration Requirements\n\nThe Email Flatten tool requires no external API keys or special configuration. It works with standard email formats and is fully integrated into the Agent C framework.\n\n## Important Considerations\n\n### Privacy and Security\n\nWhen using this tool, be aware that email content may contain sensitive information. The tool processes the full content of emails, including any personal or confidential information they may contain.\n\n### Limitations\n\n- **Complex Formatting**: While the tool handles most email formats, extremely complex HTML formatting or uncommon email clients might occasionally produce unexpected results\n- **Embedded Content**: The tool focuses on text content and may not preserve certain embedded elements like complex tables or interactive components\n- **Language Processing**: The tool works best with English language emails; support for other languages may vary\n\n### Best Practices\n\n- For optimal results, ensure the complete email thread is provided, including headers\n- When analyzing sensitive communications, be mindful of privacy considerations\n- Verify critical information extracted from flattened emails against the original when making important decisions"}]}];
+        
+        // DOM elements
+        const treeView = document.getElementById('tree-view');
+        const markdownContent = document.getElementById('markdown-content');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+        const sidebarResizeHandle = document.getElementById('sidebar-resize-handle');
+        const content = document.getElementById('content');
+        
+        // Get saved sidebar width from localStorage or use default
+        const savedSidebarWidth = localStorage.getItem('sidebarWidth');
+        if (savedSidebarWidth) {
+            sidebar.style.width = savedSidebarWidth + 'px';
+        }
+        
+        // Toggle sidebar
+        let sidebarHidden = false;
+        sidebarToggle.addEventListener('click', () => {
+            sidebarHidden = !sidebarHidden;
+            
+            if (sidebarHidden) {
+                const currentWidth = sidebar.offsetWidth;
+                localStorage.setItem('lastSidebarWidth', currentWidth);
+                sidebar.style.width = '0';
+                sidebarToggle.textContent = 'Show';
+                sidebarToggle.style.right = '10px';
+                sidebarToggle.style.position = 'fixed';
+                sidebarResizeHandle.style.display = 'none';
+            } else {
+                const lastWidth = localStorage.getItem('lastSidebarWidth') || 300;
+                sidebar.style.width = lastWidth + 'px';
+                sidebarToggle.textContent = 'Hide';
+                sidebarToggle.style.right = '10px';
+                sidebarToggle.style.position = 'absolute';
+                sidebarResizeHandle.style.display = 'block';
+            }
+        });
+        
+        // Implement sidebar resize functionality
+        let isResizing = false;
+        
+        sidebarResizeHandle.addEventListener('mousedown', function(e) {
+            isResizing = true;
+            document.body.style.cursor = 'col-resize';
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', stopResize);
+            // Prevent selection during resize
+            e.preventDefault();
+        });
+        
+        function handleMouseMove(e) {
+            if (!isResizing) return;
+            
+            let newWidth = e.clientX;
+            
+            // Apply constraints
+            if (newWidth < parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-min-width'))) {
+                newWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-min-width'));
+            }
+            
+            if (newWidth > parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-max-width'))) {
+                newWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-max-width'));
+            }
+            
+            sidebar.style.width = newWidth + 'px';
+            localStorage.setItem('sidebarWidth', newWidth);
+        }
+        
+        function stopResize() {
+            isResizing = false;
+            document.body.style.cursor = '';
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', stopResize);
+        }
+        
+        // Configure marked for proper rendering
+        marked.setOptions({
+            highlight: function(code, lang) {
+                if (lang && hljs.getLanguage(lang)) {
+                    try {
+                        return hljs.highlight(code, { language: lang }).value;
+                    } catch (e) {
+                        console.error(e);
+                    }
+                }
+                return hljs.highlightAuto(code).value;
+            },
+            langPrefix: 'hljs language-',
+            headerIds: true,
+            mangle: false,
+            pedantic: false,
+            gfm: true,
+            breaks: false,
+            sanitize: false,
+            smartLists: true,
+            smartypants: false,
+            xhtml: false
+        });
+        
+        // Custom renderer to handle mermaid diagrams
+        const renderer = new marked.Renderer();
+        const originalCodeRenderer = renderer.code.bind(renderer);
+        const originalImageRenderer = renderer.image.bind(renderer);
+        
+        renderer.code = function (code, language, escaped) {
+            if (language === 'mermaid') {
+                return `<div class="mermaid-wrapper">
+                            <div class="fullscreen-trigger" onclick="openFullscreen(this.nextElementSibling)">⛶</div>
+                            <div class="mermaid">${code}</div>
+                        </div>`;
+            }
+            return originalCodeRenderer(code, language, escaped);
+        };
+        
+        renderer.image = function(href, title, text) {
+            const img = originalImageRenderer(href, title, text);
+            return `<span style="position: relative; display: inline-block;">
+                        <span class="fullscreen-trigger" onclick="openFullscreen(this.nextElementSibling)">⛶</span>
+                        ${img}
+                    </span>`;
+        };
+        
+        marked.use({ renderer });
+        
+        // Function to open fullscreen view
+        window.openFullscreen = function(element) {
+            // Create overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'fullscreen-overlay';
+            
+            // Create content container
+            const content = document.createElement('div');
+            content.className = 'fullscreen-content';
+            
+            // Create close button
+            const closeBtn = document.createElement('div');
+            closeBtn.className = 'fullscreen-close';
+            closeBtn.innerHTML = '×';
+            closeBtn.onclick = function() {
+                document.body.removeChild(overlay);
+            };
+            
+            // Clone the element to show in fullscreen
+            const clone = element.cloneNode(true);
+            
+            // Handle different element types
+            if (element.tagName === 'IMG') {
+                // For images, create a new img element
+                const img = document.createElement('img');
+                img.src = element.src;
+                img.alt = element.alt;
+                content.appendChild(img);
+            } else if (element.classList.contains('mermaid')) {
+                // For mermaid diagrams
+                clone.removeAttribute('style'); // Remove any inline styles
+                content.appendChild(clone);
+                
+                // Re-render the mermaid diagram
+                setTimeout(() => {
+                    mermaid.init(undefined, [clone]);
+                }, 100);
+            }
+            
+            // Add elements to the DOM
+            overlay.appendChild(closeBtn);
+            overlay.appendChild(content);
+            document.body.appendChild(overlay);
+            
+            // Close on escape key
+            document.addEventListener('keydown', function escHandler(e) {
+                if (e.key === 'Escape') {
+                    document.body.removeChild(overlay);
+                    document.removeEventListener('keydown', escHandler);
+                }
+            });
+            
+            // Close on click outside the content
+            overlay.addEventListener('click', function(e) {
+                if (e.target === overlay) {
+                    document.body.removeChild(overlay);
+                }
+            });
+        };
+        
+        // Function to create the tree view
+        function createTreeView(structure, parent) {
+            structure.forEach(item => {
+                const li = document.createElement('li');
+                
+                if (item.type === 'folder') {
+                    // Create folder
+                    const folderElement = document.createElement('div');
+                    folderElement.classList.add('folder');
+                    folderElement.textContent = item.name;
+                    li.appendChild(folderElement);
+                    
+                    // Create child list for this folder
+                    const ul = document.createElement('ul');
+                    ul.classList.add('tree-view', 'hidden');
+                    li.appendChild(ul);
+                    
+                    // Toggle visibility on click
+                    folderElement.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        folderElement.classList.toggle('open');
+                        ul.classList.toggle('hidden');
+                    });
+                    
+                    // If there are children, create their views
+                    if (item.children && item.children.length > 0) {
+                        createTreeView(item.children, ul);
+                        
+                        // Auto-expand folders with only one sub-folder
+                        if (item.children.length === 1 && item.children[0].type === 'folder') {
+                            folderElement.classList.add('open');
+                            ul.classList.remove('hidden');
+                        }
+                    }
+                } else {
+                    // Create file
+                    // Only show markdown files
+                    if (item.name.toLowerCase().endsWith('.md') || item.name.toLowerCase().endsWith('.markdown')) {
+                        const fileElement = document.createElement('div');
+                        fileElement.classList.add('file');
+                        fileElement.textContent = item.name;
+                        fileElement.dataset.path = item.path;
+                        fileElement.dataset.content = item.content;
+                        li.appendChild(fileElement);
+                        
+                        // Handle file click to display content
+                        fileElement.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            // Remove active from all files
+                            document.querySelectorAll('.file.active').forEach(el => {
+                                el.classList.remove('active');
+                            });
+                            // Add active to this file
+                            fileElement.classList.add('active');
+                            
+                            // Render markdown content
+                            renderMarkdown(fileElement.dataset.content);
+                            
+                            // Update browser history to allow back/forward navigation
+                            updateHistory(item.path);
+                            
+                            // On mobile, collapse sidebar after selection
+                            if (window.innerWidth <= 768) {
+                                sidebarHidden = true;
+                                sidebar.style.maxHeight = '40px';
+                                sidebar.style.overflow = 'hidden';
+                            }
+                        });
+                    } else {
+                        // Skip non-markdown files
+                        return;
+                    }
+                }
+                
+                parent.appendChild(li);
+            });
+        }
+        
+        // Function to render markdown
+        function renderMarkdown(content) {
+            markdownContent.innerHTML = marked.parse(content);
+            
+            // Initialize mermaid diagrams
+            if (window.mermaid) {
+                mermaid.initialize({
+                    startOnLoad: false,
+                    theme: 'default',
+                    securityLevel: 'loose',
+                    logLevel: 5
+                });
+                
+                try {
+                    mermaid.init(undefined, document.querySelectorAll('.mermaid'));
+                } catch (error) {
+                    console.error('Mermaid initialization failed:', error);
+                }
+            }
+            
+            // Highlight all code blocks
+            document.querySelectorAll('pre code').forEach((block) => {
+                hljs.highlightElement(block);
+            });
+            
+            // Process links in the rendered content
+            document.querySelectorAll('#markdown-content a').forEach(link => {
+                // For external links, add target="_blank"
+                if (link.hostname !== window.location.hostname) {
+                    link.setAttribute('target', '_blank');
+                    link.setAttribute('rel', 'noopener noreferrer');
+                }
+                
+                // For internal anchor links (that weren't processed by the Python script)
+                // These could be generated by the markdown renderer from headings
+                if (link.hash && link.href.startsWith(window.location.href.split('#')[0])) {
+                    link.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const anchorId = link.hash.substring(1);
+                        scrollToAnchor(anchorId);
+                    });
+                }
+            });
+            
+            // Scroll to hash if present
+            if (window.location.hash) {
+                const element = document.getElementById(window.location.hash.substring(1));
+                if (element) {
+                    element.scrollIntoView();
+                }
+            }
+        }
+        
+        // Function to update browser history
+        function updateHistory(filePath) {
+            const url = new URL(window.location);
+            url.searchParams.set('file', filePath);
+            window.history.pushState({filePath: filePath}, '', url);
+        }
+        
+        // Function to open a markdown file by path
+        function openMarkdownFile(filePath, anchor = '') {
+            // Check if this is a directory path (no file extension or ends with /)
+            if (filePath.endsWith('/') || !filePath.includes('.')) {
+                // Try to find the first markdown file in this directory
+                const directoryPath = filePath.endsWith('/') ? filePath : filePath + '/';
+                
+                // Look through all file elements to find one in this directory
+                const fileElements = document.querySelectorAll('.file[data-path]');
+                for (const element of fileElements) {
+                    if (element.dataset.path.startsWith(directoryPath)) {
+                        // Found a file in this directory, open it
+                        return openMarkdownFile(element.dataset.path, anchor);
+                    }
+                }
+            }
+            
+            const fileElement = document.querySelector(`[data-path="${filePath}"]`);
+            if (fileElement) {
+                // Set active class
+                document.querySelectorAll('.file.active').forEach(el => {
+                    el.classList.remove('active');
+                });
+                fileElement.classList.add('active');
+                
+                // Render content
+                renderMarkdown(fileElement.dataset.content);
+                
+                // Update history
+                updateHistory(filePath);
+                
+                // Expand parent folders
+                let parent = fileElement.parentElement;
+                while (parent) {
+                    if (parent.tagName === 'UL' && parent.classList.contains('tree-view')) {
+                        parent.classList.remove('hidden');
+                        const folderDiv = parent.previousElementSibling;
+                        if (folderDiv && folderDiv.classList.contains('folder')) {
+                            folderDiv.classList.add('open');
+                        }
+                    }
+                    parent = parent.parentElement;
+                }
+                
+                // Scroll to anchor if provided
+                if (anchor) {
+                    const element = document.getElementById(anchor.substring(1));
+                    if (element) {
+                        setTimeout(() => {
+                            element.scrollIntoView();
+                        }, 100);
+                    }
+                }
+                
+                return true;
+            }
+            return false;
+        }
+        
+        // Function to find file in structure by path
+        function findFileInStructure(structure, path) {
+            for (const item of structure) {
+                if (item.type === 'file' && item.path === path) {
+                    return item;
+                } else if (item.type === 'folder' && item.children) {
+                    const found = findFileInStructure(item.children, path);
+                    if (found) return found;
+                }
+            }
+            return null;
+        }
+        
+        // Function to find and display first markdown file
+        function findAndDisplayFirstMarkdownFile(structure) {
+            const findFirstMdFile = (items) => {
+                for (const item of items) {
+                    if (item.type === 'file' && (item.name.toLowerCase().endsWith('.md') || item.name.toLowerCase().endsWith('.markdown'))) {
+                        return item;
+                    } else if (item.type === 'folder' && item.children && item.children.length > 0) {
+                        const found = findFirstMdFile(item.children);
+                        if (found) return found;
+                    }
+                }
+                return null;
+            };
+            
+            // Check URL parameters first
+            const urlParams = new URLSearchParams(window.location.search);
+            const fileParam = urlParams.get('file');
+            
+            if (fileParam) {
+                const fileItem = findFileInStructure(structure, fileParam);
+                if (fileItem) {
+                    setTimeout(() => {
+                        openMarkdownFile(fileItem.path);
+                    }, 100);
+                    return;
+                }
+            }
+            
+            // If no file in URL or not found, display first file
+            const firstMdFile = findFirstMdFile(structure);
+            if (firstMdFile) {
+                setTimeout(() => {
+                    openMarkdownFile(firstMdFile.path);
+                }, 100);
+            } else {
+                markdownContent.innerHTML = '<h1>No markdown files found</h1>';
+            }
+        }
+        
+        // Handle browser back/forward navigation
+        window.addEventListener('popstate', (event) => {
+            if (event.state && event.state.filePath) {
+                openMarkdownFile(event.state.filePath);
+            } else {
+                // If no state, open first file
+                findAndDisplayFirstMarkdownFile(fileStructure);
+            }
+        });
+        
+        // Initialize the viewer
+        function initializeViewer() {
+            // Create the tree view
+            createTreeView(fileStructure, treeView);
+            
+            // Auto-open the first markdown file
+            findAndDisplayFirstMarkdownFile(fileStructure);
+        }
+        
+        // Function to scroll to an anchor within the current document
+        function scrollToAnchor(anchorId) {
+            const element = document.getElementById(anchorId);
+            if (element) {
+                element.scrollIntoView({behavior: 'smooth'});
+                // Highlight the element briefly
+                const originalBackgroundColor = element.style.backgroundColor;
+                element.style.backgroundColor = 'rgba(255, 255, 0, 0.3)';
+                setTimeout(() => {
+                    element.style.backgroundColor = originalBackgroundColor;
+                }, 1500);
+            } else {
+                console.warn(`Anchor with id '${anchorId}' not found`);
+            }
+        }
+        
+        // Make functions globally available
+        window.openMarkdownFile = openMarkdownFile;
+        window.scrollToAnchor = scrollToAnchor;
+        
+        // Start the application
+        window.addEventListener('DOMContentLoaded', initializeViewer);
+    </script>
+</body>
+</html>

@@ -13,10 +13,8 @@ class ThinkSection(PromptSection):
                     "- Planning a complex refactoring or enhancement\n"
                     "- Analyzing potential bugs and their root causes\n"
                     "- After reading scratchpad content.\n"
-                    "- Before implementing ANY changes\n"
                     "- When considering possible solutions to a problem\n"
                     "- When evaluating the impact of a proposed change\n"
                     "- When determining the root cause of an issue\n"
-                    "- Before deciding on an implementation approach\n"
                     "- If you find yourself wanting to immediately fix something\n")
         super().__init__(template=TEMPLATE, required=True, name="Think", render_section_header=False, **data)

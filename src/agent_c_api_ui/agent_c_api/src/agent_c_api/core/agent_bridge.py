@@ -951,7 +951,7 @@ class AgentBridge:
             await self.session_manager.flush()
 
         except Exception as e:
-            self.logger.error(f"Error in stream_chat: {e}")
+            self.logger.exception (f"Error in stream_chat: {e}", exc_info=True)
             error_type = type(e).__name__
             error_traceback = traceback.format_exc()
             self.logger.error(f"Error in event_bridge.py:stream_chat {error_type}: {str(e)}\n{error_traceback}")
