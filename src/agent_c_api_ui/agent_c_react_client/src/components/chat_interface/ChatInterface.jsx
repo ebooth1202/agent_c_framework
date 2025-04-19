@@ -671,10 +671,10 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
     };
 
     return (
-        <Card className="flex flex-col h-full bg-white/50 backdrop-blur-sm border shadow-lg rounded-xl relative z-0">
+        <Card className="flex flex-col h-full bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border dark:border-gray-700 shadow-lg rounded-xl relative z-0">
             <ScrollArea className="flex-1 px-4 py-3 min-h-[400px]">
                 {/* Add copy entire chat button */}
-                <div className="flex justify-end gap-2 p-2 sticky top-0 z-10 bg-white/80 backdrop-blur-sm">
+                <div className="flex justify-end gap-2 p-2 sticky top-0 z-10 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
                     <CopyButton
                         content={getChatCopyContent}
                         htmlContent={getChatCopyHTML}
@@ -738,7 +738,7 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                                     <div className="flex justify-start items-start gap-2 group">
                                         <ModelIcon vendor={msg.vendor}/>
                                         <div
-                                            className="max-w-[80%] rounded-2xl px-4 py-2 shadow-sm bg-purple-50 text-purple-800 mr-12 rounded-bl-sm">
+                                            className="max-w-[80%] rounded-2xl px-4 py-2 shadow-sm bg-purple-50 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200 mr-12 rounded-bl-sm">
                                             <MarkdownMessage content={msg.content}/>
                                             {msg.tokenUsage && <TokenUsageDisplay usage={msg.tokenUsage}/>}
                                         </div>
@@ -782,8 +782,8 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                                     <div
                                         className={`max-w-[80%] rounded-2xl px-4 py-2 shadow-sm relative ${
                                             isError
-                                                ? "bg-red-100 text-red-800 border border-red-300"
-                                                : "bg-gray-100 text-gray-600"
+                                                ? "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-300 dark:border-red-800"
+                                                : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
                                         }`}
                                     >
                                         {isError ? "🚫 Error: " : ""}{msg.content}
@@ -820,7 +820,7 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
             </ScrollArea>
 
             {/* Footer with file upload and message input */}
-            <div className="border-t bg-white/50 backdrop-blur-sm p-4 space-y-3 rounded-b-xl">
+            <div className="border-t dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm p-4 space-y-3 rounded-b-xl">
                 <div className="flex gap-2">
                     <Input
                         type="file"
@@ -831,13 +831,14 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                         file:rounded-xl file:border-0
                         file:text-sm file:font-semibold
                         file:bg-blue-50 file:text-blue-700
-                        hover:file:bg-blue-100
-                        focus:outline-none focus:ring-2 focus:ring-blue-200 focus:ring-opacity-50
+                        file:dark:bg-blue-900 file:dark:text-blue-300
+                        hover:file:bg-blue-100 hover:file:dark:bg-blue-800
+                        focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 focus:ring-opacity-50
                         rounded-xl
                         cursor-pointer
                         transition-all
-                        border border-gray-200
-                        bg-white/50 backdrop-blur-sm
+                        border border-gray-200 dark:border-gray-700
+                        bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm
                         h-12 py-2"
                     />
                     <Button
@@ -845,7 +846,7 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                         variant="outline"
                         size="icon"
                         disabled={!selectedFileForUpload || isUploading}
-                        className="shrink-0 rounded-xl border-gray-200 bg-white/50 backdrop-blur-sm hover:bg-white/80 transition-colors"
+                        className="shrink-0 rounded-xl border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm hover:bg-white/80 dark:hover:bg-gray-700/80 transition-colors"
                     >
                         <Upload className="h-4 w-4"/>
                     </Button>
@@ -854,29 +855,29 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                 {/* Add the file list here - before the message input */}
                 {uploadedFiles.length > 0 && (
                     <div
-                        className="my-2 p-3 bg-gray-50 rounded-lg max-h-32 overflow-y-auto border border-gray-300 shadow-sm">
+                        className="my-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg max-h-32 overflow-y-auto border border-gray-300 dark:border-gray-600 shadow-sm">
                         <div className="text-xs font-medium text-gray-500 mb-2">Uploaded Files</div>
                         {uploadedFiles.map((file) => (
                             <div key={file.id}
                                  className={`file-item flex items-center justify-between mb-1 p-2 rounded border ${
-                                     file.processing_status === 'failed' ? 'bg-red-50 border-red-200' :
-                                         file.processing_status === 'complete' ? 'bg-green-50 border-green-200' : 'bg-gray-100 border-gray-200'
+                                     file.processing_status === 'failed' ? 'bg-red-50 dark:bg-red-900/50 border-red-200 dark:border-red-800' :
+                                         file.processing_status === 'complete' ? 'bg-green-50 dark:bg-green-900/50 border-green-200 dark:border-green-800' : 'bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600'
                                  }`}>
                                 <span className="text-sm truncate max-w-[70%]">{file.name}</span>
                                 <div className="flex items-center space-x-2">
                                     {file.processing_status === 'pending' &&
                                         <span
-                                            className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">Processing...</span>
+                                            className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/70 text-blue-700 dark:text-blue-300 rounded-full">Processing...</span>
                                     }
                                     {file.processing_status === 'failed' && (
-                                        <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded-full"
+                                        <span className="text-xs px-2 py-0.5 bg-red-100 dark:bg-red-900/70 text-red-700 dark:text-red-300 rounded-full"
                                               title={file.processing_error || "Error processing file"}>
                             Error
                         </span>
                                     )}
                                     {file.processing_status === 'complete' &&
                                         <span
-                                            className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">Ready</span>
+                                            className="text-xs px-2 py-0.5 bg-green-100 dark:bg-green-900/70 text-green-700 dark:text-green-300 rounded-full">Ready</span>
                                     }
                                     <input
                                         type="checkbox"
@@ -903,9 +904,9 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
         }}
         disabled={isStreaming}
         rows="2"
-        className="flex-1 rounded-xl border border-gray-200 bg-white/50 backdrop-blur-sm transition-colors
-        hover:bg-white/80 focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50
-        placeholder-gray-400 py-2 px-3 resize-none"
+        className="flex-1 rounded-xl border border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm transition-colors
+        hover:bg-white/80 dark:hover:bg-gray-700/80 focus:border-blue-300 dark:focus:border-blue-600 focus:ring focus:ring-blue-200 dark:focus:ring-blue-800 focus:ring-opacity-50
+        placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-gray-100 py-2 px-3 resize-none"
     />
                     <div className="flex flex-col gap-2 self-end">
                         <Button
