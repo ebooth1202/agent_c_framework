@@ -20,6 +20,7 @@ class WorkspaceSection(PromptSection):
                     "- **Navigation**: Use `tree` for broader holistic views. Us `ls` to list a specific directory contents\n"
                     "- **File Management**: Use `cp` to copy and `mv` to move files or directories\n"
                     "  - Both source and destination must be in the same workspace\n"    
+                    "- Workspace text files are UTF-8 encoded\n"
                     "## CRITICAL: Workspace Traceability rules:\n"
                     "- Prefer `inspect_code` over reading entire code files in Python, or C# code.\n" 
                     "   - This will give you the signatures and doc strings for code files"
