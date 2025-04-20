@@ -794,7 +794,7 @@ const ChatInterface = ({
                             return (
                                 <div key={idx} className="flex justify-end items-start gap-2 group">
                                     <div
-                                        className="max-w-[80%] rounded-2xl px-4 py-2 shadow-sm bg-blue-500 text-white ml-12 rounded-br-sm border border-blue-600">
+                                        className="max-w-[80%] rounded-2xl px-4 py-2 shadow-sm bg-blue-500 text-white ml-12 rounded-br-sm border border-blue-600" style={{ fontFamily: 'Georgia, serif' }}>
                                         <div className="flex justify-between items-start gap-4">
                                             <div className="prose dark:prose-invert flex-1">
                                                 {msg.isVoiceMessage ? (
@@ -831,7 +831,7 @@ const ChatInterface = ({
                                     <div className="flex justify-start items-start gap-2 group">
                                         <ModelIcon vendor={msg.vendor}/>
                                         <div
-                                            className="max-w-[80%] rounded-2xl px-4 py-2 shadow-sm bg-purple-50 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200 mr-12 rounded-bl-sm border border-purple-200 dark:border-purple-700">
+                                            className="max-w-[80%] rounded-2xl px-4 py-2 shadow-sm bg-purple-50 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200 mr-12 rounded-bl-sm border border-purple-200 dark:border-purple-700" style={{ fontFamily: 'Georgia, serif' }}>
                                             <div className="flex justify-between items-start gap-4">
                                                 <div className="prose dark:prose-invert flex-1">
                                                     <MarkdownMessage content={msg.content}/>
