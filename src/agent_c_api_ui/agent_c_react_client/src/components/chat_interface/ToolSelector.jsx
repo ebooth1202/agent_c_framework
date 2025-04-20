@@ -236,14 +236,21 @@ const ToolSelector = ({availableTools, onEquipTools, activeTools = [], sessionId
                         </div>
                     )}
                     <Tabs defaultValue={availableTools.essential_tools && availableTools.essential_tools.length > 0 ? "essential" : availableTools.categories[0] || ""} className="w-full">
-                        <TabsList className="flex w-full overflow-x-auto mb-4 bg-gray-100 dark:bg-gray-800/70">
+                        <TabsList className="flex w-full overflow-x-auto mb-4 bg-gray-100 dark:bg-gray-800/70 p-1 rounded-md border border-gray-200 dark:border-gray-700 shadow-sm">
                             {availableTools.essential_tools && availableTools.essential_tools.length > 0 && (
-                                <TabsTrigger value="essential" className="flex-shrink-0">
+                                <TabsTrigger 
+                                    value="essential" 
+                                    className="flex-shrink-0 font-medium data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow"
+                                >
                                     Essential
                                 </TabsTrigger>
                             )}
                             {availableTools.categories.map((category) => (
-                                <TabsTrigger key={category} value={category} className="flex-shrink-0">
+                                <TabsTrigger 
+                                    key={category} 
+                                    value={category} 
+                                    className="flex-shrink-0 font-medium data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow"
+                                >
                                     {category}
                                 </TabsTrigger>
                             ))}

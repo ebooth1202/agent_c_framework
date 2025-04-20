@@ -68,12 +68,18 @@ const CollapsibleOptions = ({
                 </div>
                 <CollapsibleContent className="px-4 pb-4">
                     <Tabs defaultValue="settings" className="w-full">
-                        <TabsList className="w-full mb-4 bg-gray-100 dark:bg-gray-800/70">
-                            <TabsTrigger value="settings" className="flex items-center gap-1 w-1/2">
+                        <TabsList className="w-full mb-4 border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800/70 p-1 rounded-md shadow-sm">
+                            <TabsTrigger 
+                                value="settings" 
+                                className="flex items-center gap-1 w-1/2 font-medium data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow"
+                            >
                                 <Settings className="h-4 w-4" />
                                 <span>Settings</span>
                             </TabsTrigger>
-                            <TabsTrigger value="tools" className="flex items-center gap-1 w-1/2">
+                            <TabsTrigger 
+                                value="tools" 
+                                className="flex items-center gap-1 w-1/2 font-medium data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow"
+                            >
                                 <Wrench className="h-4 w-4" />
                                 <span>Tools</span>
                             </TabsTrigger>
