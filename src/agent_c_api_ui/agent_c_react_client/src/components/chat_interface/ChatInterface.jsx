@@ -676,9 +676,9 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
     };
 
     return (
-        <Card className="flex flex-col h-full bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border dark:border-gray-700 shadow-lg rounded-xl relative z-0">
-            {/* Add copy entire chat button - fixed at top */}
-            <div className="flex justify-end gap-2 p-2 sticky top-0 z-10 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-b border-gray-100 dark:border-gray-700">
+        <Card className="flex flex-col h-full bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border dark:border-gray-700 shadow-lg rounded-xl relative z-0 group">
+            {/* Floating copy/export buttons that only appear on hover */}
+            <div className="absolute top-4 right-4 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex gap-2">
                 <CopyButton
                     content={getChatCopyContent}
                     htmlContent={getChatCopyHTML}
@@ -686,7 +686,7 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                     successText="Chat copied!"
                     size="sm"
                     variant="outline"
-                    className="border-gray-300"
+                    className="border-gray-300 bg-white/90 dark:bg-gray-800/90 shadow-sm hover:shadow-md"
                 />
                 <ExportHTMLButton
                     messages={messages}
@@ -694,7 +694,7 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                     filename={`chat-export-${new Date().toISOString().slice(0, 10)}.html`}
                     size="sm"
                     variant="outline"
-                    className="border-gray-300"
+                    className="border-gray-300 bg-white/90 dark:bg-gray-800/90 shadow-sm hover:shadow-md"
                 />
             </div>
             <ScrollArea className="flex-1 px-4 py-3" type="auto">
