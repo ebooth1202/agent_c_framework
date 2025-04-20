@@ -25,14 +25,14 @@ const ToolCallItem = ({ tool, results }) => {
   const formattedResults = results ? formatData(results) : "";
 
   return (
-    <div className="border border-blue-200 rounded-lg mb-2 bg-white shadow-sm overflow-hidden">
+    <div className="border border-blue-200 dark:border-blue-700 rounded-lg mb-2 bg-white dark:bg-gray-800 shadow-sm overflow-hidden">
       <div
-        className="flex items-center justify-between px-4 py-3 cursor-pointer bg-blue-50 hover:bg-blue-100 transition-colors rounded-lg"
+        className="flex items-center justify-between px-4 py-3 cursor-pointer bg-blue-50 dark:bg-blue-900/40 hover:bg-blue-100 dark:hover:bg-blue-800/50 transition-colors rounded-lg"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-2">
-          <PocketKnife className="h-5 w-5 text-blue-600" />
-          <span className="font-semibold text-blue-800">
+          <PocketKnife className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          <span className="font-semibold text-blue-800 dark:text-blue-300">
             {tool.name}
           </span>
         </div>
@@ -50,11 +50,11 @@ const ToolCallItem = ({ tool, results }) => {
               }}
               tooltipText="Copy tool call"
               variant="ghost"
-              className="text-blue-600 hover:text-blue-800 hover:bg-blue-100"
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800/50"
             />
           </div>
           <ChevronDown
-            className={`h-5 w-5 text-blue-600 transform transition-transform duration-200 ${
+            className={`h-5 w-5 text-blue-600 dark:text-blue-400 transform transition-transform duration-200 ${
               isExpanded ? "rotate-180" : ""
             }`}
           />
@@ -62,20 +62,20 @@ const ToolCallItem = ({ tool, results }) => {
       </div>
 
       {isExpanded && (
-        <div className="border-t border-blue-200 bg-white p-4 rounded-b-lg">
+        <div className="border-t border-blue-200 dark:border-blue-700 bg-white dark:bg-gray-800 p-4 rounded-b-lg">
           {formattedArguments && (
             <div className="mb-4 relative group">
               <div className="flex justify-between items-center mb-2">
-                <h5 className="text-sm font-semibold text-blue-600">Arguments:</h5>
+                <h5 className="text-sm font-semibold text-blue-600 dark:text-blue-400">Arguments:</h5>
                 <CopyButton
                   content={formattedArguments}
                   tooltipText="Copy arguments"
                   variant="ghost"
-                  className="text-blue-600 hover:text-blue-800 hover:bg-blue-100"
+                  className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800/50"
                   size="xs"
                 />
               </div>
-              <pre className="text-sm font-mono bg-blue-50 p-2 rounded-md whitespace-pre-wrap overflow-x-auto max-w-full">
+              <pre className="text-sm font-mono bg-blue-50 dark:bg-gray-700 p-2 rounded-md whitespace-pre-wrap overflow-x-auto max-w-full dark:text-gray-200">
                 {formattedArguments}
               </pre>
             </div>
@@ -84,16 +84,16 @@ const ToolCallItem = ({ tool, results }) => {
           {formattedResults && (
             <div className="relative group">
               <div className="flex justify-between items-center mb-2">
-                <h5 className="text-sm font-semibold text-blue-600">Results:</h5>
+                <h5 className="text-sm font-semibold text-blue-600 dark:text-blue-400">Results:</h5>
                 <CopyButton
                   content={formattedResults}
                   tooltipText="Copy results"
                   variant="ghost"
-                  className="text-blue-600 hover:text-blue-800 hover:bg-blue-100"
+                  className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800/50"
                   size="xs"
                 />
               </div>
-              <pre className="text-sm font-mono bg-blue-50 p-2 rounded-md whitespace-pre-wrap overflow-x-auto max-w-full">
+              <pre className="text-sm font-mono bg-blue-50 dark:bg-gray-700 p-2 rounded-md whitespace-pre-wrap overflow-x-auto max-w-full dark:text-gray-200">
                 {formattedResults}
               </pre>
             </div>
