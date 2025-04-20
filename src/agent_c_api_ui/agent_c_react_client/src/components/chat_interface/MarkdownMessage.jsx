@@ -21,20 +21,20 @@ const MarkdownMessage = ({content}) => {
         }
         
         // For regular markdown messages, ensure proper spacing around headers
-        let processedContent = content.replace(/\n(#{1,6})\s*([^\n]+)/g, '\n\n$1 $2\n');
+        // Use minimal newlines to avoid excessive spacing
+        let processedContent = content.replace(/\n(#{1,6})\s*([^\n]+)/g, '\n$1 $2\n');
 
         // Ensure proper list formatting
         processedContent = processedContent.replace(/^\s*[-*]\s/gm, '* ');
         
-        // Add extra newline before lists, but not if we're in a list already
-        // This prevents breaking bullet + inline code formatting
-        processedContent = processedContent.replace(/(?<![-*]\s.*?)\n[-*]/g, '\n\n*');
+        // Don't add extra newlines before lists - it causes too much spacing
+        // processedContent = processedContent.replace(/(?<![-*]\s.*?)\n[-*]/g, '\n\n*');
 
         return typeof processedContent === 'string' ? processedContent : String(processedContent);
     }, [content]);
 
     return (
-        <div className="prose prose-sm max-w-none prose-headings:mt-4 prose-headings:mb-2 relative group">
+        <div className="prose prose-sm max-w-none prose-p:my-1 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-1 relative group">
             {/* Copy button that appears on hover */}
             <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity">
                 <CopyButton
@@ -46,16 +46,16 @@ const MarkdownMessage = ({content}) => {
 
             <ReactMarkdown
                 components={{
-                    h1: ({node, ...props}) => <h1 className="text-2xl font-bold mt-6 mb-4" {...props} />,
-                    h2: ({node, ...props}) => <h2 className="text-xl font-bold mt-5 mb-3" {...props} />,
-                    h3: ({node, ...props}) => <h3 className="text-lg font-bold mt-4 mb-2" {...props} />,
-                    h4: ({node, ...props}) => <h4 className="text-base font-bold mt-3 mb-2" {...props} />,
-                    // Enhanced list rendering
+                    h1: ({node, ...props}) => <h1 className="text-2xl font-bold mt-3 mb-1" {...props} />,
+                    h2: ({node, ...props}) => <h2 className="text-xl font-bold mt-2 mb-1" {...props} />,
+                    h3: ({node, ...props}) => <h3 className="text-lg font-bold mt-2 mb-1" {...props} />,
+                    h4: ({node, ...props}) => <h4 className="text-base font-bold mt-1 mb-1" {...props} />,
+                    // Enhanced list rendering - reduced margins
                     ul: ({node, ...props}) => (
-                        <ul className="list-disc ml-4 mt-2 mb-4 space-y-2" {...props} />
+                        <ul className="list-disc ml-4 my-1" {...props} />
                     ),
                     li: ({node, ...props}) => (
-                        <li className="mt-1 [&>code]:ml-0" {...props} />
+                        <li className="[&>code]:ml-0" {...props} />
                     ),
                     // Enhanced bold text rendering
                     strong: ({node, ...props}) => (
@@ -108,9 +108,9 @@ const MarkdownMessage = ({content}) => {
                     blockquote: ({node, ...props}) => (
                         <blockquote className="border-l-4 border-purple-300 pl-4 my-4 italic" {...props} />
                     ),
-                    // Enhance paragraph rendering
+                    // Enhance paragraph rendering with reduced spacing
                     p: ({node, ...props}) => (
-                        <p className="my-2 leading-relaxed" {...props} />
+                        <p className="my-1 leading-relaxed" {...props} />
                     ),
                     // Enhanced horizontal rule
                     hr: ({node, ...props}) => (
