@@ -56,19 +56,19 @@ const StatusBar = ({
     const statusInfo = getStatusInfo();
 
     return (
-        <div className="flex items-center justify-between py-2 px-3 bg-background/95 backdrop-blur-sm rounded-lg shadow-sm text-sm">
-            <div className="flex items-center space-x-6">
+        <div className="flex items-center justify-between py-1 px-2 bg-background/95 backdrop-blur-sm rounded-lg shadow-sm text-xs">
+            <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
                     <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <div className="flex items-center space-x-2">
                                     <Activity
-                                        className={`w-4 h-4 ${statusInfo.color} ${statusInfo.iconClass} ${
+                                        className={`w-3 h-3 ${statusInfo.color} ${statusInfo.iconClass} ${
                                             isProcessing ? 'scale-110 transition-transform duration-200' : ''
                                         }`}
                                     />
-                                    <span className="text-sm font-medium">
+                                    <span className="text-xs font-medium">
                                         Status: {statusInfo.message}
                                     </span>
                                 </div>
@@ -88,15 +88,15 @@ const StatusBar = ({
                 </div>
 
                 {isReady && activeTools && activeTools.length > 0 && (
-                    <div className="flex items-center space-x-2 px-4 py-1.5 bg-blue-50/10 rounded-full border border-blue-200/20 dark:bg-blue-950/20 dark:border-blue-800/30">
-                        <Wrench className="w-4 h-4 text-blue-500 dark:text-blue-400" />
-                        <span className="text-sm text-blue-700 dark:text-blue-300">
+                    <div className="flex items-center space-x-2 px-3 py-0.5 bg-blue-50/10 rounded-full border border-blue-200/20 dark:bg-blue-950/20 dark:border-blue-800/30">
+                        <Wrench className="w-3 h-3 text-blue-500 dark:text-blue-400" />
+                        <span className="text-xs text-blue-700 dark:text-blue-300">
                             Active Tools: {activeTools.length}
                         </span>
                         <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <Info className="w-4 h-4 text-blue-400 dark:text-blue-300 cursor-help" />
+                                    <Info className="w-3 h-3 text-blue-400 dark:text-blue-300 cursor-help" />
                                 </TooltipTrigger>
                                 <TooltipContent className="bg-background border shadow-md">
                                     <p className="max-w-xs text-muted-foreground">{activeTools.join(', ')}</p>

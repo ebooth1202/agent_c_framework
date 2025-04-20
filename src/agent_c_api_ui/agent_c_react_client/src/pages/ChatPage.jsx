@@ -3,7 +3,7 @@ import React, { useContext } from 'react';
 import { SessionContext } from '@/contexts/SessionContext';
 import ChatInterface from '../components/chat_interface/ChatInterface';
 import CollapsibleOptions from '@/components/chat_interface//CollapsibleOptions';
-import StatusBar from '@/components/chat_interface//StatusBar';
+// StatusBar now moved to ChatInterface component
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const ChatPage = () => {
@@ -97,17 +97,7 @@ const ChatPage = () => {
               selectedModel={selectedModel}
               onProcessingStatus={handleProcessingStatus}
             />
-            {isReady && (
-              <div className="mt-2">
-                <StatusBar
-                  isReady={isReady}
-                  activeTools={activeTools}
-                  sessionId={sessionId}
-                  settingsVersion={settingsVersion}
-                  isProcessing={isStreaming}
-                />
-              </div>
-            )}
+            {/* StatusBar moved to ChatInterface component */}
           </div>
         </div>
       )}

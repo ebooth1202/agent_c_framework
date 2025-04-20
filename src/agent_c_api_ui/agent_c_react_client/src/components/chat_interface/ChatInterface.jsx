@@ -1,4 +1,4 @@
-import React, {useState, useRef, useEffect, useCallback} from "react";
+import React, {useState, useRef, useEffect, useCallback, useContext} from "react";
 import {Card} from "@/components/ui/card";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
@@ -11,9 +11,11 @@ import MarkdownMessage from './MarkdownMessage';
 import ThoughtDisplay from './ThoughtDisplay';
 import ModelIcon from './ModelIcon';
 import CopyButton from './CopyButton';
+import StatusBar from './StatusBar';
 import {API_URL} from "@/config/config";
 import {createClipboardContent} from '@/components/chat_interface/utils/htmlChatFormatter';
 import ExportHTMLButton from './ExportHTMLButton';
+import { SessionContext } from '@/contexts/SessionContext';
 
 /**
  * ChatInterface component provides a complete chat interface with support for
@@ -29,6 +31,9 @@ import ExportHTMLButton from './ExportHTMLButton';
  * @param {Function} props.onProcessingStatus - Callback for streaming status updates
  */
 const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onProcessingStatus}) => {
+    // Access SessionContext for StatusBar props
+    const { isReady, activeTools, settingsVersion } = useContext(SessionContext);
+    
     const [messages, setMessages] = useState([]);
     const [inputText, setInputText] = useState("");
     const [isStreaming, setIsStreaming] = useState(false);
@@ -918,6 +923,17 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                             <Send className="h-4 w-4"/>
                         </Button>
                     </div>
+                </div>
+                
+                {/* StatusBar positioned just below the input */}
+                <div className="-mt-1 flex justify-center w-full transform translate-y-1">
+                    <StatusBar
+                        isReady={isReady}
+                        activeTools={activeTools}
+                        sessionId={sessionId}
+                        settingsVersion={settingsVersion}
+                        isProcessing={isStreaming}
+                    />
                 </div>
             </div>
         </Card>
