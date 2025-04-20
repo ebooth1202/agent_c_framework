@@ -2,8 +2,8 @@
 import React, { useContext } from 'react';
 import { SessionContext } from '@/contexts/SessionContext';
 import ChatInterface from '../components/chat_interface/ChatInterface';
-import CollapsibleOptions from '@/components/chat_interface//CollapsibleOptions';
-import StatusBar from '@/components/chat_interface//StatusBar';
+// Remove the CollapsibleOptions import since it will be used directly in ChatInterface
+// import CollapsibleOptions from '@/components/chat_interface//CollapsibleOptions';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const ChatPage = () => {
@@ -44,10 +44,10 @@ const ChatPage = () => {
   }
 
   return (
-    <div className="flex flex-col">
-      <div className="flex flex-col space-y-4 mb-4">
+    <div className="flex flex-col h-[calc(100vh-3.5rem)] overflow-hidden">
+      <div className="flex flex-col space-y-2 mb-1">
         {error && (
-          <Alert variant="destructive" className="mb-4">
+          <Alert variant="destructive" className="mb-2">
             <AlertDescription className="flex justify-between items-center">
               {error}
               <button
@@ -61,50 +61,30 @@ const ChatPage = () => {
             </AlertDescription>
           </Alert>
         )}
-        {isReady && (
-          <StatusBar
-            isReady={isReady}
-            activeTools={activeTools}
-            onSessionsDeleted={handleSessionsDeleted}
-            sessionId={sessionId}
-            settingsVersion={settingsVersion}
-            isProcessing={isStreaming}
-          />
-        )}
       </div>
 
       {sessionId && isInitialized && (
-        <div className="flex-1 flex flex-col min-h-0">
-          <CollapsibleOptions
-            isOpen={isOptionsOpen}
-            setIsOpen={setIsOptionsOpen}
-            persona={persona}
-            personas={personas}
-            availableTools={availableTools}
-            customPrompt={customPrompt}
-            temperature={temperature}
-            modelName={modelName}
-            modelConfigs={modelConfigs}
-            sessionId={sessionId}
-            isReady={isReady}
-            onEquipTools={handleEquipTools}
-            activeTools={activeTools}
-            modelParameters={modelParameters}
-            selectedModel={selectedModel}
-            onUpdateSettings={updateAgentSettings}
-            isInitialized={isInitialized}
-            onProcessingStatus={handleProcessingStatus}
-          />
-
-          <div className="flex-1 min-h-0">
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          {/* CollapsibleOptions removed from here since it's now in ChatInterface */}
+          
+          <div className="flex-1 overflow-hidden flex flex-col">
             <ChatInterface
               sessionId={sessionId}
               customPrompt={customPrompt}
               modelName={modelName}
               modelParameters={modelParameters}
-              selectedModel={selectedModel}
               onProcessingStatus={handleProcessingStatus}
+              // Added props for options panel
+              persona={persona}
+              personas={personas}
+              availableTools={availableTools}
+              modelConfigs={modelConfigs}
+              onEquipTools={handleEquipTools}
+              selectedModel={selectedModel}
+              onUpdateSettings={updateAgentSettings}
+              isInitialized={isInitialized}
             />
+            {/* StatusBar moved to ChatInterface component */}
           </div>
         </div>
       )}

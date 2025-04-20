@@ -1,8 +1,8 @@
-import React, {useState, useRef, useEffect, useCallback} from "react";
+import React, {useState, useRef, useEffect, useCallback, useContext} from "react";
 import {Card} from "@/components/ui/card";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
-import {Send, Upload, User, Mic} from "lucide-react";
+import {Send, Upload, User, Mic, FileIcon, Settings} from "lucide-react";
 import {ScrollArea} from "@/components/ui/scroll-area";
 import ToolCallDisplay from "./ToolCallDisplay";
 import MediaMessage from './MediaMessage';
@@ -11,24 +11,43 @@ import MarkdownMessage from './MarkdownMessage';
 import ThoughtDisplay from './ThoughtDisplay';
 import ModelIcon from './ModelIcon';
 import CopyButton from './CopyButton';
+import StatusBar from './StatusBar';
+import CollapsibleOptions from './CollapsibleOptions';
 import {API_URL} from "@/config/config";
 import {createClipboardContent} from '@/components/chat_interface/utils/htmlChatFormatter';
 import ExportHTMLButton from './ExportHTMLButton';
+import { SessionContext } from '@/contexts/SessionContext';
 
 /**
  * ChatInterface component provides a complete chat interface with support for
  * message streaming, file uploads, and various message types including text,
  * media, and tool calls.
- *
- * @component
- * @param {Object} props
- * @param {string} props.sessionId - Unique identifier for the chat session
- * @param {string} [props.customPrompt] - Optional custom prompt for the chat
- * @param {string} props.modelName - Name of the language model to use
- * @param {Object} props.modelParameters - Configuration parameters for the model
- * @param {Function} props.onProcessingStatus - Callback for streaming status updates
  */
-const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onProcessingStatus}) => {
+const ChatInterface = ({
+    sessionId, 
+    customPrompt, 
+    modelName, 
+    modelParameters, 
+    onProcessingStatus,
+    // Added props for options panel
+    persona,
+    personas,
+    availableTools,
+    onEquipTools,
+    modelConfigs,
+    selectedModel,
+    onUpdateSettings,
+    isInitialized
+}) => {
+    // Access SessionContext for StatusBar props and options panel state
+    const { 
+        isReady, 
+        activeTools, 
+        settingsVersion,
+        isOptionsOpen,
+        setIsOptionsOpen
+    } = useContext(SessionContext);
+    
     const [messages, setMessages] = useState([]);
     const [inputText, setInputText] = useState("");
     const [isStreaming, setIsStreaming] = useState(false);
@@ -39,6 +58,10 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [isUploading, setIsUploading] = useState(false);
     const [selectedFileForUpload, setSelectedFileForUpload] = useState(null); // Track selected file
+    
+    // State for drag & drop functionality
+    const [isDraggingOver, setIsDraggingOver] = useState(false);
+    const dragCounterRef = useRef(0);
 
     // Helper function to format a message for copying
     const formatMessageForCopy = useCallback((msg) => {
@@ -108,26 +131,93 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
      */
     const handleFileSelection = (e) => {
         if (e.target.files && e.target.files.length > 0) {
-            setSelectedFileForUpload(e.target.files[0]);
+            const file = e.target.files[0];
+            setSelectedFileForUpload(file);
+            
+            // Automatically upload the file when selected
+            setTimeout(() => {
+                handleUploadFile(file);
+            }, 0);
         } else {
             setSelectedFileForUpload(null);
         }
     };
 
     /**
+     * Opens the file picker dialog
+     */
+    const openFilePicker = () => {
+        fileInputRef.current?.click();
+    };
+
+    /**
+     * Handles drag enter events
+     */
+    const handleDragEnter = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounterRef.current++;
+        
+        if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+            setIsDraggingOver(true);
+        }
+    };
+
+    /**
+     * Handles drag leave events
+     */
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounterRef.current--;
+        
+        if (dragCounterRef.current === 0) {
+            setIsDraggingOver(false);
+        }
+    };
+
+    /**
+     * Handles drag over events
+     */
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    /**
+     * Handles drop events
+     */
+    const handleDrop = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDraggingOver(false);
+        dragCounterRef.current = 0;
+        
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            setSelectedFileForUpload(e.dataTransfer.files[0]);
+            // Automatically upload the file when dropped
+            setTimeout(() => {
+                handleUploadFile(e.dataTransfer.files[0]);
+            }, 0);
+        }
+    };
+
+    /**
      * Handles file upload to the server and tracks processing status
+     * @param {File} fileToUpload - Optional file to upload, if not provided uses selectedFileForUpload
      * @returns {Promise<void>}
      * @throws {Error} If the file upload fails
      */
-    const handleUploadFile = async () => {
-        // Use the selected file from state instead of directly accessing fileInputRef
-        if (!selectedFileForUpload) return;
+    const handleUploadFile = async (fileToUpload = null) => {
+        // Use provided file or the selected file from state
+        const fileToProcess = fileToUpload || selectedFileForUpload;
+        if (!fileToProcess) return;
 
         setIsUploading(true);
 
         const formData = new FormData();
         formData.append("ui_session_id", sessionId);
-        formData.append("file", selectedFileForUpload);
+        formData.append("file", fileToProcess);
 
         try {
             // Upload the file
@@ -161,7 +251,7 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                 {
                     role: "system",
                     type: "content",
-                    content: `File uploaded: ${selectedFileForUpload.name}`,
+                    content: `File uploaded: ${fileToProcess.name}`,
                 },
             ]);
 
@@ -670,59 +760,62 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
         }
     };
 
-    return (
-        <Card className="flex flex-col h-full bg-white/50 backdrop-blur-sm border shadow-lg rounded-xl relative z-0">
-            <ScrollArea className="flex-1 px-4 py-3 min-h-[400px]">
-                {/* Add copy entire chat button */}
-                <div className="flex justify-end gap-2 p-2 sticky top-0 z-10 bg-white/80 backdrop-blur-sm">
-                    <CopyButton
-                        content={getChatCopyContent}
-                        htmlContent={getChatCopyHTML}
-                        tooltipText="Copy entire chat"
-                        successText="Chat copied!"
-                        size="sm"
-                        variant="outline"
-                        className="border-gray-300"
-                    />
-                    <ExportHTMLButton
-                        messages={messages}
-                        tooltipText="Export as HTML"
-                        filename={`chat-export-${new Date().toISOString().slice(0, 10)}.html`}
-                        size="sm"
-                        variant="outline"
-                        className="border-gray-300"
-                    />
-                </div>
+    // Toggle options panel visibility
+    const toggleOptionsPanel = () => {
+        setIsOptionsOpen(!isOptionsOpen);
+    };
 
-                <div className="space-y-4">
+    return (
+        <Card 
+            className="flex flex-col h-full min-h-0 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border dark:border-gray-700 shadow-lg rounded-xl relative z-0 group"
+            onDragEnter={handleDragEnter}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+        >
+            {/* Drag & Drop overlay */}
+            {isDraggingOver && (
+                <div className="absolute inset-0 bg-blue-500/10 dark:bg-blue-800/20 backdrop-blur-sm z-50 rounded-xl flex items-center justify-center border-2 border-blue-500 dark:border-blue-400 border-dashed">
+                    <div className="text-center p-6 bg-white/80 dark:bg-gray-800/80 rounded-xl shadow-lg">
+                        <Upload className="h-10 w-10 text-blue-500 dark:text-blue-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-blue-700 dark:text-blue-300">Drop your file here</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Files will be uploaded and processed automatically</p>
+                    </div>
+                </div>
+            )}
+            
+            {/* Buttons moved to status bar */}
+            <ScrollArea className="flex-1 px-4 py-3" type="auto">
+
+                <div className="space-y-4 w-full overflow-x-hidden">
                     {messages.map((msg, idx) => {
                         // === USER MESSAGES ===
                         if (msg.role === "user") {
                             return (
                                 <div key={idx} className="flex justify-end items-start gap-2 group">
                                     <div
-                                        className="max-w-[80%] rounded-2xl px-4 py-2 shadow-sm bg-blue-500 text-white ml-12 rounded-br-sm relative">
-                                        {msg.isVoiceMessage ? (
-                                            <div className="flex items-center space-x-2">
-                                                <Mic className="h-4 w-4 text-white"/>
-                                                <span className="text-white">Voice message</span>
+                                        className="max-w-[80%] rounded-2xl px-4 py-2 shadow-sm bg-blue-500 text-white ml-12 rounded-br-sm border border-blue-600" style={{ fontFamily: 'Georgia, serif' }}>
+                                        <div className="flex justify-between items-start gap-4">
+                                            <div className="prose dark:prose-invert flex-1">
+                                                {msg.isVoiceMessage ? (
+                                                    <div className="flex items-center space-x-2">
+                                                        <Mic className="h-4 w-4 text-white"/>
+                                                        <span className="text-white">Voice message</span>
+                                                    </div>
+                                                ) : (
+                                                    <div className="markdown-user-message">
+                                                        <MarkdownMessage content={msg.content}/>
+                                                    </div>
+                                                )}
                                             </div>
-                                        ) : (
-                                            <div className="markdown-user-message">
-                                                <MarkdownMessage content={msg.content}/>
-                                            </div>
-                                        )}
-
-                                        {/* Copy button that appears on hover */}
-                                        <div
-                                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity transform -translate-x-full">
+                                            {/* Copy button that appears on hover */}
                                             <CopyButton
                                                 content={msg.content}
                                                 tooltipText="Copy message"
                                                 position="left"
                                                 variant="secondary"
                                                 size="xs"
-                                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                                                className="mt-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity bg-blue-600 hover:bg-blue-700 text-white"
                                             />
                                         </div>
                                     </div>
@@ -738,9 +831,21 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                                     <div className="flex justify-start items-start gap-2 group">
                                         <ModelIcon vendor={msg.vendor}/>
                                         <div
-                                            className="max-w-[80%] rounded-2xl px-4 py-2 shadow-sm bg-purple-50 text-purple-800 mr-12 rounded-bl-sm">
-                                            <MarkdownMessage content={msg.content}/>
-                                            {msg.tokenUsage && <TokenUsageDisplay usage={msg.tokenUsage}/>}
+                                            className="max-w-[80%] rounded-2xl px-4 py-2 shadow-sm bg-purple-50 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200 mr-12 rounded-bl-sm border border-purple-200 dark:border-purple-700" style={{ fontFamily: 'Georgia, serif' }}>
+                                            <div className="flex justify-between items-start gap-4">
+                                                <div className="prose dark:prose-invert flex-1">
+                                                    <MarkdownMessage content={msg.content}/>
+                                                    {msg.tokenUsage && <TokenUsageDisplay usage={msg.tokenUsage}/>}
+                                                </div>
+                                                <CopyButton
+                                                    content={msg.content}
+                                                    tooltipText="Copy message"
+                                                    position="left"
+                                                    variant="secondary"
+                                                    size="xs"
+                                                    className="mt-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -780,24 +885,24 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                             return (
                                 <div key={idx} className="flex justify-start group">
                                     <div
-                                        className={`max-w-[80%] rounded-2xl px-4 py-2 shadow-sm relative ${
+                                        className={`max-w-[80%] rounded-2xl px-4 py-2 shadow-sm ${
                                             isError
-                                                ? "bg-red-100 text-red-800 border border-red-300"
-                                                : "bg-gray-100 text-gray-600"
+                                                ? "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-300 dark:border-red-800"
+                                                : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600"
                                         }`}
                                     >
-                                        {isError ? "🚫 Error: " : ""}{msg.content}
-
-                                        {/* Copy button that appears on hover */}
-                                        <div
-                                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="flex justify-between items-start gap-4">
+                                            <div className="prose dark:prose-invert flex-1">
+                                                {isError ? "⛔ Error: " : ""}{msg.content}
+                                            </div>
+                                            {/* Copy button that appears on hover */}
                                             <CopyButton
                                                 content={msg.content}
                                                 tooltipText="Copy message"
                                                 position="left"
                                                 variant="ghost"
                                                 size="xs"
-                                                className="text-gray-500 hover:bg-gray-200"
+                                                className="mt-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-gray-500 hover:bg-gray-200"
                                             />
                                         </div>
                                     </div>
@@ -819,64 +924,59 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                 </div>
             </ScrollArea>
 
-            {/* Footer with file upload and message input */}
-            <div className="border-t bg-white/50 backdrop-blur-sm p-4 space-y-3 rounded-b-xl">
-                <div className="flex gap-2">
-                    <Input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleFileSelection}
-                        className="block w-full text-sm text-gray-500
-                        file:mr-4 file:py-2 file:px-4
-                        file:rounded-xl file:border-0
-                        file:text-sm file:font-semibold
-                        file:bg-blue-50 file:text-blue-700
-                        hover:file:bg-blue-100
-                        focus:outline-none focus:ring-2 focus:ring-blue-200 focus:ring-opacity-50
-                        rounded-xl
-                        cursor-pointer
-                        transition-all
-                        border border-gray-200
-                        bg-white/50 backdrop-blur-sm
-                        h-12 py-2"
+            {/* Options Panel - conditionally rendered between messages and input */}
+            {isOptionsOpen && (
+                <div className="mx-4 mb-2">
+                    <CollapsibleOptions
+                        isOpen={isOptionsOpen}
+                        setIsOpen={setIsOptionsOpen}
+                        persona={persona}
+                        personas={personas}
+                        availableTools={availableTools}
+                        customPrompt={customPrompt}
+                        temperature={modelParameters.temperature}
+                        modelName={modelName}
+                        modelConfigs={modelConfigs}
+                        sessionId={sessionId}
+                        isReady={isReady}
+                        onEquipTools={onEquipTools}
+                        activeTools={activeTools}
+                        modelParameters={modelParameters}
+                        selectedModel={selectedModel}
+                        onUpdateSettings={onUpdateSettings}
+                        isInitialized={isInitialized}
                     />
-                    <Button
-                        onClick={handleUploadFile}
-                        variant="outline"
-                        size="icon"
-                        disabled={!selectedFileForUpload || isUploading}
-                        className="shrink-0 rounded-xl border-gray-200 bg-white/50 backdrop-blur-sm hover:bg-white/80 transition-colors"
-                    >
-                        <Upload className="h-4 w-4"/>
-                    </Button>
                 </div>
+            )}
 
+            {/* Footer with file upload and message input */}
+            <div className="border-t dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm p-4 space-y-3 rounded-b-xl">
                 {/* Add the file list here - before the message input */}
                 {uploadedFiles.length > 0 && (
                     <div
-                        className="my-2 p-3 bg-gray-50 rounded-lg max-h-32 overflow-y-auto border border-gray-300 shadow-sm">
+                        className="my-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg max-h-32 overflow-y-auto border border-gray-300 dark:border-gray-600 shadow-sm">
                         <div className="text-xs font-medium text-gray-500 mb-2">Uploaded Files</div>
                         {uploadedFiles.map((file) => (
                             <div key={file.id}
                                  className={`file-item flex items-center justify-between mb-1 p-2 rounded border ${
-                                     file.processing_status === 'failed' ? 'bg-red-50 border-red-200' :
-                                         file.processing_status === 'complete' ? 'bg-green-50 border-green-200' : 'bg-gray-100 border-gray-200'
+                                     file.processing_status === 'failed' ? 'bg-red-50 dark:bg-red-900/50 border-red-200 dark:border-red-800' :
+                                         file.processing_status === 'complete' ? 'bg-green-50 dark:bg-green-900/50 border-green-200 dark:border-green-800' : 'bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600'
                                  }`}>
                                 <span className="text-sm truncate max-w-[70%]">{file.name}</span>
                                 <div className="flex items-center space-x-2">
                                     {file.processing_status === 'pending' &&
                                         <span
-                                            className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">Processing...</span>
+                                            className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/70 text-blue-700 dark:text-blue-300 rounded-full">Processing...</span>
                                     }
                                     {file.processing_status === 'failed' && (
-                                        <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded-full"
+                                        <span className="text-xs px-2 py-0.5 bg-red-100 dark:bg-red-900/70 text-red-700 dark:text-red-300 rounded-full"
                                               title={file.processing_error || "Error processing file"}>
                             Error
                         </span>
                                     )}
                                     {file.processing_status === 'complete' &&
                                         <span
-                                            className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">Ready</span>
+                                            className="text-xs px-2 py-0.5 bg-green-100 dark:bg-green-900/70 text-green-700 dark:text-green-300 rounded-full">Ready</span>
                                     }
                                     <input
                                         type="checkbox"
@@ -891,32 +991,73 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                 )}
 
                 <div className="flex gap-2">
-    <textarea
-        placeholder="Type your message..."
-        value={inputText}
-        onChange={(e) => setInputText(e.target.value)}
-        onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSendMessage();
-            }
-        }}
-        disabled={isStreaming}
-        rows="2"
-        className="flex-1 rounded-xl border border-gray-200 bg-white/50 backdrop-blur-sm transition-colors
-        hover:bg-white/80 focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50
-        placeholder-gray-400 py-2 px-3 resize-none"
-    />
-                    <div className="flex flex-col gap-2 self-end">
+                    {/* Hidden file input */}
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileSelection}
+                        className="hidden"
+                    />
+                    
+                    {/* Text input with action buttons */}
+                    <div className="relative flex-1">
+                        <textarea
+                            placeholder="Type your message..."
+                            value={inputText}
+                            onChange={(e) => setInputText(e.target.value)}
+                            onKeyDown={handleKeyPress}
+                            disabled={isStreaming}
+                            rows="2"
+                            className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm transition-colors
+                            hover:bg-white/80 dark:hover:bg-gray-700/80 focus:border-blue-300 dark:focus:border-blue-600 focus:ring focus:ring-blue-200 dark:focus:ring-blue-800 focus:ring-opacity-50
+                            placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-gray-100 py-2 pl-3 pr-12 resize-none"
+                        />
+                        
+                        {/* Settings gear icon button - added above the file upload button */}
+                        <Button
+                            onClick={toggleOptionsPanel}
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-20 bottom-2 h-8 w-8 text-gray-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-full transition-colors"
+                        >
+                            <Settings className="h-4 w-4" />
+                        </Button>
+                        
+                        {/* File upload button positioned inside the input area */}
+                        <Button
+                            onClick={openFilePicker}
+                            variant="ghost"
+                            size="icon"
+                            disabled={isStreaming || isUploading}
+                            className="absolute right-12 bottom-2 h-8 w-8 text-gray-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-full transition-colors"
+                        >
+                            <Upload className="h-4 w-4" />
+                        </Button>
+                        
+                        {/* Send button */}
                         <Button
                             onClick={handleSendMessage}
                             disabled={isStreaming}
                             size="icon"
-                            className="shrink-0 rounded-xl bg-blue-500 hover:bg-blue-600 transition-colors"
+                            className="absolute right-2 bottom-2 h-8 w-8 rounded-full bg-blue-500 hover:bg-blue-600 transition-colors"
                         >
-                            <Send className="h-4 w-4"/>
+                            <Send className="h-4 w-4" />
                         </Button>
                     </div>
+                </div>
+                
+                {/* StatusBar positioned just below the input */}
+                <div className="-mt-1 flex justify-center w-full transform translate-y-1">
+                    <StatusBar
+                        isReady={isReady}
+                        activeTools={activeTools}
+                        sessionId={sessionId}
+                        settingsVersion={settingsVersion}
+                        isProcessing={isStreaming || isUploading}
+                        getChatCopyContent={getChatCopyContent}
+                        getChatCopyHTML={getChatCopyHTML}
+                        messages={messages}
+                    />
                 </div>
             </div>
         </Card>

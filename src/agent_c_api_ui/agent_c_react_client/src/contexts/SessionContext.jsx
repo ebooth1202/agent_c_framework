@@ -23,6 +23,11 @@ export const SessionProvider = ({children}) => {
     const [isLoading, setIsLoading] = useState(true);
     const [isInitialized, setIsInitialized] = useState(false);
     const [isReady, setIsReady] = useState(false);
+    const [theme, setTheme] = useState(() => {
+        // Check for saved theme preference in localStorage
+        const savedTheme = localStorage.getItem('theme');
+        return savedTheme || 'system';
+    });
 
     // Agent settings & configuration
     const [persona, setPersona] = useState("");
@@ -669,6 +674,12 @@ export const SessionProvider = ({children}) => {
         setModelName("");
         setSelectedModel(null);
     };
+    
+    // Handle theme change
+    const handleThemeChange = (newTheme) => {
+        setTheme(newTheme);
+        localStorage.setItem('theme', newTheme);
+    };
 
     // --- Effects ---
     useEffect(() => {
@@ -703,6 +714,8 @@ export const SessionProvider = ({children}) => {
                 personas,
                 availableTools,
                 activeTools,
+                theme,
+                handleThemeChange,
                 fetchAgentTools,
                 updateAgentSettings,
                 handleEquipTools,

@@ -7,45 +7,49 @@ import CopyButton from './CopyButton';
 const MarkdownMessage = ({content}) => {
     // Memoize the markdown content to prevent unnecessary re-renders
     const memoizedContent = useMemo(() => {
-
         if (content === undefined || content === null) {
             return '';
         }
-        // Ensure proper spacing around headers
-        let processedContent = content.replace(/\n(#{1,6})\s*([^\n]+)/g, '\n\n$1 $2\n');
+        
+        // For thought display, we want minimal processing to avoid excessive newlines
+        const isThoughtContent = content.includes('Thinking Process') || 
+                               document.querySelector('.bg-yellow-50.border-yellow-100') !== null;
+        
+        if (isThoughtContent) {
+            // Minimal processing for thought content
+            return typeof content === 'string' ? content : String(content);
+        }
+        
+        // For regular markdown messages, ensure proper spacing around headers
+        // Use minimal newlines to avoid excessive spacing
+        let processedContent = content.replace(/\n(#{1,6})\s*([^\n]+)/g, '\n$1 $2\n');
 
         // Ensure proper list formatting
         processedContent = processedContent.replace(/^\s*[-*]\s/gm, '* ');
+        
+        // Don't add extra newlines before lists - it causes too much spacing
+        // processedContent = processedContent.replace(/(?<![-*]\s.*?)\n[-*]/g, '\n\n*');
 
-        // Add extra newline before lists
-        processedContent = processedContent.replace(/\n[-*]/g, '\n\n*');
-
-        return typeof processedContent === 'string' ? content : String(content);
+        return typeof processedContent === 'string' ? processedContent : String(processedContent);
     }, [content]);
 
     return (
-        <div className="prose prose-sm max-w-none prose-headings:mt-4 prose-headings:mb-2 relative group">
-            {/* Copy button that appears on hover */}
-            <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                <CopyButton
-                    content={content}
-                    tooltipText="Copy markdown"
-                    position="left"
-                />
-            </div>
+        <div className="prose prose-sm max-w-none prose-p:my-1 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-1 group flex gap-2 items-start">
+            {/* Main content */}
+            <div className="flex-1">
 
             <ReactMarkdown
                 components={{
-                    h1: ({node, ...props}) => <h1 className="text-2xl font-bold mt-6 mb-4" {...props} />,
-                    h2: ({node, ...props}) => <h2 className="text-xl font-bold mt-5 mb-3" {...props} />,
-                    h3: ({node, ...props}) => <h3 className="text-lg font-bold mt-4 mb-2" {...props} />,
-                    h4: ({node, ...props}) => <h4 className="text-base font-bold mt-3 mb-2" {...props} />,
-                    // Enhanced list rendering
+                    h1: ({node, ...props}) => <h1 className="text-2xl font-bold mt-3 mb-1" {...props} />,
+                    h2: ({node, ...props}) => <h2 className="text-xl font-bold mt-2 mb-1" {...props} />,
+                    h3: ({node, ...props}) => <h3 className="text-lg font-bold mt-2 mb-1" {...props} />,
+                    h4: ({node, ...props}) => <h4 className="text-base font-bold mt-1 mb-1" {...props} />,
+                    // Enhanced list rendering - reduced margins
                     ul: ({node, ...props}) => (
-                        <ul className="list-disc ml-4 mt-2 mb-4 space-y-2" {...props} />
+                        <ul className="list-disc ml-4 my-1" {...props} />
                     ),
                     li: ({node, ...props}) => (
-                        <li className="mt-1" {...props} />
+                        <li className="[&>code]:ml-0" {...props} />
                     ),
                     // Enhanced bold text rendering
                     strong: ({node, ...props}) => (
@@ -89,7 +93,7 @@ const MarkdownMessage = ({content}) => {
                             </div>
                         ) : (
                             // Inline code (single backticks) formatting
-                            <code className="bg-purple-100 px-1 rounded text-purple-800 inline font-mono" {...props}>
+                            <code className="bg-purple-100 px-1 rounded text-purple-800 inline font-mono inline-block" {...props}>
                                 {children}
                             </code>
                         );
@@ -98,9 +102,9 @@ const MarkdownMessage = ({content}) => {
                     blockquote: ({node, ...props}) => (
                         <blockquote className="border-l-4 border-purple-300 pl-4 my-4 italic" {...props} />
                     ),
-                    // Enhance paragraph rendering
+                    // Enhance paragraph rendering with reduced spacing
                     p: ({node, ...props}) => (
-                        <p className="my-2 leading-relaxed" {...props} />
+                        <p className="my-1 leading-relaxed" {...props} />
                     ),
                     // Enhanced horizontal rule
                     hr: ({node, ...props}) => (
@@ -110,6 +114,15 @@ const MarkdownMessage = ({content}) => {
             >
                 {memoizedContent}
             </ReactMarkdown>
+            </div>
+            {/* Copy button that appears on hover */}
+            <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                <CopyButton
+                    content={content}
+                    tooltipText="Copy markdown"
+                    position="left"
+                />
+            </div>
         </div>
     );
 };

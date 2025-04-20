@@ -1,53 +1,29 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import AgentConfigHoverCard from './AgentConfigHoverCard';
-import { Trash2, Activity, Wrench, Info } from 'lucide-react';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { Activity, Wrench, Info, Copy, Download } from 'lucide-react';
 import {
     Tooltip,
     TooltipContent,
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {API_URL} from "@/config/config";
+import CopyButton from './CopyButton';
+import ExportHTMLButton from './ExportHTMLButton';
+
 
 const StatusBar = ({
     isReady,
     activeTools = [],
-    onSessionsDeleted,
     isInitializing = false,
     isProcessing = false,
     sessionId,
-    settingsVersion
+    settingsVersion,
+    getChatCopyContent,
+    getChatCopyHTML,
+    messages
 }) => {
-    const handleDeleteSessions = async () => {
-        try {
-            const response = await fetch(`${API_URL}/sessions`, {
-                method: 'DELETE',
-            });
 
-            if (!response.ok) {
-                throw new Error('Failed to delete sessions');
-            }
-
-            const data = await response.json();
-            if (onSessionsDeleted) {
-                onSessionsDeleted();
-            }
-        } catch (error) {
-            console.error('Error deleting sessions:', error);
-        }
-    };
 
     const getStatusInfo = () => {
         if (isProcessing) {
@@ -85,19 +61,19 @@ const StatusBar = ({
     const statusInfo = getStatusInfo();
 
     return (
-        <div className="flex items-center justify-between p-4 bg-white/95 backdrop-blur-sm rounded-lg shadow-sm border">
-            <div className="flex items-center space-x-6">
+        <div className="flex items-center justify-between py-1 px-2 bg-background/95 backdrop-blur-sm rounded-lg shadow-sm text-xs">
+            <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
                     <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <div className="flex items-center space-x-2">
                                     <Activity
-                                        className={`w-4 h-4 ${statusInfo.color} ${statusInfo.iconClass} ${
+                                        className={`w-3 h-3 ${statusInfo.color} ${statusInfo.iconClass} ${
                                             isProcessing ? 'scale-110 transition-transform duration-200' : ''
                                         }`}
                                     />
-                                    <span className="text-sm font-medium">
+                                    <span className="text-xs font-medium">
                                         Status: {statusInfo.message}
                                     </span>
                                 </div>
@@ -117,56 +93,49 @@ const StatusBar = ({
                 </div>
 
                 {isReady && activeTools && activeTools.length > 0 && (
-                    <div className="flex items-center space-x-2 px-4 py-1.5 bg-blue-50 rounded-full border border-blue-100">
-                        <Wrench className="w-4 h-4 text-blue-500" />
-                        <span className="text-sm text-blue-700">
+                    <div className="flex items-center space-x-2 px-3 py-0.5 bg-blue-50/10 rounded-full border border-blue-200/20 dark:bg-blue-950/20 dark:border-blue-800/30">
+                        <Wrench className="w-3 h-3 text-blue-500 dark:text-blue-400" />
+                        <span className="text-xs text-blue-700 dark:text-blue-300">
                             Active Tools: {activeTools.length}
                         </span>
                         <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <Info className="w-4 h-4 text-blue-400 cursor-help" />
+                                    <Info className="w-3 h-3 text-blue-400 dark:text-blue-300 cursor-help" />
                                 </TooltipTrigger>
-                                <TooltipContent className="bg-white border shadow-md">
-                                    <p className="max-w-xs text-gray-700">{activeTools.join(', ')}</p>
+                                <TooltipContent className="bg-background border shadow-md">
+                                    <p className="max-w-xs text-muted-foreground">{activeTools.join(', ')}</p>
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
                     </div>
                 )}
             </div>
-
-            {isReady && (
-                <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                        <Button
-                            variant="destructive"
-                            size="sm"
-                            className="flex items-center space-x-2 bg-red-500 hover:bg-red-600 rounded-full"
-                        >
-                            <Trash2 className="w-4 h-4" />
-                            <span>Delete All Sessions</span>
-                        </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="bg-white">
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                This action will delete all active chat sessions and cannot be undone.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel className="border-gray-200 rounded-full">Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                                onClick={handleDeleteSessions}
-                                className="bg-red-500 hover:bg-red-600 text-white rounded-full"
-                            >
-                                Delete
-                            </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-            )}
+            
+            {/* Chat export actions */}
+            <div className="flex items-center space-x-4">
+                <CopyButton
+                    content={getChatCopyContent}
+                    htmlContent={getChatCopyHTML}
+                    tooltipText="Copy entire chat"
+                    successText="Chat copied!"
+                    size="sm"
+                    variant="ghost"
+                    className="text-foreground hover:bg-muted"
+                    icon={<Copy className="w-4 h-4" />}
+                    iconOnly
+                />
+                <ExportHTMLButton
+                    messages={messages}
+                    tooltipText="Export as HTML"
+                    filename={`chat-export-${new Date().toISOString().slice(0, 10)}.html`}
+                    size="sm"
+                    variant="ghost"
+                    className="text-foreground hover:bg-muted"
+                    icon={<Download className="w-4 h-4" />}
+                    iconOnly
+                />
+            </div>
         </div>
     );
 };

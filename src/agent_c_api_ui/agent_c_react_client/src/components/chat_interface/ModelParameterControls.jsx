@@ -219,7 +219,7 @@ const ModelParameterControls = ({
                 <div className="space-y-2">
                     <div className="flex items-center justify-between">
                         <Label className="text-sm font-medium">Temperature</Label>
-                        <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-xl text-sm font-medium">
+                        <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-xl text-sm font-medium">
                             {localTemperature.toFixed(1)}
                         </span>
                     </div>
@@ -262,16 +262,16 @@ const ModelParameterControls = ({
                     >
                         <SelectTrigger
                             id="reasoning-effort"
-                            className="w-full rounded-xl border-gray-200 bg-white/50 backdrop-blur-sm"
+                            className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
                         >
                             <SelectValue placeholder="Select reasoning effort"/>
                         </SelectTrigger>
-                        <SelectContent className="bg-white/95 backdrop-blur-sm border shadow-lg rounded-xl">
+                        <SelectContent className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border dark:border-gray-700 shadow-lg rounded-xl">
                             {reasoningEffortOptions.map(option => (
                                 <SelectItem
                                     key={option}
                                     value={option}
-                                    className="hover:bg-blue-50/80 focus:bg-blue-50 transition-colors rounded-lg mx-1 my-0.5"
+                                    className="hover:bg-blue-50/80 dark:hover:bg-blue-900/30 focus:bg-blue-50 dark:focus:bg-blue-900/30 transition-colors rounded-lg mx-1 my-0.5"
                                 >
                                     {option.charAt(0).toUpperCase() + option.slice(1)}
                                 </SelectItem>
@@ -301,7 +301,7 @@ const ModelParameterControls = ({
                         <div className="mt-3 space-y-2">
                             <div className="flex items-center justify-between">
                                 <Label className="text-sm font-medium">Thinking Budget</Label>
-                                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-xl text-sm font-medium">
+                                <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-xl text-sm font-medium">
                                     {budgetTokens.toLocaleString()} tokens
                                 </span>
                             </div>
