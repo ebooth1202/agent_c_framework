@@ -37,7 +37,7 @@ const ThoughtDisplay = ({content, vendor}) => {
             <div className="relative max-w-[80%] rounded-2xl px-4 py-3 shadow-sm 
                 bg-amber-50 dark:bg-gray-700/70 
                 text-amber-700/80 dark:text-amber-200/80 
-                border border-amber-200 dark:border-gray-600 
+                border border-amber-200 dark:border-amber-800 
                 rounded-bl-sm">
                 {/* Content area with markdown */}
                 <div

@@ -767,7 +767,7 @@ const ChatInterface = ({
 
     return (
         <Card 
-            className="flex flex-col h-full bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border dark:border-gray-700 shadow-lg rounded-xl relative z-0 group"
+            className="flex flex-col h-full min-h-0 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border dark:border-gray-700 shadow-lg rounded-xl relative z-0 group"
             onDragEnter={handleDragEnter}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -794,7 +794,7 @@ const ChatInterface = ({
                             return (
                                 <div key={idx} className="flex justify-end items-start gap-2 group">
                                     <div
-                                        className="max-w-[80%] rounded-2xl px-4 py-2 shadow-sm bg-blue-500 text-white ml-12 rounded-br-sm relative">
+                                        className="max-w-[80%] rounded-2xl px-4 py-2 shadow-sm bg-blue-500 text-white ml-12 rounded-br-sm relative border border-blue-600">
                                         {msg.isVoiceMessage ? (
                                             <div className="flex items-center space-x-2">
                                                 <Mic className="h-4 w-4 text-white"/>
@@ -831,7 +831,7 @@ const ChatInterface = ({
                                     <div className="flex justify-start items-start gap-2 group">
                                         <ModelIcon vendor={msg.vendor}/>
                                         <div
-                                            className="max-w-[80%] rounded-2xl px-4 py-2 shadow-sm bg-purple-50 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200 mr-12 rounded-bl-sm">
+                                            className="max-w-[80%] rounded-2xl px-4 py-2 shadow-sm bg-purple-50 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200 mr-12 rounded-bl-sm border border-purple-200 dark:border-purple-700">
                                             <MarkdownMessage content={msg.content}/>
                                             {msg.tokenUsage && <TokenUsageDisplay usage={msg.tokenUsage}/>}
                                         </div>

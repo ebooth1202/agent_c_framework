@@ -4,7 +4,7 @@ import { ThemeToggle } from './ui/theme-toggle';
 
 const Layout = ({children}) => {
     return (
-        <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex flex-col overflow-hidden">
             <header className="container mx-auto px-6 py-4 max-w-7xl flex items-center justify-between">
                 <div className="flex items-center">
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Agent C Conversational Interface</h1>
@@ -20,10 +20,7 @@ const Layout = ({children}) => {
                     </nav>
                 </div>
             </header>
-            <main className="container mx-auto px-6 pt-1 pb-4 max-w-7xl text-gray-900 dark:text-gray-100">{children}</main>
-            <footer className="container mx-auto px-6 py-4 max-w-7xl text-center text-gray-600 dark:text-gray-400">
-                &copy; {new Date().getFullYear()}
-            </footer>
+            <main className="container mx-auto px-6 pt-1 pb-4 max-w-7xl text-gray-900 dark:text-gray-100 flex-1 flex flex-col overflow-hidden">{children}</main>
         </div>
     );
 };
