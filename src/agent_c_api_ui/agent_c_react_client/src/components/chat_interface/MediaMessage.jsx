@@ -47,7 +47,7 @@ const MediaMessage = ({message}) => {
                     onClick={toggleFullscreen}
                     className="absolute top-2 right-2 p-1 rounded-lg bg-background/80 hover:bg-background shadow-sm transition-colors"
                 >
-                    <Maximize2 className="h-4 w-4 text-blue-600"/>
+                    <Maximize2 className="h-4 w-4 text-blue-600 dark:text-blue-400"/>
                 </button>
             )}
             {children}
@@ -120,7 +120,7 @@ const MediaMessage = ({message}) => {
     const FullscreenDialog = () => (
         <Dialog open={isFullscreen} onOpenChange={setIsFullscreen}>
             <DialogContent className="p-0 overflow-hidden max-w-7xl">
-                <div className="w-full h-full flex items-center justify-center bg-card p-4">
+                <div className="w-full h-full flex items-center justify-center bg-card p-4 dark:bg-gray-900">
                     {message.contentType === 'image/svg+xml' ? (
                         <div
                             className="w-full h-full flex items-center justify-center"
@@ -150,7 +150,7 @@ const MediaMessage = ({message}) => {
 
     return (
         <>
-            <Card className="bg-card shadow-sm overflow-hidden">
+            <Card className="bg-card shadow-sm overflow-hidden max-w-[80%] ml-8">
                 <div
                     className="flex items-center justify-between px-4 py-3 cursor-pointer bg-amber-50/80 dark:bg-amber-900/20 hover:bg-amber-100/90 dark:hover:bg-amber-900/30 transition-colors"
                     onClick={() => setIsExpanded(!isExpanded)}
@@ -180,7 +180,7 @@ const MediaMessage = ({message}) => {
                 </div>
 
                 {isExpanded && (
-                    <div className="border-t border-amber-100 dark:border-amber-900/30 p-4">
+                    <div className="border-t border-amber-100 dark:border-amber-900/30 p-4 bg-card">
                         <div className="max-h-96 overflow-auto">
                             {renderContent()}
                         </div>
