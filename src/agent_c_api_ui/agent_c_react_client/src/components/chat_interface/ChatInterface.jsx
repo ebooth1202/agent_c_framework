@@ -2,7 +2,7 @@ import React, {useState, useRef, useEffect, useCallback, useContext} from "react
 import {Card} from "@/components/ui/card";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
-import {Send, Upload, User, Mic, FileIcon} from "lucide-react";
+import {Send, Upload, User, Mic, FileIcon, Settings} from "lucide-react";
 import {ScrollArea} from "@/components/ui/scroll-area";
 import ToolCallDisplay from "./ToolCallDisplay";
 import MediaMessage from './MediaMessage';
@@ -12,6 +12,7 @@ import ThoughtDisplay from './ThoughtDisplay';
 import ModelIcon from './ModelIcon';
 import CopyButton from './CopyButton';
 import StatusBar from './StatusBar';
+import CollapsibleOptions from './CollapsibleOptions';
 import {API_URL} from "@/config/config";
 import {createClipboardContent} from '@/components/chat_interface/utils/htmlChatFormatter';
 import ExportHTMLButton from './ExportHTMLButton';
@@ -22,9 +23,30 @@ import { SessionContext } from '@/contexts/SessionContext';
  * message streaming, file uploads, and various message types including text,
  * media, and tool calls.
  */
-const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onProcessingStatus}) => {
-    // Access SessionContext for StatusBar props
-    const { isReady, activeTools, settingsVersion } = useContext(SessionContext);
+const ChatInterface = ({
+    sessionId, 
+    customPrompt, 
+    modelName, 
+    modelParameters, 
+    onProcessingStatus,
+    // Added props for options panel
+    persona,
+    personas,
+    availableTools,
+    onEquipTools,
+    modelConfigs,
+    selectedModel,
+    onUpdateSettings,
+    isInitialized
+}) => {
+    // Access SessionContext for StatusBar props and options panel state
+    const { 
+        isReady, 
+        activeTools, 
+        settingsVersion,
+        isOptionsOpen,
+        setIsOptionsOpen
+    } = useContext(SessionContext);
     
     const [messages, setMessages] = useState([]);
     const [inputText, setInputText] = useState("");
@@ -738,6 +760,11 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
         }
     };
 
+    // Toggle options panel visibility
+    const toggleOptionsPanel = () => {
+        setIsOptionsOpen(!isOptionsOpen);
+    };
+
     return (
         <Card 
             className="flex flex-col h-full bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border dark:border-gray-700 shadow-lg rounded-xl relative z-0 group"
@@ -904,6 +931,31 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                 </div>
             </ScrollArea>
 
+            {/* Options Panel - conditionally rendered between messages and input */}
+            {isOptionsOpen && (
+                <div className="mx-4 mb-2">
+                    <CollapsibleOptions
+                        isOpen={isOptionsOpen}
+                        setIsOpen={setIsOptionsOpen}
+                        persona={persona}
+                        personas={personas}
+                        availableTools={availableTools}
+                        customPrompt={customPrompt}
+                        temperature={modelParameters.temperature}
+                        modelName={modelName}
+                        modelConfigs={modelConfigs}
+                        sessionId={sessionId}
+                        isReady={isReady}
+                        onEquipTools={onEquipTools}
+                        activeTools={activeTools}
+                        modelParameters={modelParameters}
+                        selectedModel={selectedModel}
+                        onUpdateSettings={onUpdateSettings}
+                        isInitialized={isInitialized}
+                    />
+                </div>
+            )}
+
             {/* Footer with file upload and message input */}
             <div className="border-t dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm p-4 space-y-3 rounded-b-xl">
                 {/* Add the file list here - before the message input */}
@@ -967,6 +1019,16 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                             hover:bg-white/80 dark:hover:bg-gray-700/80 focus:border-blue-300 dark:focus:border-blue-600 focus:ring focus:ring-blue-200 dark:focus:ring-blue-800 focus:ring-opacity-50
                             placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-gray-100 py-2 pl-3 pr-12 resize-none"
                         />
+                        
+                        {/* Settings gear icon button - added above the file upload button */}
+                        <Button
+                            onClick={toggleOptionsPanel}
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-20 bottom-2 h-8 w-8 text-gray-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-full transition-colors"
+                        >
+                            <Settings className="h-4 w-4" />
+                        </Button>
                         
                         {/* File upload button positioned inside the input area */}
                         <Button

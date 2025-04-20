@@ -2,8 +2,8 @@
 import React, { useContext } from 'react';
 import { SessionContext } from '@/contexts/SessionContext';
 import ChatInterface from '../components/chat_interface/ChatInterface';
-import CollapsibleOptions from '@/components/chat_interface//CollapsibleOptions';
-// StatusBar now moved to ChatInterface component
+// Remove the CollapsibleOptions import since it will be used directly in ChatInterface
+// import CollapsibleOptions from '@/components/chat_interface//CollapsibleOptions';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const ChatPage = () => {
@@ -65,37 +65,24 @@ const ChatPage = () => {
 
       {sessionId && isInitialized && (
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          <div className="flex-shrink-0">
-            <CollapsibleOptions
-              isOpen={isOptionsOpen}
-              setIsOpen={setIsOptionsOpen}
-              persona={persona}
-              personas={personas}
-              availableTools={availableTools}
-              customPrompt={customPrompt}
-              temperature={temperature}
-              modelName={modelName}
-              modelConfigs={modelConfigs}
-              sessionId={sessionId}
-              isReady={isReady}
-              onEquipTools={handleEquipTools}
-              activeTools={activeTools}
-              modelParameters={modelParameters}
-              selectedModel={selectedModel}
-              onUpdateSettings={updateAgentSettings}
-              isInitialized={isInitialized}
-              onProcessingStatus={handleProcessingStatus}
-            />
-          </div>
-
+          {/* CollapsibleOptions removed from here since it's now in ChatInterface */}
+          
           <div className="flex-1 overflow-hidden flex flex-col">
             <ChatInterface
               sessionId={sessionId}
               customPrompt={customPrompt}
               modelName={modelName}
               modelParameters={modelParameters}
-              selectedModel={selectedModel}
               onProcessingStatus={handleProcessingStatus}
+              // Added props for options panel
+              persona={persona}
+              personas={personas}
+              availableTools={availableTools}
+              modelConfigs={modelConfigs}
+              onEquipTools={handleEquipTools}
+              selectedModel={selectedModel}
+              onUpdateSettings={updateAgentSettings}
+              isInitialized={isInitialized}
             />
             {/* StatusBar moved to ChatInterface component */}
           </div>
