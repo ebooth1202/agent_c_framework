@@ -45,9 +45,9 @@ const ChatPage = () => {
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
-      <div className="flex flex-col space-y-4 mb-4">
+      <div className="flex flex-col space-y-2 mb-1">
         {error && (
-          <Alert variant="destructive" className="mb-4">
+          <Alert variant="destructive" className="mb-2">
             <AlertDescription className="flex justify-between items-center">
               {error}
               <button
