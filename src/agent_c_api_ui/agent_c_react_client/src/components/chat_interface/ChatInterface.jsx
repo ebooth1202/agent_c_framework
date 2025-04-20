@@ -2,7 +2,7 @@ import React, {useState, useRef, useEffect, useCallback, useContext} from "react
 import {Card} from "@/components/ui/card";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
-import {Send, Upload, User, Mic} from "lucide-react";
+import {Send, Upload, User, Mic, FileIcon} from "lucide-react";
 import {ScrollArea} from "@/components/ui/scroll-area";
 import ToolCallDisplay from "./ToolCallDisplay";
 import MediaMessage from './MediaMessage';
@@ -21,14 +21,6 @@ import { SessionContext } from '@/contexts/SessionContext';
  * ChatInterface component provides a complete chat interface with support for
  * message streaming, file uploads, and various message types including text,
  * media, and tool calls.
- *
- * @component
- * @param {Object} props
- * @param {string} props.sessionId - Unique identifier for the chat session
- * @param {string} [props.customPrompt] - Optional custom prompt for the chat
- * @param {string} props.modelName - Name of the language model to use
- * @param {Object} props.modelParameters - Configuration parameters for the model
- * @param {Function} props.onProcessingStatus - Callback for streaming status updates
  */
 const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onProcessingStatus}) => {
     // Access SessionContext for StatusBar props
@@ -44,6 +36,10 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [isUploading, setIsUploading] = useState(false);
     const [selectedFileForUpload, setSelectedFileForUpload] = useState(null); // Track selected file
+    
+    // State for drag & drop functionality
+    const [isDraggingOver, setIsDraggingOver] = useState(false);
+    const dragCounterRef = useRef(0);
 
     // Helper function to format a message for copying
     const formatMessageForCopy = useCallback((msg) => {
@@ -113,26 +109,93 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
      */
     const handleFileSelection = (e) => {
         if (e.target.files && e.target.files.length > 0) {
-            setSelectedFileForUpload(e.target.files[0]);
+            const file = e.target.files[0];
+            setSelectedFileForUpload(file);
+            
+            // Automatically upload the file when selected
+            setTimeout(() => {
+                handleUploadFile(file);
+            }, 0);
         } else {
             setSelectedFileForUpload(null);
         }
     };
 
     /**
+     * Opens the file picker dialog
+     */
+    const openFilePicker = () => {
+        fileInputRef.current?.click();
+    };
+
+    /**
+     * Handles drag enter events
+     */
+    const handleDragEnter = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounterRef.current++;
+        
+        if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+            setIsDraggingOver(true);
+        }
+    };
+
+    /**
+     * Handles drag leave events
+     */
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounterRef.current--;
+        
+        if (dragCounterRef.current === 0) {
+            setIsDraggingOver(false);
+        }
+    };
+
+    /**
+     * Handles drag over events
+     */
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    /**
+     * Handles drop events
+     */
+    const handleDrop = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDraggingOver(false);
+        dragCounterRef.current = 0;
+        
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            setSelectedFileForUpload(e.dataTransfer.files[0]);
+            // Automatically upload the file when dropped
+            setTimeout(() => {
+                handleUploadFile(e.dataTransfer.files[0]);
+            }, 0);
+        }
+    };
+
+    /**
      * Handles file upload to the server and tracks processing status
+     * @param {File} fileToUpload - Optional file to upload, if not provided uses selectedFileForUpload
      * @returns {Promise<void>}
      * @throws {Error} If the file upload fails
      */
-    const handleUploadFile = async () => {
-        // Use the selected file from state instead of directly accessing fileInputRef
-        if (!selectedFileForUpload) return;
+    const handleUploadFile = async (fileToUpload = null) => {
+        // Use provided file or the selected file from state
+        const fileToProcess = fileToUpload || selectedFileForUpload;
+        if (!fileToProcess) return;
 
         setIsUploading(true);
 
         const formData = new FormData();
         formData.append("ui_session_id", sessionId);
-        formData.append("file", selectedFileForUpload);
+        formData.append("file", fileToProcess);
 
         try {
             // Upload the file
@@ -166,7 +229,7 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                 {
                     role: "system",
                     type: "content",
-                    content: `File uploaded: ${selectedFileForUpload.name}`,
+                    content: `File uploaded: ${fileToProcess.name}`,
                 },
             ]);
 
@@ -676,7 +739,24 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
     };
 
     return (
-        <Card className="flex flex-col h-full bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border dark:border-gray-700 shadow-lg rounded-xl relative z-0 group">
+        <Card 
+            className="flex flex-col h-full bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border dark:border-gray-700 shadow-lg rounded-xl relative z-0 group"
+            onDragEnter={handleDragEnter}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+        >
+            {/* Drag & Drop overlay */}
+            {isDraggingOver && (
+                <div className="absolute inset-0 bg-blue-500/10 dark:bg-blue-800/20 backdrop-blur-sm z-50 rounded-xl flex items-center justify-center border-2 border-blue-500 dark:border-blue-400 border-dashed">
+                    <div className="text-center p-6 bg-white/80 dark:bg-gray-800/80 rounded-xl shadow-lg">
+                        <Upload className="h-10 w-10 text-blue-500 dark:text-blue-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-blue-700 dark:text-blue-300">Drop your file here</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Files will be uploaded and processed automatically</p>
+                    </div>
+                </div>
+            )}
+            
             {/* Floating copy/export buttons that only appear on hover */}
             <div className="absolute top-4 right-4 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex gap-2">
                 <CopyButton
@@ -791,7 +871,7 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                                                 : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
                                         }`}
                                     >
-                                        {isError ? "🚫 Error: " : ""}{msg.content}
+                                        {isError ? "ud83dudeab Error: " : ""}{msg.content}
 
                                         {/* Copy button that appears on hover */}
                                         <div
@@ -826,37 +906,6 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
 
             {/* Footer with file upload and message input */}
             <div className="border-t dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm p-4 space-y-3 rounded-b-xl">
-                <div className="flex gap-2">
-                    <Input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleFileSelection}
-                        className="block w-full text-sm text-gray-500
-                        file:mr-4 file:py-2 file:px-4
-                        file:rounded-xl file:border-0
-                        file:text-sm file:font-semibold
-                        file:bg-blue-50 file:text-blue-700
-                        file:dark:bg-blue-900 file:dark:text-blue-300
-                        hover:file:bg-blue-100 hover:file:dark:bg-blue-800
-                        focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 focus:ring-opacity-50
-                        rounded-xl
-                        cursor-pointer
-                        transition-all
-                        border border-gray-200 dark:border-gray-700
-                        bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm
-                        h-12 py-2"
-                    />
-                    <Button
-                        onClick={handleUploadFile}
-                        variant="outline"
-                        size="icon"
-                        disabled={!selectedFileForUpload || isUploading}
-                        className="shrink-0 rounded-xl border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm hover:bg-white/80 dark:hover:bg-gray-700/80 transition-colors"
-                    >
-                        <Upload className="h-4 w-4"/>
-                    </Button>
-                </div>
-
                 {/* Add the file list here - before the message input */}
                 {uploadedFiles.length > 0 && (
                     <div
@@ -897,30 +946,47 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                 )}
 
                 <div className="flex gap-2">
-    <textarea
-        placeholder="Type your message..."
-        value={inputText}
-        onChange={(e) => setInputText(e.target.value)}
-        onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSendMessage();
-            }
-        }}
-        disabled={isStreaming}
-        rows="2"
-        className="flex-1 rounded-xl border border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm transition-colors
-        hover:bg-white/80 dark:hover:bg-gray-700/80 focus:border-blue-300 dark:focus:border-blue-600 focus:ring focus:ring-blue-200 dark:focus:ring-blue-800 focus:ring-opacity-50
-        placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-gray-100 py-2 px-3 resize-none"
-    />
-                    <div className="flex flex-col gap-2 self-end">
+                    {/* Hidden file input */}
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileSelection}
+                        className="hidden"
+                    />
+                    
+                    {/* Text input with action buttons */}
+                    <div className="relative flex-1">
+                        <textarea
+                            placeholder="Type your message..."
+                            value={inputText}
+                            onChange={(e) => setInputText(e.target.value)}
+                            onKeyDown={handleKeyPress}
+                            disabled={isStreaming}
+                            rows="2"
+                            className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm transition-colors
+                            hover:bg-white/80 dark:hover:bg-gray-700/80 focus:border-blue-300 dark:focus:border-blue-600 focus:ring focus:ring-blue-200 dark:focus:ring-blue-800 focus:ring-opacity-50
+                            placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-gray-100 py-2 pl-3 pr-12 resize-none"
+                        />
+                        
+                        {/* File upload button positioned inside the input area */}
+                        <Button
+                            onClick={openFilePicker}
+                            variant="ghost"
+                            size="icon"
+                            disabled={isStreaming || isUploading}
+                            className="absolute right-12 bottom-2 h-8 w-8 text-gray-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-full transition-colors"
+                        >
+                            <Upload className="h-4 w-4" />
+                        </Button>
+                        
+                        {/* Send button */}
                         <Button
                             onClick={handleSendMessage}
                             disabled={isStreaming}
                             size="icon"
-                            className="shrink-0 rounded-xl bg-blue-500 hover:bg-blue-600 transition-colors"
+                            className="absolute right-2 bottom-2 h-8 w-8 rounded-full bg-blue-500 hover:bg-blue-600 transition-colors"
                         >
-                            <Send className="h-4 w-4"/>
+                            <Send className="h-4 w-4" />
                         </Button>
                     </div>
                 </div>
@@ -932,7 +998,7 @@ const ChatInterface = ({sessionId, customPrompt, modelName, modelParameters, onP
                         activeTools={activeTools}
                         sessionId={sessionId}
                         settingsVersion={settingsVersion}
-                        isProcessing={isStreaming}
+                        isProcessing={isStreaming || isUploading}
                     />
                 </div>
             </div>
