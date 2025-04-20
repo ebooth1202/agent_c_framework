@@ -73,7 +73,7 @@ const ToolCategory = ({title, tools = [], selectedTools, activeTools, onToolTogg
                                 <TooltipTrigger asChild>
                                     <div
                                         className={`flex items-center space-x-2 p-2 rounded-lg transition-colors duration-200 
-                      ${isActive ? 'bg-blue-50/80 hover:bg-blue-100/80' : 'hover:bg-white'}`}
+                      ${isActive ? 'bg-blue-50/80 dark:bg-blue-900/30 hover:bg-blue-100/80 dark:hover:bg-blue-900/50' : 'hover:bg-gray-50 dark:hover:bg-gray-800/70'}`}
                                     >
                                         <Checkbox
                                             checked={isSelected}
