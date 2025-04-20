@@ -1,4 +1,5 @@
-import React, {useState, useRef, useEffect} from 'react';
+import React, {useState, useRef, useEffect, useContext} from 'react';
+import { SessionContext } from '@/contexts/SessionContext';
 import {ChevronDown} from 'lucide-react';
 import {Card} from "@/components/ui/card";
 import ModelIcon from './ModelIcon';
@@ -6,6 +7,11 @@ import CopyButton from './CopyButton';
 import MarkdownMessage from "@/components/chat_interface/MarkdownMessage";
 
 const ThoughtDisplay = ({content, vendor}) => {
+    const { theme } = useContext(SessionContext);
+    // Define scrollbar colors based on theme
+    const isDarkMode = theme === 'dark';
+    const scrollbarThumb = isDarkMode ? '#78350f' : '#d97706';
+    const scrollbarTrack = isDarkMode ? '#2c1a09' : '#fef3c7';
     const [isExpanded, setIsExpanded] = useState(true);
     const [maxHeight, setMaxHeight] = useState("auto");
     const contentRef = useRef(null);
@@ -68,12 +74,12 @@ const ThoughtDisplay = ({content, vendor}) => {
     }, [content]);
 
     return (
-        <Card className="bg-yellow-50 border-yellow-100 shadow-sm overflow-hidden mb-3 relative max-w-[80%] ml-8">
+        <Card className="bg-amber-50 dark:bg-gray-700/70 border-amber-200 dark:border-gray-600 shadow-sm overflow-hidden mb-3 relative max-w-[80%] ml-8">
             <div className="px-4 py-3 flex items-center justify-between cursor-pointer"
                  onClick={() => setIsExpanded(!isExpanded)}>
                 <div className="flex items-center gap-2">
                     <ModelIcon vendor={vendor}/>
-                    <span className="font-semibold text-yellow-800 text-sm">Thinking Process</span>
+                    <span className="font-semibold text-amber-800 dark:text-amber-300 text-sm">Thinking Process</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <div onClick={(e) => e.stopPropagation()}>
@@ -81,25 +87,25 @@ const ThoughtDisplay = ({content, vendor}) => {
                             content={content}
                             tooltipText="Copy thinking process"
                             variant="ghost"
-                            className="text-yellow-600 hover:text-yellow-800 hover:bg-yellow-100"
+                            className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/30"
                         />
                     </div>
-                    <ChevronDown className={`h-5 w-5 text-yellow-600 transform transition-transform duration-200 ${
+                    <ChevronDown className={`h-5 w-5 text-amber-600 dark:text-amber-400 transform transition-transform duration-200 ${
                         isExpanded ? "rotate-180" : ""
                     }`}/>
                 </div>
             </div>
 
             {isExpanded && (
-                <div className="border-t border-yellow-100 px-4 py-3">
+                <div className="border-t border-amber-200 dark:border-gray-700 px-4 py-3">
                     <div
                         ref={contentRef}
-                        className="text-yellow-700 text-sm whitespace-pre-wrap font-mono overflow-auto transition-all duration-300 ease-in-out"
+                        className="text-amber-700 dark:text-amber-200 text-sm whitespace-pre-wrap font-mono overflow-auto transition-all duration-300 ease-in-out"
                         style={{
                             maxHeight: maxHeight,
                             minHeight: "100px", // Ensure minimum height
                             scrollbarWidth: 'thin',
-                            scrollbarColor: '#f59e0b #fef3c7'
+                            scrollbarColor: `${scrollbarThumb} ${scrollbarTrack}`
                         }}
                     >
                         <div ref={markdownRef}>
