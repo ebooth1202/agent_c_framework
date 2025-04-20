@@ -40,17 +40,27 @@ const ThoughtDisplay = ({content, vendor}) => {
                 border border-amber-200 dark:border-amber-800 
                 rounded-bl-sm">
                 {/* Content area with markdown */}
-                <div
-                    ref={contentRef}
-                    className="text-sm whitespace-pre-wrap font-mono overflow-auto max-h-[200px] min-h-[50px]"
-                    style={{
-                        scrollbarWidth: 'thin',
-                        scrollbarColor: `${scrollbarThumb} ${scrollbarTrack}`
-                    }}
-                >
-                    <div ref={markdownRef}>
-                        <MarkdownMessage content={content} />
+                <div className="flex justify-between items-start gap-4">
+                    <div
+                        ref={contentRef}
+                        className="text-sm whitespace-pre-wrap font-mono overflow-auto max-h-[200px] min-h-[50px] flex-1"
+                        style={{
+                            scrollbarWidth: 'thin',
+                            scrollbarColor: `${scrollbarThumb} ${scrollbarTrack}`
+                        }}
+                    >
+                        <div ref={markdownRef}>
+                            <MarkdownMessage content={content} />
+                        </div>
                     </div>
+                    <CopyButton
+                        content={content}
+                        tooltipText="Copy thinking"
+                        position="left"
+                        variant="secondary"
+                        size="xs"
+                        className="mt-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900/30"
+                    />
                 </div>
             </div>
         </div>

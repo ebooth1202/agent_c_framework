@@ -34,15 +34,9 @@ const MarkdownMessage = ({content}) => {
     }, [content]);
 
     return (
-        <div className="prose prose-sm max-w-none prose-p:my-1 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-1 relative group">
-            {/* Copy button that appears on hover */}
-            <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                <CopyButton
-                    content={content}
-                    tooltipText="Copy markdown"
-                    position="left"
-                />
-            </div>
+        <div className="prose prose-sm max-w-none prose-p:my-1 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-1 group flex gap-2 items-start">
+            {/* Main content */}
+            <div className="flex-1">
 
             <ReactMarkdown
                 components={{
@@ -120,6 +114,15 @@ const MarkdownMessage = ({content}) => {
             >
                 {memoizedContent}
             </ReactMarkdown>
+            </div>
+            {/* Copy button that appears on hover */}
+            <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                <CopyButton
+                    content={content}
+                    tooltipText="Copy markdown"
+                    position="left"
+                />
+            </div>
         </div>
     );
 };

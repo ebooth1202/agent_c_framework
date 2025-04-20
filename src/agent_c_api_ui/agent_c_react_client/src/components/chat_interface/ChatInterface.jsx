@@ -794,28 +794,28 @@ const ChatInterface = ({
                             return (
                                 <div key={idx} className="flex justify-end items-start gap-2 group">
                                     <div
-                                        className="max-w-[80%] rounded-2xl px-4 py-2 shadow-sm bg-blue-500 text-white ml-12 rounded-br-sm relative border border-blue-600">
-                                        {msg.isVoiceMessage ? (
-                                            <div className="flex items-center space-x-2">
-                                                <Mic className="h-4 w-4 text-white"/>
-                                                <span className="text-white">Voice message</span>
+                                        className="max-w-[80%] rounded-2xl px-4 py-2 shadow-sm bg-blue-500 text-white ml-12 rounded-br-sm border border-blue-600">
+                                        <div className="flex justify-between items-start gap-4">
+                                            <div className="prose dark:prose-invert flex-1">
+                                                {msg.isVoiceMessage ? (
+                                                    <div className="flex items-center space-x-2">
+                                                        <Mic className="h-4 w-4 text-white"/>
+                                                        <span className="text-white">Voice message</span>
+                                                    </div>
+                                                ) : (
+                                                    <div className="markdown-user-message">
+                                                        <MarkdownMessage content={msg.content}/>
+                                                    </div>
+                                                )}
                                             </div>
-                                        ) : (
-                                            <div className="markdown-user-message">
-                                                <MarkdownMessage content={msg.content}/>
-                                            </div>
-                                        )}
-
-                                        {/* Copy button that appears on hover */}
-                                        <div
-                                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity transform -translate-x-full">
+                                            {/* Copy button that appears on hover */}
                                             <CopyButton
                                                 content={msg.content}
                                                 tooltipText="Copy message"
                                                 position="left"
                                                 variant="secondary"
                                                 size="xs"
-                                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                                                className="mt-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity bg-blue-600 hover:bg-blue-700 text-white"
                                             />
                                         </div>
                                     </div>
@@ -832,8 +832,20 @@ const ChatInterface = ({
                                         <ModelIcon vendor={msg.vendor}/>
                                         <div
                                             className="max-w-[80%] rounded-2xl px-4 py-2 shadow-sm bg-purple-50 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200 mr-12 rounded-bl-sm border border-purple-200 dark:border-purple-700">
-                                            <MarkdownMessage content={msg.content}/>
-                                            {msg.tokenUsage && <TokenUsageDisplay usage={msg.tokenUsage}/>}
+                                            <div className="flex justify-between items-start gap-4">
+                                                <div className="prose dark:prose-invert flex-1">
+                                                    <MarkdownMessage content={msg.content}/>
+                                                    {msg.tokenUsage && <TokenUsageDisplay usage={msg.tokenUsage}/>}
+                                                </div>
+                                                <CopyButton
+                                                    content={msg.content}
+                                                    tooltipText="Copy message"
+                                                    position="left"
+                                                    variant="secondary"
+                                                    size="xs"
+                                                    className="mt-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -873,24 +885,24 @@ const ChatInterface = ({
                             return (
                                 <div key={idx} className="flex justify-start group">
                                     <div
-                                        className={`max-w-[80%] rounded-2xl px-4 py-2 shadow-sm relative ${
+                                        className={`max-w-[80%] rounded-2xl px-4 py-2 shadow-sm ${
                                             isError
                                                 ? "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-300 dark:border-red-800"
-                                                : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                                                : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600"
                                         }`}
                                     >
-                                        {isError ? "ud83dudeab Error: " : ""}{msg.content}
-
-                                        {/* Copy button that appears on hover */}
-                                        <div
-                                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="flex justify-between items-start gap-4">
+                                            <div className="prose dark:prose-invert flex-1">
+                                                {isError ? "⛔ Error: " : ""}{msg.content}
+                                            </div>
+                                            {/* Copy button that appears on hover */}
                                             <CopyButton
                                                 content={msg.content}
                                                 tooltipText="Copy message"
                                                 position="left"
                                                 variant="ghost"
                                                 size="xs"
-                                                className="text-gray-500 hover:bg-gray-200"
+                                                className="mt-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-gray-500 hover:bg-gray-200"
                                             />
                                         </div>
                                     </div>
