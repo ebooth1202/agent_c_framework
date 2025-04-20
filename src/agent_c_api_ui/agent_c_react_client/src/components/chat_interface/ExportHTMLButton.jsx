@@ -15,6 +15,8 @@ import { formatChatAsHTML } from '@/components/chat_interface/utils/htmlChatForm
  * @param {string} [props.position="top"] - Tooltip position
  * @param {string} [props.size="sm"] - Button size
  * @param {string} [props.variant="ghost"] - Button variant
+ * @param {boolean} [props.iconOnly=false] - Whether to show only the icon without text
+ * @param {React.ReactNode} [props.icon] - Custom icon to use instead of default
  */
 const ExportHTMLButton = ({
   messages,
@@ -24,6 +26,8 @@ const ExportHTMLButton = ({
   position = "top",
   size = "sm",
   variant = "ghost",
+  iconOnly = false,
+  icon = null,
 }) => {
   const handleExport = useCallback(() => {
     if (!messages || messages.length === 0) return;
@@ -59,7 +63,7 @@ const ExportHTMLButton = ({
             className={`hover:bg-gray-100 transition-colors ${className}`}
             onClick={handleExport}
           >
-            <Download className="h-4 w-4" />
+            {icon || <Download className="h-4 w-4" />}
           </Button>
         </TooltipTrigger>
         <TooltipContent side={position}>

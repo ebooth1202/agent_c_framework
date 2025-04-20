@@ -15,6 +15,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
  * @param {string} [props.position="top"] - Tooltip position
  * @param {string} [props.size="sm"] - Button size
  * @param {string} [props.variant="ghost"] - Button variant
+ * @param {boolean} [props.iconOnly=false] - Whether to show only the icon without text
+ * @param {React.ReactNode} [props.icon] - Custom icon to use instead of default
  */
 const CopyButton = ({
   content,
@@ -25,6 +27,8 @@ const CopyButton = ({
   position = "top",
   size = "sm",
   variant = "ghost",
+  iconOnly = false,
+  icon = null,
 }) => {
   const [isCopied, setIsCopied] = useState(false);
 
@@ -76,7 +80,7 @@ const CopyButton = ({
             className={`hover:bg-gray-100 transition-colors ${className}`}
             onClick={copyToClipboard}
           >
-            {isCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+            {isCopied ? <Check className="h-4 w-4 text-green-500" /> : (icon || <Copy className="h-4 w-4" />)}
           </Button>
         </TooltipTrigger>
         <TooltipContent side={position}>

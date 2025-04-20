@@ -1,13 +1,15 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import AgentConfigHoverCard from './AgentConfigHoverCard';
-import { Activity, Wrench, Info } from 'lucide-react';
+import { Activity, Wrench, Info, Copy, Download } from 'lucide-react';
 import {
     Tooltip,
     TooltipContent,
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
+import CopyButton from './CopyButton';
+import ExportHTMLButton from './ExportHTMLButton';
 
 
 const StatusBar = ({
@@ -16,7 +18,10 @@ const StatusBar = ({
     isInitializing = false,
     isProcessing = false,
     sessionId,
-    settingsVersion
+    settingsVersion,
+    getChatCopyContent,
+    getChatCopyHTML,
+    messages
 }) => {
 
 
@@ -105,6 +110,31 @@ const StatusBar = ({
                         </TooltipProvider>
                     </div>
                 )}
+            </div>
+            
+            {/* Chat export actions */}
+            <div className="flex items-center space-x-4">
+                <CopyButton
+                    content={getChatCopyContent}
+                    htmlContent={getChatCopyHTML}
+                    tooltipText="Copy entire chat"
+                    successText="Chat copied!"
+                    size="sm"
+                    variant="ghost"
+                    className="text-foreground hover:bg-muted"
+                    icon={<Copy className="w-4 h-4" />}
+                    iconOnly
+                />
+                <ExportHTMLButton
+                    messages={messages}
+                    tooltipText="Export as HTML"
+                    filename={`chat-export-${new Date().toISOString().slice(0, 10)}.html`}
+                    size="sm"
+                    variant="ghost"
+                    className="text-foreground hover:bg-muted"
+                    icon={<Download className="w-4 h-4" />}
+                    iconOnly
+                />
             </div>
         </div>
     );

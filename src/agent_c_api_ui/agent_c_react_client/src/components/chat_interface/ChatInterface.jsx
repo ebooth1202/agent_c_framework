@@ -784,26 +784,7 @@ const ChatInterface = ({
                 </div>
             )}
             
-            {/* Floating copy/export buttons that only appear on hover */}
-            <div className="absolute top-4 right-4 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex gap-2">
-                <CopyButton
-                    content={getChatCopyContent}
-                    htmlContent={getChatCopyHTML}
-                    tooltipText="Copy entire chat"
-                    successText="Chat copied!"
-                    size="sm"
-                    variant="outline"
-                    className="border-gray-300 bg-white/90 dark:bg-gray-800/90 shadow-sm hover:shadow-md"
-                />
-                <ExportHTMLButton
-                    messages={messages}
-                    tooltipText="Export as HTML"
-                    filename={`chat-export-${new Date().toISOString().slice(0, 10)}.html`}
-                    size="sm"
-                    variant="outline"
-                    className="border-gray-300 bg-white/90 dark:bg-gray-800/90 shadow-sm hover:shadow-md"
-                />
-            </div>
+            {/* Buttons moved to status bar */}
             <ScrollArea className="flex-1 px-4 py-3" type="auto">
 
                 <div className="space-y-4 w-full overflow-x-hidden">
@@ -1061,6 +1042,9 @@ const ChatInterface = ({
                         sessionId={sessionId}
                         settingsVersion={settingsVersion}
                         isProcessing={isStreaming || isUploading}
+                        getChatCopyContent={getChatCopyContent}
+                        getChatCopyHTML={getChatCopyHTML}
+                        messages={messages}
                     />
                 </div>
             </div>
