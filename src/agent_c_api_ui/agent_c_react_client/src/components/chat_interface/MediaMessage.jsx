@@ -45,7 +45,7 @@ const MediaMessage = ({message}) => {
             {allowFullscreen && (
                 <button
                     onClick={toggleFullscreen}
-                    className="absolute top-2 right-2 p-1 rounded-lg bg-white/80 hover:bg-white shadow-sm transition-colors"
+                    className="absolute top-2 right-2 p-1 rounded-lg bg-background/80 hover:bg-background shadow-sm transition-colors"
                 >
                     <Maximize2 className="h-4 w-4 text-blue-600"/>
                 </button>
@@ -106,7 +106,7 @@ const MediaMessage = ({message}) => {
         if (!sent_by_class && !sent_by_function) return null;
 
         return (
-            <div className="mt-4 pt-3 border-t border-amber-100 flex items-center gap-2 text-xs text-amber-600">
+            <div className="mt-4 pt-3 border-t border-amber-100 dark:border-amber-900/30 flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
                 <Info className="h-4 w-4 shrink-0"/>
                 <span className="font-medium">
                     {sent_by_class}
@@ -120,7 +120,7 @@ const MediaMessage = ({message}) => {
     const FullscreenDialog = () => (
         <Dialog open={isFullscreen} onOpenChange={setIsFullscreen}>
             <DialogContent className="p-0 overflow-hidden max-w-7xl">
-                <div className="w-full h-full flex items-center justify-center bg-white p-4">
+                <div className="w-full h-full flex items-center justify-center bg-card p-4">
                     {message.contentType === 'image/svg+xml' ? (
                         <div
                             className="w-full h-full flex items-center justify-center"
@@ -150,14 +150,14 @@ const MediaMessage = ({message}) => {
 
     return (
         <>
-            <Card className="bg-white shadow-sm overflow-hidden">
+            <Card className="bg-card shadow-sm overflow-hidden">
                 <div
-                    className="flex items-center justify-between px-4 py-3 cursor-pointer bg-amber-50 hover:bg-amber-100 transition-colors"
+                    className="flex items-center justify-between px-4 py-3 cursor-pointer bg-amber-50/80 dark:bg-amber-900/20 hover:bg-amber-100/90 dark:hover:bg-amber-900/30 transition-colors"
                     onClick={() => setIsExpanded(!isExpanded)}
                 >
                     <div className="flex items-center gap-2">
-                        <Monitor className="h-5 w-5 text-amber-600"/>
-                        <span className="font-semibold text-amber-800">
+                        <Monitor className="h-5 w-5 text-amber-600 dark:text-amber-400"/>
+                        <span className="font-semibold text-amber-800 dark:text-amber-300">
                             {getContentTypeDisplay()}
                         </span>
                     </div>
@@ -168,11 +168,11 @@ const MediaMessage = ({message}) => {
                                 content={getCopyContent}
                                 tooltipText={`Copy ${message.contentType.split('/')[1]}`}
                                 variant="ghost"
-                                className="text-amber-600 hover:text-amber-800 hover:bg-amber-100"
+                                className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 hover:bg-amber-100/90 dark:hover:bg-amber-900/30"
                             />
                         </div>
                         <ChevronDown
-                            className={`h-5 w-5 text-amber-600 transform transition-transform duration-200 ${
+                            className={`h-5 w-5 text-amber-600 dark:text-amber-400 transform transition-transform duration-200 ${
                                 isExpanded ? "rotate-180" : ""
                             }`}
                         />
@@ -180,7 +180,7 @@ const MediaMessage = ({message}) => {
                 </div>
 
                 {isExpanded && (
-                    <div className="border-t border-amber-100 p-4">
+                    <div className="border-t border-amber-100 dark:border-amber-900/30 p-4">
                         <div className="max-h-96 overflow-auto">
                             {renderContent()}
                         </div>
