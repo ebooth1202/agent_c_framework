@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/tooltip';
 import {Badge} from '@/components/ui/badge';
 import {Check, AlertCircle} from 'lucide-react';
+import {Tabs, TabsList, TabsTrigger, TabsContent} from '@/components/ui/tabs';
 
 /**
  * Displays essential tools that cannot be toggled
@@ -61,7 +62,6 @@ const EssentialTools = ({tools = []}) => (
  */
 const ToolCategory = ({title, tools = [], selectedTools, activeTools, onToolToggle}) => (
     <div className="mb-6">
-        <h3 className="font-medium mb-3 text-lg text-blue-600 dark:text-blue-400">{title}</h3>
         <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {tools.map((tool) => {
@@ -235,21 +235,40 @@ const ToolSelector = ({availableTools, onEquipTools, activeTools = [], sessionId
                             {error}
                         </div>
                     )}
-                    <ScrollArea className="h-[400px] pr-4">
-                        <div className="space-y-6">
-                            <EssentialTools tools={availableTools.essential_tools}/>
+                    <Tabs defaultValue={availableTools.essential_tools && availableTools.essential_tools.length > 0 ? "essential" : availableTools.categories[0] || ""} className="w-full">
+                        <TabsList className="flex w-full overflow-x-auto mb-4 bg-gray-100 dark:bg-gray-800/70">
+                            {availableTools.essential_tools && availableTools.essential_tools.length > 0 && (
+                                <TabsTrigger value="essential" className="flex-shrink-0">
+                                    Essential
+                                </TabsTrigger>
+                            )}
                             {availableTools.categories.map((category) => (
-                                <ToolCategory
-                                    key={category}
-                                    title={category}
-                                    tools={availableTools.groups[category] || []}
-                                    selectedTools={selectedTools}
-                                    activeTools={activeTools}
-                                    onToolToggle={handleToolToggle}
-                                />
+                                <TabsTrigger key={category} value={category} className="flex-shrink-0">
+                                    {category}
+                                </TabsTrigger>
+                            ))}
+                        </TabsList>
+
+                        <div className="max-h-[340px] overflow-y-auto pr-2">
+                            {availableTools.essential_tools && availableTools.essential_tools.length > 0 && (
+                                <TabsContent value="essential" className="mt-0">
+                                    <EssentialTools tools={availableTools.essential_tools}/>
+                                </TabsContent>
+                            )}
+                            
+                            {availableTools.categories.map((category) => (
+                                <TabsContent key={category} value={category} className="mt-0">
+                                    <ToolCategory
+                                        title={category}
+                                        tools={availableTools.groups[category] || []}
+                                        selectedTools={selectedTools}
+                                        activeTools={activeTools}
+                                        onToolToggle={handleToolToggle}
+                                    />
+                                </TabsContent>
                             ))}
                         </div>
-                    </ScrollArea>
+                    </Tabs>
                     <Button
                         onClick={handleEquipTools}
                         disabled={!isReady || isLoading}

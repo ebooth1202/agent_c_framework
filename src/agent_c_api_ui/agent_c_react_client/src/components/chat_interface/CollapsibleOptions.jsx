@@ -4,9 +4,10 @@ import {
     CollapsibleContent,
     CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import {Button} from "@/components/ui/button";
-import {ChevronDown, ChevronUp} from 'lucide-react';
-import {Card} from '@/components/ui/card';
+import { Button } from "@/components/ui/button";
+import { ChevronDown, ChevronUp, Settings, Wrench } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import PersonaSelector from './PersonaSelector';
 import ToolSelector from './ToolSelector';
 
@@ -66,32 +67,50 @@ const CollapsibleOptions = ({
                     </CollapsibleTrigger>
                 </div>
                 <CollapsibleContent className="px-4 pb-4">
-                    <div className="space-y-4">
-                        <PersonaSelector
-                            persona_name={persona}
-                            personas={personas}
-                            customPrompt={customPrompt}
-                            temperature={temperature}
-                            modelName={modelName}
-                            modelConfigs={modelConfigs}
-                            sessionId={sessionId}
-                            modelParameters={modelParameters}
-                            selectedModel={selectedModel}
-                            onUpdateSettings={onUpdateSettings}
-                            isInitialized={isInitialized}
-                        />
-                        <ToolSelector
-                            availableTools={availableTools}
-                            onEquipTools={onEquipTools}
-                            activeTools={activeTools}
-                            sessionId={sessionId}
-                            isReady={isReady}
-                        />
-                    </div>
+                    <Tabs defaultValue="settings" className="w-full">
+                        <TabsList className="w-full mb-4 bg-gray-100 dark:bg-gray-800/70">
+                            <TabsTrigger value="settings" className="flex items-center gap-1 w-1/2">
+                                <Settings className="h-4 w-4" />
+                                <span>Settings</span>
+                            </TabsTrigger>
+                            <TabsTrigger value="tools" className="flex items-center gap-1 w-1/2">
+                                <Wrench className="h-4 w-4" />
+                                <span>Tools</span>
+                            </TabsTrigger>
+                        </TabsList>
+                        
+                        <TabsContent value="settings" className="mt-0">
+                            <PersonaSelector
+                                persona_name={persona}
+                                personas={personas}
+                                customPrompt={customPrompt}
+                                temperature={temperature}
+                                modelName={modelName}
+                                modelConfigs={modelConfigs}
+                                sessionId={sessionId}
+                                modelParameters={modelParameters}
+                                selectedModel={selectedModel}
+                                onUpdateSettings={onUpdateSettings}
+                                isInitialized={isInitialized}
+                            />
+                        </TabsContent>
+                        
+                        <TabsContent value="tools" className="mt-0">
+                            <ToolSelector
+                                availableTools={availableTools}
+                                onEquipTools={onEquipTools}
+                                activeTools={activeTools}
+                                sessionId={sessionId}
+                                isReady={isReady}
+                            />
+                        </TabsContent>
+                    </Tabs>
                 </CollapsibleContent>
             </Collapsible>
         </Card>
     );
 };
+
+
 
 export default CollapsibleOptions;
