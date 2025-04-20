@@ -13,7 +13,7 @@ const ToolCallDisplay = ({ toolCalls }) => {
   if (toolCount === 0) return null;
 
   return (
-    <div className="border rounded-2xl my-2 bg-card shadow-lg overflow-hidden max-w-[80%] ml-8">
+    <div className={`border rounded-2xl my-2 bg-card shadow-lg overflow-hidden ml-8 ${isExpanded ? 'max-w-[50%]' : 'w-fit'}`}>
       <div
         className="flex items-center justify-between p-4 cursor-pointer bg-blue-100/80 dark:bg-blue-950/30 hover:bg-blue-200/90 dark:hover:bg-blue-900/40 transition-colors rounded-t-2xl"
         onClick={() => setIsExpanded(!isExpanded)}

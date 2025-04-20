@@ -150,7 +150,7 @@ const MediaMessage = ({message}) => {
 
     return (
         <>
-            <Card className="bg-card shadow-sm overflow-hidden max-w-[80%] ml-8">
+            <Card className={`bg-card shadow-sm overflow-hidden ml-8 ${isExpanded ? 'max-w-[80%]' : 'w-fit'}`}>
                 <div
                     className="flex items-center justify-between px-4 py-3 cursor-pointer bg-amber-50/80 dark:bg-amber-900/20 hover:bg-amber-100/90 dark:hover:bg-amber-900/30 transition-colors"
                     onClick={() => setIsExpanded(!isExpanded)}
