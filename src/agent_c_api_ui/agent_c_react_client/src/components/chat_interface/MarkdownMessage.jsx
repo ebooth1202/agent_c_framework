@@ -25,9 +25,10 @@ const MarkdownMessage = ({content}) => {
 
         // Ensure proper list formatting
         processedContent = processedContent.replace(/^\s*[-*]\s/gm, '* ');
-
-        // Add extra newline before lists
-        processedContent = processedContent.replace(/\n[-*]/g, '\n\n*');
+        
+        // Add extra newline before lists, but not if we're in a list already
+        // This prevents breaking bullet + inline code formatting
+        processedContent = processedContent.replace(/(?<![-*]\s.*?)\n[-*]/g, '\n\n*');
 
         return typeof processedContent === 'string' ? processedContent : String(processedContent);
     }, [content]);
@@ -54,7 +55,7 @@ const MarkdownMessage = ({content}) => {
                         <ul className="list-disc ml-4 mt-2 mb-4 space-y-2" {...props} />
                     ),
                     li: ({node, ...props}) => (
-                        <li className="mt-1" {...props} />
+                        <li className="mt-1 [&>code]:ml-0" {...props} />
                     ),
                     // Enhanced bold text rendering
                     strong: ({node, ...props}) => (
@@ -98,7 +99,7 @@ const MarkdownMessage = ({content}) => {
                             </div>
                         ) : (
                             // Inline code (single backticks) formatting
-                            <code className="bg-purple-100 px-1 rounded text-purple-800 inline font-mono" {...props}>
+                            <code className="bg-purple-100 px-1 rounded text-purple-800 inline font-mono inline-block" {...props}>
                                 {children}
                             </code>
                         );
