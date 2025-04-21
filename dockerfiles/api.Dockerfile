@@ -11,6 +11,7 @@ RUN mkdir -p /app/workspaces/documents
 
 
 # Copy source code first
+COPY src/ace_proto ./src/ace_proto
 COPY src/agent_c_core ./src/agent_c_core
 COPY src/agent_c_tools ./src/agent_c_tools
 COPY src/agent_c_api_ui/agent_c_api ./src/agent_c_api_ui/agent_c_api
@@ -28,6 +29,7 @@ RUN chown -R agent_c:agent_c /app
 USER agent_c
 # Install Python dependencies
 WORKDIR /app/src
+RUN pip install ace_proto/ts_tool-0.1.0-py3-none-any.whl
 RUN pip install  -e agent_c_core \
     && pip install -e agent_c_tools \
     && pip install -e agent_c_api_ui/agent_c_api
