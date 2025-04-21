@@ -1,11 +1,27 @@
 import json
 import logging
 import re
+
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 
 from agent_c.toolsets.tool_set import Toolset
 from agent_c.toolsets.json_schema import json_schema
+
+# Import dependencies for markdown to docx conversion
+try:
+    import markdown
+    from docx import Document
+    from docx.shared import Pt, Inches, RGBColor
+    from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
+    from docx.oxml.ns import qn
+    from docx.oxml import OxmlElement
+    from bs4 import BeautifulSoup
+    DOCX_CONVERSION_AVAILABLE = True
+except ImportError:
+    DOCX_CONVERSION_AVAILABLE = False
+    logging.warning("python-docx and/or BeautifulSoup not available. The markdown to Word conversion will not work."
+                    "Install with: pip install markdown python-docx beautifulsoup4")
 
 logger = logging.getLogger(__name__)
 
@@ -627,6 +643,540 @@ class MarkdownToHtmlReportTools(Toolset):
         except Exception as e:
             logger.error(f"Error reading template file: {e}")
             raise RuntimeError(f"Failed to load HTML template: {e}")
+
+
+    @json_schema(
+        description="Convert a markdown file to Word (DOCX) format",
+        params={
+            "workspace": {
+                "type": "string",
+                "description": "The workspace containing the markdown file",
+                "required": True
+            },
+            "input_path": {
+                "type": "string",
+                "description": "The path to the markdown file to convert (UNC-style or relative to workspace)",
+                "required": True
+            },
+            "output_filename": {
+                "type": "string",
+                "description": "filename for the output Word document",
+                "required": False
+            },
+            "style": {
+                "type": "string",
+                "description": "Style template to use",
+                "enum": ["default", "academic", "business", "minimal"],
+                "required": False,
+                "default": "default"
+            },
+            "include_toc": {
+                "type": "boolean",
+                "description": "Whether to include a table of contents",
+                "required": False,
+                "default": True
+            },
+            "page_break_level": {
+                "type": "integer",
+                "description": "Insert page breaks before headings of this level (1-6)",
+                "required": False,
+                "default": 1
+            }
+        }
+    )
+    async def markdown_to_docx(self, **kwargs) -> str:
+        """Convert a markdown file to Word (DOCX) format.
+
+        Args:
+            kwargs:
+                workspace: The workspace containing the markdown file
+                input_path: The path to the markdown file to convert (UNC-style or relative to workspace)
+                output_path: Output path for the Word document (UNC-style or relative to workspace)
+                style: Style template to use (default, academic, business, minimal)
+                include_toc: Whether to include a table of contents
+                page_break_level: Insert page breaks before headings of this level (1-6)
+
+        Returns:
+            A dictionary with success status and information about the operation
+        """
+        if not DOCX_CONVERSION_AVAILABLE:
+            return json.dumps({
+                "success": False,
+                "error": "Required dependencies not available. Please install python-markdown, python-docx, and beautifulsoup4."
+            })
+
+        workspace = kwargs.get('workspace')
+        input_path = kwargs.get('input_path')
+        output_filename = kwargs.get('output_filename')
+        style = kwargs.get('style', 'default')
+        include_toc = kwargs.get('include_toc', True)
+        page_break_level = kwargs.get('page_break_level', 1)
+
+        # Arg check
+        missing_fields = []
+        if workspace is None:
+            missing_fields.append("workspace")
+        if input_path is None:
+            missing_fields.append("input_path")
+        if output_filename is None:
+            missing_fields.append("output_filename")
+
+        if missing_fields:
+            return f"Required fields cannot be empty: {', '.join(missing_fields)}"
+
+        try:
+            # Check if input_path is already a UNC path (starts with //)
+            if input_path.startswith('//'):
+                # Input path is already a UNC path, use it directly
+                input_path_full = input_path
+
+                # Extract workspace from UNC path
+                path_parts = input_path.replace('\\', '/').split('/', 4)
+                if len(path_parts) >= 3:
+                    workspace = path_parts[2]  # Get workspace name
+            else:
+                # Normalize input path (remove leading slashes)
+                normalized_input_path = input_path.lstrip('/')
+
+                # Construct full UNC path
+                input_path_full = f"//{workspace}/{normalized_input_path}"
+
+            # Extract the filename using string manipulation
+            # Convert all backslashes to forward slashes for consistent handling
+            normalized_path = input_path_full.replace('\\', '/')
+            # Get the last part after the final slash
+            input_filename = normalized_path.split('/')[-1]
+
+            if not self._is_markdown_file(normalized_path):
+                return json.dumps({
+                    "success": False,
+                    "error": f"Input file '{normalized_path}' does not appear to be a markdown file. Expected a .md or .markdown extension."
+                })
+
+            # Determine output path if not provided
+            if not output_filename:
+                # Use the same name as the input but with .docx extension
+                output_filename = Path(input_filename).stem + ".docx"
+                output_path_full = f"//{workspace}/{output_filename}"
+            else:
+                # Check if output_path is already a UNC path
+                if re.match(UNC_PATH_PATTERN, output_filename):
+                    output_path_full = output_filename
+                else:
+                    # Normalize the output path
+                    normalized_output_path = output_filename.lstrip('/')
+                    # Ensure it has .docx extension
+                    if not normalized_output_path.lower().endswith('.docx'):
+                        normalized_output_path = Path(normalized_output_path).with_suffix('.docx').as_posix()
+                    output_path_full = f"//{workspace}/{normalized_output_path}"
+
+            # Log the paths for debugging
+            logger.debug(f"Original input path: {input_path}")
+            logger.debug(f"Workspace name: {workspace}")
+            logger.debug(f"Processed input path: {input_path_full}")
+            logger.debug(f"Output path: {output_path_full}")
+
+            # Read and Process the markdown file
+            read_result = await self.workspace_tool.read(path=input_path_full)
+            read_data = json.loads(read_result)
+
+            if 'error' in read_data:
+                return json.dumps({
+                    "success": False,
+                    "error": f"Failed to read input file: {read_data['error']}"
+                })
+
+            md_content = read_data.get('contents', '')
+
+            # Convert markdown to Word document
+            docx_content_bytes = await self._convert_markdown_to_docx_bytes(md_content, style, include_toc, page_break_level)
+
+            try:
+                write_result = await self.workspace_tool.write(
+                    path=output_path_full,
+                    data=docx_content_bytes,
+                    mode="write",
+                    data_type="binary"
+                )
+            except Exception as e:
+                logger.error(f"Error writing docx file: {e}")
+                return json.dumps({
+                    "success": False,
+                    "error": f"Failed to write Word document: {str(e)}"
+                })
+
+            write_data = json.loads(write_result)
+            if 'error' in write_data:
+                return json.dumps({
+                    "success": False,
+                    "error": f"Failed to write Word document: {write_data['error']}"
+                })
+
+            # Prepare output summary
+            result = {
+                "success": True,
+                "message": f"Successfully converted markdown to Word document at {output_path_full}",
+                "input_file": input_path_full,
+                "output_file": output_path_full,
+                "workspace": workspace,
+                "style": style
+            }
+
+            # Raise a media event with HTML that provides information about the conversion
+            try:
+                # Get the actual OS-level filepath for the output
+                _, workspace_obj, rel_path = self.workspace_tool._parse_unc_path(output_path_full)
+                file_system_path = None
+                if workspace_obj and hasattr(workspace_obj, 'full_path'):
+                    file_system_path = workspace_obj.full_path(rel_path, mkdirs=False)
+
+                # Create file URL (this may not work due to browser security)
+                if file_system_path:
+                    url_path = file_system_path.replace('\\', '/')
+                    if url_path.startswith('/'):
+                        file_url = f"file://{url_path}"
+                    else:
+                        file_url = f"file:///{url_path}"
+                else:
+                    file_url = f"file:///{output_path_full.replace('//', '').replace('\\', '/')}"
+
+                html_content = f"""
+                <div style="padding: 20px; font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; background-color: #f8fafc;">
+                    <h2 style="color: #334155; margin-top: 0;">Word Document Generated Successfully</h2>
+
+                    <div style="background-color: #f1f5f9; border-radius: 6px; padding: 16px; margin-bottom: 20px;">
+                        <p style="margin: 0 0 8px 0;"><strong>Input:</strong> {input_path_full}</p>
+                        <p style="margin: 0 0 8px 0;"><strong>Output:</strong> {output_path_full}</p>
+                        <p style="margin: 0 0 8px 0;"><strong>Style:</strong> {style}</p>
+                        <p style="margin: 0;"><strong>Location:</strong> <code style="background: #e2e8f0; padding: 2px 4px; border-radius: 4px;">{file_system_path if file_system_path else output_path_full}</code></p>
+                    </div>
+
+                    <div style="margin-bottom: 16px;">
+                        <p><strong>File path:</strong> <br/>
+                        <code style="background: #e2e8f0; padding: 8px; border-radius: 4px; display: block; margin-top: 8px; word-break: break-all;">{file_system_path if file_system_path else output_path_full}</code>
+                        </p>
+
+                        <p><strong>Terminal command:</strong> <br/>
+                        <code style="background: #e2e8f0; padding: 8px; border-radius: 4px; display: block; margin-top: 8px; word-break: break-all;">
+                            {f'start "" "{file_system_path}"' if file_system_path and ':\\' in file_system_path else f'open "{file_system_path if file_system_path else output_path_full}"'}
+                        </code>
+                        </p>
+                    </div>
+                </div>
+                """
+                # Raise the media event
+                await self._raise_render_media(
+                    sent_by_class=self.__class__.__name__,
+                    sent_by_function='markdown_to_docx',
+                    content_type="text/html",
+                    content=html_content
+                )
+                
+            except Exception as e:
+                logger.error(f"Failed to raise media event: {str(e)}")
+
+            return json.dumps(result)
+
+        except Exception as e:
+            logger.exception("Error converting markdown to Word document")
+            return json.dumps({
+                "success": False,
+                "error": f"Error converting markdown to Word document: {str(e)}"
+            })
+
+    async def _convert_markdown_to_docx_bytes(self, md_content: str, style_name: str = "default",
+                                   include_toc: bool = True, page_break_level: int = 1) -> bytes:
+        """Convert markdown content to a Word document in binary format.
+        
+        Note: This method returns binary data which will need to be encoded as base64
+        when writing to the workspace since the workspace API primarily works with text.
+
+
+        Args:
+            md_content: The markdown content to convert
+            style_name: Style template to use (default, academic, business, minimal)
+            include_toc: Whether to include a table of contents
+            page_break_level: Insert page breaks before headings of this level
+
+        Returns:
+            Bytes containing the Word document
+        """
+        # Convert markdown to HTML
+        html_content = markdown.markdown(
+            md_content,
+            extensions=['extra', 'codehilite', 'toc', 'tables', 'nl2br', 'sane_lists']
+        )
+
+        # Parse HTML with BeautifulSoup
+        soup = BeautifulSoup(html_content, 'html.parser')
+
+        # Create new Word document
+        doc = Document()
+        doc = self._apply_style(doc, style_name)
+
+        # Add table of contents if requested
+        if include_toc:
+            self._create_table_of_contents(doc)
+
+        # Process HTML elements
+        current_elements = soup.find_all(
+            ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'pre', 'blockquote', 'table'])
+
+        for element in current_elements:
+            tag_name = element.name
+
+            # Process headings
+            if tag_name.startswith('h') and len(tag_name) == 2:
+                level = int(tag_name[1])
+
+                # Add page break before heading if configured
+                if level <= page_break_level:
+                    doc.add_page_break()
+
+                # Add heading
+                doc.add_heading(element.get_text(), level=level)
+
+            # Process paragraphs
+            elif tag_name == 'p':
+                paragraph = doc.add_paragraph()
+
+                # Process inline elements (bold, italic, links, etc.)
+                for child in element.children:
+                    if child.name is None:  # Plain text
+                        paragraph.add_run(child.string)
+                    elif child.name == 'strong' or child.name == 'b':
+                        paragraph.add_run(child.get_text()).bold = True
+                    elif child.name == 'em' or child.name == 'i':
+                        paragraph.add_run(child.get_text()).italic = True
+                    elif child.name == 'a':
+                        self._add_hyperlink(paragraph, child.get('href', ''), child.get_text())
+                    elif child.name == 'code':
+                        run = paragraph.add_run(child.get_text())
+                        run.font.name = 'Courier New'
+                        run.font.size = Pt(10)
+                    elif child.name == 'br':
+                        paragraph.add_run('\n')
+                    else:
+                        paragraph.add_run(child.get_text())
+
+            # Process lists
+            elif tag_name in ('ul', 'ol'):
+                is_ordered = tag_name == 'ol'
+
+                for list_item in element.find_all('li', recursive=False):
+                    level = 0
+                    parent = list_item.parent
+                    while parent is not None and parent.name in ('ul', 'ol'):
+                        level += 1
+                        parent = parent.parent
+
+                    # Add list item
+                    p = doc.add_paragraph(style='List Bullet' if not is_ordered else 'List Number')
+                    p.paragraph_format.left_indent = Inches(0.25 * level)
+
+                    # Process inline elements in list items
+                    item_text = ""
+                    for child in list_item.children:
+                        if child.name is None:  # Plain text
+                            if child.string:
+                                item_text += child.string.strip()
+                        elif child.name == 'strong' or child.name == 'b':
+                            p.add_run(child.get_text().strip()).bold = True
+                        elif child.name == 'em' or child.name == 'i':
+                            p.add_run(child.get_text().strip()).italic = True
+                        elif child.name not in ('ul', 'ol'):  # Avoid adding nested list text twice
+                            item_text += child.get_text().strip() + " "
+
+                    if item_text:
+                        p.add_run(item_text.strip())
+
+                    # Handle nested lists recursively (simplified)
+                    nested_lists = list_item.find_all(['ul', 'ol'], recursive=False)
+                    for nested_list in nested_lists:
+                        for nested_item in nested_list.find_all('li', recursive=False):
+                            nested_p = doc.add_paragraph(style='List Bullet' if nested_list.name == 'ul' else 'List Number')
+                            nested_p.paragraph_format.left_indent = Inches(0.25 * (level + 1))
+                            nested_p.add_run(nested_item.get_text())
+
+            # Process code blocks
+            elif tag_name == 'pre':
+                code_block = element.find('code')
+                if code_block:
+                    p = doc.add_paragraph()
+                    code_text = code_block.get_text()
+
+                    # Apply code block styling
+                    run = p.add_run(code_text)
+                    run.font.name = 'Courier New'
+                    run.font.size = Pt(10)
+
+                    # Add a light gray shading
+                    p.paragraph_format.left_indent = Inches(0.5)
+                    p.paragraph_format.right_indent = Inches(0.5)
+
+            # Process blockquotes
+            elif tag_name == 'blockquote':
+                p = doc.add_paragraph()
+                p.paragraph_format.left_indent = Inches(0.5)
+                p.paragraph_format.right_indent = Inches(0.5)
+                p.style = 'Quote'
+                p.add_run(element.get_text())
+
+            # Process tables
+            elif tag_name == 'table':
+                # Count rows and columns
+                rows = element.find_all('tr')
+                if not rows:
+                    continue
+
+                # Determine max columns by checking all rows
+                max_cols = 0
+                for row in rows:
+                    cols = row.find_all(['td', 'th'])
+                    max_cols = max(max_cols, len(cols))
+
+                if max_cols == 0:
+                    continue
+
+                # Create table
+                table = doc.add_table(rows=len(rows), cols=max_cols)
+                table.style = 'Table Grid'
+
+                # Fill table
+                for i, row in enumerate(rows):
+                    cells = row.find_all(['td', 'th'])
+                    for j, cell in enumerate(cells):
+                        if j < max_cols:
+                            # Style header cells
+                            if cell.name == 'th':
+                                cell_text = cell.get_text().strip()
+                                table.cell(i, j).text = cell_text
+                                for paragraph in table.cell(i, j).paragraphs:
+                                    for run in paragraph.runs:
+                                        run.bold = True
+                            else:
+                                table.cell(i, j).text = cell.get_text().strip()
+
+        # Save document to a BytesIO object
+        from io import BytesIO
+        docx_bytes = BytesIO()
+        doc.save(docx_bytes)
+        docx_bytes.seek(0)
+        return docx_bytes.getvalue()
+
+    def _apply_style(self, doc: Document, style_name: str) -> Document:
+        """Apply predefined style to document."""
+        # Default style is already applied by default
+
+        if style_name == 'academic':
+            # Font settings
+            doc.styles['Normal'].font.name = 'Times New Roman'
+            doc.styles['Normal'].font.size = Pt(12)
+
+            # Heading styles
+            for i in range(1, 4):
+                heading_style = doc.styles[f'Heading {i}']
+                heading_style.font.name = 'Times New Roman'
+                heading_style.font.bold = True
+                heading_style.font.size = Pt(16 - (i - 1) * 2)  # H1: 16pt, H2: 14pt, H3: 12pt
+
+            # Paragraph spacing
+            doc.styles['Normal'].paragraph_format.line_spacing = 2.0  # Double spacing
+
+        elif style_name == 'business':
+            # Font settings
+            doc.styles['Normal'].font.name = 'Calibri'
+            doc.styles['Normal'].font.size = Pt(11)
+
+            # Heading styles
+            for i in range(1, 4):
+                heading_style = doc.styles[f'Heading {i}']
+                heading_style.font.name = 'Calibri'
+                heading_style.font.bold = True
+                if i == 1:
+                    heading_style.font.size = Pt(16)
+                    heading_style.font.color.rgb = RGBColor(0, 77, 113)  # Dark blue
+                elif i == 2:
+                    heading_style.font.size = Pt(14)
+                    heading_style.font.color.rgb = RGBColor(0, 112, 155)  # Medium blue
+                else:
+                    heading_style.font.size = Pt(12)
+                    heading_style.font.color.rgb = RGBColor(0, 130, 188)  # Light blue
+
+        elif style_name == 'minimal':
+            # Font settings
+            doc.styles['Normal'].font.name = 'Arial'
+            doc.styles['Normal'].font.size = Pt(10)
+
+            # Heading styles
+            for i in range(1, 4):
+                heading_style = doc.styles[f'Heading {i}']
+                heading_style.font.name = 'Arial'
+                heading_style.font.bold = True
+                heading_style.font.size = Pt(14 - (i - 1) * 2)  # H1: 14pt, H2: 12pt, H3: 10pt
+
+            # Paragraph spacing
+            doc.styles['Normal'].paragraph_format.space_after = Pt(6)
+
+        return doc
+
+    def _create_table_of_contents(self, doc: Document) -> None:
+        """Create table of contents"""
+        doc.add_heading('Table of Contents', level=1)
+        paragraph = doc.add_paragraph()
+        run = paragraph.add_run()
+        fldChar = OxmlElement('w:fldChar')
+        fldChar.set(qn('w:fldCharType'), 'begin')
+
+        instrText = OxmlElement('w:instrText')
+        instrText.set(qn('xml:space'), 'preserve')
+        instrText.text = 'TOC \\o "1-3" \\h \\z \\u'
+
+        fldChar2 = OxmlElement('w:fldChar')
+        fldChar2.set(qn('w:fldCharType'), 'separate')
+
+        fldChar3 = OxmlElement('w:t')
+        fldChar3.text = "Right-click to update table of contents."
+
+        fldChar4 = OxmlElement('w:fldChar')
+        fldChar4.set(qn('w:fldCharType'), 'end')
+
+        r_element = run._r
+        r_element.append(fldChar)
+        r_element.append(instrText)
+        r_element.append(fldChar2)
+        r_element.append(fldChar3)
+        r_element.append(fldChar4)
+
+        doc.add_page_break()
+
+    def _add_hyperlink(self, paragraph, url, text):
+        """Add a hyperlink to a paragraph."""
+        part = paragraph.part
+        r_id = part.relate_to(url, "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+                              is_external=True)
+
+        hyperlink = OxmlElement('w:hyperlink')
+        hyperlink.set(qn('r:id'), r_id)
+
+        new_run = OxmlElement('w:r')
+        rPr = OxmlElement('w:rPr')
+
+        c = OxmlElement('w:color')
+        c.set(qn('w:val'), '0000FF')
+        rPr.append(c)
+
+        u = OxmlElement('w:u')
+        u.set(qn('w:val'), 'single')
+        rPr.append(u)
+
+        new_run.append(rPr)
+        new_run.text = text
+        hyperlink.append(new_run)
+
+        paragraph._p.append(hyperlink)
+
+        return hyperlink
 
 
 # Register the toolset with the Agent C framework
