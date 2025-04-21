@@ -62,7 +62,7 @@ class SessionLogger:
     async def log_event(self, event: Any) -> bool:
         """
         Log a single event to the file with timestamp.
-        
+
         Args:
             event: The event to log. Can be any object that can be serialized to JSON.
         """
@@ -73,20 +73,31 @@ class SessionLogger:
 
             # Convert datetime to ISO format string
             timestamp = datetime.datetime.now().isoformat()
-            
-            # Convert the event to a dict if it has a model_dump method (Pydantic model)
-            event_data = event.model_dump() if hasattr(event, 'model_dump') else event
-            
+
+            # Process the event based on its type
+            if hasattr(event, 'model_dump'):
+                # It's a Pydantic model
+                event_data = event.model_dump()
+            elif isinstance(event, str):
+                # It's a string, try to parse as JSON first
+                try:
+                    event_data = json.loads(event)
+                except json.JSONDecodeError:
+                    # Not JSON, use as-is
+                    event_data = event
+            else:
+                # Use as-is (dict, list, primitive, etc.)
+                event_data = event
+
             # Create the log entry with timestamp
             log_entry = {
                 'timestamp': timestamp,
                 'event': event_data
             }
-            
+
             # Write the entry to the log file
             with open(self.log_file_path, 'a', encoding='utf-8') as f:
                 f.write(json.dumps(log_entry) + '\n')
-
             return True
         except Exception as e:
             logging.exception(f"Error logging event: {e}")
