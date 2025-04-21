@@ -256,17 +256,15 @@ class LocalStorageWorkspace(BaseWorkspace):
         full_path = self.workspace_root.joinpath(norm_path)
         return full_path.is_dir()
 
-    async def write(self, file_path: str, mode: str, data: str) -> str:
+    async def write(self, file_path: str, mode: str, data: str, is_binary=False) -> str:
         read_only_error = self._check_read_only()
         if read_only_error:
             return read_only_error
-        return await self._write_impl(file_path, mode, data, is_binary=False)
+        return await self._write_impl(file_path, mode, data, is_binary=is_binary)
 
     async def write_bytes(self, file_path: str, mode: str, data: bytes) -> str:
-        read_only_error = self._check_read_only()
-        if read_only_error:
-            return read_only_error
-        return await self._write_impl(file_path, mode, data, is_binary=True)
+        # For legacy reasons, we keep the write_bytes method
+        return await self.write(file_path, mode, data, is_binary=True)
 
     async def _write_impl(self, file_path: str, mode: str, data: Union[str, bytes], is_binary: bool) -> str:
         valid, error_msg, full_path = self._validate_path(file_path)

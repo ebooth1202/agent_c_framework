@@ -204,16 +204,24 @@ class WorkspaceTools(Toolset):
                 'type': 'string',
                 'description': 'The writing mode: "write" to overwrite or "append" to add to the file',
                 'required': False
+            },
+            'data_type': {
+                'type': 'string',
+                'description': 'Type of data being written',
+                'enum': ['text', 'binary'],
+                'required': False,
+                'default': 'text'
             }
         }
     )
     async def write(self, **kwargs: Any) -> str:
         """Asynchronously writes or appends data to a file.
 
-        Args:
+        kwargs:
             path (str): UNC-style path (//WORKSPACE/path) to the file to write
-            data (str): The text data to write or append to the file
+            data (Union[str, bytes]): The text or binary data to write or append to the file
             mode (str): The writing mode, either 'write' to overwrite or 'append'
+            data_type (str): Type of data being written, either 'text' for plain text or 'binary' for base64-encoded binary data
 
         Returns:
             str: JSON string with a success message or an error message.
@@ -221,12 +229,16 @@ class WorkspaceTools(Toolset):
         unc_path = kwargs.get('path', '')
         data = kwargs['data']
         mode = kwargs.get('mode', 'write')
+        data_type = kwargs.get('data_type', 'text')
 
         error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
         if error:
             return json.dumps({'error': error})
 
-        return await workspace.write(relative_path, mode, data)
+        if data_type == 'binary':
+            return await workspace.write_bytes(relative_path, mode, data)
+        else:
+            return await workspace.write(relative_path, mode, data)
 
     @json_schema(
         'Copy a file or directory using UNC-style paths',

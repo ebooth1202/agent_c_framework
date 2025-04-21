@@ -28,14 +28,15 @@ dependencies = [
     "azure-storage-blob>=12.25.1",
     "azure-core>=1.32.0",
     "unidiff>=0.7.5",
-    "markdown",
+    "markdown", # markdown html report tool
     "beautifulsoup4==4.12.3",# dynamics (overlap agent_c_tools)
     "pytz==2024.2",         # dynamics
     "lxml==5.3.0",          # dynamics (overlaps agent_c_voice)
     "lxml_html_clean==0.2.2", # Dynamics (overlaps agent_c_voice)
     "openpyxl==3.1.5", # dynamics
     "mcp>=0.7.0",         # MCP SDK
-    "pyyaml>=6.0"         # Configuration file support
+    "pyyaml>=6.0",         # Configuration file support
+    "python-docx==1.1.2",        # markdown html report tool
 ]
 
 requires-python = ">=3.10"
