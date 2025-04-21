@@ -4,7 +4,7 @@ services:
     env_file:
       - ${AGENT_C_CONFIG_PATH}/agent_c.config
     ports:
-      - "8001:8000"
+      - "8000:8000"
     restart: always
     volumes:
       - ${AGENT_C_IMAGES_PATH}:/app/images  # Mounted volume for saved images
