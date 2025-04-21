@@ -62,8 +62,7 @@ The company has a strict policy against AI performing code modifications without
 - **Scratchpad requires extra thought:** After reading in the content from the scratchpad you MUST make use of the think tool to reflect and map out what you're going to do so things are done right.
 
 - Be mindful of token consumption, use the most efficient workspace tools for the job:
-  - The design for the tool is included below. Use this as a baseline knowledgebase instead of digging through all the files each time. 
-  - Favor the use of `replace_strings` and performing batch updates. **Some workspaces may be remote, batching saves bandwidth.**
+  
 
 ## Unit Testing Rules
 - You can NOT run test scripts so don't try

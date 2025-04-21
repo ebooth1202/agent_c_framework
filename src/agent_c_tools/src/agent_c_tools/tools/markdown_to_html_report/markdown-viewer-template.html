@@ -652,81 +652,100 @@
         
         // Function to create the tree view
         function createTreeView(structure, parent) {
-            structure.forEach(item => {
-                const li = document.createElement('li');
-                
-                if (item.type === 'folder') {
-                    // Create folder
-                    const folderElement = document.createElement('div');
-                    folderElement.classList.add('folder');
-                    folderElement.textContent = item.name;
-                    li.appendChild(folderElement);
-                    
-                    // Create child list for this folder
-                    const ul = document.createElement('ul');
-                    ul.classList.add('tree-view', 'hidden');
-                    li.appendChild(ul);
-                    
-                    // Toggle visibility on click
-                    folderElement.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        folderElement.classList.toggle('open');
-                        ul.classList.toggle('hidden');
-                    });
-                    
-                    // If there are children, create their views
-                    if (item.children && item.children.length > 0) {
-                        createTreeView(item.children, ul);
-                        
-                        // Auto-expand folders with only one sub-folder
-                        if (item.children.length === 1 && item.children[0].type === 'folder') {
-                            folderElement.classList.add('open');
-                            ul.classList.remove('hidden');
-                        }
-                    }
-                } else {
-                    // Create file
-                    // Only show markdown files
-                    if (item.name.toLowerCase().endsWith('.md') || item.name.toLowerCase().endsWith('.markdown')) {
-                        const fileElement = document.createElement('div');
-                        fileElement.classList.add('file');
-                        fileElement.textContent = item.name;
-                        fileElement.dataset.path = item.path;
-                        fileElement.dataset.content = item.content;
-                        li.appendChild(fileElement);
-                        
-                        // Handle file click to display content
-                        fileElement.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            // Remove active from all files
-                            document.querySelectorAll('.file.active').forEach(el => {
-                                el.classList.remove('active');
-                            });
-                            // Add active to this file
-                            fileElement.classList.add('active');
-                            
-                            // Render markdown content
-                            renderMarkdown(fileElement.dataset.content);
-                            
-                            // Update browser history to allow back/forward navigation
-                            updateHistory(item.path);
-                            
-                            // On mobile, collapse sidebar after selection
-                            if (window.innerWidth <= 768) {
-                                sidebarHidden = true;
-                                sidebar.style.maxHeight = '40px';
-                                sidebar.style.overflow = 'hidden';
-                            }
-                        });
-                    } else {
-                        // Skip non-markdown files
-                        return;
-                    }
-                }
-                
-                parent.appendChild(li);
+    // Helper function to format display names
+    function formatDisplayName(filename) {
+        // Remove leading numbers and dots (e.g., "01.")
+        let displayName = filename.replace(/^\d+\./, '');
+
+        // Remove file extensions (.md or .markdown)
+        displayName = displayName.replace(/\.(md|markdown)$/i, '');
+
+        // Replace underscores with spaces
+        displayName = displayName.replace(/_/g, ' ');
+
+        // Title case (capitalize first letter of each word)
+        displayName = displayName.split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+
+        return displayName;
+    }
+
+    structure.forEach(item => {
+        const li = document.createElement('li');
+
+        if (item.type === 'folder') {
+            // Create folder
+            const folderElement = document.createElement('div');
+            folderElement.classList.add('folder');
+            folderElement.textContent = formatDisplayName(item.name); // Format folder name
+            li.appendChild(folderElement);
+
+            // Create child list for this folder
+            const ul = document.createElement('ul');
+            ul.classList.add('tree-view', 'hidden');
+            li.appendChild(ul);
+
+            // Toggle visibility on click
+            folderElement.addEventListener('click', (e) => {
+                e.stopPropagation();
+                folderElement.classList.toggle('open');
+                ul.classList.toggle('hidden');
             });
+
+            // If there are children, create their views
+            if (item.children && item.children.length > 0) {
+                createTreeView(item.children, ul);
+
+                // Auto-expand folders with only one sub-folder
+                if (item.children.length === 1 && item.children[0].type === 'folder') {
+                    folderElement.classList.add('open');
+                    ul.classList.remove('hidden');
+                }
+            }
+        } else {
+            // Create file
+            // Only show markdown files
+            if (item.name.toLowerCase().endsWith('.md') || item.name.toLowerCase().endsWith('.markdown')) {
+                const fileElement = document.createElement('div');
+                fileElement.classList.add('file');
+                fileElement.textContent = formatDisplayName(item.name); // Format file name
+                fileElement.dataset.path = item.path;
+                fileElement.dataset.content = item.content;
+                li.appendChild(fileElement);
+
+                // Handle file click to display content
+                fileElement.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    // Remove active from all files
+                    document.querySelectorAll('.file.active').forEach(el => {
+                        el.classList.remove('active');
+                    });
+                    // Add active to this file
+                    fileElement.classList.add('active');
+
+                    // Render markdown content
+                    renderMarkdown(fileElement.dataset.content);
+
+                    // Update browser history to allow back/forward navigation
+                    updateHistory(item.path);
+
+                    // On mobile, collapse sidebar after selection
+                    if (window.innerWidth <= 768) {
+                        sidebarHidden = true;
+                        sidebar.style.maxHeight = '40px';
+                        sidebar.style.overflow = 'hidden';
+                    }
+                });
+            } else {
+                // Skip non-markdown files
+                return;
+            }
         }
+
+        parent.appendChild(li);
+    });
+}
         
         // Function to render markdown
         function renderMarkdown(content) {
