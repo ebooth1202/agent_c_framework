@@ -7,6 +7,10 @@
 @import './common/typography.css';
 @import './common/layout.css';
 @import './common/utilities.css';
+@import './common/cards.css';
+@import './common/badges.css';
+@import './common/interactive.css';
+@import './common/tooltips.css';
 
 /* Import component styles */
 @import './components/layout.css';

@@ -1,3 +1,8 @@
+# CSS Variables Expansion Draft
+
+After auditing the first 6 components, I've identified several categories of hardcoded values that should be converted to variables. Here's a proposal for expanding our variables.css file:
+
+```css
 /* ===== COMMON: CSS Variables ===== */
 /* Description: Global CSS variables for consistent styling across the application */
 
@@ -31,7 +36,7 @@
   --color-error: 0 84% 60%;
   --color-info: 211 96% 62%;
   
-  /* Colors - Gray Scale */
+  /* NEW: Colors - Gray Scale */
   --color-gray-50: 210 40% 98%;
   --color-gray-100: 214 32% 91%;
   --color-gray-200: 214 15% 91%;
@@ -44,7 +49,7 @@
   --color-gray-900: 221 39% 11%;
   --color-gray-950: 224 71% 4%;
 
-  /* Colors - Blue Scale */
+  /* NEW: Colors - Blue Scale */
   --color-blue-50: 214 100% 97%;
   --color-blue-100: 214 95% 93%;
   --color-blue-200: 213 97% 87%;
@@ -56,7 +61,7 @@
   --color-blue-800: 226 71% 40%;
   --color-blue-900: 224 64% 33%;
   
-  /* Colors - Purple Scale */
+  /* NEW: Colors - Purple Scale */
   --color-purple-50: 270 100% 98%;
   --color-purple-100: 269 100% 95%;
   --color-purple-200: 268 100% 92%;
@@ -68,7 +73,7 @@
   --color-purple-800: 273 67% 39%;
   --color-purple-900: 274 66% 32%;
 
-  /* Colors - Green Scale */
+  /* NEW: Colors - Green Scale */
   --color-green-50: 138 76% 97%;
   --color-green-100: 141 84% 93%;
   --color-green-200: 141 79% 85%;
@@ -80,7 +85,7 @@
   --color-green-800: 143 64% 24%;
   --color-green-900: 144 61% 20%;
 
-  /* Colors - Amber Scale */
+  /* NEW: Colors - Amber Scale */
   --color-amber-50: 48 100% 96%;
   --color-amber-100: 48 96% 89%;
   --color-amber-200: 48 97% 77%;
@@ -96,7 +101,7 @@
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
   --font-mono: 'JetBrains Mono', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
   
-  /* Font Sizes */
+  /* NEW: Font Sizes */
   --font-size-xs: 0.75rem;     /* 12px */
   --font-size-sm: 0.875rem;    /* 14px */
   --font-size-base: 1rem;      /* 16px */
@@ -106,7 +111,7 @@
   --font-size-3xl: 1.875rem;   /* 30px */
   --font-size-4xl: 2.25rem;    /* 36px */
   
-  /* Font Weights */
+  /* NEW: Font Weights */
   --font-weight-normal: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
@@ -132,7 +137,7 @@
   --border-radius-2xl: 1rem;     /* 16px */
   --border-radius-full: 9999px;  /* Fully rounded */
   
-  /* Border Widths */
+  /* NEW: Border Widths */
   --border-width-thin: 1px;
   --border-width-medium: 2px;
   --border-width-thick: 3px;
@@ -148,7 +153,7 @@
   --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
   
-  /* Specific Transitions */
+  /* NEW: Specific Transitions */
   --transition-hover: 200ms ease;
   --transition-fade: 200ms ease-out;
   --transition-slide: 200ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -162,7 +167,7 @@
   --z-index-popover: 60;
   --z-index-tooltip: 70;
   
-  /* Component-specific variables */
+  /* NEW: Component-specific variables */
   
   /* Layout Component */
   --layout-max-width: 80rem; /* 1280px */
@@ -191,3 +196,48 @@
   --badge-font-size: var(--font-size-xs);
   --badge-border-radius: var(--border-radius-full);
 }
+```
+
+## Implementation Strategy
+
+1. Update variables.css with these expanded variables
+
+2. For component CSS files, implement the following substitutions:
+
+### Text Colors
+- Replace `#111827` with `hsl(var(--color-gray-900))`
+- Replace `#f9fafb` with `hsl(var(--color-gray-50))`
+- Replace `#4b5563` with `hsl(var(--color-gray-600))`
+- Replace `#6b7280` with `hsl(var(--color-gray-500))`
+- Replace `#9ca3af` with `hsl(var(--color-gray-400))`
+
+### UI Element Colors
+- Replace `white` with `var(--card-background)` for card backgrounds
+- Replace `#f3f4f6` with `hsl(var(--color-gray-100))`
+- Replace `#1f2937` with `hsl(var(--color-gray-800))`
+- Replace `#374151` with `hsl(var(--color-gray-700))`
+- Replace `#e5e7eb` with `hsl(var(--color-gray-200))`
+
+### Spacing
+- Replace `0.25rem` with `var(--spacing-1)`
+- Replace `0.5rem` with `var(--spacing-2)`
+- Replace `0.75rem` with `var(--spacing-3)`
+- Replace `1rem` with `var(--spacing-4)`
+- Replace `1.5rem` with `var(--spacing-6)`
+
+### Typography
+- Replace `0.75rem` with `var(--font-size-xs)`
+- Replace `0.875rem` with `var(--font-size-sm)`
+- Replace `1rem` with `var(--font-size-base)`
+- Replace `1.25rem` with `var(--font-size-xl)`
+- Replace `1.5rem` with `var(--font-size-2xl)`
+
+### Transitions
+- Replace `0.2s ease` with `var(--transition-hover)`
+
+## Next Steps
+
+1. Update variables.css with expanded variables
+2. Create a common-elements.css file for shared UI patterns
+3. Begin updating component CSS files systematically
+4. Test and validate changes
