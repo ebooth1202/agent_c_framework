@@ -34,26 +34,26 @@ const MarkdownMessage = ({content}) => {
     }, [content]);
 
     return (
-        <div className="prose prose-sm max-w-none prose-p:my-1 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-1 group flex gap-2 items-start">
+        <div className="prose prose-sm max-w-none prose-p:my-1 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-1 markdown-container">
             {/* Main content */}
-            <div className="flex-1">
+            <div className="markdown-content">
 
             <ReactMarkdown
                 components={{
-                    h1: ({node, ...props}) => <h1 className="text-2xl font-bold mt-3 mb-1" {...props} />,
-                    h2: ({node, ...props}) => <h2 className="text-xl font-bold mt-2 mb-1" {...props} />,
-                    h3: ({node, ...props}) => <h3 className="text-lg font-bold mt-2 mb-1" {...props} />,
-                    h4: ({node, ...props}) => <h4 className="text-base font-bold mt-1 mb-1" {...props} />,
+                    h1: ({node, ...props}) => <h1 className="markdown-h1" {...props} />,
+                    h2: ({node, ...props}) => <h2 className="markdown-h2" {...props} />,
+                    h3: ({node, ...props}) => <h3 className="markdown-h3" {...props} />,
+                    h4: ({node, ...props}) => <h4 className="markdown-h4" {...props} />,
                     // Enhanced list rendering - reduced margins
                     ul: ({node, ...props}) => (
-                        <ul className="list-disc ml-4 my-1" {...props} />
+                        <ul className="markdown-ul" {...props} />
                     ),
                     li: ({node, ...props}) => (
-                        <li className="[&>code]:ml-0" {...props} />
+                        <li className="markdown-li" {...props} />
                     ),
                     // Enhanced bold text rendering
                     strong: ({node, ...props}) => (
-                        <strong className="font-bold text-purple-800" {...props} />
+                        <strong className="markdown-strong" {...props} />
                     ),
                     // Enhanced code block rendering with copy button
                     code: ({node, inline, className, children, ...props}) => {
@@ -70,14 +70,13 @@ const MarkdownMessage = ({content}) => {
 
                         return !shouldBeInline ? (
                             // Code block (triple backticks) formatting
-                            <div className="rounded-lg overflow-hidden my-4 relative group">
-                                <div
-                                    className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="markdown-code-block-container">
+                                <div className="markdown-code-block-copy-button">
                                     <CopyButton
                                         content={codeString}
                                         tooltipText="Copy code"
                                         variant="secondary"
-                                        className="bg-gray-800 hover:bg-gray-700 text-white hover:text-white"
+                                        className="markdown-code-block-copy-button-style"
                                     />
                                 </div>
                                 <SyntaxHighlighter
@@ -93,22 +92,22 @@ const MarkdownMessage = ({content}) => {
                             </div>
                         ) : (
                             // Inline code (single backticks) formatting
-                            <code className="bg-purple-100 px-1 rounded text-purple-800 inline font-mono inline-block" {...props}>
+                            <code className="markdown-inline-code" {...props}>
                                 {children}
                             </code>
                         );
                     },
                     // Enhanced blockquote rendering
                     blockquote: ({node, ...props}) => (
-                        <blockquote className="border-l-4 border-purple-300 pl-4 my-4 italic" {...props} />
+                        <blockquote className="markdown-blockquote" {...props} />
                     ),
                     // Enhance paragraph rendering with reduced spacing
                     p: ({node, ...props}) => (
-                        <p className="my-1 leading-relaxed" {...props} />
+                        <p className="markdown-paragraph" {...props} />
                     ),
                     // Enhanced horizontal rule
                     hr: ({node, ...props}) => (
-                        <hr className="my-6 border-t-2 border-purple-100" {...props} />
+                        <hr className="markdown-hr" {...props} />
                     ),
                 }}
             >
@@ -116,7 +115,7 @@ const MarkdownMessage = ({content}) => {
             </ReactMarkdown>
             </div>
             {/* Copy button that appears on hover */}
-            <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="markdown-copy-button-container">
                 <CopyButton
                     content={content}
                     tooltipText="Copy markdown"

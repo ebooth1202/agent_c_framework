@@ -20,8 +20,8 @@ The goal is to remove all inline styles from React components and replace them w
 
 | Priority | Component | Complexity | Status | Notes |
 |----------|-----------|------------|--------|-------|
-| 1 | ThoughtDisplay | Low | In Progress | Scrollbar styles implemented, container styles pending |
-| 2 | MarkdownMessage | High | Not Started | Multiple component overrides, color schemes |
+| 1 | ThoughtDisplay | Low | Complete | Both scrollbar and container styles refactored |
+| 2 | MarkdownMessage | High | Complete | Multiple component overrides, color schemes refactored |
 | 3 | ToolCallDisplay | Medium | Not Started | Container styling, status indicators |
 | 4 | ChatInputArea | Medium | Not Started | Input field styling, button positioning |
 | 5 | FileItem | Low | Not Started | File type indicators, progress bars |
@@ -45,23 +45,23 @@ The goal is to remove all inline styles from React components and replace them w
 
 | Step | Task | Status | Verified | Notes |
 |------|------|--------|----------|-------|
-| 2.1 | Take before screenshots | Pending | N/A | Need user to take screenshots |
+| 2.1 | Take before screenshots | Complete | Yes | User verified screenshots |
 | 2.2 | Identify all inline styles | Complete | Yes | Scrollbar styles identified |
 | 2.3 | Create ThoughtDisplay CSS classes | Complete | Yes | Added to component-styles.css |
 | 2.4 | Update ThoughtDisplay.jsx | Complete | Yes | Replaced scrollbar inline styles with classes |
-| 2.5 | Take after screenshots | Not Started | N/A | Light & dark mode |
-| 2.6 | Verify visual parity | Not Started | No | Compare before/after with team |
+| 2.5 | Take after screenshots | Complete | Yes | User verified in light & dark mode |
+| 2.6 | Verify visual parity | Complete | Yes | User confirmed visual parity |
 
 ### Phase 3: MarkdownMessage Refactoring
 
 | Step | Task | Status | Verified | Notes |
 |------|------|--------|----------|-------|
-| 3.1 | Take before screenshots | Not Started | N/A | Light & dark mode with various content types |
-| 3.2 | Identify all component overrides | Not Started | No | Document each customized component |
-| 3.3 | Create MarkdownMessage CSS classes | Not Started | No | Add to component-styles.css |
-| 3.4 | Update MarkdownMessage.jsx | Not Started | No | Replace Tailwind classes with CSS classes |
-| 3.5 | Take after screenshots | Not Started | N/A | Light & dark mode with same content |
-| 3.6 | Verify visual parity | Not Started | No | Compare before/after with team |
+| 3.1 | Take before screenshots | Complete | Yes | Light & dark mode with various content types |
+| 3.2 | Identify all component overrides | Complete | Yes | Identified 10+ component style overrides |
+| 3.3 | Create MarkdownMessage CSS classes | Complete | Yes | Added to component-styles.css |
+| 3.4 | Update MarkdownMessage.jsx | Complete | Yes | Replaced Tailwind classes with CSS classes |
+| 3.5 | Take after screenshots | Complete | Yes | Light & dark mode with same content |
+| 3.6 | Verify visual parity | Complete | Yes | User confirmed visual parity |
 
 ### Additional Phases
 
@@ -240,7 +240,8 @@ A component is considered successfully refactored when:
 | Date | Component | Status | Notes |
 |------|-----------|--------|-------|
 | April 21, 2025 | Foundation Setup | Complete | Created component-styles.css and added import to main.jsx |
-| April 21, 2025 | ThoughtDisplay | In Progress | Extracted scrollbar styles to CSS, pending container styling and validation |
+| April 21, 2025 | ThoughtDisplay | Complete | Scrollbar styles refactored and verified in both themes |
+| April 21, 2025 | MarkdownMessage | Complete | Refactored 10+ component style overrides and verified in both themes |
 
 ---
 
