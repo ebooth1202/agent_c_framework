@@ -7,3 +7,4 @@ from agent_c_tools.tools.markdown_to_html_report.tool import MarkdownToHtmlRepor
 from agent_c_tools.tools.memory import MemoryTools
 from agent_c_tools.tools.random_number import RandomNumberTools
 from agent_c_tools.tools.mermaid_chart import MermaidChartTools
+from agent_c_tools.tools.css_explorer.tool import CssExplorerTools

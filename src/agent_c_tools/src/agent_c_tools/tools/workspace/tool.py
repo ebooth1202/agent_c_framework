@@ -74,7 +74,7 @@ class WorkspaceTools(Toolset):
 
         return None, workspace, relative_path
 
-    def _validate_and_get_workspace_path(self, unc_path: str) -> Tuple[Optional[str], Optional[BaseWorkspace], Optional[str]]:
+    def validate_and_get_workspace_path(self, unc_path: str) -> Tuple[Optional[str], Optional[BaseWorkspace], Optional[str]]:
         """
         Validate a UNC path and return the workspace object and relative path.
 
@@ -115,7 +115,7 @@ class WorkspaceTools(Toolset):
         """
         unc_path = kwargs.get('path', '')
 
-        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
+        error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
         if error:
             return json.dumps({'error': error})
 
@@ -154,7 +154,7 @@ class WorkspaceTools(Toolset):
         folder_depth = kwargs.get('folder_depth', 5)
         file_depth = kwargs.get('file_depth', 3)
 
-        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
+        error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
         if error:
             return json.dumps({'error': error})
 
@@ -181,7 +181,7 @@ class WorkspaceTools(Toolset):
         """
         unc_path = kwargs.get('path', '')
 
-        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
+        error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
         if error:
             return json.dumps({'error': error})
 
@@ -222,7 +222,7 @@ class WorkspaceTools(Toolset):
         data = kwargs['data']
         mode = kwargs.get('mode', 'write')
 
-        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
+        error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
         if error:
             return json.dumps({'error': error})
 
@@ -257,12 +257,12 @@ class WorkspaceTools(Toolset):
         dest_unc_path = kwargs.get('dest_path', '')
 
         # Validate source path
-        src_error, src_workspace, src_relative_path = self._validate_and_get_workspace_path(src_unc_path)
+        src_error, src_workspace, src_relative_path = self.validate_and_get_workspace_path(src_unc_path)
         if src_error:
             return json.dumps({'error': src_error})
 
         # Validate destination path
-        dest_error, dest_workspace, dest_relative_path = self._validate_and_get_workspace_path(dest_unc_path)
+        dest_error, dest_workspace, dest_relative_path = self.validate_and_get_workspace_path(dest_unc_path)
         if dest_error:
             return json.dumps({'error': dest_error})
 
@@ -295,7 +295,7 @@ class WorkspaceTools(Toolset):
         """
         unc_path = kwargs.get('path', '')
 
-        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
+        error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
         if error:
             return json.dumps({'error': error})
 
@@ -336,12 +336,12 @@ class WorkspaceTools(Toolset):
         dest_unc_path = kwargs.get('dest_path', '')
 
         # Validate source path
-        src_error, src_workspace, src_relative_path = self._validate_and_get_workspace_path(src_unc_path)
+        src_error, src_workspace, src_relative_path = self.validate_and_get_workspace_path(src_unc_path)
         if src_error:
             return json.dumps({'error': src_error})
 
         # Validate destination path
-        dest_error, dest_workspace, dest_relative_path = self._validate_and_get_workspace_path(dest_unc_path)
+        dest_error, dest_workspace, dest_relative_path = self.validate_and_get_workspace_path(dest_unc_path)
         if dest_error:
             return json.dumps({'error': dest_error})
 
@@ -396,7 +396,7 @@ class WorkspaceTools(Toolset):
         updates = kwargs['updates']
 
         unc_path = kwargs.get('path', '')
-        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
+        error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
         if error:
             return json.dumps({'error': error})
 
@@ -454,7 +454,7 @@ class WorkspaceTools(Toolset):
         end_line = kwargs.get('end_line')
         include_line_numbers = kwargs.get('include_line_numbers', False)
 
-        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
+        error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
         if error:
             return json.dumps({'error': error})
 
@@ -521,7 +521,7 @@ class WorkspaceTools(Toolset):
         """
         unc_path = kwargs.get('path', '')
 
-        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
+        error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
         if error:
             return json.dumps({'error': error})
 
@@ -588,7 +588,7 @@ class WorkspaceTools(Toolset):
         use_regex = kwargs.get('use_regex', False)
         max_results = kwargs.get('max_results', 0)
 
-        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
+        error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
         if error:
             return json.dumps({'error': error})
 

@@ -1717,3 +1717,549 @@
 .dark .agent-config-tooltip-value {
   color: #f9fafb; /* text-gray-100 */
 }
+
+/* ==============================
+   PageHeader Component Styles
+   ============================== */
+
+/* Main container */
+.page-header {
+  margin-bottom: 1.5rem; /* mb-6 */
+  padding-bottom: 1rem; /* pb-4 */
+  border-bottom: 1px solid #e5e7eb; /* border-b border-gray-200 */
+}
+
+.dark .page-header {
+  border-color: #374151; /* border-gray-700 */
+}
+
+/* Content container with flex layout */
+.page-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem; /* gap-4 */
+}
+
+/* Stack layout on small screens */
+@media (max-width: 640px) {
+  .page-header-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .page-header-actions {
+    margin-top: 0.5rem; /* mt-2 */
+    align-self: flex-end;
+  }
+}
+
+/* Text container */
+.page-header-text {
+  flex: 1;
+}
+
+/* Page title */
+.page-header-title {
+  font-size: 1.875rem; /* text-3xl */
+  font-weight: 700; /* font-bold */
+  line-height: 1.2;
+  color: #111827; /* text-gray-900 */
+  margin-bottom: 0.25rem; /* mb-1 */
+}
+
+.dark .page-header-title {
+  color: #f9fafb; /* text-gray-50 */
+}
+
+/* Page description */
+.page-header-description {
+  color: #6b7280; /* text-gray-500 */
+  font-size: 1rem; /* text-base */
+  max-width: 36rem; /* max-w-2xl */
+}
+
+.dark .page-header-description {
+  color: #9ca3af; /* text-gray-400 */
+}
+
+/* Actions container */
+.page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem; /* gap-2 */
+  flex-shrink: 0;
+}
+
+/* ==============================
+   Sidebar Component Styles
+   ============================== */
+
+/* Main sidebar container */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 16rem; /* w-64 */
+  background-color: white;
+  border-right: 1px solid #e5e7eb; /* border-r border-gray-200 */
+  overflow-y: auto;
+  height: 100%;
+}
+
+.dark .sidebar {
+  background-color: #1f2937; /* bg-gray-800 */
+  border-color: #374151; /* border-gray-700 */
+}
+
+/* Sidebar title section */
+.sidebar-title {
+  padding: 1rem;
+  font-size: 1.125rem; /* text-lg */
+  font-weight: 600; /* font-semibold */
+  border-bottom: 1px solid #e5e7eb; /* border-b border-gray-200 */
+  color: #111827; /* text-gray-900 */
+}
+
+.dark .sidebar-title {
+  color: #f9fafb; /* text-gray-50 */
+  border-color: #374151; /* border-gray-700 */
+}
+
+/* Navigation container */
+.sidebar-nav {
+  flex: 1;
+  padding: 1rem 0;
+}
+
+/* Navigation list */
+.sidebar-nav-list {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* Navigation list item */
+.sidebar-nav-item {
+  margin-bottom: 0.25rem; /* mb-1 */
+}
+
+/* Base link styling */
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  color: #4b5563; /* text-gray-600 */
+  text-decoration: none;
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
+}
+
+.sidebar-link:hover {
+  background-color: #f3f4f6; /* bg-gray-100 */
+  color: #111827; /* text-gray-900 */
+}
+
+.dark .sidebar-link {
+  color: #9ca3af; /* text-gray-400 */
+}
+
+.dark .sidebar-link:hover {
+  background-color: #374151; /* bg-gray-700 */
+  color: #f9fafb; /* text-gray-50 */
+}
+
+/* Active link styling */
+.sidebar-link-active {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  color: #2563eb; /* text-blue-600 */
+  background-color: #eff6ff; /* bg-blue-50 */
+  font-weight: 500; /* font-medium */
+  text-decoration: none;
+  border-left: 3px solid #2563eb; /* border-l-3 border-blue-600 */
+}
+
+.dark .sidebar-link-active {
+  color: #3b82f6; /* text-blue-500 */
+  background-color: rgba(59, 130, 246, 0.1); /* bg-blue-500/10 */
+  border-left-color: #3b82f6; /* border-blue-500 */
+}
+
+/* Disabled link styling */
+.sidebar-link-disabled {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  color: #9ca3af; /* text-gray-400 */
+  cursor: not-allowed;
+  border-left: 3px solid transparent;
+}
+
+.dark .sidebar-link-disabled {
+  color: #6b7280; /* text-gray-500 */
+}
+
+/* Icon in link */
+.sidebar-link-icon {
+  margin-right: 0.5rem; /* mr-2 */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Footer section */
+.sidebar-footer {
+  padding: 1rem;
+  border-top: 1px solid #e5e7eb; /* border-t border-gray-200 */
+  font-size: 0.875rem; /* text-sm */
+}
+
+.dark .sidebar-footer {
+  border-color: #374151; /* border-gray-700 */
+}
+
+/* ==============================
+   AgentConfigHoverCard Component Styles
+   ============================== */
+
+/* Main trigger container */
+.agent-config-hover-card-trigger {
+  display: inline-flex;
+  align-items: center;
+  cursor: help;
+}
+
+/* Settings icon styling */
+.agent-config-hover-card-icon {
+  width: 1rem;
+  height: 1rem;
+  color: #3b82f6; /* text-blue-500 */
+  transition: color 0.2s ease;
+}
+
+.agent-config-hover-card-icon:hover {
+  color: #2563eb; /* hover:text-blue-600 */
+}
+
+/* Text label styling */
+.agent-config-hover-card-text {
+  margin-left: 0.375rem; /* ml-1.5 */
+  font-size: 0.875rem; /* text-sm */
+  color: #3b82f6; /* text-blue-500 */
+  font-weight: 500; /* font-medium */
+  transition: color 0.2s ease;
+}
+
+.agent-config-hover-card-text:hover {
+  color: #2563eb; /* hover:text-blue-600 */
+}
+
+/* HoverCard content container */
+.agent-config-hover-card-content {
+  width: 24rem; /* Increased from 20rem to 24rem to prevent wrapping */
+  padding: 0; /* p-0 */
+  background-color: white;
+  border: 1px solid #e5e7eb; /* border */
+  border-radius: 0.5rem; /* rounded-lg */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
+  z-index: 50; /* z-50 */
+}
+
+.dark .agent-config-hover-card-content {
+  background-color: #1f2937; /* dark:bg-gray-800 */
+  border-color: #374151; /* dark:border-gray-700 */
+}
+
+/* Card header styles */
+.agent-config-hover-card-header {
+  padding-bottom: 0.5rem; /* pb-2 */
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem; /* space-y-1.5 */
+}
+
+/* Model info container */
+.agent-config-hover-card-model-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem; /* gap-2 */
+}
+
+/* Model title */
+.agent-config-hover-card-title {
+  font-size: 1rem; /* text-base */
+  font-weight: 600; /* font-semibold */
+  color: #111827; /* text-gray-900 - explicit color for light mode */
+}
+
+/* Dark mode model title with improved contrast */
+.dark .agent-config-hover-card-title {
+  color: #f3f4f6; /* text-gray-100 - much better contrast in dark mode */
+}
+
+/* Backend info container */
+.agent-config-hover-card-backend {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem; /* gap-1.5 */
+  font-size: 0.75rem; /* text-xs */
+  color: #6b7280; /* text-gray-500 */
+}
+
+.dark .agent-config-hover-card-backend {
+  color: #9ca3af; /* dark:text-gray-400 */
+}
+
+/* Backend server icon */
+.agent-config-hover-card-backend-icon {
+  width: 0.875rem; /* w-3.5 */
+  height: 0.875rem; /* h-3.5 */
+}
+
+/* Card content styles */
+.agent-config-hover-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem; /* space-y-4 */
+  padding-bottom: 1rem; /* pb-4 */
+}
+
+/* Section styling */
+.agent-config-hover-card-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem; /* space-y-2 */
+}
+
+/* Section header */
+.agent-config-hover-card-section-title {
+  font-size: 0.75rem; /* text-xs */
+  font-weight: 500; /* font-medium */
+  color: #6b7280; /* text-gray-500 */
+  text-transform: uppercase;
+  letter-spacing: 0.05em; /* tracking-wide */
+}
+
+.dark .agent-config-hover-card-section-title {
+  color: #9ca3af; /* dark:text-gray-400 */
+}
+
+/* Badge container */
+.agent-config-hover-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem; /* gap-2 */
+}
+
+/* Parameter badge base styling */
+.agent-config-hover-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem; /* gap-1 */
+  font-weight: 400; /* font-normal */
+  border: 1px solid;
+  border-radius: 9999px; /* rounded-full */
+  padding: 0.25rem 0.75rem; /* py-1 px-3 */
+  font-size: 0.75rem; /* text-xs */
+  white-space: nowrap; /* Prevent text wrapping within badges */
+}
+
+/* Temperature badge */
+.agent-config-hover-card-badge-temperature {
+  background-color: #eff6ff; /* bg-blue-50 */
+  color: #1d4ed8; /* text-blue-700 */
+  border-color: #dbeafe; /* border-blue-200 */
+}
+
+.dark .agent-config-hover-card-badge-temperature {
+  background-color: rgba(30, 58, 138, 0.3); /* dark:bg-blue-900/30 */
+  color: #93c5fd; /* dark:text-blue-300 */
+  border-color: rgba(30, 64, 175, 0.3); /* dark:border-blue-800/30 */
+}
+
+/* Reasoning badge */
+.agent-config-hover-card-badge-reasoning {
+  background-color: #faf5ff; /* bg-purple-50 */
+  color: #7e22ce; /* text-purple-700 */
+  border-color: #e9d5ff; /* border-purple-200 */
+}
+
+.dark .agent-config-hover-card-badge-reasoning {
+  background-color: rgba(126, 34, 206, 0.2); /* dark:bg-purple-800/20 */
+  color: #d8b4fe; /* dark:text-purple-300 */
+  border-color: rgba(126, 34, 206, 0.3); /* dark:border-purple-800/30 */
+}
+
+/* Thinking badge */
+.agent-config-hover-card-badge-thinking-enabled {
+  background-color: #f0fdf4; /* bg-green-50 */
+  color: #15803d; /* text-green-700 */
+  border-color: #dcfce7; /* border-green-200 */
+}
+
+.agent-config-hover-card-badge-thinking-disabled {
+  background-color: #f3f4f6; /* bg-gray-50 */
+  color: #6b7280; /* text-gray-500 */
+  border-color: #e5e7eb; /* border-gray-200 */
+}
+
+.dark .agent-config-hover-card-badge-thinking-enabled {
+  background-color: rgba(21, 128, 61, 0.2); /* dark:bg-green-800/20 */
+  color: #4ade80; /* dark:text-green-300 */
+  border-color: rgba(21, 128, 61, 0.3); /* dark:border-green-800/30 */
+}
+
+.dark .agent-config-hover-card-badge-thinking-disabled {
+  background-color: rgba(55, 65, 81, 0.3); /* dark:bg-gray-700/30 */
+  color: #9ca3af; /* dark:text-gray-400 */
+  border-color: rgba(55, 65, 81, 0.4); /* dark:border-gray-700/40 */
+}
+
+/* Budget badge */
+.agent-config-hover-card-badge-budget {
+  background-color: #fffbeb; /* bg-amber-50 */
+  color: #b45309; /* text-amber-700 */
+  border-color: #fef3c7; /* border-amber-200 */
+}
+
+.dark .agent-config-hover-card-badge-budget {
+  background-color: rgba(180, 83, 9, 0.2); /* dark:bg-amber-800/20 */
+  color: #fcd34d; /* dark:text-amber-300 */
+  border-color: rgba(180, 83, 9, 0.3); /* dark:border-amber-800/30 */
+}
+
+/* Persona badge */
+.agent-config-hover-card-badge-persona {
+  background-color: #eef2ff; /* bg-indigo-50 */
+  color: #4338ca; /* text-indigo-700 */
+  border-color: #e0e7ff; /* border-indigo-200 */
+}
+
+.dark .agent-config-hover-card-badge-persona {
+  background-color: rgba(67, 56, 202, 0.2); /* dark:bg-indigo-800/20 */
+  color: #a5b4fc; /* dark:text-indigo-300 */
+  border-color: rgba(67, 56, 202, 0.3); /* dark:border-indigo-800/30 */
+}
+
+/* Tool badge */
+.agent-config-hover-card-badge-tool {
+  background-color: #ecfdf5; /* bg-green-50 */
+  color: #047857; /* text-green-700 */
+  border-color: #d1fae5; /* border-green-200 */
+  font-size: 0.65rem; /* text-xs */
+}
+
+.dark .agent-config-hover-card-badge-tool {
+  background-color: rgba(4, 120, 87, 0.2); /* dark:bg-green-800/20 */
+  color: #34d399; /* dark:text-green-400 */
+  border-color: rgba(4, 120, 87, 0.3); /* dark:border-green-800/30 */
+}
+
+/* Session ID info section */
+.agent-config-hover-card-session-info {
+  padding-top: 0.25rem; /* pt-1 */
+  border-top: 1px solid #f3f4f6; /* border-t border-gray-100 */
+  font-size: 0.75rem; /* text-xs */
+  color: #6b7280; /* text-gray-500 */
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem; /* space-y-1 */
+}
+
+.dark .agent-config-hover-card-session-info {
+  border-color: #374151; /* dark:border-gray-700 */
+  color: #9ca3af; /* dark:text-gray-400 */
+}
+
+/* Session ID row */
+.agent-config-hover-card-session-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Session label */
+.agent-config-hover-card-session-label {
+  font-weight: 500; /* font-medium */
+}
+
+/* Session ID code */
+.agent-config-hover-card-session-id {
+  font-size: 0.65rem; /* text-xs */
+  background-color: #f3f4f6; /* bg-gray-50 */
+  padding: 0.125rem 0.25rem; /* py-0.5 px-1 */
+  border-radius: 0.25rem; /* rounded */
+  font-family: monospace;
+}
+
+.dark .agent-config-hover-card-session-id {
+  background-color: #374151; /* dark:bg-gray-700 */
+}
+
+/* ==============================
+   DragDropOverlay Component Styles
+   ============================== */
+
+/* Main overlay container */
+.drag-drop-overlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(var(--primary-rgb), 0.1); /* bg-primary/10 */
+  backdrop-filter: blur(4px); /* backdrop-blur-sm */
+  z-index: 50; /* z-50 */
+  border-radius: 0.75rem; /* rounded-xl */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--primary); /* border-2 border-primary border-dashed */
+}
+
+/* Dark mode variations */
+.dark .drag-drop-overlay {
+  background-color: rgba(var(--primary-900-rgb), 0.2); /* dark:bg-primary-900/20 */
+}
+
+/* Inner content container */
+.drag-drop-overlay-content {
+  text-align: center;
+  padding: 1.5rem; /* p-6 */
+  background-color: rgba(var(--background-rgb), 0.8); /* bg-background/80 */
+  border-radius: 0.75rem; /* rounded-xl */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
+}
+
+/* Dark mode content background */
+.dark .drag-drop-overlay-content {
+  background-color: rgba(31, 41, 55, 0.8); /* dark:bg-gray-800/80 */
+}
+
+/* Upload icon styling */
+.drag-drop-overlay-icon {
+  height: 2.5rem; /* h-10 */
+  width: 2.5rem; /* w-10 */
+  color: var(--primary); /* text-primary */
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 1rem; /* mb-4 */
+}
+
+/* Heading text */
+.drag-drop-overlay-heading {
+  font-size: 1.125rem; /* text-lg */
+  font-weight: 600; /* font-semibold */
+  color: var(--primary-900); /* text-primary-900 */
+}
+
+/* Dark mode heading */
+.dark .drag-drop-overlay-heading {
+  color: var(--primary-300); /* dark:text-primary-300 */
+}
+
+/* Description text */
+.drag-drop-overlay-description {
+  font-size: 0.875rem; /* text-sm */
+  color: var(--muted-foreground); /* text-muted-foreground */
+  margin-top: 0.25rem; /* mt-1 */
+}

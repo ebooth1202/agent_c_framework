@@ -9,7 +9,8 @@ from . import mermaid_chart
 from . import user_bio
 from . import weather
 from . import random_number
-from . import xml_explorer  # New XML Explorer toolset
+from . import xml_explorer  # XML Explorer toolset
+from . import css_explorer  # CSS Explorer toolset
 
 __all__ = [
     'workspace',
@@ -21,5 +22,6 @@ __all__ = [
     'user_bio',
     'weather',
     'random_number',
-    'xml_explorer',  # Add to __all__ list
+    'xml_explorer',
+    'css_explorer',
 ]

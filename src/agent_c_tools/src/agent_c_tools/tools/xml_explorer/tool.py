@@ -5,6 +5,7 @@ from agent_c.toolsets.tool_set import Toolset
 from agent_c.toolsets.json_schema import json_schema
 
 from .xml_navigator import XMLNavigator
+from ... import WorkspaceTools
 
 
 class XmlExplorerTools(Toolset):
@@ -14,35 +15,10 @@ class XmlExplorerTools(Toolset):
 
     def __init__(self, **kwargs: Any):
         super().__init__(name='xml', **kwargs)
-        self.workspaces = kwargs.get('workspaces', {})
+        self.workspace_tool: Optional[WorkspaceTools] = None
 
     async def post_init(self):
-        # If this toolset is initialized after the workspace toolset,
-        # we can access workspaces directly
-        if hasattr(self.tool_chest, 'active_tools') and 'workspace' in self.tool_chest.active_tools:
-            workspace_tools = self.tool_chest.active_tools['workspace']
-            self.workspaces = workspace_tools.workspaces
-
-    def _validate_and_get_workspace_path(self, unc_path: str):
-        """
-        Validate UNC-style path and return workspace object and relative path.
-        Returns (error_message, workspace, relative_path) tuple.
-        """
-        if not unc_path or not unc_path.startswith('//'):
-            return f"Invalid UNC path: {unc_path}", None, None
-
-        parts = unc_path.split('/', 3)
-        if len(parts) < 4:
-            return f"Invalid UNC path format: {unc_path}", None, None
-
-        workspace_name = parts[2]
-        relative_path = parts[3] if len(parts) > 3 else ''
-
-        if workspace_name not in self.workspaces:
-            return f"Workspace not found: {workspace_name}", None, None
-
-        workspace = self.workspaces[workspace_name]
-        return None, workspace, relative_path
+        self.workspace_tool = self.tool_chest.active_tools['workspace']
 
     @json_schema(
         'Get structure information about a large XML file without loading the entire file.',
@@ -78,7 +54,7 @@ class XmlExplorerTools(Toolset):
         max_depth: int = kwargs.get('max_depth', 3)
         sample_count: int = kwargs.get('sample_count', 5)
         unc_path = kwargs.get('path', '')
-        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
+        error, workspace, relative_path = self.workspace_tool.validate_and_get_workspace_path(unc_path)
         if error:
             return json.dumps({'error': error})
 
@@ -119,7 +95,7 @@ class XmlExplorerTools(Toolset):
         xpath: str = kwargs['xpath']
         limit: int = kwargs.get('limit', 10)
         unc_path = kwargs.get('path', '')
-        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
+        error, workspace, relative_path = self.workspace_tool.validate_and_get_workspace_path(unc_path)
         if error:
             return json.dumps({'error': error})
 
@@ -162,7 +138,7 @@ class XmlExplorerTools(Toolset):
         unc_path = kwargs.get('path', '')
         
         # Validate input path
-        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
+        error, workspace, relative_path = self.workspace_tool.validate_and_get_workspace_path(unc_path)
         if error:
             return json.dumps({'error': error})
 
@@ -172,7 +148,7 @@ class XmlExplorerTools(Toolset):
         if output_path:
             if output_path.startswith('//'):
                 # UNC path for output
-                error, output_workspace, output_relative_path = self._validate_and_get_workspace_path(output_path)
+                error, output_workspace, output_relative_path = self.workspace_tool.validate_and_get_workspace_path(output_path)
                 if error:
                     return json.dumps({'error': f'Invalid output path: {error}'})
             else:
