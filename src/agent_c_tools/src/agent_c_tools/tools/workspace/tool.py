@@ -1,7 +1,7 @@
 import json
 import logging
 import re
-from typing import Any, List, Tuple, Optional, Dict
+from typing import Any, List, Tuple, Optional
 from ts_tool import api
 
 from agent_c.toolsets.tool_set import Toolset
@@ -403,7 +403,7 @@ class WorkspaceTools(Toolset):
         try:
             # Use utf-8 encoding explicitly when processing string replacements
             result = await self.replace_helper.process_replace_strings(
-                read_function=workspace.read, write_function=workspace.write,
+                read_function=workspace.read_internal, write_function=workspace.write,
                 path=relative_path, updates=updates, encoding='utf-8')
 
             return json.dumps(result)
@@ -465,16 +465,10 @@ class WorkspaceTools(Toolset):
             if not isinstance(end_line, int) or end_line < start_line:
                 return json.dumps({'error': 'Invalid end_line value'})
 
-            file_content_response = await workspace.read(relative_path)
-
-            # Parse the response to get the actual content
             try:
-                file_content_json = json.loads(file_content_response)
-                if 'error' in file_content_json:
-                    return file_content_response  # Return the error from read operation
-                file_content = file_content_json.get('contents', '')
-            except json.JSONDecodeError:
-                file_content = file_content_response
+                file_content = await workspace.read_internal(relative_path)
+            except Exception as e:
+                return json.dumps({'error': f'Error reading file: {str(e)}'})
 
             # Split the content into lines
             lines = file_content.splitlines()
@@ -525,18 +519,14 @@ class WorkspaceTools(Toolset):
         if error:
             return json.dumps({'error': error})
 
-        try:
-            file_content_response = await workspace.read(relative_path)
-            # Parse the response to get the actual content
 
-            file_content_json = json.loads(file_content_response)
-            if 'error' in file_content_json:
-                return file_content_response  # Return the error from read operation
-            file_content = file_content_json.get('contents', '')
-        except  Exception as e:
+        try:
+            file_content = await workspace.read_internal(relative_path)
+        except Exception as e:
             error_msg = f'Error fetching {unc_path}: {str(e)}'
             self.logger.error(error_msg)
             return json.dumps({'error': error_msg})
+
         try:
             context = api.get_code_context(file_content, format='markdown', filename=unc_path)
         except Exception as e:
@@ -596,16 +586,10 @@ class WorkspaceTools(Toolset):
             if not search_string:
                 return json.dumps({'error': 'Search string cannot be empty'})
 
-            file_content_response = await workspace.read(relative_path)
-
-            # Parse the response to get the actual content
             try:
-                file_content_json = json.loads(file_content_response)
-                if 'error' in file_content_json:
-                    return file_content_response  # Return the error from read operation
-                file_content = file_content_json.get('contents', '')
-            except json.JSONDecodeError:
-                file_content = file_content_response
+                file_content = await workspace.read_internal(relative_path)
+            except Exception as e:
+                return json.dumps({'error': f'Error reading file: {str(e)}'})
 
             # Split the content into lines
             lines = file_content.splitlines()
