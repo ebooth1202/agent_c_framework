@@ -856,3 +856,152 @@
     opacity: 0.25;
   }
 }
+
+/* ==============================
+   ModelParameterControls Component Styles
+   ============================== */
+
+/* Main container for parameter controls */
+.parameter-controls-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem; /* space-y-4 */
+}
+
+/* Individual parameter section */
+.parameter-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem; /* space-y-2 */
+}
+
+/* Header row with label and value */
+.parameter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Parameter label */
+.parameter-label {
+  font-size: 0.875rem; /* text-sm */
+  font-weight: 500; /* font-medium */
+}
+
+/* Value badge styling */
+.parameter-value-badge {
+  padding: 0.25rem 0.5rem; /* px-2 py-1 */
+  background-color: #dbeafe; /* bg-blue-100 */
+  color: #1d4ed8; /* text-blue-700 */
+  border-radius: 0.75rem; /* rounded-xl */
+  font-size: 0.875rem; /* text-sm */
+  font-weight: 500; /* font-medium */
+}
+
+/* Dark mode badge */
+.dark .parameter-value-badge {
+  background-color: rgba(30, 58, 138, 0.4); /* bg-blue-900/40 */
+  color: #93c5fd; /* text-blue-300 */
+}
+
+/* Slider container */
+.parameter-slider-container {
+  position: relative;
+  padding-top: 0.25rem; /* pt-1 */
+}
+
+/* Slider labels container */
+.parameter-slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem; /* text-xs */
+  color: var(--muted-foreground);
+  margin-bottom: 0.5rem; /* mb-2 */
+}
+
+/* Slider markers container */
+.parameter-slider-markers {
+  position: absolute;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 2px; /* px-[2px] */
+  pointer-events: none;
+}
+
+/* Individual marker */
+.parameter-slider-marker {
+  width: 2px; /* w-[2px] */
+  height: 0.5rem; /* h-2 */
+  background-color: rgba(var(--muted-foreground-rgb), 0.2); /* bg-muted-foreground/20 */
+}
+
+/* Helper text */
+.parameter-helper-text {
+  font-size: 0.75rem; /* text-xs */
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+/* Select Styling */
+.parameter-select-trigger {
+  width: 100%;
+  border-radius: 0.75rem; /* rounded-xl */
+  border: 1px solid #e5e7eb; /* border-gray-200 */
+  background-color: rgba(255, 255, 255, 0.5); /* bg-white/50 */
+  backdrop-filter: blur(4px); /* backdrop-blur-sm */
+}
+
+.dark .parameter-select-trigger {
+  border-color: #374151; /* border-gray-700 */
+  background-color: rgba(31, 41, 55, 0.5); /* bg-gray-800/50 */
+}
+
+.parameter-select-content {
+  background-color: rgba(255, 255, 255, 0.95); /* bg-white/95 */
+  backdrop-filter: blur(4px); /* backdrop-blur-sm */
+  border: 1px solid #e5e7eb; /* border */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
+  border-radius: 0.75rem; /* rounded-xl */
+}
+
+.dark .parameter-select-content {
+  background-color: rgba(31, 41, 55, 0.95); /* bg-gray-800/95 */
+  border-color: #374151; /* dark:border-gray-700 */
+}
+
+.parameter-select-item {
+  transition: background-color 0.2s ease;
+}
+
+.parameter-select-item:hover {
+  background-color: rgba(219, 234, 254, 0.8); /* bg-blue-50/80 */
+  border-radius: 0.5rem; /* rounded-lg */
+  margin: 0 0.25rem; /* mx-1 */
+  margin-top: 0.125rem; /* my-0.5 */
+  margin-bottom: 0.125rem;
+}
+
+.parameter-select-item:focus {
+  background-color: #eff6ff; /* bg-blue-50 */
+  border-radius: 0.5rem; /* rounded-lg */
+  margin: 0 0.25rem; /* mx-1 */
+  margin-top: 0.125rem; /* my-0.5 */
+  margin-bottom: 0.125rem;
+}
+
+.dark .parameter-select-item:hover {
+  background-color: rgba(30, 58, 138, 0.3); /* bg-blue-900/30 */
+}
+
+.dark .parameter-select-item:focus {
+  background-color: rgba(30, 58, 138, 0.3); /* bg-blue-900/30 */
+}
+
+/* Extended thinking section */
+.extended-thinking-section {
+  margin-top: 0.75rem; /* mt-3 */
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem; /* space-y-2 */
+}
