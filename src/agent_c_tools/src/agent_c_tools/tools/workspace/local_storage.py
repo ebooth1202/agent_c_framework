@@ -188,7 +188,7 @@ class LocalStorageWorkspace(BaseWorkspace):
                 return self._error_response(f'The path {file_path} does not exist.')
 
             if full_path.is_file():
-                with open(full_path, 'r', encoding='utf-8') as file:
+                with open(full_path, 'r', encoding='utf-8', errors='replace') as file:
                     contents = file.read()
                     if len(contents):
                         file_tokens = TokenCounter.count(contents)

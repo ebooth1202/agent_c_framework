@@ -595,28 +595,6 @@ class MarkdownToHtmlReportTools(Toolset):
     async def _get_html_template(self) -> str:
         """Get the HTML template for the markdown viewer."""
         try:
-            # To get the template from the workspace
-            # We're going to use local file only for now
-            # workspace_template_paths = [
-            #     "//tools/src/agent_c_tools/tools/markdown_viewer/markdown-viewer-template.html",
-            #     "//tools/src/markdown-viewer-template.html",
-            #     "//tools/markdown-viewer-template.html"
-            # ]
-            #
-            # # Try reading from workspace first
-            # for template_path in workspace_template_paths:
-            #     try:
-            #         read_result = await self.workspace_tool.read(path=template_path)
-            #         read_data = json.loads(read_result)
-            #
-            #         if 'error' not in read_data:
-            #             logger.info(f"Found template in workspace: {template_path}")
-            #             return read_data.get('contents', '')
-            #     except Exception:
-            #         # Continue to the next path if this one fails
-            #         pass
-
-
             # If no workspace template found, try local file system
             local_template_path = Path(__file__).parent / "markdown-viewer-template.html"
 
@@ -792,11 +770,10 @@ class MarkdownToHtmlReportTools(Toolset):
             docx_content_bytes = await self._convert_markdown_to_docx_bytes(md_content, style, include_toc, page_break_level)
 
             try:
-                write_result = await self.workspace_tool.write(
+                write_result = await self.workspace_tool.internal_write_bytes(
                     path=output_path_full,
                     data=docx_content_bytes,
                     mode="write",
-                    data_type="binary"
                 )
             except Exception as e:
                 logger.error(f"Error writing docx file: {e}")
