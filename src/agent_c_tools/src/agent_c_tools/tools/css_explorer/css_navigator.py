@@ -256,35 +256,32 @@ class CssNavigator:
     def _extract_components_with_lines(self, content_lines: List[str]) -> List[Dict[str, Any]]:
         """
         Extracts component sections from CSS content with line numbers.
-        
+
         Args:
             content_lines: CSS file content as a list of lines
-            
+
         Returns:
             List of component dictionaries with names, line numbers, and styles
         """
-        # Regular expression to find component section headers
-        component_pattern = r"/\*\s*={2,}\s*([^=\n]+)\s*Component\s*Styles\s*={2,}\s*\*/"
-        
-        # Find all component sections
         components = []
         content = ''.join(content_lines)
-        
+
+        component_pattern = r"COMPONENT:\s*(?P<comp_name1>[A-Za-z0-9_-]+)[\s\S]*?\*\/|\*\s*={2,}\s*(?P<comp_name2>[^=\n]+)\s*Component\s*Styles\s*={2,}\s*\*/"
         for match in re.finditer(component_pattern, content, re.IGNORECASE):
-            component_name = match.group(1).strip()
-            
+            component_name = (match.group('comp_name1') or match.group('comp_name2')).strip()
+
             # Find the line number for this component header by calculating the position
-            match_start_pos = match.start()
+            match_start_pos = match.start() - 1
             content_before_match = content[:match_start_pos]
             start_line = content_before_match.count('\n')
-            
+
             # Find the next component or the end of the file
             next_component_match = None
             for next_match in re.finditer(component_pattern, content, re.IGNORECASE):
                 if next_match.start() > match.end():
                     next_component_match = next_match
                     break
-                    
+
             # Get the end line for this component
             if next_component_match:
                 next_match_start_pos = next_component_match.start()
@@ -292,18 +289,18 @@ class CssNavigator:
                 end_line = content_before_next_match.count('\n') - 1
             else:
                 end_line = len(content_lines) - 1
-                
+
             # Extract styles within this component
             component_content = ''.join(content_lines[start_line:end_line + 1])
             styles = self._extract_styles(content_lines, start_line, end_line)
-            
+
             components.append({
                 'name': component_name,
                 'start_line': start_line,
                 'end_line': end_line,
                 'styles': styles
             })
-            
+
         return components
 
     def _extract_styles(self, content_lines: List[str], start_line: int, end_line: int) -> List[Dict[str, Any]]:

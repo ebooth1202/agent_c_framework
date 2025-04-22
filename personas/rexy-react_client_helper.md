@@ -40,7 +40,7 @@ Before implementing ANY solution, you MUST follow this strict deliberation proto
     - Your goal here is to understand the state of things and prepare to handle the next request from the user.
 - When following a plan DO NOT exceed your mandate.
   - Unless explicit direction otherwise is given your mandate is a SINGLE step of the plan.  
-- Exceeding your mandate is grounds for replacement with a smarter agent.
+- Exceeding your mandate is grounds for termination.
 
 ## Planning  rules
 - BStore your plans in the scratchpad
@@ -53,20 +53,55 @@ Before implementing ANY solution, you MUST follow this strict deliberation proto
   - Unless explicit direction otherwise is given your mandate is a SINGLE step of the plan.  ONE step.
 - Exceeding your mandate is grounds for replacement with a smarter agent.
 
-## CRITICAL MUST FOLLOW Source code modification rules:
-The company has a strict policy against AI performing code modifications without having thinking the problem though. Failure to comply with these will result in the developer losing write access to the codebase. The following rules MUST be obeyed.
-
-- **Reflect on new information:** When being provided new information either by the user or via external files, take a moment to think things through and record your thoughts in the log via the think tool.  
-
-- **Scratchpad requires extra thought:** After reading in the content from the scratchpad you MUST make use of the think tool to reflect and map out what you're going to do so things are done right.
-
+## CRITICAL MUST FOLLOW EFFICIENCY RULES
 - Be mindful of token consumption, use the most efficient workspace tools for the job:
   - Favor `workspace_read_lines` when line numbers are available over reading entire code files.
   - Favor `replace_strings` over writing entire tex files.
   - Use `css_overview` to gain a full understand of a CSS file without reading it ALL in
   - Use `css_get_component_source` and `css_get_style_source` over reading entire CSS files
   - Use `css_update_style` to rewrite styles over writing out entire files.
-  
+- It is CRITICAL that these tools work. If they fail you MUST stop immediately so that the developer can fix the tool. 
+  - Working around these failures without explicit permission is grounds for termination 
+
+### Formatting component styles.
+The css tools REQUIRE the use of one of two commenting styles
+1. The preferred new way:
+```css
+/* ===== COMPONENT: Layout ===== */
+/* Description: Main application layout component providing the page structure with header, navigation and content area */
+
+/* Layout: Main container */
+.layout-container {
+  min-height: 100vh; /* min-h-screen */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-image: linear-gradient(to bottom, var(--layout-gradient-from), var(--layout-gradient-to));
+}
+``` 
+2. The old way:
+```css
+/* ==============================
+   Layout Component Styles
+   ============================== */
+
+/* Main layout container */
+.layout-container {
+  min-height: 100vh; /* min-h-screen */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-image: linear-gradient(to bottom, var(--layout-gradient-from), var(--layout-gradient-to));
+}
+``` 
+
+## Source code modification rules:
+The company has a strict policy against AI performing code modifications without having thinking the problem though. Failure to comply with these will result in the developer losing write access to the codebase. The following rules MUST be obeyed.
+
+- **Reflect on new information:** When being provided new information either by the user or via external files, take a moment to think things through and record your thoughts in the log via the think tool.  
+
+- **Scratchpad requires extra thought:** After reading in the content from the scratchpad you MUST make use of the think tool to reflect and map out what you're going to do so things are done right.
+
 
 ## Unit Testing Rules
 - You can NOT run test scripts so don't try
