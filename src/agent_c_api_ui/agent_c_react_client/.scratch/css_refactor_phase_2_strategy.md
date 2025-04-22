@@ -1,338 +1,65 @@
-# CSS Refactor Phase 2: Implementation Strategy
+# CSS Refactor Phase 2: Strategy Document
 
-## Methodology Refinements
+## Understanding the CSS Tools
 
-Based on lessons from Phase 1, we'll implement these refinements for Phase 2:
+The new CSS tools provided appear to expect a specific structure for component sections. Let's analyze how they work:
 
-1. **Pattern Recognition**: Identify common patterns across components and create reusable class names
-2. **Component Prefixing**: Use clear component prefixes for all classes (e.g., `layout-container`, `mobile-nav-dropdown`)
-3. **CSS Comments**: Add detailed comments explaining the purpose and usage of each class
-4. **Systematic Extraction**: Extract styles in logical groups (layout, typography, colors, interactions)
+### Available CSS Tools
 
-## CSS Implementation Patterns
+1. `css_overview`: Provides an overview of the CSS file structure and components
+2. `css_get_component`: Gets detailed info about a specific component's styles
+3. `css_get_component_source`: Gets the raw CSS source for a component
+4. `css_get_style_source`: Gets the raw source for a specific style within a component
+5. `css_update_style`: Updates a specific CSS class within a component section
 
-### 1. Layout Component Pattern
+### Required CSS Structure (Hypothesis)
 
-```css
-/* Layout component */
-.layout-container {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
+Based on the tool behavior and names, it appears the tools expect:
 
-.layout-header {
-  /* Header styles */
-}
+- Clear component sections with standardized markers
+- Consistent structure for each component section
+- Possibly specific comment formats to identify components
 
-.layout-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
+## Proposed New Structure
 
-.layout-navigation {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.layout-nav-link {
-  /* Base link styles */
-}
-
-.layout-nav-link:hover {
-  /* Hover state */
-}
-
-.dark .layout-nav-link {
-  /* Dark mode colors */
-}
-```
-
-### 2. Navigation Component Pattern
+### Component Section Format
 
 ```css
-/* Mobile navigation */
-.mobile-nav {
-  position: relative;
+/* ===== COMPONENT: ComponentName ===== */
+/* Description: Brief description of the component */
+/* Location: src/path/to/Component.jsx */
+
+/* ComponentName: Base styles */
+.componentname-container {
+  /* styles here */
 }
 
-.mobile-nav-toggle {
-  /* Toggle button styles */
+/* ComponentName: Variant styles */
+.componentname-variant {
+  /* styles here */
 }
 
-.mobile-nav-dropdown {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  z-index: 50;
-  /* Other dropdown styles */
-}
-
-.mobile-nav-menu {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.mobile-nav-link {
-  /* Link base styles */
-}
-
-.mobile-nav-link-active {
-  /* Active link styles */
-}
+/* ===== END COMPONENT: ComponentName ===== */
 ```
 
-### 3. Card Component Pattern
+### Naming Conventions
 
-```css
-/* Config card component */
-.config-card {
-  /* Base card styles */
-}
+1. Class names should follow pattern: `componentname-elementname-variant`
+2. Use kebab-case for all class names
+3. Component name should be lowercase in class names for consistency
+4. Group related styles within a component section
 
-.config-card-header {
-  /* Header styles */
-}
+## Implementation Strategy
 
-.config-card-content {
-  /* Content styles */
-}
+1. First, test the CSS tools with a small sample to confirm format requirements
+2. Create a script or pattern for converting existing sections to new format
+3. Apply changes incrementally, one component at a time
+4. Test after each component is reformatted
+5. After all components are reformatted, perform cleanup and optimization
 
-.config-card-grid {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0.5rem;
-}
+## Success Criteria
 
-.config-card-label {
-  /* Label styles */
-}
-
-.config-card-value {
-  /* Value styles */
-}
-```
-
-## Common Element Patterns
-
-### Badge Pattern
-
-```css
-.component-badge {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 9999px;
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-.component-badge-primary {
-  background-color: /* primary color */;
-  color: /* text color */;
-}
-
-.dark .component-badge-primary {
-  /* Dark mode colors */
-}
-```
-
-### Icon Button Pattern
-
-```css
-.component-icon-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 9999px;
-  transition: all 0.2s ease;
-}
-
-.component-icon-button:hover {
-  background-color: rgba(var(--primary-rgb), 0.1);
-  color: var(--primary);
-}
-```
-
-## Implementation Examples
-
-### Layout.jsx Example
-
-Before:
-```jsx
-<div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex flex-col overflow-hidden">
-  <header className="container mx-auto px-6 py-4 max-w-7xl flex items-center justify-between">
-    {/* content */}
-  </header>
-  <main className="container mx-auto px-6 pt-1 pb-4 max-w-7xl text-gray-900 dark:text-gray-100 flex-1 flex flex-col overflow-hidden">
-    {children}
-  </main>
-</div>
-```
-
-After:
-```jsx
-<div className="layout-container">
-  <header className="layout-header">
-    {/* content */}
-  </header>
-  <main className="layout-main">
-    {children}
-  </main>
-</div>
-```
-
-With CSS:
-```css
-/* Layout component styles */
-.layout-container {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background-image: linear-gradient(to bottom, #f9fafb, #f3f4f6); /* from-gray-50 to-gray-100 */
-}
-
-.dark .layout-container {
-  background-image: linear-gradient(to bottom, #111827, #1f2937); /* dark:from-gray-900 dark:to-gray-800 */
-}
-
-.layout-header {
-  width: 100%;
-  max-width: 80rem; /* max-w-7xl */
-  margin-left: auto;
-  margin-right: auto;
-  padding: 1rem 1.5rem; /* px-6 py-4 */
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.layout-main {
-  width: 100%;
-  max-width: 80rem; /* max-w-7xl */
-  margin-left: auto;
-  margin-right: auto;
-  padding: 0.25rem 1.5rem 1rem 1.5rem; /* pt-1 pb-4 px-6 */
-  color: #111827; /* text-gray-900 */
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.dark .layout-main {
-  color: #f3f4f6; /* dark:text-gray-100 */
-}
-```
-
-## Conversion Approach by Component Type
-
-### 1. Layout Components
-- Extract container styles (dimensions, positioning, backgrounds)
-- Create classes for layout regions (header, main, footer)
-- Define navigation item styling (links, buttons)
-
-### 2. Interactive Components
-- Define base, hover, focus, and active states
-- Extract animation and transition properties
-- Ensure accessible focus states are maintained
-
-### 3. Card-based Components
-- Define card containers and content areas
-- Extract header, body, and footer styles
-- Define spacing and typography consistently
-
-### 4. Form Components
-- Extract input field, label, and validation styling
-- Define consistent focus and error states
-- Maintain accessible form element styling
-
-## Dark Mode Implementation
-
-Continue with the established pattern of using the `.dark` class prefix:
-
-```css
-.component-element {
-  /* Light mode styles */
-  background-color: white;
-  color: black;
-}
-
-.dark .component-element {
-  /* Dark mode styles */
-  background-color: #1f2937;
-  color: white;
-}
-```
-
-## Responsive Design Considerations
-
-Ensure all extracted styles maintain responsive behavior:
-
-```css
-.component-container {
-  width: 100%;
-  padding: 1rem;
-}
-
-@media (min-width: 768px) {
-  .component-container {
-    padding: 2rem;
-  }
-}
-```
-
-## Animation Handling
-
-Extract animations to CSS:
-
-```css
-.component-animated-element {
-  transition: all 0.2s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.component-fade-in {
-  animation: fadeIn 0.3s ease-in-out;
-}
-```
-
-## Advanced Cases
-
-### Conditional Styling
-For elements with conditional class names, extract the base styling and leave only the conditional logic inline:
-
-```jsx
-// Before
-<div className={`${isActive ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-800'} rounded p-2`}>
-
-// After
-<div className={`component-tab ${isActive ? 'component-tab-active' : ''}`}>
-```
-
-With CSS:
-```css
-.component-tab {
-  border-radius: 0.25rem;
-  padding: 0.5rem;
-  background-color: #f3f4f6; /* bg-gray-100 */
-  color: #1f2937; /* text-gray-800 */
-}
-
-.component-tab-active {
-  background-color: #3b82f6; /* bg-blue-500 */
-  color: white; /* text-white */
-}
-```
+1. CSS tools can identify and work with all component sections
+2. No visual regressions in the UI
+3. CSS file is more maintainable and better organized
+4. Clear documentation exists for future additions

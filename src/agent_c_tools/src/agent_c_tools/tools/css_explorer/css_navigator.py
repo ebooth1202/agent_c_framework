@@ -269,18 +269,14 @@ class CssNavigator:
         # Find all component sections
         components = []
         content = ''.join(content_lines)
-        content_with_line_numbers = '\n'.join([f"{i}:{line}" for i, line in enumerate(content_lines)])
         
         for match in re.finditer(component_pattern, content, re.IGNORECASE):
             component_name = match.group(1).strip()
             
-            # Find the line number for this component header
-            match_text = match.group(0)
-            line_match = re.search(f"(\\d+):{re.escape(match_text)}", content_with_line_numbers)
-            if not line_match:
-                continue
-                
-            start_line = int(line_match.group(1))
+            # Find the line number for this component header by calculating the position
+            match_start_pos = match.start()
+            content_before_match = content[:match_start_pos]
+            start_line = content_before_match.count('\n')
             
             # Find the next component or the end of the file
             next_component_match = None
@@ -291,9 +287,9 @@ class CssNavigator:
                     
             # Get the end line for this component
             if next_component_match:
-                next_match_text = next_component_match.group(0)
-                next_line_match = re.search(f"(\\d+):{re.escape(next_match_text)}", content_with_line_numbers)
-                end_line = int(next_line_match.group(1)) - 1 if next_line_match else len(content_lines) - 1
+                next_match_start_pos = next_component_match.start()
+                content_before_next_match = content[:next_match_start_pos]
+                end_line = content_before_next_match.count('\n') - 1
             else:
                 end_line = len(content_lines) - 1
                 
