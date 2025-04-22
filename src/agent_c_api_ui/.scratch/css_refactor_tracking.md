@@ -85,6 +85,17 @@ The goal is to remove all inline styles from React components and replace them w
 | 5.5 | Take after screenshots | Complete | Yes | User verified in light & dark mode |
 | 5.6 | Verify visual parity | Complete | Yes | User confirmed visual parity |
 
+### Phase 6: FileItem Refactoring
+
+| Step | Task | Status | Verified | Notes |
+|------|------|--------|----------|-------|
+| 6.1 | Take before screenshots | Not Started | No | Light & dark mode with file items |
+| 6.2 | Identify all inline styles | Not Started | No | Need to identify file type indicators, progress bars |
+| 6.3 | Create FileItem CSS classes | Not Started | No | Add to component-styles.css |
+| 6.4 | Update FileItem.jsx | Not Started | No | Replace Tailwind classes with CSS classes |
+| 6.5 | Take after screenshots | Not Started | No | Light & dark mode with same content |
+| 6.6 | Verify visual parity | Not Started | No | Needs user confirmation |
+
 ### Additional Phases
 
 Additional component phases will be added after successful completion of Phase 3.
@@ -266,6 +277,7 @@ A component is considered successfully refactored when:
 | April 21, 2025 | MarkdownMessage | Complete | Refactored 10+ component style overrides and verified in both themes |
 | April 21, 2025 | ToolCallDisplay | Complete | Refactored container, header, and badge styling verified in both themes |
 | April 21, 2025 | ChatInputArea | Complete | Refactored textarea, button styling and position verified in both themes |
+| April 21, 2025 | Preparation | In Progress | Preparing for FileItem component refactoring |
 
 ---
 
