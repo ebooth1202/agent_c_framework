@@ -8,7 +8,7 @@ from agent_c.toolsets.tool_set import Toolset
 from agent_c.toolsets.json_schema import json_schema
 from agent_c_tools.tools.workspace.base import BaseWorkspace
 from agent_c_tools.tools.workspace.prompt import WorkspaceSection
-from agent_c_tools.tools.workspace.util import ReplaceStringsHelper
+from agent_c_tools.tools.workspace.util.replace_strings_helper import ReplaceStringsHelper
 
 class WorkspaceTools(Toolset):
     """
@@ -401,9 +401,10 @@ class WorkspaceTools(Toolset):
             return json.dumps({'error': error})
 
         try:
+            # Use utf-8 encoding explicitly when processing string replacements
             result = await self.replace_helper.process_replace_strings(
                 read_function=workspace.read, write_function=workspace.write,
-                path=relative_path, updates=updates)
+                path=relative_path, updates=updates, encoding='utf-8')
 
             return json.dumps(result)
         except Exception as e:
