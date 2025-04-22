@@ -3,6 +3,7 @@ import {Settings} from 'lucide-react';
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
 import * as Portal from '@radix-ui/react-portal';
 import {API_URL} from "@/config/config";
+import "@/styles/component-styles.css";
 
 /**
  * AgentConfigDisplay is a component that fetches and displays agent configuration
@@ -124,9 +125,9 @@ const AgentConfigDisplay = ({sessionId, className = "", settingsVersion}) => {
 
     if (!config) {
         return (
-            <div className={`inline-flex items-center cursor-help ${className}`}>
-                <Settings className="w-4 h-4 text-gray-400"/>
-                <span className="ml-1 text-sm text-gray-400">Loading...</span>
+            <div className={`agent-config-container agent-config-loading ${className}`}>
+                <Settings className="agent-config-loading-icon" />
+                <span className="agent-config-loading-text">Loading...</span>
             </div>
         );
     }
@@ -171,22 +172,22 @@ const AgentConfigDisplay = ({sessionId, className = "", settingsVersion}) => {
         <TooltipProvider>
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <div className={`inline-flex items-center cursor-help ${className}`}>
-                        <Settings className="w-4 h-4 text-blue-500 hover:text-blue-600"/>
-                        <span className="ml-1 text-sm text-blue-500 hover:text-blue-600">
-              Current Config
-            </span>
+                    <div className={`agent-config-container agent-config-loaded ${className}`}>
+                        <Settings className="agent-config-loaded-icon" />
+                        <span className="agent-config-loaded-text">
+                            Current Config
+                        </span>
                     </div>
                 </TooltipTrigger>
                 <Portal.Root>
-                    <TooltipContent side="right" className="w-80 bg-white border shadow-md relative z-50">
-                        <div className="p-2">
-                            <h4 className="font-semibold mb-2 text-gray-900">Agent Configuration</h4>
-                            <div className="space-y-1 bg-white">
+                    <TooltipContent side="right" className="agent-config-tooltip">
+                        <div className="agent-config-tooltip-container">
+                            <h4 className="agent-config-tooltip-header">Agent Configuration</h4>
+                            <div className="agent-config-tooltip-items">
                                 {Object.entries(configDisplay).map(([key, value]) => (
-                                    <div key={key} className="grid grid-cols-2 text-sm">
-                                        <span className="text-gray-500">{key}:</span>
-                                        <span className="font-medium text-gray-900">{value}</span>
+                                    <div key={key} className="agent-config-tooltip-item">
+                                        <span className="agent-config-tooltip-label">{key}:</span>
+                                        <span className="agent-config-tooltip-value">{value}</span>
                                     </div>
                                 ))}
                             </div>
