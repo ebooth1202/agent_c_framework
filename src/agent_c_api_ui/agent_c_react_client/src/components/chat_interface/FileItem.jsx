@@ -19,9 +19,9 @@ import { cn } from "@/lib/utils";
 const FileItem = ({ file, toggleFileSelection, className }) => {
   // Define status-specific styles based on processing status
   const statusStyles = {
-    pending: "file-item-pending bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800",
-    complete: "file-item-complete bg-success/10 border-success/30",
-    failed: "file-item-failed bg-destructive/10 border-destructive/30"
+    pending: "file-item-pending",
+    complete: "file-item-complete",
+    failed: "file-item-failed"
   };
   
   // Get the appropriate status style based on file's processing_status
@@ -30,26 +30,26 @@ const FileItem = ({ file, toggleFileSelection, className }) => {
   return (
     <div 
       className={cn(
-        "file-item flex items-center justify-between p-2 rounded-md border mb-1 transition-colors",
+        "file-item",
         statusStyle,
         className
       )}
     >
-      <span className="file-item-name text-sm truncate max-w-[70%]">
+      <span className="file-item-name truncate max-w-[70%]">
         {file.name}
       </span>
       
-      <div className="file-item-actions flex items-center space-x-2">
+      <div className="file-item-actions">
         {/* Status badges */}
         {file.processing_status === 'pending' && (
-          <span className="file-item-status-badge text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/70 text-blue-700 dark:text-blue-300 rounded-full">
+          <span className="file-item-status-badge file-item-status-badge-pending">
             Processing...
           </span>
         )}
         
         {file.processing_status === 'failed' && (
           <span 
-            className="file-item-status-badge text-xs px-2 py-0.5 bg-destructive/20 text-destructive rounded-full"
+            className="file-item-status-badge file-item-status-badge-failed"
             title={file.processing_error || "Error processing file"}
           >
             Error
@@ -57,7 +57,7 @@ const FileItem = ({ file, toggleFileSelection, className }) => {
         )}
         
         {file.processing_status === 'complete' && (
-          <span className="file-item-status-badge text-xs px-2 py-0.5 bg-success/20 text-success rounded-full">
+          <span className="file-item-status-badge file-item-status-badge-complete">
             Ready
           </span>
         )}
@@ -67,7 +67,7 @@ const FileItem = ({ file, toggleFileSelection, className }) => {
           type="checkbox"
           checked={file.selected}
           onChange={() => toggleFileSelection(file.id)}
-          className="file-item-checkbox h-4 w-4 text-primary rounded border-input focus:ring-primary/50"
+          className="file-item-checkbox"
         />
       </div>
     </div>
