@@ -1,42 +1,71 @@
-# CSS Refactor Phase 2: Tracking Document
+# CSS Refactoring Phase 2 Tracking
 
-## Progress Tracker
+## Component Conversion Progress
 
-| Step | Description | Status | Notes |
-|------|-------------|--------|-------|
-| 1.1 | Analyze CSS tools requirements | Not Started | |
-| 1.2 | Create component section inventory | Not Started | |
-| 1.3 | Identify patterns & inconsistencies | Not Started | |
-| 2.1 | Design standardized format | Not Started | |
-| 2.2 | Create component section template | Not Started | |
-| 2.3 | Define naming conventions | Not Started | |
-| 3.1 | Reformat Layout component | Not Started | |
-| 3.2 | Reformat ThoughtDisplay component | Not Started | |
-| 3.3 | Reformat MarkdownMessage component | Not Started | |
-| 3.4 | Reformat ToolCallDisplay component | Not Started | |
-| 3.5 | Reformat ChatInputArea component | Not Started | |
-| 3.x | Continue with other components... | Not Started | |
-| 4.1 | Identify duplicate styles | Not Started | |
-| 4.2 | Extract common patterns | Not Started | |
-| 4.3 | Remove unused styles | Not Started | |
-| 5.1 | Add documentation | Not Started | |
-| 5.2 | Create style guide | Not Started | |
-| 5.3 | Review CSS variables | Not Started | |
-| 6.1 | Visual regression testing | Not Started | |
-| 6.2 | Tool compatibility testing | Not Started | |
-| 6.3 | Responsive design testing | Not Started | |
+### Group 1
+- [ ] AgentConfigDisplay
+- [ ] AgentConfigHoverCard
+- [ ] MobileNav
 
-## Component Inventory
+### Group 2
+- [ ] PersonaSelector
+- [ ] StatusBar
+- [ ] ToolCallDisplay
 
-Components identified so far:
-1. Layout
-2. ThoughtDisplay
-3. MarkdownMessage
-4. ToolCallDisplay
-5. ChatInputArea
+### Group 3
+- [ ] ChatInputArea
+- [ ] FileItem
+- [ ] MediaMessage
 
-*To be completed during Step 1.2*
+### Group 4
+- [ ] ModelParameterControls
+- [ ] AnimatedStatusIndicator
+- [ ] DragDropOverlay
 
-## Notes & Decisions
+### Group 5
+- [ ] PageHeader
+- [ ] Sidebar
+- [ ] TokenUsageDisplay
 
-*Document important decisions and findings here as we progress*
+## Already Converted Components
+- [x] Layout
+- [x] ThoughtDisplay
+- [x] MarkdownMessage
+
+## Analysis Documents
+- [ ] Group 1 Analysis
+- [ ] Group 2 Analysis
+- [ ] Group 3 Analysis
+- [ ] Group 4 Analysis
+- [ ] Group 5 Analysis
+
+## Common Styles Creation
+- [ ] Identify common patterns
+- [ ] Create Common section
+- [ ] Extract button styles
+- [ ] Extract card styles
+- [ ] Extract input styles
+- [ ] Refactor components to use common styles
+
+## CSS Variables Implementation
+- [ ] Define color variables
+- [ ] Define spacing variables
+- [ ] Define typography variables
+- [ ] Define animation variables
+- [ ] Update components to use variables
+
+## File Structure
+- [ ] Add comprehensive header
+- [ ] Create table of contents
+- [ ] Organize components in logical groups
+
+## Final Verification
+- [ ] CSS syntax validation
+- [ ] Visual testing - Light mode
+- [ ] Visual testing - Dark mode
+- [ ] Responsive design testing
+
+## Notes and Issues
+
+- Fixed CSS syntax error where "write" was incorrectly appended to CSS blocks
+- Verified new CSS tools work with our component format

@@ -1,50 +1,80 @@
-# CSS Refactor Phase 2: Consolidation and Cleanup Plan
+# CSS Refactoring Phase 2 Plan
 
-## Current State Analysis
-- CSS file size: 2265 lines, 54502 characters
-- Component sections identified in comments but not recognized by CSS tools
-- File is organized by component sections with clear headers
+## Overview
 
-## Objectives
-1. Reorganize CSS to be compatible with the new CSS tools
-2. Consolidate and clean up redundant styles
-3. Optimize the structure for better maintainability
-4. Establish a sustainable pattern for future CSS additions
+After successfully completing Phase 1 (structure standardization), we'll now focus on Phase 2: reorganizing, consolidating, and optimizing our CSS styles. This phase will make the codebase more maintainable and reduce redundancy.
 
-## Phase 2 Plan
+## Goals
 
-### Step 1: Understand Tool Requirements and Current Structure
-- Analyze how the CSS tools expect component sections to be formatted
-- Create a complete inventory of current component sections
-- Identify any patterns or inconsistencies in the current CSS
+1. Convert all remaining components to the new format
+2. Identify and consolidate duplicate styles
+3. Create a "Common" section for shared styles
+4. Define CSS variables for consistent values
+5. Add a comprehensive file header and table of contents
 
-### Step 2: Define New Structure
-- Design a standardized format for component sections that works with the tools
-- Create a template for new component sections
-- Define naming conventions and organization principles
+## Implementation Strategy
 
-### Step 3: Reorganize Component Sections
-- Reformat each component section to match the new structure
-- Add any missing metadata or markers needed for tools
-- Ensure consistent formatting across all sections
+### Step 1: Finish Component Conversion
 
-### Step 4: Consolidate and Clean
-- Identify and merge duplicate styles
-- Extract common patterns into reusable classes
-- Remove any unused or redundant styles
+Convert all remaining components to the new format, focusing on 2-3 components per session:
 
-### Step 5: Optimize for Maintainability
-- Add clear documentation for future contributors
-- Create a guide for adding new component styles
-- Ensure proper use of CSS variables for theming
+1. **Group 1**: AgentConfigDisplay, AgentConfigHoverCard, MobileNav
+2. **Group 2**: PersonaSelector, StatusBar, ToolCallDisplay
+3. **Group 3**: ChatInputArea, FileItem, MediaMessage
+4. **Group 4**: ModelParameterControls, AnimatedStatusIndicator, DragDropOverlay
+5. **Group 5**: PageHeader, Sidebar, TokenUsageDisplay
 
-### Step 6: Testing and Verification
-- Ensure no visual regressions after changes
-- Verify compatibility with the CSS tools
-- Test across different screen sizes and themes
+### Step 2: Audit and Analysis
 
-## Implementation Approach
-- Work on one component section at a time
-- Make incremental changes that can be easily tested
-- Keep original styles in comments or backup files until verified
-- Use the new CSS tools to verify changes as we go
+After converting a group of components:
+
+1. Analyze for duplicate styles or patterns
+2. Identify common values that could be CSS variables
+3. Document findings in analysis files
+
+### Step 3: Create Common Styles Section
+
+Once all components are in the new format:
+
+1. Create a "Common" section at the top of the file
+2. Extract shared styles like buttons, inputs, cards
+3. Update component-specific styles to use common classes where appropriate
+
+### Step 4: Implement CSS Variables
+
+1. Define variables for colors, spacing, typography, etc.
+2. Update component styles to use the variables
+3. Ensure dark mode support with variable overrides
+
+### Step 5: Add File Structure
+
+1. Create comprehensive file header with documentation
+2. Add table of contents listing all components
+3. Organize components in logical groups
+
+## Tools and Methodology
+
+1. Use `css_overview` to get a bird's-eye view of the CSS file
+2. Use `css_get_component` to extract specific components
+3. Use `css_get_style_source` to examine individual styles
+4. Use `css_update_style` for targeted updates
+5. Document progress in tracking file
+
+## Testing and Verification
+
+After each component group is updated:
+
+1. Verify the CSS is syntactically valid
+2. Test the affected components in the UI
+3. Check both light and dark mode appearance
+
+## Timeline
+
+- **Session 1**: Group 1 conversion and analysis
+- **Session 2**: Group 2 conversion and analysis
+- **Session 3**: Group 3 conversion and analysis
+- **Session 4**: Group 4 conversion and analysis
+- **Session 5**: Group 5 conversion and analysis
+- **Session 6**: Create common styles section
+- **Session 7**: Implement CSS variables
+- **Session 8**: Add file structure and final cleanup

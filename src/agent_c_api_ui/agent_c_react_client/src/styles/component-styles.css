@@ -12,11 +12,11 @@
  * 4. Use CSS variables for themable properties
  */
 
-/* ==============================
-   Layout Component Styles
-   ============================== */
+/* ===== COMPONENT: Layout ===== */
+/* Description: Main application layout component providing the page structure with header, navigation and content area */
+/* Location: src/components/Layout.jsx */
 
-/* Main layout container */
+/* Layout: Main container */
 .layout-container {
   min-height: 100vh; /* min-h-screen */
   display: flex;
@@ -25,19 +25,19 @@
   background-image: linear-gradient(to bottom, var(--layout-gradient-from), var(--layout-gradient-to));
 }
 
-/* Light mode gradient colors */
+/* Layout: Light mode gradient colors */
 :root {
   --layout-gradient-from: #f9fafb; /* from-gray-50 */
   --layout-gradient-to: #f3f4f6; /* to-gray-100 */
 }
 
-/* Dark mode gradient colors */
+/* Layout: Dark mode gradient colors */
 .dark {
   --layout-gradient-from: #111827; /* from-gray-900 */
   --layout-gradient-to: #1f2937; /* to-gray-800 */
 }
 
-/* Header container */
+/* Layout: Header container */
 .layout-header {
   max-width: 80rem; /* max-w-7xl */
   margin-left: auto;
@@ -49,65 +49,70 @@
   width: 100%;
 }
 
-/* Title container */
+/* Layout: Title container */
 .layout-title-container {
   display: flex;
   align-items: center;
 }
 
-/* Title text */
+/* Layout: Title text */
 .layout-title {
   font-size: 1.5rem; /* text-2xl */
   font-weight: 700; /* font-bold */
   color: #111827; /* text-gray-900 */
 }
 
+/* Layout: Dark mode title text */
 .dark .layout-title {
   color: #f9fafb; /* text-gray-100 */
 }
 
-/* Control container (right side) */
+/* Layout: Control container (right side) */
 .layout-controls {
   display: flex;
   align-items: center;
   gap: 1rem; /* gap-4 */
 }
 
-/* Navigation menu */
+/* Layout: Navigation menu */
 .layout-nav {
   display: none; /* hidden */
 }
 
+/* Layout: Navigation menu responsive behavior */
 @media (min-width: 640px) {
   .layout-nav {
     display: flex; /* sm:flex */
   }
 }
 
-/* Navigation links */
+/* Layout: Navigation links */
 .layout-nav-link {
   color: #374151; /* text-gray-700 */
   transition: color 0.2s ease;
 }
 
+/* Layout: Navigation links hover state */
 .layout-nav-link:hover {
   color: #111827; /* hover:text-gray-900 */
 }
 
+/* Layout: Dark mode navigation links */
 .dark .layout-nav-link {
   color: #d1d5db; /* dark:text-gray-300 */
 }
 
+/* Layout: Dark mode navigation links hover state */
 .dark .layout-nav-link:hover {
   color: #f9fafb; /* dark:hover:text-gray-100 */
 }
 
-/* Additional margin for links (except first) */
+/* Layout: Additional margin for links (except first) */
 .layout-nav-link-spacing {
   margin-left: 1rem; /* ml-4 */
 }
 
-/* Main content area */
+/* Layout: Main content area */
 .layout-main {
   flex: 1;
   display: flex;
@@ -121,15 +126,18 @@
   color: #111827; /* text-gray-900 */
 }
 
+/* Layout: Dark mode main content area */
 .dark .layout-main {
-  color: #f9fafb; /* dark:text-gray-100 */
+  color: #f9fafb; /* text-gray-100 */
 }
 
-/* ==============================
-   ThoughtDisplay Component Styles
-   ============================== */
+/* ===== END COMPONENT: Layout ===== */
 
-/* Thought container styles */
+/* ===== COMPONENT: ThoughtDisplay ===== */
+/* Description: Component that displays AI reasoning and thinking process in a styled container */
+/* Location: src/components/chat_interface/ThoughtDisplay.jsx */
+
+/* ThoughtDisplay: Container styles */
 .thought-container {
   position: relative;
   max-width: 80%;
@@ -142,14 +150,14 @@
   border-bottom-left-radius: 0.125rem; /* rounded-bl-sm */
 }
 
-/* Dark theme container styles */
+/* ThoughtDisplay: Dark theme container styles */
 .dark .thought-container {
   background-color: rgba(55, 65, 81, 0.7); /* bg-gray-700/70 */
   color: rgba(252, 211, 77, 0.8); /* text-amber-200/80 */
   border-color: #92400e; /* border-amber-800 */
 }
 
-/* Base styles for thought display content area */
+/* ThoughtDisplay: Base styles for content area */
 .thought-display-content {
   scrollbar-width: thin;
   text-align: left;
@@ -160,42 +168,47 @@
   flex: 1;
 }
 
-/* Light theme scrollbar colors */
+/* ThoughtDisplay: Light theme scrollbar colors */
 .thought-display-content-light {
   scrollbar-color: #d97706 #fef3c7; /* thumb track */
 }
 
-/* Dark theme scrollbar colors */
+/* ThoughtDisplay: Dark theme scrollbar colors */
 .thought-display-content-dark {
   scrollbar-color: #78350f #2c1a09; /* thumb track */
 }
 
-/* For WebKit browsers (Chrome, Safari, newer Edge) */
+/* ThoughtDisplay: WebKit scrollbar width */
 .thought-display-content::-webkit-scrollbar {
   width: 8px;
 }
 
+/* ThoughtDisplay: Light theme WebKit scrollbar thumb */
 .thought-display-content-light::-webkit-scrollbar-thumb {
   background-color: #d97706;
 }
 
+/* ThoughtDisplay: Light theme WebKit scrollbar track */
 .thought-display-content-light::-webkit-scrollbar-track {
   background-color: #fef3c7;
 }
 
+/* ThoughtDisplay: Dark theme WebKit scrollbar thumb */
 .thought-display-content-dark::-webkit-scrollbar-thumb {
   background-color: #78350f;
 }
 
+/* ThoughtDisplay: Dark theme WebKit scrollbar track */
 .thought-display-content-dark::-webkit-scrollbar-track {
   background-color: #2c1a09;
 }
 
-/* ==============================
-   MarkdownMessage Component Styles
-   ============================== */
+/* ===== END COMPONENT: ThoughtDisplay ===== */
+/* ===== COMPONENT: MarkdownMessage ===== */
+/* Description: Component for displaying and styling markdown content in chat messages */
+/* Location: src/components/chat_interface/MarkdownMessage.jsx */
 
-/* Main container for markdown content */
+/* MarkdownMessage: Main container */
 .markdown-container {
   display: flex;
   gap: 0.5rem;
@@ -203,12 +216,12 @@
   /* Preserve Tailwind prose classes via direct reference */
 }
 
-/* Markdown content wrapper */
+/* MarkdownMessage: Content wrapper */
 .markdown-content {
   flex: 1;
 }
 
-/* Heading styles */
+/* MarkdownMessage: Heading level 1 */
 .markdown-h1 {
   font-size: 1.5rem;
   font-weight: bold;
@@ -216,6 +229,7 @@
   margin-bottom: 0.25rem;
 }
 
+/* MarkdownMessage: Heading level 2 */
 .markdown-h2 {
   font-size: 1.25rem;
   font-weight: bold;
@@ -223,6 +237,7 @@
   margin-bottom: 0.25rem;
 }
 
+/* MarkdownMessage: Heading level 3 */
 .markdown-h3 {
   font-size: 1.125rem;
   font-weight: bold;
@@ -230,6 +245,7 @@
   margin-bottom: 0.25rem;
 }
 
+/* MarkdownMessage: Heading level 4 */
 .markdown-h4 {
   font-size: 1rem;
   font-weight: bold;
@@ -237,7 +253,7 @@
   margin-bottom: 0.25rem;
 }
 
-/* List styles */
+/* MarkdownMessage: Unordered list */
 .markdown-ul {
   list-style-type: disc;
   margin-left: 1rem;
@@ -245,21 +261,23 @@
   margin-bottom: 0.25rem;
 }
 
+/* MarkdownMessage: List item */
 .markdown-li {
   /* Preserve nested inline code alignment */
 }
 
+/* MarkdownMessage: List item code */
 .markdown-li > code {
   margin-left: 0;
 }
 
-/* Strong text */
+/* MarkdownMessage: Strong text */
 .markdown-strong {
   font-weight: bold;
   color: #6b21a8; /* text-purple-800 */
 }
 
-/* Code blocks and inline code */
+/* MarkdownMessage: Code block container */
 .markdown-code-block-container {
   position: relative;
   overflow: hidden;
@@ -268,6 +286,7 @@
   margin-bottom: 1rem;
 }
 
+/* MarkdownMessage: Code block copy button */
 .markdown-code-block-copy-button {
   position: absolute;
   top: 0.5rem;
@@ -277,19 +296,23 @@
   transition: opacity 0.2s ease-in-out;
 }
 
+/* MarkdownMessage: Code block copy button hover state */
 .markdown-code-block-container:hover .markdown-code-block-copy-button {
   opacity: 1;
 }
 
+/* MarkdownMessage: Code block copy button style */
 .markdown-code-block-copy-button-style {
   background-color: #1f2937; /* bg-gray-800 */
   color: white;
 }
 
+/* MarkdownMessage: Code block copy button hover style */
 .markdown-code-block-copy-button-style:hover {
   background-color: #374151; /* bg-gray-700 */
 }
 
+/* MarkdownMessage: Inline code */
 .markdown-inline-code {
   background-color: #f3e8ff; /* bg-purple-100 */
   padding: 0 0.25rem;
@@ -299,7 +322,7 @@
   display: inline-block;
 }
 
-/* Blockquote styling */
+/* MarkdownMessage: Blockquote */
 .markdown-blockquote {
   border-left: 4px solid #d8b4fe; /* border-purple-300 */
   padding-left: 1rem;
@@ -308,14 +331,14 @@
   font-style: italic;
 }
 
-/* Paragraph styling */
+/* MarkdownMessage: Paragraph */
 .markdown-paragraph {
   margin-top: 0.25rem;
   margin-bottom: 0.25rem;
   line-height: 1.625; /* leading-relaxed */
 }
 
-/* Horizontal rule */
+/* MarkdownMessage: Horizontal rule */
 .markdown-hr {
   margin-top: 1.5rem;
   margin-bottom: 1.5rem;
@@ -323,17 +346,19 @@
   border-color: #faf5ff; /* border-purple-100 */
 }
 
-/* Copy button container */
+/* MarkdownMessage: Copy button container */
 .markdown-copy-button-container {
   flex-shrink: 0;
   opacity: 0;
   transition: opacity 0.2s ease-in-out;
 }
 
+/* MarkdownMessage: Copy button container hover state */
 .markdown-container:hover .markdown-copy-button-container {
   opacity: 1;
 }
 
+/* ===== END COMPONENT: MarkdownMessage ===== */
 /* ==============================
    ToolCallDisplay Component Styles
    ============================== */

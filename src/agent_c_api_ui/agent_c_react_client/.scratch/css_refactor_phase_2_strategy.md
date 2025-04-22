@@ -1,65 +1,124 @@
-# CSS Refactor Phase 2: Strategy Document
+# CSS Refactoring Phase 2 Strategy
 
-## Understanding the CSS Tools
+## Component Conversion Best Practices
 
-The new CSS tools provided appear to expect a specific structure for component sections. Let's analyze how they work:
+### 1. Safe Conversion Process
 
-### Available CSS Tools
+To avoid syntax errors and ensure safe updates:
 
-1. `css_overview`: Provides an overview of the CSS file structure and components
-2. `css_get_component`: Gets detailed info about a specific component's styles
-3. `css_get_component_source`: Gets the raw CSS source for a component
-4. `css_get_style_source`: Gets the raw source for a specific style within a component
-5. `css_update_style`: Updates a specific CSS class within a component section
+1. Use `css_get_component` to extract the current component CSS
+2. Create a new version in the new format in a temporary variable
+3. Double-check the formatting before writing back
+4. For updates, prefer `css_update_style` for individual changes when possible
+5. When updating entire components, use `workspace_replace_strings` with precise boundaries
 
-### Required CSS Structure (Hypothesis)
-
-Based on the tool behavior and names, it appears the tools expect:
-
-- Clear component sections with standardized markers
-- Consistent structure for each component section
-- Possibly specific comment formats to identify components
-
-## Proposed New Structure
-
-### Component Section Format
+### 2. Component Header Template
 
 ```css
 /* ===== COMPONENT: ComponentName ===== */
-/* Description: Brief description of the component */
-/* Location: src/path/to/Component.jsx */
+/* Description: Brief description of what the component does */
+/* Location: src/path/to/ComponentName.jsx */
 
-/* ComponentName: Base styles */
-.componentname-container {
-  /* styles here */
-}
-
-/* ComponentName: Variant styles */
-.componentname-variant {
-  /* styles here */
-}
+/* Component-specific styles here */
 
 /* ===== END COMPONENT: ComponentName ===== */
 ```
 
-### Naming Conventions
+### 3. Individual Style Template
 
-1. Class names should follow pattern: `componentname-elementname-variant`
-2. Use kebab-case for all class names
-3. Component name should be lowercase in class names for consistency
-4. Group related styles within a component section
+```css
+/* ComponentName: Description of the element */
+.component-class-name {
+  property: value; /* tailwind equivalent if applicable */
+}
+```
 
-## Implementation Strategy
+## Analysis Methodology
 
-1. First, test the CSS tools with a small sample to confirm format requirements
-2. Create a script or pattern for converting existing sections to new format
-3. Apply changes incrementally, one component at a time
-4. Test after each component is reformatted
-5. After all components are reformatted, perform cleanup and optimization
+When analyzing components for consolidation opportunities:
 
-## Success Criteria
+1. Look for repeated color values that could become variables
+2. Identify common spacing patterns (padding, margin, gap)
+3. Note repeated structural patterns (cards, containers, headers)
+4. Check for inconsistent values that should be standardized
+5. Document findings in analysis files with specific examples
 
-1. CSS tools can identify and work with all component sections
-2. No visual regressions in the UI
-3. CSS file is more maintainable and better organized
-4. Clear documentation exists for future additions
+## Common Styles Section Structure
+
+```css
+/* ===== COMMON: Shared Styles ===== */
+/* Description: Reusable styles shared across multiple components */
+
+/* Common: Card containers */
+.common-card {
+  /* Base card styles */
+}
+
+/* Common: Buttons */
+.common-button {
+  /* Base button styles */
+}
+
+/* Common: Form elements */
+.common-input {
+  /* Base input styles */
+}
+
+/* ===== END COMMON: Shared Styles ===== */
+```
+
+## CSS Variables Naming Conventions
+
+```css
+:root {
+  /* Colors */
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+  --color-muted: #9ca3af;
+  
+  /* Spacing */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  
+  /* Typography */
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  
+  /* Transitions */
+  --transition-standard: 0.2s ease;
+}
+```
+
+## Safe Testing Process
+
+After each component update:
+
+1. Run the application to verify no CSS syntax errors
+2. Navigate to screens using the component
+3. Test interactions with the component
+4. Verify appearance in both light and dark modes
+
+## Tools Usage Guidelines
+
+### css_overview
+Use at the beginning of a session to get an overview of current components.
+
+### css_get_component
+Use to extract a specific component's styles for inspection or modification.
+
+### css_get_style_source
+Use to examine a specific style rule including its comment.
+
+### css_update_style
+Use for targeted updates to individual style rules without affecting surrounding code.
+
+## Handling Edge Cases
+
+1. **Nested Selectors**: Keep parent-child relationships clear in comments
+2. **Media Queries**: Include in the component section they apply to
+3. **Animations**: Include in the component section or create a dedicated animations section
+4. **!important Rules**: Document why they're necessary in comments
