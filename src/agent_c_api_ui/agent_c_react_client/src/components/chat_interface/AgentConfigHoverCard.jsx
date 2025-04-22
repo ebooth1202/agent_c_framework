@@ -117,7 +117,7 @@ const AgentConfigHoverCard = ({ sessionId, className = "", settingsVersion }) =>
         <div className={`inline-flex items-center cursor-help ${className}`}>
           <Settings className="w-4 h-4 text-blue-500 hover:text-blue-600 transition-colors" />
           <span className="ml-1.5 text-sm text-blue-500 hover:text-blue-600 transition-colors font-medium">
-            Agent Config
+            Session Info
           </span>
         </div>
       </HoverCardTrigger>

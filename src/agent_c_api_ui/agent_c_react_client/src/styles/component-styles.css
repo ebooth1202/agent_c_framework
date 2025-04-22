@@ -1149,3 +1149,223 @@
   width: 1rem; /* w-4 */
   height: 1rem; /* h-4 */
 }
+
+/* ==============================
+   PersonaSelector Component Styles
+   ============================== */
+
+/* Main card container */
+.persona-selector-card {
+  width: 100%;
+}
+
+/* Card content with proper spacing */
+.persona-selector-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem; /* space-y-6 */
+}
+
+/* Individual section container */
+.persona-selector-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem; /* space-y-2 */
+}
+
+/* Select trigger styling */
+.persona-selector-select-trigger {
+  border-radius: 0.75rem; /* rounded-xl */
+  border: 1px solid #e5e7eb; /* border-gray-200 */
+  background-color: rgba(255, 255, 255, 0.5); /* bg-white/50 */
+  backdrop-filter: blur(4px); /* backdrop-blur-sm */
+  transition: all 0.2s ease;
+}
+
+/* Dark mode trigger */
+.dark .persona-selector-select-trigger {
+  border-color: #374151; /* border-gray-700 */
+  background-color: rgba(31, 41, 55, 0.5); /* bg-gray-800/50 */
+}
+
+/* Hover state */
+.persona-selector-select-trigger:hover {
+  background-color: rgba(255, 255, 255, 0.8); /* bg-white/80 */
+}
+
+/* Dark mode hover */
+.dark .persona-selector-select-trigger:hover {
+  background-color: rgba(55, 65, 81, 0.8); /* bg-gray-700/80 */
+}
+
+/* Focus state */
+.persona-selector-select-trigger:focus {
+  border-color: #93c5fd; /* border-blue-300 */
+  box-shadow: 0 0 0 2px rgba(147, 197, 253, 0.5); /* ring ring-blue-200 ring-opacity-50 */
+}
+
+/* Dark mode focus */
+.dark .persona-selector-select-trigger:focus {
+  border-color: #60a5fa; /* border-blue-600 */
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.5); /* ring ring-blue-800 ring-opacity-50 */
+}
+
+/* Select content dropdown */
+.persona-selector-select-content {
+  background-color: rgba(255, 255, 255, 0.95); /* bg-white/95 */
+  backdrop-filter: blur(4px); /* backdrop-blur-sm */
+  border: 1px solid #e5e7eb; /* border */
+  border-radius: 0.75rem; /* rounded-xl */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
+  color: #111827; /* text-gray-900 */
+}
+
+/* Dark mode content */
+.dark .persona-selector-select-content {
+  background-color: rgba(31, 41, 55, 0.95); /* bg-gray-800/95 */
+  border-color: #374151; /* border-gray-700 */
+  color: #f9fafb; /* text-gray-100 */
+}
+
+/* Select items styling */
+.persona-selector-select-item {
+  transition: background-color 0.2s ease;
+  margin: 0 0.25rem; /* mx-1 */
+  margin-top: 0.125rem; /* my-0.5 */
+  margin-bottom: 0.125rem;
+  border-radius: 0.5rem; /* rounded-lg */
+  color: #111827; /* text-gray-900 */
+}
+
+/* Dark mode items */
+.dark .persona-selector-select-item {
+  color: #f9fafb; /* text-gray-100 */
+}
+
+/* Item hover state */
+.persona-selector-select-item:hover {
+  background-color: rgba(219, 234, 254, 0.8); /* bg-blue-50/80 */
+}
+
+/* Dark mode item hover */
+.dark .persona-selector-select-item:hover {
+  background-color: rgba(30, 64, 175, 0.5); /* bg-blue-800/50 */
+}
+
+/* Item focus state */
+.persona-selector-select-item:focus {
+  background-color: #eff6ff; /* bg-blue-50 */
+}
+
+/* Dark mode item focus */
+.dark .persona-selector-select-item:focus {
+  background-color: rgba(30, 64, 175, 0.5); /* bg-blue-800/50 */
+}
+
+/* Error message styling */
+.persona-selector-error {
+  font-size: 0.875rem; /* text-sm */
+  color: #ef4444; /* text-red-500 */
+  margin-top: 0.25rem; /* mt-1 */
+}
+
+/* Textarea styling */
+.persona-selector-textarea {
+  min-height: 100px; /* min-h-[100px] */
+  resize: vertical; /* resize-y */
+  border-radius: 0.75rem; /* rounded-xl */
+  border: 1px solid #e5e7eb; /* border-gray-200 */
+  background-color: rgba(255, 255, 255, 0.5); /* bg-white/50 */
+  backdrop-filter: blur(4px); /* backdrop-blur-sm */
+  transition: all 0.2s ease;
+  color: #111827; /* text-gray-900 */
+}
+
+/* Dark mode textarea */
+.dark .persona-selector-textarea {
+  border-color: #374151; /* border-gray-700 */
+  background-color: rgba(31, 41, 55, 0.5); /* bg-gray-800/50 */
+  color: #f9fafb; /* text-gray-100 */
+}
+
+/* Textarea hover state */
+.persona-selector-textarea:hover {
+  background-color: rgba(255, 255, 255, 0.8); /* bg-white/80 */
+}
+
+/* Dark mode textarea hover */
+.dark .persona-selector-textarea:hover {
+  background-color: rgba(55, 65, 81, 0.8); /* bg-gray-700/80 */
+}
+
+/* Textarea focus state */
+.persona-selector-textarea:focus {
+  border-color: #93c5fd; /* border-blue-300 */
+  box-shadow: 0 0 0 2px rgba(147, 197, 253, 0.5); /* ring ring-blue-200 ring-opacity-50 */
+  outline: none;
+}
+
+/* Dark mode textarea focus */
+.dark .persona-selector-textarea:focus {
+  border-color: #60a5fa; /* border-blue-600 */
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.5); /* ring ring-blue-800 ring-opacity-50 */
+}
+
+/* Textarea placeholder */
+.persona-selector-textarea::placeholder {
+  color: #9ca3af; /* placeholder-gray-400 */
+}
+
+/* Dark mode placeholder */
+.dark .persona-selector-textarea::placeholder {
+  color: #6b7280; /* placeholder-gray-500 */
+}
+
+/* Grid layout for responsive columns */
+.persona-selector-grid {
+  display: grid;
+  grid-template-columns: 1fr; /* grid-cols-1 */
+  gap: 1.5rem; /* gap-6 */
+}
+
+/* Media query for medium screens and up */
+@media (min-width: 768px) {
+  .persona-selector-grid {
+    grid-template-columns: 1fr 1fr; /* md:grid-cols-2 */
+  }
+}
+
+/* Header for vendor sections */
+.persona-selector-vendor-header {
+  opacity: 0.5;
+  pointer-events: none;
+  padding: 0.5rem 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #6b7280; /* text-gray-500 */
+}
+
+.dark .persona-selector-vendor-header {
+  color: #9ca3af; /* text-gray-400 */
+}
+
+/* Tooltip styling */
+.persona-selector-tooltip-content {
+  color: #111827; /* text-gray-900 */
+  background-color: white;
+}
+
+.dark .persona-selector-tooltip-content {
+  color: #f9fafb; /* text-gray-100 */
+  background-color: #1f2937; /* bg-gray-800 */
+}
+
+.persona-selector-tooltip-model-type {
+  font-size: 0.75rem; /* text-xs */
+  color: #4b5563; /* text-gray-600 */
+  margin-top: 0.25rem; /* mt-1 */
+}
+
+.dark .persona-selector-tooltip-model-type {
+  color: #9ca3af; /* text-gray-400 */
+}
