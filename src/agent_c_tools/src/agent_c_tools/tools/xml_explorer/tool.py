@@ -5,7 +5,7 @@ from agent_c.toolsets.tool_set import Toolset
 from agent_c.toolsets.json_schema import json_schema
 
 from .xml_navigator import XMLNavigator
-from ... import WorkspaceTools
+from agent_c_tools.tools.workspace.tool import WorkspaceTools
 
 
 class XmlExplorerTools(Toolset):

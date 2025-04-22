@@ -5,7 +5,7 @@ from agent_c.toolsets.tool_set import Toolset
 from agent_c.toolsets.json_schema import json_schema
 
 from .css_navigator import CssNavigator
-from ... import WorkspaceTools
+from agent_c_tools.tools.workspace.tool import WorkspaceTools
 
 
 class CssExplorerTools(Toolset):

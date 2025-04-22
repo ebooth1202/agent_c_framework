@@ -202,7 +202,7 @@ class CssNavigator:
             
             # Find the line number for this component header
             match_text = match.group(0)
-            line_match = re.search(f"(\d+):{re.escape(match_text)}", content_with_line_numbers)
+            line_match = re.search(f"(\\d+):{re.escape(match_text)}", content_with_line_numbers)
             if not line_match:
                 continue
                 
@@ -218,7 +218,7 @@ class CssNavigator:
             # Get the end line for this component
             if next_component_match:
                 next_match_text = next_component_match.group(0)
-                next_line_match = re.search(f"(\d+):{re.escape(next_match_text)}", content_with_line_numbers)
+                next_line_match = re.search(f"(\\d+):{re.escape(next_match_text)}", content_with_line_numbers)
                 end_line = int(next_line_match.group(1)) - 1 if next_line_match else len(content_lines) - 1
             else:
                 end_line = len(content_lines) - 1
