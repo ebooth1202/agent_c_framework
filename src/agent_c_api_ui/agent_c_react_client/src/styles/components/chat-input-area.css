@@ -1,0 +1,108 @@
+/* ===== COMPONENT: ChatInputArea ===== */
+/* Description: Provides the user input interface for chat interactions with textarea and action buttons */
+
+/* ChatInputArea: Main container */
+.chat-input-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* ChatInputArea: Input wrapper */
+.chat-input-wrapper {
+  position: relative;
+  flex: 1;
+}
+
+/* ChatInputArea: Textarea styling */
+.chat-input-textarea {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb; /* border-gray-200 */
+  background-color: rgba(255, 255, 255, 0.5); /* bg-background/50 */
+  backdrop-filter: blur(4px); /* backdrop-blur-sm */
+  transition: colors 0.2s ease;
+  padding: 0.5rem 3rem 0.5rem 0.75rem; /* py-2 pl-3 pr-12 */
+  resize: none;
+  color: var(--foreground);
+}
+
+/* ChatInputArea: Textarea dark mode */
+.dark .chat-input-textarea {
+  border-color: #374151; /* border-gray-700 */
+}
+
+/* ChatInputArea: Textarea hover state */
+.chat-input-textarea:hover {
+  background-color: rgba(255, 255, 255, 0.8); /* bg-background/80 */
+}
+
+/* ChatInputArea: Textarea dark mode hover */
+.dark .chat-input-textarea:hover {
+  background-color: rgba(55, 65, 81, 0.8); /* bg-gray-700/80 */
+}
+
+/* ChatInputArea: Textarea focus state */
+.chat-input-textarea:focus {
+  border-color: var(--primary); /* border-primary */
+  box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.2); /* ring ring-primary/20 ring-opacity-50 */
+  outline: none;
+}
+
+/* ChatInputArea: Textarea placeholder */
+.chat-input-textarea::placeholder {
+  color: var(--muted-foreground);
+}
+
+/* ChatInputArea: Settings button styling */
+.chat-input-settings-button {
+  position: absolute;
+  right: 5rem; /* right-20 */
+  bottom: 0.5rem; /* bottom-2 */
+  height: 2rem; /* h-8 */
+  width: 2rem; /* w-8 */
+  color: var(--muted-foreground);
+  border-radius: 9999px; /* rounded-full */
+  transition: all 0.2s ease; /* transition-colors */
+}
+
+/* ChatInputArea: Settings button hover */
+.chat-input-settings-button:hover {
+  color: var(--primary);
+  background-color: rgba(var(--primary-rgb), 0.1); /* hover:bg-primary/10 */
+}
+
+/* ChatInputArea: Upload button styling */
+.chat-input-upload-button {
+  position: absolute;
+  right: 3rem; /* right-12 */
+  bottom: 0.5rem; /* bottom-2 */
+  height: 2rem; /* h-8 */
+  width: 2rem; /* w-8 */
+  color: var(--muted-foreground);
+  border-radius: 9999px; /* rounded-full */
+  transition: all 0.2s ease; /* transition-colors */
+}
+
+/* ChatInputArea: Upload button hover */
+.chat-input-upload-button:hover {
+  color: var(--primary);
+  background-color: rgba(var(--primary-rgb), 0.1); /* hover:bg-primary/10 */
+}
+
+/* ChatInputArea: Send button styling */
+.chat-input-send-button {
+  position: absolute;
+  right: 0.5rem; /* right-2 */
+  bottom: 0.5rem; /* bottom-2 */
+  height: 2rem; /* h-8 */
+  width: 2rem; /* w-8 */
+  border-radius: 9999px; /* rounded-full */
+  background-color: var(--primary);
+  transition: background-color 0.2s ease; /* transition-colors */
+}
+
+/* ChatInputArea: Send button hover */
+.chat-input-send-button:hover {
+  background-color: rgba(var(--primary-rgb), 0.9); /* hover:bg-primary/90 */
+}

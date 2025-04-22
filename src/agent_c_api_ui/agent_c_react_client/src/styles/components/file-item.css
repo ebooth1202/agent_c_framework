@@ -1,0 +1,124 @@
+/* ===== COMPONENT: FileItem ===== */
+/* Description: Displays individual file information with status indicators for uploads and processing */
+
+/* FileItem: Main container for file item */
+.file-item {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #e5e7eb; /* border-b border-gray-200 */
+  padding: 1rem; /* p-4 */
+  transition: background-color 0.2s ease;
+}
+
+/* FileItem: Dark mode border color */
+.dark .file-item {
+  border-color: #374151; /* border-gray-700 */
+}
+
+/* FileItem: Hover state */
+.file-item:hover {
+  background-color: #f9fafb; /* bg-gray-50 */
+}
+
+/* FileItem: Dark mode hover */
+.dark .file-item:hover {
+  background-color: #1f2937; /* bg-gray-800 */
+}
+
+/* FileItem: Status-specific styles */
+.file-item-pending {
+  color: #9ca3af; /* text-gray-400 */
+}
+
+.file-item-complete {
+  color: #065f46; /* text-green-800 */
+}
+
+.dark .file-item-complete {
+  color: #10b981; /* text-green-500 */
+}
+
+.file-item-failed {
+  color: #b91c1c; /* text-red-700 */
+}
+
+.dark .file-item-failed {
+  color: #ef4444; /* text-red-500 */
+}
+
+/* FileItem: File name styling */
+.file-item-name {
+  flex: 1;
+  margin-left: 0.5rem; /* ml-2 */
+  font-size: 0.875rem; /* text-sm */
+}
+
+/* FileItem: Action container */
+.file-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem; /* gap-2 */
+}
+
+/* FileItem: Status badge base */
+.file-item-status-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px; /* rounded-full */
+  padding: 0.25rem 0.5rem; /* py-1 px-2 */
+  font-size: 0.75rem; /* text-xs */
+  font-weight: 500; /* font-medium */
+  white-space: nowrap;
+}
+
+/* FileItem: Status badge - Pending */
+.file-item-status-badge-pending {
+  background-color: #f3f4f6; /* bg-gray-100 */
+  color: #6b7280; /* text-gray-500 */
+}
+
+.dark .file-item-status-badge-pending {
+  background-color: #374151; /* bg-gray-700 */
+  color: #9ca3af; /* text-gray-400 */
+}
+
+/* FileItem: Status badge - Complete */
+.file-item-status-badge-complete {
+  background-color: #d1fae5; /* bg-green-100 */
+  color: #065f46; /* text-green-800 */
+}
+
+.dark .file-item-status-badge-complete {
+  background-color: rgba(6, 95, 70, 0.2); /* bg-green-800/20 */
+  color: #34d399; /* text-green-400 */
+}
+
+/* FileItem: Status badge - Failed */
+.file-item-status-badge-failed {
+  background-color: #fee2e2; /* bg-red-100 */
+  color: #b91c1c; /* text-red-700 */
+}
+
+.dark .file-item-status-badge-failed {
+  background-color: rgba(185, 28, 28, 0.2); /* bg-red-700/20 */
+  color: #f87171; /* text-red-400 */
+}
+
+/* FileItem: Checkbox styling */
+.file-item-checkbox {
+  height: 1rem; /* h-4 */
+  width: 1rem; /* w-4 */
+  border-radius: 0.25rem; /* rounded */
+  border: 1px solid #d1d5db; /* border border-gray-300 */
+  transition: all 0.2s ease;
+}
+
+.dark .file-item-checkbox {
+  border-color: #4b5563; /* border-gray-600 */
+  background-color: #1f2937; /* bg-gray-800 */
+}
+
+/* FileItem: Checkbox hover */
+.file-item-checkbox:hover {
+  border-color: var(--primary);
+}

@@ -1,0 +1,64 @@
+/* ===== COMPONENT: DragDropOverlay ===== */
+/* Description: Displays a visual overlay when dragging files for upload with instructions and feedback */
+
+/* DragDropOverlay: Main overlay container */
+.drag-drop-overlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(var(--primary-rgb), 0.1); /* bg-primary/10 */
+  backdrop-filter: blur(4px); /* backdrop-blur-sm */
+  z-index: 50; /* z-50 */
+  border-radius: 0.75rem; /* rounded-xl */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--primary); /* border-2 border-primary border-dashed */
+}
+
+/* DragDropOverlay: Dark mode variations */
+.dark .drag-drop-overlay {
+  background-color: rgba(var(--primary-900-rgb), 0.2); /* dark:bg-primary-900/20 */
+}
+
+/* DragDropOverlay: Inner content container */
+.drag-drop-overlay-content {
+  text-align: center;
+  padding: 1.5rem; /* p-6 */
+  background-color: rgba(var(--background-rgb), 0.8); /* bg-background/80 */
+  border-radius: 0.75rem; /* rounded-xl */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
+}
+
+/* DragDropOverlay: Dark mode content background */
+.dark .drag-drop-overlay-content {
+  background-color: rgba(31, 41, 55, 0.8); /* dark:bg-gray-800/80 */
+}
+
+/* DragDropOverlay: Upload icon styling */
+.drag-drop-overlay-icon {
+  height: 2.5rem; /* h-10 */
+  width: 2.5rem; /* w-10 */
+  color: var(--primary); /* text-primary */
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 1rem; /* mb-4 */
+}
+
+/* DragDropOverlay: Heading text */
+.drag-drop-overlay-heading {
+  font-size: 1.125rem; /* text-lg */
+  font-weight: 600; /* font-semibold */
+  color: var(--primary-900); /* text-primary-900 */
+}
+
+/* DragDropOverlay: Dark mode heading */
+.dark .drag-drop-overlay-heading {
+  color: var(--primary-300); /* dark:text-primary-300 */
+}
+
+/* DragDropOverlay: Description text */
+.drag-drop-overlay-description {
+  font-size: 0.875rem; /* text-sm */
+  color: var(--muted-foreground); /* text-muted-foreground */
+  margin-top: 0.25rem; /* mt-1 */
+}
