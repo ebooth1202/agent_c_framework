@@ -20,14 +20,9 @@ class CssNavigator:
             Markdown string with CSS structure information
         """
         try:
-            # Get the full path to the file
-            full_path = self.workspace.full_path(file_path, mkdirs=False)
-            if not full_path:
-                return f"Error: Invalid file path: {file_path}"
-
-            # Read the file content
-            with open(full_path, 'r', encoding='utf-8') as f:
-                content = f.readlines()
+            # Read the file content using workspace
+            content_str = await self.workspace.read_internal(file_path)
+            content = content_str.splitlines(True)  # Keep line endings
 
             # Count total lines and characters
             total_lines = len(content)
@@ -69,14 +64,9 @@ class CssNavigator:
             Markdown string with component styles information
         """
         try:
-            # Get the full path to the file
-            full_path = self.workspace.full_path(file_path, mkdirs=False)
-            if not full_path:
-                return f"Error: Invalid file path: {file_path}"
-
-            # Read the file content
-            with open(full_path, 'r', encoding='utf-8') as f:
-                content = f.readlines()
+            # Read the file content using workspace
+            content_str = await self.workspace.read_internal(file_path)
+            content = content_str.splitlines(True)  # Keep line endings
 
             # Extract component information
             components = self._extract_components_with_lines(content)
@@ -131,14 +121,9 @@ class CssNavigator:
             Markdown string with update status
         """
         try:
-            # Get the full path to the file
-            full_path = self.workspace.full_path(file_path, mkdirs=False)
-            if not full_path:
-                return f"Error: Invalid file path: {file_path}"
-
-            # Read the file content
-            with open(full_path, 'r', encoding='utf-8') as f:
-                content = f.readlines()
+            # Read the file content using workspace
+            content_str = await self.workspace.read_internal(file_path)
+            content = content_str.splitlines(True)  # Keep line endings
 
             # Extract component information
             components = self._extract_components_with_lines(content)
@@ -164,9 +149,9 @@ class CssNavigator:
             new_content.extend(new_style.splitlines(True))  # Keep line endings
             new_content.extend(content[end_line + 1:])
 
-            # Write the updated content back to the file
-            with open(full_path, 'w', encoding='utf-8') as f:
-                f.writelines(new_content)
+            # Write the updated content back to the file using workspace
+            new_content_str = ''.join(new_content)
+            await self.workspace.write(file_path, new_content_str, 'write')
 
             return f"# Style Update Successful\n\n" + \
                    f"- Component: **{component_name}**\n" + \
@@ -191,14 +176,9 @@ class CssNavigator:
             Raw CSS source code for the component
         """
         try:
-            # Get the full path to the file
-            full_path = self.workspace.full_path(file_path, mkdirs=False)
-            if not full_path:
-                return f"Error: Invalid file path: {file_path}"
-
-            # Read the file content
-            with open(full_path, 'r', encoding='utf-8') as f:
-                content = f.readlines()
+            # Read the file content using workspace
+            content_str = await self.workspace.read_internal(file_path)
+            content = content_str.splitlines(True)  # Keep line endings
 
             # Extract component information
             components = self._extract_components_with_lines(content)
@@ -234,14 +214,9 @@ class CssNavigator:
             Raw CSS source code for the style including its comment
         """
         try:
-            # Get the full path to the file
-            full_path = self.workspace.full_path(file_path, mkdirs=False)
-            if not full_path:
-                return f"Error: Invalid file path: {file_path}"
-
-            # Read the file content
-            with open(full_path, 'r', encoding='utf-8') as f:
-                content = f.readlines()
+            # Read the file content using workspace
+            content_str = await self.workspace.read_internal(file_path)
+            content = content_str.splitlines(True)  # Keep line endings
 
             # Extract component information
             components = self._extract_components_with_lines(content)
