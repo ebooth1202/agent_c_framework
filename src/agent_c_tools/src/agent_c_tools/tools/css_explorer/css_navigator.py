@@ -151,7 +151,7 @@ class CssNavigator:
 
             # Write the updated content back to the file using workspace
             new_content_str = ''.join(new_content)
-            await self.workspace.write(file_path, new_content_str, 'write')
+            await self.workspace.write(file_path, new_content_str)
 
             return f"# Style Update Successful\n\n" + \
                    f"- Component: **{component_name}**\n" + \
