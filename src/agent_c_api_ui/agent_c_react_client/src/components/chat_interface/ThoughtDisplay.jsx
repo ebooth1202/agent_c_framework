@@ -7,10 +7,8 @@ import MarkdownMessage from "@/components/chat_interface/MarkdownMessage";
 
 const ThoughtDisplay = ({content, vendor}) => {
     const {theme} = useContext(SessionContext);
-    // Define scrollbar colors based on theme
+    // Check if dark mode is enabled
     const isDarkMode = theme === 'dark';
-    const scrollbarThumb = isDarkMode ? '#78350f' : '#d97706';
-    const scrollbarTrack = isDarkMode ? '#2c1a09' : '#fef3c7';
     const contentRef = useRef(null);
     const markdownRef = useRef(null);
 
@@ -43,11 +41,7 @@ const ThoughtDisplay = ({content, vendor}) => {
                 <div className="flex justify-between items-start gap-4">
                     <div
                         ref={contentRef}
-                        className="text-sm whitespace-pre-wrap font-mono overflow-auto max-h-[200px] min-h-[50px] flex-1"
-                        style={{
-                            scrollbarWidth: 'thin',
-                            scrollbarColor: `${scrollbarThumb} ${scrollbarTrack}`
-                        }}
+                        className={`text-sm font-mono thought-display-content ${isDarkMode ? 'thought-display-content-dark' : 'thought-display-content-light'}`}
                     >
                         <div ref={markdownRef}>
                             <MarkdownMessage content={content} />
