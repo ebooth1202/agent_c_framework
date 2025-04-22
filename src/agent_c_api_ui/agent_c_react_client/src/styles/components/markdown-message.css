@@ -1,0 +1,141 @@
+/* ===== COMPONENT: MarkdownMessage ===== */
+/* Description: Component for rendering formatted markdown content in chat messages */
+
+/* MarkdownMessage: Main container for markdown content */
+.markdown-container {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  /* Preserve Tailwind prose classes via direct reference */
+}
+
+/* MarkdownMessage: Markdown content wrapper */
+.markdown-content {
+  flex: 1;
+}
+
+/* MarkdownMessage: Heading styles */
+.markdown-h1 {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-top: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.markdown-h2 {
+  font-size: 1.25rem;
+  font-weight: bold;
+  margin-top: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.markdown-h3 {
+  font-size: 1.125rem;
+  font-weight: bold;
+  margin-top: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.markdown-h4 {
+  font-size: 1rem;
+  font-weight: bold;
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+/* MarkdownMessage: List styles */
+.markdown-ul {
+  list-style-type: disc;
+  margin-left: 1rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.markdown-li {
+  /* Preserve nested inline code alignment */
+}
+
+.markdown-li > code {
+  margin-left: 0;
+}
+
+/* MarkdownMessage: Strong text */
+.markdown-strong {
+  font-weight: bold;
+  color: #6b21a8; /* text-purple-800 */
+}
+
+/* MarkdownMessage: Code blocks and inline code */
+.markdown-code-block-container {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+.markdown-code-block-copy-button {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.markdown-code-block-container:hover .markdown-code-block-copy-button {
+  opacity: 1;
+}
+
+.markdown-code-block-copy-button-style {
+  background-color: #1f2937; /* bg-gray-800 */
+  color: white;
+}
+
+.markdown-code-block-copy-button-style:hover {
+  background-color: #374151; /* bg-gray-700 */
+}
+
+.markdown-inline-code {
+  background-color: #f3e8ff; /* bg-purple-100 */
+  padding: 0 0.25rem;
+  border-radius: 0.25rem;
+  color: #6b21a8; /* text-purple-800 */
+  font-family: monospace;
+  display: inline-block;
+}
+
+/* MarkdownMessage: Blockquote styling */
+.markdown-blockquote {
+  border-left: 4px solid #d8b4fe; /* border-purple-300 */
+  padding-left: 1rem;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  font-style: italic;
+}
+
+/* MarkdownMessage: Paragraph styling */
+.markdown-paragraph {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+  line-height: 1.625; /* leading-relaxed */
+}
+
+/* MarkdownMessage: Horizontal rule */
+.markdown-hr {
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+  border-top-width: 2px;
+  border-color: #faf5ff; /* border-purple-100 */
+}
+
+/* MarkdownMessage: Copy button container */
+.markdown-copy-button-container {
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.markdown-container:hover .markdown-copy-button-container {
+  opacity: 1;
+}

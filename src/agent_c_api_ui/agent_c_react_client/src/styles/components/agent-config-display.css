@@ -1,0 +1,130 @@
+/* ===== COMPONENT: AgentConfigDisplay ===== */
+/* Description: Displays agent configuration information in a tooltip interface */
+/* File: src/components/chat_interface/AgentConfigDisplay.jsx */
+
+/* AgentConfigDisplay: Main container for both loading and loaded states */
+.agent-config-container {
+  display: inline-flex;
+  align-items: center;
+  cursor: help;
+}
+
+/* AgentConfigDisplay: Loading state styling */
+.agent-config-loading {
+  color: #9ca3af; /* text-gray-400 */
+}
+
+/* AgentConfigDisplay: Loading icon */
+.agent-config-loading-icon {
+  width: 1rem;
+  height: 1rem;
+  color: #9ca3af; /* text-gray-400 */
+}
+
+/* AgentConfigDisplay: Loading text */
+.agent-config-loading-text {
+  margin-left: 0.25rem;
+  font-size: 0.875rem;
+  color: #9ca3af; /* text-gray-400 */
+}
+
+/* AgentConfigDisplay: Loaded state styling */
+.agent-config-loaded {
+  color: #3b82f6; /* text-blue-500 */
+}
+
+/* AgentConfigDisplay: Loaded icon */
+.agent-config-loaded-icon {
+  width: 1rem;
+  height: 1rem;
+  color: #3b82f6; /* text-blue-500 */
+  transition: color 0.2s ease;
+}
+
+/* AgentConfigDisplay: Loaded text */
+.agent-config-loaded-text {
+  margin-left: 0.25rem;
+  font-size: 0.875rem;
+  color: #3b82f6; /* text-blue-500 */
+  transition: color 0.2s ease;
+}
+
+/* AgentConfigDisplay: Hover state */
+.agent-config-loaded:hover .agent-config-loaded-icon,
+.agent-config-loaded:hover .agent-config-loaded-text {
+  color: #2563eb; /* text-blue-600 hover:text-blue-600 */
+}
+
+/* AgentConfigDisplay: Tooltip content styling */
+.agent-config-tooltip {
+  width: 20rem; /* w-80 */
+  background-color: white;
+  border: 1px solid #e5e7eb; /* border */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-md */
+  position: relative;
+  z-index: 50;
+}
+
+/* AgentConfigDisplay: Dark mode tooltip */
+.dark .agent-config-tooltip {
+  background-color: #1f2937; /* bg-gray-800 */
+  border-color: #374151; /* border-gray-700 */
+}
+
+/* AgentConfigDisplay: Tooltip header */
+.agent-config-tooltip-header {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #111827; /* text-gray-900 */
+}
+
+/* AgentConfigDisplay: Dark mode tooltip header */
+.dark .agent-config-tooltip-header {
+  color: #f9fafb; /* text-gray-100 */
+}
+
+/* AgentConfigDisplay: Container for tooltip content */
+.agent-config-tooltip-container {
+  padding: 0.5rem;
+}
+
+/* AgentConfigDisplay: Spacing between items */
+.agent-config-tooltip-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  background-color: white;
+}
+
+/* AgentConfigDisplay: Dark mode tooltip items */
+.dark .agent-config-tooltip-items {
+  background-color: #1f2937; /* bg-gray-800 */
+}
+
+/* AgentConfigDisplay: Individual config item */
+.agent-config-tooltip-item {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  font-size: 0.875rem;
+}
+
+/* AgentConfigDisplay: Item label */
+.agent-config-tooltip-label {
+  color: #6b7280; /* text-gray-500 */
+}
+
+/* AgentConfigDisplay: Dark mode item label */
+.dark .agent-config-tooltip-label {
+  color: #9ca3af; /* text-gray-400 */
+}
+
+/* AgentConfigDisplay: Item value */
+.agent-config-tooltip-value {
+  font-weight: 500;
+  color: #111827; /* text-gray-900 */
+}
+
+/* AgentConfigDisplay: Dark mode item value */
+.dark .agent-config-tooltip-value {
+  color: #f9fafb; /* text-gray-100 */
+}

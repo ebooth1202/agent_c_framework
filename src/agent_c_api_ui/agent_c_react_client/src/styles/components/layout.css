@@ -1,0 +1,111 @@
+/* ===== COMPONENT: Layout ===== */
+/* Description: Main application layout component providing the page structure with header, navigation and content area */
+
+/* Layout: Main container */
+.layout-container {
+  min-height: 100vh; /* min-h-screen */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-image: linear-gradient(to bottom, var(--layout-gradient-from), var(--layout-gradient-to));
+}
+
+/* Layout: Light mode gradient colors */
+:root {
+  --layout-gradient-from: #f9fafb; /* from-gray-50 */
+  --layout-gradient-to: #f3f4f6; /* to-gray-100 */
+}
+
+/* Layout: Dark mode gradient colors */
+.dark {
+  --layout-gradient-from: #111827; /* from-gray-900 */
+  --layout-gradient-to: #1f2937; /* to-gray-800 */
+}
+
+/* Layout: Header container */
+.layout-header {
+  max-width: 80rem; /* max-w-7xl */
+  margin-left: auto;
+  margin-right: auto;
+  padding: 1rem 1.5rem; /* py-4 px-6 */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+/* Layout: Title container */
+.layout-title-container {
+  display: flex;
+  align-items: center;
+}
+
+/* Layout: Title text */
+.layout-title {
+  font-size: 1.5rem; /* text-2xl */
+  font-weight: 700; /* font-bold */
+  color: #111827; /* text-gray-900 */
+}
+
+.dark .layout-title {
+  color: #f9fafb; /* text-gray-100 */
+}
+
+/* Layout: Control container (right side) */
+.layout-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem; /* gap-4 */
+}
+
+/* Layout: Navigation menu */
+.layout-nav {
+  display: none; /* hidden */
+}
+
+@media (min-width: 640px) {
+  .layout-nav {
+    display: flex; /* sm:flex */
+  }
+}
+
+/* Layout: Navigation links */
+.layout-nav-link {
+  color: #374151; /* text-gray-700 */
+  transition: color 0.2s ease;
+}
+
+.layout-nav-link:hover {
+  color: #111827; /* hover:text-gray-900 */
+}
+
+.dark .layout-nav-link {
+  color: #d1d5db; /* dark:text-gray-300 */
+}
+
+.dark .layout-nav-link:hover {
+  color: #f9fafb; /* dark:hover:text-gray-100 */
+}
+
+/* Layout: Additional margin for links (except first) */
+.layout-nav-link-spacing {
+  margin-left: 1rem; /* ml-4 */
+}
+
+/* Layout: Main content area */
+.layout-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-width: 80rem; /* max-w-7xl */
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0.25rem 1.5rem 1rem 1.5rem; /* pt-1 pb-4 px-6 */
+  color: #111827; /* text-gray-900 */
+}
+
+.dark .layout-main {
+  color: #f9fafb; /* dark:text-gray-100 */
+}

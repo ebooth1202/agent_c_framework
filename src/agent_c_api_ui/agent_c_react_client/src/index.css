@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import our CSS style system */
+@import './styles/main.css';
+
 /* Custom styles for markdown in user messages */
 .markdown-user-message .prose {
   color: white;
