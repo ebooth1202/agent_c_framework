@@ -22,7 +22,7 @@ class CssExplorerTools(Toolset):
         self.workspace_tool = self.tool_chest.active_tools['workspace']
 
     @json_schema(
-        'Scan a CSS file to identify component sections and build a Markdown overview.',
+        'Obtain an overview of the CSS file structure and components. In a token efficient manner',
         {
             'path': {
                 'type': 'string',
@@ -31,7 +31,7 @@ class CssExplorerTools(Toolset):
             }
         }
     )
-    async def scan(self, **kwargs: Any) -> str:
+    async def overview(self, **kwargs: Any) -> str:
         """Asynchronously scans a CSS file to identify components and their styles.
 
         Args:
@@ -131,6 +131,83 @@ class CssExplorerTools(Toolset):
 
         navigator = CssNavigator(workspace)
         return await navigator.update_style(relative_path, component, class_name, new_style)
+        
+    @json_schema(
+        'Get the raw CSS source for a component, including its header comment and all styles.',
+        {
+            'path': {
+                'type': 'string',
+                'description': 'UNC-style path (//WORKSPACE/path) to the CSS file',
+                'required': True
+            },
+            'component': {
+                'type': 'string',
+                'description': 'Name of the component to extract source for',
+                'required': True
+            }
+        }
+    )
+    async def get_component_source(self, **kwargs: Any) -> str:
+        """Asynchronously retrieves raw CSS source for a specific component from a CSS file.
+
+        Args:
+            path (str): UNC-style path (//WORKSPACE/path) to the CSS file
+            component (str): Name of the component to extract source for
+
+        Returns:
+            str: Raw CSS source code for the component including header comment and all styles
+        """
+        unc_path = kwargs.get('path', '')
+        component = kwargs.get('component', '')
+        
+        error, workspace, relative_path = self.workspace_tool.validate_and_get_workspace_path(unc_path)
+        if error:
+            return f"Error: {error}"
+
+        navigator = CssNavigator(workspace)
+        return await navigator.get_component_source(relative_path, component)
+
+    @json_schema(
+        'Get the raw CSS source for a specific style within a component, including its preceding comment.',
+        {
+            'path': {
+                'type': 'string',
+                'description': 'UNC-style path (//WORKSPACE/path) to the CSS file',
+                'required': True
+            },
+            'component': {
+                'type': 'string',
+                'description': 'Name of the component containing the style',
+                'required': True
+            },
+            'class_name': {
+                'type': 'string',
+                'description': 'Name of the CSS class to get source for (selector)',
+                'required': True
+            }
+        }
+    )
+    async def get_style_source(self, **kwargs: Any) -> str:
+        """Asynchronously retrieves raw CSS source for a specific style from a CSS file.
+
+        Args:
+            path (str): UNC-style path (//WORKSPACE/path) to the CSS file
+            component (str): Name of the component containing the style
+            class_name (str): Name of the CSS class to get source for (selector)
+
+        Returns:
+            str: Raw CSS source code for the style including its preceding comment
+        """
+        unc_path = kwargs.get('path', '')
+        component = kwargs.get('component', '')
+        class_name = kwargs.get('class_name', '')
+        
+        error, workspace, relative_path = self.workspace_tool.validate_and_get_workspace_path(unc_path)
+        if error:
+            return f"Error: {error}"
+
+        navigator = CssNavigator(workspace)
+        return await navigator.get_style_source(relative_path, component, class_name)
 
 
 # Register the toolset

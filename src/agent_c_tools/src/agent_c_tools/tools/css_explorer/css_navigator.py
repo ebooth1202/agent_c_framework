@@ -178,6 +178,105 @@ class CssNavigator:
             error_msg = f"Error updating style: {str(e)}"
             self.logger.error(error_msg)
             return error_msg
+    
+    async def get_component_source(self, file_path: str, component_name: str) -> str:
+        """
+        Gets raw CSS source for a specific component, including its header comment and all styles.
+
+        Args:
+            file_path: Path to the CSS file relative to workspace root
+            component_name: Name of the component to extract source for
+
+        Returns:
+            Raw CSS source code for the component
+        """
+        try:
+            # Get the full path to the file
+            full_path = self.workspace.full_path(file_path, mkdirs=False)
+            if not full_path:
+                return f"Error: Invalid file path: {file_path}"
+
+            # Read the file content
+            with open(full_path, 'r', encoding='utf-8') as f:
+                content = f.readlines()
+
+            # Extract component information
+            components = self._extract_components_with_lines(content)
+
+            # Find the requested component
+            component = next((c for c in components if c['name'].lower() == component_name.lower()), None)
+            if not component:
+                available = ", ".join([c['name'] for c in components])
+                return f"Error: Component not found: {component_name}\n\nAvailable components: {available}"
+
+            # Extract the component source
+            start_line = component['start_line']
+            end_line = component['end_line']
+            component_source = ''.join(content[start_line:end_line + 1])
+            
+            return component_source
+
+        except Exception as e:
+            error_msg = f"Error retrieving component source: {str(e)}"
+            self.logger.error(error_msg)
+            return error_msg
+    
+    async def get_style_source(self, file_path: str, component_name: str, class_name: str) -> str:
+        """
+        Gets raw CSS source for a specific style within a component, including its preceding comment.
+
+        Args:
+            file_path: Path to the CSS file relative to workspace root
+            component_name: Name of the component containing the style
+            class_name: Name of the CSS class to get source for
+
+        Returns:
+            Raw CSS source code for the style including its comment
+        """
+        try:
+            # Get the full path to the file
+            full_path = self.workspace.full_path(file_path, mkdirs=False)
+            if not full_path:
+                return f"Error: Invalid file path: {file_path}"
+
+            # Read the file content
+            with open(full_path, 'r', encoding='utf-8') as f:
+                content = f.readlines()
+
+            # Extract component information
+            components = self._extract_components_with_lines(content)
+
+            # Find the requested component
+            component = next((c for c in components if c['name'].lower() == component_name.lower()), None)
+            if not component:
+                available = ", ".join([c['name'] for c in components])
+                return f"Error: Component not found: {component_name}\n\nAvailable components: {available}"
+
+            # Find the requested style within the component
+            style = next((s for s in component['styles'] if s['selector'].strip() == class_name.strip()), None)
+            if not style:
+                available = ", ".join([s['selector'] for s in component['styles']])
+                return f"Error: Style not found: {class_name}\n\nAvailable styles: {available}"
+
+            # Get style source lines
+            start_line = style['start_line']
+            end_line = style['end_line']
+            
+            # Get the comment section before the style
+            # Look for /* pattern before the start line to find the comment start
+            comment_start = start_line
+            for i in range(start_line - 1, max(0, start_line - 10), -1):  # Look up to 10 lines back
+                if "/*" in content[i]:
+                    comment_start = i
+                    break
+            
+            style_source = ''.join(content[comment_start:end_line + 1])
+            return style_source
+
+        except Exception as e:
+            error_msg = f"Error retrieving style source: {str(e)}"
+            self.logger.error(error_msg)
+            return error_msg
 
     def _extract_components_with_lines(self, content_lines: List[str]) -> List[Dict[str, Any]]:
         """

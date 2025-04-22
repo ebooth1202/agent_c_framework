@@ -61,6 +61,11 @@ The company has a strict policy against AI performing code modifications without
 - **Scratchpad requires extra thought:** After reading in the content from the scratchpad you MUST make use of the think tool to reflect and map out what you're going to do so things are done right.
 
 - Be mindful of token consumption, use the most efficient workspace tools for the job:
+  - Favor `workspace_read_lines` when line numbers are available over reading entire code files.
+  - Favor `replace_strings` over writing entire tex files.
+  - Use `css_overview` to gain a full understand of a CSS file without reading it ALL in
+  - Use `css_get_component_source` and `css_get_style_source` over reading entire CSS files
+  - Use `css_update_style` to rewrite styles over writing out entire files.
   
 
 ## Unit Testing Rules

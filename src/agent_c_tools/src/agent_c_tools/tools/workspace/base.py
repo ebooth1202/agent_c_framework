@@ -135,6 +135,19 @@ class BaseWorkspace:
         """
         raise NotImplementedError
 
+    async def read_internal(self, file_path: str) -> str:
+        """
+        Abstract method to read text from a path within the workspace.
+        Used internally for reading files, raises exceptions instead of returning error json.
+
+        Args:
+            path (str): The path from which to read text.
+
+        Raises:
+            NotImplementedError: This method should be implemented by subclasses.
+        """
+        raise NotImplementedError
+
     async def write(self, path: str, mode: str, data: str) -> str:
         """
         Abstract method to write text to a path within the workspace.
