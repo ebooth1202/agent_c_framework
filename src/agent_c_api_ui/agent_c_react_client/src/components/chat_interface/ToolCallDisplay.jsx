@@ -13,23 +13,23 @@ const ToolCallDisplay = ({ toolCalls }) => {
   if (toolCount === 0) return null;
 
   return (
-    <div className={`border rounded-2xl my-2 bg-card shadow-lg overflow-hidden ml-8 ${isExpanded ? 'max-w-[50%]' : 'w-fit'}`}>
+    <div className={`tool-call-container ${isExpanded ? 'tool-call-container-expanded' : 'tool-call-container-collapsed'}`}>
       <div
-        className="flex items-center justify-between p-4 cursor-pointer bg-blue-100/80 dark:bg-blue-950/30 hover:bg-blue-200/90 dark:hover:bg-blue-900/40 transition-colors rounded-t-2xl"
+        className="tool-call-header"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-3">
-          <Wrench className="h-5 w-5 text-blue-500 dark:text-blue-400" />
-          <h4 className="text-blue-700 dark:text-blue-300 font-medium">Tool Calls</h4>
-          <Badge variant="secondary" className="bg-blue-200 dark:bg-blue-900/50 hover:bg-blue-200 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300">
+          <Wrench className="tool-call-icon" />
+          <h4 className="tool-call-title">Tool Calls</h4>
+          <Badge variant="secondary" className="tool-call-badge">
             {toolCount}
           </Badge>
         </div>
-        <span className="text-blue-500 dark:text-blue-400">{isExpanded ? "▲" : "▼"}</span>
+        <span className="tool-call-expand-icon">{isExpanded ? "▲" : "▼"}</span>
       </div>
 
       {isExpanded && (
-        <div className="p-4 space-y-2 rounded-b-2xl bg-card">
+        <div className="tool-call-content space-y-2">
           {validTools.map((toolCall, idx) => (
             <ToolCallItem
               key={toolCall.id || idx}
