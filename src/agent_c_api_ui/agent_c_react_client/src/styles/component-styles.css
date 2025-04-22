@@ -794,3 +794,65 @@
 .media-message-metadata-separator {
   margin: 0 0.5rem; /* mx-2 */
 }
+
+/* ==============================
+   AnimatedStatusIndicator Component Styles
+   ============================== */
+
+/* Main container for status indicator */
+.status-indicator-container {
+  position: relative;
+}
+
+/* The main status dot */
+.status-indicator-dot {
+  width: 0.75rem; /* w-3 */
+  height: 0.75rem; /* h-3 */
+  border-radius: 9999px; /* rounded-full */
+  transition: all 300ms ease-in-out; /* transition-all duration-300 ease-in-out */
+}
+
+/* Scale effect when processing */
+.status-indicator-dot-processing {
+  transform: scale(1.1); /* scale-110 */
+}
+
+.status-indicator-dot-idle {
+  transform: scale(1); /* scale-100 */
+}
+
+/* Ping animation effect */
+.status-indicator-ping {
+  position: absolute;
+  inset: 0; /* inset-0 */
+  border-radius: 9999px; /* rounded-full */
+  opacity: 0.75; /* opacity-75 */
+  animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite; /* animate-ping */
+}
+
+/* Pulse animation effect */
+.status-indicator-pulse {
+  position: absolute;
+  inset: -0.25rem; /* -inset-1 */
+  border-radius: 9999px; /* rounded-full */
+  opacity: 0.5; /* opacity-50 */
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; /* animate-pulse */
+}
+
+/* Define the ping animation if not already provided by Tailwind */
+@keyframes ping {
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+/* Define the pulse animation if not already provided by Tailwind */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}

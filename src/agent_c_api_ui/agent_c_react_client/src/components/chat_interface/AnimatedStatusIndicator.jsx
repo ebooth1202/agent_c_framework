@@ -2,28 +2,19 @@ import React from 'react';
 
 const AnimatedStatusIndicator = ({ isProcessing, className = '' }) => {
   return (
-    <div className="relative">
+    <div className="status-indicator-container">
       <div
         className={`
-          w-3 h-3 rounded-full 
-          transition-all duration-300 ease-in-out
+          status-indicator-dot
           ${className}
-          ${isProcessing ? 'scale-110' : 'scale-100'}
+          ${isProcessing ? 'status-indicator-dot-processing' : 'status-indicator-dot-idle'}
         `}
       >
         {/* Ripple effect when processing */}
         {isProcessing && (
           <>
-            <div className={`
-              absolute inset-0 rounded-full 
-              ${className} opacity-75
-              animate-ping
-            `} />
-            <div className={`
-              absolute -inset-1 rounded-full 
-              ${className} opacity-50
-              animate-pulse
-            `} />
+            <div className={`status-indicator-ping ${className}`} />
+            <div className={`status-indicator-pulse ${className}`} />
           </>
         )}
       </div>
