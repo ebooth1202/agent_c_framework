@@ -1,10 +1,12 @@
 import React, {useState, useRef, useEffect, useCallback, useContext} from "react";
 import {Card} from "@/components/ui/card";
+import {Wrench} from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import {Send, Upload, User, Mic, FileIcon, Settings} from "lucide-react";
 import {ScrollArea} from "@/components/ui/scroll-area";
 import ToolCallDisplay from "./ToolCallDisplay";
+import ToolCallItem from "./ToolCallItem";
 import MediaMessage from './MediaMessage';
 import TokenUsageDisplay from './TokenUsageDisplay';
 import MarkdownMessage from './MarkdownMessage';
@@ -58,10 +60,22 @@ const ChatInterface = ({
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [isUploading, setIsUploading] = useState(false);
     const [selectedFileForUpload, setSelectedFileForUpload] = useState(null); // Track selected file
+    const [expandedToolCallMessages, setExpandedToolCallMessages] = useState([]); // Track which messages have expanded tool calls
     
     // State for drag & drop functionality
     const [isDraggingOver, setIsDraggingOver] = useState(false);
     const dragCounterRef = useRef(0);
+
+    // Toggle the expanded state of tool calls for a specific message
+    const toggleToolCallExpansion = (messageIdx) => {
+        setExpandedToolCallMessages(prev => {
+            if (prev.includes(messageIdx)) {
+                return prev.filter(idx => idx !== messageIdx);
+            } else {
+                return [...prev, messageIdx];
+            }
+        });
+    };
 
     // Helper function to format a message for copying
     const formatMessageForCopy = useCallback((msg) => {
@@ -826,6 +840,12 @@ const ChatInterface = ({
 
                         // === ASSISTANT TEXT ===
                         if (msg.role === "assistant" && msg.type === "content") {
+                            // Find associated tool calls (the next message if it's a tool call)
+                            const nextMsg = messages[idx + 1];
+                            const hasToolCalls = nextMsg && nextMsg.type === "tool_calls" && nextMsg.toolCalls && nextMsg.toolCalls.length > 0;
+                            const toolCallCount = hasToolCalls ? nextMsg.toolCalls.length : 0;
+                            const isToolCallsExpanded = expandedToolCallMessages.includes(idx);
+                            
                             return (
                                 <div key={idx} className="flex flex-col">
                                     <div className="flex justify-start items-start gap-2 group">
@@ -835,7 +855,45 @@ const ChatInterface = ({
                                             <div className="flex justify-between items-start gap-4">
                                                 <div className="prose dark:prose-invert flex-1">
                                                     <MarkdownMessage content={msg.content}/>
-                                                    {msg.tokenUsage && <TokenUsageDisplay usage={msg.tokenUsage}/>}
+                                                    
+                                                    {/* Footer with token usage and tool call info */}
+                                                    <div className="flex flex-wrap items-center gap-2 mt-2 pt-1 border-t border-purple-100 dark:border-purple-700/50">
+                                                        {msg.tokenUsage && <TokenUsageDisplay usage={msg.tokenUsage}/>}
+                                                        
+                                                        {/* Tool call toggle button - only show if there are tool calls */}
+                                                        {hasToolCalls && (
+                                                            <div 
+                                                                className="flex items-center gap-1 text-xs py-1 px-2 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/50 transition-colors"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    toggleToolCallExpansion(idx);
+                                                                }}
+                                                            >
+                                                                <Wrench className="h-3 w-3" />
+                                                                <span>Tool Calls {toolCallCount}</span>
+                                                                <span>{isToolCallsExpanded ? "▲" : "▼"}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    
+                                                    {/* Expanded tool calls - only show if expanded */}
+                                                    {hasToolCalls && isToolCallsExpanded && (
+                                                        <div className="mt-3 pt-2 border-t border-purple-100 dark:border-purple-700/50">
+                                                            <div className="tool-call-content space-y-2">
+                                                                {nextMsg.toolCalls.map((toolCall, toolIdx) => (
+                                                                    <ToolCallItem
+                                                                        key={toolCall.id || toolIdx}
+                                                                        tool={{
+                                                                            name: toolCall.name || toolCall.function?.name,
+                                                                            arguments: toolCall.arguments || toolCall.function?.arguments,
+                                                                            id: toolCall.id || toolCall.tool_call_id
+                                                                        }}
+                                                                        results={toolCall.results}
+                                                                    />
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 <CopyButton
                                                     content={msg.content}
@@ -854,6 +912,14 @@ const ChatInterface = ({
 
                         // === TOOL CALLS (single container for all tool calls) ===
                         if (msg.type === "tool_calls") {
+                            // If the previous message is an assistant message, skip rendering as a separate component
+                            // We'll display it inline with the assistant message instead
+                            const prevMsg = messages[idx - 1];
+                            if (prevMsg && prevMsg.role === "assistant" && prevMsg.type === "content") {
+                                return null;
+                            }
+                            
+                            // Otherwise, render as usual (for standalone tool calls not attached to a message)
                             return (
                                 <div key={idx}>
                                     <ToolCallDisplay toolCalls={msg.toolCalls}/>

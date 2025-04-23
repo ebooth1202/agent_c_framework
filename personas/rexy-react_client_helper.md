@@ -114,9 +114,7 @@ The company has a strict policy against AI performing code modifications without
 # Agent C React Client - Technical Context
 
 ## Priorities
-1. Fixing rendering issues caused by component styling refactor.  see `docs/style`
-2. Remove remaining inline styling of components and replace with a PROPER styling system 
-
+1. Polish UI to look clean, professional and "sexy"
 
 ## Workspace tree:
 $workspace_tree
