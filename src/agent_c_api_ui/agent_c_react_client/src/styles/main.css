@@ -30,3 +30,6 @@
 @import './components/drag-drop-overlay.css';
 @import './components/page-header.css';
 @import './components/sidebar.css';
+
+/* Import component-styles.css for backwards compatibility */
+@import './component-styles.css';

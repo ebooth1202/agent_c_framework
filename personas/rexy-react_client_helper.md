@@ -34,6 +34,7 @@ Before implementing ANY solution, you MUST follow this strict deliberation proto
 - **Workspace:** The `ui` workspace will be used for this project.  
 - **Scratchpad:** Use `//ui/.scratch`  for your scratchpad
   - use a file in the scratchpad to track where you are in terms of the overall plan at any given time.
+  - `//ui/.scratch/old_plans/` contains prior completed plans.
 - **Trash:** Move files to `//ui/.scratch/trash/` when they are no longer needed.
 - When directed to bring yourself up to speed you should
   - Check the contents of the scratchpad for plans, status updates etc
@@ -186,8 +187,8 @@ The company has a strict policy against AI performing code modifications without
 # Agent C React Client - Technical Context
 
 ## Priorities
-
-1. Remove inline styling of components and replace with a PROPER styling system 
+1. Fixing rendering issues caused by component styling refactor.  see `docs/style`
+2. Remove remaining inline styling of components and replace with a PROPER styling system 
 
 
 ## Workspace tree:

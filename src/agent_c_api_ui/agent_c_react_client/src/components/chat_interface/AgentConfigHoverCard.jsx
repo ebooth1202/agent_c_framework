@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import ModelIcon from '@/components/chat_interface/ModelIcon';
 import * as Portal from '@radix-ui/react-portal';
 import { API_URL } from "@/config/config";
-import "@/styles/component-styles.css";
+
 
 /**
  * AgentConfigHoverCard is a component that fetches and displays agent configuration

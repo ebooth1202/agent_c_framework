@@ -1,7 +1,7 @@
 import React from 'react';
 import {Link} from 'react-router-dom';
 import { ThemeToggle } from './ui/theme-toggle';
-import '../styles/component-styles.css';
+// CSS already imported through main.css
 
 const Layout = ({children}) => {
     return (

@@ -3,7 +3,7 @@ import {Settings} from 'lucide-react';
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
 import * as Portal from '@radix-ui/react-portal';
 import {API_URL} from "@/config/config";
-import "@/styles/component-styles.css";
+// CSS already imported through main.css
 
 /**
  * AgentConfigDisplay is a component that fetches and displays agent configuration
