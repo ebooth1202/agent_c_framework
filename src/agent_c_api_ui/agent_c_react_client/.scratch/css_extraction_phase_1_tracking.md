@@ -49,7 +49,7 @@
 | PageHeader.jsx | Traditional CSS | - | High | 📝 To Analyze |
 | MobileNav.jsx | Traditional CSS | Button | High | 📝 To Analyze |
 | ChatInterface.jsx | Mixed | Card, Button, Dialog | High | ✅ Analyzed | Uses shadcn/ui Card and Button with custom CSS classes |
-| MessagesList.jsx | Traditional CSS | - | Medium | 📝 To Analyze |
+| MessagesList.jsx | CSS | ScrollArea | Medium | ✅ Analyzed | Uses shadcn/ui ScrollArea component with better semantic CSS classes |
 | StatusBar.jsx | Traditional CSS | - | Medium | 📝 To Analyze |
 | CollapsibleOptions.jsx | Traditional CSS | - | Medium | 📝 To Analyze |
 | FileUploadManager.jsx | Traditional CSS | - | Medium | 📝 To Analyze |

@@ -1,6 +1,10 @@
 import React, { useRef, useEffect } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import MessageItem from './MessageItem';
+import { cn } from '@/lib/utils';
+
+// Import component CSS
+import '@/styles/components/messages-list.css';
 
 /**
  * MessagesList component handles rendering a list of messages with automatic scrolling
@@ -12,13 +16,15 @@ import MessageItem from './MessageItem';
  * @param {function} props.toggleToolCallExpansion - Function to toggle tool call expansion
  * @param {boolean} props.toolSelectionInProgress - Whether a tool selection is in progress
  * @param {string} props.toolSelectionName - Name of the tool being selected
+ * @param {string} props.className - Optional additional CSS classes for the container
  */
 const MessagesList = ({
   messages,
   expandedToolCallMessages,
   toggleToolCallExpansion,
   toolSelectionInProgress,
-  toolSelectionName
+  toolSelectionName,
+  className
 }) => {
   const messagesEndRef = useRef(null);
   
@@ -32,31 +38,36 @@ const MessagesList = ({
   }, [messages]);
   
   return (
-    <ScrollArea className="flex-1 px-4 py-3" type="auto">
-      <div className="space-y-4 w-full overflow-x-hidden">
-        {messages.map((message, index) => (
-          <MessageItem
-            key={index}
-            message={message}
-            index={index}
-            messages={messages}
-            expandedToolCallMessages={expandedToolCallMessages}
-            toggleToolCallExpansion={toggleToolCallExpansion}
-          />
-        ))}
-        
-        {/* Tool selection in progress indicator */}
-        {toolSelectionInProgress && (
-          <div className="flex items-center gap-2 text-sm text-gray-500 italic my-1 ml-8">
-            <div className="animate-pulse h-2 w-2 bg-purple-400 rounded-full"></div>
-            <span>Preparing to use: {toolSelectionName?.replace(/-/g, ' ') || 'tool'}</span>
-          </div>
-        )}
-        
-        {/* Ref for scrolling to bottom */}
-        <div ref={messagesEndRef} />
-      </div>
-    </ScrollArea>
+    <div className={cn("messages-list-container", className)}>
+      <ScrollArea 
+        className="messages-list-scroll-area"
+        type="auto"
+      >
+        <div className="messages-list-content">
+          {messages.map((message, index) => (
+            <MessageItem
+              key={index}
+              message={message}
+              index={index}
+              messages={messages}
+              expandedToolCallMessages={expandedToolCallMessages}
+              toggleToolCallExpansion={toggleToolCallExpansion}
+            />
+          ))}
+          
+          {/* Tool selection in progress indicator */}
+          {toolSelectionInProgress && (
+            <div className="tool-selection-indicator">
+              <div className="tool-selection-indicator-dot"></div>
+              <span>Preparing to use: {toolSelectionName?.replace(/-/g, ' ') || 'tool'}</span>
+            </div>
+          )}
+          
+          {/* Ref for scrolling to bottom */}
+          <div ref={messagesEndRef} />
+        </div>
+      </ScrollArea>
+    </div>
   );
 };
 

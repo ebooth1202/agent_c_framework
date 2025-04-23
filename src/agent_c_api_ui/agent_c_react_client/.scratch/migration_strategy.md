@@ -11,6 +11,7 @@ This document outlines the approach for migrating the Agent C React UI from trad
 3. **Component Ownership**: Use shadcn/ui's approach of copying components into your project for full control
 4. **Accessibility**: Leverage shadcn/ui's accessibility features built on Radix UI primitives
 5. **Test-Driven**: Test each component before and after migration to ensure identical functionality
+6. **Separation of Concerns**: Keep JSX focused on component structure and behavior by moving all styling to CSS files. Use semantic class names instead of embedding styling utilities directly in JSX.
 
 ## Implementation Strategy
 

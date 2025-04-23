@@ -1,117 +1,95 @@
-# CSS Validation and Testing Plan
+# CSS Validation Testing Plan
 
-## Goals
+## Purpose
 
-- Ensure consistent styling across all migrated components
-- Verify that shadcn/ui components maintain the same visual appearance as original components
-- Confirm proper implementation of design system
-- Validate responsive behavior across various screen sizes
-- Ensure dark mode functionality works correctly
+This plan establishes a systematic approach to validate and correct CSS styling issues throughout the migration process, with a particular focus on proper CSS variable usage and inline style extraction.
+
+## CSS Variable Validation Process
+
+### 1. Inventory Global CSS Variables
+
+- [ ] Document all variables defined in variables.css
+- [ ] Categorize variables by type (colors, spacing, typography, etc.)
+- [ ] Identify any duplicate or redundant variables
+
+### 2. Component CSS Validation
+
+For each component CSS file:
+
+- [ ] Check all CSS variable references against the global inventory
+- [ ] Identify any non-existent variables
+- [ ] Fix incorrect variable names to match global definitions
+- [ ] Document component-specific variables that should be globally defined
+
+### 3. Inline Style Audit
+
+For each React component:
+
+- [ ] Identify all instances of inline styles
+- [ ] Extract inline styles to appropriate component CSS files
+- [ ] Replace hardcoded values with CSS variables where appropriate
+- [ ] Verify style extraction didn't break component functionality
 
 ## Testing Methodology
 
-### 1. Visual Comparison Testing
+### Visual Regression Testing
 
-#### Before & After Screenshots
-- [ ] Capture screenshots of each component before migration
-- [ ] After migration, capture screenshots from the same view
-- [ ] Compare screenshots to identify visual regressions
+- [ ] Capture screenshots before and after CSS changes
+- [ ] Compare visual differences across multiple screen sizes
+- [ ] Verify dark mode appearance maintains consistency
 
-#### Responsive Breakpoint Validation
-- [ ] Test each component at standard breakpoints:
-  - Mobile: 320px, 375px, 425px
-  - Tablet: 768px
-  - Laptop: 1024px
-  - Desktop: 1440px, 1920px
-- [ ] Verify that responsive behavior is maintained or improved
+### Theme Consistency Testing
 
-### 2. Theme Consistency Testing
+- [ ] Test components with different theme settings
+- [ ] Verify color scheme changes are properly applied
+- [ ] Ensure component styling respects global theme variables
 
-#### Light Mode Validation
-- [ ] Verify colors match the design system
-- [ ] Confirm text contrast meets accessibility standards
-- [ ] Validate component shadows and borders
+### CSS Variable Coverage Analysis
 
-#### Dark Mode Validation
-- [ ] Verify dark mode colors are correctly applied
-- [ ] Confirm text contrast meets accessibility standards in dark mode
-- [ ] Validate transition between light and dark modes
+- [ ] Track percentage of hardcoded values vs. CSS variables
+- [ ] Identify components with low CSS variable usage
+- [ ] Prioritize components for further CSS cleanup
 
-### 3. Functionality Testing
+## Documentation
 
-#### Interactive Element Testing
-- [ ] Verify hover, focus, and active states
-- [ ] Confirm click/tap targets are appropriately sized
-- [ ] Test keyboard navigation through components
+### CSS Variable Reference
 
-#### Animation Testing
-- [ ] Verify transitions are smooth and consistent
-- [ ] Confirm animations match original implementation
-- [ ] Test animation performance on lower-end devices
+- [ ] Create a comprehensive reference of all approved CSS variables
+- [ ] Document variable purpose and acceptable values
+- [ ] Provide examples of proper usage
 
-### 4. Accessibility Testing
+### Migration Patterns
 
-#### Screen Reader Compatibility
-- [ ] Test with screen readers to verify accessibility
-- [ ] Confirm proper ARIA attributes are preserved or improved
-- [ ] Verify focus management works correctly
+- [ ] Document common patterns for converting inline styles to CSS
+- [ ] Create examples of proper shadcn/ui styling approaches
+- [ ] Establish best practices for component-specific styling
 
-#### Keyboard Navigation
-- [ ] Ensure all interactive elements are keyboard accessible
-- [ ] Verify logical tab order through the interface
-- [ ] Confirm focus indicators are visible
+## Implementation Steps
 
-## Test Cases by Component Type
+### Immediate Actions
 
-### Layout Components
-- [ ] Verify container sizing and padding
-- [ ] Confirm grid/flex layouts match original
-- [ ] Test responsive behavior at breakpoints
+1. Generate complete inventory of global CSS variables
+2. Create automated tool/script to check variable references
+3. Prioritize components for validation based on complexity and usage
 
-### Input Components
-- [ ] Test all input states (default, focus, disabled, error)
-- [ ] Verify form validation styling
-- [ ] Confirm input padding and sizing
+### Per-Component Process
 
-### Display Components
-- [ ] Verify text formatting and truncation
-- [ ] Test content overflow handling
-- [ ] Confirm image/media display
+1. Run CSS variable validation check
+2. Fix any incorrect variable references
+3. Extract inline styles to component CSS
+4. Test component for visual and functional correctness
+5. Document changes and any special considerations
 
-### Interactive Components
-- [ ] Test all button variants and states
-- [ ] Verify dropdown/menu functionality
-- [ ] Confirm tooltip/popover positioning
+### Continuous Validation
 
-## Documentation Requirements
-
-### Test Documentation
-- [ ] Create test report template for each component
-- [ ] Document before/after screenshots in a central location
-- [ ] Record any style adjustments made during testing
-
-### Style Guide Updates
-- [ ] Update style guide with new component examples
-- [ ] Document theming variables and their usage
-- [ ] Create pattern library of common styling solutions
-
-## Rollout Strategy
-
-### Phased Testing
-1. Test each component individually after migration
-2. Test components together in functional groups
-3. Perform full application testing after migration complete
-
-### Regression Prevention
-- [ ] Create visual regression tests for key components
-- [ ] Document expected behavior for future reference
-- [ ] Establish CSS linting rules to maintain consistency
+1. Add CSS validation to the component migration checklist
+2. Regularly update the CSS variable reference documentation
+3. Review new component additions for proper CSS variable usage
 
 ## Success Criteria
 
-- All components visually match their pre-migration appearance
-- Dark mode functions correctly throughout the application
-- Responsive behavior works at all standard breakpoints
-- No accessibility regressions introduced
-- Code is cleaner, more maintainable, and follows shadcn/ui patterns
-- Design system is consistently applied across all components
+- All CSS files use only valid, existing CSS variables
+- No inline styles in migrated components
+- Consistent naming conventions throughout the codebase
+- Dark mode and theming work correctly across all components
+- Documentation is complete and up-to-date
