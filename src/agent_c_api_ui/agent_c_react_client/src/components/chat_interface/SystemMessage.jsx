@@ -12,19 +12,19 @@ import CopyButton from './CopyButton';
  */
 const SystemMessage = ({ content, isError = false, isCritical = false }) => {
   return (
-    <div className="flex justify-start group">
+    <div className="system-message-row group">
       <div
-        className={`max-w-[80%] rounded-2xl px-4 py-2 shadow-sm ${
+        className={`system-message-bubble ${
           isError
-            ? "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-300 dark:border-red-800"
-            : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600"
+            ? "system-message-bubble-error"
+            : "system-message-bubble-default"
         }`}
       >
-        <div className="flex justify-between items-start gap-4">
-          <div className="prose dark:prose-invert flex-1">
+        <div className="system-message-content">
+          <div className="system-message-body prose dark:prose-invert">
             {isError ? "⛔ Error: " : ""}{content}
             {isCritical && (
-              <div className="mt-1 text-xs text-red-500 dark:text-red-400 font-medium">
+              <div className="system-message-critical">
                 This is a critical error that may require restarting the session.
               </div>
             )}
@@ -36,7 +36,7 @@ const SystemMessage = ({ content, isError = false, isCritical = false }) => {
             position="left"
             variant="ghost"
             size="xs"
-            className="mt-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-gray-500 hover:bg-gray-200"
+            className="system-message-copy-button"
           />
         </div>
       </div>

@@ -33,6 +33,9 @@
 @import './components/drag-drop-overlay.css';
 @import './components/page-header.css';
 @import './components/sidebar.css';
+@import './components/assistant-message.css';
+@import './components/user-message.css';
+@import './components/system-message.css';
 
 /* Import component-styles.css for backwards compatibility */
 @import './component-styles.css';

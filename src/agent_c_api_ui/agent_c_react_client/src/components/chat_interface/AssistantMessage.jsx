@@ -30,25 +30,22 @@ const AssistantMessage = ({
   const toolCallCount = hasToolCalls ? toolCalls.length : 0;
   
   return (
-    <div className="flex flex-col">
-      <div className="flex justify-start items-start gap-2 group">
+    <div className="assistant-message-container">
+      <div className="assistant-message-row group">
         <ModelIcon vendor={vendor} />
-        <div
-          className="max-w-[80%] rounded-2xl px-4 py-2 shadow-sm bg-purple-50 dark:bg-purple-900/10 text-purple-800 dark:text-purple-200 mr-12 rounded-bl-sm border border-purple-200 dark:border-purple-700"
-          style={{ fontFamily: 'Georgia, serif' }}
-        >
-          <div className="flex justify-between items-start gap-4">
-            <div className="prose dark:prose-invert flex-1">
+        <div className="assistant-message-bubble">
+          <div className="assistant-message-content">
+            <div className="assistant-message-body prose dark:prose-invert">
               <MarkdownMessage content={content} />
               
               {/* Footer with token usage and tool call info */}
-              <div className="flex flex-wrap items-center gap-2 mt-2 pt-1 border-t border-purple-100 dark:border-purple-700/50">
+              <div className="assistant-message-footer">
                 {tokenUsage && <TokenUsageDisplay usage={tokenUsage} />}
                 
                 {/* Tool call toggle button - only show if there are tool calls */}
                 {hasToolCalls && (
                   <div 
-                    className="flex items-center gap-1 text-xs py-1 px-2 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/50 transition-colors"
+                    className="assistant-message-tool-toggle"
                     onClick={(e) => {
                       e.stopPropagation();
                       onToggleToolCalls();
@@ -63,7 +60,7 @@ const AssistantMessage = ({
               
               {/* Expanded tool calls - only show if expanded */}
               {hasToolCalls && isToolCallsExpanded && (
-                <div className="mt-3 pt-2 border-t border-purple-100 dark:border-purple-700/50">
+                <div className="assistant-message-tool-calls">
                   <div className="tool-call-content space-y-2">
                     {toolCalls.map((toolCall, toolIdx) => (
                       <ToolCallItem
@@ -87,7 +84,7 @@ const AssistantMessage = ({
               position="left"
               variant="secondary"
               size="xs"
-              className="mt-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="assistant-message-copy-button"
             />
           </div>
         </div>

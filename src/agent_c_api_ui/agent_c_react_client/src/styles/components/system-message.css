@@ -1,0 +1,91 @@
+/* ===== COMPONENT: SystemMessage ===== */
+/* Description: Displays system messages and errors in the chat interface with consistent styling and copy functionality */
+/* File: src/components/chat_interface/SystemMessage.jsx */
+
+/* SystemMessage: Row layout */
+.system-message-row {
+  display: flex;
+  justify-content: flex-start;
+  gap: var(--spacing-2);
+}
+
+/* SystemMessage: Base bubble styling */
+.system-message-bubble {
+  max-width: 80%;
+  border-radius: var(--border-radius-2xl);
+  padding: var(--spacing-4) var(--spacing-4);
+  box-shadow: var(--shadow-sm);
+}
+
+/* SystemMessage: Default (non-error) styling */
+.system-message-bubble-default {
+  background-color: hsl(var(--color-gray-100));
+  color: hsl(var(--color-gray-600));
+  border: var(--border-width-thin) solid hsl(var(--color-gray-200));
+}
+
+/* SystemMessage: Dark mode default styling */
+.dark .system-message-bubble-default {
+  background-color: hsl(var(--color-gray-700));
+  color: hsl(var(--color-gray-300));
+  border-color: hsl(var(--color-gray-600));
+}
+
+/* SystemMessage: Error styling */
+.system-message-bubble-error {
+  background-color: hsl(var(--color-red-100));
+  color: hsl(var(--color-red-800));
+  border: var(--border-width-thin) solid hsl(var(--color-red-300));
+}
+
+/* SystemMessage: Dark mode error styling */
+.dark .system-message-bubble-error {
+  background-color: hsl(var(--color-red-900) / 0.3);
+  color: hsl(var(--color-red-300));
+  border-color: hsl(var(--color-red-800));
+}
+
+/* SystemMessage: Inner content layout */
+.system-message-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-4);
+}
+
+/* SystemMessage: Message body */
+.system-message-body {
+  flex: 1;
+}
+
+/* SystemMessage: Critical error message */
+.system-message-critical {
+  margin-top: var(--spacing-1);
+  font-size: var(--font-size-xs);
+  color: hsl(var(--color-red-500));
+  font-weight: var(--font-weight-medium);
+}
+
+/* SystemMessage: Dark mode critical message */
+.dark .system-message-critical {
+  color: hsl(var(--color-red-400));
+}
+
+/* SystemMessage: Copy button */
+.system-message-copy-button {
+  margin-top: var(--spacing-1);
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity var(--transition-hover);
+  color: hsl(var(--color-gray-500));
+}
+
+/* SystemMessage: Copy button hover */
+.system-message-copy-button:hover {
+  background-color: hsl(var(--color-gray-200));
+}
+
+/* SystemMessage: Show copy button on hover */
+.system-message-row:hover .system-message-copy-button {
+  opacity: 1;
+}
