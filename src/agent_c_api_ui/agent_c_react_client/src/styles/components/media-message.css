@@ -31,20 +31,20 @@
   justify-content: space-between;
   padding: var(--spacing-3) var(--spacing-4); /* px-4 py-3 */
   cursor: pointer;
-  background-color: hsla(var(--color-amber-50), 0.8); /* bg-amber-50/80 */
+  background-color: hsl(var(--color-amber-50) / 0.8); /* bg-amber-50/80 */
   transition: background-color var(--transition-hover);
 }
 
 .media-message-header:hover {
-  background-color: hsla(var(--color-amber-100), 0.9); /* bg-amber-100/90 */
+  background-color: hsl(var(--color-amber-100) / 0.9); /* bg-amber-100/90 */
 }
 
 .dark .media-message-header {
-  background-color: hsla(var(--color-amber-900), 0.2); /* bg-amber-900/20 */
+  background-color: hsl(var(--color-amber-900) / 0.2); /* bg-amber-900/20 */
 }
 
 .dark .media-message-header:hover {
-  background-color: hsla(var(--color-amber-900), 0.3); /* bg-amber-900/30 */
+  background-color: hsl(var(--color-amber-900) / 0.3); /* bg-amber-900/30 */
 }
 
 /* MediaMessage: Header content area */
@@ -89,7 +89,7 @@
 
 .media-message-copy-button:hover {
   color: hsl(var(--color-amber-800)); /* text-amber-800 */
-  background-color: hsla(var(--color-amber-100), 0.9); /* bg-amber-100/90 */
+  background-color: hsl(var(--color-amber-100) / 0.9); /* bg-amber-100/90 */
 }
 
 .dark .media-message-copy-button {
@@ -98,7 +98,7 @@
 
 .dark .media-message-copy-button:hover {
   color: hsl(var(--color-amber-300)); /* text-amber-300 */
-  background-color: hsla(var(--color-amber-900), 0.3); /* bg-amber-900/30 */
+  background-color: hsl(var(--color-amber-900) / 0.3); /* bg-amber-900/30 */
 }
 
 /* MediaMessage: Expand/collapse icon */
@@ -126,7 +126,7 @@
 }
 
 .dark .media-message-content {
-  border-color: hsla(var(--color-amber-900), 0.3); /* border-amber-900/30 */
+  border-color: hsl(var(--color-amber-900) / 0.3); /* border-amber-900/30 */
 }
 
 /* MediaMessage: Content wrapper */
@@ -147,7 +147,7 @@
   right: var(--spacing-2); /* right-2 */
   padding: var(--spacing-1); /* p-1 */
   border-radius: var(--border-radius-lg); /* rounded-lg */
-  background-color: hsla(var(--color-background), 0.8); /* bg-background/80 */
+  background-color: hsl(var(--color-background) / 0.8); /* bg-background/80 */
   box-shadow: var(--shadow-sm);
   transition: background-color var(--transition-hover);
 }
@@ -259,7 +259,7 @@
 }
 
 .dark .media-message-metadata {
-  border-color: hsla(var(--color-amber-900), 0.3); /* border-amber-900/30 */
+  border-color: hsl(var(--color-amber-900) / 0.3); /* border-amber-900/30 */
   color: hsl(var(--color-amber-400)); /* text-amber-400 */
 }
 
