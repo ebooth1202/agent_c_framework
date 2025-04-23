@@ -2,34 +2,8 @@
 /* Description: Global CSS variables for consistent styling across the application */
 
 :root {
-  /* Colors - Base */
-  --color-primary: 211 96% 62%;
-  --color-primary-foreground: 0 0% 100%;
-  
-  --color-secondary: 217 91% 60%;
-  --color-secondary-foreground: 0 0% 100%;
-  
-  --color-accent: 250 95% 76%;
-  --color-accent-foreground: 0 0% 100%;
-  
-  --color-background: 224 71% 4%;
-  --color-foreground: 0 0% 100%;
-  
-  /* Colors - UI Elements */
-  --color-card: 222 47% 11%;
-  --color-card-foreground: 0 0% 100%;
-  
-  --color-popover: 222 47% 11%;
-  --color-popover-foreground: 0 0% 100%;
-  
-  --color-border: 217 33% 17%;
-  --color-input: 217 33% 17%;
-  
-  /* Colors - State */
-  --color-success: 142 71% 45%;
-  --color-warning: 38 92% 50%;
-  --color-error: 0 84% 60%;
-  --color-info: 211 96% 62%;
+  /* ===== COLOR SCALES - Available in both themes ===== */
+  /* These are base HSL values that don't change between themes */
   
   /* Colors - Gray Scale */
   --color-gray-50: 210 40% 98%;
@@ -91,6 +65,77 @@
   --color-amber-700: 26 90% 37%;
   --color-amber-800: 23 83% 31%;
   --color-amber-900: 22 78% 26%;
+
+  /* ===== THEME COLORS - Light Mode Default ===== */
+  /* These are semantic color names with light mode values by default */
+  
+  /* Base theme colors - Light Mode */
+  --theme-background: var(--color-gray-50);
+  --theme-foreground: var(--color-gray-900);
+  
+  --theme-card: white;
+  --theme-card-foreground: var(--color-gray-900);
+  
+  --theme-popover: white;
+  --theme-popover-foreground: var(--color-gray-900);
+  
+  --theme-primary: var(--color-blue-600);
+  --theme-primary-foreground: white;
+  
+  --theme-secondary: var(--color-blue-100);
+  --theme-secondary-foreground: var(--color-blue-800);
+  
+  --theme-muted: var(--color-gray-100);
+  --theme-muted-foreground: var(--color-gray-600);
+  
+  --theme-accent: var(--color-purple-100);
+  --theme-accent-foreground: var(--color-purple-800);
+  
+  --theme-border: var(--color-gray-200);
+  --theme-input: var(--color-gray-300);
+  
+  /* State colors - Light Mode */
+  --theme-success: var(--color-green-600);
+  --theme-success-background: var(--color-green-100);
+  --theme-success-foreground: white;
+  
+  --theme-warning: var(--color-amber-600);
+  --theme-warning-background: var(--color-amber-100);
+  --theme-warning-foreground: white;
+  
+  --theme-error: hsl(0 84% 60%);
+  --theme-error-background: hsl(0 84% 90%);
+  --theme-error-foreground: white;
+  
+  --theme-info: var(--color-blue-600);
+  --theme-info-background: var(--color-blue-100);
+  --theme-info-foreground: white;
+  
+  /* Component-specific colors - Light Mode */
+  --theme-thought-background: hsl(var(--color-gray-200));
+  --theme-thought-foreground: hsl(var(--color-gray-800));
+  --theme-thought-border: hsl(var(--color-amber-300));
+  --theme-thought-inline-code-bg: hsl(var(--color-purple-100));
+  --theme-thought-inline-code-fg: hsl(var(--color-purple-800));
+  
+  --theme-tool-call-background: white;
+  --theme-tool-call-border: hsl(212 96% 78%);
+  --theme-tool-call-header-background: hsl(214 95% 93%);
+  --theme-tool-call-header-hover: hsl(213 97% 87%);
+  --theme-tool-call-title: hsl(224 76% 48%);
+  --theme-tool-call-icon: hsl(221 83% 53%);
+  
+  --theme-user-message-background: rgb(0, 119, 182);
+  --theme-user-message-foreground: rgb(33, 37, 41);
+  --theme-user-message-border: hsl(213 97% 87%);
+  
+  --theme-assistant-message-background: hsl(var(--color-blue-50));
+  --theme-assistant-message-foreground: hsl(var(--color-gray-800));
+  --theme-assistant-message-border: hsl(var(--color-blue-200));
+  
+  --theme-system-message-background: hsl(214 32% 91%);
+  --theme-system-message-foreground: hsl(215 28% 17%);
+  --theme-system-message-border: hsl(212 10% 83%);
   
   /* Typography */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
@@ -170,8 +215,8 @@
   /* Card Components */
   --card-padding-x: var(--spacing-4);
   --card-padding-y: var(--spacing-3);
-  --card-background: white;
-  --card-border-color: hsl(var(--color-border) / 0.2);
+  --card-background: var(--theme-card);
+  --card-border-color: hsl(var(--theme-border) / 0.2);
   --card-border-radius: var(--border-radius-lg);
   --card-shadow: var(--shadow-md);
   
@@ -190,4 +235,76 @@
   --badge-padding-y: 0.25rem;  /* 4px */
   --badge-font-size: var(--font-size-xs);
   --badge-border-radius: var(--border-radius-full);
+}
+
+/* ===== DARK THEME OVERRIDES ===== */
+/* Dark mode theme colors - Override light mode defaults */
+.dark {
+  /* Base theme colors - Dark Mode */
+  --theme-background: var(--color-gray-950);
+  --theme-foreground: white;
+  
+  --theme-card: var(--color-gray-900);
+  --theme-card-foreground: white;
+  
+  --theme-popover: var(--color-gray-900);
+  --theme-popover-foreground: white;
+  
+  --theme-primary: var(--color-blue-400);
+  --theme-primary-foreground: var(--color-gray-950);
+  
+  --theme-secondary: var(--color-gray-800);
+  --theme-secondary-foreground: var(--color-gray-100);
+  
+  --theme-muted: var(--color-gray-800);
+  --theme-muted-foreground: var(--color-gray-400);
+  
+  --theme-accent: var(--color-purple-800);
+  --theme-accent-foreground: var(--color-purple-200);
+  
+  --theme-border: var(--color-gray-700);
+  --theme-input: var(--color-gray-700);
+  
+  /* State colors - Dark Mode */
+  --theme-success: var(--color-green-400);
+  --theme-success-background: var(--color-green-900);
+  --theme-success-foreground: var(--color-gray-950);
+  
+  --theme-warning: var(--color-amber-400);
+  --theme-warning-background: var(--color-amber-900);
+  --theme-warning-foreground: var(--color-gray-950);
+  
+  --theme-error: hsl(0 84% 60%);
+  --theme-error-background: hsl(0 84% 20%);
+  --theme-error-foreground: var(--color-gray-950);
+  
+  --theme-info: var(--color-blue-400);
+  --theme-info-background: var(--color-blue-900);
+  --theme-info-foreground: var(--color-gray-950);
+  
+  /* Component-specific colors - Dark Mode */
+  --theme-thought-background: hsl(215 28% 17%);
+  --theme-thought-foreground: hsl(48 97% 77%);
+  --theme-thought-border: hsl(23 83% 31%);
+  --theme-thought-inline-code-bg: hsl(var(--color-purple-800) / 0.3);
+  --theme-thought-inline-code-fg: hsl(var(--color-purple-200));
+  
+  --theme-tool-call-background: hsl(215 28% 17%);
+  --theme-tool-call-border: hsl(224 76% 48%);
+  --theme-tool-call-header-background: hsl(226 71% 40% / 0.5);
+  --theme-tool-call-header-hover: hsl(224 76% 48% / 0.6);
+  --theme-tool-call-title: hsl(212 96% 78%);
+  --theme-tool-call-icon: hsl(213 94% 68%);
+  
+  --theme-user-message-background: hsl(215 28% 17%);
+  --theme-user-message-foreground: hsl(214 32% 91%);
+  --theme-user-message-border: hsl(226 71% 40%);
+  
+  --theme-assistant-message-background: hsl(215 28% 17%);
+  --theme-assistant-message-foreground: hsl(214 32% 91%);
+  --theme-assistant-message-border: hsl(273 67% 39%);
+  
+  --theme-system-message-background: hsl(215 28% 17%);
+  --theme-system-message-foreground: hsl(214 32% 91%);
+  --theme-system-message-border: hsl(217 19% 27%);
 }

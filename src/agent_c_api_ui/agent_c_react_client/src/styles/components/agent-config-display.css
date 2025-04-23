@@ -11,26 +11,26 @@
 
 /* AgentConfigDisplay: Loading state styling */
 .agent-config-loading {
-  color: hsl(var(--color-gray-400));
+  color: var(--color-gray-400);
 }
 
 /* AgentConfigDisplay: Loading icon */
 .agent-config-loading-icon {
   width: 1rem;
   height: 1rem;
-  color: hsl(var(--color-gray-400));
+  color: var(--color-gray-400);
 }
 
 /* AgentConfigDisplay: Loading text */
 .agent-config-loading-text {
   margin-left: var(--spacing-1);
   font-size: var(--font-size-sm);
-  color: hsl(var(--color-gray-400));
+  color: var(--color-gray-400);
 }
 
 /* AgentConfigDisplay: Loaded state styling */
 .agent-config-loaded {
-  color: hsl(var(--color-blue-500));
+  color: var(--color-blue-500);
 }
 
 /* AgentConfigDisplay: Loaded icon */

@@ -9,17 +9,10 @@
   border-radius: var(--border-radius-2xl);
   padding: var(--spacing-3) var(--spacing-4);
   box-shadow: var(--shadow-sm);
-  background-color: hsl(var(--color-amber-50));
-  color: hsl(var(--color-amber-700));
-  border: var(--border-width-thin) solid hsl(var(--color-amber-200));
+  background-color: var(--theme-thought-background);
+  color: var(--theme-thought-foreground);
+  border: var(--border-width-thin) solid var(--theme-thought-border);
   border-bottom-left-radius: var(--border-radius-sm);
-}
-
-/* ThoughtDisplay: Dark theme container styles */
-.dark .thought-container {
-  background-color: hsl(var(--color-gray-800));
-  color: hsl(var(--color-amber-200));
-  border-color: hsl(var(--color-amber-800));
 }
 
 /* ThoughtDisplay: Base styles for thought display content area */
@@ -33,14 +26,9 @@
   flex: 1;
 }
 
-/* ThoughtDisplay: Light theme scrollbar colors */
-.thought-display-content-light {
-  scrollbar-color: hsl(var(--color-amber-600)) hsl(var(--color-amber-100));
-}
-
-/* ThoughtDisplay: Dark theme scrollbar colors */
-.thought-display-content-dark {
-  scrollbar-color: hsl(var(--color-amber-900)) hsl(var(--color-amber-950));
+/* ThoughtDisplay: Scrollbar colors (using theme variables) */
+.thought-display-content {
+  scrollbar-color: var(--theme-thought-border) var(--theme-thought-background);
 }
 
 /* ThoughtDisplay: For WebKit browsers (Chrome, Safari, newer Edge) */
@@ -48,18 +36,31 @@
   width: 8px;
 }
 
-.thought-display-content-light::-webkit-scrollbar-thumb {
-  background-color: hsl(var(--color-amber-600));
+.thought-display-content::-webkit-scrollbar-thumb {
+  background-color: var(--theme-thought-border);
 }
 
-.thought-display-content-light::-webkit-scrollbar-track {
-  background-color: hsl(var(--color-amber-100));
+.thought-display-content::-webkit-scrollbar-track {
+  background-color: var(--theme-thought-background);
 }
 
-.thought-display-content-dark::-webkit-scrollbar-thumb {
-  background-color: hsl(var(--color-amber-900));
+/* ThoughtDisplay: Light and dark mode specific styles */
+.thought-display-content-light {
+  background-color: var(--theme-thought-background);
+  color: var(--theme-thought-foreground);
 }
 
-.thought-display-content-dark::-webkit-scrollbar-track {
-  background-color: hsl(var(--color-amber-950));
+.thought-display-content-dark {
+  background-color: var(--theme-thought-background);
+  color: var(--theme-thought-foreground);
+}
+
+.thought-display-content-light code.markdown-inline-code {
+  background-color: var(--theme-thought-inline-code-bg);
+  color: var(--theme-thought-inline-code-fg);
+}
+
+.thought-display-content-dark code.markdown-inline-code {
+  background-color: var(--theme-thought-inline-code-bg);
+  color: var(--theme-thought-inline-code-fg);
 }
