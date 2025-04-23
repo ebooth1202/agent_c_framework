@@ -31,14 +31,6 @@ Each component CSS file should begin with a standardized header in one of two ap
 /* Description: Brief description of component purpose and functionality */
 ```
 
-### Alternative Format
-
-```css
-/* ==============================
-   ComponentName Component Styles
-   ============================== */
-```
-
 ## Section Documentation
 
 Within the CSS file, styles should be grouped into logical sections with clear comment headers:

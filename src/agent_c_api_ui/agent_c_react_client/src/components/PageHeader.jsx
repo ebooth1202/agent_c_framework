@@ -1,4 +1,7 @@
 import React from 'react';
+import { Card, CardHeader, CardTitle, CardDescription } from './ui/card';
+import { Separator } from './ui/separator';
+import { cn } from "@/lib/utils";
 
 /**
  * Reusable page header component
@@ -17,20 +20,25 @@ const PageHeader = ({
   className = ''
 }) => {
   return (
-    <div className={`page-header ${className}`}>
-      <div className="page-header-content">
-        <div className="page-header-text">
-          <h1 className="page-header-title">{title}</h1>
-          {description && (
-            <p className="page-header-description">{description}</p>
-          )}
-        </div>
-        {actions && (
-          <div className="page-header-actions">
-            {actions}
+    <div className={cn("page-header", className)}>
+      <Card className="bg-transparent border-0 shadow-none">
+        <CardHeader className="p-0 space-y-0">
+          <div className="page-header-content">
+            <div className="page-header-text">
+              <CardTitle className="page-header-title">{title}</CardTitle>
+              {description && (
+                <CardDescription className="page-header-description">{description}</CardDescription>
+              )}
+            </div>
+            {actions && (
+              <div className="page-header-actions">
+                {actions}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </CardHeader>
+      </Card>
+      <Separator className="mt-4" />
     </div>
   );
 };
