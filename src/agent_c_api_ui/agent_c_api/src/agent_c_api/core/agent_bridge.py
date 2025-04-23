@@ -934,15 +934,30 @@ class AgentBridge:
                         yield content
                         queue.task_done()
                     except asyncio.TimeoutError:
-                        self.logger.warning(f"Timeout waiting for stream content {timeout} seconds, terminating stream")
+                        timeout_msg =f"Timeout waiting for stream content to occur in agent_bridge.py:stream_chat. Waiting for stream surpassed {timeout} seconds, terminating stream."
+                        self.logger.warning(timeout_msg)
+                        yield json.dumps({
+                            "type": "error",
+                            "data": timeout_msg
+                        }) + "\n"
                         break
-                    except asyncio.CancelledError:
-                        self.logger.info("Stream was cancelled")
+                    except asyncio.CancelledError as e:
+                        error_type = type(e).__name__
+                        error_traceback = traceback.format_exc()
+                        cancelled_msg = f"Asyncio Cancelled error in agent_bridge.py:stream_chat {error_type}: {str(e)}\n{error_traceback}"
+                        self.logger.error(cancelled_msg)
+                        yield json.dumps({
+                            "type": "error",
+                            "data": cancelled_msg
+                        }) + "\n"
                         break
                 except Exception as e:
-                    self.logger.error(f"Unexpected error in stream processing: {str(e)}")
+                    error_type = type(e).__name__
+                    error_traceback = traceback.format_exc()
+                    unexpected_msg = f"Unexpected error in stream processing: {error_type}: {str(e)}\n{error_traceback}"
+                    self.logger.error(unexpected_msg)
                     # Yield error message and break
-                    yield json.dumps({"type": "error", "data": f"Stream processing error: {str(e)}"}) + "\n"
+                    yield json.dumps({"type": "error", "data": unexpected_msg}) + "\n"
                     break
 
             await chat_task
