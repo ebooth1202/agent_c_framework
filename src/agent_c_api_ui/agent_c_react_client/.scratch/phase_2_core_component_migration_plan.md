@@ -9,25 +9,36 @@
 
 ## Components to Migrate
 
-1. **Sidebar.jsx**
+1. **MarkdownMessage.jsx**
+   - Estimated complexity: Medium
+   - shadcn/ui components used: Card, ScrollArea, Separator
+   - Special considerations: Used in multiple contexts (regular messages, thought display)
+   - Migration plan: //ui/.scratch/markdown_message_migration_plan.md
+   - Status: 🟢 IMPLEMENTED (Pending Testing)
+
+2. **Sidebar.jsx**
    - Estimated complexity: Medium
    - shadcn/ui components needed: ScrollArea, Sheet (for mobile)
    - Special considerations: Mobile/desktop variants
+   - Status: ⚠️ NOT USED - DO NOT MIGRATE
 
-2. **PageHeader.jsx**
+3. **PageHeader.jsx**
    - Estimated complexity: Low
    - shadcn/ui components needed: None (just Tailwind)
    - Special considerations: Responsive layout
+   - Status: ✅ MIGRATED BUT NOT USED
 
-3. **Layout.jsx**
+4. **Layout.jsx**
    - Estimated complexity: Medium
    - shadcn/ui components needed: Card (for content container)
    - Special considerations: Integration with Sidebar and PageHeader
+   - Status: ✅ COMPLETED
 
-4. **MobileNav.jsx**
+5. **MobileNav.jsx**
    - Estimated complexity: Medium
    - shadcn/ui components needed: Sheet, Button
    - Special considerations: Animation and interaction
+   - Status: ⚠️ NOT USED - DO NOT MIGRATE
 
 ## Migration Steps for Each Component
 

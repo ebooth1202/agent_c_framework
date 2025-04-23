@@ -17,6 +17,7 @@ class WorkspaceSection(PromptSection):
                     "               Use `read_lines` to read a portion of a file\n"
                     "- **Writing**: Use `write` for creating or replacing files; parent directories are created automatically\n"
                     "- **Appending**: Use `write` with the optional `mode` parameter set to `append`\n"
+                    "= **Searching**: Use `grep` to search for patterns in files.  This uses the same syntax as the grep CLI.\n"
                     "- **Navigation**: Use `tree` for broader holistic views. Us `ls` to list a specific directory contents\n"
                     "- **File Management**: Use `cp` to copy and `mv` to move files or directories\n"
                     "  - Both source and destination must be in the same workspace\n"    

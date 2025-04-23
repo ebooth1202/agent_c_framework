@@ -26,6 +26,7 @@
   padding: var(--spacing-2) 3rem var(--spacing-2) var(--spacing-3);
   resize: none;
   color: hsl(var(--color-foreground));
+  min-height: initial;
 }
 
 /* ChatInputArea: Textarea dark mode */

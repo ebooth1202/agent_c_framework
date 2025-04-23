@@ -1,4 +1,5 @@
 import React from 'react';
+import { cn } from "@/lib/utils";
 import {
     Collapsible,
     CollapsibleContent,
@@ -33,6 +34,7 @@ import ToolSelector from './ToolSelector';
  * @param {string} props.selectedModel - Selected model identifier
  * @param {Function} props.onUpdateSettings - Settings update callback
  * @param {boolean} props.isInitialized - Component initialization state
+ * @param {string} props.className - Optional additional CSS class names
  *
  * @returns {React.ReactElement} A collapsible options panel component
  */
@@ -53,32 +55,33 @@ const CollapsibleOptions = ({
                                 modelParameters,
                                 selectedModel,
                                 onUpdateSettings,
-                                isInitialized
+                                isInitialized,
+                                className
                             }) => {
     return (
-        <Card className="w-full mb-2 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border dark:border-gray-700 shadow-sm">
+        <Card className={cn("collapsible-options-card", className)}>
             <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-                <div className="py-2 px-3 flex items-center justify-between">
-                    <h2 className="text-base font-medium text-gray-900 dark:text-gray-100">Options Panel</h2>
+                <div className="collapsible-options-header">
+                    <h2 className="collapsible-options-title">Options Panel</h2>
                     <CollapsibleTrigger asChild>
                         <Button variant="ghost" size="sm" className="w-9 p-0">
                             {isOpen ? <ChevronUp className="h-4 w-4"/> : <ChevronDown className="h-4 w-4"/>}
                         </Button>
                     </CollapsibleTrigger>
                 </div>
-                <CollapsibleContent className="px-4 pb-4">
-                    <Tabs defaultValue="settings" className="w-full">
-                        <TabsList className="w-full mb-4 border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800/70 p-1 rounded-md shadow-sm">
+                <CollapsibleContent className="collapsible-options-content">
+                    <Tabs defaultValue="settings" className="collapsible-options-tabs">
+                        <TabsList className="collapsible-options-tabs-list">
                             <TabsTrigger 
                                 value="settings" 
-                                className="flex items-center gap-1 w-1/2 font-medium data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow"
+                                className="collapsible-options-tab-trigger"
                             >
                                 <Settings className="h-4 w-4" />
                                 <span>Settings</span>
                             </TabsTrigger>
                             <TabsTrigger 
                                 value="tools" 
-                                className="flex items-center gap-1 w-1/2 font-medium data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow"
+                                className="collapsible-options-tab-trigger"
                             >
                                 <Wrench className="h-4 w-4" />
                                 <span>Tools</span>

@@ -140,7 +140,7 @@ class ClaudeChatAgent(BaseAgent):
                         return result
 
                     messages = result
-                except (APITimeoutError, RateLimitError, OverloadedError) as e:
+                except (APITimeoutError, RateLimitError) as e:
                     # Exponential backoff handled in a helper method
                     delay = await self._handle_retryable_error(e, delay, callback_opts)
                 except Exception as e:

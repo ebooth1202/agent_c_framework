@@ -56,26 +56,58 @@ Changes:
 ## Planned Migrations
 
 ### 4. ChatInputArea
-Status: 📝 PLANNED
-Notes:
-- Replace textarea with shadcn/ui Textarea component
-- Enhance button interactions
+Status: ✅ COMPLETED
+Date: 2025-04-23
+Validation steps completed:
+- [x] Inspect for inline styles
+- [x] Validated CSS file structure
+- [x] Validated CSS variables
+- [x] Identified shadcn/ui replacement components
+Changes:
+- Replaced standard textarea with shadcn/ui Textarea component
+- Maintained existing Button components from shadcn/ui
+- Added min-height: initial to CSS to ensure proper sizing
+- Preserved all existing styling and functionality
+- Ensured dark mode compatibility
 
 ### 5. CollapsibleOptions
-Status: 📝 PLANNED
-Notes:
-- Could use Collapsible component from shadcn/ui
-- Enhance form controls with shadcn/ui components
+Status: ✅ COMPLETED
+Date: 2025-04-23
+Validation steps completed:
+- [x] Inspect for inline styles
+- [x] Created dedicated component CSS file
+- [x] Validated CSS variables
+- [x] Identified shadcn/ui replacement components
+Changes:
+- Extracted inline styles to collapsible-options.css
+- Created semantic CSS classes for component elements
+- Improved classNames management with cn() utility
+- Added className prop for customization from parent components
+- Used theme CSS variables for colors and styling
+- Maintained existing Collapsible, Tabs components from shadcn/ui
+- Ensured dark mode compatibility
 
 ### 6. AgentConfigDisplay
-Status: 📝 PLANNED
+Status: ⚠️ NOT USED - DO NOT MIGRATE
 Notes:
-- Potential for Card, Hover components
+- After verification, this component appears to be superseded by AgentConfigHoverCard
+- AgentConfigHoverCard already uses shadcn/ui components (Card, HoverCard, Badge)
 
 ### 7. MarkdownMessage
-Status: 📝 PLANNED
-Notes:
-- Potential for Card component enhancement
+Status: 🟢 IMPLEMENTED (Pending Testing)
+Date: 2025-04-23
+Validation steps completed:
+- [x] Inspect for inline styles
+- [x] Validated CSS file structure
+- [x] Validated CSS variables
+- [x] Identified shadcn/ui replacement components
+Changes:
+- Replaced container div with Card component
+- Added ScrollArea for code blocks
+- Replaced horizontal rules with Separator component
+- Updated CSS to be compatible with shadcn/ui components
+- Maintained all existing functionality and visual appearance
+- Ensured dark mode compatibility
 
 ## Not Currently Used (Lower Priority)
 

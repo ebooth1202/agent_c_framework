@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
 import { Send, Upload, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 /**
  * ChatInputArea component provides a styled input area for the chat interface
@@ -45,13 +46,13 @@ const ChatInputArea = ({
       
       {/* Text input with action buttons */}
       <div className="chat-input-wrapper relative flex-1">
-        <textarea
+        <Textarea
           placeholder="Type your message..."
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={handleKeyPress}
           disabled={isStreaming}
-          rows="2"
+          rows={2}
           className="chat-input-textarea"
         />
         

@@ -1,3 +1,4 @@
+import asyncio
 import os
 import json
 import base64
@@ -6,7 +7,7 @@ import logging
 import functools
 
 from pathlib import Path
-from typing import Optional, Union, Tuple, Callable, TypeVar
+from typing import Optional, Union, Tuple, Callable, TypeVar, List, Dict
 
 from agent_c.util.token_counter import TokenCounter
 from agent_c_tools.tools.workspace.base import BaseWorkspace
@@ -365,5 +366,98 @@ class LocalStorageWorkspace(BaseWorkspace):
             self.logger.exception(f"Failed to {operation}.")
             return self._error_response(error_msg)
 
+    async def grep(self,
+            pattern: str,
+            file_paths: Union[str, List[str]],
+            ignore_case: bool = False,
+            recursive: bool = False
+    ) -> str:
+        """
+        Execute grep command asynchronously with line numbers for pattern matching in files.
+
+        Args:
+            pattern: Regular expression pattern to search for
+            file_paths: Single file path or list of file paths to search
+            ignore_case: Whether to ignore case in pattern matching
+            recursive: Whether to search directories recursively
+            include_filename: Whether to include filename in output
+
+        Returns:
+            String containing the grep output with line numbers
+        """
+        # Convert single file path to list
+        if isinstance(file_paths, str):
+            file_paths = [file_paths]
+
+        actual_paths = []
+        invalid_paths = []
+        for file_path in file_paths:
+            valid, error_msg, full_path = self._validate_path(file_path)
+            if valid:
+                actual_paths.append(str(full_path))
+            else:
+                invalid_paths.append(str(file_path))
+
+        # Base command with line numbers always enabled
+        cmd = ["grep", "-n"]
+
+        # Add optional flags
+        if ignore_case:
+            cmd.append("-i")
+
+        if recursive:
+            if self.allow_symlinks:
+                cmd.append("-R")
+            else:
+                cmd.append("-r")
+
+        # Add pattern and files
+        cmd.append(pattern)
+        cmd.extend(actual_paths)
+
+        print(" ".join(cmd))
+
+        try:
+            # Create subprocess
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+
+            # Wait for the subprocess to complete and get stdout/stderr
+            stdout_bytes, stderr_bytes = await process.communicate()
+            stdout = stdout_bytes.decode('utf-8').replace("\\", "/")
+            stderr = stderr_bytes.decode('utf-8')
+            if process.returncode > 1:
+                return f"Error executing grep: {stderr}"
+            root_path = str(self.workspace_root).replace("\\", "/")
+            file_map: Dict[str, List[str]] = {}
+            stdout_lines = stdout.split("\n")
+            for raw_line in [line.replace(root_path, f"//{self.name}")  for line in stdout_lines]:
+                if len(raw_line) and ":" in raw_line:
+                    try:
+                        path, line, rest = raw_line.split(":", 2)
+                    except ValueError as e:
+                        line, rest = raw_line.split(":", 1)
+                        path = f"//{self.name} single file"
+
+                    if path not in file_map:
+                        file_map[path] = []
+
+                    file_map[path].append(f"  - {line}: {rest}")
+
+            result: str = ""
+            if len(invalid_paths):
+                result += f"Invalid paths: {', '.join(invalid_paths)}\n\n"
+
+            for path, lines in file_map.items():
+                result += f"File: {path}\n"
+                result += "\n".join(lines)
+                result += "\n\n"
+
+            return result
+        except Exception as e:
+            return f"Exception occurred: {str(e)}"
 
 from agent_c_tools.tools.workspace.local_project import LocalProjectWorkspace  # noqa

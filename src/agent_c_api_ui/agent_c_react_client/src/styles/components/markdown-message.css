@@ -8,11 +8,15 @@
   gap: var(--spacing-2);
   align-items: flex-start;
   /* Preserve Tailwind prose classes via direct reference */
+  /* No border by default as shadcn/ui Card provides this */
+  border: none;
+  position: relative;
 }
 
 /* MarkdownMessage: Markdown content wrapper */
 .markdown-content {
   flex: 1;
+  padding: var(--spacing-3);
 }
 
 /* MarkdownMessage: Heading styles */
@@ -145,6 +149,9 @@
 
 /* MarkdownMessage: Copy button container */
 .markdown-copy-button-container {
+  position: absolute;
+  top: var(--spacing-2);
+  right: var(--spacing-2);
   flex-shrink: 0;
   opacity: 0;
   transition: opacity var(--transition-hover);

@@ -1,8 +1,9 @@
 import json
 import logging
 import re
-from typing import Any, List, Tuple, Optional
+from typing import Any, List, Tuple, Optional, Union
 from ts_tool import api
+from win32cryptcon import CERT_REGISTRY_STORE_REMOTE_FLAG
 
 from agent_c.toolsets.tool_set import Toolset
 from agent_c.toolsets.json_schema import json_schema
@@ -115,7 +116,7 @@ class WorkspaceTools(Toolset):
         """
         unc_path = kwargs.get('path', '')
 
-        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
+        error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
         if error:
             return json.dumps({'error': error})
 
@@ -241,7 +242,7 @@ class WorkspaceTools(Toolset):
             str: JSON string with a success message or an error message.
         """
 
-        error, workspace, relative_path = self._validate_and_get_workspace_path(path)
+        error, workspace, relative_path = self.validate_and_get_workspace_path(path)
         if error:
             return json.dumps({'error': error})
 
@@ -556,98 +557,73 @@ class WorkspaceTools(Toolset):
         return context
 
     @json_schema(
-        'Find strings in a file using exact match or regex pattern',
+        'Run `grep -n`  over files in workspaces using UNC-style paths',
         {
-            'path': {
-                'type': 'string',
-                'description': 'UNC-style path (//WORKSPACE/path) to the file to search in',
+            'paths': {
+                "type": "array",
+                "items": {
+                    "type": "number"
+                },
+                'description': 'UNC-style paths (//WORKSPACE/path) to grep, wildcards ARE supported',
                 'required': True
             },
-            'search_string': {
+            'pattern': {
                 'type': 'string',
-                'description': 'The string or pattern to search for',
+                'description': 'Grep pattern to search for',
                 'required': True
             },
-            'use_regex': {
+            'ignore_case': {
                 'type': 'boolean',
-                'description': 'Whether to treat the search string as a regex pattern. False the the default',
+                'description': 'Set to true to ignore case',
                 'required': False
             },
-            'max_results': {
-                'type': 'integer',
-                'description': 'Maximum number of results to return (0 for all matches) 0 is the default',
+            'recursive': {
+                'type': 'boolean',
+                'description': 'Set to true to recursively search subdirectories',
                 'required': False
             }
         }
     )
-    async def find_strings(self, **kwargs: Any) -> str:
-        """Finds strings in a file using exact match or regex pattern.
+    async def grep(self, **kwargs: Any) -> str:
+        unc_paths = kwargs.get('paths', '')
+        pattern = kwargs.get('pattern', '')
+        ignore_case = kwargs.get('ignore_case', False)
+        recursive = kwargs.get('recursive', False)
+        errors = []
+        queue = {}
+        results = []
+        for punc_path in unc_paths:
+            error, workspace, relative_path = self.validate_and_get_workspace_path(punc_path)
+            if error:
+                errors.append(f"Error processing path {punc_path}: {error}")
+                continue
+            if workspace not in queue:
+                queue[workspace] = []
 
-        Args:
-            path (str): UNC-style path (//WORKSPACE/path) to the file to search in
-            search_string (str): The string or pattern to search for
-            use_regex (bool, optional): Whether to treat the search string as a regex pattern
-            max_results (int, optional): Maximum number of results to return (0 for all matches)
+            queue[workspace].append(relative_path)
 
-        Returns:
-            str: Multi-line string with line numbers and matching lines or an error message.
-        """
-        unc_path = kwargs.get('path', '')
-        search_string = kwargs.get('search_string', '')
-        use_regex = kwargs.get('use_regex', False)
-        max_results = kwargs.get('max_results', 0)
+            if not pattern:
+                return json.dumps({'error': '`pattern` cannot be empty'})
 
-        error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
-        if error:
-            return json.dumps({'error': error})
-
-        try:
-            if not search_string:
-                return json.dumps({'error': 'Search string cannot be empty'})
-
-            try:
-                file_content = await workspace.read_internal(relative_path)
-            except Exception as e:
-                return json.dumps({'error': f'Error reading file: {str(e)}'})
-
-            # Split the content into lines
-            lines = file_content.splitlines()
-            matches = []
-
-            # Compile the regex pattern if using regex
-            pattern = None
-            if use_regex:
+            for workspace, paths in queue.items():
                 try:
-                    pattern = re.compile(search_string)
-                except re.error as e:
-                    return json.dumps({'error': f'Invalid regex pattern: {str(e)}'})
+                    # Use the workspace's grep method to search for the pattern
+                    result = await workspace.grep(
+                        pattern=pattern,
+                        file_paths=paths,
+                        ignore_case=ignore_case,
+                        recursive=recursive
+                    )
+                    results.append(result)
 
-            # Search for matches in each line
-            for i, line in enumerate(lines):
-                if use_regex:
-                    if pattern.search(line):
-                        matches.append(f"{i}: {line}")
-                else:
-                    if search_string in line:
-                        matches.append(f"{i}: {line}")
+                except Exception as e:
+                    results.append(f'Error reading file: {str(e)}')
+        err_str = ""
+        if errors:
+            err_str = f"Errors:\n{"\n".join(errors)}\n\n"
 
-                # Check if we've reached the maximum number of results
-                if max_results > 0 and len(matches) >= max_results:
-                    break
+        return f"{err_str}Results:\n{"\n\n".join(results)}"
 
-            if not matches:
-                return json.dumps({
-                    'message': f'No matches found for "{search_string}" in {unc_path}',
-                    'matches': []
-                })
 
-            # Join the matches into a multi-line string
-            result = '\n'.join(matches)
-            return result
-
-        except Exception as e:
-            error_msg = f'Error finding strings: {str(e)}'
-            self.logger.error(error_msg)
-            return json.dumps({'error': error_msg})
 
 Toolset.register(WorkspaceTools)
