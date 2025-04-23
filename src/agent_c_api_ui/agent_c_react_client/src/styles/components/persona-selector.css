@@ -1,5 +1,6 @@
 /* ===== COMPONENT: PersonaSelector ===== */
 /* Description: Component for selecting and configuring AI personas with model selection and custom prompts */
+/* File: src/components/chat_interface/PersonaSelector.jsx */
 
 /* PersonaSelector: Main card container */
 .persona-selector-card {

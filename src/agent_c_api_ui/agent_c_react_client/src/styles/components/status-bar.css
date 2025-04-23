@@ -1,5 +1,6 @@
 /* ===== COMPONENT: StatusBar ===== */
 /* Description: Displays system status information including processing state, available tools, and export options */
+/* File: src/components/chat_interface/StatusBar.jsx */
 
 /* StatusBar: Main status bar container */
 .status-bar {

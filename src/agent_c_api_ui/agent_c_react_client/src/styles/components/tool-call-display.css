@@ -1,5 +1,6 @@
 /* ===== COMPONENT: ToolCallDisplay ===== */
 /* Description: Displays tool calls made by the AI, with collapsible sections for viewing tool parameters and results */
+/* File: src/components/chat_interface/ToolCallDisplay.jsx */
 
 /* ToolCallDisplay: Main container for tool calls display */
 .tool-call-container {

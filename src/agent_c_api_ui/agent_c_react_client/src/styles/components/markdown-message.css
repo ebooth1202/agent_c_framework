@@ -1,5 +1,6 @@
 /* ===== COMPONENT: MarkdownMessage ===== */
 /* Description: Component for rendering formatted markdown content in chat messages */
+/* File: src/components/chat_interface/MarkdownMessage.jsx */
 
 /* MarkdownMessage: Main container for markdown content */
 .markdown-container {

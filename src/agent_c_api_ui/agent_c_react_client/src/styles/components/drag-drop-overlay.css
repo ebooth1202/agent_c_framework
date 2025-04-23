@@ -1,5 +1,6 @@
 /* ===== COMPONENT: DragDropOverlay ===== */
 /* Description: Displays a visual overlay when dragging files for upload with instructions and feedback */
+/* File: src/components/chat_interface/DragDropOverlay.jsx */
 
 /* DragDropOverlay: Main overlay container */
 .drag-drop-overlay {

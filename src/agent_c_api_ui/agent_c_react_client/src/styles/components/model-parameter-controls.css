@@ -1,5 +1,6 @@
 /* ===== COMPONENT: ModelParameterControls ===== */
 /* Description: Component for adjusting AI model parameters such as temperature and tokens with sliders and selectors */
+/* File: src/components/chat_interface/ModelParameterControls.jsx */
 
 /* ModelParameterControls: Main container for parameter controls */
 .parameter-controls-container {
