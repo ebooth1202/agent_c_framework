@@ -3,13 +3,13 @@
 
 /* ToolCallDisplay: Main container for tool calls display */
 .tool-call-container {
-  border: 1px solid;
-  border-radius: 1rem;
-  margin: 0.5rem 0;
-  background-color: var(--background-card);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
+  border: var(--border-width-thin) solid;
+  border-radius: var(--border-radius-2xl);
+  margin: var(--spacing-2) 0;
+  background-color: var(--card-background);
+  box-shadow: var(--shadow-lg);
   overflow: hidden;
-  margin-left: 2rem; /* ml-8 */
+  margin-left: var(--spacing-8);
 }
 
 /* ToolCallDisplay: Container width variations */
@@ -26,86 +26,86 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem;
+  padding: var(--spacing-4);
   cursor: pointer;
-  border-top-left-radius: 1rem;
-  border-top-right-radius: 1rem;
-  transition: background-color 0.2s ease;
-  background-color: rgba(219, 234, 254, 0.8); /* bg-blue-100/80 */
+  border-top-left-radius: var(--border-radius-2xl);
+  border-top-right-radius: var(--border-radius-2xl);
+  transition: background-color var(--transition-hover);
+  background-color: hsl(var(--color-blue-100) / 0.8);
 }
 
 /* ToolCallDisplay: Dark mode header */
 .dark .tool-call-header {
-  background-color: rgba(23, 37, 84, 0.3); /* bg-blue-950/30 */
+  background-color: hsl(var(--color-blue-950) / 0.3);
 }
 
 /* ToolCallDisplay: Header hover states */
 .tool-call-header:hover {
-  background-color: rgba(191, 219, 254, 0.9); /* bg-blue-200/90 */
+  background-color: hsl(var(--color-blue-200) / 0.9);
 }
 
 .dark .tool-call-header:hover {
-  background-color: rgba(30, 58, 138, 0.4); /* bg-blue-900/40 */
+  background-color: hsl(var(--color-blue-900) / 0.4);
 }
 
 /* ToolCallDisplay: Tool call icon styling */
 .tool-call-icon {
   height: 1.25rem;
   width: 1.25rem;
-  color: #3b82f6; /* text-blue-500 */
+  color: hsl(var(--color-blue-500));
 }
 
 .dark .tool-call-icon {
-  color: #60a5fa; /* text-blue-400 */
+  color: hsl(var(--color-blue-400));
 }
 
 /* ToolCallDisplay: Tool call title styling */
 .tool-call-title {
-  color: #1d4ed8; /* text-blue-700 */
-  font-weight: 500;
+  color: hsl(var(--color-blue-700));
+  font-weight: var(--font-weight-medium);
 }
 
 .dark .tool-call-title {
-  color: #93c5fd; /* text-blue-300 */
+  color: hsl(var(--color-blue-300));
 }
 
 /* ToolCallDisplay: Tool count badge styling */
 .tool-call-badge {
-  background-color: #bfdbfe; /* bg-blue-200 */
-  color: #1d4ed8; /* text-blue-700 */
+  background-color: hsl(var(--color-blue-200));
+  color: hsl(var(--color-blue-700));
 }
 
 .tool-call-badge:hover {
-  background-color: #bfdbfe; /* bg-blue-200 */
+  background-color: hsl(var(--color-blue-200));
 }
 
 .dark .tool-call-badge {
-  background-color: rgba(30, 58, 138, 0.5); /* bg-blue-900/50 */
-  color: #93c5fd; /* text-blue-300 */
+  background-color: hsl(var(--color-blue-900) / 0.5);
+  color: hsl(var(--color-blue-300));
 }
 
 .dark .tool-call-badge:hover {
-  background-color: rgba(30, 58, 138, 0.5); /* bg-blue-900/50 */
+  background-color: hsl(var(--color-blue-900) / 0.5);
 }
 
 /* ToolCallDisplay: Expand/collapse icon styling */
 .tool-call-expand-icon {
-  color: #3b82f6; /* text-blue-500 */
+  color: hsl(var(--color-blue-500));
 }
 
 .dark .tool-call-expand-icon {
-  color: #60a5fa; /* text-blue-400 */
+  color: hsl(var(--color-blue-400));
 }
 
 /* ToolCallDisplay: Content area for tool calls list */
 .tool-call-content {
-  padding: 1rem;
-  border-bottom-left-radius: 1rem;
-  border-bottom-right-radius: 1rem;
-  background-color: var(--background-card);
+  padding: var(--spacing-4);
+  border-bottom-left-radius: var(--border-radius-2xl);
+  border-bottom-right-radius: var(--border-radius-2xl);
+  background-color: var(--card-background);
 }
 
 .tool-call-item-spacing {
-  margin-top: 0.5rem;
-  margin-bottom: 0.5rem;
+  margin-top: var(--spacing-2);
+  margin-bottom: var(--spacing-2);
 }

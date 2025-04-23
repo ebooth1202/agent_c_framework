@@ -15,10 +15,10 @@
 | AgentConfigDisplay | ✅ | Color values, shadows, spacing | Tooltip styles, hover effects | Info displays, tooltips, labels | Consistent naming | ✅ |
 | AgentConfigHoverCard | ✅ | Color values, badges, transitions | Badge styles, hover states | Badges, info cards, sections | Very detailed naming | ✅ |
 | MobileNav | ✅ | Color values, animations, sizing | Dropdown styles, hover effects | Navigation links, dropdowns | Consistent naming | ✅ |
-| PersonaSelector | ⏳ | | | | | ⏳ |
-| StatusBar | ⏳ | | | | | ⏳ |
-| ToolCallDisplay | ⏳ | | | | | ⏳ |
-| ChatInputArea | ⏳ | | | | | ⏳ |
+| PersonaSelector | ✅ | Color values, spacing values, transitions, typography | Select dropdowns, interactive elements | Form elements, tooltips, status sections | Follows naming convention | ✅ |
+| StatusBar | ✅ | Color values, spacing values, icon sizing | Status indicators, tool badges | Status displays, tool counts, badges | Consistent naming | ✅ |
+| ToolCallDisplay | ✅ | Color values, border radius, shadows | Tool call headers, collapsible elements | Collapsible sections, tool call cards | Follows naming convention | ✅ |
+| ChatInputArea | ✅ | Color values, button dimensions, transitions | Input area, action buttons | Form controls, floating action buttons | Consistent naming | ✅ |
 | FileItem | ⏳ | | | | | ⏳ |
 | MediaMessage | ⏳ | | | | | ⏳ |
 | ModelParameterControls | ⏳ | | | | | ⏳ |
@@ -108,11 +108,11 @@
 - [x] Refactor AgentConfigHoverCard component to use variables and common patterns
 - [x] Refactor MobileNav component to use variables and common patterns
 - [x] Refactor MarkdownMessage component to use variables and common patterns
-- [ ] Continue component audits and refactoring
-  - [ ] Audit and refactor PersonaSelector
-  - [ ] Audit and refactor StatusBar
-  - [ ] Audit and refactor ToolCallDisplay
-  - [ ] Audit and refactor ChatInputArea
+- [x] Continue component audits and refactoring
+  - [x] Audit and refactor PersonaSelector
+  - [x] Audit and refactor StatusBar
+  - [x] Audit and refactor ToolCallDisplay
+  - [x] Audit and refactor ChatInputArea
   - [ ] Audit and refactor remaining components
 - [ ] Compile list of any redundant styles that need to be removed from component CSS files
 
@@ -139,4 +139,11 @@
 - Refactored AgentConfigHoverCard component to use variables and common patterns
 - Refactored MobileNav component to use variables and common patterns
 - Refactored MarkdownMessage component to use variables and common patterns
+- Updated tracking document
+
+### Session 4 (April 22, 2025)
+- Refactored PersonaSelector component to use variables and common patterns
+- Refactored StatusBar component to use variables and common patterns
+- Refactored ToolCallDisplay component to use variables and common patterns
+- Refactored ChatInputArea component to use variables and common patterns
 - Updated tracking document

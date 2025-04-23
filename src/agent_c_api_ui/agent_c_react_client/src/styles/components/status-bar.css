@@ -6,137 +6,137 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.25rem 0.5rem; /* py-1 px-2 */
-  background-color: rgba(var(--background-rgb), 0.95); /* bg-background/95 */
-  backdrop-filter: blur(4px); /* backdrop-blur-sm */
-  border-radius: 0.5rem; /* rounded-lg */
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
-  font-size: 0.75rem; /* text-xs */
+  padding: var(--spacing-1) var(--spacing-2);
+  background-color: hsl(var(--color-background) / 0.95);
+  backdrop-filter: blur(4px);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-sm);
+  font-size: var(--font-size-xs);
 }
 
 /* StatusBar: Status section containers */
 .status-bar-section {
   display: flex;
   align-items: center;
-  gap: 1rem; /* space-x-4 */
+  gap: var(--spacing-4);
 }
 
 .status-indicator-section {
   display: flex;
   align-items: center;
-  gap: 0.5rem; /* space-x-2 */
+  gap: var(--spacing-2);
 }
 
 .status-indicator-wrapper {
   display: flex;
   align-items: center;
-  gap: 0.5rem; /* space-x-2 */
+  gap: var(--spacing-2);
 }
 
 /* StatusBar: Status indicator icon - Processing state */
 .status-indicator-icon-processing {
-  width: 0.75rem; /* w-3 */
-  height: 0.75rem; /* h-3 */
-  color: #ef4444; /* text-red-500 */
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; /* animate-pulse */
-  transform: scale(1.1); /* scale-110 */
-  transition: transform 0.2s ease; /* transition-transform duration-200 */
+  width: 0.75rem;
+  height: 0.75rem;
+  color: hsl(var(--color-error));
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  transform: scale(1.1);
+  transition: transform var(--transition-hover);
 }
 
 /* StatusBar: Status indicator icon - Initializing state */
 .status-indicator-icon-initializing {
-  width: 0.75rem; /* w-3 */
-  height: 0.75rem; /* h-3 */
-  color: #f59e0b; /* text-yellow-500 */
+  width: 0.75rem;
+  height: 0.75rem;
+  color: hsl(var(--color-amber-500));
 }
 
 /* StatusBar: Status indicator icon - Ready state */
 .status-indicator-icon-ready {
-  width: 0.75rem; /* w-3 */
-  height: 0.75rem; /* h-3 */
-  color: #10b981; /* text-green-500 */
+  width: 0.75rem;
+  height: 0.75rem;
+  color: hsl(var(--color-green-500));
 }
 
 /* StatusBar: Status text */
 .status-text {
-  font-size: 0.75rem; /* text-xs */
-  font-weight: 500; /* font-medium */
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
 }
 
 /* StatusBar: Tools section */
 .tools-badge {
   display: flex;
   align-items: center;
-  gap: 0.5rem; /* space-x-2 */
-  padding: 0.125rem 0.75rem; /* px-3 py-0.5 */
-  background-color: rgba(219, 234, 254, 0.1); /* bg-blue-50/10 */
-  border-radius: 9999px; /* rounded-full */
-  border: 1px solid rgba(191, 219, 254, 0.2); /* border border-blue-200/20 */
+  gap: var(--spacing-2);
+  padding: 0.125rem var(--spacing-3);
+  background-color: hsl(var(--color-blue-100) / 0.1);
+  border-radius: var(--border-radius-full);
+  border: var(--border-width-thin) solid hsl(var(--color-blue-200) / 0.2);
 }
 
 .dark .tools-badge {
-  background-color: rgba(30, 58, 138, 0.2); /* bg-blue-950/20 */
-  border-color: rgba(30, 64, 175, 0.3); /* border-blue-800/30 */
+  background-color: hsl(var(--color-blue-950) / 0.2);
+  border-color: hsl(var(--color-blue-800) / 0.3);
 }
 
 /* StatusBar: Tools icon */
 .tools-icon {
-  width: 0.75rem; /* w-3 */
-  height: 0.75rem; /* h-3 */
-  color: #3b82f6; /* text-blue-500 */
+  width: 0.75rem;
+  height: 0.75rem;
+  color: hsl(var(--color-blue-500));
 }
 
 .dark .tools-icon {
-  color: #60a5fa; /* text-blue-400 */
+  color: hsl(var(--color-blue-400));
 }
 
 /* StatusBar: Tools count text */
 .tools-count-text {
-  font-size: 0.75rem; /* text-xs */
-  color: #1d4ed8; /* text-blue-700 */
+  font-size: var(--font-size-xs);
+  color: hsl(var(--color-blue-700));
 }
 
 .dark .tools-count-text {
-  color: #93c5fd; /* text-blue-300 */
+  color: hsl(var(--color-blue-300));
 }
 
 /* StatusBar: Info icon */
 .tools-info-icon {
-  width: 0.75rem; /* w-3 */
-  height: 0.75rem; /* h-3 */
-  color: #60a5fa; /* text-blue-400 */
+  width: 0.75rem;
+  height: 0.75rem;
+  color: hsl(var(--color-blue-400));
   cursor: help;
 }
 
 .dark .tools-info-icon {
-  color: #93c5fd; /* text-blue-300 */
+  color: hsl(var(--color-blue-300));
 }
 
 /* StatusBar: Tools tooltip content */
 .tools-tooltip-content {
-  background-color: var(--background);
-  border: 1px solid;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-md */
+  background-color: hsl(var(--color-background));
+  border: var(--border-width-thin) solid;
+  box-shadow: var(--shadow-md);
 }
 
 /* StatusBar: Chat export actions */
 .chat-export-actions {
   display: flex;
   align-items: center;
-  gap: 1rem; /* space-x-4 */
+  gap: var(--spacing-4);
 }
 
 /* StatusBar: Export action buttons */
 .chat-export-button {
-  color: var(--foreground);
+  color: hsl(var(--color-foreground));
 }
 
 .chat-export-button:hover {
-  background-color: var(--muted);
+  background-color: hsl(var(--color-gray-200) / 0.2);
 }
 
 /* StatusBar: Export button icon */
 .chat-export-icon {
-  width: 1rem; /* w-4 */
-  height: 1rem; /* h-4 */
+  width: 1rem;
+  height: 1rem;
 }
