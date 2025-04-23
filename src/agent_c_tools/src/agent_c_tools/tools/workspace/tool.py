@@ -115,7 +115,7 @@ class WorkspaceTools(Toolset):
         """
         unc_path = kwargs.get('path', '')
 
-        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
+        error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
         if error:
             return json.dumps({'error': error})
 
@@ -241,7 +241,7 @@ class WorkspaceTools(Toolset):
             str: JSON string with a success message or an error message.
         """
 
-        error, workspace, relative_path = self._validate_and_get_workspace_path(path)
+        error, workspace, relative_path = self.validate_and_get_workspace_path(path)
         if error:
             return json.dumps({'error': error})
 
