@@ -1,5 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 import AgentConfigHoverCard from './AgentConfigHoverCard';
 import { Activity, Wrench, Info, Copy, Download } from 'lucide-react';
 import {
@@ -10,6 +12,7 @@ import {
 } from "@/components/ui/tooltip";
 import CopyButton from './CopyButton';
 import ExportHTMLButton from './ExportHTMLButton';
+import { cn } from '@/lib/utils';
 
 
 const StatusBar = ({
@@ -21,7 +24,8 @@ const StatusBar = ({
     settingsVersion,
     getChatCopyContent,
     getChatCopyHTML,
-    messages
+    messages,
+    className
 }) => {
 
 
@@ -53,7 +57,7 @@ const StatusBar = ({
     const statusInfo = getStatusInfo();
 
     return (
-        <div className="status-bar">
+        <Card className={cn("status-bar", className)}>
             <div className="status-bar-section">
                 <div className="status-indicator-section">
                     <TooltipProvider>
@@ -61,12 +65,13 @@ const StatusBar = ({
                             <TooltipTrigger asChild>
                                 <div className="status-indicator-wrapper">
                                     <Activity
-                                        className={isProcessing 
-                                            ? 'status-indicator-icon-processing' 
-                                            : isInitializing || !isReady 
-                                                ? 'status-indicator-icon-initializing' 
-                                                : 'status-indicator-icon-ready'
-                                        }
+                                        className={cn(
+                                            isProcessing 
+                                                ? 'status-indicator-icon-processing' 
+                                                : isInitializing || !isReady 
+                                                    ? 'status-indicator-icon-initializing' 
+                                                    : 'status-indicator-icon-ready'
+                                        )}
                                     />
                                     <span className="status-text">
                                         Status: {statusInfo.message}
@@ -88,7 +93,7 @@ const StatusBar = ({
                 </div>
 
                 {isReady && activeTools && activeTools.length > 0 && (
-                    <div className="tools-badge">
+                    <Badge variant="outline" className="tools-badge">
                         <Wrench className="tools-icon" />
                         <span className="tools-count-text">
                             Active Tools: {activeTools.length}
@@ -103,7 +108,7 @@ const StatusBar = ({
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
-                    </div>
+                    </Badge>
                 )}
             </div>
             
@@ -116,7 +121,7 @@ const StatusBar = ({
                     successText="Chat copied!"
                     size="sm"
                     variant="ghost"
-                    className="chat-export-button"
+                    className={cn("chat-export-button")}
                     icon={<Copy className="chat-export-icon" />}
                     iconOnly
                 />
@@ -126,12 +131,12 @@ const StatusBar = ({
                     filename={`chat-export-${new Date().toISOString().slice(0, 10)}.html`}
                     size="sm"
                     variant="ghost"
-                    className="chat-export-button"
+                    className={cn("chat-export-button")}
                     icon={<Download className="chat-export-icon" />}
                     iconOnly
                 />
             </div>
-        </div>
+        </Card>
     );
 };
 

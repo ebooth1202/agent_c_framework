@@ -8,7 +8,7 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--spacing-1) var(--spacing-2);
-  background-color: hsl(var(--color-background) / 0.95);
+  background-color: hsl(var(--theme-background) / 0.95);
   backdrop-filter: blur(4px);
   border-radius: var(--border-radius-lg);
   box-shadow: var(--shadow-sm);
@@ -38,7 +38,7 @@
 .status-indicator-icon-processing {
   width: 0.75rem;
   height: 0.75rem;
-  color: hsl(var(--color-error));
+  color: hsl(var(--theme-error));
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   transform: scale(1.1);
   transition: transform var(--transition-hover);
@@ -69,15 +69,17 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
+  background: transparent !important;
+  border: none !important;
   padding: 0.125rem var(--spacing-3);
-  background-color: hsl(var(--color-blue-100) / 0.1);
-  border-radius: var(--border-radius-full);
-  border: var(--border-width-thin) solid hsl(var(--color-blue-200) / 0.2);
+  background-color: hsl(var(--color-blue-100) / 0.1) !important;
+  border-radius: var(--border-radius-full) !important;
+  border: var(--border-width-thin) solid hsl(var(--color-blue-200) / 0.2) !important;
 }
 
 .dark .tools-badge {
-  background-color: hsl(var(--color-blue-950) / 0.2);
-  border-color: hsl(var(--color-blue-800) / 0.3);
+  background-color: hsl(var(--color-blue-950) / 0.2) !important;
+  border-color: hsl(var(--color-blue-800) / 0.3) !important;
 }
 
 /* StatusBar: Tools icon */
@@ -115,7 +117,7 @@
 
 /* StatusBar: Tools tooltip content */
 .tools-tooltip-content {
-  background-color: hsl(var(--color-background));
+  background-color: hsl(var(--theme-background));
   border: var(--border-width-thin) solid;
   box-shadow: var(--shadow-md);
 }
@@ -129,7 +131,7 @@
 
 /* StatusBar: Export action buttons */
 .chat-export-button {
-  color: hsl(var(--color-foreground));
+  color: hsl(var(--theme-foreground));
 }
 
 .chat-export-button:hover {
