@@ -429,7 +429,7 @@
     <div id="sidebar">
 		<button id="sidebar-toggle" title="Toggle Sidebar">.</button> <!--Hide button, disabling for now-->
         <div id="sidebar-resize-handle" title="Drag to resize"></div>
-        <h3 style="margin: 0 16px 16px 16px;">Agent C Output Viewer</h3>
+        <h3 style="margin: 0 16px 16px 16px;">Test Report</h3>
 		<div><svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
   <!-- Orange concentric arcs (target/bullseye) -->
   <path d="M250 150 A100 100 0 0 0 150 250 A100 100 0 0 0 250 350" stroke="#FF6A00" stroke-width="30" fill="none" />
@@ -465,7 +465,7 @@
     
     <script>
         // File structure will be injected here by the generator script
-        const fileStructure = $FILE_STRUCTURE;
+        const fileStructure = [{"name": "Markdown To Html Enhancements", "type": "file", "path": "markdown_to_html_enhancements.md", "content": "# Markdown to HTML Report Tool Enhancement Ideas\n\n## Current Tool Overview\n\nThe current tool does a good job of:\n\n- Collecting markdown files from a workspace directory\n- Building a navigable file structure\n- Converting markdown to HTML using Marked.js\n- Supporting syntax highlighting via Highlight.js\n- Rendering Mermaid diagrams\n- Providing a responsive UI with sidebar navigation\n- Handling internal links between markdown files\n- Adding fullscreen view for images and diagrams\n\n## Enhancement Opportunities\n\nHere are several ways we could enhance the tool to add more interactivity and visual polish:\n\n### 1. Interactive Data Visualization\n\n**Implementation:**\n\n- Integrate Chart.js or D3.js via CDN\n- Support custom code fences for charts: \n  \n  ```\n  ```chart\n  {\n    \"type\": \"bar\",\n    \"data\": { ... }\n  }\n  ```\n  \n  ```\n- Process this during markdown rendering to generate interactive charts\n\n**Benefits:**\n\n- Makes data visualization dynamic and interactive\n- Allows agents to present data findings more effectively\n- Supports hover effects, tooltips, and animations\n\n**Sample Implementation:**\n\n```javascript\n// Add to the HTML template head section\n<script src=\"https://cdn.jsdelivr.net/npm/chart.js\"></script>\n\n// In the markdown processing logic\nconst renderer = new marked.Renderer();\nrenderer.code = function(code, language) {\n  if (language === 'chart') {\n    try {\n      const chartConfig = JSON.parse(code);\n      const chartId = 'chart-' + Math.random().toString(36).substring(2);\n      setTimeout(() => {\n        const ctx = document.getElementById(chartId).getContext('2d');\n        new Chart(ctx, chartConfig);\n      }, 0);\n      return `<div class=\"chart-container\"><canvas id=\"${chartId}\"></canvas></div>`;\n    } catch (e) {\n      return `<pre><code class=\"hljs\">Error parsing chart: ${e.message}</code></pre>`;\n    }\n  }\n  // Default code block handling\n  // ...\n};\n```\n\n### 2. Tabbed Content\n\n**Implementation:**\n\n- Add support for a simple syntax like:\n  \n  ```\n  :::tabs\n  ::tab Python\n  ```python\n  print(\"Hello World\")\n  ```\n  \n  ::tab JavaScript\n  \n  ```javascript\n  console.log(\"Hello World\");\n  ```\n  \n  :::\n  ```\n- Process this custom syntax during rendering to create tab interfaces\n\n**Benefits:**\n\n- Provides a cleaner way to compare different code samples\n- Reduces vertical scrolling for alternative solutions\n- Especially useful for multi-language code examples\n\n**Sample Implementation:**\n\n```javascript\n// CSS for tabs\n.tabs-container {\n  margin: 1em 0;\n}\n.tabs-header {\n  display: flex;\n  border-bottom: 1px solid #ccc;\n}\n.tab-button {\n  padding: 0.5em 1em;\n  border: none;\n  background: none;\n  cursor: pointer;\n}\n.tab-button.active {\n  border-bottom: 2px solid #0366d6;\n}\n.tab-content {\n  display: none;\n  padding: 1em 0;\n}\n.tab-content.active {\n  display: block;\n}\n\n// Custom markdown processing for tabs\nfunction processTabsInMarkdown(markdown) {\n  const tabsRegex = /:::tabs\\s*\\n([\\s\\S]*?):::/g;\n  const tabRegex = /::tab\\s+(.+?)\\n([\\s\\S]*?)(?=::tab|:::)/g;\n\n  return markdown.replace(tabsRegex, (match, tabsContent) => {\n    let tabsHtml = '<div class=\"tabs-container\"><div class=\"tabs-header\">';\n    let tabsContentHtml = '';\n    let tabId = 'tabs-' + Math.random().toString(36).substring(2);\n    let firstTab = true;\n\n    let tabMatch;\n    let tabIndex = 0;\n    while ((tabMatch = tabRegex.exec(tabsContent + '::')) !== null) {\n      const [_, tabName, tabContent] = tabMatch;\n      const currentTabId = `${tabId}-${tabIndex}`;\n\n      tabsHtml += `<button class=\"tab-button ${firstTab ? 'active' : ''}\" \n                        data-tab=\"${currentTabId}\">${tabName}</button>`;\n\n      tabsContentHtml += `<div class=\"tab-content ${firstTab ? 'active' : ''}\" \n                           id=\"${currentTabId}\">${marked(tabContent)}</div>`;\n\n      firstTab = false;\n      tabIndex++;\n    }\n\n    return tabsHtml + '</div>' + tabsContentHtml + '</div>';\n  });\n}\n\n// Add JavaScript to handle tab switching\nfunction setupTabs() {\n  document.querySelectorAll('.tab-button').forEach(button => {\n    button.addEventListener('click', () => {\n      const tabContainer = button.closest('.tabs-container');\n\n      // Deactivate all tabs\n      tabContainer.querySelectorAll('.tab-button').forEach(b => \n        b.classList.remove('active'));\n      tabContainer.querySelectorAll('.tab-content').forEach(c => \n        c.classList.remove('active'));\n\n      // Activate the clicked tab\n      button.classList.add('active');\n      const tabId = button.getAttribute('data-tab');\n      document.getElementById(tabId).classList.add('active');\n    });\n  });\n}\n\n// Call setupTabs after the document is loaded\ndocument.addEventListener('DOMContentLoaded', setupTabs);\n```\n\n### 3. Collapsible Content Sections\n\n**Implementation:**\n\n- Support syntax like:\n  \n  ```\n  :::details Advanced Options\n  This content is initially hidden but can be expanded.\n  :::\n  ```\n- Use JavaScript to toggle visibility\n\n**Benefits:**\n\n- Helps manage information density\n- Allows users to focus on the most relevant content\n- Useful for hiding verbose logs or detailed explanations\n\n**Sample Implementation:**\n\n```javascript\n// CSS for collapsible sections\n.details-container {\n  border: 1px solid #ddd;\n  border-radius: 4px;\n  margin: 1em 0;\n}\n.details-summary {\n  padding: 0.5em 1em;\n  cursor: pointer;\n  background-color: #f5f5f5;\n  display: flex;\n  justify-content: space-between;\n  align-items: center;\n}\n.details-summary::after {\n  content: '+';\n  font-weight: bold;\n}\n.details-container.open .details-summary::after {\n  content: '-';\n}\n.details-content {\n  padding: 1em;\n  display: none;\n}\n.details-container.open .details-content {\n  display: block;\n}\n\n// Custom markdown processing\nfunction processDetailsInMarkdown(markdown) {\n  const detailsRegex = /:::details\\s+(.+?)\\n([\\s\\S]*?):::/g;\n\n  return markdown.replace(detailsRegex, (match, summary, content) => {\n    const detailId = 'details-' + Math.random().toString(36).substring(2);\n    return `\n      <div class=\"details-container\" id=\"${detailId}\">\n        <div class=\"details-summary\">${summary}</div>\n        <div class=\"details-content\">${marked(content)}</div>\n      </div>\n    `;\n  });\n}\n\n// Add JavaScript to handle toggling\nfunction setupCollapsibleSections() {\n  document.querySelectorAll('.details-summary').forEach(summary => {\n    summary.addEventListener('click', () => {\n      const container = summary.closest('.details-container');\n      container.classList.toggle('open');\n    });\n  });\n}\n\n// Call after the document is loaded\ndocument.addEventListener('DOMContentLoaded', setupCollapsibleSections);\n```\n\n### 4. Math Equation Support\n\n**Implementation:**\n\n- Add KaTeX or MathJax via CDN\n- Support LaTeX math notation in markdown:\n  \n  ```\n  The formula is $E = mc^2$ and the equation is:\n  $$\n  \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}\n  $$\n  ```\n\n**Benefits:**\n\n- Proper rendering of mathematical equations\n- Essential for technical and scientific reports\n\n**Sample Implementation:**\n\n```html\n<!-- Add to HTML template head -->\n<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css\">\n<script src=\"https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.js\"></script>\n<script src=\"https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/contrib/auto-render.min.js\"></script>\n\n<!-- Add after markdown is rendered -->\n<script>\n  document.addEventListener(\"DOMContentLoaded\", function() {\n    renderMathInElement(document.body, {\n      delimiters: [\n        {left: \"$$\", right: \"$$\", display: true},\n        {left: \"$\", right: \"$\", display: false}\n      ],\n      throwOnError: false\n    });\n  });\n</script>\n```\n\n### 5. Dark Mode Toggle\n\n**Implementation:**\n\n- Add CSS variables for light/dark themes\n- Include a theme toggle button\n- Store preference in localStorage\n\n**Benefits:**\n\n- Improves readability based on user preference and environment\n- Reduces eye strain in low-light settings\n\n**Sample Implementation:**\n\n```html\n<!-- Add to CSS -->\n<style>\n  :root {\n    --bg-color: #ffffff;\n    --text-color: #333333;\n    --sidebar-bg: #f5f5f5;\n    --code-bg: #f5f5f5;\n    --border-color: #ddd;\n    --link-color: #0366d6;\n  }\n\n  [data-theme=\"dark\"] {\n    --bg-color: #222;\n    --text-color: #eee;\n    --sidebar-bg: #333;\n    --code-bg: #333;\n    --border-color: #555;\n    --link-color: #58a6ff;\n  }\n\n  body {\n    background-color: var(--bg-color);\n    color: var(--text-color);\n  }\n\n  .sidebar {\n    background-color: var(--sidebar-bg);\n    border-color: var(--border-color);\n  }\n\n  pre, code {\n    background-color: var(--code-bg);\n    border-color: var(--border-color);\n  }\n\n  a {\n    color: var(--link-color);\n  }\n\n  /* More styles using variables */\n</style>\n\n<!-- Add theme toggle button to header -->\n<button id=\"theme-toggle\" aria-label=\"Toggle dark mode\">\n  <svg id=\"moon\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n    <path d=\"M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z\"></path>\n  </svg>\n  <svg id=\"sun\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n    <circle cx=\"12\" cy=\"12\" r=\"5\"></circle>\n    <line x1=\"12\" y1=\"1\" x2=\"12\" y2=\"3\"></line>\n    <line x1=\"12\" y1=\"21\" x2=\"12\" y2=\"23\"></line>\n    <line x1=\"4.22\" y1=\"4.22\" x2=\"5.64\" y2=\"5.64\"></line>\n    <line x1=\"18.36\" y1=\"18.36\" x2=\"19.78\" y2=\"19.78\"></line>\n    <line x1=\"1\" y1=\"12\" x2=\"3\" y2=\"12\"></line>\n    <line x1=\"21\" y1=\"12\" x2=\"23\" y2=\"12\"></line>\n    <line x1=\"4.22\" y1=\"19.78\" x2=\"5.64\" y2=\"18.36\"></line>\n    <line x1=\"18.36\" y1=\"5.64\" x2=\"19.78\" y2=\"4.22\"></line>\n  </svg>\n</button>\n\n<!-- Add JavaScript for theme switching -->\n<script>\n  document.addEventListener('DOMContentLoaded', () => {\n    const themeToggle = document.getElementById('theme-toggle');\n    const moonIcon = document.getElementById('moon');\n    const sunIcon = document.getElementById('sun');\n\n    // Check for saved theme preference or get from OS\n    const savedTheme = localStorage.getItem('theme') || \n      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');\n\n    // Apply the theme\n    if (savedTheme === 'dark') {\n      document.documentElement.setAttribute('data-theme', 'dark');\n      moonIcon.style.display = 'none';\n      sunIcon.style.display = 'block';\n    } else {\n      moonIcon.style.display = 'block';\n      sunIcon.style.display = 'none';\n    }\n\n    // Toggle theme when button is clicked\n    themeToggle.addEventListener('click', () => {\n      const currentTheme = document.documentElement.getAttribute('data-theme');\n      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';\n\n      document.documentElement.setAttribute('data-theme', newTheme);\n      localStorage.setItem('theme', newTheme);\n\n      if (newTheme === 'dark') {\n        moonIcon.style.display = 'none';\n        sunIcon.style.display = 'block';\n      } else {\n        moonIcon.style.display = 'block';\n        sunIcon.style.display = 'none';\n      }\n    });\n  });\n</script>\n```\n\n### 6. Search Functionality\n\n**Implementation:**\n\n- Add a search input in the header\n- Use Lunr.js or a similar library for client-side search\n- Highlight matches in the content\n\n**Benefits:**\n\n- Makes finding specific information much faster\n- Particularly valuable in lengthy documentation\n\n**Sample Implementation:**\n\n```html\n<!-- Add to HTML template head -->\n<script src=\"https://cdn.jsdelivr.net/npm/lunr@2.3.9/lunr.min.js\"></script>\n\n<!-- Add search input to header -->\n<div class=\"search-container\">\n  <input type=\"text\" id=\"search-input\" placeholder=\"Search...\" />\n  <div id=\"search-results\" class=\"search-results\"></div>\n</div>\n\n<!-- Add JavaScript for search functionality -->\n<script>\n  document.addEventListener('DOMContentLoaded', () => {\n    // Build search index\n    const searchIndex = lunr(function() {\n      this.ref('id');\n      this.field('title');\n      this.field('content');\n\n      // Create a document for each content section\n      document.querySelectorAll('.content-section').forEach((section, index) => {\n        const title = section.querySelector('h1, h2, h3, h4, h5, h6')?.textContent || '';\n        const content = section.textContent;\n        this.add({\n          id: index,\n          title: title,\n          content: content,\n          element: section\n        });\n      });\n    });\n\n    const searchInput = document.getElementById('search-input');\n    const searchResults = document.getElementById('search-results');\n\n    searchInput.addEventListener('input', () => {\n      const query = searchInput.value;\n      if (query.length < 2) {\n        searchResults.innerHTML = '';\n        searchResults.style.display = 'none';\n        return;\n      }\n\n      const results = searchIndex.search(query);\n      if (results.length === 0) {\n        searchResults.innerHTML = '<div class=\"no-results\">No results found</div>';\n        searchResults.style.display = 'block';\n        return;\n      }\n\n      searchResults.innerHTML = results.map(result => {\n        const item = document.getElementById(result.ref);\n        const title = item.querySelector('h1, h2, h3, h4, h5, h6')?.textContent || 'Untitled';\n        return `\n          <div class=\"search-result-item\" data-ref=\"${result.ref}\">\n            <h4>${title}</h4>\n            <p>${item.textContent.substring(0, 150)}...</p>\n          </div>\n        `;\n      }).join('');\n\n      searchResults.style.display = 'block';\n\n      // Add click handlers to search results\n      document.querySelectorAll('.search-result-item').forEach(item => {\n        item.addEventListener('click', () => {\n          const ref = item.getAttribute('data-ref');\n          const element = document.getElementById(ref);\n          element.scrollIntoView({ behavior: 'smooth' });\n          searchResults.style.display = 'none';\n        });\n      });\n    });\n\n    // Close search results when clicking outside\n    document.addEventListener('click', (e) => {\n      if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {\n        searchResults.style.display = 'none';\n      }\n    });\n  });\n</script>\n```\n\n### 7. Enhanced Tables\n\n**Implementation:**\n\n- Add DataTables.js support for markdown tables\n- Enable sorting, filtering, and pagination for tables that opt-in\n\n**Benefits:**\n\n- Makes large data tables much more usable\n- Provides advanced data exploration capabilities\n\n**Sample Implementation:**\n\n```html\n<!-- Add to HTML template head -->\n<link rel=\"stylesheet\" href=\"https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css\">\n<script src=\"https://code.jquery.com/jquery-3.6.0.min.js\"></script>\n<script src=\"https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js\"></script>\n\n<!-- Add to markdown processing -->\n<script>\n  function enhanceTables() {\n    // Look for tables with a special class or attribute\n    document.querySelectorAll('table[data-enhanced=\"true\"]').forEach(table => {\n      $(table).DataTable({\n        paging: true,\n        searching: true,\n        ordering: true\n      });\n    });\n  }\n\n  // Add a custom syntax for enhanced tables in the markdown processor\n  // Example: \n  // :::enhanced-table\n  // | Header 1 | Header 2 |\n  // | -------- | -------- |\n  // | Data 1   | Data 2   |\n  // :::\n\n  function processEnhancedTablesInMarkdown(markdown) {\n    const tableRegex = /:::enhanced-table\\s*\\n([\\s\\S]*?):::/g;\n\n    return markdown.replace(tableRegex, (match, tableContent) => {\n      // Process the table with standard markdown\n      const processed = marked(tableContent);\n\n      // Add the data-enhanced attribute\n      return processed.replace('<table>', '<table data-enhanced=\"true\">');\n    });\n  }\n\n  document.addEventListener('DOMContentLoaded', enhanceTables);\n</script>\n```\n\n### 8. PDF Export\n\n**Implementation:**\n\n- Add html2pdf.js via CDN\n- Include an export button in the header\n\n**Benefits:**\n\n- Creates shareable documents from the HTML viewer\n- Provides offline access to content\n\n**Sample Implementation:**\n\n```html\n<!-- Add to HTML template head -->\n<script src=\"https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js\"></script>\n\n<!-- Add export button to header -->\n<button id=\"export-pdf\" class=\"export-button\">Export as PDF</button>\n\n<!-- Add JavaScript for PDF export -->\n<script>\n  document.addEventListener('DOMContentLoaded', () => {\n    const exportButton = document.getElementById('export-pdf');\n\n    exportButton.addEventListener('click', () => {\n      // Get the current document title or use default\n      const title = document.querySelector('h1')?.textContent || 'Document';\n\n      // Get the content element (excluding sidebar)\n      const content = document.querySelector('#content');\n\n      // Configure PDF options\n      const options = {\n        margin: [10, 10, 10, 10],\n        filename: `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`,\n        image: { type: 'jpeg', quality: 0.98 },\n        html2canvas: { scale: 2 },\n        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }\n      };\n\n      // Generate the PDF\n      html2pdf().from(content).set(options).save();\n    });\n  });\n</script>\n```\n\n### 9. Copy Code Button\n\n**Implementation:**\n\n- Add a \"Copy\" button to the top-right of each code block\n- Use the Clipboard API to copy code to clipboard\n\n**Benefits:**\n\n- Simplifies the process of using provided code examples\n- Eliminates manual selection and potential copy errors\n\n**Sample Implementation:**\n\n```javascript\n// CSS for copy button\n.code-block {\n  position: relative;\n}\n.copy-button {\n  position: absolute;\n  top: 5px;\n  right: 5px;\n  padding: 3px 8px;\n  font-size: 12px;\n  background: rgba(0, 0, 0, 0.3);\n  color: white;\n  border: none;\n  border-radius: 3px;\n  cursor: pointer;\n  opacity: 0;\n  transition: opacity 0.2s;\n}\n.code-block:hover .copy-button {\n  opacity: 1;\n}\n.copy-button:hover {\n  background: rgba(0, 0, 0, 0.5);\n}\n\n// JavaScript to add copy buttons to code blocks\nfunction addCopyButtons() {\n  document.querySelectorAll('pre code').forEach((codeBlock) => {\n    const container = codeBlock.parentNode;\n    container.classList.add('code-block');\n\n    const copyButton = document.createElement('button');\n    copyButton.className = 'copy-button';\n    copyButton.textContent = 'Copy';\n\n    copyButton.addEventListener('click', () => {\n      navigator.clipboard.writeText(codeBlock.textContent)\n        .then(() => {\n          // Visual feedback\n          copyButton.textContent = 'Copied!';\n          setTimeout(() => {\n            copyButton.textContent = 'Copy';\n          }, 2000);\n        })\n        .catch(err => {\n          console.error('Failed to copy code: ', err);\n          copyButton.textContent = 'Error!';\n          setTimeout(() => {\n            copyButton.textContent = 'Copy';\n          }, 2000);\n        });\n    });\n\n    container.appendChild(copyButton);\n  });\n}\n\ndocument.addEventListener('DOMContentLoaded', addCopyButtons);\n```\n\n## Implementation Approach\n\nTo integrate these enhancements:\n\n1. **Update HTML Template**: Modify the template to include additional CSS/JS libraries via CDN\n2. **Enhance Markdown Processing**: Add custom processors for special syntax\n3. **Extend Marked.js Renderer**: Customize the renderer to handle our extensions\n4. **Add UI Controls**: Include buttons and controls for new interactive features\n\nThis approach maintains the simplicity of markdown as the input format while significantly enhancing the output's interactivity and visual appeal. The beauty is that authors only need to learn minimal additional syntax to leverage these powerful features.\n\n## Implementation Priority\n\nSuggested implementation order based on impact and complexity:\n\n1. Copy Code Button (high impact, low complexity)\n2. Dark Mode Toggle (high impact, medium complexity)\n3. Tabbed Content (high impact, medium complexity)\n4. Collapsible Content Sections (high impact, medium complexity)\n5. Interactive Data Visualization (high impact, high complexity)\n6. Math Equation Support (medium impact, low complexity)\n7. Enhanced Tables (medium impact, medium complexity)\n8. Search Functionality (medium impact, high complexity)\n9. PDF Export (medium impact, medium complexity)\n\n## Next Steps\n\n1. Review the proposed enhancements and prioritize based on user needs\n2. Implement a prototype with 2-3 of the highest priority features\n3. Test with actual markdown content from agent outputs\n4. Gather feedback and refine the implementation\n5. Document the extended markdown syntax for agent developers\n6. Roll out the enhanced viewer as part of the standard toolkit"}, {"name": "Test Markdown", "type": "file", "path": "test_markdown.md", "content": "# Test Markdown File\n\nThis is a test markdown file to verify the markdown to HTML tool is working correctly."}];
         
         // DOM elements
         const treeView = document.getElementById('tree-view');
@@ -652,100 +652,81 @@
         
         // Function to create the tree view
         function createTreeView(structure, parent) {
-    // Helper function to format display names
-    function formatDisplayName(filename) {
-        // Remove leading numbers and dots (e.g., "01.")
-        let displayName = filename.replace(/^\d+\./, '');
-
-        // Remove file extensions (.md or .markdown)
-        displayName = displayName.replace(/\.(md|markdown)$/i, '');
-
-        // Replace underscores with spaces
-        displayName = displayName.replace(/_/g, ' ');
-
-        // Title case (capitalize first letter of each word)
-        displayName = displayName.split(' ')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(' ');
-
-        return displayName;
-    }
-
-    structure.forEach(item => {
-        const li = document.createElement('li');
-
-        if (item.type === 'folder') {
-            // Create folder
-            const folderElement = document.createElement('div');
-            folderElement.classList.add('folder');
-            folderElement.textContent = formatDisplayName(item.name); // Format folder name
-            li.appendChild(folderElement);
-
-            // Create child list for this folder
-            const ul = document.createElement('ul');
-            ul.classList.add('tree-view', 'hidden');
-            li.appendChild(ul);
-
-            // Toggle visibility on click
-            folderElement.addEventListener('click', (e) => {
-                e.stopPropagation();
-                folderElement.classList.toggle('open');
-                ul.classList.toggle('hidden');
-            });
-
-            // If there are children, create their views
-            if (item.children && item.children.length > 0) {
-                createTreeView(item.children, ul);
-
-                // Auto-expand folders with only one sub-folder
-                if (item.children.length === 1 && item.children[0].type === 'folder') {
-                    folderElement.classList.add('open');
-                    ul.classList.remove('hidden');
-                }
-            }
-        } else {
-            // Create file
-            // Only show markdown files
-            if (item.name.toLowerCase().endsWith('.md') || item.name.toLowerCase().endsWith('.markdown')) {
-                const fileElement = document.createElement('div');
-                fileElement.classList.add('file');
-                fileElement.textContent = formatDisplayName(item.name); // Format file name
-                fileElement.dataset.path = item.path;
-                fileElement.dataset.content = item.content;
-                li.appendChild(fileElement);
-
-                // Handle file click to display content
-                fileElement.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    // Remove active from all files
-                    document.querySelectorAll('.file.active').forEach(el => {
-                        el.classList.remove('active');
+            structure.forEach(item => {
+                const li = document.createElement('li');
+                
+                if (item.type === 'folder') {
+                    // Create folder
+                    const folderElement = document.createElement('div');
+                    folderElement.classList.add('folder');
+                    folderElement.textContent = item.name;
+                    li.appendChild(folderElement);
+                    
+                    // Create child list for this folder
+                    const ul = document.createElement('ul');
+                    ul.classList.add('tree-view', 'hidden');
+                    li.appendChild(ul);
+                    
+                    // Toggle visibility on click
+                    folderElement.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        folderElement.classList.toggle('open');
+                        ul.classList.toggle('hidden');
                     });
-                    // Add active to this file
-                    fileElement.classList.add('active');
-
-                    // Render markdown content
-                    renderMarkdown(fileElement.dataset.content);
-
-                    // Update browser history to allow back/forward navigation
-                    updateHistory(item.path);
-
-                    // On mobile, collapse sidebar after selection
-                    if (window.innerWidth <= 768) {
-                        sidebarHidden = true;
-                        sidebar.style.maxHeight = '40px';
-                        sidebar.style.overflow = 'hidden';
+                    
+                    // If there are children, create their views
+                    if (item.children && item.children.length > 0) {
+                        createTreeView(item.children, ul);
+                        
+                        // Auto-expand folders with only one sub-folder
+                        if (item.children.length === 1 && item.children[0].type === 'folder') {
+                            folderElement.classList.add('open');
+                            ul.classList.remove('hidden');
+                        }
                     }
-                });
-            } else {
-                // Skip non-markdown files
-                return;
-            }
+                } else {
+                    // Create file
+                    // Only show markdown files
+                    if (item.name.toLowerCase().endsWith('.md') || item.name.toLowerCase().endsWith('.markdown')) {
+                        const fileElement = document.createElement('div');
+                        fileElement.classList.add('file');
+                        fileElement.textContent = item.name;
+                        fileElement.dataset.path = item.path;
+                        fileElement.dataset.content = item.content;
+                        li.appendChild(fileElement);
+                        
+                        // Handle file click to display content
+                        fileElement.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            // Remove active from all files
+                            document.querySelectorAll('.file.active').forEach(el => {
+                                el.classList.remove('active');
+                            });
+                            // Add active to this file
+                            fileElement.classList.add('active');
+                            
+                            // Render markdown content
+                            renderMarkdown(fileElement.dataset.content);
+                            
+                            // Update browser history to allow back/forward navigation
+                            updateHistory(item.path);
+                            
+                            // On mobile, collapse sidebar after selection
+                            if (window.innerWidth <= 768) {
+                                sidebarHidden = true;
+                                sidebar.style.maxHeight = '40px';
+                                sidebar.style.overflow = 'hidden';
+                            }
+                        });
+                    } else {
+                        // Skip non-markdown files
+                        return;
+                    }
+                }
+                
+                parent.appendChild(li);
+            });
         }
-
-        parent.appendChild(li);
-    });
-}
         
         // Function to render markdown
         function renderMarkdown(content) {

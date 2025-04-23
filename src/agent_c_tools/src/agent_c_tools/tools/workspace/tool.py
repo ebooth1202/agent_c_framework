@@ -8,7 +8,7 @@ from agent_c.toolsets.tool_set import Toolset
 from agent_c.toolsets.json_schema import json_schema
 from agent_c_tools.tools.workspace.base import BaseWorkspace
 from agent_c_tools.tools.workspace.prompt import WorkspaceSection
-from agent_c_tools.tools.workspace.util.replace_strings_helper import ReplaceStringsHelper
+from agent_c_tools.tools.workspace.util import ReplaceStringsHelper
 
 class WorkspaceTools(Toolset):
     """
@@ -115,7 +115,7 @@ class WorkspaceTools(Toolset):
         """
         unc_path = kwargs.get('path', '')
 
-        error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
+        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
         if error:
             return json.dumps({'error': error})
 
@@ -210,10 +210,11 @@ class WorkspaceTools(Toolset):
     async def write(self, **kwargs: Any) -> str:
         """Asynchronously writes or appends data to a file.
 
-        Args:
+        kwargs:
             path (str): UNC-style path (//WORKSPACE/path) to the file to write
-            data (str): The text data to write or append to the file
+            data (Union[str, bytes]): The text or binary data to write or append to the file
             mode (str): The writing mode, either 'write' to overwrite or 'append'
+            data_type (str): Type of data being written, either 'text' for plain text or 'binary' for base64-encoded binary data
 
         Returns:
             str: JSON string with a success message or an error message.
@@ -227,6 +228,24 @@ class WorkspaceTools(Toolset):
             return json.dumps({'error': error})
 
         return await workspace.write(relative_path, mode, data)
+
+    async def internal_write_bytes(self, path: str, data: Union[str, bytes], mode: str) -> str:
+        """Asynchronously writes or appends binary data to a file.  This is an internal workspace function, not available to agents.
+
+        Arguments:
+            path (str): UNC-style path (//WORKSPACE/path) to the file to write
+            data (Union[str, bytes]): The text or binary data to write or append to the file
+            mode (str): The writing mode, either 'write' to overwrite or 'append'
+
+        Returns:
+            str: JSON string with a success message or an error message.
+        """
+
+        error, workspace, relative_path = self._validate_and_get_workspace_path(path)
+        if error:
+            return json.dumps({'error': error})
+
+        return await workspace.write_bytes(relative_path, mode, data)
 
     @json_schema(
         'Copy a file or directory using UNC-style paths',

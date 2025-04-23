@@ -1,0 +1,9 @@
+{
+    "local_workspaces": [
+        {
+            "name": "Desktop",
+            "workspace_path": "C:\\Users\\donav\\Desktop",
+            "description": "A workspace mapped to the Desktop folder of the user."
+        }
+    ]
+}
