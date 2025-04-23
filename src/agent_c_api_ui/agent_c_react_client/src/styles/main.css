@@ -1,0 +1,41 @@
+/* ===== MAIN CSS IMPORTS ===== */
+/* Description: Entry point for all component and common styles */
+
+/* Import common styles */
+@import './common/variables.css';
+@import './common/reset.css';
+@import './common/typography.css';
+@import './common/layout.css';
+@import './common/utilities.css';
+@import './common/cards.css';
+@import './common/badges.css';
+@import './common/interactive.css';
+@import './common/tooltips.css';
+
+/* Import component styles */
+@import './components/layout.css';
+@import './components/thought-display.css';
+@import './components/markdown-message.css';
+@import './components/agent-config-display.css';
+@import './components/agent-config-hover-card.css';
+@import './components/mobile-nav.css';
+@import './components/persona-selector.css';
+@import './components/status-bar.css';
+@import './components/tool-call-display.css';
+@import './components/tool-call-item.css';
+@import './components/tool-call-item-integrated.css';
+@import './components/parameter-documentation.css';
+@import './components/chat-input-area.css';
+@import './components/file-item.css';
+@import './components/media-message.css';
+@import './components/model-parameter-controls.css';
+@import './components/animated-status-indicator.css';
+@import './components/drag-drop-overlay.css';
+@import './components/page-header.css';
+@import './components/sidebar.css';
+@import './components/assistant-message.css';
+@import './components/user-message.css';
+@import './components/system-message.css';
+
+/* Import component-styles.css for backwards compatibility */
+@import './component-styles.css';

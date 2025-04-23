@@ -1,0 +1,112 @@
+/* ===== COMPONENT: Layout ===== */
+/* Description: Main application layout component providing the page structure with header, navigation and content area */
+/* File: src/components/Layout.jsx */
+
+/* Layout: Main container */
+.layout-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-image: linear-gradient(to bottom, var(--layout-gradient-from), var(--layout-gradient-to));
+}
+
+/* Layout: Light mode gradient colors */
+:root {
+  --layout-gradient-from: hsl(var(--color-blue-50));
+  --layout-gradient-to: hsl(var(--color-gray-100));
+}
+
+/* Layout: Dark mode gradient colors */
+.dark {
+  --layout-gradient-from: hsl(var(--color-gray-900));
+  --layout-gradient-to: hsl(var(--color-gray-800));
+}
+
+/* Layout: Header container */
+.layout-header {
+  max-width: var(--layout-max-width);
+  margin-left: auto;
+  margin-right: auto;
+  padding: var(--spacing-4) var(--spacing-6);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+/* Layout: Title container */
+.layout-title-container {
+  display: flex;
+  align-items: center;
+}
+
+/* Layout: Title text */
+.layout-title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: hsl(var(--color-gray-900));
+}
+
+.dark .layout-title {
+  color: hsl(var(--color-gray-50));
+}
+
+/* Layout: Control container (right side) */
+.layout-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+}
+
+/* Layout: Navigation menu */
+.layout-nav {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .layout-nav {
+    display: flex;
+  }
+}
+
+/* Layout: Navigation links */
+.layout-nav-link {
+  color: hsl(var(--color-gray-700));
+  transition: var(--transition-hover);
+}
+
+.layout-nav-link:hover {
+  color: hsl(var(--color-gray-900));
+}
+
+.dark .layout-nav-link {
+  color: hsl(var(--color-gray-300));
+}
+
+.dark .layout-nav-link:hover {
+  color: hsl(var(--color-gray-50));
+}
+
+/* Layout: Additional margin for links (except first) */
+.layout-nav-link-spacing {
+  margin-left: var(--spacing-4);
+}
+
+/* Layout: Main content area */
+.layout-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-width: var(--layout-max-width);
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding: var(--spacing-1) var(--spacing-6) var(--spacing-4) var(--spacing-6);
+  color: hsl(var(--color-gray-900));
+}
+
+.dark .layout-main {
+  color: hsl(var(--color-gray-50));
+}

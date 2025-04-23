@@ -179,31 +179,37 @@ class LocalStorageWorkspace(BaseWorkspace):
             return self._error_response(error_msg)
 
     async def read(self, file_path: str) -> str:
+        try:
+            contents = await self.read_internal(file_path)
+            if len(contents):
+                file_tokens = TokenCounter.count(contents)
+                if file_tokens > self.max_token_size:
+                    return self._error_response(
+                        f'The file {file_path} exceeds the token limit of '
+                        f'{self.max_token_size}. Actual size is {file_tokens}.'
+                    )
+            return await self.read_internal(file_path)
+        except Exception as e:
+            return self._error_response(str(e))
+
+    async def read_internal(self, file_path: str) -> str:
         valid, error_msg, full_path = self._validate_path(file_path)
         if not valid:
-            return self._error_response(error_msg)
+            raise ValueError(error_msg)
 
         try:
             if not full_path.exists():
-                return self._error_response(f'The path {file_path} does not exist.')
+                raise FileNotFoundError(f'The path {file_path} does not exist.')
 
             if full_path.is_file():
-                with open(full_path, 'r', encoding='utf-8', errors='replace') as file:
-                    contents = file.read()
-                    if len(contents):
-                        file_tokens = TokenCounter.count(contents)
-                        if file_tokens > self.max_token_size:
-                            return self._error_response(
-                                f'The file {file_path} exceeds the token limit of '
-                                f'{self.max_token_size}. Actual size is {file_tokens}.'
-                            )
-                    return json.dumps({'contents': contents})
+                with open(full_path, 'r', encoding='utf-8') as file:
+                    return file.read()
             else:
                 return self._error_response(f'The path {file_path} is not a file.')
         except Exception as e:
-            error_msg = f'An error occurred while reading the file: {e}'
+            error_msg = f'LocalStorageWorkspace.read_internal An error occurred while reading the file: {e}'
             self.logger.exception("Failed to read the file.")
-            return self._error_response(error_msg)
+            raise Exception(error_msg)
 
     async def read_bytes_internal(self, file_path: str) -> bytes:
         valid, error_msg, full_path = self._validate_path(file_path)
@@ -256,15 +262,17 @@ class LocalStorageWorkspace(BaseWorkspace):
         full_path = self.workspace_root.joinpath(norm_path)
         return full_path.is_dir()
 
-    async def write(self, file_path: str, mode: str, data: str, is_binary=False) -> str:
+    async def write(self, file_path: str, mode: str, data: str) -> str:
         read_only_error = self._check_read_only()
         if read_only_error:
             return read_only_error
-        return await self._write_impl(file_path, mode, data, is_binary=is_binary)
+        return await self._write_impl(file_path, mode, data, is_binary=False)
 
     async def write_bytes(self, file_path: str, mode: str, data: bytes) -> str:
-        # For legacy reasons, we keep the write_bytes method
-        return await self.write(file_path, mode, data, is_binary=True)
+        read_only_error = self._check_read_only()
+        if read_only_error:
+            return read_only_error
+        return await self._write_impl(file_path, mode, data, is_binary=True)
 
     async def _write_impl(self, file_path: str, mode: str, data: Union[str, bytes], is_binary: bool) -> str:
         valid, error_msg, full_path = self._validate_path(file_path)

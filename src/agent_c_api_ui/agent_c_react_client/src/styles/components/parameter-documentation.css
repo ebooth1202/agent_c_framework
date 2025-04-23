@@ -1,0 +1,58 @@
+/* ===== COMPONENT: ParameterDocumentation ===== */
+/* Description: Styling for parameter documentation in thought displays */
+
+/* Parameter documentation inline code */
+.thought-container code {
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  margin: 0 0.2rem;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: hsl(var(--color-amber-700));
+  background-color: hsl(var(--color-amber-100));
+  border-radius: var(--border-radius-sm);
+  border: var(--border-width-thin) solid hsl(var(--color-amber-300));
+}
+
+/* Dark mode parameter docs */
+.dark .thought-container code {
+  color: hsl(var(--color-amber-300));
+  background-color: hsl(var(--color-amber-900));
+  border-color: hsl(var(--color-amber-700));
+}
+
+/* Parameter documentation list items */
+.thought-container .markdown-li {
+  margin-left: var(--spacing-4);
+  position: relative;
+  padding-left: var(--spacing-1);
+  line-height: 1.6;
+  list-style-type: none;
+}
+
+/* Parameter documentation list item bullets */
+.thought-container .markdown-li::before {
+  content: "•";
+  position: absolute;
+  left: -1rem;
+  color: hsl(var(--color-amber-600));
+  font-weight: var(--font-weight-bold);
+}
+
+.dark .thought-container .markdown-li::before {
+  color: hsl(var(--color-amber-400));
+}
+
+/* Parameter documentation list margins */
+.thought-container .markdown-ul {
+  margin-top: var(--spacing-2);
+  margin-bottom: var(--spacing-2);
+}
+
+/* Parameter documentation paragraphs */
+.thought-container .markdown-paragraph {
+  line-height: 1.6;
+  margin-top: var(--spacing-2);
+  margin-bottom: var(--spacing-2);
+}

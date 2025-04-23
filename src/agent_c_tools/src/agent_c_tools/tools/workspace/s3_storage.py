@@ -255,18 +255,47 @@ class S3StorageWorkspace(BaseWorkspace):
                 logging.error(e)
                 raise e
 
-    async def read(self, path: str) -> str:
+    async def read_internal(self, path: str) -> str:
         """
-        Read text from a path within the S3 bucket.
+        Read text from a path within the S3 bucket and return the raw content.
 
         Args:
             path (str): The path from which to read text.
 
         Returns:
             str: The content of the file as a string.
+            
+        Raises:
+            FileNotFoundError: If the file does not exist.
+            Exception: For other S3 errors.
         """
         content = await self.read_bytes_internal(path)
         return content.decode('utf-8')
+        
+    async def read(self, path: str) -> str:
+        """
+        Read text from a path within the S3 bucket with error handling.
+
+        Args:
+            path (str): The path from which to read text.
+
+        Returns:
+            str: The content of the file as a string or a JSON error response.
+        """
+        try:
+            contents = await self.read_internal(path)
+            if hasattr(self, 'max_token_size') and self.max_token_size > 0:
+                from agent_c.util.token_counter import TokenCounter
+                file_tokens = TokenCounter.count(contents)
+                if file_tokens > self.max_token_size:
+                    return json.dumps({
+                        'error': f'The file {path} exceeds the token limit of '
+                                f'{self.max_token_size}. Actual size is {file_tokens}.'
+                    })
+            return contents
+        except Exception as e:
+            logging.error(f"Error reading file {path}: {str(e)}")
+            return json.dumps({'error': str(e)})
 
     async def write(self, path: str, mode: str, data: str) -> str:
         """

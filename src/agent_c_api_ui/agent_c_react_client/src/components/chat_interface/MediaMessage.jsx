@@ -41,13 +41,13 @@ const MediaMessage = ({message}) => {
     };
 
     const MediaContentWrapper = ({children, allowFullscreen = false}) => (
-        <div className="relative">
+        <div className="media-message-media-wrapper">
             {allowFullscreen && (
                 <button
                     onClick={toggleFullscreen}
-                    className="absolute top-2 right-2 p-1 rounded-lg bg-background/80 hover:bg-background shadow-sm transition-colors"
+                    className="media-message-fullscreen-button"
                 >
-                    <Maximize2 className="h-4 w-4 text-blue-600 dark:text-blue-400"/>
+                    <Maximize2 className="media-message-fullscreen-icon"/>
                 </button>
             )}
             {children}
@@ -69,7 +69,7 @@ const MediaMessage = ({message}) => {
         if (message.contentType === "text/html") {
             return (
                 <MediaContentWrapper>
-                    <div dangerouslySetInnerHTML={{__html: message.content}}/>
+                    <div className="media-message-html-content" dangerouslySetInnerHTML={{__html: message.content}}/>
                 </MediaContentWrapper>
             );
         }
@@ -89,7 +89,7 @@ const MediaMessage = ({message}) => {
                     <img
                         src={`data:${message.contentType};base64,${message.content}`}
                         alt="Generated Content"
-                        className="w-full h-auto rounded shadow-lg object-contain"
+                        className="media-message-image"
                         loading="lazy"
                     />
                 </MediaContentWrapper>
@@ -106,11 +106,11 @@ const MediaMessage = ({message}) => {
         if (!sent_by_class && !sent_by_function) return null;
 
         return (
-            <div className="mt-4 pt-3 border-t border-amber-100 dark:border-amber-900/30 flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
-                <Info className="h-4 w-4 shrink-0"/>
-                <span className="font-medium">
+            <div className="media-message-metadata">
+                <Info className="media-message-metadata-icon"/>
+                <span className="media-message-metadata-text">
                     {sent_by_class}
-                    {sent_by_class && sent_by_function && <span className="mx-2">•</span>}
+                    {sent_by_class && sent_by_function && <span className="media-message-metadata-separator">{"\u2022"}</span>}
                     {sent_by_function}
                 </span>
             </div>
@@ -120,7 +120,7 @@ const MediaMessage = ({message}) => {
     const FullscreenDialog = () => (
         <Dialog open={isFullscreen} onOpenChange={setIsFullscreen}>
             <DialogContent className="p-0 overflow-hidden max-w-7xl">
-                <div className="w-full h-full flex items-center justify-center bg-card p-4 dark:bg-gray-900">
+                <div className="media-message-fullscreen-content">
                     {message.contentType === 'image/svg+xml' ? (
                         <div
                             className="w-full h-full flex items-center justify-center"
@@ -130,7 +130,7 @@ const MediaMessage = ({message}) => {
                         <img
                             src={`data:${message.contentType};base64,${message.content}`}
                             alt="Generated content"
-                            className="max-w-full max-h-[80vh] object-contain rounded shadow-lg"
+                            className="media-message-fullscreen-image"
                         />
                     ) : (
                         <div dangerouslySetInnerHTML={{__html: message.content}}/>
@@ -150,38 +150,36 @@ const MediaMessage = ({message}) => {
 
     return (
         <>
-            <Card className={`bg-card shadow-sm overflow-hidden ml-8 ${isExpanded ? 'max-w-[80%]' : 'w-fit'}`}>
+            <Card className={`media-message-card ${isExpanded ? 'media-message-card-expanded' : 'media-message-card-collapsed'}`}>
                 <div
-                    className="flex items-center justify-between px-4 py-3 cursor-pointer bg-amber-50/80 dark:bg-amber-900/20 hover:bg-amber-100/90 dark:hover:bg-amber-900/30 transition-colors"
+                    className="media-message-header"
                     onClick={() => setIsExpanded(!isExpanded)}
                 >
-                    <div className="flex items-center gap-2">
-                        <Monitor className="h-5 w-5 text-amber-600 dark:text-amber-400"/>
-                        <span className="font-semibold text-amber-800 dark:text-amber-300">
+                    <div className="media-message-header-content">
+                        <Monitor className="media-message-header-icon"/>
+                        <span className="media-message-header-title">
                             {getContentTypeDisplay()}
                         </span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="media-message-header-actions">
                         {/* Copy button that stops event propagation */}
                         <div onClick={(e) => e.stopPropagation()}>
                             <CopyButton
                                 content={getCopyContent}
                                 tooltipText={`Copy ${message.contentType.split('/')[1]}`}
                                 variant="ghost"
-                                className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 hover:bg-amber-100/90 dark:hover:bg-amber-900/30"
+                                className="media-message-copy-button"
                             />
                         </div>
                         <ChevronDown
-                            className={`h-5 w-5 text-amber-600 dark:text-amber-400 transform transition-transform duration-200 ${
-                                isExpanded ? "rotate-180" : ""
-                            }`}
+                            className={`media-message-expand-icon ${isExpanded ? "media-message-expand-icon-expanded" : ""}`}
                         />
                     </div>
                 </div>
 
                 {isExpanded && (
-                    <div className="border-t border-amber-100 dark:border-amber-900/30 p-4 bg-card">
-                        <div className="max-h-96 overflow-auto">
+                    <div className="media-message-content">
+                        <div className="media-message-content-wrapper">
                             {renderContent()}
                         </div>
                         {renderMetadata()}

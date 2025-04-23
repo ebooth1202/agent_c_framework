@@ -1,6 +1,7 @@
 import json
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 import logging
+import codecs
 
 class ReplaceStringsHelper:
     """
@@ -23,7 +24,8 @@ class ReplaceStringsHelper:
         read_function, 
         write_function, 
         path: str, 
-        updates: List[Dict[str, str]]
+        updates: List[Dict[str, str]],
+        encoding: str = 'utf-8'
     ) -> Dict[str, Any]:
         """
         Process string replacements in a file with robust error handling.
@@ -47,15 +49,20 @@ class ReplaceStringsHelper:
             file_content_response = await read_function(path)
             
             # Parse the file content response
-            file_content = self._parse_file_content(file_content_response)
+            file_content = self._parse_file_content(file_content_response, encoding)
             if isinstance(file_content, dict) and 'error' in file_content:
                 return file_content
             
-            # Process replacements
-            updated_content, replacement_stats = self._process_replacements(file_content, updates)
+            # Process replacements with explicit encoding
+            updated_content, replacement_stats = self._process_replacements(file_content, updates, encoding)
             
+            # Ensure content is encoded properly for writing
+            content_to_write = updated_content
+            if isinstance(content_to_write, bytes):
+                content_to_write = content_to_write.decode(encoding)
+                
             # Write updated content back to file
-            write_response = await write_function(path, 'write', updated_content)
+            write_response = await write_function(path, 'write', content_to_write)
             
             # Check write response
             if isinstance(write_response, dict) and 'error' in write_response:
@@ -118,7 +125,7 @@ class ReplaceStringsHelper:
         # All validations passed
         return None
         
-    def _parse_file_content(self, response: Any) -> Union[str, Dict[str, Any]]:
+    def _parse_file_content(self, response: Any, encoding: str = 'utf-8') -> Union[str, Dict[str, Any]]:
         """
         Parse the file content response from the read operation.
         
@@ -149,23 +156,34 @@ class ReplaceStringsHelper:
         # Default case: return response as is
         return response
         
-    def _process_replacements(self, content: str, updates: List[Dict[str, str]]) -> tuple[str, List[Dict[str, Any]]]:
+    def _process_replacements(self, content: str, updates: List[Dict[str, str]], encoding: str = 'utf-8') -> tuple[str, List[Dict[str, Any]]]:
         """
-        Process multiple string replacements in the content.
+        Process multiple string replacements in the content with explicit encoding handling.
         
         Args:
             content: The original file content
             updates: List of update operations
+            encoding: The character encoding to use (default: utf-8)
             
         Returns:
             Tuple of (updated content, replacement stats)
         """
+        # Ensure content is properly decoded as Unicode string
+        if isinstance(content, bytes):
+            content = content.decode(encoding)
         updated_content = content
         replacement_stats = []
         
         for i, update in enumerate(updates):
+            # Get strings and ensure they're properly decoded
             old_string = update.get('old_string', '')
             new_string = update.get('new_string', '')
+            
+            # Convert to Unicode strings if they're byte strings
+            if isinstance(old_string, bytes):
+                old_string = old_string.decode(encoding)
+            if isinstance(new_string, bytes):
+                new_string = new_string.decode(encoding)
             
             # Skip invalid operations (should be caught by validation, but just in case)
             if not old_string:

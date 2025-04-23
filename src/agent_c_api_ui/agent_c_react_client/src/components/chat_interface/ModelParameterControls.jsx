@@ -214,27 +214,27 @@ const ModelParameterControls = ({
     };
 
     return (
-        <div className="space-y-4">
+        <div className="parameter-controls-container">
             {selectedModel.parameters?.temperature && (
-                <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                        <Label className="text-sm font-medium">Temperature</Label>
-                        <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-xl text-sm font-medium">
+                <div className="parameter-section">
+                    <div className="parameter-header">
+                        <Label className="parameter-label">Temperature</Label>
+                        <span className="parameter-value-badge">
                             {localTemperature.toFixed(1)}
                         </span>
                     </div>
-                    <div className="relative pt-1">
-                        <div className="flex justify-between text-xs text-muted-foreground mb-2">
-                            <span className="text-left">Focused</span>
-                            <span className="text-center">Balanced</span>
-                            <span className="text-right">Creative</span>
+                    <div className="parameter-slider-container">
+                        <div className="parameter-slider-labels">
+                            <span>Focused</span>
+                            <span>Balanced</span>
+                            <span>Creative</span>
                         </div>
-                        <div className="absolute w-full flex justify-between px-[2px] pointer-events-none">
-                            <div className="w-[2px] h-2 bg-muted-foreground/20"></div>
-                            <div className="w-[2px] h-2 bg-muted-foreground/20"></div>
-                            <div className="w-[2px] h-2 bg-muted-foreground/20"></div>
-                            <div className="w-[2px] h-2 bg-muted-foreground/20"></div>
-                            <div className="w-[2px] h-2 bg-muted-foreground/20"></div>
+                        <div className="parameter-slider-markers">
+                            <div className="parameter-slider-marker"></div>
+                            <div className="parameter-slider-marker"></div>
+                            <div className="parameter-slider-marker"></div>
+                            <div className="parameter-slider-marker"></div>
+                            <div className="parameter-slider-marker"></div>
                         </div>
                         <Slider
                             id="temperature-slider"
@@ -247,31 +247,31 @@ const ModelParameterControls = ({
                             className="w-full"
                         />
                     </div>
-                    <div className="text-xs text-muted-foreground italic">
+                    <div className="parameter-helper-text">
                         Higher values make output more creative but less predictable
                     </div>
                 </div>
             )}
 
             {selectedModel.parameters?.reasoning_effort && reasoningEffortOptions && (
-                <div className="space-y-2">
-                    <Label htmlFor="reasoning-effort">Reasoning Effort</Label>
+                <div className="parameter-section">
+                    <Label htmlFor="reasoning-effort" className="parameter-label">Reasoning Effort</Label>
                     <Select
                         value={reasoningEffort}
                         onValueChange={handleReasoningEffortChange}
                     >
                         <SelectTrigger
                             id="reasoning-effort"
-                            className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
+                            className="parameter-select-trigger"
                         >
                             <SelectValue placeholder="Select reasoning effort"/>
                         </SelectTrigger>
-                        <SelectContent className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border dark:border-gray-700 shadow-lg rounded-xl">
+                        <SelectContent className="parameter-select-content">
                             {reasoningEffortOptions.map(option => (
                                 <SelectItem
                                     key={option}
                                     value={option}
-                                    className="hover:bg-blue-50/80 dark:hover:bg-blue-900/30 focus:bg-blue-50 dark:focus:bg-blue-900/30 transition-colors rounded-lg mx-1 my-0.5"
+                                    className="parameter-select-item"
                                 >
                                     {option.charAt(0).toUpperCase() + option.slice(1)}
                                 </SelectItem>
@@ -282,9 +282,9 @@ const ModelParameterControls = ({
             )}
 
             {selectedModel.parameters?.extended_thinking && (
-                <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                        <Label htmlFor="extended-thinking" className="text-sm font-medium">
+                <div className="parameter-section">
+                    <div className="parameter-header">
+                        <Label htmlFor="extended-thinking" className="parameter-label">
                             Extended Thinking
                         </Label>
                         <Switch
@@ -293,15 +293,15 @@ const ModelParameterControls = ({
                             onCheckedChange={handleExtendedThinkingChange}
                         />
                     </div>
-                    <div className="text-xs text-muted-foreground italic">
+                    <div className="parameter-helper-text">
                         Enable deep reasoning for complex problems
                     </div>
 
                     {extendedThinkingEnabled && (
-                        <div className="mt-3 space-y-2">
-                            <div className="flex items-center justify-between">
-                                <Label className="text-sm font-medium">Thinking Budget</Label>
-                                <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-xl text-sm font-medium">
+                        <div className="extended-thinking-section">
+                            <div className="parameter-header">
+                                <Label className="parameter-label">Thinking Budget</Label>
+                                <span className="parameter-value-badge">
                                     {budgetTokens.toLocaleString()} tokens
                                 </span>
                             </div>
@@ -315,7 +315,7 @@ const ModelParameterControls = ({
                                 onValueCommit={handleBudgetTokensCommit}
                                 className="w-full"
                             />
-                            <div className="text-xs text-muted-foreground italic">
+                            <div className="parameter-helper-text">
                                 Higher values allow more thorough analysis but may take longer
                             </div>
                         </div>

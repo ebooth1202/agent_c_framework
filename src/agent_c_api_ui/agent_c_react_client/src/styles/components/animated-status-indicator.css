@@ -1,0 +1,61 @@
+/* ===== COMPONENT: AnimatedStatusIndicator ===== */
+/* Description: Displays the current status of the system with animated indicators for different states */
+/* File: src/components/chat_interface/AnimatedStatusIndicator.jsx */
+
+/* AnimatedStatusIndicator: Main container for status indicator */
+.status-indicator-container {
+  position: relative;
+}
+
+/* AnimatedStatusIndicator: The main status dot */
+.status-indicator-dot {
+  width: var(--spacing-3); /* w-3 */
+  height: var(--spacing-3); /* h-3 */
+  border-radius: var(--border-radius-full); /* rounded-full */
+  transition: all var(--transition-normal); /* transition-all duration-300 ease-in-out */
+}
+
+/* AnimatedStatusIndicator: Scale effect when processing */
+.status-indicator-dot-processing {
+  transform: scale(1.1); /* scale-110 */
+}
+
+.status-indicator-dot-idle {
+  transform: scale(1); /* scale-100 */
+}
+
+/* AnimatedStatusIndicator: Ping animation effect */
+.status-indicator-ping {
+  position: absolute;
+  inset: 0; /* inset-0 */
+  border-radius: var(--border-radius-full); /* rounded-full */
+  opacity: 0.75; /* opacity-75 */
+  animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite; /* animate-ping */
+}
+
+/* AnimatedStatusIndicator: Pulse animation effect */
+.status-indicator-pulse {
+  position: absolute;
+  inset: calc(-1 * var(--spacing-1)); /* -inset-1 */
+  border-radius: var(--border-radius-full); /* rounded-full */
+  opacity: 0.5; /* opacity-50 */
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; /* animate-pulse */
+}
+
+/* Define the ping animation if not already provided by Tailwind */
+@keyframes ping {
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+/* Define the pulse animation if not already provided by Tailwind */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}

@@ -124,27 +124,27 @@ function PersonaSelector({
     }, [modelConfigs, onUpdateSettings]);
 
     return (
-        <Card className="w-full">
+        <Card className="persona-selector-card">
             <CardHeader>
                 <CardTitle>Settings</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="persona-selector-content">
                 {/* Persona Selection */}
-                <div className="space-y-2">
+                <div className="persona-selector-section">
                     <Label htmlFor="persona-select">Load Persona Prompt</Label>
                     <Select value={selectedPersona} onValueChange={handlePersonaChange}>
                         <SelectTrigger
                             id="persona-select"
-                            className="rounded-xl border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm transition-colors hover:bg-white/80 dark:hover:bg-gray-700/80 focus:border-blue-300 dark:focus:border-blue-600 focus:ring focus:ring-blue-200 dark:focus:ring-blue-800 focus:ring-opacity-50"
+                            className="persona-selector-select-trigger"
                         >
                             <SelectValue placeholder="Select a persona"/>
                         </SelectTrigger>
-                        <SelectContent className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border dark:border-gray-700 shadow-lg rounded-xl text-gray-900 dark:text-gray-100">
+                        <SelectContent className="persona-selector-select-content">
                             {personas.map((p) => (
                                 <SelectItem
                                     key={p.name}
                                     value={p.name}
-                                    className="hover:bg-blue-50/80 dark:hover:bg-blue-800/50 focus:bg-blue-50 dark:focus:bg-blue-800/50 transition-colors rounded-lg mx-1 my-0.5 text-gray-900 dark:text-gray-100"
+                                    className="persona-selector-select-item"
                                 >
                                     {p.name}
                                 </SelectItem>
@@ -152,28 +152,28 @@ function PersonaSelector({
                         </SelectContent>
                     </Select>
                     {error && (
-                        <div className="text-sm text-red-500 mt-1">
+                        <div className="persona-selector-error">
                             Error: {error}
                         </div>
                     )}
                 </div>
 
                 {/* Custom Instructions */}
-                <div className="space-y-2">
+                <div className="persona-selector-section">
                     <Label htmlFor="custom-prompt">Customize Persona Instructions</Label>
                     <Textarea
                         id="custom-prompt"
                         value={localCustomPrompt}
                         onChange={handleCustomPromptChange}
                         onBlur={handleCustomPromptBlur}
-                        className="min-h-[100px] resize-y rounded-xl border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm transition-colors hover:bg-white/80 dark:hover:bg-gray-700/80 focus:border-blue-300 dark:focus:border-blue-600 focus:ring focus:ring-blue-200 dark:focus:ring-blue-800 focus:ring-opacity-50 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+                        className="persona-selector-textarea"
                         placeholder="You are a helpful assistant."
                     />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="persona-selector-grid">
                     {/* Model Selection */}
-                    <div className="space-y-2">
+                    <div className="persona-selector-section">
                         <Label htmlFor="model-select">Model</Label>
                         <Select
                             value={modelName}
@@ -181,11 +181,11 @@ function PersonaSelector({
                         >
                             <SelectTrigger
                                 id="model-select"
-                                className="rounded-xl border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm transition-colors hover:bg-white/80 dark:hover:bg-gray-700/80 focus:border-blue-300 dark:focus:border-blue-600 focus:ring focus:ring-blue-200 dark:focus:ring-blue-800 focus:ring-opacity-50"
+                                className="persona-selector-select-trigger"
                             >
                                 <SelectValue placeholder="Select model"/>
                             </SelectTrigger>
-                            <SelectContent className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border dark:border-gray-700 shadow-lg rounded-xl text-gray-900 dark:text-gray-100">
+                            <SelectContent className="persona-selector-select-content">
                                 {Object.entries(modelConfigs.reduce((acc, model) => {
                                     if (!acc[model.backend]) acc[model.backend] = [];
                                     acc[model.backend].push(model);
@@ -195,7 +195,7 @@ function PersonaSelector({
                                         <SelectItem
                                             value={`header-${vendor}`}
                                             disabled
-                                            className="opacity-50 pointer-events-none px-2 py-1.5 text-sm font-semibold text-gray-500 dark:text-gray-400"
+                                            className="persona-selector-vendor-header"
                                         >
                                             {vendor.toUpperCase()}
                                         </SelectItem>
@@ -205,14 +205,14 @@ function PersonaSelector({
                                                     <TooltipTrigger asChild>
                                                         <SelectItem
                                                             value={model.id}
-                                                            className="hover:bg-blue-50/80 dark:hover:bg-blue-800/50 focus:bg-blue-50 dark:focus:bg-blue-800/50 transition-colors rounded-lg mx-1 my-0.5 pl-4 text-gray-900 dark:text-gray-100"
+                                                            className="persona-selector-select-item"
                                                         >
                                                             {model.label}
                                                         </SelectItem>
                                                     </TooltipTrigger>
-                                                    <TooltipContent className="text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800">
+                                                    <TooltipContent className="persona-selector-tooltip-content">
                                                         <p>{model.description}</p>
-                                                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                                        <p className="persona-selector-tooltip-model-type">
                                                             Type: {model.model_type}
                                                         </p>
                                                     </TooltipContent>

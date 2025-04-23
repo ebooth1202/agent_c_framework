@@ -1,26 +1,27 @@
 import React from 'react';
 import {Link} from 'react-router-dom';
 import { ThemeToggle } from './ui/theme-toggle';
+// CSS already imported through main.css
 
 const Layout = ({children}) => {
     return (
-        <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex flex-col overflow-hidden">
-            <header className="container mx-auto px-6 py-4 max-w-7xl flex items-center justify-between">
-                <div className="flex items-center">
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Agent C Conversational Interface</h1>
+        <div className="layout-container">
+            <header className="layout-header">
+                <div className="layout-title-container">
+                    <h1 className="layout-title">Agent C Conversational Interface</h1>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="layout-controls">
                     <ThemeToggle />
-                    <nav className="hidden sm:flex">
-                        <Link to="/" className="text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100">Home</Link>
-                        <Link to="/chat" className="ml-4 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100">Chat</Link>
-                        <Link to="/rag" className="ml-4 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100">RAG Admin</Link>
-                        <Link to="/settings" className="ml-4 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100">Settings</Link>
-                        <Link to="/interactions" className="ml-4 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100">Sessions</Link>
+                    <nav className="layout-nav">
+                        <Link to="/" className="layout-nav-link">Home</Link>
+                        <Link to="/chat" className="layout-nav-link layout-nav-link-spacing">Chat</Link>
+                        <Link to="/rag" className="layout-nav-link layout-nav-link-spacing">RAG Admin</Link>
+                        <Link to="/settings" className="layout-nav-link layout-nav-link-spacing">Settings</Link>
+                        <Link to="/interactions" className="layout-nav-link layout-nav-link-spacing">Sessions</Link>
                     </nav>
                 </div>
             </header>
-            <main className="container mx-auto px-6 pt-1 pb-4 max-w-7xl text-gray-900 dark:text-gray-100 flex-1 flex flex-col overflow-hidden">{children}</main>
+            <main className="layout-main">{children}</main>
         </div>
     );
 };

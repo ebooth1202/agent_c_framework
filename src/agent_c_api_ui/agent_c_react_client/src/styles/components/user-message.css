@@ -1,0 +1,88 @@
+/* ===== COMPONENT: UserMessage ===== */
+/* Description: Displays messages sent by the user in the chat interface with consistent styling and copy functionality */
+/* File: src/components/chat_interface/UserMessage.jsx */
+
+/* UserMessage: Message row layout */
+.user-message-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: var(--spacing-2);
+}
+
+/* UserMessage: Message bubble styling */
+.user-message-bubble {
+  max-width: 80%;
+  border-radius: var(--border-radius-2xl);
+  padding: var(--spacing-4) var(--spacing-4);
+  margin-left: var(--spacing-12);
+  box-shadow: var(--shadow-sm);
+  background-color: var(--theme-user-message-background);
+  color: var(--theme-user-message-foreground);
+  border: var(--border-width-thin) solid var(--theme-user-message-border);
+  font-family: Georgia, serif;
+  border-bottom-right-radius: var(--spacing-1);
+}
+
+/* UserMessage: Inner content layout */
+.user-message-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-4);
+}
+
+/* UserMessage: Message body */
+.user-message-body {
+  flex: 1;
+}
+
+/* UserMessage: Voice message style */
+.user-message-voice {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+/* UserMessage: Files attachment footer */
+.user-message-files {
+  margin-top: var(--spacing-2);
+  padding-top: var(--spacing-1);
+  border-top: var(--border-width-thin) solid var(--theme-user-message-border);
+}
+
+/* UserMessage: Files text styling */
+.user-message-files-text {
+  font-size: var(--font-size-xs);
+  color: var(--theme-user-message-foreground);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
+/* UserMessage: Copy button */
+.user-message-copy-button {
+  margin-top: var(--spacing-1);
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity var(--transition-hover);
+  background-color: var(--theme-user-message-background);
+  color: var(--theme-user-message-foreground);
+}
+
+/* UserMessage: Copy button hover state */
+.user-message-copy-button:hover {
+  background-color: var(--theme-secondary);
+}
+
+/* UserMessage: Show copy button on hover */
+.user-message-row:hover .user-message-copy-button {
+  opacity: 1;
+}
+
+/* UserMessage: User icon */
+.user-message-icon {
+  height: 1.5rem;
+  width: 1.5rem;
+  color: var(--theme-primary);
+}

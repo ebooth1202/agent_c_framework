@@ -1,0 +1,120 @@
+/* ===== COMPONENT: MobileNav ===== */
+/* Description: Mobile navigation component with dropdown menu */
+/* File: src/components/MobileNav.jsx */
+
+/* MobileNav: Main container for mobile navigation */
+.mobile-nav {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* MobileNav: Toggle button for mobile menu */
+.mobile-nav-toggle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: hsl(var(--color-gray-600));
+  transition: var(--transition-hover);
+}
+
+/* MobileNav: Toggle button hover */
+.mobile-nav-toggle:hover {
+  color: hsl(var(--color-gray-900));
+}
+
+/* MobileNav: Dark mode toggle button */
+.dark .mobile-nav-toggle {
+  color: hsl(var(--color-gray-400));
+}
+
+/* MobileNav: Dark mode toggle button hover */
+.dark .mobile-nav-toggle:hover {
+  color: hsl(var(--color-gray-100));
+}
+
+/* MobileNav: Dropdown container that appears when menu is open */
+.mobile-nav-dropdown {
+  position: absolute;
+  top: 2.5rem;
+  right: 0;
+  z-index: var(--z-index-dropdown);
+  min-width: 12rem;
+  background-color: var(--card-background);
+  border-radius: var(--card-border-radius);
+  box-shadow: var(--shadow-lg);
+  border: var(--border-width-thin) solid var(--card-border-color);
+  overflow: hidden;
+  animation: slideDown var(--transition-fade);
+}
+
+/* MobileNav: Dark mode dropdown */
+.dark .mobile-nav-dropdown {
+  background-color: hsl(var(--color-gray-800));
+  border-color: hsl(var(--color-gray-700));
+}
+
+/* MobileNav: Animation for dropdown menu */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* MobileNav: Navigation menu containing links */
+.mobile-nav-menu {
+  display: flex;
+  flex-direction: column;
+  padding: var(--spacing-2);
+}
+
+/* MobileNav: Regular navigation links */
+.mobile-nav-link {
+  display: block;
+  padding: var(--spacing-2) var(--spacing-3);
+  color: hsl(var(--color-gray-600));
+  border-radius: var(--border-radius-md);
+  transition: var(--transition-hover);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+}
+
+/* MobileNav: Navigation link hover */
+.mobile-nav-link:hover {
+  background-color: hsl(var(--color-gray-100));
+  color: hsl(var(--color-gray-900));
+}
+
+/* MobileNav: Dark mode navigation link */
+.dark .mobile-nav-link {
+  color: hsl(var(--color-gray-400));
+}
+
+/* MobileNav: Dark mode navigation link hover */
+.dark .mobile-nav-link:hover {
+  background-color: hsl(var(--color-gray-700));
+  color: hsl(var(--color-gray-100));
+}
+
+/* MobileNav: Active navigation link */
+.mobile-nav-link-active {
+  display: block;
+  padding: var(--spacing-2) var(--spacing-3);
+  color: hsl(var(--color-blue-600));
+  background-color: hsl(var(--color-blue-50));
+  border-radius: var(--border-radius-md);
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+}
+
+/* MobileNav: Dark mode active navigation link */
+.dark .mobile-nav-link-active {
+  color: hsl(var(--color-blue-500));
+  background-color: hsla(var(--color-blue-500), 0.1);
+}

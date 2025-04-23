@@ -1,7 +1,7 @@
 import json
 import logging
 import re
-from typing import Any, List, Tuple, Optional, Dict, Union
+from typing import Any, List, Tuple, Optional
 from ts_tool import api
 
 from agent_c.toolsets.tool_set import Toolset
@@ -74,7 +74,7 @@ class WorkspaceTools(Toolset):
 
         return None, workspace, relative_path
 
-    def _validate_and_get_workspace_path(self, unc_path: str) -> Tuple[Optional[str], Optional[BaseWorkspace], Optional[str]]:
+    def validate_and_get_workspace_path(self, unc_path: str) -> Tuple[Optional[str], Optional[BaseWorkspace], Optional[str]]:
         """
         Validate a UNC path and return the workspace object and relative path.
 
@@ -154,7 +154,7 @@ class WorkspaceTools(Toolset):
         folder_depth = kwargs.get('folder_depth', 5)
         file_depth = kwargs.get('file_depth', 3)
 
-        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
+        error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
         if error:
             return json.dumps({'error': error})
 
@@ -181,7 +181,7 @@ class WorkspaceTools(Toolset):
         """
         unc_path = kwargs.get('path', '')
 
-        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
+        error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
         if error:
             return json.dumps({'error': error})
 
@@ -223,7 +223,7 @@ class WorkspaceTools(Toolset):
         data = kwargs['data']
         mode = kwargs.get('mode', 'write')
 
-        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
+        error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
         if error:
             return json.dumps({'error': error})
 
@@ -276,12 +276,12 @@ class WorkspaceTools(Toolset):
         dest_unc_path = kwargs.get('dest_path', '')
 
         # Validate source path
-        src_error, src_workspace, src_relative_path = self._validate_and_get_workspace_path(src_unc_path)
+        src_error, src_workspace, src_relative_path = self.validate_and_get_workspace_path(src_unc_path)
         if src_error:
             return json.dumps({'error': src_error})
 
         # Validate destination path
-        dest_error, dest_workspace, dest_relative_path = self._validate_and_get_workspace_path(dest_unc_path)
+        dest_error, dest_workspace, dest_relative_path = self.validate_and_get_workspace_path(dest_unc_path)
         if dest_error:
             return json.dumps({'error': dest_error})
 
@@ -314,7 +314,7 @@ class WorkspaceTools(Toolset):
         """
         unc_path = kwargs.get('path', '')
 
-        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
+        error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
         if error:
             return json.dumps({'error': error})
 
@@ -355,12 +355,12 @@ class WorkspaceTools(Toolset):
         dest_unc_path = kwargs.get('dest_path', '')
 
         # Validate source path
-        src_error, src_workspace, src_relative_path = self._validate_and_get_workspace_path(src_unc_path)
+        src_error, src_workspace, src_relative_path = self.validate_and_get_workspace_path(src_unc_path)
         if src_error:
             return json.dumps({'error': src_error})
 
         # Validate destination path
-        dest_error, dest_workspace, dest_relative_path = self._validate_and_get_workspace_path(dest_unc_path)
+        dest_error, dest_workspace, dest_relative_path = self.validate_and_get_workspace_path(dest_unc_path)
         if dest_error:
             return json.dumps({'error': dest_error})
 
@@ -415,14 +415,15 @@ class WorkspaceTools(Toolset):
         updates = kwargs['updates']
 
         unc_path = kwargs.get('path', '')
-        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
+        error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
         if error:
             return json.dumps({'error': error})
 
         try:
+            # Use utf-8 encoding explicitly when processing string replacements
             result = await self.replace_helper.process_replace_strings(
-                read_function=workspace.read, write_function=workspace.write,
-                path=relative_path, updates=updates)
+                read_function=workspace.read_internal, write_function=workspace.write,
+                path=relative_path, updates=updates, encoding='utf-8')
 
             return json.dumps(result)
         except Exception as e:
@@ -472,7 +473,7 @@ class WorkspaceTools(Toolset):
         end_line = kwargs.get('end_line')
         include_line_numbers = kwargs.get('include_line_numbers', False)
 
-        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
+        error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
         if error:
             return json.dumps({'error': error})
 
@@ -483,16 +484,10 @@ class WorkspaceTools(Toolset):
             if not isinstance(end_line, int) or end_line < start_line:
                 return json.dumps({'error': 'Invalid end_line value'})
 
-            file_content_response = await workspace.read(relative_path)
-
-            # Parse the response to get the actual content
             try:
-                file_content_json = json.loads(file_content_response)
-                if 'error' in file_content_json:
-                    return file_content_response  # Return the error from read operation
-                file_content = file_content_json.get('contents', '')
-            except json.JSONDecodeError:
-                file_content = file_content_response
+                file_content = await workspace.read_internal(relative_path)
+            except Exception as e:
+                return json.dumps({'error': f'Error reading file: {str(e)}'})
 
             # Split the content into lines
             lines = file_content.splitlines()
@@ -539,22 +534,18 @@ class WorkspaceTools(Toolset):
         """
         unc_path = kwargs.get('path', '')
 
-        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
+        error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
         if error:
             return json.dumps({'error': error})
 
-        try:
-            file_content_response = await workspace.read(relative_path)
-            # Parse the response to get the actual content
 
-            file_content_json = json.loads(file_content_response)
-            if 'error' in file_content_json:
-                return file_content_response  # Return the error from read operation
-            file_content = file_content_json.get('contents', '')
-        except  Exception as e:
+        try:
+            file_content = await workspace.read_internal(relative_path)
+        except Exception as e:
             error_msg = f'Error fetching {unc_path}: {str(e)}'
             self.logger.error(error_msg)
             return json.dumps({'error': error_msg})
+
         try:
             context = api.get_code_context(file_content, format='markdown', filename=unc_path)
         except Exception as e:
@@ -606,7 +597,7 @@ class WorkspaceTools(Toolset):
         use_regex = kwargs.get('use_regex', False)
         max_results = kwargs.get('max_results', 0)
 
-        error, workspace, relative_path = self._validate_and_get_workspace_path(unc_path)
+        error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
         if error:
             return json.dumps({'error': error})
 
@@ -614,16 +605,10 @@ class WorkspaceTools(Toolset):
             if not search_string:
                 return json.dumps({'error': 'Search string cannot be empty'})
 
-            file_content_response = await workspace.read(relative_path)
-
-            # Parse the response to get the actual content
             try:
-                file_content_json = json.loads(file_content_response)
-                if 'error' in file_content_json:
-                    return file_content_response  # Return the error from read operation
-                file_content = file_content_json.get('contents', '')
-            except json.JSONDecodeError:
-                file_content = file_content_response
+                file_content = await workspace.read_internal(relative_path)
+            except Exception as e:
+                return json.dumps({'error': f'Error reading file: {str(e)}'})
 
             # Split the content into lines
             lines = file_content.splitlines()

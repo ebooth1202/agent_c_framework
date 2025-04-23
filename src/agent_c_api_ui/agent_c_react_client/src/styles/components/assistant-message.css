@@ -1,0 +1,113 @@
+/* ===== COMPONENT: AssistantMessage ===== */
+/* Description: Displays messages from the AI assistant with formatting, token usage, and expandable tool calls */
+/* File: src/components/chat_interface/AssistantMessage.jsx */
+
+/* AssistantMessage: Main container */
+.assistant-message-container {
+  display: flex;
+  flex-direction: column;
+}
+
+/* AssistantMessage: Message row layout */
+.assistant-message-row {
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: var(--spacing-2);
+}
+
+/* AssistantMessage: Message bubble styling */
+.assistant-message-bubble {
+  max-width: 80%;
+  border-radius: var(--border-radius-2xl);
+  padding: var(--spacing-4) var(--spacing-4);
+  margin-right: var(--spacing-12);
+  box-shadow: var(--shadow-md);
+  border: var(--border-width-thin) solid var(--theme-assistant-message-border);
+  background-color: var(--theme-assistant-message-background);
+  color: var(--theme-assistant-message-foreground);
+  font-family: Georgia, serif;
+  border-bottom-left-radius: var(--spacing-1);
+}
+
+/* AssistantMessage: Mode-specific styles for better contrast */
+/* Light mode */
+.assistant-message-bubble .markdown-inline-code {
+  background-color: rgba(0, 0, 0, 0.1);
+  color: var(--theme-assistant-message-foreground);
+  font-weight: 600;
+  padding: 0.2em 0.4em;
+  border-radius: 0.2em;
+}
+
+/* Dark mode */
+.dark .assistant-message-bubble .markdown-inline-code {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--theme-assistant-message-foreground);
+  font-weight: 600;
+  padding: 0.2em 0.4em;
+  border-radius: 0.2em;
+}
+
+/* AssistantMessage: Inner content layout */
+.assistant-message-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-4);
+}
+
+/* AssistantMessage: Message body */
+.assistant-message-body {
+  flex: 1;
+}
+
+/* AssistantMessage: Footer section */
+.assistant-message-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-2);
+  padding-top: var(--spacing-1);
+  border-top: var(--border-width-thin) solid var(--theme-assistant-message-border);
+}
+
+/* AssistantMessage: Tool calls section */
+.assistant-message-tool-calls {
+  margin-top: var(--spacing-3);
+  padding-top: var(--spacing-2);
+  border-top: var(--border-width-thin) solid var(--theme-assistant-message-border);
+}
+
+/* AssistantMessage: Tool calls toggle button */
+.assistant-message-tool-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  font-size: var(--font-size-xs);
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: 9999px;
+  background-color: var(--theme-tool-call-header-background);
+  color: var(--theme-tool-call-title);
+  cursor: pointer;
+  transition: background-color var(--transition-hover);
+}
+
+/* AssistantMessage: Tool calls toggle hover */
+.assistant-message-tool-toggle:hover {
+  background-color: var(--theme-tool-call-header-hover);
+}
+
+/* AssistantMessage: Copy button */
+.assistant-message-copy-button {
+  margin-top: var(--spacing-1);
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity var(--transition-hover);
+}
+
+/* AssistantMessage: Show copy button on hover */
+.assistant-message-row:hover .assistant-message-copy-button {
+  opacity: 1;
+}

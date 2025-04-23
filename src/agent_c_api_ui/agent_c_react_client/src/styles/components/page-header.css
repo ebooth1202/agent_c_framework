@@ -1,0 +1,72 @@
+/* ===== COMPONENT: PageHeader ===== */
+/* Description: Provides consistent page headings with title, description and optional action buttons */
+/* File: src/components/PageHeader.jsx */
+
+/* PageHeader: Main container */
+.page-header {
+  margin-bottom: var(--spacing-6); /* mb-6 */
+  padding-bottom: var(--spacing-4); /* pb-4 */
+  border-bottom: var(--border-width-thin) solid hsl(var(--color-gray-200)); /* border-b border-gray-200 */
+}
+
+.dark .page-header {
+  border-color: hsl(var(--color-gray-700)); /* border-gray-700 */
+}
+
+/* PageHeader: Content container with flex layout */
+.page-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-4); /* gap-4 */
+}
+
+/* PageHeader: Stack layout on small screens */
+@media (max-width: 640px) {
+  .page-header-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .page-header-actions {
+    margin-top: var(--spacing-2); /* mt-2 */
+    align-self: flex-end;
+  }
+}
+
+/* PageHeader: Text container */
+.page-header-text {
+  flex: 1;
+}
+
+/* PageHeader: Page title */
+.page-header-title {
+  font-size: var(--font-size-3xl); /* text-3xl */
+  font-weight: var(--font-weight-bold); /* font-bold */
+  line-height: 1.2;
+  color: hsl(var(--color-gray-900)); /* text-gray-900 */
+  margin-bottom: var(--spacing-1); /* mb-1 */
+}
+
+.dark .page-header-title {
+  color: hsl(var(--color-gray-50)); /* text-gray-50 */
+}
+
+/* PageHeader: Page description */
+.page-header-description {
+  color: hsl(var(--color-gray-500)); /* text-gray-500 */
+  font-size: var(--font-size-base); /* text-base */
+  max-width: 36rem; /* max-w-2xl */
+}
+
+.dark .page-header-description {
+  color: hsl(var(--color-gray-400)); /* text-gray-400 */
+}
+
+/* PageHeader: Actions container */
+.page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2); /* gap-2 */
+  flex-shrink: 0;
+}

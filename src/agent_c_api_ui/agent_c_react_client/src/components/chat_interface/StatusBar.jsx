@@ -29,51 +29,46 @@ const StatusBar = ({
         if (isProcessing) {
             return {
                 message: 'Processing...',
-                color: 'text-red-500',
-                description: 'Agent is processing your request',
-                iconClass: 'animate-pulse'
+                description: 'Agent is processing your request'
             };
         }
         if (isInitializing) {
             return {
                 message: 'Initializing Application...',
-                color: 'text-yellow-500',
-                description: 'Loading initial application data',
-                iconClass: ''
+                description: 'Loading initial application data'
             };
         }
         if (!isReady) {
             return {
                 message: 'Initializing Agent...',
-                color: 'text-yellow-500',
-                description: 'Setting up the agent and tools',
-                iconClass: ''
+                description: 'Setting up the agent and tools'
             };
         }
         return {
             message: 'Ready',
-            color: 'text-green-500',
-            description: 'System is ready to process requests',
-            iconClass: ''
+            description: 'System is ready to process requests'
         };
     };
 
     const statusInfo = getStatusInfo();
 
     return (
-        <div className="flex items-center justify-between py-1 px-2 bg-background/95 backdrop-blur-sm rounded-lg shadow-sm text-xs">
-            <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2">
+        <div className="status-bar">
+            <div className="status-bar-section">
+                <div className="status-indicator-section">
                     <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <div className="flex items-center space-x-2">
+                                <div className="status-indicator-wrapper">
                                     <Activity
-                                        className={`w-3 h-3 ${statusInfo.color} ${statusInfo.iconClass} ${
-                                            isProcessing ? 'scale-110 transition-transform duration-200' : ''
-                                        }`}
+                                        className={isProcessing 
+                                            ? 'status-indicator-icon-processing' 
+                                            : isInitializing || !isReady 
+                                                ? 'status-indicator-icon-initializing' 
+                                                : 'status-indicator-icon-ready'
+                                        }
                                     />
-                                    <span className="text-xs font-medium">
+                                    <span className="status-text">
                                         Status: {statusInfo.message}
                                     </span>
                                 </div>
@@ -93,17 +88,17 @@ const StatusBar = ({
                 </div>
 
                 {isReady && activeTools && activeTools.length > 0 && (
-                    <div className="flex items-center space-x-2 px-3 py-0.5 bg-blue-50/10 rounded-full border border-blue-200/20 dark:bg-blue-950/20 dark:border-blue-800/30">
-                        <Wrench className="w-3 h-3 text-blue-500 dark:text-blue-400" />
-                        <span className="text-xs text-blue-700 dark:text-blue-300">
+                    <div className="tools-badge">
+                        <Wrench className="tools-icon" />
+                        <span className="tools-count-text">
                             Active Tools: {activeTools.length}
                         </span>
                         <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <Info className="w-3 h-3 text-blue-400 dark:text-blue-300 cursor-help" />
+                                    <Info className="tools-info-icon" />
                                 </TooltipTrigger>
-                                <TooltipContent className="bg-background border shadow-md">
+                                <TooltipContent className="tools-tooltip-content">
                                     <p className="max-w-xs text-muted-foreground">{activeTools.join(', ')}</p>
                                 </TooltipContent>
                             </Tooltip>
@@ -113,7 +108,7 @@ const StatusBar = ({
             </div>
             
             {/* Chat export actions */}
-            <div className="flex items-center space-x-4">
+            <div className="chat-export-actions">
                 <CopyButton
                     content={getChatCopyContent}
                     htmlContent={getChatCopyHTML}
@@ -121,8 +116,8 @@ const StatusBar = ({
                     successText="Chat copied!"
                     size="sm"
                     variant="ghost"
-                    className="text-foreground hover:bg-muted"
-                    icon={<Copy className="w-4 h-4" />}
+                    className="chat-export-button"
+                    icon={<Copy className="chat-export-icon" />}
                     iconOnly
                 />
                 <ExportHTMLButton
@@ -131,8 +126,8 @@ const StatusBar = ({
                     filename={`chat-export-${new Date().toISOString().slice(0, 10)}.html`}
                     size="sm"
                     variant="ghost"
-                    className="text-foreground hover:bg-muted"
-                    icon={<Download className="w-4 h-4" />}
+                    className="chat-export-button"
+                    icon={<Download className="chat-export-icon" />}
                     iconOnly
                 />
             </div>
