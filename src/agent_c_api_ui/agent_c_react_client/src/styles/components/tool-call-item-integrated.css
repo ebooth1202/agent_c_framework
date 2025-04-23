@@ -1,0 +1,150 @@
+/* ===== COMPONENT: ToolCallItem (Integrated) ===== */
+/* Description: Styles for tool call items when displayed integrated within assistant messages */
+
+/* ToolCallItem (Integrated): Main container */
+.integrated-tool-call-item {
+  margin-bottom: var(--spacing-2);
+  background-color: transparent;
+  border-radius: var(--border-radius-lg);
+  overflow: hidden;
+}
+
+/* ToolCallItem (Integrated): Header styling */
+.integrated-tool-call-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-2) var(--spacing-3);
+  cursor: pointer;
+  background-color: hsl(var(--color-purple-100) / 0.5);
+  transition: background-color var(--transition-hover);
+  border-radius: var(--border-radius-md);
+  border: 1px solid hsl(var(--color-purple-200) / 0.8);
+}
+
+/* ToolCallItem (Integrated): Dark mode header */
+.dark .integrated-tool-call-item-header {
+  background-color: hsl(var(--color-purple-900) / 0.3);
+  border-color: hsl(var(--color-purple-700) / 0.6);
+}
+
+/* ToolCallItem (Integrated): Header hover states */
+.integrated-tool-call-item-header:hover {
+  background-color: hsl(var(--color-purple-100) / 0.9);
+}
+
+.dark .integrated-tool-call-item-header:hover {
+  background-color: hsl(var(--color-purple-800) / 0.5);
+}
+
+/* ToolCallItem (Integrated): Content area */
+.integrated-tool-call-item-content {
+  background-color: hsl(var(--color-purple-50) / 0.7);
+  padding: var(--spacing-3);
+  border-bottom-left-radius: var(--border-radius-md);
+  border-bottom-right-radius: var(--border-radius-md);
+  border: 1px solid hsl(var(--color-purple-200) / 0.8);
+  border-top: none;
+}
+
+.dark .integrated-tool-call-item-content {
+  background-color: hsl(var(--color-purple-950) / 0.4);
+  border-color: hsl(var(--color-purple-700) / 0.6);
+}
+
+/* ToolCallItem (Integrated): Code pre formatting */
+.integrated-tool-call-item-code {
+  font-size: var(--font-size-sm);
+  font-family: var(--font-mono);
+  background-color: hsl(var(--color-purple-50) / 0.9);
+  padding: var(--spacing-2);
+  border-radius: var(--border-radius-md);
+  white-space: pre-wrap;
+  overflow-x: auto;
+  max-width: 100%;
+  border: var(--border-width-thin) solid hsl(var(--color-purple-200));
+  color: hsl(var(--color-purple-900));
+}
+
+/* ToolCallItem (Integrated): Dark mode code */
+.dark .integrated-tool-call-item-code {
+  background-color: hsl(var(--color-purple-950) / 0.7);
+  color: hsl(var(--color-purple-100));
+  border-color: hsl(var(--color-purple-700));
+}
+
+/* Section title styling */
+.integrated-tool-call-item-section-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: hsl(var(--color-purple-800));
+  margin-bottom: var(--spacing-1);
+}
+
+.dark .integrated-tool-call-item-section-title {
+  color: hsl(var(--color-purple-200));
+}
+
+/* Icons */
+.integrated-tool-call-item-icon {
+  height: 1.25rem;
+  width: 1.25rem;
+  color: hsl(var(--color-purple-600));
+}
+
+.dark .integrated-tool-call-item-icon {
+  color: hsl(var(--color-purple-300));
+}
+
+/* Tool call item name container */
+.tool-call-item-name-container {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+/* Tool call item name */
+.tool-call-item-name {
+  font-weight: var(--font-weight-medium);
+  color: hsl(var(--color-purple-800));
+}
+
+.dark .tool-call-item-name {
+  color: hsl(var(--color-purple-200));
+}
+
+/* Tool call item buttons */
+.tool-call-item-buttons {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
+/* Tool call item chevron */
+.tool-call-item-chevron {
+  height: 1rem;
+  width: 1rem;
+  transition: transform var(--transition-standard);
+  color: hsl(var(--color-purple-600));
+}
+
+.dark .tool-call-item-chevron {
+  color: hsl(var(--color-purple-300));
+}
+
+.tool-call-item-chevron-rotated {
+  transform: rotate(180deg);
+}
+
+/* Tool call item section */
+.tool-call-item-section {
+  margin-top: var(--spacing-2);
+}
+
+/* Tool call item section header */
+.tool-call-item-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-1);
+}

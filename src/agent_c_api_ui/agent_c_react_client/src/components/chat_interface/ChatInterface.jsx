@@ -889,6 +889,7 @@ const ChatInterface = ({
                                                                             id: toolCall.id || toolCall.tool_call_id
                                                                         }}
                                                                         results={toolCall.results}
+                                                                        integrated={true}
                                                                     />
                                                                 ))}
                                                             </div>

@@ -23,6 +23,7 @@
 @import './components/status-bar.css';
 @import './components/tool-call-display.css';
 @import './components/tool-call-item.css';
+@import './components/tool-call-item-integrated.css';
 @import './components/parameter-documentation.css';
 @import './components/chat-input-area.css';
 @import './components/file-item.css';

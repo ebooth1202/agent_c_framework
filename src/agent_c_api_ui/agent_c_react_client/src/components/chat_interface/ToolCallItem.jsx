@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { PocketKnife, ChevronDown } from 'lucide-react';
 import CopyButton from './CopyButton';
+import '../../styles/components/tool-call-item-integrated.css';
 
 function formatData(data) {
   if (!data) return "";
@@ -16,7 +17,7 @@ function formatData(data) {
   }
 }
 
-const ToolCallItem = ({ tool, results }) => {
+const ToolCallItem = ({ tool, results, integrated = false }) => {
   const [isExpanded, setIsExpanded] = useState(false); // Default to collapsed
 
   if (!tool?.name) return null;
@@ -25,13 +26,13 @@ const ToolCallItem = ({ tool, results }) => {
   const formattedResults = results ? formatData(results) : "";
 
   return (
-    <div className="tool-call-item">
+    <div className={integrated ? "integrated-tool-call-item" : "tool-call-item"}>
       <div
-        className="tool-call-item-header"
+        className={integrated ? "integrated-tool-call-item-header" : "tool-call-item-header"}
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="tool-call-item-name-container">
-          <PocketKnife className="tool-call-item-icon" />
+          <PocketKnife className={integrated ? "integrated-tool-call-item-icon" : "tool-call-item-icon"} />
           <span className="tool-call-item-name">
             {tool.name}
           </span>
@@ -62,11 +63,11 @@ const ToolCallItem = ({ tool, results }) => {
       </div>
 
       {isExpanded && (
-        <div className="tool-call-item-content">
+        <div className={integrated ? "integrated-tool-call-item-content" : "tool-call-item-content"}>
           {formattedArguments && (
             <div className="tool-call-item-section">
               <div className="tool-call-item-section-header">
-                <h5 className="tool-call-item-section-title">Arguments:</h5>
+                <h5 className={integrated ? "integrated-tool-call-item-section-title" : "tool-call-item-section-title"}>Arguments:</h5>
                 <CopyButton
                   content={formattedArguments}
                   tooltipText="Copy arguments"
@@ -75,7 +76,7 @@ const ToolCallItem = ({ tool, results }) => {
                   size="xs"
                 />
               </div>
-              <pre className="tool-call-item-code">
+              <pre className={integrated ? "integrated-tool-call-item-code" : "tool-call-item-code"}>
                 {formattedArguments}
               </pre>
             </div>
@@ -84,7 +85,7 @@ const ToolCallItem = ({ tool, results }) => {
           {formattedResults && (
             <div className="tool-call-item-section">
               <div className="tool-call-item-section-header">
-                <h5 className="tool-call-item-section-title">Results:</h5>
+                <h5 className={integrated ? "integrated-tool-call-item-section-title" : "tool-call-item-section-title"}>Results:</h5>
                 <CopyButton
                   content={formattedResults}
                   tooltipText="Copy results"
@@ -93,7 +94,7 @@ const ToolCallItem = ({ tool, results }) => {
                   size="xs"
                 />
               </div>
-              <pre className="tool-call-item-code">
+              <pre className={integrated ? "integrated-tool-call-item-code" : "tool-call-item-code"}>
                 {formattedResults}
               </pre>
             </div>
