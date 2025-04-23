@@ -4,9 +4,9 @@
 
 | CSS File | Purpose | Status | Notes |
 |---------|---------|--------|-------|
-| globals.css | Global styles and CSS variables | 📝 To Analyze | Contains shadcn/ui variables |
-| main.css | Main application styles | 📝 To Analyze | |
-| component-styles.css | Component-specific imports | 📝 To Analyze | |
+| globals.css | Global styles and CSS variables | ✅ Analyzed | Contains shadcn/ui variables and Tailwind directives |
+| main.css | Main application styles | ✅ Analyzed | Import file for component and common styles |
+| component-styles.css | Component-specific imports | ✅ Analyzed | Legacy import file for backwards compatibility |
 | common/badges.css | Badge styling | 📝 To Analyze | |
 | common/cards.css | Card styling | 📝 To Analyze | |
 | common/interactive.css | Interactive element styling | 📝 To Analyze | |
@@ -15,15 +15,15 @@
 | common/tooltips.css | Tooltip styling | 📝 To Analyze | |
 | common/typography.css | Typography styles | 📝 To Analyze | |
 | common/utilities.css | Utility classes | 📝 To Analyze | |
-| common/variables.css | CSS variables | 📝 To Analyze | |
+| common/variables.css | CSS variables | ✅ Analyzed | Comprehensive set of theme variables, colors, spacing, typography |
 | components/agent-config-display.css | AgentConfigDisplay component styling | 📝 To Analyze | |
 | components/agent-config-hover-card.css | AgentConfigHoverCard component styling | 📝 To Analyze | |
 | components/animated-status-indicator.css | AnimatedStatusIndicator component styling | 📝 To Analyze | |
-| components/assistant-message.css | AssistantMessage component styling | 📝 To Analyze | |
+| components/assistant-message.css | AssistantMessage component styling | ✅ Analyzed | Styling for assistant message bubbles, content, and tool calls |
 | components/chat-input-area.css | ChatInputArea component styling | 📝 To Analyze | |
 | components/drag-drop-overlay.css | DragDropOverlay component styling | 📝 To Analyze | |
 | components/file-item.css | FileItem component styling | 📝 To Analyze | |
-| components/layout.css | Layout component styling | 📝 To Analyze | |
+| components/layout.css | Layout component styling | ✅ Analyzed | Main layout structure with header, navigation, and content area |
 | components/markdown-message.css | MarkdownMessage component styling | 📝 To Analyze | |
 | components/media-message.css | MediaMessage component styling | 📝 To Analyze | |
 | components/mobile-nav.css | MobileNav component styling | 📝 To Analyze | |
@@ -45,16 +45,16 @@
 | Component | Current Style Type | shadcn/ui Dependencies | Migration Priority | Status |
 |-----------|-------------------|------------------------|-------------------|--------|
 | Layout.jsx | Traditional CSS | Card | High | 📝 To Analyze |
-| Sidebar.jsx | Traditional CSS | Button | High | 📝 To Analyze |
+| Sidebar.jsx | Traditional CSS | Button | High | ✅ Analyzed | Navigation sidebar with links, could be migrated to Sheet for mobile |
 | PageHeader.jsx | Traditional CSS | - | High | 📝 To Analyze |
 | MobileNav.jsx | Traditional CSS | Button | High | 📝 To Analyze |
-| ChatInterface.jsx | Mixed | Card, Button | High | 📝 To Analyze |
+| ChatInterface.jsx | Mixed | Card, Button, Dialog | High | ✅ Analyzed | Uses shadcn/ui Card and Button with custom CSS classes |
 | MessagesList.jsx | Traditional CSS | - | Medium | 📝 To Analyze |
 | StatusBar.jsx | Traditional CSS | - | Medium | 📝 To Analyze |
 | CollapsibleOptions.jsx | Traditional CSS | - | Medium | 📝 To Analyze |
 | FileUploadManager.jsx | Traditional CSS | - | Medium | 📝 To Analyze |
 | DragDropArea.jsx | Traditional CSS | - | Medium | 📝 To Analyze |
-| ToolCallDisplay.jsx | Traditional CSS | - | Medium | 📝 To Analyze |
+| ToolCallDisplay.jsx | Mixed | Badge | Medium | ✅ Analyzed | Uses Badge component with custom container styling |
 | ThoughtDisplay.jsx | Traditional CSS | - | Medium | 📝 To Analyze |
 | TokenUsageDisplay.jsx | Traditional CSS | - | Low | 📝 To Analyze |
 | PersonaSelector.jsx | Traditional CSS | - | Medium | 📝 To Analyze |
@@ -84,14 +84,18 @@
 | Textarea | Installed | ChatInputArea | - |
 | Toast | Installed | - | - |
 | Tooltip | Installed | - | - |
-| Accordion | Need to install | - | - |
-| Avatar | Need to install | - | - |
-| DropdownMenu | Need to install | - | - |
-| Form | Need to install | - | react-hook-form, zod |
-| Separator | Need to install | - | - |
-| Sheet | Need to install | MobileNav | - |
-| ContextMenu | Need to install | - | - |
+| Accordion | Need to install | CollapsibleOptions | - |
+| Avatar | Need to install | UserMessage, AssistantMessage | - |
+| DropdownMenu | Need to install | FileUploadManager, ToolSelector | - |
+| Form | Need to install | ChatInputArea, ModelParameterControls | react-hook-form, zod |
+| Separator | Need to install | CollapsibleOptions, StatusBar | - |
+| Sheet | Need to install | MobileNav, Sidebar (mobile view) | - |
+| ContextMenu | Need to install | MessageItem (for actions) | - |
 
 ## CSS Variable Mapping
 
-This section will be populated as we analyze the CSS files.
+See the comprehensive CSS-to-Tailwind mapping document at `.scratch/css_to_tailwind_mapping.md`
+
+## Component Dependency Map
+
+See the detailed component dependency analysis at `.scratch/component_dependency_map.md`
