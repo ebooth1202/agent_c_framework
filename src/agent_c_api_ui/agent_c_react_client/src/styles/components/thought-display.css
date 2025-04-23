@@ -44,23 +44,11 @@
   background-color: var(--theme-thought-background);
 }
 
-/* ThoughtDisplay: Light and dark mode specific styles */
-.thought-display-content-light {
-  background-color: var(--theme-thought-background);
-  color: var(--theme-thought-foreground);
-}
-
-.thought-display-content-dark {
-  background-color: var(--theme-thought-background);
-  color: var(--theme-thought-foreground);
-}
-
-.thought-display-content-light code.markdown-inline-code {
+/* ThoughtDisplay: Code formatting inside thought bubbles */
+.thought-display-content code.markdown-inline-code {
   background-color: var(--theme-thought-inline-code-bg);
   color: var(--theme-thought-inline-code-fg);
-}
-
-.thought-display-content-dark code.markdown-inline-code {
-  background-color: var(--theme-thought-inline-code-bg);
-  color: var(--theme-thought-inline-code-fg);
+  padding: 0.1em 0.3em;
+  border-radius: var(--border-radius-sm);
+  font-size: 0.9em;
 }

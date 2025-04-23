@@ -30,9 +30,19 @@
   border-bottom-left-radius: var(--spacing-1);
 }
 
-/* AssistantMessage: Light mode specific styles for better contrast */
+/* AssistantMessage: Mode-specific styles for better contrast */
+/* Light mode */
 .assistant-message-bubble .markdown-inline-code {
   background-color: rgba(0, 0, 0, 0.1);
+  color: var(--theme-assistant-message-foreground);
+  font-weight: 600;
+  padding: 0.2em 0.4em;
+  border-radius: 0.2em;
+}
+
+/* Dark mode */
+.dark .assistant-message-bubble .markdown-inline-code {
+  background-color: rgba(255, 255, 255, 0.1);
   color: var(--theme-assistant-message-foreground);
   font-weight: 600;
   padding: 0.2em 0.4em;

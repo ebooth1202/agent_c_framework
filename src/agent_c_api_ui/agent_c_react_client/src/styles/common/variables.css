@@ -125,8 +125,8 @@
   --theme-tool-call-title: hsl(var(--color-blue-800));
   --theme-tool-call-icon: hsl(var(--color-blue-600));
   
-  --theme-user-message-background: rgb(0, 119, 182);
-  --theme-user-message-foreground: rgb(33, 37, 41);
+  --theme-user-message-background: hsl(var(--color-blue-600));
+  --theme-user-message-foreground: white;
   --theme-user-message-border: hsl(213 97% 87%);
   
   --theme-assistant-message-background: hsl(var(--color-blue-100));
@@ -283,28 +283,28 @@
   --theme-info-foreground: var(--color-gray-950);
   
   /* Component-specific colors - Dark Mode */
-  --theme-thought-background: hsl(215 28% 17%);
-  --theme-thought-foreground: hsl(48 97% 77%);
-  --theme-thought-border: hsl(23 83% 31%);
+  --theme-thought-background: hsl(var(--color-gray-800));
+  --theme-thought-foreground: hsl(var(--color-gray-200));
+  --theme-thought-border: hsl(var(--color-blue-700));
   --theme-thought-inline-code-bg: hsl(var(--color-purple-800) / 0.3);
   --theme-thought-inline-code-fg: hsl(var(--color-purple-200));
   
-  --theme-tool-call-background: hsl(215 28% 17%);
-  --theme-tool-call-border: hsl(224 76% 48%);
-  --theme-tool-call-header-background: hsl(226 71% 40% / 0.5);
-  --theme-tool-call-header-hover: hsl(224 76% 48% / 0.6);
-  --theme-tool-call-title: hsl(212 96% 78%);
-  --theme-tool-call-icon: hsl(213 94% 68%);
+  --theme-tool-call-background: hsl(var(--color-gray-800));
+  --theme-tool-call-border: hsl(var(--color-blue-700));
+  --theme-tool-call-header-background: hsl(var(--color-blue-800) / 0.5);
+  --theme-tool-call-header-hover: hsl(var(--color-blue-700) / 0.6);
+  --theme-tool-call-title: hsl(var(--color-blue-300));
+  --theme-tool-call-icon: hsl(var(--color-blue-400));
   
-  --theme-user-message-background: hsl(215 28% 17%);
-  --theme-user-message-foreground: hsl(214 32% 91%);
-  --theme-user-message-border: hsl(226 71% 40%);
+  --theme-user-message-background: hsl(var(--color-gray-800));
+  --theme-user-message-foreground: hsl(var(--color-gray-100));
+  --theme-user-message-border: hsl(var(--color-blue-700));
   
-  --theme-assistant-message-background: hsl(215 28% 17%);
-  --theme-assistant-message-foreground: hsl(214 32% 91%);
-  --theme-assistant-message-border: hsl(273 67% 39%);
+  --theme-assistant-message-background: hsl(var(--color-gray-800));
+  --theme-assistant-message-foreground: hsl(var(--color-gray-100));
+  --theme-assistant-message-border: hsl(var(--color-purple-800));
   
-  --theme-system-message-background: hsl(215 28% 17%);
-  --theme-system-message-foreground: hsl(214 32% 91%);
-  --theme-system-message-border: hsl(217 19% 27%);
+  --theme-system-message-background: hsl(var(--color-gray-800));
+  --theme-system-message-foreground: hsl(var(--color-gray-100));
+  --theme-system-message-border: hsl(var(--color-gray-700));
 }

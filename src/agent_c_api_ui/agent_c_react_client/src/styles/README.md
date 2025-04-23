@@ -10,6 +10,7 @@ Please refer to the following documentation:
 - [CSS Style Guide](/docs/style/style-guide.md)
 - [Common CSS Patterns](/docs/style/common-patterns.md)
 - [Component-Specific Styling](/docs/style/component-styling.md)
+- [Theme Consistency Guidelines](/docs/style/theme-consistency.md)
 
 ## Directory Structure
 

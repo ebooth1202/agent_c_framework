@@ -37,7 +37,7 @@ const ThoughtDisplay = ({content, vendor}) => {
                 <div className="flex justify-between items-start gap-4">
                     <div
                         ref={contentRef}
-                        className={`text-sm font-mono thought-display-content ${isDarkMode ? 'thought-display-content-dark' : 'thought-display-content-light'}`}
+                        className={`text-sm font-mono thought-display-content`}
                     >
                         <div ref={markdownRef}>
                             <MarkdownMessage content={content} />
