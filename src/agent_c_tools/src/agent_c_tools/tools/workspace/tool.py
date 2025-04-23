@@ -1,7 +1,7 @@
 import json
 import logging
 import re
-from typing import Any, List, Tuple, Optional
+from typing import Any, List, Tuple, Optional, Union
 from ts_tool import api
 
 from agent_c.toolsets.tool_set import Toolset
