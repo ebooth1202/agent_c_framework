@@ -8,7 +8,7 @@
   max-width: 80%;
   border-radius: var(--border-radius-2xl);
   padding: var(--spacing-3) var(--spacing-4);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md);
   background-color: var(--theme-thought-background);
   color: var(--theme-thought-foreground);
   border: var(--border-width-thin) solid var(--theme-thought-border);

@@ -70,13 +70,13 @@
   /* These are semantic color names with light mode values by default */
   
   /* Base theme colors - Light Mode */
-  --theme-background: var(--color-gray-50);
+  --theme-background: var(--color-gray-100);
   --theme-foreground: var(--color-gray-900);
   
-  --theme-card: white;
+  --theme-card: var(--color-gray-50);
   --theme-card-foreground: var(--color-gray-900);
   
-  --theme-popover: white;
+  --theme-popover: var(--color-gray-50);
   --theme-popover-foreground: var(--color-gray-900);
   
   --theme-primary: var(--color-blue-600);
@@ -112,26 +112,26 @@
   --theme-info-foreground: white;
   
   /* Component-specific colors - Light Mode */
-  --theme-thought-background: hsl(var(--color-gray-200));
-  --theme-thought-foreground: hsl(var(--color-gray-800));
-  --theme-thought-border: hsl(var(--color-amber-300));
-  --theme-thought-inline-code-bg: hsl(var(--color-purple-100));
-  --theme-thought-inline-code-fg: hsl(var(--color-purple-800));
+  --theme-thought-background: hsl(var(--color-amber-50));
+  --theme-thought-foreground: hsl(var(--color-gray-900));
+  --theme-thought-border: hsl(var(--color-amber-400));
+  --theme-thought-inline-code-bg: hsl(var(--color-amber-100));
+  --theme-thought-inline-code-fg: hsl(var(--color-amber-900));
   
-  --theme-tool-call-background: white;
-  --theme-tool-call-border: hsl(212 96% 78%);
-  --theme-tool-call-header-background: hsl(214 95% 93%);
-  --theme-tool-call-header-hover: hsl(213 97% 87%);
-  --theme-tool-call-title: hsl(224 76% 48%);
-  --theme-tool-call-icon: hsl(221 83% 53%);
+  --theme-tool-call-background: hsl(var(--color-gray-50));
+  --theme-tool-call-border: hsl(var(--color-blue-400));
+  --theme-tool-call-header-background: hsl(var(--color-blue-100));
+  --theme-tool-call-header-hover: hsl(var(--color-blue-200));
+  --theme-tool-call-title: hsl(var(--color-blue-800));
+  --theme-tool-call-icon: hsl(var(--color-blue-600));
   
   --theme-user-message-background: rgb(0, 119, 182);
   --theme-user-message-foreground: rgb(33, 37, 41);
   --theme-user-message-border: hsl(213 97% 87%);
   
-  --theme-assistant-message-background: hsl(var(--color-blue-50));
-  --theme-assistant-message-foreground: hsl(var(--color-gray-800));
-  --theme-assistant-message-border: hsl(var(--color-blue-200));
+  --theme-assistant-message-background: hsl(var(--color-blue-100));
+  --theme-assistant-message-foreground: hsl(var(--color-gray-900));
+  --theme-assistant-message-border: hsl(var(--color-blue-300));
   
   --theme-system-message-background: hsl(214 32% 91%);
   --theme-system-message-foreground: hsl(215 28% 17%);

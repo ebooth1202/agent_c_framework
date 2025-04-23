@@ -57,6 +57,7 @@
 .tool-call-badge {
   background-color: var(--theme-tool-call-header-hover);
   color: var(--theme-tool-call-title);
+  border: 1px solid var(--theme-tool-call-border);
 }
 
 .tool-call-badge:hover {
@@ -106,6 +107,7 @@
   border-radius: 9999px;
   background-color: var(--theme-tool-call-header-background);
   color: var(--theme-tool-call-title);
+  border: 1px solid var(--theme-tool-call-border);
   cursor: pointer;
   transition: background-color var(--transition-hover);
 }

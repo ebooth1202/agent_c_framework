@@ -13,7 +13,7 @@
 
 /* Layout: Light mode gradient colors */
 :root {
-  --layout-gradient-from: hsl(var(--color-gray-50));
+  --layout-gradient-from: hsl(var(--color-blue-50));
   --layout-gradient-to: hsl(var(--color-gray-100));
 }
 

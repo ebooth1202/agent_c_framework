@@ -445,7 +445,7 @@ const ChatInterfaceInner = ({
       disabled={isStreaming}
       className="flex flex-col h-full min-h-0 relative z-0 group"
     >
-      <Card className="flex flex-col h-full min-h-0 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border dark:border-gray-700 shadow-lg rounded-xl">
+      <Card className="flex flex-col h-full min-h-0 bg-card/90 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-300 dark:border-gray-700 shadow-xl rounded-xl">
         {/* Messages list */}
         <MessagesList 
           messages={messages}
@@ -481,7 +481,7 @@ const ChatInterfaceInner = ({
         )}
         
         {/* Footer with file upload and message input */}
-        <div className="border-t dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm p-4 space-y-3 rounded-b-xl">
+        <div className="border-t border-gray-300 dark:border-gray-700 bg-card/90 dark:bg-gray-800/50 backdrop-blur-sm p-4 space-y-3 rounded-b-xl">
           {/* File management component */}
           <FileUploadManager
             sessionId={sessionId}
@@ -501,9 +501,9 @@ const ChatInterfaceInner = ({
                 onKeyDown={handleKeyPress}
                 disabled={isStreaming}
                 rows="2"
-                className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm transition-colors
-                hover:bg-white/80 dark:hover:bg-gray-700/80 focus:border-blue-300 dark:focus:border-blue-600 focus:ring focus:ring-blue-200 dark:focus:ring-blue-800 focus:ring-opacity-50
-                placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-gray-100 py-2 pl-3 pr-12 resize-none"
+                className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm transition-colors
+                hover:bg-white dark:hover:bg-gray-700/80 focus:border-blue-400 dark:focus:border-blue-600 focus:ring focus:ring-blue-200 dark:focus:ring-blue-800 focus:ring-opacity-50
+                placeholder-gray-500 dark:placeholder-gray-500 text-gray-900 dark:text-gray-100 py-2 pl-3 pr-12 resize-none"
               />
               
               {/* Settings gear icon button */}
