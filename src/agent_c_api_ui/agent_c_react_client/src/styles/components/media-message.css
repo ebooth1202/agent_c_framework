@@ -8,6 +8,12 @@
   box-shadow: var(--shadow-sm);
   overflow: hidden;
   margin-left: var(--spacing-8); /* ml-8 */
+  border: var(--border-width-thin) solid hsl(var(--color-amber-200));
+  border-radius: var(--border-radius-lg);
+}
+
+.dark .media-message-card {
+  border-color: hsl(var(--color-amber-800)); 
 }
 
 .media-message-card-expanded {
@@ -167,6 +173,54 @@
   border-radius: var(--border-radius-md); /* rounded */
   box-shadow: var(--shadow-lg);
   object-fit: contain;
+}
+
+/* MediaMessage: HTML content styling */
+.media-message-html-content {
+  width: 100%;
+  padding: var(--spacing-4);
+  border-radius: var(--border-radius-md);
+  background-color: hsl(var(--color-card));
+  color: hsl(var(--color-foreground));
+  font-family: var(--font-family-sans);
+  line-height: var(--line-height-relaxed);
+  box-shadow: var(--shadow-md);
+  border: var(--border-width-thin) solid hsl(var(--color-gray-200));
+}
+
+.dark .media-message-html-content {
+  background-color: hsl(var(--color-gray-900));
+  color: hsl(var(--color-gray-200));
+  border: var(--border-width-thin) solid hsl(var(--color-gray-700));
+}
+
+/* Tool output styling in HTML content */
+.media-message-html-content h1, 
+.media-message-html-content h2, 
+.media-message-html-content h3 {
+  margin-bottom: var(--spacing-2);
+  font-weight: var(--font-weight-semibold);
+  color: hsl(var(--color-amber-800));
+}
+
+.dark .media-message-html-content h1,
+.dark .media-message-html-content h2,
+.dark .media-message-html-content h3 {
+  color: hsl(var(--color-amber-300));
+}
+
+/* Styling specifically for tool elements */
+.media-message-html-content svg,
+.media-message-html-content .icon {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: var(--spacing-2);
+  color: hsl(var(--color-amber-600));
+}
+
+.dark .media-message-html-content svg,
+.dark .media-message-html-content .icon {
+  color: hsl(var(--color-amber-400));
 }
 
 /* MediaMessage: Fullscreen dialog content */

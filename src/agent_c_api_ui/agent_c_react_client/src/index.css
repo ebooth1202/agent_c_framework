@@ -1,8 +1,12 @@
+/* Import component styles first */
 @import './styles/main.css';
-@import './styles/component-styles.css';
+/* main.css already imports component-styles.css, so we can remove this duplicate import */
 
+/* Then import Tailwind */
 @tailwind base;
 @tailwind components;
+
+/* Finally Tailwind utilities */
 @tailwind utilities;
 
 /* Custom styles for markdown in user messages */

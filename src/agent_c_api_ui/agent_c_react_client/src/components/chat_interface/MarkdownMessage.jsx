@@ -1,10 +1,11 @@
-import React, {useMemo} from 'react';
+import React, {useMemo, useRef} from 'react';
 import ReactMarkdown from 'react-markdown';
 import {Prism as SyntaxHighlighter} from 'react-syntax-highlighter';
 import {oneDark} from 'react-syntax-highlighter/dist/esm/styles/prism';
 import CopyButton from './CopyButton';
 
 const MarkdownMessage = ({content}) => {
+    const markdownRef = useRef(null);
     // Memoize the markdown content to prevent unnecessary re-renders
     const memoizedContent = useMemo(() => {
         if (content === undefined || content === null) {
@@ -12,8 +13,10 @@ const MarkdownMessage = ({content}) => {
         }
         
         // For thought display, we want minimal processing to avoid excessive newlines
+        // Check if this component is inside a thought container
         const isThoughtContent = content.includes('Thinking Process') || 
-                               document.querySelector('.bg-yellow-50.border-yellow-100') !== null;
+                               (document.querySelector('.thought-container') !== null &&
+                               markdownRef?.current?.closest('.thought-container') !== null);
         
         if (isThoughtContent) {
             // Minimal processing for thought content
@@ -34,7 +37,7 @@ const MarkdownMessage = ({content}) => {
     }, [content]);
 
     return (
-        <div className="prose prose-sm max-w-none prose-p:my-1 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-1 markdown-container">
+        <div ref={markdownRef} className="prose prose-sm max-w-none prose-p:my-1 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-1 markdown-container">
             {/* Main content */}
             <div className="markdown-content">
 

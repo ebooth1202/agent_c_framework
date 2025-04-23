@@ -22,6 +22,8 @@
 @import './components/persona-selector.css';
 @import './components/status-bar.css';
 @import './components/tool-call-display.css';
+@import './components/tool-call-item.css';
+@import './components/parameter-documentation.css';
 @import './components/chat-input-area.css';
 @import './components/file-item.css';
 @import './components/media-message.css';

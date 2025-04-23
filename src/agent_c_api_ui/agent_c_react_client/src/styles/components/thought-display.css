@@ -10,15 +10,15 @@
   padding: var(--spacing-3) var(--spacing-4);
   box-shadow: var(--shadow-sm);
   background-color: hsl(var(--color-amber-50));
-  color: hsla(var(--color-amber-700), 0.8);
+  color: hsl(var(--color-amber-700));
   border: var(--border-width-thin) solid hsl(var(--color-amber-200));
   border-bottom-left-radius: var(--border-radius-sm);
 }
 
 /* ThoughtDisplay: Dark theme container styles */
 .dark .thought-container {
-  background-color: hsla(var(--color-gray-700), 0.7);
-  color: hsla(var(--color-amber-200), 0.8);
+  background-color: hsl(var(--color-gray-800));
+  color: hsl(var(--color-amber-200));
   border-color: hsl(var(--color-amber-800));
 }
 

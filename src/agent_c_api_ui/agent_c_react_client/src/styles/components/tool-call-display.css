@@ -4,13 +4,19 @@
 
 /* ToolCallDisplay: Main container for tool calls display */
 .tool-call-container {
-  border: var(--border-width-thin) solid;
+  border: var(--border-width-thin) solid hsl(var(--color-blue-300));
   border-radius: var(--border-radius-2xl);
   margin: var(--spacing-2) 0;
-  background-color: var(--card-background);
+  background-color: white;
   box-shadow: var(--shadow-lg);
   overflow: hidden;
   margin-left: var(--spacing-8);
+}
+
+/* ToolCallDisplay: Dark mode container */
+.dark .tool-call-container {
+  background-color: hsl(var(--color-gray-800));
+  border-color: hsl(var(--color-blue-700));
 }
 
 /* ToolCallDisplay: Container width variations */

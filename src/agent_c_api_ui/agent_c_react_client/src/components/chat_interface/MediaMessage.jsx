@@ -69,7 +69,7 @@ const MediaMessage = ({message}) => {
         if (message.contentType === "text/html") {
             return (
                 <MediaContentWrapper>
-                    <div dangerouslySetInnerHTML={{__html: message.content}}/>
+                    <div className="media-message-html-content" dangerouslySetInnerHTML={{__html: message.content}}/>
                 </MediaContentWrapper>
             );
         }
