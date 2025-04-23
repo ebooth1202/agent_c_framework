@@ -3,13 +3,13 @@
 
 /* PageHeader: Main container */
 .page-header {
-  margin-bottom: 1.5rem; /* mb-6 */
-  padding-bottom: 1rem; /* pb-4 */
-  border-bottom: 1px solid #e5e7eb; /* border-b border-gray-200 */
+  margin-bottom: var(--spacing-6); /* mb-6 */
+  padding-bottom: var(--spacing-4); /* pb-4 */
+  border-bottom: var(--border-width-thin) solid hsl(var(--color-gray-200)); /* border-b border-gray-200 */
 }
 
 .dark .page-header {
-  border-color: #374151; /* border-gray-700 */
+  border-color: hsl(var(--color-gray-700)); /* border-gray-700 */
 }
 
 /* PageHeader: Content container with flex layout */
@@ -17,7 +17,7 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 1rem; /* gap-4 */
+  gap: var(--spacing-4); /* gap-4 */
 }
 
 /* PageHeader: Stack layout on small screens */
@@ -28,7 +28,7 @@
   }
   
   .page-header-actions {
-    margin-top: 0.5rem; /* mt-2 */
+    margin-top: var(--spacing-2); /* mt-2 */
     align-self: flex-end;
   }
 }
@@ -40,32 +40,32 @@
 
 /* PageHeader: Page title */
 .page-header-title {
-  font-size: 1.875rem; /* text-3xl */
-  font-weight: 700; /* font-bold */
+  font-size: var(--font-size-3xl); /* text-3xl */
+  font-weight: var(--font-weight-bold); /* font-bold */
   line-height: 1.2;
-  color: #111827; /* text-gray-900 */
-  margin-bottom: 0.25rem; /* mb-1 */
+  color: hsl(var(--color-gray-900)); /* text-gray-900 */
+  margin-bottom: var(--spacing-1); /* mb-1 */
 }
 
 .dark .page-header-title {
-  color: #f9fafb; /* text-gray-50 */
+  color: hsl(var(--color-gray-50)); /* text-gray-50 */
 }
 
 /* PageHeader: Page description */
 .page-header-description {
-  color: #6b7280; /* text-gray-500 */
-  font-size: 1rem; /* text-base */
+  color: hsl(var(--color-gray-500)); /* text-gray-500 */
+  font-size: var(--font-size-base); /* text-base */
   max-width: 36rem; /* max-w-2xl */
 }
 
 .dark .page-header-description {
-  color: #9ca3af; /* text-gray-400 */
+  color: hsl(var(--color-gray-400)); /* text-gray-400 */
 }
 
 /* PageHeader: Actions container */
 .page-header-actions {
   display: flex;
   align-items: center;
-  gap: 0.5rem; /* gap-2 */
+  gap: var(--spacing-2); /* gap-2 */
   flex-shrink: 0;
 }
