@@ -4,38 +4,37 @@
 
 We've successfully completed the migration of all primary user-facing components:
 
-1. u2705 Layout (core structure)
-2. u2705 StatusBar 
-3. u2705 MessagesList (with improved scrolling)
-4. u2705 ChatInputArea
-5. u2705 CollapsibleOptions
-6. u2705 MarkdownMessage
-7. u2705 UserMessage
-8. u2705 AssistantMessage
-9. u2705 SystemMessage
-10. u2705 ThoughtDisplay
-11. u2705 ToolCallDisplay
-12. u2705 ToolCallItem
-13. u2705 ToolSelector
+1. ✅ Layout (core structure)
+2. ✅ StatusBar 
+3. ✅ MessagesList (with improved scrolling)
+4. ✅ ChatInputArea
+5. ✅ CollapsibleOptions
+6. ✅ MarkdownMessage
+7. ✅ UserMessage
+8. ✅ AssistantMessage
+9. ✅ SystemMessage
+10. ✅ ThoughtDisplay
+11. ✅ ToolCallDisplay
+12. ✅ ToolCallItem
+13. ✅ ToolSelector
+14. ✅ ToolCallContext (analyzed - no UI component to migrate)
+15. ✅ FileUploadManager & FilesPanel
 
 Additionally, we've resolved critical UI issues:
 
-1. u2705 Fixed scroll-to-top functionality allowing users to reach the first message
-2. u2705 Made tool selection indicators automatically scroll into view
-3. u2705 Improved spacing consistency between different message types
-4. u2705 Extracted inline styles to component CSS files
-5. u2705 Fixed incorrect CSS variable usage
+1. ✅ Fixed scroll-to-top functionality allowing users to reach the first message
+2. ✅ Made tool selection indicators automatically scroll into view
+3. ✅ Improved spacing consistency between different message types
+4. ✅ Extracted inline styles to component CSS files
+5. ✅ Fixed incorrect CSS variable usage
 
 ## Recommended Next Steps
 
-### 1. Tool-Related Components
+### 1. Final Component: DragDropArea
 
-Focus on remaining tool-related components:
+We've almost completed all tool-related components. The last remaining component is:
 
-- u2705 ToolSelector (completed on 2025-04-24)
-- ToolCallManager (next in queue)
-- FileUploadManager
-- FilesPanel
+- DragDropArea & DragDropOverlay
 
 ### 2. Address Message Rendering Issues
 

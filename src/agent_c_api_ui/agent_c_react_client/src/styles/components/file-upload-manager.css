@@ -1,0 +1,15 @@
+/* ===== COMPONENT: FileUploadManager ===== */
+/* Description: Manages file uploads, processing status tracking, and file selection */
+/* File: src/components/chat_interface/FileUploadManager.jsx */
+
+/* FileUploadManager: Main container */
+.file-upload-manager {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* FileUploadManager: Hidden file input */
+.file-upload-manager-input {
+  display: none;
+}

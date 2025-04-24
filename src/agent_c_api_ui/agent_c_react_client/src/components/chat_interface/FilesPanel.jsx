@@ -1,6 +1,8 @@
 import React from 'react';
 import FileItem from './FileItem';
 import { cn } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 /**
  * FilesPanel component displays a list of uploaded files with their status
@@ -18,26 +20,25 @@ const FilesPanel = ({ uploadedFiles, toggleFileSelection, className }) => {
   }
   
   return (
-    <div
-      className={cn(
-        "files-panel my-2 p-3 bg-background/80 dark:bg-gray-800/80 rounded-lg max-h-32 overflow-y-auto border border-input shadow-sm",
-        className
-      )}
-    >
-      <div className="files-panel-header text-xs font-medium text-muted-foreground mb-2">
-        Uploaded Files
-      </div>
+    <Card className={cn("files-panel", className)}>
+      <CardHeader className="files-panel-header p-0 pb-2 space-y-0">
+        <CardTitle className="text-xs font-medium text-muted-foreground">
+          Uploaded Files
+        </CardTitle>
+      </CardHeader>
       
-      <div className="files-panel-list space-y-1">
-        {uploadedFiles.map((file) => (
-          <FileItem 
-            key={file.id} 
-            file={file} 
-            toggleFileSelection={toggleFileSelection}
-          />
-        ))}
-      </div>
-    </div>
+      <CardContent className="p-0">
+        <ScrollArea className="files-panel-list space-y-1 max-h-24">
+          {uploadedFiles.map((file) => (
+            <FileItem 
+              key={file.id} 
+              file={file} 
+              toggleFileSelection={toggleFileSelection}
+            />
+          ))}
+        </ScrollArea>
+      </CardContent>
+    </Card>
   );
 };
 

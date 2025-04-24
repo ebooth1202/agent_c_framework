@@ -27,6 +27,8 @@
 @import './components/parameter-documentation.css';
 @import './components/chat-input-area.css';
 @import './components/file-item.css';
+@import './components/files-panel.css';
+@import './components/file-upload-manager.css';
 @import './components/media-message.css';
 @import './components/model-parameter-controls.css';
 @import './components/animated-status-indicator.css';

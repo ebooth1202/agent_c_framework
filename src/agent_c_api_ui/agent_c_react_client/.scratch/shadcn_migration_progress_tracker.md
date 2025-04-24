@@ -233,6 +233,42 @@ Changes implemented:
 - Ensured dark mode compatibility with CSS variables
 - Maintained all existing functionality including tool selection, active tool indication, etc.
 
+### 14. ToolCallContext (replacing ToolCallManager)
+Status: u2705 ANALYZED - NO CHANGES NEEDED
+Date: 2025-04-24
+Validation steps completed:
+- [x] Inspect for inline styles
+- [x] Analyzed component architecture
+- [x] Checked for usage in application
+Notes:
+- This is a Context provider component with no UI rendering or styles
+- No CSS file needed as it only provides state management and functions
+- Already follows React best practices with Context API
+- Appears to have replaced the older ToolCallManager component which used render props
+- No migration needed, but marked as analyzed for tracking purposes
+
+### 15. FileUploadManager & FilesPanel
+Status: u2705 COMPLETED
+Date: 2025-04-24
+Validation steps completed:
+- [x] Inspect for inline styles
+- [x] Created dedicated component CSS files
+- [x] Validated CSS variables
+- [x] Identified shadcn/ui replacement components
+Changes implemented:
+- Created file-upload-manager.css with proper component documentation
+- Created files-panel.css with proper component documentation
+- Updated FileUploadManager to use semantic class names instead of inline styles
+- Migrated FilesPanel to use Card, CardHeader, CardTitle, CardContent components
+- Added ScrollArea for better overflow handling
+- Updated FileItem to use Badge and Checkbox components from shadcn/ui
+- Added Tooltip component for showing error details on failed files
+- Improved className management with cn() utility throughout
+- Updated component property documentation with JSDoc
+- Created proper responsive styling with CSS variables
+- Ensured dark mode compatibility with CSS variables
+- Preserved all existing functionality including file selection, upload, and status tracking
+
 ## Not Currently Used (Lower Priority)
 
 ### PageHeader Component
@@ -253,3 +289,11 @@ Notes:
 Status: u26a0ufe0f NOT USED - DO NOT MIGRATE
 Notes:
 - Component exists but is not referenced in the application
+
+### ToolCallManager Component
+Status: u26a0ufe0f DEPRECATED - REPLACED BY TOOLCALLCONTEXT
+Date: 2025-04-24
+Notes:
+- Uses render props pattern for the same functionality now in ToolCallContext
+- Not currently imported or used in the application
+- Should be considered for moving to trash in a future cleanup phase

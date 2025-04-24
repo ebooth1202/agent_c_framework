@@ -1,0 +1,38 @@
+/* ===== COMPONENT: FilesPanel ===== */
+/* Description: Displays uploaded files with status indicators and selection controls */
+/* File: src/components/chat_interface/FilesPanel.jsx */
+
+/* FilesPanel: Main container */
+.files-panel {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--border-radius-lg); /* rounded-lg */
+  background-color: hsla(var(--color-background), 0.8); /* bg-background/80 */
+  border: var(--border-width-thin) solid hsl(var(--color-input)); /* border border-input */
+  padding: var(--spacing-3); /* p-3 */
+  margin-top: var(--spacing-2); /* mt-2 */
+  margin-bottom: var(--spacing-2); /* mb-2 */
+  max-height: var(--size-32); /* max-h-32 */
+  overflow-y: auto;
+  box-shadow: var(--shadow-sm); /* shadow-sm */
+}
+
+/* FilesPanel: Dark mode styling */
+.dark .files-panel {
+  background-color: hsla(var(--color-gray-800), 0.8); /* bg-gray-800/80 */
+}
+
+/* FilesPanel: Header */
+.files-panel-header {
+  font-size: var(--font-size-xs); /* text-xs */
+  font-weight: var(--font-weight-medium); /* font-medium */
+  color: hsl(var(--color-muted-foreground)); /* text-muted-foreground */
+  margin-bottom: var(--spacing-2); /* mb-2 */
+}
+
+/* FilesPanel: List container */
+.files-panel-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1); /* space-y-1 */
+}

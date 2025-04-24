@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import FilesPanel from './FilesPanel';
 import { API_URL } from "@/config/config";
+import { cn } from "@/lib/utils";
 
 /**
  * FileUploadManager handles all file upload functionality including selection,
@@ -264,13 +265,13 @@ const FileUploadManager = ({
   };
 
   return (
-    <div className={className}>
+    <div className={cn("file-upload-manager", className)}>
       {/* Hidden file input */}
       <input
         type="file"
         ref={fileInputRef}
         onChange={handleFileSelection}
-        className="hidden"
+        className="file-upload-manager-input"
       />
       
       {/* Files panel showing uploaded files */}

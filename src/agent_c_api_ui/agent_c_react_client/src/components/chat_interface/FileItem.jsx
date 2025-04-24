@@ -1,5 +1,8 @@
 import React from 'react';
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 /**
  * FileItem component displays an individual file with its status and a checkbox
@@ -27,6 +30,20 @@ const FileItem = ({ file, toggleFileSelection, className }) => {
   // Get the appropriate status style based on file's processing_status
   const statusStyle = statusStyles[file.processing_status] || statusStyles.pending;
   
+  // Define badge variants based on processing status
+  const badgeVariants = {
+    pending: "secondary",
+    complete: "success", 
+    failed: "destructive"
+  };
+  
+  // Badge text based on processing status
+  const badgeText = {
+    pending: "Processing...",
+    complete: "Ready",
+    failed: "Error"
+  };
+  
   return (
     <div 
       className={cn(
@@ -42,32 +59,36 @@ const FileItem = ({ file, toggleFileSelection, className }) => {
       <div className="file-item-actions">
         {/* Status badges */}
         {file.processing_status === 'pending' && (
-          <span className="file-item-status-badge file-item-status-badge-pending">
-            Processing...
-          </span>
+          <Badge variant={badgeVariants.pending} className="file-item-status-badge">
+            {badgeText.pending}
+          </Badge>
         )}
         
         {file.processing_status === 'failed' && (
-          <span 
-            className="file-item-status-badge file-item-status-badge-failed"
-            title={file.processing_error || "Error processing file"}
-          >
-            Error
-          </span>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge variant={badgeVariants.failed} className="file-item-status-badge">
+                {badgeText.failed}
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent>
+              {file.processing_error || "Error processing file"}
+            </TooltipContent>
+          </Tooltip>
         )}
         
         {file.processing_status === 'complete' && (
-          <span className="file-item-status-badge file-item-status-badge-complete">
-            Ready
-          </span>
+          <Badge variant={badgeVariants.complete} className="file-item-status-badge">
+            {badgeText.complete}
+          </Badge>
         )}
         
         {/* Selection checkbox */}
-        <input
-          type="checkbox"
+        <Checkbox
           checked={file.selected}
-          onChange={() => toggleFileSelection(file.id)}
+          onCheckedChange={() => toggleFileSelection(file.id)}
           className="file-item-checkbox"
+          id={`file-${file.id}`}
         />
       </div>
     </div>
