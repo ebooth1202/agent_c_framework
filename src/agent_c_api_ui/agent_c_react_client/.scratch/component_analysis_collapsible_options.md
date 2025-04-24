@@ -1,40 +1,80 @@
 # CollapsibleOptions Component Analysis
 
-## Overview
+## Component Overview
 
-The CollapsibleOptions component is a good example of how shadcn/ui components are being used in the application. It demonstrates proper import patterns and good use of CSS classes instead of inline styles.
+The `CollapsibleOptions` component is a collapsible panel that provides access to persona selection, model settings, and tool management. It integrates several shadcn/ui components including Collapsible, Card, Tabs, and Button.
 
-## Positive Aspects
+## Current Implementation Analysis
 
-1. **Correct Import Paths**: The component correctly imports shadcn/ui components using the proper `@/components/ui` path
-2. **Good Use of shadcn/ui Components**: It properly uses Collapsible, Card, Tabs, and Button components
-3. **No Inline Styles**: The component doesn't contain any inline styles, instead using CSS classes
-4. **Uses shadcn/ui theming**: The CSS file uses HSL color variables like `hsl(var(--card))` which is the correct format for shadcn/ui
-5. **Class Naming Consistency**: Uses consistent kebab-case class naming conventions
-6. **cn Utility**: Correctly uses the `cn` utility for conditional class names
+### What Works Well
 
-## Areas for Improvement
+1. **Proper shadcn/ui Component Usage**: The component correctly imports and uses several shadcn/ui components:
+   - `Collapsible` for expanding/collapsing content
+   - `Card` for the container
+   - `Tabs` for organizing settings and tools sections
+   - `Button` for the collapse trigger
 
-1. **CSS Variable Consistency**: While it uses some shadcn variables (`--card`, `--border`, `--foreground`), it also uses custom variables like `--shadow-sm`
-2. **Tailwind Migration**: Some custom CSS classes could be replaced with Tailwind utility classes
-3. **Background Transparency**: Uses a custom approach for translucent backgrounds with HSL opacity and backdrop filter
+2. **Uses shadcn/ui Theme Variables**: The CSS mostly uses shadcn/ui's theme variables properly:
+   - Uses `hsl(var(--card))`, `hsl(var(--border))`, `hsl(var(--foreground))` etc.
+   - Correctly applies opacity modifiers (`/ 50%`)
+
+3. **Good Component Composition**: Makes use of nested components in a logical structure
+
+### Areas for Improvement
+
+1. **Mixed Styling Approaches**: While the component uses shadcn/ui's theme variables, it doesn't fully embrace Tailwind for styling:
+   - Uses custom CSS classes instead of Tailwind utility classes for many styles
+   - Creates custom implementations of styles that could be handled by shadcn/ui's default styles
+
+2. **Custom Tab Styling**: The tab styling overrides the default shadcn/ui tab styles, creating inconsistency:
+   - Custom `.collapsible-options-tabs-list` class modifies the appearance of the TabsList
+   - Custom active state styling for tabs that differs from shadcn/ui defaults
+
+3. **Non-standard Approach to Spacing**: Uses custom padding values instead of Tailwind's spacing scale
+
+4. **Custom Shadow Variables**: Uses `var(--shadow-sm)` instead of shadcn/ui's approach to shadows
+
+## CSS Analysis
+
+1. **Theme Variable Usage**: 
+   - Most color variables properly use the `hsl(var(--x))` format
+   - Some custom variables like `var(--shadow-sm)` that should be standardized
+
+2. **CSS Class Structure**:
+   - Uses component-specific prefixed classes (good for organization)
+   - However, this approach doesn't fully leverage the utility-class pattern of Tailwind
+
+3. **Specificity Issues**:
+   - No major specificity issues found
+   - Class selectors are flat and well-organized
 
 ## Recommendations
 
-1. **Keep Component Structure**: The component has good structure and proper use of shadcn/ui
-2. **Standardize CSS Variables**: Continue using shadcn/ui variables and move any necessary custom variables to a unified place
-3. **Consider Tailwind for Simple Styles**: For example:
-   - `padding: 0.5rem 0.75rem;` could be `p-2 px-3`
-   - `margin-bottom: 0.5rem;` could be `mb-2`
-   - `display: flex; align-items: center;` could be `flex items-center`
+1. **Increase Tailwind Usage**:
+   - Replace custom spacing values with Tailwind's spacing utilities
+   - Replace custom shadow variables with shadcn/ui's shadow approach
 
-## Migration Path
+2. **Standardize Tab Styling**:
+   - Use shadcn/ui's default tab styling where possible
+   - Only override specific aspects needed for the design
 
-This component showcases a good balance between shadcn/ui components and custom styling. As we proceed with the migration, we can:
+3. **Simplify Container Styling**:
+   - Use Tailwind classes for margins, padding, and width
+   - Maintain the backdrop filter and opacity effects that are part of the design
 
-1. Keep the current component structure
-2. Gradually replace custom CSS with Tailwind utility classes
-3. Standardize on shadcn/ui CSS variables
-4. Leave the more complex custom CSS in place until we have a comprehensive approach for application-specific styling
+4. **Refine Active State Styling**:
+   - Use shadcn/ui's approach to active states
+   - Ensure consistent visual feedback for active/selected states
 
-This component is a good model for how other components should be structured.
+## Specific Changes Needed
+
+1. Replace custom classes with Tailwind utilities for:
+   - Padding/margin
+   - Font sizes and weights
+   - Flex layout properties
+
+2. Standardize card styling to match other shadcn/ui components
+
+3. Update tab styling to better match shadcn/ui defaults while maintaining the current design
+
+4. Ensure the backdrop blur effect is maintained as it's an important design element

@@ -2,132 +2,66 @@
 /* Description: Displays agent configuration information in a tooltip interface */
 /* File: src/components/chat_interface/AgentConfigDisplay.jsx */
 
-/* AgentConfigDisplay: Main container for both loading and loaded states */
+/* AgentConfigDisplay: Main container */
 .agent-config-container {
   display: inline-flex;
   align-items: center;
   cursor: help;
+  gap: 0.25rem;
 }
 
-/* AgentConfigDisplay: Loading state styling */
-.agent-config-loading {
-  color: var(--color-gray-400);
+/* AgentConfigDisplay: Icon styling */
+.agent-config-icon {
+  color: hsl(var(--muted-foreground));
+  transition: color 0.2s ease;
 }
 
-/* AgentConfigDisplay: Loading icon */
-.agent-config-loading-icon {
-  width: 1rem;
-  height: 1rem;
-  color: var(--color-gray-400);
+/* AgentConfigDisplay: Text styling */
+.agent-config-text {
+  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground));
+  transition: color 0.2s ease;
 }
 
-/* AgentConfigDisplay: Loading text */
-.agent-config-loading-text {
-  margin-left: var(--spacing-1);
-  font-size: var(--font-size-sm);
-  color: var(--color-gray-400);
+/* AgentConfigDisplay: Loading state */
+.agent-config-loading .agent-config-icon,
+.agent-config-loading .agent-config-text {
+  color: hsl(var(--muted-foreground));
 }
 
-/* AgentConfigDisplay: Loaded state styling */
-.agent-config-loaded {
-  color: var(--color-blue-500);
-}
-
-/* AgentConfigDisplay: Loaded icon */
-.agent-config-loaded-icon {
-  width: 1rem;
-  height: 1rem;
-  color: hsl(var(--color-blue-500));
-  transition: var(--transition-hover);
-}
-
-/* AgentConfigDisplay: Loaded text */
-.agent-config-loaded-text {
-  margin-left: var(--spacing-1);
-  font-size: var(--font-size-sm);
-  color: hsl(var(--color-blue-500));
-  transition: var(--transition-hover);
+/* AgentConfigDisplay: Loaded state */
+.agent-config-loaded .agent-config-icon,
+.agent-config-loaded .agent-config-text {
+  color: hsl(var(--primary));
 }
 
 /* AgentConfigDisplay: Hover state */
-.agent-config-loaded:hover .agent-config-loaded-icon,
-.agent-config-loaded:hover .agent-config-loaded-text {
-  color: hsl(var(--color-blue-600));
+.agent-config-loaded:hover .agent-config-icon,
+.agent-config-loaded:hover .agent-config-text {
+  color: hsl(var(--primary-foreground));
 }
 
-/* AgentConfigDisplay: Tooltip content styling */
-.agent-config-tooltip {
-  width: 20rem;
-  /* Use our common tooltip/popover styles instead of custom ones */
-  /* Consider adding .popover class to the component JSX */
-  background-color: var(--card-background);
-  border: var(--border-width-thin) solid var(--card-border-color);
-  border-radius: var(--card-border-radius);
-  box-shadow: var(--shadow-md);
-  position: relative;
-  z-index: var(--z-index-popover);
-}
-
-/* AgentConfigDisplay: Dark mode tooltip */
-.dark .agent-config-tooltip {
-  background-color: hsl(var(--color-gray-800));
-  border-color: hsl(var(--color-gray-700));
-}
-
-/* AgentConfigDisplay: Tooltip header */
-.agent-config-tooltip-header {
-  font-weight: var(--font-weight-semibold);
-  margin-bottom: var(--spacing-2);
-  color: hsl(var(--color-gray-900));
-}
-
-/* AgentConfigDisplay: Dark mode tooltip header */
-.dark .agent-config-tooltip-header {
-  color: hsl(var(--color-gray-50));
-}
-
-/* AgentConfigDisplay: Container for tooltip content */
-.agent-config-tooltip-container {
-  padding: var(--spacing-2);
-}
-
-/* AgentConfigDisplay: Spacing between items */
+/* AgentConfigDisplay: Tooltip items container */
 .agent-config-tooltip-items {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-1);
-  background-color: var(--card-background);
-}
-
-/* AgentConfigDisplay: Dark mode tooltip items */
-.dark .agent-config-tooltip-items {
-  background-color: hsl(var(--color-gray-800));
+  gap: 0.5rem;
 }
 
 /* AgentConfigDisplay: Individual config item */
 .agent-config-tooltip-item {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  font-size: var(--font-size-sm);
+  font-size: 0.875rem;
 }
 
 /* AgentConfigDisplay: Item label */
 .agent-config-tooltip-label {
-  color: hsl(var(--color-gray-500));
-}
-
-/* AgentConfigDisplay: Dark mode item label */
-.dark .agent-config-tooltip-label {
-  color: hsl(var(--color-gray-400));
+  color: hsl(var(--muted-foreground));
 }
 
 /* AgentConfigDisplay: Item value */
 .agent-config-tooltip-value {
-  font-weight: var(--font-weight-medium);
-  color: hsl(var(--color-gray-900));
-}
-
-/* AgentConfigDisplay: Dark mode item value */
-.dark .agent-config-tooltip-value {
-  color: hsl(var(--color-gray-50));
+  font-weight: 500;
+  color: hsl(var(--foreground));
 }

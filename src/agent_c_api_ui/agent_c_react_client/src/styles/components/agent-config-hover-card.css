@@ -7,287 +7,54 @@
   display: inline-flex;
   align-items: center;
   cursor: help;
-  transition: var(--transition-hover);
+  transition: color 0.2s ease;
 }
 
 /* AgentConfigHoverCard: Settings icon styling */
 .agent-config-hover-card-icon {
   width: 1rem;
   height: 1rem;
-  color: hsl(var(--color-blue-500));
-  transition: var(--transition-hover);
-}
-
-/* AgentConfigHoverCard: Settings icon hover */
-.agent-config-hover-card-icon:hover {
-  color: hsl(var(--color-blue-600));
+  color: hsl(var(--primary));
+  transition: color 0.2s ease;
 }
 
 /* AgentConfigHoverCard: Text label styling */
 .agent-config-hover-card-text {
-  margin-left: var(--spacing-3);
-  font-size: var(--font-size-sm);
-  color: hsl(var(--color-blue-500));
-  font-weight: var(--font-weight-medium);
-  transition: var(--transition-hover);
+  margin-left: 0.75rem;
+  font-size: 0.875rem;
+  color: hsl(var(--primary));
+  font-weight: 500;
+  transition: color 0.2s ease;
 }
 
-/* AgentConfigHoverCard: Text label hover */
-.agent-config-hover-card-text:hover {
-  color: hsl(var(--color-blue-600));
+/* AgentConfigHoverCard: Hover states */
+.agent-config-hover-card-trigger:hover .agent-config-hover-card-icon,
+.agent-config-hover-card-trigger:hover .agent-config-hover-card-text {
+  color: hsl(var(--primary-foreground));
 }
 
-/* AgentConfigHoverCard: HoverCard content container */
-.agent-config-hover-card-content {
-  width: 24rem; /* Increased from 20rem to 24rem to prevent wrapping */
-  padding: 0;
-  background-color: var(--card-background);
-  border: var(--border-width-thin) solid var(--card-border-color);
-  border-radius: var(--card-border-radius);
-  box-shadow: var(--shadow-lg);
-  z-index: var(--z-index-popover);
+/* AgentConfigHoverCard: Loading state container */
+.agent-config-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: wait;
 }
 
-/* AgentConfigHoverCard: Dark mode content container */
-.dark .agent-config-hover-card-content {
-  background-color: hsl(var(--color-gray-800));
-  border-color: hsl(var(--color-gray-700));
+/* AgentConfigHoverCard: Loading icon */
+.agent-config-loading-icon {
+  color: hsl(var(--muted-foreground));
 }
 
-/* AgentConfigHoverCard: Card header styles */
-.agent-config-hover-card-header {
-  padding-bottom: var(--spacing-2);
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-3);
+/* AgentConfigHoverCard: Loading text */
+.agent-config-loading-text {
+  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground));
 }
 
-/* AgentConfigHoverCard: Model info container */
+/* AgentConfigHoverCard: Model container */
 .agent-config-hover-card-model-container {
   display: flex;
   align-items: center;
-  gap: var(--spacing-2);
-}
-
-/* AgentConfigHoverCard: Model title */
-.agent-config-hover-card-title {
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-semibold);
-  color: hsl(var(--color-gray-900));
-}
-
-/* AgentConfigHoverCard: Dark mode model title */
-.dark .agent-config-hover-card-title {
-  color: hsl(var(--color-gray-100));
-}
-
-/* AgentConfigHoverCard: Backend info container */
-.agent-config-hover-card-backend {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-3);
-  font-size: var(--font-size-xs);
-  color: hsl(var(--color-gray-500));
-}
-
-/* AgentConfigHoverCard: Dark mode backend info */
-.dark .agent-config-hover-card-backend {
-  color: hsl(var(--color-gray-400));
-}
-
-/* AgentConfigHoverCard: Backend server icon */
-.agent-config-hover-card-backend-icon {
-  width: 0.875rem;
-  height: 0.875rem;
-}
-
-/* AgentConfigHoverCard: Card content styles */
-.agent-config-hover-card-body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-4);
-  padding-bottom: var(--spacing-4);
-}
-
-/* AgentConfigHoverCard: Section styling */
-.agent-config-hover-card-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-2);
-}
-
-/* AgentConfigHoverCard: Section header */
-.agent-config-hover-card-section-title {
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  color: hsl(var(--color-gray-500));
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-/* AgentConfigHoverCard: Dark mode section header */
-.dark .agent-config-hover-card-section-title {
-  color: hsl(var(--color-gray-400));
-}
-
-/* AgentConfigHoverCard: Badge container */
-.agent-config-hover-card-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-2);
-}
-
-/* AgentConfigHoverCard: Parameter badge (extends common badge class) */
-.agent-config-hover-card-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--spacing-1);
-  font-weight: var(--font-weight-normal);
-  border: var(--border-width-thin) solid;
-  border-radius: var(--badge-border-radius);
-  padding: var(--badge-padding-y) var(--badge-padding-x);
-  font-size: var(--badge-font-size);
-  white-space: nowrap;
-}
-
-/* AgentConfigHoverCard: Temperature badge */
-.agent-config-hover-card-badge-temperature {
-  background-color: hsl(var(--color-blue-50));
-  color: hsl(var(--color-blue-700));
-  border-color: hsl(var(--color-blue-200));
-}
-
-/* AgentConfigHoverCard: Dark mode temperature badge */
-.dark .agent-config-hover-card-badge-temperature {
-  background-color: hsla(var(--color-blue-900), 0.3);
-  color: hsl(var(--color-blue-300));
-  border-color: hsla(var(--color-blue-800), 0.3);
-}
-
-/* AgentConfigHoverCard: Reasoning badge */
-.agent-config-hover-card-badge-reasoning {
-  background-color: hsl(var(--color-purple-50));
-  color: hsl(var(--color-purple-700));
-  border-color: hsl(var(--color-purple-200));
-}
-
-/* AgentConfigHoverCard: Dark mode reasoning badge */
-.dark .agent-config-hover-card-badge-reasoning {
-  background-color: hsla(var(--color-purple-900), 0.2);
-  color: hsl(var(--color-purple-300));
-  border-color: hsla(var(--color-purple-800), 0.3);
-}
-
-/* AgentConfigHoverCard: Thinking enabled badge */
-.agent-config-hover-card-badge-thinking-enabled {
-  background-color: hsl(var(--color-green-50));
-  color: hsl(var(--color-green-700));
-  border-color: hsl(var(--color-green-200));
-}
-
-/* AgentConfigHoverCard: Thinking disabled badge */
-.agent-config-hover-card-badge-thinking-disabled {
-  background-color: hsl(var(--color-gray-100));
-  color: hsl(var(--color-gray-500));
-  border-color: hsl(var(--color-gray-200));
-}
-
-/* AgentConfigHoverCard: Dark mode thinking enabled badge */
-.dark .agent-config-hover-card-badge-thinking-enabled {
-  background-color: hsla(var(--color-green-900), 0.2);
-  color: hsl(var(--color-green-300));
-  border-color: hsla(var(--color-green-800), 0.3);
-}
-
-/* AgentConfigHoverCard: Dark mode thinking disabled badge */
-.dark .agent-config-hover-card-badge-thinking-disabled {
-  background-color: hsla(var(--color-gray-700), 0.3);
-  color: hsl(var(--color-gray-400));
-  border-color: hsla(var(--color-gray-700), 0.4);
-}
-
-/* AgentConfigHoverCard: Budget badge */
-.agent-config-hover-card-badge-budget {
-  background-color: hsl(var(--color-amber-50));
-  color: hsl(var(--color-amber-700));
-  border-color: hsl(var(--color-amber-200));
-}
-
-/* AgentConfigHoverCard: Dark mode budget badge */
-.dark .agent-config-hover-card-badge-budget {
-  background-color: hsla(var(--color-amber-900), 0.2);
-  color: hsl(var(--color-amber-300));
-  border-color: hsla(var(--color-amber-800), 0.3);
-}
-
-/* AgentConfigHoverCard: Persona badge */
-.agent-config-hover-card-badge-persona {
-  background-color: hsl(var(--color-purple-50));
-  color: hsl(var(--color-purple-700));
-  border-color: hsl(var(--color-purple-200));
-}
-
-/* AgentConfigHoverCard: Dark mode persona badge */
-.dark .agent-config-hover-card-badge-persona {
-  background-color: hsla(var(--color-purple-900), 0.2);
-  color: hsl(var(--color-purple-300));
-  border-color: hsla(var(--color-purple-800), 0.3);
-}
-
-/* AgentConfigHoverCard: Tool badge */
-.agent-config-hover-card-badge-tool {
-  background-color: hsl(var(--color-green-50));
-  color: hsl(var(--color-green-700));
-  border-color: hsl(var(--color-green-200));
-  font-size: 0.65rem;
-}
-
-/* AgentConfigHoverCard: Dark mode tool badge */
-.dark .agent-config-hover-card-badge-tool {
-  background-color: hsla(var(--color-green-900), 0.2);
-  color: hsl(var(--color-green-300));
-  border-color: hsla(var(--color-green-800), 0.3);
-}
-
-/* AgentConfigHoverCard: Session ID info section */
-.agent-config-hover-card-session-info {
-  padding-top: var(--spacing-1);
-  border-top: var(--border-width-thin) solid hsl(var(--color-gray-100));
-  font-size: var(--font-size-xs);
-  color: hsl(var(--color-gray-500));
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-1);
-}
-
-/* AgentConfigHoverCard: Dark mode session info */
-.dark .agent-config-hover-card-session-info {
-  border-color: hsl(var(--color-gray-700));
-  color: hsl(var(--color-gray-400));
-}
-
-/* AgentConfigHoverCard: Session ID row */
-.agent-config-hover-card-session-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-/* AgentConfigHoverCard: Session label */
-.agent-config-hover-card-session-label {
-  font-weight: var(--font-weight-medium);
-}
-
-/* AgentConfigHoverCard: Session ID code */
-.agent-config-hover-card-session-id {
-  font-size: 0.65rem;
-  background-color: hsl(var(--color-gray-100));
-  padding: 0.125rem 0.25rem;
-  border-radius: var(--border-radius-md);
-  font-family: var(--font-mono);
-}
-
-/* AgentConfigHoverCard: Dark mode session ID code */
-.dark .agent-config-hover-card-session-id {
-  background-color: hsl(var(--color-gray-700));
+  gap: 0.5rem;
 }

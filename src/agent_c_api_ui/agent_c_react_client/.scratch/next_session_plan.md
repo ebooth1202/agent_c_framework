@@ -1,55 +1,44 @@
-# Next Session Implementation Plan
+# Next Session Plan
 
-## Session Goals
+## Focus: CollapsibleOptions Component Standardization
 
-1. Complete the component inventory for remaining key shadcn/ui components
-2. Create a detailed analysis of an application component that needs standardization
-3. Create a prototype for standardized component implementation
+### Tasks
 
-## Detailed Tasks
+1. **Analyze CollapsibleOptions component**
+   - Examine current implementation and CSS
+   - Identify issues with shadcn/ui integration
+   - Document component structure and dependencies
 
-### 1. Component Inventory Completion
+2. **Create standardized prototype**
+   - Use proper shadcn/ui Collapsible components
+   - Update component to follow shadcn/ui patterns
+   - Fix any issues with state management
 
-- Analyze the following shadcn/ui components:
-  - Checkbox
-  - Select
-  - Tabs
-  - Toast/Toaster
-  - Tooltip
+3. **Update CSS**
+   - Replace custom color variables with shadcn/ui theme variables
+   - Remove explicit `.dark` selectors in favor of theme variables
+   - Document CSS variable mapping
 
-- Analyze the following application components and their shadcn/ui usage:
-  - ChatInputArea
-  - MessageItem
-  - Sidebar
-  - Layout
+4. **Implement changes**
+   - Update the component with the new implementation
+   - Update CSS file with shadcn/ui theme variables
+   - Test in both light and dark modes
 
-### 2. Application Component Analysis
+5. **Update documentation**
+   - Document changes made in implementation summary
+   - Update task tracker
+   - Update current plan
 
-Select AgentConfigDisplay as our example component for detailed analysis:
+### Potential Issues to Watch For
 
-- Document current implementation patterns
-- Identify styling inconsistencies
-- Map custom CSS classes to shadcn/ui equivalents
-- Identify Radix UI direct usage vs. shadcn/ui wrappers
+1. **State Management**: The CollapsibleOptions component has complex open/close state
+2. **Tabs Integration**: Ensure tabs work properly with the collapsible content
+3. **Event Handling**: Ensure click events are properly handled
 
-### 3. Create Standardization Prototype
+### Next Components to Address
 
-Create a prototype standardized version of AgentConfigDisplay:
+After the CollapsibleOptions component, we should focus on:
 
-- Use shadcn/ui components consistently
-- Replace custom CSS variables with shadcn/ui theme variables
-- Ensure proper light/dark mode support
-- Document the migration approach
-
-### 4. CSS Variable Testing
-
-- Test the CSS variable mapping in a controlled environment
-- Validate that changes preserve the same visual appearance
-- Document any adjustments needed to the mapping
-
-## Success Criteria
-
-- Complete inventory of at least 5 more shadcn/ui components
-- Detailed analysis of AgentConfigDisplay component
-- Prototype standardized implementation of AgentConfigDisplay
-- Validation of CSS variable mapping for at least one component
+1. **ChatInputArea**: Complex component with multiple states and interactions
+2. **MessageItem**: Core component for displaying messages
+3. **Sidebar**: Navigation component that needs proper responsive behavior
