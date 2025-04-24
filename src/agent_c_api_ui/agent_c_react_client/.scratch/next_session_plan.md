@@ -1,88 +1,55 @@
 # Next Session Implementation Plan
 
-## Focus Areas
+## Session Goals
 
-Based on our analysis and the progress we've made so far, the next session should focus on:
-
-1. Implementing the CSS import restructuring plan
-2. Standardizing more shadcn/ui components
-3. Creating a comprehensive component audit spreadsheet
+1. Complete the component inventory for remaining key shadcn/ui components
+2. Create a detailed analysis of an application component that needs standardization
+3. Create a prototype for standardized component implementation
 
 ## Detailed Tasks
 
-### 1. CSS Import Restructuring
+### 1. Component Inventory Completion
 
-- [x] Update index.css to improve import order:
-  - ✅ Tailwind base/components first
-  - ✅ Common styles imported via main.css
-  - ✅ Tailwind utilities last
+- Analyze the following shadcn/ui components:
+  - Checkbox
+  - Select
+  - Tabs
+  - Toast/Toaster
+  - Tooltip
 
-- [x] Simplify main.css:
-  - ✅ Remove duplicate imports
-  - ✅ Remove import of component-styles.css
+- Analyze the following application components and their shadcn/ui usage:
+  - ChatInputArea
+  - MessageItem
+  - Sidebar
+  - Layout
 
-- [x] Add deprecation notice to component-styles.css
-  - ✅ Added clear notice that the file will be removed in a future update
+### 2. Application Component Analysis
 
-- [x] Test thoroughly after changes:
-  - ✅ Verified light and dark mode functionality
-  - ✅ Confirmed theme toggle works properly
+Select AgentConfigDisplay as our example component for detailed analysis:
 
-### 2. Component Standardization
+- Document current implementation patterns
+- Identify styling inconsistencies
+- Map custom CSS classes to shadcn/ui equivalents
+- Identify Radix UI direct usage vs. shadcn/ui wrappers
 
-Select 2-3 shadcn/ui components to fully standardize and verify:
+### 3. Create Standardization Prototype
 
-- [ ] Button component
-  - Compare to latest shadcn/ui documentation
-  - Test all variants and sizes
-  - Ensure proper light/dark theming
+Create a prototype standardized version of AgentConfigDisplay:
 
-- [ ] Dialog component
-  - Verify against latest shadcn/ui docs
-  - Test all features (open, close, animations)
-  - Ensure proper accessibility
+- Use shadcn/ui components consistently
+- Replace custom CSS variables with shadcn/ui theme variables
+- Ensure proper light/dark mode support
+- Document the migration approach
 
-- [ ] Card component
-  - Check against latest shadcn/ui docs
-  - Test variants and composition
+### 4. CSS Variable Testing
 
-### 3. Component Inventory
+- Test the CSS variable mapping in a controlled environment
+- Validate that changes preserve the same visual appearance
+- Document any adjustments needed to the mapping
 
-- [ ] Create a comprehensive component inventory spreadsheet with:
-  - Component name
-  - File path
-  - Type (shadcn, custom, needs migration)
-  - Styling approach (CSS file, Tailwind, inline)
-  - Priority for migration
-  - Notes on issues
+## Success Criteria
 
-- [ ] Inventory at least 10 key application components:
-  - Layout.jsx
-  - MarkdownMessage.jsx
-  - ChatInputArea.jsx
-  - And 7 others based on visibility and importance
-
-### 4. Implementation of Theming Improvements
-
-- [ ] Test theme toggle functionality thoroughly
-- [ ] Document how the current theme state is managed
-- [ ] Create a prototype for a unified theming approach
-
-## Deliverables
-
-By the end of the next session, we should have:
-
-1. Improved CSS import structure
-2. 2-3 fully verified shadcn/ui components
-3. Component inventory of at least 10 key components
-4. Better understanding of the theming system
-5. Documentation of current state and next steps
-
-## Testing Approach
-
-For each change made:
-
-1. Verify in both light and dark modes
-2. Test responsive behavior on different screen sizes
-3. Check for any visual regressions in styling
-4. Ensure component functionality remains intact
+- Complete inventory of at least 5 more shadcn/ui components
+- Detailed analysis of AgentConfigDisplay component
+- Prototype standardized implementation of AgentConfigDisplay
+- Validation of CSS variable mapping for at least one component

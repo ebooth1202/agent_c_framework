@@ -1,91 +1,47 @@
-# ShadCN and Radix UI Implementation Plan
+# ShadCN/UI and Radix UI Implementation Plan
 
-## Overall Strategy
+## Phase 1: Assessment and Critical Fixes ✅ COMPLETE
 
-This document outlines our multi-session plan to correct the implementation of shadcn/ui and Radix UI components in the application. The approach focuses on minimizing disruption while systematically improving the codebase.
+- ✅ Audit shadcn/ui components for correctness
+- ✅ Fix ThemeToggle component import paths
+- ✅ Fix ScrollArea viewportRef handling
+- ✅ Analyze CSS structure and fix import order
+- ✅ Create CSS variable mapping between shadcn/ui and custom variables
+- ✅ Document findings and create detailed plans
 
-## Phase 1: Assessment and Planning
+## Phase 2: Component Inventory and Standardization 🔄 IN PROGRESS
 
-### Goals
-- Complete inventory of all components
-- Identify critical issues and priorities
-- Create detailed implementation plan
-- Establish CSS variable mapping
+- 🔄 Create comprehensive component inventory
+  - ✅ Basic shadcn/ui components (Button, Card, Dialog)
+  - 🔄 Complex shadcn/ui components (remaining components)
+  - 🔄 Application components using shadcn/ui
+- ⏳ Create prototype for standardized component implementation
+  - Select an application component with mixed styling
+  - Create a standardized version using shadcn/ui patterns consistently
+- ⏳ Document best practices for component usage
 
-### Tasks
-1. ✅ Audit shadcn/ui components in src/components/ui
-2. ✅ Examine application components using shadcn/ui
-3. ✅ Analyze theming systems and CSS structure
-4. ✅ Create component analysis documentation
-5. ✅ Develop CSS variable mapping between systems (see css_variable_mapping.md)
-6. ✅ Prioritize components for migration
+## Phase 3: Theming Consolidation ⏳ PENDING
 
-## Phase 2: Fix Critical Issues
+- ✅ Create CSS variable mapping
+- ⏳ Test variable mapping on a subset of components
+- ⏳ Implement consolidated theming approach
+- ⏳ Update components to use shadcn/ui theme variables consistently
 
-### Goals
-- Fix broken components and incorrect imports
-- Address theming inconsistencies
-- Ensure dark mode works correctly
+## Phase 4: Application Component Migration ⏳ PENDING
 
-### Tasks
-1. ✅ Fix ThemeToggle component import paths
-2. ✅ Correct CSS import structure in main.css/component-styles.css
-   - ✅ Fixed order of imports in index.css (Tailwind → component styles → Tailwind utilities)
-   - ✅ Removed duplicate imports in main.css
-   - ✅ Marked component-styles.css as deprecated
-3. ✅ Ensure dark mode toggles properly with both theming systems
-4. ✅ Fix ScrollArea component to properly handle viewportRef prop
-5. ✅ Fix critical CSS import issue with globals.css not being imported
-6. Address any remaining visual bugs in core UI components
+- ⏳ Prioritize components for migration
+- ⏳ Migrate high-priority components
+- ⏳ Test and validate changes
+- ⏳ Document migration patterns
 
-## Phase 3: Standardize Core Components
+## Phase 5: CSS Cleanup ⏳ PENDING
 
-### Goals
-- Ensure all shadcn/ui components follow best practices
-- Standardize usage patterns across application
-- Consolidate theming variables
+- ⏳ Remove duplicate CSS
+- ⏳ Standardize component CSS files
+- ⏳ Ensure proper dark mode support
 
-### Tasks
-1. Review and fix shadcn/ui components against documentation
-2. Standardize implementation of Radix primitives
-3. Begin migration of custom CSS to shadcn/ui variables
-4. Create component usage documentation
+## Phase 6: Final Review and Documentation ⏳ PENDING
 
-## Phase 4: Application Component Migration
-
-### Goals
-- Migrate application components to use shadcn/ui properly
-- Remove duplicate and inline styles
-- Ensure consistent styling across the application
-
-### Tasks
-1. Prioritize high-visibility components for migration
-2. Move inline styles to CSS files following shadcn pattern
-3. Replace custom CSS classes with Tailwind where appropriate
-4. Test components in both light and dark modes
-
-## Phase 5: Theming Consolidation
-
-### Goals
-- Fully transition to shadcn/ui theming system
-- Remove legacy custom theme variables
-- Ensure consistent look and feel throughout the application
-
-### Tasks
-1. Create comprehensive mapping between theme systems
-2. Replace custom theme variable usage with shadcn equivalents
-3. Update component CSS files to use shadcn variables
-4. Remove duplicate variables from variables.css
-
-## Phase 6: Final Testing and Documentation
-
-### Goals
-- Ensure application functions correctly with new styling
-- Document theming system and component usage
-- Provide guidelines for future development
-
-### Tasks
-1. Comprehensive visual testing across all components
-2. Ensure dark mode functions properly throughout
-3. Document theming approach and variables
-4. Create component styling guidelines for future development
+- ⏳ Comprehensive testing
+- ⏳ Create documentation for future development
+- ⏳ Final report on improvements
