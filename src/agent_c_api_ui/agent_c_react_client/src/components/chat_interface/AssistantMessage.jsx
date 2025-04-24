@@ -37,7 +37,7 @@ const AssistantMessage = ({
     <div className={cn("assistant-message-container", className)}>
       <div className="assistant-message-row group">
         <ModelIcon vendor={vendor} />
-        <Card className="assistant-message-bubble" variant="transparent">
+        <Card className="assistant-message-bubble">
           <CardContent className="assistant-message-content">
             <div className="assistant-message-body prose dark:prose-invert">
               <MarkdownMessage content={content} />

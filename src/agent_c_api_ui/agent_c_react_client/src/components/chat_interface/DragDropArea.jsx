@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import DragDropOverlay from './DragDropOverlay';
+import { cn } from '@/lib/utils';
 
 /**
  * DragDropArea component provides file drag and drop functionality with visual feedback.
@@ -75,7 +76,11 @@ const DragDropArea = ({ children, onFileDrop, disabled = false, className }) => 
 
   return (
     <div 
-      className={className}
+      className={cn(
+        'drag-drop-area',
+        disabled && 'drag-drop-area-disabled',
+        className
+      )}
       onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}

@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { Sun, Moon, Laptop } from 'lucide-react';
-import { Button } from './button';
+import { Button } from '../../../.scratch/backup/ui/button';
 import { SessionContext } from '@/contexts/SessionContext';
 
 export function ThemeToggle() {

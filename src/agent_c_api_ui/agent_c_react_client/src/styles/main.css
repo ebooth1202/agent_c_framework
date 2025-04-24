@@ -33,6 +33,7 @@
 @import './components/model-parameter-controls.css';
 @import './components/animated-status-indicator.css';
 @import './components/drag-drop-overlay.css';
+@import './components/drag-drop-area.css';
 @import './components/page-header.css';
 @import './components/sidebar.css';
 @import './components/assistant-message.css';
