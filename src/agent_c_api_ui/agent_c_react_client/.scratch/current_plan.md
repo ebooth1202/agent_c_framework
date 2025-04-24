@@ -29,9 +29,14 @@ This document outlines our multi-session plan to correct the implementation of s
 
 ### Tasks
 1. ✅ Fix ThemeToggle component import paths
-2. Correct CSS import structure in main.css/component-styles.css
-3. Ensure dark mode toggles properly with both theming systems
-4. Address any visual bugs in core UI components
+2. ✅ Correct CSS import structure in main.css/component-styles.css
+   - ✅ Fixed order of imports in index.css (Tailwind → component styles → Tailwind utilities)
+   - ✅ Removed duplicate imports in main.css
+   - ✅ Marked component-styles.css as deprecated
+3. ✅ Ensure dark mode toggles properly with both theming systems
+4. ✅ Fix ScrollArea component to properly handle viewportRef prop
+5. ✅ Fix critical CSS import issue with globals.css not being imported
+6. Address any remaining visual bugs in core UI components
 
 ## Phase 3: Standardize Core Components
 

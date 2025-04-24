@@ -42,5 +42,5 @@
 @import './components/collapsible-options.css';
 @import './components/tool-selector.css';
 
-/* Import component-styles.css for backwards compatibility */
-@import './component-styles.css';
+/* We've removed the import of component-styles.css as it created duplicate imports */
+/* All component styles are now directly imported above */

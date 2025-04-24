@@ -29,9 +29,19 @@ This duplication causes confusion and potential styling conflicts.
 
 ## Component Inventory
 
+### CSS Import Structure Analysis
+
+- **index.css**: Now correctly orders imports: Tailwind base/components → main.css → Tailwind utilities
+- **main.css**: Simplified by removing duplicate imports and deprecated component-styles.css import
+- **component-styles.css**: Marked as deprecated for future removal
+
 ### Correctly Implemented shadcn/ui Components
 
 - **Button**: Correctly implements shadcn/ui pattern with proper Tailwind classes
+  - Matches latest documentation including icon styling
+  - Uses class-variance-authority (cva) for variants
+  - Correctly implements asChild parameter
+  - Properly imports utility functions
 - **Card**: Correctly set up with proper Tailwind classes
 - **Checkbox**: Follows the correct pattern
 - **Dialog**: Correctly implemented with Radix primitives
@@ -39,7 +49,8 @@ This duplication causes confusion and potential styling conflicts.
 
 ### Components with Issues
 
-- **Theme-toggle**: Imports from incorrect path (`.scratch/backup`)
+- **Theme-toggle**: ✅ Fixed - Was importing from incorrect path (`.scratch/backup`)
+- **ScrollArea**: ✅ Fixed - Wasn't properly handling viewportRef prop 
 - Various application components mixing custom CSS with shadcn components
 
 ### CSS Variable Mapping Analysis

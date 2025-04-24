@@ -22,6 +22,8 @@
    - ✅ Identified duplicate imports between main.css and component-styles.css
    - ✅ Discovered Tailwind import order issue in index.css
    - ✅ Created detailed CSS import restructuring plan (see css_import_restructuring_plan.md)
+   - ✅ Implemented CSS import restructuring fixes in index.css and main.css
+   - ✅ Marked component-styles.css as deprecated
 
 3. [x] Create CSS variable mapping reference
    - ✅ Created detailed mapping between custom variables and shadcn variables in css_variable_mapping.md
@@ -44,9 +46,9 @@
 
 ### Theming Tasks
 
-1. [ ] Verify dark mode implementation
-   - Test theme toggle functionality
-   - Ensure both CSS variable systems respond correctly
+1. [x] Verify dark mode implementation
+   - ✅ Tested theme toggle functionality
+   - ✅ Confirmed both CSS variable systems respond correctly to theme changes
 
 2. [ ] Document theming conflicts
    - Identify components using conflicting theming approaches
@@ -59,6 +61,17 @@
 - [ ] Create inventory of all application components
 - [ ] Classify components by complexity and styling approach
 - [ ] Prioritize components for styling migration
+
+### Critical Bug Fixes
+
+- [x] Fix ScrollArea implementation issue with viewportRef
+  - ✅ Modified ScrollArea component to properly pass viewportRef to ScrollAreaPrimitive.Viewport
+  - ✅ Fixed React warning about unrecognized viewportRef prop on DOM element
+
+- [x] Fix broken UI styling after CSS restructuring
+  - ✅ Identified globals.css not being imported, causing theme variables to be missing
+  - ✅ Updated index.css to properly import globals.css before main.css
+  - ✅ Fixed styling cascade to ensure shadcn/ui theme variables are applied
 
 ### Documentation
 

@@ -1,13 +1,8 @@
-/* Import component styles first */
+/* Import shadcn/ui base styles from globals.css */
+@import './styles/globals.css';
+
+/* Import our main CSS file which contains common styles and component styles */
 @import './styles/main.css';
-/* main.css already imports component-styles.css, so we can remove this duplicate import */
-
-/* Then import Tailwind */
-@tailwind base;
-@tailwind components;
-
-/* Finally Tailwind utilities */
-@tailwind utilities;
 
 /* Custom styles for markdown in user messages */
 .markdown-user-message .prose {
