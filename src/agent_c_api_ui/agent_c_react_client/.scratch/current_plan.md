@@ -17,7 +17,7 @@ This document outlines our multi-session plan to correct the implementation of s
 2. ✅ Examine application components using shadcn/ui
 3. ✅ Analyze theming systems and CSS structure
 4. ✅ Create component analysis documentation
-5. ✅ Develop CSS variable mapping between systems
+5. ✅ Develop CSS variable mapping between systems (see css_variable_mapping.md)
 6. ✅ Prioritize components for migration
 
 ## Phase 2: Fix Critical Issues
@@ -28,7 +28,7 @@ This document outlines our multi-session plan to correct the implementation of s
 - Ensure dark mode works correctly
 
 ### Tasks
-1. Fix ThemeToggle component import paths
+1. ✅ Fix ThemeToggle component import paths
 2. Correct CSS import structure in main.css/component-styles.css
 3. Ensure dark mode toggles properly with both theming systems
 4. Address any visual bugs in core UI components

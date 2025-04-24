@@ -14,23 +14,25 @@
 
 ### High Priority Tasks
 
-1. [ ] Fix ThemeToggle component incorrect imports
-   - The component is importing from `.scratch/backup` which needs to be corrected
-   - Verify against shadcn-ui documentation
+1. [x] Fix ThemeToggle component incorrect imports
+   - ✅ Fixed import from `.scratch/backup` to proper `@/components/ui/button`
+   - ✅ Verified against shadcn-ui documentation
 
-2. [ ] Fix CSS import structure
-   - Address potential order issues in main.css
-   - Evaluate duplication between main.css and component-styles.css
+2. [x] Analyze CSS import structure
+   - ✅ Identified duplicate imports between main.css and component-styles.css
+   - ✅ Discovered Tailwind import order issue in index.css
+   - ✅ Created detailed CSS import restructuring plan (see css_import_restructuring_plan.md)
 
-3. [ ] Create CSS variable mapping reference
-   - Detailed mapping between custom variables and shadcn variables
-   - Decision guide for which variables to use in which context
+3. [x] Create CSS variable mapping reference
+   - ✅ Created detailed mapping between custom variables and shadcn variables in css_variable_mapping.md
+   - ✅ Included notes on transition strategy
 
 ### Component Fixes
 
-1. [ ] Audit CollapsibleOptions component
-   - Check for inline styles that should be in CSS
-   - Verify that it's using shadcn/ui components correctly
+1. [x] Audit CollapsibleOptions component
+   - ✅ No inline styles found - already uses CSS classes properly
+   - ✅ Correctly imports and uses shadcn/ui components
+   - ✅ Detailed analysis in component_analysis_collapsible_options.md
 
 2. [ ] Review Button component implementation
    - Verify against current shadcn/ui documentation

@@ -1,66 +1,89 @@
-# Next Session Plan - ShadCN/Radix UI Implementation
+# Next Session Implementation Plan
 
-## Session Goals
+## Focus Areas
 
-1. Fix critical issues with shadcn/ui components
-2. Create detailed CSS variable mapping
-3. Begin addressing theming inconsistencies
+Based on our analysis and the progress we've made so far, the next session should focus on:
+
+1. Implementing the CSS import restructuring plan
+2. Standardizing more shadcn/ui components
+3. Creating a comprehensive component audit spreadsheet
 
 ## Detailed Tasks
 
-### 1. Fix ThemeToggle Component (High Priority)
+### 1. CSS Import Restructuring
 
-- **Issue**: Currently imports from incorrect path (`.scratch/backup`)
-- **Steps**:
-  1. Check shadcn-ui documentation for correct theme-toggle implementation
-  2. Fix import paths in the component
-  3. Verify functionality in browser
-  4. Ensure it works correctly with ThemeProvider
+- [ ] Update index.css to improve import order:
+  - Tailwind base/components first
+  - Common styles next
+  - Component styles after
+  - Tailwind utilities last
 
-### 2. Create CSS Variable Mapping Reference
+- [ ] Simplify main.css:
+  - Remove duplicate imports
+  - Remove import of component-styles.css
 
-- **Purpose**: Help developers understand which variables to use and where
-- **Steps**:
-  1. Create comprehensive table mapping shadcn to custom variables
-  2. Identify variables with no direct equivalent
-  3. Document which components use which variable systems
-  4. Create guidelines for variable usage moving forward
+- [ ] Add deprecation notice to component-styles.css
 
-### 3. Fix CSS Import Structure
+- [ ] Test thoroughly after changes:
+  - Light and dark mode
+  - All major components
+  - Responsive behavior
 
-- **Issue**: Complex and potentially problematic import patterns
-- **Steps**:
-  1. Analyze main.css, component-styles.css, and import order
-  2. Evaluate impact of Tailwind being imported after component styles
-  3. Propose simplified import structure
-  4. Test changes for visual regressions
+### 2. Component Standardization
 
-### 4. Audit CollapsibleOptions Component
+Select 2-3 shadcn/ui components to fully standardize and verify:
 
-- **Purpose**: Example of addressing application component styling
-- **Steps**:
-  1. Identify inline styles that should be in CSS
-  2. Check for custom classes that could use Tailwind
-  3. Document changes needed
-  4. Implement and test changes
+- [ ] Button component
+  - Compare to latest shadcn/ui documentation
+  - Test all variants and sizes
+  - Ensure proper light/dark theming
 
-### 5. Document Theming Conflicts
+- [ ] Dialog component
+  - Verify against latest shadcn/ui docs
+  - Test all features (open, close, animations)
+  - Ensure proper accessibility
 
-- **Purpose**: Create clear path for theming standardization
-- **Steps**:
-  1. Identify components using custom theme variables
-  2. Document impact of migrating these to shadcn variables
-  3. Create prioritized list for future migration
+- [ ] Card component
+  - Check against latest shadcn/ui docs
+  - Test variants and composition
 
-## Validation Criteria
+### 3. Component Inventory
 
-- ThemeToggle component works correctly in light and dark modes
-- CSS variable mapping document is comprehensive and clear
-- Preliminary fixes don't introduce visual regressions
-- We have a clear understanding of the scope of theming conflicts
+- [ ] Create a comprehensive component inventory spreadsheet with:
+  - Component name
+  - File path
+  - Type (shadcn, custom, needs migration)
+  - Styling approach (CSS file, Tailwind, inline)
+  - Priority for migration
+  - Notes on issues
 
-## Resources Needed
+- [ ] Inventory at least 10 key application components:
+  - Layout.jsx
+  - MarkdownMessage.jsx
+  - ChatInputArea.jsx
+  - And 7 others based on visibility and importance
 
-- shadcn/ui documentation for reference
-- Ability to test changes in both light and dark modes
-- Access to see components in browser for visual verification
+### 4. Implementation of Theming Improvements
+
+- [ ] Test theme toggle functionality thoroughly
+- [ ] Document how the current theme state is managed
+- [ ] Create a prototype for a unified theming approach
+
+## Deliverables
+
+By the end of the next session, we should have:
+
+1. Improved CSS import structure
+2. 2-3 fully verified shadcn/ui components
+3. Component inventory of at least 10 key components
+4. Better understanding of the theming system
+5. Documentation of current state and next steps
+
+## Testing Approach
+
+For each change made:
+
+1. Verify in both light and dark modes
+2. Test responsive behavior on different screen sizes
+3. Check for any visual regressions in styling
+4. Ensure component functionality remains intact
