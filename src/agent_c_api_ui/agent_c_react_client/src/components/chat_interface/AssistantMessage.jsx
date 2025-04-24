@@ -1,5 +1,7 @@
 import React from 'react';
 import { Wrench } from 'lucide-react';
+import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import MarkdownMessage from './MarkdownMessage';
 import TokenUsageDisplay from './TokenUsageDisplay';
 import ModelIcon from './ModelIcon';
@@ -17,6 +19,7 @@ import ToolCallItem from './ToolCallItem';
  * @param {Array} [props.toolCalls] - Tool calls associated with this message
  * @param {boolean} [props.isToolCallsExpanded=false] - Whether tool calls are expanded
  * @param {function} props.onToggleToolCalls - Function to toggle tool call expansion
+ * @param {string} [props.className] - Optional additional class names
  */
 const AssistantMessage = ({
   content,
@@ -24,17 +27,18 @@ const AssistantMessage = ({
   tokenUsage,
   toolCalls,
   isToolCallsExpanded = false,
-  onToggleToolCalls
+  onToggleToolCalls,
+  className
 }) => {
   const hasToolCalls = toolCalls && toolCalls.length > 0;
   const toolCallCount = hasToolCalls ? toolCalls.length : 0;
   
   return (
-    <div className="assistant-message-container">
+    <div className={cn("assistant-message-container", className)}>
       <div className="assistant-message-row group">
         <ModelIcon vendor={vendor} />
-        <div className="assistant-message-bubble">
-          <div className="assistant-message-content">
+        <Card className="assistant-message-bubble">
+          <CardContent className="assistant-message-content p-0">
             <div className="assistant-message-body prose dark:prose-invert">
               <MarkdownMessage content={content} />
               
@@ -86,8 +90,8 @@ const AssistantMessage = ({
               size="xs"
               className="assistant-message-copy-button"
             />
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

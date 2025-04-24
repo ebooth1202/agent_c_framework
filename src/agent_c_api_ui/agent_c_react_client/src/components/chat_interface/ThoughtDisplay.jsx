@@ -1,11 +1,22 @@
 import React, {useRef, useEffect, useContext} from 'react';
 import {SessionContext} from '@/contexts/SessionContext';
 import {Brain} from 'lucide-react';
+import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import ModelIcon from './ModelIcon';
 import CopyButton from './CopyButton';
 import MarkdownMessage from "@/components/chat_interface/MarkdownMessage";
 
-const ThoughtDisplay = ({content, vendor}) => {
+/**
+ * ThoughtDisplay component displays AI thinking processes in a visually distinct container
+ * with auto-scrolling functionality for streaming content.
+ * 
+ * @param {Object} props - Component props
+ * @param {string} props.content - The thinking content to display
+ * @param {string} props.vendor - The AI model vendor
+ * @param {string} [props.className] - Optional additional class names
+ */
+const ThoughtDisplay = ({content, vendor, className}) => {
     const {theme} = useContext(SessionContext);
     // Check if dark mode is enabled
     const isDarkMode = theme === 'dark';
@@ -27,14 +38,14 @@ const ThoughtDisplay = ({content, vendor}) => {
     }, [content]);
 
     return (
-        <div className="flex justify-start items-start gap-2 group mb-3">
+        <div className={cn("flex justify-start items-start gap-2 group mb-3", className)}>
             <div className="flex-shrink-0 mt-1">
                 <ModelIcon vendor={vendor} />
             </div>
             
-            <div className="thought-container">
+            <Card className="thought-container">
                 {/* Content area with markdown */}
-                <div className="flex justify-between items-start gap-4">
+                <CardContent className="flex justify-between items-start gap-4 p-0">
                     <div
                         ref={contentRef}
                         className={`text-sm font-mono thought-display-content`}
@@ -51,8 +62,8 @@ const ThoughtDisplay = ({content, vendor}) => {
                         size="xs"
                         className="mt-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900/30"
                     />
-                </div>
-            </div>
+                </CardContent>
+            </Card>
         </div>
     );
 };

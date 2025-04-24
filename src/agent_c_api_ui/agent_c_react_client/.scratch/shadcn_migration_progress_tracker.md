@@ -13,7 +13,7 @@ We're taking an incremental approach, focusing on components that are actively u
 ## Completed Migrations
 
 ### 1. Layout Component (Core Structure)
-Status: ✅ COMPLETED
+Status: u2705 COMPLETED
 Date: 2025-04-23
 Changes:
 - Enhanced with Card component for header
@@ -22,11 +22,11 @@ Changes:
 - Verified working in production
 
 ### 2. StatusBar Component (Chat Interface)
-Status: ✅ COMPLETED
+Status: u2705 COMPLETED
 Date: 2025-04-23
 Changes:
 - Extracted inline styles to status-bar.css
-- Fixed incorrect CSS variables (--color-* → --theme-*)
+- Fixed incorrect CSS variables (--color-* u2192 --theme-*)
 - Replaced custom container with Card component
 - Converted tools badge to use Badge component
 - Added className prop for customization from parent components
@@ -35,7 +35,7 @@ Changes:
 - Maintained all existing functionality and visual appearance
 
 ### 3. MessagesList Component
-Status: ✅ COMPLETED
+Status: u2705 COMPLETED
 Date: 2025-04-23
 Validation steps completed:
 - [x] Inspect for inline styles
@@ -58,7 +58,7 @@ Changes:
 - Added automatic scrolling for tool selection indicators
 
 ### 4. ChatInputArea
-Status: ✅ COMPLETED
+Status: u2705 COMPLETED
 Date: 2025-04-23
 Validation steps completed:
 - [x] Inspect for inline styles
@@ -73,7 +73,7 @@ Changes:
 - Ensured dark mode compatibility
 
 ### 5. CollapsibleOptions
-Status: ✅ COMPLETED
+Status: u2705 COMPLETED
 Date: 2025-04-23
 Validation steps completed:
 - [x] Inspect for inline styles
@@ -90,7 +90,7 @@ Changes:
 - Ensured dark mode compatibility
 
 ### 6. MarkdownMessage
-Status: ✅ COMPLETED
+Status: u2705 COMPLETED
 Date: 2025-04-23
 Validation steps completed:
 - [x] Inspect for inline styles
@@ -106,7 +106,7 @@ Changes:
 - Ensured dark mode compatibility
 
 ### 7. UserMessage
-Status: ✅ COMPLETED
+Status: u2705 COMPLETED
 Date: 2025-04-23
 Validation steps completed:
 - [x] Inspect for inline styles
@@ -122,10 +122,102 @@ Changes implemented:
 - Added support for className prop for better component composition
 - Successfully tested and confirmed working
 
+### 8. AssistantMessage
+Status: u2705 COMPLETED
+Date: 2025-04-23
+Validation steps completed:
+- [x] Inspect for inline styles
+- [x] Validated CSS file structure
+- [x] Validated CSS variables
+- [x] Identified shadcn/ui replacement components
+Changes implemented:
+- Replaced message bubble div with Card component
+- Replaced content div with CardContent component
+- Added className prop support for better component composition
+- Used cn() utility for better className management
+- Maintained all existing functionality including toolcall expansion
+- Preserved TokenUsageDisplay integration
+- Preserved hover state functionality (copy button visibility)
+- Confirmed compatibility with other migrated components
+
+### 9. SystemMessage
+Status: u2705 COMPLETED
+Date: 2025-04-23
+Validation steps completed:
+- [x] Inspect for inline styles
+- [x] Validated CSS file structure
+- [x] Validated CSS variables
+- [x] Identified shadcn/ui replacement components
+Changes implemented:
+- Used Card component for regular system messages
+- Used Alert component with destructive variant for error messages
+- Used CardContent and AlertDescription for content containers
+- Added className prop support for better component composition
+- Used cn() utility for better className management
+- Maintained all existing functionality including error styling and critical error indication
+- Preserved copy button with appropriate variant based on message type
+- No CSS changes needed as existing CSS was well-structured
+
+### 10. ThoughtDisplay
+Status: u2705 COMPLETED
+Date: 2025-04-23
+Validation steps completed:
+- [x] Inspect for inline styles
+- [x] Validated CSS file structure
+- [x] Validated CSS variables
+- [x] Identified shadcn/ui replacement components
+Changes implemented:
+- Replaced main container div with Card component
+- Used CardContent for the content area
+- Maintained auto-scrolling functionality for streaming content
+- Preserved ModelIcon integration
+- Kept CopyButton functionality with styling
+- Added className prop support for better component composition
+- Used cn() utility for better className management
+- No CSS changes needed as existing CSS was well-structured
+
+### 11. ToolCallDisplay
+Status: u2705 COMPLETED
+Date: 2025-04-23
+Validation steps completed:
+- [x] Inspect for inline styles
+- [x] Validated CSS file structure
+- [x] Validated CSS variables
+- [x] Identified shadcn/ui replacement components
+Changes implemented:
+- Replaced main container with Card component
+- Used Collapsible, CollapsibleTrigger, and CollapsibleContent for expanding/collapsing functionality
+- Used CardContent for the content area
+- Maintained Badge component for tool count
+- Added className prop support for better component composition
+- Used cn() utility for better className management
+- Improved variable naming (isExpanded u2192 isOpen) for consistency with shadcn/ui
+- Enhanced component documentation with JSDoc comments
+- No CSS changes needed as existing CSS was well-structured
+
+### 12. ToolCallItem
+Status: u2705 COMPLETED
+Date: 2025-04-23
+Validation steps completed:
+- [x] Inspect for inline styles
+- [x] Validated CSS file structure
+- [x] Validated CSS variables
+- [x] Identified shadcn/ui replacement components
+Changes implemented:
+- Replaced main container with Card component
+- Used Collapsible, CollapsibleTrigger, and CollapsibleContent for expanding/collapsing functionality
+- Used CardContent for the content area
+- Maintained support for integrated mode with conditional class application
+- Added className prop support for better component composition
+- Used cn() utility for better className management
+- Improved variable naming (isExpanded u2192 isOpen) for consistency with shadcn/ui
+- Enhanced component documentation with JSDoc comments
+- No CSS changes needed as existing CSS was well-structured
+
 ## Not Currently Used (Lower Priority)
 
 ### PageHeader Component
-Status: ✅ MIGRATED BUT NOT USED
+Status: u2705 MIGRATED BUT NOT USED
 Date: 2025-04-23
 Notes:
 - Enhanced with Card, CardHeader, CardTitle components
@@ -133,12 +225,12 @@ Notes:
 - Not currently imported or used in the application
 
 ### Sidebar Component
-Status: ⚠️ NOT USED - DO NOT MIGRATE
+Status: u26a0ufe0f NOT USED - DO NOT MIGRATE
 Notes:
 - Component exists but is not referenced in the application
 - Previous migration attempts caused issues by modifying this unused component
 
 ### MobileNav Component
-Status: ⚠️ NOT USED - DO NOT MIGRATE
+Status: u26a0ufe0f NOT USED - DO NOT MIGRATE
 Notes:
 - Component exists but is not referenced in the application
