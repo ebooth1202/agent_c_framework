@@ -43,7 +43,7 @@ const ThoughtDisplay = ({content, vendor, className}) => {
                 <ModelIcon vendor={vendor} />
             </div>
             
-            <Card className="thought-container">
+            <Card className="thought-container" variant="transparent">
                 {/* Content area with markdown */}
                 <CardContent className="flex justify-between items-start gap-4 p-0">
                     <div

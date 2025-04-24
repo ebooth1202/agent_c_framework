@@ -19,7 +19,7 @@ import MarkdownMessage from './MarkdownMessage';
 const UserMessage = ({ content, files, isVoiceMessage, className }) => {
   return (
     <div className={cn("user-message-row group", className)}>
-      <Card className="user-message-bubble">
+      <Card className="user-message-bubble" variant="transparent">
         <CardContent className="user-message-content p-0">
           <div className="user-message-body prose dark:prose-invert">
             {isVoiceMessage ? (

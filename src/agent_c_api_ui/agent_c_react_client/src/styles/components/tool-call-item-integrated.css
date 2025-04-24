@@ -16,84 +16,64 @@
   justify-content: space-between;
   padding: var(--spacing-2) var(--spacing-3);
   cursor: pointer;
-  background-color: hsl(var(--color-purple-100) / 0.5);
+  background-color: var(--theme-tool-call-header-background);
   transition: background-color var(--transition-hover);
   border-radius: var(--border-radius-md);
-  border: 1px solid hsl(var(--color-purple-200) / 0.8);
+  border: var(--border-width-thin) solid var(--theme-tool-call-border);
 }
 
 /* ToolCallItem (Integrated): Dark mode header */
 .dark .integrated-tool-call-item-header {
-  background-color: hsl(var(--color-purple-900) / 0.3);
-  border-color: hsl(var(--color-purple-700) / 0.6);
+  background-color: hsla(var(--color-purple-900), 0.3);
+  border-color: hsla(var(--color-purple-700), 0.6);
 }
 
 /* ToolCallItem (Integrated): Header hover states */
 .integrated-tool-call-item-header:hover {
-  background-color: hsl(var(--color-purple-100) / 0.9);
+  background-color: hsla(var(--color-purple-100), 0.9);
 }
 
 .dark .integrated-tool-call-item-header:hover {
-  background-color: hsl(var(--color-purple-800) / 0.5);
+  background-color: hsla(var(--color-purple-800), 0.5);
 }
 
 /* ToolCallItem (Integrated): Content area */
 .integrated-tool-call-item-content {
-  background-color: hsl(var(--color-purple-50) / 0.7);
+  background-color: var(--theme-tool-call-background);
   padding: var(--spacing-3);
   border-bottom-left-radius: var(--border-radius-md);
   border-bottom-right-radius: var(--border-radius-md);
-  border: 1px solid hsl(var(--color-purple-200) / 0.8);
+  border: var(--border-width-thin) solid var(--theme-tool-call-border);
   border-top: none;
-}
-
-.dark .integrated-tool-call-item-content {
-  background-color: hsl(var(--color-purple-950) / 0.4);
-  border-color: hsl(var(--color-purple-700) / 0.6);
 }
 
 /* ToolCallItem (Integrated): Code pre formatting */
 .integrated-tool-call-item-code {
   font-size: var(--font-size-sm);
   font-family: var(--font-mono);
-  background-color: hsl(var(--color-purple-50) / 0.9);
+  background-color: var(--theme-card);
   padding: var(--spacing-2);
   border-radius: var(--border-radius-md);
   white-space: pre-wrap;
   overflow-x: auto;
   max-width: 100%;
-  border: var(--border-width-thin) solid hsl(var(--color-purple-200));
-  color: hsl(var(--color-purple-900));
-}
-
-/* ToolCallItem (Integrated): Dark mode code */
-.dark .integrated-tool-call-item-code {
-  background-color: hsl(var(--color-purple-950) / 0.7);
-  color: hsl(var(--color-purple-100));
-  border-color: hsl(var(--color-purple-700));
+  border: var(--border-width-thin) solid var(--theme-border);
+  color: var(--theme-card-foreground);
 }
 
 /* Section title styling */
 .integrated-tool-call-item-section-title {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
-  color: hsl(var(--color-purple-800));
+  color: var(--theme-tool-call-title);
   margin-bottom: var(--spacing-1);
-}
-
-.dark .integrated-tool-call-item-section-title {
-  color: hsl(var(--color-purple-200));
 }
 
 /* Icons */
 .integrated-tool-call-item-icon {
   height: 1.25rem;
   width: 1.25rem;
-  color: hsl(var(--color-purple-600));
-}
-
-.dark .integrated-tool-call-item-icon {
-  color: hsl(var(--color-purple-300));
+  color: var(--theme-tool-call-icon);
 }
 
 /* Tool call item name container */
@@ -106,11 +86,7 @@
 /* Tool call item name */
 .tool-call-item-name {
   font-weight: var(--font-weight-medium);
-  color: hsl(var(--color-purple-800));
-}
-
-.dark .tool-call-item-name {
-  color: hsl(var(--color-purple-200));
+  color: var(--theme-tool-call-title);
 }
 
 /* Tool call item buttons */
@@ -124,12 +100,8 @@
 .tool-call-item-chevron {
   height: 1rem;
   width: 1rem;
-  transition: transform var(--transition-standard);
-  color: hsl(var(--color-purple-600));
-}
-
-.dark .tool-call-item-chevron {
-  color: hsl(var(--color-purple-300));
+  transition: transform var(--transition-normal);
+  color: var(--theme-tool-call-icon);
 }
 
 .tool-call-item-chevron-rotated {

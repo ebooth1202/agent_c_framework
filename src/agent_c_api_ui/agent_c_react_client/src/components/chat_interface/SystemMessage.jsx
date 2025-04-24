@@ -27,7 +27,7 @@ const SystemMessage = ({ content, isError = false, isCritical = false, className
             ? "system-message-bubble-error"
             : "system-message-bubble-default"
         }`}
-        variant={isError ? "destructive" : "default"}
+        variant={isError ? "destructive" : "transparent"}
       >
         <ContentComponent className="system-message-content p-0">
           <div className="system-message-body prose dark:prose-invert">

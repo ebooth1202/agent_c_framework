@@ -16,6 +16,7 @@ We've successfully completed the migration of all primary user-facing components
 10. u2705 ThoughtDisplay
 11. u2705 ToolCallDisplay
 12. u2705 ToolCallItem
+13. u2705 ToolSelector
 
 Additionally, we've resolved critical UI issues:
 
@@ -29,10 +30,10 @@ Additionally, we've resolved critical UI issues:
 
 ### 1. Tool-Related Components
 
-Focus on tool-related components:
+Focus on remaining tool-related components:
 
-- ToolSelector
-- ToolCallManager
+- u2705 ToolSelector (completed on 2025-04-24)
+- ToolCallManager (next in queue)
 - FileUploadManager
 - FilesPanel
 

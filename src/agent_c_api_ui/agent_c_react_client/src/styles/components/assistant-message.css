@@ -19,15 +19,14 @@
 /* AssistantMessage: Message bubble styling */
 .assistant-message-bubble {
   max-width: 80%;
-  border-radius: var(--border-radius-2xl);
-  padding: var(--spacing-4) var(--spacing-4);
+  border-radius: var(--border-radius-xl);
   margin-right: var(--spacing-12);
   box-shadow: var(--shadow-md);
   border: var(--border-width-thin) solid var(--theme-assistant-message-border);
-  background-color: var(--theme-assistant-message-background);
+  background-color: var(--theme-assistant-message-background) !important; /* Force override */
   color: var(--theme-assistant-message-foreground);
   font-family: Georgia, serif;
-  border-bottom-left-radius: var(--spacing-1);
+  overflow: hidden; /* Ensure content doesn't overflow rounded corners */
 }
 
 /* AssistantMessage: Mode-specific styles for better contrast */
@@ -78,6 +77,14 @@
   margin-top: var(--spacing-3);
   padding-top: var(--spacing-2);
   border-top: var(--border-width-thin) solid var(--theme-assistant-message-border);
+  background-color: var(--theme-muted);
+  margin-left: calc(-1 * var(--spacing-6));
+  margin-right: calc(-1 * var(--spacing-6));
+  padding-left: var(--spacing-6);
+  padding-right: var(--spacing-6);
+  padding-bottom: var(--spacing-3);
+  border-bottom-left-radius: var(--border-radius-lg);
+  border-bottom-right-radius: var(--border-radius-lg);
 }
 
 /* AssistantMessage: Tool calls toggle button */
@@ -87,11 +94,13 @@
   gap: var(--spacing-1);
   font-size: var(--font-size-xs);
   padding: var(--spacing-1) var(--spacing-2);
-  border-radius: 9999px;
+  border-radius: var(--border-radius-full);
   background-color: var(--theme-tool-call-header-background);
   color: var(--theme-tool-call-title);
   cursor: pointer;
   transition: background-color var(--transition-hover);
+  border: var(--border-width-thin) solid var(--theme-assistant-message-border);
+  font-weight: var(--font-weight-medium);
 }
 
 /* AssistantMessage: Tool calls toggle hover */

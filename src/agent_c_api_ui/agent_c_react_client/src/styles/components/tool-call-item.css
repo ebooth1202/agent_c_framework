@@ -4,7 +4,7 @@
 
 /* ToolCallItem: Main container for individual tool call item */
 .tool-call-item {
-  border: var(--border-width-thin) solid hsl(var(--color-blue-200));
+  border: var(--border-width-thin) solid var(--color-blue-200);
   border-radius: var(--border-radius-lg);
   margin-bottom: var(--spacing-2);
   background-color: white;
@@ -14,8 +14,8 @@
 
 /* ToolCallItem: Dark mode container */
 .dark .tool-call-item {
-  background-color: hsl(var(--color-gray-800));
-  border-color: hsl(var(--color-blue-700));
+  background-color: var(--color-gray-800);
+  border-color: var(--color-blue-700);
 }
 
 /* ToolCallItem: Header styling */
@@ -25,7 +25,7 @@
   justify-content: space-between;
   padding: var(--spacing-4) var(--spacing-3);
   cursor: pointer;
-  background-color: hsl(var(--color-blue-50));
+  background-color: var(--color-blue-50);
   transition: background-color var(--transition-hover);
   border-radius: var(--border-radius-lg);
 }
@@ -37,7 +37,7 @@
 
 /* ToolCallItem: Header hover states */
 .tool-call-item-header:hover {
-  background-color: hsl(var(--color-blue-100));
+  background-color: var(--color-blue-100);
 }
 
 .dark .tool-call-item-header:hover {
@@ -55,21 +55,21 @@
 .tool-call-item-icon {
   height: 1.25rem;
   width: 1.25rem;
-  color: hsl(var(--color-blue-600));
+  color: var(--color-blue-600);
 }
 
 .dark .tool-call-item-icon {
-  color: hsl(var(--color-blue-400));
+  color: var(--color-blue-400);
 }
 
 /* ToolCallItem: Tool name text */
 .tool-call-item-name {
   font-weight: var(--font-weight-semibold);
-  color: hsl(var(--color-blue-800));
+  color: var(--color-blue-800);
 }
 
 .dark .tool-call-item-name {
-  color: hsl(var(--color-blue-300));
+  color: var(--color-blue-300);
 }
 
 /* ToolCallItem: Button container */
@@ -81,7 +81,7 @@
 
 /* ToolCallItem: Content area */
 .tool-call-item-content {
-  border-top: var(--border-width-thin) solid hsl(var(--color-blue-200));
+  border-top: var(--border-width-thin) solid var(--color-blue-200);
   background-color: white;
   padding: var(--spacing-4);
   border-bottom-left-radius: var(--border-radius-lg);
@@ -89,8 +89,8 @@
 }
 
 .dark .tool-call-item-content {
-  background-color: hsl(var(--color-gray-800));
-  border-color: hsl(var(--color-blue-700));
+  background-color: var(--color-gray-800);
+  border-color: var(--color-blue-700);
 }
 
 /* ToolCallItem: Section heading */
@@ -111,18 +111,18 @@
 .tool-call-item-section-title {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
-  color: hsl(var(--color-blue-600));
+  color: var(--color-blue-600);
 }
 
 .dark .tool-call-item-section-title {
-  color: hsl(var(--color-blue-400));
+  color: var(--color-blue-400);
 }
 
 /* ToolCallItem: Code pre formatting */
 .tool-call-item-code {
   font-size: var(--font-size-sm);
   font-family: var(--font-mono);
-  background-color: hsl(var(--color-blue-50));
+  background-color: var(--color-blue-50);
   padding: var(--spacing-2);
   border-radius: var(--border-radius-md);
   white-space: pre-wrap;
@@ -132,15 +132,15 @@
 
 /* ToolCallItem: Dark mode code */
 .dark .tool-call-item-code {
-  background-color: hsl(var(--color-gray-700));
-  color: hsl(var(--color-gray-200));
+  background-color: var(--color-gray-700);
+  color: var(--color-gray-200);
 }
 
 /* ToolCallItem: Chevron animation */
 .tool-call-item-chevron {
   height: 1.25rem;
   width: 1.25rem;
-  color: hsl(var(--color-blue-600));
+  color: var(--color-blue-600);
   transform: rotate(0deg);
   transition: transform var(--transition-normal);
 }
@@ -150,5 +150,5 @@
 }
 
 .dark .tool-call-item-chevron {
-  color: hsl(var(--color-blue-400));
+  color: var(--color-blue-400);
 }

@@ -1,4 +1,5 @@
 import React, {useState} from 'react';
+import { cn } from '@/lib/utils';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {Checkbox} from '@/components/ui/checkbox';
 import {Button} from '@/components/ui/button';
@@ -21,25 +22,25 @@ import {Tabs, TabsList, TabsTrigger, TabsContent} from '@/components/ui/tabs';
  * @param {Tool[]} [props.tools=[]] - Array of essential tools
  */
 const EssentialTools = ({tools = []}) => (
-    <div className="mb-6">
-        <h3 className="font-medium mb-3 text-lg text-blue-600 dark:text-blue-400">Essential Tools</h3>
-        <div className="p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800">
-            <div className="flex flex-wrap gap-2">
+    <div className="essential-tools-container">
+        <h3 className="essential-tools-title">Essential Tools</h3>
+        <div className="essential-tools-content">
+            <div className="essential-tools-badges">
                 {tools.map((tool) => (
                     <TooltipProvider key={tool.name}>
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <Badge
                                     variant="secondary"
-                                    className="px-3 py-1.5 bg-white dark:bg-gray-800 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800 shadow-sm hover:bg-blue-50 dark:hover:bg-blue-900/50 transition-colors"
+                                    className="essential-tool-badge"
                                 >
-                                    <div className="flex items-center gap-1">
-                                        <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                                    <div className="essential-tool-badge-content">
+                                        <div className="essential-tool-badge-dot"></div>
                                         {tool.name}
                                     </div>
                                 </Badge>
                             </TooltipTrigger>
-                            <TooltipContent className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border dark:border-gray-700 shadow-lg rounded-lg">
+                            <TooltipContent className="tool-tooltip-content">
                                 <p className="max-w-xs">{tool.doc || 'No description available'}</p>
                             </TooltipContent>
                         </Tooltip>
@@ -61,9 +62,9 @@ const EssentialTools = ({tools = []}) => (
  * @param {(toolName: string) => void} props.onToolToggle - Tool toggle callback
  */
 const ToolCategory = ({title, tools = [], selectedTools, activeTools, onToolToggle}) => (
-    <div className="mb-6">
-        <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+    <div className="tool-category-container">
+        <div className="tool-category-content">
+            <div className="tool-category-grid">
                 {tools.map((tool) => {
                     const isSelected = selectedTools.has(tool.name);
                     const isActive = activeTools.includes(tool.name);
@@ -72,32 +73,34 @@ const ToolCategory = ({title, tools = [], selectedTools, activeTools, onToolTogg
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <div
-                                        className={`flex items-center space-x-2 p-2 rounded-lg transition-colors duration-200 
-                      ${isActive ? 'bg-blue-50/80 dark:bg-blue-900/30 hover:bg-blue-100/80 dark:hover:bg-blue-900/50' : 'hover:bg-gray-50 dark:hover:bg-gray-800/70'}`}
+                                        className={cn(
+                                            "tool-item", 
+                                            isActive && "active"
+                                        )}
                                     >
                                         <Checkbox
                                             checked={isSelected}
                                             onCheckedChange={() => onToolToggle(tool.name)}
                                             id={tool.name}
-                                            className="border-gray-300 dark:border-gray-600 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
                                         />
                                         <label
                                             htmlFor={tool.name}
-                                            className={`flex items-center gap-2 text-sm font-medium leading-none cursor-pointer
-                        ${isActive ? 'text-blue-700 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'}`}
+                                            className={cn(
+                                                "tool-item-label",
+                                                isActive && "active"
+                                            )}
                                         >
                                             {tool.name}
                                             {isActive && (
-                                                <span
-                                                    className="inline-flex items-center text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded-full border border-green-200 dark:border-green-800">
-                          <Check className="w-3 h-3 mr-1"/>
-                          Active
-                        </span>
+                                                <span className="tool-active-badge">
+                                                    <Check className="tool-active-icon"/>
+                                                    Active
+                                                </span>
                                             )}
                                         </label>
                                     </div>
                                 </TooltipTrigger>
-                                <TooltipContent className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border dark:border-gray-700 shadow-lg rounded-lg">
+                                <TooltipContent className="tool-tooltip-content">
                                     <p className="max-w-xs">{tool.doc || 'No description available'}</p>
                                 </TooltipContent>
                             </Tooltip>
@@ -188,12 +191,12 @@ const ToolSelector = ({availableTools, onEquipTools, activeTools = [], sessionId
     // Render waiting message if not ready
     if (!sessionId || !isReady) {
         return (
-            <Card className="w-full">
+            <Card className="tool-selector">
                 <CardHeader>
                     <CardTitle>Available Tools</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="flex items-center gap-2 justify-center p-4 text-amber-600">
+                    <div className="tool-selector-waiting">
                         <AlertCircle className="h-5 w-5"/>
                         <p>Waiting for agent initialization...</p>
                     </div>
@@ -205,12 +208,12 @@ const ToolSelector = ({availableTools, onEquipTools, activeTools = [], sessionId
     // Render no tools message if none available
     if (!availableTools || !Object.keys(availableTools).length) {
         return (
-            <Card className="w-full">
+            <Card className="tool-selector">
                 <CardHeader>
                     <CardTitle>Available Tools</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="flex items-center justify-center p-4">
+                    <div className="tool-selector-waiting">
                         <p className="text-muted-foreground">No tools available</p>
                     </div>
                 </CardContent>
@@ -220,7 +223,7 @@ const ToolSelector = ({availableTools, onEquipTools, activeTools = [], sessionId
 
     return (
         <>
-            <Card className="w-full">
+            <Card className="tool-selector">
                 <CardHeader>
                     <CardTitle className="flex justify-between items-center">
                         <span>Available Tools</span>
@@ -231,16 +234,16 @@ const ToolSelector = ({availableTools, onEquipTools, activeTools = [], sessionId
                 </CardHeader>
                 <CardContent>
                     {error && (
-                        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg border border-red-200 dark:border-red-800">
+                        <div className="tool-selector-error">
                             {error}
                         </div>
                     )}
-                    <Tabs defaultValue={availableTools.essential_tools && availableTools.essential_tools.length > 0 ? "essential" : availableTools.categories[0] || ""} className="w-full">
-                        <TabsList className="flex w-full overflow-x-auto mb-4 bg-gray-100 dark:bg-gray-800/70 p-1 rounded-md border border-gray-200 dark:border-gray-700 shadow-sm">
+                    <Tabs defaultValue={availableTools.essential_tools && availableTools.essential_tools.length > 0 ? "essential" : availableTools.categories[0] || ""} className="tool-selector">
+                        <TabsList className="tool-selector-tabs-list">
                             {availableTools.essential_tools && availableTools.essential_tools.length > 0 && (
                                 <TabsTrigger 
                                     value="essential" 
-                                    className="flex-shrink-0 font-medium data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow"
+                                    className="tool-selector-tab-trigger"
                                 >
                                     Essential
                                 </TabsTrigger>
@@ -249,14 +252,14 @@ const ToolSelector = ({availableTools, onEquipTools, activeTools = [], sessionId
                                 <TabsTrigger 
                                     key={category} 
                                     value={category} 
-                                    className="flex-shrink-0 font-medium data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow"
+                                    className="tool-selector-tab-trigger"
                                 >
                                     {category}
                                 </TabsTrigger>
                             ))}
                         </TabsList>
 
-                        <div className="max-h-[340px] overflow-y-auto pr-2">
+                        <div className="tool-selector-content">
                             {availableTools.essential_tools && availableTools.essential_tools.length > 0 && (
                                 <TabsContent value="essential" className="mt-0">
                                     <EssentialTools tools={availableTools.essential_tools}/>
@@ -279,7 +282,7 @@ const ToolSelector = ({availableTools, onEquipTools, activeTools = [], sessionId
                     <Button
                         onClick={handleEquipTools}
                         disabled={!isReady || isLoading}
-                        className="w-full mt-4 bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-full font-medium shadow-sm transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="tool-selector-equip-button"
                     >
                         {isLoading ? 'Updating Tools...' : 'Equip Selected Tools'}
                     </Button>

@@ -37,6 +37,7 @@
 @import './components/user-message.css';
 @import './components/system-message.css';
 @import './components/collapsible-options.css';
+@import './components/tool-selector.css';
 
 /* Import component-styles.css for backwards compatibility */
 @import './component-styles.css';

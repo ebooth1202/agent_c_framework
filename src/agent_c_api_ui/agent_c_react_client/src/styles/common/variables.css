@@ -283,28 +283,28 @@
   --theme-info-foreground: var(--color-gray-950);
   
   /* Component-specific colors - Dark Mode */
-  --theme-thought-background: hsl(var(--color-gray-800));
-  --theme-thought-foreground: hsl(var(--color-gray-200));
-  --theme-thought-border: hsl(var(--color-blue-700));
-  --theme-thought-inline-code-bg: hsl(var(--color-purple-800) / 0.3);
-  --theme-thought-inline-code-fg: hsl(var(--color-purple-200));
+  --theme-thought-background: var(--color-gray-800);
+  --theme-thought-foreground: var(--color-gray-200);
+  --theme-thought-border: var(--color-blue-700);
+  --theme-thought-inline-code-bg: hsla(var(--color-purple-800), 0.3);
+  --theme-thought-inline-code-fg: var(--color-purple-200);
   
-  --theme-tool-call-background: hsl(var(--color-gray-800));
-  --theme-tool-call-border: hsl(var(--color-blue-700));
-  --theme-tool-call-header-background: hsl(var(--color-blue-800) / 0.5);
-  --theme-tool-call-header-hover: hsl(var(--color-blue-700) / 0.6);
-  --theme-tool-call-title: hsl(var(--color-blue-300));
-  --theme-tool-call-icon: hsl(var(--color-blue-400));
+  --theme-tool-call-background: var(--color-gray-800);
+  --theme-tool-call-border: var(--color-blue-700);
+  --theme-tool-call-header-background: hsla(var(--color-blue-800), 0.5);
+  --theme-tool-call-header-hover: hsla(var(--color-blue-700), 0.6);
+  --theme-tool-call-title: var(--color-blue-300);
+  --theme-tool-call-icon: var(--color-blue-400);
   
-  --theme-user-message-background: hsl(var(--color-gray-800));
-  --theme-user-message-foreground: hsl(var(--color-gray-100));
-  --theme-user-message-border: hsl(var(--color-blue-700));
+  --theme-user-message-background: var(--color-gray-800);
+  --theme-user-message-foreground: var(--color-gray-100);
+  --theme-user-message-border: var(--color-blue-700);
   
-  --theme-assistant-message-background: hsl(var(--color-gray-800));
-  --theme-assistant-message-foreground: hsl(var(--color-gray-100));
-  --theme-assistant-message-border: hsl(var(--color-purple-800));
+  --theme-assistant-message-background: var(--color-gray-800);
+  --theme-assistant-message-foreground: var(--color-gray-100);
+  --theme-assistant-message-border: var(--color-purple-800);
   
-  --theme-system-message-background: hsl(var(--color-gray-800));
-  --theme-system-message-foreground: hsl(var(--color-gray-100));
-  --theme-system-message-border: hsl(var(--color-gray-700));
+  --theme-system-message-background: var(--color-gray-800);
+  --theme-system-message-foreground: var(--color-gray-100);
+  --theme-system-message-border: var(--color-gray-700);
 }

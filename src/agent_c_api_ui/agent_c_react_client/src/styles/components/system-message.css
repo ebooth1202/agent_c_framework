@@ -19,30 +19,30 @@
 
 /* SystemMessage: Default (non-error) styling */
 .system-message-bubble-default {
-  background-color: hsl(var(--color-gray-100));
-  color: hsl(var(--color-gray-600));
-  border: var(--border-width-thin) solid hsl(var(--color-gray-200));
+  background-color: var(--color-gray-100) !important; /* Force override */
+  color: var(--color-gray-600);
+  border: var(--border-width-thin) solid var(--color-gray-200);
 }
 
 /* SystemMessage: Dark mode default styling */
 .dark .system-message-bubble-default {
-  background-color: hsl(var(--color-gray-700));
-  color: hsl(var(--color-gray-300));
-  border-color: hsl(var(--color-gray-600));
+  background-color: var(--color-gray-700) !important; /* Force override */
+  color: var(--color-gray-300);
+  border-color: var(--color-gray-600);
 }
 
 /* SystemMessage: Error styling */
 .system-message-bubble-error {
-  background-color: hsl(var(--color-red-100));
-  color: hsl(var(--color-red-800));
-  border: var(--border-width-thin) solid hsl(var(--color-red-300));
+  background-color: var(--color-red-100) !important; /* Force override */
+  color: var(--color-red-800);
+  border: var(--border-width-thin) solid var(--color-red-300);
 }
 
 /* SystemMessage: Dark mode error styling */
 .dark .system-message-bubble-error {
-  background-color: hsl(var(--color-red-900) / 0.3);
-  color: hsl(var(--color-red-300));
-  border-color: hsl(var(--color-red-800));
+  background-color: hsla(var(--color-red-900), 0.3) !important; /* Force override */
+  color: var(--color-red-300);
+  border-color: var(--color-red-800);
 }
 
 /* SystemMessage: Inner content layout */
@@ -62,13 +62,13 @@
 .system-message-critical {
   margin-top: var(--spacing-1);
   font-size: var(--font-size-xs);
-  color: hsl(var(--color-red-500));
+  color: var(--color-red-500);
   font-weight: var(--font-weight-medium);
 }
 
 /* SystemMessage: Dark mode critical message */
 .dark .system-message-critical {
-  color: hsl(var(--color-red-400));
+  color: var(--color-red-400);
 }
 
 /* SystemMessage: Copy button */
@@ -77,12 +77,12 @@
   flex-shrink: 0;
   opacity: 0;
   transition: opacity var(--transition-hover);
-  color: hsl(var(--color-gray-500));
+  color: var(--color-gray-500);
 }
 
 /* SystemMessage: Copy button hover */
 .system-message-copy-button:hover {
-  background-color: hsl(var(--color-gray-200));
+  background-color: var(--color-gray-200);
 }
 
 /* SystemMessage: Show copy button on hover */
