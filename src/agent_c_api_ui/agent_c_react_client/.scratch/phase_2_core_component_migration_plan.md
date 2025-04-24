@@ -14,6 +14,13 @@
    - shadcn/ui components used: Card, ScrollArea, Separator
    - Special considerations: Used in multiple contexts (regular messages, thought display)
    - Migration plan: //ui/.scratch/markdown_message_migration_plan.md
+   - Status: ✅ COMPLETED
+
+2. **UserMessage.jsx**
+   - Estimated complexity: Medium
+   - shadcn/ui components used: Card, Avatar
+   - Special considerations: Different message types (text, voice, files)
+   - Migration plan: //ui/.scratch/user_message_migration_plan.md
    - Status: 🟢 IMPLEMENTED (Pending Testing)
 
 2. **Sidebar.jsx**

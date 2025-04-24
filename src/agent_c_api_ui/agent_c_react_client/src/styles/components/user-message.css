@@ -10,18 +10,23 @@
   gap: var(--spacing-2);
 }
 
-/* UserMessage: Message bubble styling */
+/* UserMessage: Message bubble styling (Card component) */
 .user-message-bubble {
   max-width: 80%;
   border-radius: var(--border-radius-2xl);
-  padding: var(--spacing-4) var(--spacing-4);
+  padding: var(--spacing-4);
   margin-left: var(--spacing-12);
-  box-shadow: var(--shadow-sm);
   background-color: var(--theme-user-message-background);
   color: var(--theme-user-message-foreground);
   border: var(--border-width-thin) solid var(--theme-user-message-border);
   font-family: Georgia, serif;
   border-bottom-right-radius: var(--spacing-1);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Override Card component's default padding */
+.user-message-bubble > div {
+  padding: 0;
 }
 
 /* UserMessage: Inner content layout */
@@ -80,9 +85,15 @@
   opacity: 1;
 }
 
-/* UserMessage: User icon */
+/* UserMessage: User icon (Avatar component) */
 .user-message-icon {
   height: 1.5rem;
   width: 1.5rem;
   color: var(--theme-primary);
+  background-color: transparent;
+}
+
+/* Avatar fallback styling */
+.user-message-icon > div {
+  background-color: transparent;
 }

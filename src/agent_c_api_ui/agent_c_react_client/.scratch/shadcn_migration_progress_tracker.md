@@ -34,8 +34,6 @@ Changes:
 - Updated CSS to override shadcn/ui styles where needed
 - Maintained all existing functionality and visual appearance
 
-## In Progress Migrations
-
 ### 3. MessagesList Component
 Status: ✅ COMPLETED
 Date: 2025-04-23
@@ -50,10 +48,14 @@ Changes:
 - Improved classNames management with cn() utility
 - Added className prop for customization from parent components
 - Updated tool selection indicator to use theme CSS variables
-- Maintained existing ScrollArea component from shadcn/ui
+- Enhanced ScrollArea component with viewportRef for better scrolling control
+- Added scroll-to-top button to improve navigation
+- Fixed flexbox height calculation issues with min-height: 0
+- Added proper padding to ensure content visibility
+- Implemented scroll position tracking
 - Proper separation of concerns by moving styling from JSX to CSS
-
-## Planned Migrations
+- Fixed scroll-to-top issue ensuring users can reach the first message
+- Added automatic scrolling for tool selection indicators
 
 ### 4. ChatInputArea
 Status: ✅ COMPLETED
@@ -87,14 +89,8 @@ Changes:
 - Maintained existing Collapsible, Tabs components from shadcn/ui
 - Ensured dark mode compatibility
 
-### 6. AgentConfigDisplay
-Status: ⚠️ NOT USED - DO NOT MIGRATE
-Notes:
-- After verification, this component appears to be superseded by AgentConfigHoverCard
-- AgentConfigHoverCard already uses shadcn/ui components (Card, HoverCard, Badge)
-
-### 7. MarkdownMessage
-Status: 🟢 IMPLEMENTED (Pending Testing)
+### 6. MarkdownMessage
+Status: ✅ COMPLETED
 Date: 2025-04-23
 Validation steps completed:
 - [x] Inspect for inline styles
@@ -108,6 +104,23 @@ Changes:
 - Updated CSS to be compatible with shadcn/ui components
 - Maintained all existing functionality and visual appearance
 - Ensured dark mode compatibility
+
+### 7. UserMessage
+Status: ✅ COMPLETED
+Date: 2025-04-23
+Validation steps completed:
+- [x] Inspect for inline styles
+- [x] Validated CSS file structure
+- [x] Validated CSS variables
+- [x] Identified shadcn/ui replacement components
+Changes implemented:
+- Replaced container div with Card component
+- Added Avatar component for user icon
+- Maintained compatibility with migrated MarkdownMessage component
+- Preserved styling for different message types (text, voice, files)
+- Preserved copy button functionality and positioning
+- Added support for className prop for better component composition
+- Successfully tested and confirmed working
 
 ## Not Currently Used (Lower Priority)
 

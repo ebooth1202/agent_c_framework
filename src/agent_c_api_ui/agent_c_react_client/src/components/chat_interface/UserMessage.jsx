@@ -1,5 +1,8 @@
 import React from 'react';
 import { User, Mic, FileIcon } from 'lucide-react';
+import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 import CopyButton from './CopyButton';
 import MarkdownMessage from './MarkdownMessage';
 
@@ -11,12 +14,13 @@ import MarkdownMessage from './MarkdownMessage';
  * @param {string} props.content - The message content
  * @param {Array} [props.files] - Optional array of file names attached to the message
  * @param {boolean} [props.isVoiceMessage] - Whether this is a voice message
+ * @param {string} [props.className] - Optional additional class names
  */
-const UserMessage = ({ content, files, isVoiceMessage }) => {
+const UserMessage = ({ content, files, isVoiceMessage, className }) => {
   return (
-    <div className="user-message-row group">
-      <div className="user-message-bubble">
-        <div className="user-message-content">
+    <div className={cn("user-message-row group", className)}>
+      <Card className="user-message-bubble">
+        <CardContent className="user-message-content p-0">
           <div className="user-message-body prose dark:prose-invert">
             {isVoiceMessage ? (
               <div className="user-message-voice">
@@ -49,9 +53,13 @@ const UserMessage = ({ content, files, isVoiceMessage }) => {
             size="xs"
             className="user-message-copy-button"
           />
-        </div>
-      </div>
-      <User className="user-message-icon" />
+        </CardContent>
+      </Card>
+      <Avatar className="user-message-icon">
+        <AvatarFallback>
+          <User className="h-4 w-4" />
+        </AvatarFallback>
+      </Avatar>
     </div>
   );
 };
