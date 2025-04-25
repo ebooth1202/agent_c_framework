@@ -1,19 +1,19 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
-import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
-import {Checkbox} from '@/components/ui/checkbox';
-import {Button} from '@/components/ui/button';
-import {ScrollArea} from '@/components/ui/scroll-area';
-import {Toast} from '@/components/ui/toast';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useToast } from '@/hooks/use-toast';
 import {
     Tooltip,
     TooltipContent,
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
-import {Badge} from '@/components/ui/badge';
-import {Check, AlertCircle} from 'lucide-react';
-import {Tabs, TabsList, TabsTrigger, TabsContent} from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Check, AlertCircle } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 /**
  * Displays essential tools that cannot be toggled
@@ -21,7 +21,7 @@ import {Tabs, TabsList, TabsTrigger, TabsContent} from '@/components/ui/tabs';
  * @param {Object} props
  * @param {Tool[]} [props.tools=[]] - Array of essential tools
  */
-const EssentialTools = ({tools = []}) => (
+const EssentialTools = ({ tools = [] }) => (
     <div className="essential-tools-container">
         <h3 className="essential-tools-title">Essential Tools</h3>
         <div className="essential-tools-content">
@@ -61,7 +61,7 @@ const EssentialTools = ({tools = []}) => (
  * @param {string[]} props.activeTools - Array of active tool names
  * @param {(toolName: string) => void} props.onToolToggle - Tool toggle callback
  */
-const ToolCategory = ({title, tools = [], selectedTools, activeTools, onToolToggle}) => (
+const ToolCategory = ({ title, tools = [], selectedTools, activeTools, onToolToggle }) => (
     <div className="tool-category-container">
         <div className="tool-category-content">
             <div className="tool-category-grid">
@@ -79,9 +79,9 @@ const ToolCategory = ({title, tools = [], selectedTools, activeTools, onToolTogg
                                         )}
                                     >
                                         <Checkbox
+                                            id={tool.name}
                                             checked={isSelected}
                                             onCheckedChange={() => onToolToggle(tool.name)}
-                                            id={tool.name}
                                         />
                                         <label
                                             htmlFor={tool.name}
@@ -126,23 +126,12 @@ const ToolCategory = ({title, tools = [], selectedTools, activeTools, onToolTogg
  * @param {string} props.sessionId - Current session identifier
  * @param {boolean} props.isReady - Flag indicating if the agent is ready
  */
-const ToolSelector = ({availableTools, onEquipTools, activeTools = [], sessionId, isReady}) => {
+const ToolSelector = ({ availableTools, onEquipTools, activeTools = [], sessionId, isReady }) => {
     // Local UI state
     const [selectedTools, setSelectedTools] = useState(new Set(activeTools));
     const [error, setError] = useState(null);
-    const [toast, setToast] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
-
-    /**
-     * Displays a toast notification
-     * @param {string} message - Message to display
-     * @param {'success' | 'error'} [type='success'] - Type of toast
-     */
-    const showToast = (message, type = 'success') => {
-        setToast({message, type});
-        setTimeout(() => setToast(null), 3000);
-    };
-
+    const { toast } = useToast();
 
     /**
      * Toggles a tool's selection state
@@ -150,7 +139,11 @@ const ToolSelector = ({availableTools, onEquipTools, activeTools = [], sessionId
      */
     const handleToolToggle = (toolName) => {
         if (!isReady) {
-            showToast('Please wait for agent initialization', 'error');
+            toast({
+                title: 'Agent not ready',
+                description: 'Please wait for agent initialization',
+                variant: 'destructive',
+            });
             return;
         }
         setSelectedTools((prev) => {
@@ -171,18 +164,29 @@ const ToolSelector = ({availableTools, onEquipTools, activeTools = [], sessionId
      */
     const handleEquipTools = async () => {
         if (!isReady) {
-            showToast('Please wait for agent initialization', 'error');
+            toast({
+                title: 'Agent not ready',
+                description: 'Please wait for agent initialization',
+                variant: 'destructive',
+            });
             return;
         }
         setIsLoading(true);
         try {
             const toolsToEquip = Array.from(selectedTools);
             await onEquipTools(toolsToEquip);
-            showToast('Tools equipped successfully!', 'success');
+            toast({
+                title: 'Success',
+                description: 'Tools equipped successfully!',
+            });
         } catch (error) {
             console.error('Error equipping tools:', error);
             setError('Failed to equip tools: ' + error.message);
-            showToast('Failed to equip tools', 'error');
+            toast({
+                title: 'Error',
+                description: 'Failed to equip tools',
+                variant: 'destructive',
+            });
         } finally {
             setIsLoading(false);
         }
@@ -222,80 +226,74 @@ const ToolSelector = ({availableTools, onEquipTools, activeTools = [], sessionId
     }
 
     return (
-        <>
-            <Card className="tool-selector">
-                <CardHeader>
-                    <CardTitle className="flex justify-between items-center">
-                        <span>Available Tools</span>
-                        {isLoading && (
-                            <span className="text-sm text-muted-foreground">Updating...</span>
-                        )}
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    {error && (
-                        <div className="tool-selector-error">
-                            {error}
-                        </div>
+        <Card className="tool-selector">
+            <CardHeader>
+                <CardTitle className="flex justify-between items-center">
+                    <span>Available Tools</span>
+                    {isLoading && (
+                        <span className="text-sm text-muted-foreground">Updating...</span>
                     )}
-                    <Tabs defaultValue={availableTools.essential_tools && availableTools.essential_tools.length > 0 ? "essential" : availableTools.categories[0] || ""} className="tool-selector">
-                        <TabsList className="tool-selector-tabs-list">
-                            {availableTools.essential_tools && availableTools.essential_tools.length > 0 && (
-                                <TabsTrigger 
-                                    value="essential" 
-                                    className="tool-selector-tab-trigger"
-                                >
-                                    Essential
-                                </TabsTrigger>
-                            )}
-                            {availableTools.categories.map((category) => (
-                                <TabsTrigger 
-                                    key={category} 
-                                    value={category} 
-                                    className="tool-selector-tab-trigger"
-                                >
-                                    {category}
-                                </TabsTrigger>
-                            ))}
-                        </TabsList>
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                {error && (
+                    <div className="tool-selector-error">
+                        {error}
+                    </div>
+                )}
+                <Tabs 
+                    defaultValue={availableTools.essential_tools && availableTools.essential_tools.length > 0 ? "essential" : availableTools.categories[0] || ""} 
+                    className="tool-selector-tabs"
+                >
+                    <TabsList className="tool-selector-tabs-list">
+                        {availableTools.essential_tools && availableTools.essential_tools.length > 0 && (
+                            <TabsTrigger 
+                                value="essential" 
+                                className="tool-selector-tab-trigger"
+                            >
+                                Essential
+                            </TabsTrigger>
+                        )}
+                        {availableTools.categories.map((category) => (
+                            <TabsTrigger 
+                                key={category} 
+                                value={category} 
+                                className="tool-selector-tab-trigger"
+                            >
+                                {category}
+                            </TabsTrigger>
+                        ))}
+                    </TabsList>
 
-                        <div className="tool-selector-content">
-                            {availableTools.essential_tools && availableTools.essential_tools.length > 0 && (
-                                <TabsContent value="essential" className="mt-0">
-                                    <EssentialTools tools={availableTools.essential_tools}/>
-                                </TabsContent>
-                            )}
-                            
-                            {availableTools.categories.map((category) => (
-                                <TabsContent key={category} value={category} className="mt-0">
-                                    <ToolCategory
-                                        title={category}
-                                        tools={availableTools.groups[category] || []}
-                                        selectedTools={selectedTools}
-                                        activeTools={activeTools}
-                                        onToolToggle={handleToolToggle}
-                                    />
-                                </TabsContent>
-                            ))}
-                        </div>
-                    </Tabs>
-                    <Button
-                        onClick={handleEquipTools}
-                        disabled={!isReady || isLoading}
-                        className="tool-selector-equip-button"
-                    >
-                        {isLoading ? 'Updating Tools...' : 'Equip Selected Tools'}
-                    </Button>
-                </CardContent>
-            </Card>
-            {toast && (
-                <Toast
-                    message={toast.message}
-                    type={toast.type}
-                    onClose={() => setToast(null)}
-                />
-            )}
-        </>
+                    <ScrollArea className="tool-selector-content">
+                        {availableTools.essential_tools && availableTools.essential_tools.length > 0 && (
+                            <TabsContent value="essential" className="mt-0">
+                                <EssentialTools tools={availableTools.essential_tools}/>
+                            </TabsContent>
+                        )}
+                        
+                        {availableTools.categories.map((category) => (
+                            <TabsContent key={category} value={category} className="mt-0">
+                                <ToolCategory
+                                    title={category}
+                                    tools={availableTools.groups[category] || []}
+                                    selectedTools={selectedTools}
+                                    activeTools={activeTools}
+                                    onToolToggle={handleToolToggle}
+                                />
+                            </TabsContent>
+                        ))}
+                    </ScrollArea>
+                </Tabs>
+                <Button
+                    onClick={handleEquipTools}
+                    disabled={!isReady || isLoading}
+                    className="tool-selector-equip-button"
+                >
+                    {isLoading ? 'Updating Tools...' : 'Equip Selected Tools'}
+                </Button>
+            </CardContent>
+        </Card>
     );
 };
 
