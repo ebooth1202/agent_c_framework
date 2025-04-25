@@ -119,6 +119,24 @@
 @media (min-width: 768px) {
   .persona-selector-grid {
     grid-template-columns: 1fr 1fr;
+    gap: 1.5rem; /* Consistent spacing */
+  }
+}
+
+/* PersonaSelector: Media query for small screens */
+@media (max-width: 767px) {
+  .persona-selector-card {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  
+  .persona-selector-content {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  
+  .persona-selector-textarea {
+    min-height: 80px; /* Smaller height on mobile */
   }
 }
 
@@ -136,6 +154,19 @@
 .persona-selector-tooltip-content {
   color: hsl(var(--foreground));
   background-color: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* PersonaSelector: Dark mode enhancements */
+[data-theme="dark"] .persona-selector-vendor-header {
+  color: hsl(var(--muted-foreground) / 0.8); /* Slightly brighter in dark mode */
+}
+
+[data-theme="dark"] .persona-selector-textarea,
+[data-theme="dark"] .persona-selector-select-trigger {
+  background-color: hsl(var(--background) / 0.7); /* More contrast in dark mode */
+  border-color: hsl(var(--border) / 0.8);
 }
 
 .persona-selector-tooltip-model-type {

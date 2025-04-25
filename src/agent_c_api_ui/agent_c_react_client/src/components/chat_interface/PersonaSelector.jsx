@@ -24,7 +24,7 @@ import ModelParameterControls from './ModelParameterControls';
  *
  * @component
  * @param {Object} props
- * @param {string} props.persona - Currently selected persona identifier
+ * @param {string} props.persona_name - Currently selected persona identifier
  * @param {Array<{name: string, content: string}>} props.personas - Available personas
  * @param {string} props.customPrompt - Custom instructions for the AI model
  * @param {string} props.modelName - Current model identifier
@@ -36,7 +36,7 @@ import ModelParameterControls from './ModelParameterControls';
  * @param {boolean} props.isInitialized - Component initialization status
  */
 function PersonaSelector({
-                             persona,
+                             persona_name,
                              personas,
                              customPrompt,
                              modelName,
@@ -49,16 +49,16 @@ function PersonaSelector({
                          }) {
     // Local UI state only
     const [error, setError] = useState(null);
-    const [selectedPersona, setSelectedPersona] = useState(persona || 'default');
+    const [selectedPersona, setSelectedPersona] = useState(persona_name || 'default');
     const [localCustomPrompt, setLocalCustomPrompt] = useState(customPrompt);
 
     // Sync local UI state with prop
     useEffect(() => {
         if (isInitialized) {
-            setSelectedPersona(persona);
+            setSelectedPersona(persona_name);
             setLocalCustomPrompt(customPrompt);
         }
-    }, [isInitialized, persona, customPrompt]);
+    }, [isInitialized, persona_name, customPrompt]);
 
     /**
      * Handles persona selection changes
@@ -124,18 +124,23 @@ function PersonaSelector({
     }, [modelConfigs, onUpdateSettings]);
 
     return (
-        <Card className="persona-selector-card">
-            <CardHeader>
+        <Card className="persona-selector-card" role="region" aria-label="Persona and model settings">
+            <CardHeader className="pb-2">
                 <CardTitle>Settings</CardTitle>
             </CardHeader>
             <CardContent className="persona-selector-content">
                 {/* Persona Selection */}
                 <div className="persona-selector-section">
                     <Label htmlFor="persona-select">Load Persona Prompt</Label>
-                    <Select value={selectedPersona} onValueChange={handlePersonaChange}>
+                    <Select 
+                        value={selectedPersona} 
+                        onValueChange={handlePersonaChange}
+                        aria-label="Select a persona"
+                    >
                         <SelectTrigger
                             id="persona-select"
                             className="persona-selector-select-trigger"
+                            aria-label="Available personas"
                         >
                             <SelectValue placeholder="Select a persona"/>
                         </SelectTrigger>
@@ -152,7 +157,11 @@ function PersonaSelector({
                         </SelectContent>
                     </Select>
                     {error && (
-                        <div className="persona-selector-error">
+                        <div 
+                            className="persona-selector-error" 
+                            role="alert" 
+                            aria-live="assertive"
+                        >
                             Error: {error}
                         </div>
                     )}
@@ -168,7 +177,12 @@ function PersonaSelector({
                         onBlur={handleCustomPromptBlur}
                         className="persona-selector-textarea"
                         placeholder="You are a helpful assistant."
+                        aria-label="Custom persona instructions"
+                        aria-describedby="custom-prompt-description"
                     />
+                    <div id="custom-prompt-description" className="sr-only">
+                        Enter custom instructions for the AI to follow during the conversation
+                    </div>
                 </div>
 
                 <div className="persona-selector-grid">
@@ -178,10 +192,12 @@ function PersonaSelector({
                         <Select
                             value={modelName}
                             onValueChange={handleModelChange}
+                            aria-label="Select an AI model"
                         >
                             <SelectTrigger
                                 id="model-select"
                                 className="persona-selector-select-trigger"
+                                aria-label="Available AI models"
                             >
                                 <SelectValue placeholder="Select model"/>
                             </SelectTrigger>
