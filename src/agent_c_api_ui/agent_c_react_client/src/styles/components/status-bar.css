@@ -1,42 +1,74 @@
 /* ===== COMPONENT: StatusBar ===== */
 /* Description: Displays system status information including processing state, available tools, and export options */
 
+/* StatusBar: Variables */
+:root {
+  --status-bar-padding-x: 0.5rem;
+  --status-bar-padding-y: 0.25rem;
+  --status-bar-icon-size: 0.75rem;
+  --status-bar-font-size: 0.75rem;
+  --status-bar-gap-small: 0.5rem;
+  --status-bar-gap-large: 1rem;
+  --status-bar-background-opacity: 0.95;
+}
+
 /* StatusBar: Main status bar container */
 .status-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.25rem 0.5rem; /* py-1 px-2 */
-  background-color: hsl(var(--background) / 0.95);
+  padding: var(--status-bar-padding-y) var(--status-bar-padding-x);
+  background-color: hsl(var(--background) / var(--status-bar-background-opacity));
   backdrop-filter: blur(4px);
   border-radius: var(--radius);
   box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); /* shadow-sm */
-  font-size: 0.75rem; /* 12px, text-xs */
+  font-size: var(--status-bar-font-size);
+  transition: padding 0.2s ease;
 }
 
 /* StatusBar: Status section containers */
 .status-bar-section {
   display: flex;
   align-items: center;
-  gap: 1rem; /* 16px, gap-4 */
+  gap: var(--status-bar-gap-large);
+  flex-wrap: wrap;
 }
 
 .status-indicator-section {
   display: flex;
   align-items: center;
-  gap: 0.5rem; /* 8px, gap-2 */
+  gap: var(--status-bar-gap-small);
+  flex-wrap: nowrap;
 }
 
 .status-indicator-wrapper {
   display: flex;
   align-items: center;
-  gap: 0.5rem; /* 8px, gap-2 */
+  gap: var(--status-bar-gap-small);
+  cursor: help;
+  padding: 0.125rem 0.25rem;
+  border-radius: var(--radius-sm);
+  transition: background-color 0.2s ease;
+}
+
+.status-indicator-wrapper:hover {
+  background-color: hsl(var(--muted) / 0.5);
+}
+
+.status-indicator-wrapper:focus {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+/* Dark mode styles */
+.dark .status-indicator-wrapper:hover {
+  background-color: hsl(var(--muted) / 0.7);
 }
 
 /* StatusBar: Status indicator icon - Processing state */
 .status-indicator-icon-processing {
-  width: 0.75rem;
-  height: 0.75rem;
+  width: var(--status-bar-icon-size);
+  height: var(--status-bar-icon-size);
   color: hsl(var(--destructive));
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   transform: scale(1.1);
@@ -45,54 +77,74 @@
 
 /* StatusBar: Status indicator icon - Initializing state */
 .status-indicator-icon-initializing {
-  width: 0.75rem;
-  height: 0.75rem;
+  width: var(--status-bar-icon-size);
+  height: var(--status-bar-icon-size);
   color: hsl(38 92% 50%); /* amber-500 */
 }
 
 /* StatusBar: Status indicator icon - Ready state */
 .status-indicator-icon-ready {
-  width: 0.75rem;
-  height: 0.75rem;
+  width: var(--status-bar-icon-size);
+  height: var(--status-bar-icon-size);
   color: hsl(142 71% 45%); /* green-500 */
 }
 
 /* StatusBar: Status text */
 .status-text {
-  font-size: 0.75rem; /* 12px, text-xs */
+  font-size: var(--status-bar-font-size);
   font-weight: 500; /* font-medium */
+}
+
+/* Dark mode status icons */
+.dark .status-indicator-icon-ready {
+  color: hsl(142 70% 48%); /* Brighter green in dark mode */
+}
+
+.dark .status-indicator-icon-initializing {
+  color: hsl(38 95% 55%); /* Brighter amber in dark mode */
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 
 /* StatusBar: Tools section */
 .tools-badge {
   display: flex;
   align-items: center;
-  gap: 0.5rem; /* 8px, gap-2 */
+  gap: var(--status-bar-gap-small);
   background: transparent !important;
   border: none !important;
   padding: 0.125rem 0.75rem; /* py-0.5 px-3 */
   background-color: hsl(var(--primary) / 0.1) !important;
   border-radius: 9999px !important; /* rounded-full */
   border: 1px solid hsl(var(--primary) / 0.2) !important;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 /* StatusBar: Tools icon */
 .tools-icon {
-  width: 0.75rem;
-  height: 0.75rem;
+  width: var(--status-bar-icon-size);
+  height: var(--status-bar-icon-size);
   color: hsl(var(--primary));
 }
 
 /* StatusBar: Tools count text */
 .tools-count-text {
-  font-size: 0.75rem; /* 12px, text-xs */
-  color: hsl(var(--primary-foreground));
+  font-size: var(--status-bar-font-size);
+  color: hsl(var(--primary));
+  white-space: nowrap;
 }
 
 /* StatusBar: Info icon */
 .tools-info-icon {
-  width: 0.75rem;
-  height: 0.75rem;
+  width: var(--status-bar-icon-size);
+  height: var(--status-bar-icon-size);
   color: hsl(var(--primary));
   cursor: help;
 }
@@ -102,26 +154,89 @@
   background-color: hsl(var(--background));
   border: 1px solid hsl(var(--border));
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); /* shadow-md */
+  z-index: 50;
+}
+
+/* Dark mode tools styles */
+.dark .tools-badge {
+  background-color: hsl(var(--primary) / 0.15) !important;
+  border-color: hsl(var(--primary) / 0.3) !important;
+}
+
+.dark .tools-tooltip-content {
+  background-color: hsl(var(--card));
+  border-color: hsl(var(--border) / 0.8);
 }
 
 /* StatusBar: Chat export actions */
 .chat-export-actions {
   display: flex;
   align-items: center;
-  gap: 1rem; /* 16px, gap-4 */
+  gap: var(--status-bar-gap-large);
 }
 
 /* StatusBar: Export action buttons */
 .chat-export-button {
   color: hsl(var(--foreground));
+  transition: background-color 0.2s ease, transform 0.1s ease;
 }
 
 .chat-export-button:hover {
   background-color: hsl(var(--muted) / 0.5);
 }
 
+.chat-export-button:active {
+  transform: scale(0.95);
+}
+
 /* StatusBar: Export button icon */
 .chat-export-icon {
   width: 1rem;
   height: 1rem;
+}
+
+/* Dark mode export button styles */
+.dark .chat-export-button {
+  color: hsl(var(--foreground) / 0.9);
+}
+
+.dark .chat-export-button:hover {
+  background-color: hsl(var(--muted) / 0.7);
+}
+
+/* Mobile responsive styles */
+@media (max-width: 640px) {
+  .status-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--status-bar-gap-small);
+    padding: 0.5rem;
+  }
+  
+  .status-bar-section {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .chat-export-actions {
+    width: 100%;
+    justify-content: flex-end;
+    margin-top: 0.25rem;
+  }
+  
+  /* Hide text on very small screens */
+  @media (max-width: 400px) {
+    .status-text {
+      max-width: 100px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .tools-count-text {
+      max-width: 80px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
 }
