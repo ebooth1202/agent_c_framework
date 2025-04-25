@@ -15,7 +15,6 @@ from agent_c_tools.tools.dynamics.util.dynamics_api import DynamicsAPI, InvalidO
 from agent_c_tools.tools.dynamics.util.dataframe_in_memory import create_excel_in_memory
 
 
-
 class DynamicsTools(Toolset):
     def __init__(self, **kwargs):
         super().__init__(**kwargs, name='dynamics_crm', required_tools=['workspace'],
@@ -69,13 +68,15 @@ class DynamicsTools(Toolset):
                     "cen_serviceofferingcapabilitieses are service offering names like Data & Analytics, Modern Software Delivery, "
                     "cen_industryverticalsubs are sub-categories of service offerings Software Quality Assurance and Testing, Agile, "
                     "businessunits are geographic city office locations like Boston, Columbus, Chicago,  "
-                    "cen_industryverticals are industry verticals like Healthcare, Financial Services, Retail.",
+                    "cen_industryverticals are industry verticals like Healthcare, Financial Services, Retail.\n"
+                    "The function is optimized to return only necessary fields by default to improve efficiency and reduce token usage.",
         params={
             'entity_type': {
                 'type': 'string',
                 'description': 'The type of Dynamics entity to retrieve.  Common values are "accounts", "leads", "opportunities',
                 'enum': ['accounts', 'leads', 'opportunities', 'contacts', 'annotations', 'appointments', 'tasks',
-                         'emails', 'posts', 'phonecalls', 'cen_serviceofferingcapabilitieses', 'businessunits', 'cen_industryverticalsubs', 'cen_industryverticals'],
+                         'emails', 'posts', 'phonecalls', 'cen_serviceofferingcapabilitieses', 'businessunits',
+                         'cen_industryverticalsubs', 'cen_industryverticals'],
                 'required': True,
                 'default': 'opportunities'
             },
@@ -112,8 +113,28 @@ class DynamicsTools(Toolset):
                 'required': False,
                 'default': ''
             },
-        },
-
+            'additional_fields': {
+                'type': 'array',
+                'items': {
+                    'type': 'string'
+                },
+                'description': 'Optional additional fields to include in the response beyond the default fields',
+                'required': False
+            },
+            'additional_expand': {
+                'type': 'object',
+                'description': 'Optional additional expand relationships to include in the response. Should be a dictionary with Keys representing relationship names and values are arrays of fields to expand.',
+                'required': False,
+            },
+            'override_fields': {
+                'type': 'array',
+                'items': {
+                    'type': 'string'
+                },
+                'description': 'List of specific fields to return for the entity. This will override the default fields returned. Do not use unless you absolutely must.',
+                'required': False
+            },
+        }
     )
     async def get_entities(self, **kwargs):
         entity_id = kwargs.get('entity_id', None)
@@ -125,6 +146,13 @@ class DynamicsTools(Toolset):
         force_save = kwargs.get('force_save', False)
         file_path = kwargs.get('file_path', '').strip()
         _OVERSIZE_ENTITY_CAP = 5
+
+        # Allow specifying additional fields
+        additional_fields = kwargs.get('additional_fields', None)
+        # Allow specifying fields that completely override the defaults
+        override_fields = kwargs.get('override_fields', None)
+        # Allow specifying additional expand relationships
+        additional_expand = kwargs.get('additional_expand', None)
 
         # get core lookups
         if self.dynamics_object.common_lookups is None:
@@ -152,9 +180,21 @@ class DynamicsTools(Toolset):
 
         try:
             if entity_id:
-                entities = await self.dynamics_object.get_entities(entity_type=entity_type, entity_id=entity_id)
+                entities = await self.dynamics_object.get_entities(
+                    entity_type=entity_type,
+                    entity_id=entity_id,
+                    additional_fields=additional_fields,
+                    override_fields=override_fields,
+                    additional_expand=additional_expand
+                )
             else:
-                entities = await self.dynamics_object.get_entities(entity_type=entity_type, query_params=query_params)
+                entities = await self.dynamics_object.get_entities(
+                    entity_type=entity_type,
+                    query_params=query_params,
+                    additional_fields=additional_fields,
+                    override_fields=override_fields,
+                    additional_expand=additional_expand
+                )
         except InvalidODataQueryError as e:
             return json.dumps({"error": f"Invalid OData query: {str(e)}"})
         except Exception as e:
@@ -178,7 +218,7 @@ class DynamicsTools(Toolset):
             # Create unique file name based on date/time
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             file_name = f'{entity_type}_{timestamp}.xlsx'
-            
+
             # Construct the UNC path, incorporating the file_path if provided
             if file_path:
                 # Normalize the path (remove leading/trailing slashes)
@@ -194,7 +234,7 @@ class DynamicsTools(Toolset):
                 excel_buffer = create_excel_in_memory(pd.DataFrame(entities))
             except Exception as e:
                 return json.dumps({"error": f"Error creating excel buffer bytes: {str(e)}\n\n{entities}"})
-            
+
             # Write the file using the UNC path
             result = await self.tool_chest.active_tools['workspace'].internal_write_bytes(
                 path=unc_path,
@@ -203,11 +243,11 @@ class DynamicsTools(Toolset):
             )
             self.logger.debug(result)
             self.logger.info(f'Saved data to workspace: {workspace_name} with file name: {file_name}')
-            
+
             # Create HTML content for the media event
             # Determine display path for the UI
             display_path = file_path if file_path else '(root)'
-            
+
             # Get the actual OS-level filepath using the workspace's full_path method
             _, workspace_obj, rel_path = self.tool_chest.active_tools['workspace']._parse_unc_path(unc_path)
             file_system_path = None
@@ -232,24 +272,17 @@ class DynamicsTools(Toolset):
                 file_url = f"file:///{unc_path.replace('//', '').replace('\\', '/')}"
 
             # Determine open command based on path (Windows vs Mac/Linux)
-            open_command = ""  
+            open_command = ""
             if file_system_path:
                 if ':\\' in file_system_path or ':/' in file_system_path:  # Windows path
                     open_command = f'start "" "{file_system_path}"'
                 else:  # Mac/Linux
                     open_command = f'open "{file_system_path}"'
-            
+
             html_content = f"""
 <div style="padding: 20px; font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; background-color: #f8fafc;">
     <h2 style="color: #334155; margin-top: 0;">File Saved Successfully</h2>
-    
-    <div style="background-color: #f1f5f9; border-radius: 6px; padding: 16px; margin-bottom: 20px;">
-        <p style="margin: 0 0 8px 0;"><strong>File:</strong> {file_name}</p>
-        <p style="margin: 0 0 8px 0;"><strong>Workspace:</strong> {workspace_name}</p>
-        <p style="margin: 0 0 8px 0;"><strong>Path:</strong> {display_path}</p>
-        <p style="margin: 0;"><strong>Contents:</strong> {len(entities)} records</p>
-    </div>
-    
+     
     <div style="background-color: #fff7ed; border-left: 4px solid #f97316; padding: 16px; margin-bottom: 20px;">
         <p style="margin: 0; font-weight: 500; color: #9a3412;">Browser Security Notice</p>
         <p style="margin: 8px 0 0 0;">Due to browser security restrictions, you'll need to manually open the file:</p>
@@ -258,19 +291,9 @@ class DynamicsTools(Toolset):
     <div style="margin-bottom: 16px;">
         <p><strong>File path:</strong> <br/>
         <code style="background: #e2e8f0; padding: 8px; border-radius: 4px; display: block; margin-top: 8px; word-break: break-all;">{file_system_path if file_system_path else unc_path}</code>
-        </p>
-
-        <p><strong>Terminal command:</strong> <br/>
-        <code style="background: #e2e8f0; padding: 8px; border-radius: 4px; display: block; margin-top: 8px; word-break: break-all;">
-            {open_command}
-        </code>
+        <p style="margin: 0;"><strong>Contents:</strong> {len(entities)} records saved.</p>
         </p>
     </div>
-
-    <ol style="margin-top: 0; padding-left: 20px;">
-        <li style="margin-bottom: 8px;">Copy the file path and paste it into your file explorer address bar</li>
-        <li style="margin-bottom: 8px;">Or copy the command and run it in your terminal/command prompt</li>
-    </ol>
 
     <div style="margin-top: 16px;">
         <a href="{file_url}" target="_blank" style="display: inline-block; background-color: #3b82f6; color: white; text-decoration: none; padding: 10px 16px; border-radius: 6px; font-weight: 500;">Try Direct Link</a>
@@ -278,7 +301,7 @@ class DynamicsTools(Toolset):
     </div>
 </div>
             """
-            
+
             # Raise the media event
             await self._raise_render_media(
                 sent_by_class=self.__class__.__name__,
@@ -297,7 +320,7 @@ class DynamicsTools(Toolset):
 
             # Create a more informative user message that includes path information
             path_info = f' in {file_path}/' if file_path else ' in the root directory'
-            
+
             return json.dumps({
                 'user_message': f"Display this message to the user. The response was saved to a file {file_name}{path_info} of the {workspace_name} workspace. "
                                 f"Here are the first {_OVERSIZE_ENTITY_CAP} of {len(entities)} entities. The dataset size is {response_size} tokens. "
