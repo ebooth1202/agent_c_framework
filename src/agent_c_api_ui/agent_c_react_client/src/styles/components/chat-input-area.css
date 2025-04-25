@@ -3,15 +3,7 @@
 
 /* ChatInputArea: Main container */
 .chat-input-area {
-  /* Light theme gradient */
-  background: radial-gradient(
-    circle, 
-    hsl(var(--card)), 
-    hsl(var(--background) / 0.9),
-    hsl(var(--muted) / 0.8),
-    hsl(var(--border) / 0.7),
-    hsl(var(--card) / 0.9)
-  );
+  background-color: transparent;
   border-radius: var(--radius);
   border: 1px solid hsl(var(--border) / 0.3);
   box-shadow: 0 2px 10px hsl(var(--shadow) / 0.15);
@@ -22,15 +14,6 @@
 
 /* Dark mode enhancements */
 .dark .chat-input-area {
-  /* Dark theme gradient - Cold Autumn Forest inspired */
-  background: radial-gradient(
-    circle, 
-    hsl(60, 18%, 22%), /* Kelp #44442f - from accent */
-    hsl(81, 8%, 19%), /* Heavy Metal #32352e - from secondary */
-    hsl(42, 10%, 13%), /* Rangitoto #25241e - from card */
-    hsl(41, 20%, 9%), /* Rangoon #1a1914 - from background */
-    hsl(220, 6%, 27%) /* Mako #3f4146 - from border */
-  );
   border-color: hsl(var(--border) / 0.4);
   box-shadow: 0 2px 8px hsl(var(--shadow) / 0.4);
 }

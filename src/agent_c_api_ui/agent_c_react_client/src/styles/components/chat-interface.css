@@ -33,13 +33,34 @@
 /* ChatInterface: Input area */
 .chat-interface-input-area {
   border-top: 1px solid hsl(var(--border));
-  background-color: hsl(var(--card) / 0.9);
+  /* Light theme gradient - linear */
+  background: linear-gradient(
+    to top,
+    hsl(var(--card)), 
+    hsl(var(--background) / 0.9),
+    hsl(var(--muted) / 0.8),
+    hsl(var(--border) / 0.7),
+    hsl(var(--card) / 0.9)
+  );
   backdrop-filter: blur(4px);
   padding: 0.75rem 1rem;
   border-bottom-left-radius: var(--radius-xl, 12px);
   border-bottom-right-radius: var(--radius-xl, 12px);
   flex-direction: column;
   gap: 0.75rem;
+}
+
+/* Dark mode enhancements for input area */
+.dark .chat-interface-input-area {
+  /* Dark theme gradient - Cold Autumn Forest inspired - linear */
+  background: linear-gradient(
+    to top,
+    hsl(60, 18%, 22%), /* Kelp #44442f - from accent */
+    hsl(81, 8%, 19%), /* Heavy Metal #32352e - from secondary */
+    hsl(42, 10%, 13%), /* Rangitoto #25241e - from card */
+    hsl(41, 20%, 9%), /* Rangoon #1a1914 - from background */
+    hsl(220, 6%, 27%) /* Mako #3f4146 - from border */
+  );
 }
 
 /* ChatInterface: Text input */
