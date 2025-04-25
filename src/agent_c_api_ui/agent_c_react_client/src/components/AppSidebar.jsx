@@ -43,8 +43,8 @@ const AppSidebar = ({ children, defaultOpen = true, collapsible = "icon" }) => {
     <SidebarProvider defaultOpen={defaultOpen}>
       <div className="sidebar-layout">
         <Sidebar collapsible={collapsible}>
-          <SidebarHeader className="flex items-center justify-start">
-            <div className="sidebar-logo flex items-center gap-2">
+          <SidebarHeader className="flex justify-start">
+            <div className="sidebar-logo flex gap-2">
               <SidebarTrigger />
               <h2 className="text-lg font-semibold sidebar-title">Agent C</h2>
             </div>
