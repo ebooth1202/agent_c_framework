@@ -1,14 +1,13 @@
 /* ===== COMPONENT: ToolCallItem ===== */
 /* Description: Displays individual tool calls with their arguments and results */
-/* File: src/components/chat_interface/ToolCallItem.jsx */
 
 /* ToolCallItem: Main container for individual tool call item */
 .tool-call-item {
-  border: var(--border-width-thin) solid hsl(var(--secondary) / 0.4);
+  border: 1px solid hsl(var(--secondary) / 0.4);
   border-radius: var(--radius);
-  margin-bottom: var(--spacing-2);
+  margin-bottom: 0.5rem; /* 8px, mb-2 */
   background-color: hsl(var(--card));
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); /* shadow-sm */
   overflow: hidden;
 }
 
@@ -17,10 +16,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--spacing-4) var(--spacing-3);
+  padding: 1rem 0.75rem; /* py-4 px-3 */
   cursor: pointer;
   background-color: hsl(var(--secondary) / 0.3);
-  transition: background-color var(--transition-hover);
+  transition: background-color 200ms ease;
   border-radius: var(--radius);
 }
 
@@ -33,7 +32,7 @@
 .tool-call-item-name-container {
   display: flex;
   align-items: center;
-  gap: var(--spacing-2);
+  gap: 0.5rem; /* 8px, gap-2 */
 }
 
 /* ToolCallItem: Tool icon */
@@ -45,7 +44,7 @@
 
 /* ToolCallItem: Tool name text */
 .tool-call-item-name {
-  font-weight: var(--font-weight-semibold);
+  font-weight: 600; /* font-semibold */
   color: hsl(var(--secondary-foreground));
 }
 
@@ -53,21 +52,21 @@
 .tool-call-item-buttons {
   display: flex;
   align-items: center;
-  gap: var(--spacing-2);
+  gap: 0.5rem; /* 8px, gap-2 */
 }
 
 /* ToolCallItem: Content area */
 .tool-call-item-content {
-  border-top: var(--border-width-thin) solid hsl(var(--secondary) / 0.4);
+  border-top: 1px solid hsl(var(--secondary) / 0.4);
   background-color: hsl(var(--card));
-  padding: var(--spacing-4);
+  padding: 1rem; /* 16px, p-4 */
   border-bottom-left-radius: var(--radius);
   border-bottom-right-radius: var(--radius);
 }
 
 /* ToolCallItem: Section heading */
 .tool-call-item-section {
-  margin-bottom: var(--spacing-4);
+  margin-bottom: 1rem; /* 16px, mb-4 */
   position: relative;
 }
 
@@ -76,22 +75,22 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--spacing-2);
+  margin-bottom: 0.5rem; /* 8px, mb-2 */
 }
 
 /* ToolCallItem: Section title */
 .tool-call-item-section-title {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
+  font-size: 0.875rem; /* 14px, text-sm */
+  font-weight: 600; /* font-semibold */
   color: hsl(var(--primary));
 }
 
 /* ToolCallItem: Code pre formatting */
 .tool-call-item-code {
-  font-size: var(--font-size-sm);
-  font-family: var(--font-mono);
+  font-size: 0.875rem; /* 14px, text-sm */
+  font-family: 'JetBrains Mono', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
   background-color: hsl(var(--secondary) / 0.3);
-  padding: var(--spacing-2);
+  padding: 0.5rem; /* 8px, p-2 */
   border-radius: var(--radius);
   white-space: pre-wrap;
   overflow-x: auto;
@@ -104,7 +103,7 @@
   width: 1.25rem;
   color: hsl(var(--primary));
   transform: rotate(0deg);
-  transition: transform var(--transition-normal);
+  transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .tool-call-item-chevron-rotated {

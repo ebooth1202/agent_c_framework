@@ -1,141 +1,123 @@
 /* ===== COMPONENT: StatusBar ===== */
 /* Description: Displays system status information including processing state, available tools, and export options */
-/* File: src/components/chat_interface/StatusBar.jsx */
 
 /* StatusBar: Main status bar container */
 .status-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--spacing-1) var(--spacing-2);
-  background-color: hsl(var(--theme-background) / 0.95);
+  padding: 0.25rem 0.5rem; /* py-1 px-2 */
+  background-color: hsl(var(--background) / 0.95);
   backdrop-filter: blur(4px);
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow-sm);
-  font-size: var(--font-size-xs);
+  border-radius: var(--radius);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); /* shadow-sm */
+  font-size: 0.75rem; /* 12px, text-xs */
 }
 
 /* StatusBar: Status section containers */
 .status-bar-section {
   display: flex;
   align-items: center;
-  gap: var(--spacing-4);
+  gap: 1rem; /* 16px, gap-4 */
 }
 
 .status-indicator-section {
   display: flex;
   align-items: center;
-  gap: var(--spacing-2);
+  gap: 0.5rem; /* 8px, gap-2 */
 }
 
 .status-indicator-wrapper {
   display: flex;
   align-items: center;
-  gap: var(--spacing-2);
+  gap: 0.5rem; /* 8px, gap-2 */
 }
 
 /* StatusBar: Status indicator icon - Processing state */
 .status-indicator-icon-processing {
   width: 0.75rem;
   height: 0.75rem;
-  color: hsl(var(--theme-error));
+  color: hsl(var(--destructive));
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   transform: scale(1.1);
-  transition: transform var(--transition-hover);
+  transition: transform 200ms ease;
 }
 
 /* StatusBar: Status indicator icon - Initializing state */
 .status-indicator-icon-initializing {
   width: 0.75rem;
   height: 0.75rem;
-  color: hsl(var(--color-amber-500));
+  color: hsl(38 92% 50%); /* amber-500 */
 }
 
 /* StatusBar: Status indicator icon - Ready state */
 .status-indicator-icon-ready {
   width: 0.75rem;
   height: 0.75rem;
-  color: hsl(var(--color-green-500));
+  color: hsl(142 71% 45%); /* green-500 */
 }
 
 /* StatusBar: Status text */
 .status-text {
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
+  font-size: 0.75rem; /* 12px, text-xs */
+  font-weight: 500; /* font-medium */
 }
 
 /* StatusBar: Tools section */
 .tools-badge {
   display: flex;
   align-items: center;
-  gap: var(--spacing-2);
+  gap: 0.5rem; /* 8px, gap-2 */
   background: transparent !important;
   border: none !important;
-  padding: 0.125rem var(--spacing-3);
-  background-color: hsl(var(--color-blue-100) / 0.1) !important;
-  border-radius: var(--border-radius-full) !important;
-  border: var(--border-width-thin) solid hsl(var(--color-blue-200) / 0.2) !important;
-}
-
-.dark .tools-badge {
-  background-color: hsl(var(--color-blue-950) / 0.2) !important;
-  border-color: hsl(var(--color-blue-800) / 0.3) !important;
+  padding: 0.125rem 0.75rem; /* py-0.5 px-3 */
+  background-color: hsl(var(--primary) / 0.1) !important;
+  border-radius: 9999px !important; /* rounded-full */
+  border: 1px solid hsl(var(--primary) / 0.2) !important;
 }
 
 /* StatusBar: Tools icon */
 .tools-icon {
   width: 0.75rem;
   height: 0.75rem;
-  color: hsl(var(--color-blue-500));
-}
-
-.dark .tools-icon {
-  color: hsl(var(--color-blue-400));
+  color: hsl(var(--primary));
 }
 
 /* StatusBar: Tools count text */
 .tools-count-text {
-  font-size: var(--font-size-xs);
-  color: hsl(var(--color-blue-700));
-}
-
-.dark .tools-count-text {
-  color: hsl(var(--color-blue-300));
+  font-size: 0.75rem; /* 12px, text-xs */
+  color: hsl(var(--primary-foreground));
 }
 
 /* StatusBar: Info icon */
 .tools-info-icon {
   width: 0.75rem;
   height: 0.75rem;
-  color: hsl(var(--color-blue-400));
+  color: hsl(var(--primary));
   cursor: help;
-}
-
-.dark .tools-info-icon {
-  color: hsl(var(--color-blue-300));
 }
 
 /* StatusBar: Tools tooltip content */
 .tools-tooltip-content {
-  background-color: hsl(var(--theme-background));
-  border: var(--border-width-thin) solid;
-  box-shadow: var(--shadow-md);
+  background-color: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); /* shadow-md */
 }
 
 /* StatusBar: Chat export actions */
 .chat-export-actions {
   display: flex;
   align-items: center;
-  gap: var(--spacing-4);
+  gap: 1rem; /* 16px, gap-4 */
 }
 
 /* StatusBar: Export action buttons */
 .chat-export-button {
-  color: hsl(var(--theme-foreground));
+  color: hsl(var(--foreground));
 }
 
 .chat-export-button:hover {
-  background-color: hsl(var(--color-gray-200) / 0.2);
+  background-color: hsl(var(--muted) / 0.5);
 }
 
 /* StatusBar: Export button icon */

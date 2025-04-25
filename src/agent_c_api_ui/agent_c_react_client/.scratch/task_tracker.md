@@ -83,6 +83,7 @@
 - ✅ Update color variables to use shadcn/ui theme variables
 - ✅ Update core CSS files (cards, badges, interactive)
 - ✅ Update chat interface CSS files (tool-call-display, tool-call-item)
+- ✅ Update remaining component CSS files
 - □ Remove manual dark mode implementations
 
 ## Phase 3: Component Implementation (NOT STARTED)
