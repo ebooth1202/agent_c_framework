@@ -1,8 +1,8 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ScrollArea } from '../ui/scroll-area';
 import MessageItem from './MessageItem';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { cn } from '../../lib/utils';
+import { Button } from '../ui/button';
 import { ChevronUp } from 'lucide-react';
 
 // Import component CSS
@@ -72,17 +72,20 @@ const MessagesList = ({
   }, [toolSelectionInProgress]);
   
   return (
-    <div className={cn("messages-list-container", className)}>
+    <div className={cn(
+      "relative flex h-full w-full min-h-0 flex-col overflow-hidden",
+      className
+    )}>
       <ScrollArea 
-        className="messages-list-scroll-area"
+        className="flex-1 p-4 pb-3 overflow-hidden"
         type="always"
         scrollHideDelay={100}
         viewportRef={viewportRef}
       >
-        <div className="messages-list-content">
-          <div className="messages-list-inner">
+        <div className="w-full overflow-x-hidden pt-4 pb-4">
+          <div className="flex flex-col space-y-4 min-h-full">
             {messages.map((message, index) => (
-              <div key={index} className="message-item-wrapper">
+              <div key={index} className="w-full">
                 <MessageItem
                   message={message}
                   index={index}
@@ -95,13 +98,13 @@ const MessagesList = ({
             
             {/* Tool selection in progress indicator */}
             {toolSelectionInProgress && (
-              <div className="tool-selection-indicator">
-                <div className="tool-selection-indicator-dot"></div>
+              <div className="flex items-center gap-2 text-sm italic ml-8 my-1 text-muted-foreground">
+                <div className="h-2 w-2 rounded-full bg-primary animate-pulse"></div>
                 <span>Preparing to use: {toolSelectionName?.replace(/-/g, ' ') || 'tool'}</span>
               </div>
             )}
             
-            {/* Ref for scrolling to bottom - placed after tool indicator to ensure it scrolls into view */}
+            {/* Ref for scrolling to bottom */}
             <div ref={messagesEndRef} />
           </div>
         </div>
@@ -113,7 +116,7 @@ const MessagesList = ({
           onClick={scrollToTop} 
           size="sm" 
           variant="secondary" 
-          className="scroll-to-top-button"
+          className="absolute bottom-20 right-4 z-10 w-10 h-10 rounded-full flex items-center justify-center opacity-80 transition-opacity shadow-md hover:opacity-100"
           aria-label="Scroll to top"
         >
           <ChevronUp className="h-4 w-4" />

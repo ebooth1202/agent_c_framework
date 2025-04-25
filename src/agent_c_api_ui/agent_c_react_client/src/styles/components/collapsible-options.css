@@ -1,64 +1,33 @@
 /* ===== COMPONENT: CollapsibleOptions ===== */
 /* Description: Collapsible panel for settings and tool selection */
 
-/* CollapsibleOptions: Container */
-.collapsible-options-card {
-  width: 100%;
-  margin-bottom: 0.5rem;
-  background-color: hsl(var(--card) / 50%);
-  backdrop-filter: blur(4px);
-  border: 1px solid hsl(var(--border));
-  box-shadow: var(--shadow-sm);
+/* CollapsibleOptions: Animation styles */
+.collapsible-animation {
+  overflow: hidden;
 }
 
-/* CollapsibleOptions: Header */
-.collapsible-options-header {
-  padding: 0.5rem 0.75rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.collapsible-animation[data-state="open"] {
+  animation: slideDown 300ms ease-out;
 }
 
-/* CollapsibleOptions: Title */
-.collapsible-options-title {
-  font-size: 1rem;
-  font-weight: 500;
-  color: hsl(var(--foreground));
+.collapsible-animation[data-state="closed"] {
+  animation: slideUp 300ms ease-out;
 }
 
-/* CollapsibleOptions: Content */
-.collapsible-options-content {
-  padding: 0 1rem 1rem 1rem;
+@keyframes slideDown {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-collapsible-content-height);
+  }
 }
 
-/* CollapsibleOptions: Tabs */
-.collapsible-options-tabs {
-  width: 100%;
-}
-
-/* CollapsibleOptions: Tabs List */
-.collapsible-options-tabs-list {
-  width: 100%;
-  margin-bottom: 1rem;
-  border: 1px solid hsl(var(--border));
-  background-color: hsl(var(--muted));
-  padding: 0.25rem;
-  border-radius: 0.375rem;
-  box-shadow: var(--shadow-sm);
-}
-
-/* CollapsibleOptions: Tab Trigger */
-.collapsible-options-tab-trigger {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  width: 50%;
-  font-weight: 500;
-}
-
-/* CollapsibleOptions: Tab Trigger Active State */
-.collapsible-options-tab-trigger[data-state="active"] {
-  background-color: hsl(var(--background));
-  border-bottom: 2px solid hsl(var(--primary));
-  box-shadow: var(--shadow-sm);
+@keyframes slideUp {
+  from {
+    height: var(--radix-collapsible-content-height);
+  }
+  to {
+    height: 0;
+  }
 }

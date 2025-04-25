@@ -1,7 +1,8 @@
-import React, { useRef, useState } from "react";
+import React from "react";
 import { Send, Upload, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 /**
  * ChatInputArea component provides a styled input area for the chat interface
@@ -35,7 +36,10 @@ const ChatInputArea = ({
   className
 }) => {
   return (
-    <div className={`chat-input-container ${className || ''}`}>
+    <div className={cn(
+      "flex flex-col w-full space-y-2",
+      className
+    )}>
       {/* Hidden file input */}
       <input
         type="file"
@@ -45,7 +49,7 @@ const ChatInputArea = ({
       />
       
       {/* Text input with action buttons */}
-      <div className="chat-input-wrapper relative flex-1">
+      <div className="relative flex w-full">
         <Textarea
           placeholder="Type your message..."
           value={inputText}
@@ -53,39 +57,47 @@ const ChatInputArea = ({
           onKeyDown={handleKeyPress}
           disabled={isStreaming}
           rows={2}
-          className="chat-input-textarea"
+          className={cn(
+            "pr-28 min-h-[60px] rounded-xl backdrop-blur-sm",
+            "resize-none transition-colors", 
+            "focus-visible:ring-primary focus-visible:ring-opacity-20",
+            "border-muted-foreground/20"
+          )}
         />
         
-        {/* Settings button */}
-        <Button
-          onClick={toggleOptionsPanel}
-          variant="ghost"
-          size="icon"
-          className="chat-input-settings-button"
-        >
-          <Settings className="h-4 w-4" />
-        </Button>
-        
-        {/* File upload button */}
-        <Button
-          onClick={openFilePicker}
-          variant="ghost"
-          size="icon"
-          disabled={isStreaming || isUploading}
-          className="chat-input-upload-button"
-        >
-          <Upload className="h-4 w-4" />
-        </Button>
-        
-        {/* Send button */}
-        <Button
-          onClick={handleSendMessage}
-          disabled={isStreaming}
-          size="icon"
-          className="chat-input-send-button"
-        >
-          <Send className="h-4 w-4" />
-        </Button>
+        {/* Action buttons container */}
+        <div className="absolute right-2 bottom-2 flex items-center space-x-1">
+          {/* Settings button */}
+          <Button
+            onClick={toggleOptionsPanel}
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10"
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
+          
+          {/* File upload button */}
+          <Button
+            onClick={openFilePicker}
+            variant="ghost"
+            size="icon"
+            disabled={isStreaming || isUploading}
+            className="h-8 w-8 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10"
+          >
+            <Upload className="h-4 w-4" />
+          </Button>
+          
+          {/* Send button */}
+          <Button
+            onClick={handleSendMessage}
+            disabled={isStreaming}
+            size="icon"
+            className="h-8 w-8 rounded-full bg-primary hover:bg-primary/90"
+          >
+            <Send className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </div>
   );

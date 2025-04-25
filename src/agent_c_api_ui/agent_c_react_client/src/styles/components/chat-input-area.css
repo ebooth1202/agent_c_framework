@@ -2,109 +2,20 @@
 /* Description: Provides the user input interface for chat interactions with textarea and action buttons */
 /* File: src/components/chat_interface/ChatInputArea.jsx */
 
-/* ChatInputArea: Main container */
-.chat-input-container {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
+/* This component now primarily uses Tailwind utility classes directly in the JSX */
+/* This CSS file only contains styles that can't be easily achieved with Tailwind */
+
+/* ChatInputArea: Custom textarea animation */
+.chat-input-area-textarea-enter {
+  transition: height 0.2s ease-in-out, opacity 0.2s ease;
 }
 
-/* ChatInputArea: Input wrapper */
-.chat-input-wrapper {
-  position: relative;
-  flex: 1;
-}
-
-/* ChatInputArea: Textarea styling */
-.chat-input-textarea {
-  width: 100%;
-  border-radius: var(--border-radius-xl);
-  border: var(--border-width-thin) solid hsl(var(--color-gray-200));
-  background-color: hsl(var(--color-background) / 0.5);
-  backdrop-filter: blur(4px);
-  transition: colors var(--transition-hover);
-  padding: var(--spacing-2) 3rem var(--spacing-2) var(--spacing-3);
-  resize: none;
-  color: hsl(var(--color-foreground));
-  min-height: initial;
-}
-
-/* ChatInputArea: Textarea dark mode */
-.dark .chat-input-textarea {
-  border-color: hsl(var(--color-gray-700));
-}
-
-/* ChatInputArea: Textarea hover state */
-.chat-input-textarea:hover {
-  background-color: hsl(var(--color-background) / 0.8);
-}
-
-/* ChatInputArea: Textarea dark mode hover */
-.dark .chat-input-textarea:hover {
-  background-color: hsl(var(--color-gray-700) / 0.8);
-}
-
-/* ChatInputArea: Textarea focus state */
-.chat-input-textarea:focus {
-  border-color: hsl(var(--color-primary));
-  box-shadow: 0 0 0 2px hsl(var(--color-primary) / 0.2);
-  outline: none;
-}
-
-/* ChatInputArea: Textarea placeholder */
-.chat-input-textarea::placeholder {
-  color: hsl(var(--color-gray-400));
-}
-
-/* ChatInputArea: Settings button styling */
-.chat-input-settings-button {
-  position: absolute;
-  right: 5rem;
-  bottom: var(--spacing-2);
-  height: var(--button-height-sm);
-  width: var(--button-height-sm);
-  color: hsl(var(--color-gray-400));
-  border-radius: var(--border-radius-full);
-  transition: all var(--transition-hover);
-}
-
-/* ChatInputArea: Settings button hover */
-.chat-input-settings-button:hover {
-  color: hsl(var(--color-primary));
-  background-color: hsl(var(--color-primary) / 0.1);
-}
-
-/* ChatInputArea: Upload button styling */
-.chat-input-upload-button {
-  position: absolute;
-  right: 3rem;
-  bottom: var(--spacing-2);
-  height: var(--button-height-sm);
-  width: var(--button-height-sm);
-  color: hsl(var(--color-gray-400));
-  border-radius: var(--border-radius-full);
-  transition: all var(--transition-hover);
-}
-
-/* ChatInputArea: Upload button hover */
-.chat-input-upload-button:hover {
-  color: hsl(var(--color-primary));
-  background-color: hsl(var(--color-primary) / 0.1);
-}
-
-/* ChatInputArea: Send button styling */
-.chat-input-send-button {
-  position: absolute;
-  right: var(--spacing-2);
-  bottom: var(--spacing-2);
-  height: var(--button-height-sm);
-  width: var(--button-height-sm);
-  border-radius: var(--border-radius-full);
-  background-color: hsl(var(--color-primary));
-  transition: background-color var(--transition-hover);
-}
-
-/* ChatInputArea: Send button hover */
-.chat-input-send-button:hover {
-  background-color: hsl(var(--color-primary) / 0.9);
+/* Media queries for responsive adjustments */
+@media (max-width: 640px) {
+  .chat-input-area-actions {
+    flex-direction: column;
+    bottom: 0;
+    right: 0;
+    padding: 0.25rem;
+  }
 }

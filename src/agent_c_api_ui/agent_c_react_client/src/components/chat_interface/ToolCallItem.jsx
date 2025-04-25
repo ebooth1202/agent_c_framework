@@ -4,7 +4,6 @@ import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/component
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import CopyButton from './CopyButton';
-import '../../styles/components/tool-call-item-integrated.css';
 
 /**
  * Format data (arguments or results) as pretty JSON or string
@@ -42,25 +41,41 @@ const ToolCallItem = ({ tool, results, integrated = false, className }) => {
   const formattedArguments = tool.arguments ? formatData(tool.arguments) : "";
   const formattedResults = results ? formatData(results) : "";
 
-  const containerClass = integrated ? "integrated-tool-call-item" : "tool-call-item";
-  const headerClass = integrated ? "integrated-tool-call-item-header" : "tool-call-item-header";
-  const contentClass = integrated ? "integrated-tool-call-item-content" : "tool-call-item-content";
-  const iconClass = integrated ? "integrated-tool-call-item-icon" : "tool-call-item-icon";
-  const sectionTitleClass = integrated ? "integrated-tool-call-item-section-title" : "tool-call-item-section-title";
-  const codeClass = integrated ? "integrated-tool-call-item-code" : "tool-call-item-code";
+  // Determine styling based on integrated mode
+  const cardStyles = integrated 
+    ? "bg-transparent mb-2 overflow-hidden" 
+    : "border border-primary/20 rounded-lg mb-2 overflow-hidden shadow-sm";
+    
+  const headerStyles = integrated
+    ? "bg-muted/40 hover:bg-muted/60 border border-border rounded-md"
+    : "bg-primary/5 hover:bg-primary/10 rounded-lg";
+    
+  const contentStyles = integrated
+    ? "bg-muted/20 rounded-b-md border border-t-0 border-border p-3"
+    : "border-t border-primary/20 bg-card p-4 rounded-b-lg";
+    
+  const codeStyles = integrated
+    ? "bg-card border border-border text-card-foreground p-2 rounded-md text-sm font-mono whitespace-pre-wrap overflow-x-auto max-w-full tool-call-code"
+    : "bg-primary/5 p-2 rounded-md text-sm font-mono whitespace-pre-wrap overflow-x-auto max-w-full tool-call-code";
+    
+  const sectionTitleStyles = "text-sm font-semibold text-primary";
+  const iconStyles = "h-5 w-5 text-primary";
 
   return (
-    <Card className={cn(containerClass, className)}>
+    <Card className={cn(cardStyles, className)}>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <CollapsibleTrigger asChild>
-          <div className={headerClass}>
-            <div className="tool-call-item-name-container">
-              <PocketKnife className={iconClass} />
-              <span className="tool-call-item-name">
+          <div className={cn(
+            "flex items-center justify-between p-3 cursor-pointer transition-colors",
+            headerStyles
+          )}>
+            <div className="flex items-center gap-2">
+              <PocketKnife className={iconStyles} />
+              <span className="font-medium text-foreground">
                 {tool.name}
               </span>
             </div>
-            <div className="tool-call-item-buttons">
+            <div className="flex items-center gap-1">
               {/* Copy entire tool call including arguments and results */}
               <div onClick={(e) => e.stopPropagation()}>
                 <CopyButton
@@ -74,51 +89,53 @@ const ToolCallItem = ({ tool, results, integrated = false, className }) => {
                   }}
                   tooltipText="Copy tool call"
                   variant="ghost"
-                  className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800/50"
+                  size="sm"
+                  className="text-primary hover:text-primary/80 hover:bg-primary/10"
                 />
               </div>
               <ChevronDown
-                className={`tool-call-item-chevron ${
-                  isOpen ? "tool-call-item-chevron-rotated" : ""
-                }`}
+                className={cn(
+                  "h-4 w-4 text-primary transition-transform",
+                  isOpen && "rotate-180"
+                )}
               />
             </div>
           </div>
         </CollapsibleTrigger>
 
         <CollapsibleContent>
-          <CardContent className={cn(contentClass, "p-0")}>
+          <CardContent className={cn(contentStyles, "p-0")}>
             {formattedArguments && (
-              <div className="tool-call-item-section">
-                <div className="tool-call-item-section-header">
-                  <h5 className={sectionTitleClass}>Arguments:</h5>
+              <div className="mt-2">
+                <div className="flex justify-between items-center mb-1">
+                  <h5 className={sectionTitleStyles}>Arguments:</h5>
                   <CopyButton
                     content={formattedArguments}
                     tooltipText="Copy arguments"
                     variant="ghost"
-                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800/50"
                     size="xs"
+                    className="text-primary hover:text-primary/80 hover:bg-primary/10"
                   />
                 </div>
-                <pre className={codeClass}>
+                <pre className={codeStyles}>
                   {formattedArguments}
                 </pre>
               </div>
             )}
 
             {formattedResults && (
-              <div className="tool-call-item-section">
-                <div className="tool-call-item-section-header">
-                  <h5 className={sectionTitleClass}>Results:</h5>
+              <div className="mt-2">
+                <div className="flex justify-between items-center mb-1">
+                  <h5 className={sectionTitleStyles}>Results:</h5>
                   <CopyButton
                     content={formattedResults}
                     tooltipText="Copy results"
                     variant="ghost"
-                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800/50"
                     size="xs"
+                    className="text-primary hover:text-primary/80 hover:bg-primary/10"
                   />
                 </div>
-                <pre className={codeClass}>
+                <pre className={codeStyles}>
                   {formattedResults}
                 </pre>
               </div>

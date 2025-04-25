@@ -20,20 +20,21 @@ const SystemMessage = ({ content, isError = false, isCritical = false, className
   const ContentComponent = isError ? AlertDescription : CardContent;
   
   return (
-    <div className={cn("system-message-row group", className)}>
+    <div className={cn("flex justify-start gap-2 group", className)}>
       <MessageComponent
-        className={`system-message-bubble ${
-          isError
-            ? "system-message-bubble-error"
-            : "system-message-bubble-default"
-        }`}
+        className={cn(
+          "max-w-[80%] rounded-2xl shadow-sm",
+          isError 
+            ? "border-destructive/50 bg-destructive/10 text-destructive dark:bg-destructive/20" 
+            : "bg-background text-foreground border-border"
+        )}
         variant={isError ? "destructive" : "default"}
       >
-        <ContentComponent className="system-message-content p-0">
-          <div className="system-message-body prose dark:prose-invert">
+        <ContentComponent className="flex justify-between items-start gap-4 p-4">
+          <div className="flex-1 prose dark:prose-invert">
             {isError ? "⛔ Error: " : ""}{content}
             {isCritical && (
-              <div className="system-message-critical">
+              <div className="mt-1 text-xs font-medium text-destructive">
                 This is a critical error that may require restarting the session.
               </div>
             )}
@@ -44,7 +45,7 @@ const SystemMessage = ({ content, isError = false, isCritical = false, className
             position="left"
             variant={isError ? "destructive" : "secondary"}
             size="xs"
-            className="system-message-copy-button"
+            className="mt-1 flex-shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
           />
         </ContentComponent>
       </MessageComponent>

@@ -1,0 +1,48 @@
+/* ===== COMPONENT: AppSidebar ===== */
+/* Description: Main application sidebar using shadcn/ui Sidebar component */
+
+/* AppSidebar: Main layout container for sidebar and content */
+.sidebar-layout {
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* AppSidebar: Application logo container in sidebar header */
+.sidebar-logo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.5rem;
+}
+
+/* AppSidebar: Main content area that adapts to sidebar state */
+.sidebar-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  overflow-x: hidden;
+}
+
+/* Ensure consistent header height with sidebar header */
+.page-header {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  padding: 0 1.5rem;
+  border-bottom: 1px solid hsl(var(--border));
+  background-color: hsl(var(--background));
+}
+
+/* For screens that might not have a dvh unit */
+@supports not (height: 100dvh) {
+  .sidebar-layout,
+  .sidebar-content {
+    min-height: 100vh;
+    height: 100vh;
+  }
+}

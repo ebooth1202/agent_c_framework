@@ -7,8 +7,18 @@ import {
 } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp, Settings, Wrench } from 'lucide-react';
-import { Card } from '@/components/ui/card';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { 
+    Card, 
+    CardHeader, 
+    CardTitle, 
+    CardContent 
+} from '@/components/ui/card';
+import { 
+    Tabs, 
+    TabsList, 
+    TabsTrigger, 
+    TabsContent 
+} from "@/components/ui/tabs";
 import PersonaSelector from './PersonaSelector';
 import ToolSelector from './ToolSelector';
 
@@ -39,87 +49,99 @@ import ToolSelector from './ToolSelector';
  * @returns {React.ReactElement} A collapsible options panel component
  */
 const CollapsibleOptions = ({
-                                isOpen,
-                                setIsOpen,
-                                persona,
-                                customPrompt,
-                                temperature,
-                                modelName,
-                                modelConfigs,
-                                sessionId,
-                                personas,
-                                availableTools,
-                                onEquipTools,
-                                activeTools,
-                                isReady,
-                                modelParameters,
-                                selectedModel,
-                                onUpdateSettings,
-                                isInitialized,
-                                className
-                            }) => {
+    isOpen,
+    setIsOpen,
+    persona,
+    customPrompt,
+    temperature,
+    modelName,
+    modelConfigs,
+    sessionId,
+    personas,
+    availableTools,
+    onEquipTools,
+    activeTools,
+    isReady,
+    modelParameters,
+    selectedModel,
+    onUpdateSettings,
+    isInitialized,
+    className
+}) => {
     return (
-        <Card className={cn("collapsible-options-card", className)}>
+        <Card 
+            className={cn(
+                "w-full mb-2 bg-card/50 backdrop-blur-sm border-border shadow-sm", 
+                className
+            )}
+        >
             <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-                <div className="collapsible-options-header">
-                    <h2 className="collapsible-options-title">Options Panel</h2>
-                    <CollapsibleTrigger asChild>
-                        <Button variant="ghost" size="sm" className="w-9 p-0">
-                            {isOpen ? <ChevronUp className="h-4 w-4"/> : <ChevronDown className="h-4 w-4"/>}
-                        </Button>
-                    </CollapsibleTrigger>
-                </div>
-                <CollapsibleContent className="collapsible-options-content">
-                    <Tabs defaultValue="settings" className="collapsible-options-tabs">
-                        <TabsList className="collapsible-options-tabs-list">
-                            <TabsTrigger 
-                                value="settings" 
-                                className="collapsible-options-tab-trigger"
-                            >
-                                <Settings className="h-4 w-4" />
-                                <span>Settings</span>
-                            </TabsTrigger>
-                            <TabsTrigger 
-                                value="tools" 
-                                className="collapsible-options-tab-trigger"
-                            >
-                                <Wrench className="h-4 w-4" />
-                                <span>Tools</span>
-                            </TabsTrigger>
-                        </TabsList>
-                        
-                        <TabsContent value="settings" className="mt-0">
-                            <PersonaSelector
-                                persona_name={persona}
-                                personas={personas}
-                                customPrompt={customPrompt}
-                                temperature={temperature}
-                                modelName={modelName}
-                                modelConfigs={modelConfigs}
-                                sessionId={sessionId}
-                                modelParameters={modelParameters}
-                                selectedModel={selectedModel}
-                                onUpdateSettings={onUpdateSettings}
-                                isInitialized={isInitialized}
-                            />
-                        </TabsContent>
-                        
-                        <TabsContent value="tools" className="mt-0">
-                            <ToolSelector
-                                availableTools={availableTools}
-                                onEquipTools={onEquipTools}
-                                activeTools={activeTools}
-                                sessionId={sessionId}
-                                isReady={isReady}
-                            />
-                        </TabsContent>
-                    </Tabs>
-                </CollapsibleContent>
+                <CardHeader className="py-2 px-3">
+                    <div className="flex items-center justify-between">
+                        <CardTitle className="text-base font-medium">
+                            Options Panel
+                        </CardTitle>
+                        <CollapsibleTrigger asChild>
+                            <Button variant="ghost" size="sm" className="w-9 p-0">
+                                {isOpen ? 
+                                    <ChevronUp className="h-4 w-4" /> : 
+                                    <ChevronDown className="h-4 w-4" />
+                                }
+                            </Button>
+                        </CollapsibleTrigger>
+                    </div>
+                </CardHeader>
+                <CardContent className="px-3 pt-0 pb-4">
+                    <CollapsibleContent className="collapsible-animation">
+                        <Tabs defaultValue="settings" className="w-full">
+                            <TabsList className="w-full mb-4 border border-border bg-muted p-1 rounded-md shadow-sm">
+                                <TabsTrigger 
+                                    value="settings" 
+                                    className="flex items-center gap-1 w-1/2 font-medium"
+                                >
+                                    <Settings className="h-4 w-4" />
+                                    <span>Settings</span>
+                                </TabsTrigger>
+                                <TabsTrigger 
+                                    value="tools" 
+                                    className="flex items-center gap-1 w-1/2 font-medium"
+                                >
+                                    <Wrench className="h-4 w-4" />
+                                    <span>Tools</span>
+                                </TabsTrigger>
+                            </TabsList>
+                            
+                            <TabsContent value="settings" className="mt-0">
+                                <PersonaSelector
+                                    persona_name={persona}
+                                    personas={personas}
+                                    customPrompt={customPrompt}
+                                    temperature={temperature}
+                                    modelName={modelName}
+                                    modelConfigs={modelConfigs}
+                                    sessionId={sessionId}
+                                    modelParameters={modelParameters}
+                                    selectedModel={selectedModel}
+                                    onUpdateSettings={onUpdateSettings}
+                                    isInitialized={isInitialized}
+                                />
+                            </TabsContent>
+                            
+                            <TabsContent value="tools" className="mt-0">
+                                <ToolSelector
+                                    availableTools={availableTools}
+                                    onEquipTools={onEquipTools}
+                                    activeTools={activeTools}
+                                    sessionId={sessionId}
+                                    isReady={isReady}
+                                />
+                            </TabsContent>
+                        </Tabs>
+                    </CollapsibleContent>
+                </CardContent>
             </Collapsible>
         </Card>
     );
 };
-
-
 
 export default CollapsibleOptions;

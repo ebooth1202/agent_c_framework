@@ -1,54 +1,7 @@
 /* ===== COMPONENT: ThoughtDisplay ===== */
 /* Description: Component for displaying AI thinking processes in a visually distinct container */
-/* File: src/components/chat_interface/ThoughtDisplay.jsx */
 
-/* ThoughtDisplay: Thought container styles */
-.thought-container {
-  position: relative;
-  max-width: 80%;
-  border-radius: var(--border-radius-2xl);
-  padding: var(--spacing-3) var(--spacing-4);
-  box-shadow: var(--shadow-md);
-  background-color: var(--theme-thought-background) !important; /* Force override */
-  color: var(--theme-thought-foreground);
-  border: var(--border-width-thin) solid var(--theme-thought-border);
-  border-bottom-left-radius: var(--border-radius-sm);
-}
-
-/* ThoughtDisplay: Base styles for thought display content area */
-.thought-display-content {
-  scrollbar-width: thin;
-  text-align: left;
-  white-space: pre-wrap;
-  overflow: auto;
-  max-height: 200px;
-  min-height: 50px;
-  flex: 1;
-}
-
-/* ThoughtDisplay: Scrollbar colors (using theme variables) */
-.thought-display-content {
-  scrollbar-color: var(--theme-thought-border) var(--theme-thought-background);
-}
-
-/* ThoughtDisplay: For WebKit browsers (Chrome, Safari, newer Edge) */
-.thought-display-content::-webkit-scrollbar {
-  width: 8px;
-}
-
-.thought-display-content::-webkit-scrollbar-thumb {
-  background-color: var(--theme-thought-border);
-}
-
-.thought-display-content::-webkit-scrollbar-track {
-  background-color: var(--theme-thought-background);
-}
-
-/* ThoughtDisplay: Code formatting inside thought bubbles */
-.thought-display-content code.markdown-inline-code {
-  background-color: var(--theme-thought-inline-code-bg);
-  color: var(--theme-thought-inline-code-fg);
-  padding: 0.1em 0.3em;
-  border-radius: var(--border-radius-sm);
-  font-size: 0.9em;
+/* ThoughtDisplay: Custom styles for inline code inside thought bubbles */
+.prose .markdown-inline-code {
+  @apply bg-primary/20 text-primary px-1.5 py-0.5 rounded text-[0.9em];
 }

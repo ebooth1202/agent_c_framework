@@ -1,6 +1,4 @@
-import React, {useRef, useEffect, useContext} from 'react';
-import {SessionContext} from '@/contexts/SessionContext';
-import {Brain} from 'lucide-react';
+import React, { useRef, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import ModelIcon from './ModelIcon';
@@ -16,10 +14,7 @@ import MarkdownMessage from "@/components/chat_interface/MarkdownMessage";
  * @param {string} props.vendor - The AI model vendor
  * @param {string} [props.className] - Optional additional class names
  */
-const ThoughtDisplay = ({content, vendor, className}) => {
-    const {theme} = useContext(SessionContext);
-    // Check if dark mode is enabled
-    const isDarkMode = theme === 'dark';
+const ThoughtDisplay = ({ content, vendor, className }) => {
     const contentRef = useRef(null);
     const markdownRef = useRef(null);
 
@@ -43,24 +38,24 @@ const ThoughtDisplay = ({content, vendor, className}) => {
                 <ModelIcon vendor={vendor} />
             </div>
             
-            <Card className="thought-container">
-                {/* Content area with markdown */}
-                <CardContent className="flex justify-between items-start gap-4 p-0">
+            <Card className="max-w-[80%] rounded-2xl shadow-md border border-primary/30 bg-primary/10 text-primary rounded-bl-sm overflow-hidden">
+                <CardContent className="flex justify-between items-start gap-4 p-3">
                     <div
                         ref={contentRef}
-                        className={`text-sm font-mono thought-display-content`}
+                        className="text-sm font-mono flex-1 whitespace-pre-wrap overflow-auto max-h-[200px] min-h-[50px] scrollbar-thin scrollbar-thumb-primary/30 scrollbar-track-primary/10"
                     >
                         <div ref={markdownRef}>
                             <MarkdownMessage content={content} />
                         </div>
                     </div>
+                    
                     <CopyButton
                         content={content}
                         tooltipText="Copy thinking"
                         position="left"
                         variant="secondary"
                         size="xs"
-                        className="mt-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900/30"
+                        className="mt-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-primary hover:bg-primary/20"
                     />
                 </CardContent>
             </Card>
