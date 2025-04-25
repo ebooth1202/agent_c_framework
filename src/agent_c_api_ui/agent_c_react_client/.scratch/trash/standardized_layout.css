@@ -1,0 +1,105 @@
+/* ===== COMPONENT: Layout ===== */
+/* Description: Main application layout component providing responsive layout with header and content area */
+/* File: src/components/Layout.jsx */
+
+/* Layout: Main container */
+.layout-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(
+    to bottom,
+    hsl(var(--background)),
+    hsl(var(--muted))
+  );
+}
+
+/* Layout: Header container */
+.layout-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  width: 100%;
+  padding: var(--spacing-4) var(--spacing-6);
+  background-color: hsl(var(--background)/80%);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+/* Layout: Header content container */
+.layout-header-content {
+  max-width: var(--layout-max-width, 1400px);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+/* Layout: Title container */
+.layout-title-container {
+  display: flex;
+  align-items: center;
+}
+
+/* Layout: Title text */
+.layout-title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: hsl(var(--foreground));
+}
+
+/* Layout: Control container (right side) */
+.layout-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+}
+
+/* Layout: Navigation menu */
+.layout-nav {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .layout-nav {
+    display: flex;
+    align-items: center;
+  }
+  
+  .layout-mobile-trigger {
+    display: none;
+  }
+}
+
+/* Layout: Navigation buttons */
+.layout-nav-button {
+  font-size: var(--font-size-sm);
+}
+
+/* Layout: Mobile trigger button */
+.layout-mobile-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (min-width: 768px) {
+  .layout-mobile-trigger {
+    display: none;
+  }
+}
+
+/* Layout: Main content area */
+.layout-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  max-width: var(--layout-max-width, 1400px);
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding: var(--spacing-4) var(--spacing-6);
+  color: hsl(var(--foreground));
+  overflow-x: hidden;
+}

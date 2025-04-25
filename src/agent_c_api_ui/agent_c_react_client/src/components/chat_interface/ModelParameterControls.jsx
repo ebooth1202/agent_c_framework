@@ -266,6 +266,7 @@ const ModelParameterControls = ({
                             aria-valuenow={localTemperature}
                             aria-valuemin={temperatureConfig.min}
                             aria-valuemax={temperatureConfig.max}
+                        />
                     </div>
                     <div className="parameter-helper-text" id="temperature-helper">
                         Higher values make output more creative but less predictable

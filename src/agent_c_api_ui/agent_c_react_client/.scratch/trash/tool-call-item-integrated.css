@@ -1,0 +1,112 @@
+/* ===== COMPONENT: ToolCallItem (Integrated) ===== */
+/* Description: Styles for tool call items when displayed integrated within assistant messages */
+
+/* ToolCallItem (Integrated): Main container */
+.integrated-tool-call-item {
+  margin-bottom: 0.5rem; /* 8px, mb-2 */
+  background-color: transparent;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+/* ToolCallItem (Integrated): Header styling */
+.integrated-tool-call-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem; /* py-2 px-3 */
+  cursor: pointer;
+  background-color: hsl(var(--secondary));
+  transition: background-color 200ms ease;
+  border-radius: 0.375rem; /* 6px, rounded-md */
+  border: 1px solid hsl(var(--border));
+}
+
+/* ToolCallItem (Integrated): Header hover states */
+.integrated-tool-call-item-header:hover {
+  background-color: hsl(var(--accent));
+}
+
+/* ToolCallItem (Integrated): Content area */
+.integrated-tool-call-item-content {
+  background-color: hsl(var(--card));
+  padding: 0.75rem; /* 12px, p-3 */
+  border-bottom-left-radius: 0.375rem; /* 6px, rounded-md */
+  border-bottom-right-radius: 0.375rem; /* 6px, rounded-md */
+  border: 1px solid hsl(var(--border));
+  border-top: none;
+}
+
+/* ToolCallItem (Integrated): Code pre formatting */
+.integrated-tool-call-item-code {
+  font-size: 0.875rem; /* 14px, text-sm */
+  font-family: 'JetBrains Mono', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  background-color: hsl(var(--muted));
+  padding: 0.5rem; /* 8px, p-2 */
+  border-radius: 0.375rem; /* 6px, rounded-md */
+  white-space: pre-wrap;
+  overflow-x: auto;
+  max-width: 100%;
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--muted-foreground));
+}
+
+/* Section title styling */
+.integrated-tool-call-item-section-title {
+  font-size: 0.875rem; /* 14px, text-sm */
+  font-weight: 600; /* font-semibold */
+  color: hsl(var(--foreground));
+  margin-bottom: 0.25rem; /* 4px, mb-1 */
+}
+
+/* Icons */
+.integrated-tool-call-item-icon {
+  height: 1.25rem;
+  width: 1.25rem;
+  color: hsl(var(--primary));
+}
+
+/* Tool call item name container */
+.tool-call-item-name-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem; /* 8px, gap-2 */
+}
+
+/* Tool call item name */
+.tool-call-item-name {
+  font-weight: 500; /* font-medium */
+  color: hsl(var(--foreground));
+}
+
+/* Tool call item buttons */
+.tool-call-item-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem; /* 4px, gap-1 */
+}
+
+/* Tool call item chevron */
+.tool-call-item-chevron {
+  height: 1rem;
+  width: 1rem;
+  transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  color: hsl(var(--primary));
+}
+
+.tool-call-item-chevron-rotated {
+  transform: rotate(180deg);
+}
+
+/* Tool call item section */
+.tool-call-item-section {
+  margin-top: 0.5rem; /* 8px, mt-2 */
+}
+
+/* Tool call item section header */
+.tool-call-item-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem; /* 4px, mb-1 */
+}

@@ -1,0 +1,9 @@
+/* ===== COMPONENT: FilesPanel ===== */
+/* Description: Displays uploaded files with status indicators and selection controls */
+/* File: src/components/chat_interface/FilesPanel.jsx */
+
+/* Note: Most styles have been migrated to Tailwind utility classes in the component. */
+/* This file only contains the necessary styles that can't be easily achieved with Tailwind */
+
+/* Note: No additional CSS needed for the standardized FilesPanel and FileItem components */
+/* All styling has been migrated to Tailwind utility classes */
