@@ -240,13 +240,18 @@ class DynamicsAPI:
             self.logger.info(f"Unexpected response format for {entity_type}: {type(data)}")
             return data
 
-    def generate_query_params(self, entity_type, user_query_params='', additional_fields=None, additional_expand=None):
+    def generate_query_params(self, entity_type, user_query_params='', additional_fields=None, additional_expand=None, override_fields=None):
         default_config = self.DEFAULT_FIELDS.get(entity_type, {'select': [], 'expand': {}})
 
         # Handle select fields
-        select_fields = list(default_config.get('select', []))
-        if additional_fields:
-            select_fields.extend(additional_fields)
+        if override_fields:
+            # If override_fields is provided, use only those fields
+            select_fields = list(override_fields)
+        else:
+            # Otherwise use default fields plus any additional fields
+            select_fields = list(default_config.get('select', []))
+            if additional_fields:
+                select_fields.extend(additional_fields)
         select_fields = list(dict.fromkeys(select_fields))  # Remove duplicates
 
         # Handle expand fields
@@ -281,7 +286,7 @@ class DynamicsAPI:
         return "&".join(query_parts)
 
     async def get_entities(self, entity_type, entity_id=None, query_params=None, additional_fields=None,
-                           additional_expand=None):
+                           additional_expand=None, override_fields=None):
         if self.access_token is None or not self.access_token.strip():
             await self.authorize_dynamics()
 
@@ -292,7 +297,8 @@ class DynamicsAPI:
             entity_type,
             query_params,
             additional_fields,
-            additional_expand
+            additional_expand,
+            override_fields
         )
 
         headers = {
