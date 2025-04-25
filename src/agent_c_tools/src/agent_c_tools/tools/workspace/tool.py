@@ -1,7 +1,7 @@
 import json
 import logging
 import re
-from typing import Any, List, Tuple, Optional, Union
+from typing import Any, List, Tuple, Optional, Union, Callable, Awaitable
 from ts_tool import api
 
 from agent_c.toolsets.tool_set import Toolset
@@ -74,6 +74,29 @@ class WorkspaceTools(Toolset):
 
         return None, workspace, relative_path
 
+    async def _run_cp_or_mv(self, operation: Callable[[object, str, str], Awaitable[str]], *, src_path: str, dest_path: str) -> str:
+        """
+        Validate UNC paths, ensure same workspace, then perform the operation.
+        """
+        # Validate paths
+        src_error, src_workspace, src_relative_path = self.validate_and_get_workspace_path(src_path)
+        if src_error:
+            return json.dumps({'error': src_error})
+
+        dest_error, dest_workspace, dest_relative_path = self.validate_and_get_workspace_path(dest_path)
+        if dest_error:
+            return json.dumps({'error': dest_error})
+
+        # Same-workspace check
+        if src_workspace != dest_workspace:
+            error_msg = ("Cross-workspace operations are not supported. "
+                         "Source and destination must be in the same workspace.")
+            self.logger.error(error_msg)
+            return json.dumps({'error': error_msg})
+
+        # Do the copy or move
+        return await operation(src_workspace, src_relative_path, dest_relative_path)
+
     def validate_and_get_workspace_path(self, unc_path: str) -> Tuple[Optional[str], Optional[BaseWorkspace], Optional[str]]:
         """
         Validate a UNC path and return the workspace object and relative path.
@@ -108,7 +131,8 @@ class WorkspaceTools(Toolset):
         """Asynchronously lists the contents of a workspace directory.
 
         Args:
-            path (str): UNC-style path (//WORKSPACE/path) to list contents for
+            **kwargs: Keyword arguments.
+                path (str): UNC-style path (//WORKSPACE/path) to list contents for
 
         Returns:
             str: JSON string with the listing or an error message.
@@ -145,7 +169,10 @@ class WorkspaceTools(Toolset):
         """Asynchronously generates a tree view of a directory.
 
         Args:
-            path (str): UNC-style path (//WORKSPACE/path) to start the tree from
+            **kwargs: Keyword arguments.
+                path (str): UNC-style path (//WORKSPACE/path) to start the tree from
+                folder_depth (int): Depth of folders to include in the tree, default 5
+                file_depth (int): Depth of files to include in the tree, default 3
 
         Returns:
             str: JSON string with the tree view or an error message.
@@ -174,7 +201,8 @@ class WorkspaceTools(Toolset):
         """Asynchronously reads the content of a text file.
 
         Args:
-            path (str): UNC-style path (//WORKSPACE/path) to the file to read
+            **kwargs: Keyword arguments.
+                path (str): UNC-style path (//WORKSPACE/path) to the file to read
 
         Returns:
             str: JSON string with the file content or an error message.
@@ -210,11 +238,12 @@ class WorkspaceTools(Toolset):
     async def write(self, **kwargs: Any) -> str:
         """Asynchronously writes or appends data to a file.
 
-        kwargs:
-            path (str): UNC-style path (//WORKSPACE/path) to the file to write
-            data (Union[str, bytes]): The text or binary data to write or append to the file
-            mode (str): The writing mode, either 'write' to overwrite or 'append'
-            data_type (str): Type of data being written, either 'text' for plain text or 'binary' for base64-encoded binary data
+        Args:
+            **kwargs: Keyword arguments.
+                path (str): UNC-style path (//WORKSPACE/path) to the file to write
+                data (Union[str, bytes]): The text or binary data to write or append to the file
+                mode (str): The writing mode, either 'write' to overwrite or 'append'
+                data_type (str): Type of data being written, either 'text' for plain text or 'binary' for base64-encoded binary data
 
         Returns:
             str: JSON string with a success message or an error message.
@@ -232,7 +261,7 @@ class WorkspaceTools(Toolset):
     async def internal_write_bytes(self, path: str, data: Union[str, bytes], mode: str) -> str:
         """Asynchronously writes or appends binary data to a file.  This is an internal workspace function, not available to agents.
 
-        Arguments:
+        Args:
             path (str): UNC-style path (//WORKSPACE/path) to the file to write
             data (Union[str, bytes]): The text or binary data to write or append to the file
             mode (str): The writing mode, either 'write' to overwrite or 'append'
@@ -266,8 +295,9 @@ class WorkspaceTools(Toolset):
         """Asynchronously copies a file or directory.
 
         Args:
-            src_path (str): UNC-style path (//WORKSPACE/path) to the source
-            dest_path (str): UNC-style path (//WORKSPACE/path) to the destination
+            **kwargs: Keyword arguments.
+                src_path (str): UNC-style path (//WORKSPACE/path) to the source
+                dest_path (str): UNC-style path (//WORKSPACE/path) to the destination
 
         Returns:
             str: JSON string with the result or an error message.
@@ -275,23 +305,11 @@ class WorkspaceTools(Toolset):
         src_unc_path = kwargs.get('src_path', '')
         dest_unc_path = kwargs.get('dest_path', '')
 
-        # Validate source path
-        src_error, src_workspace, src_relative_path = self.validate_and_get_workspace_path(src_unc_path)
-        if src_error:
-            return json.dumps({'error': src_error})
-
-        # Validate destination path
-        dest_error, dest_workspace, dest_relative_path = self.validate_and_get_workspace_path(dest_unc_path)
-        if dest_error:
-            return json.dumps({'error': dest_error})
-
-        # Check if both paths are in the same workspace
-        if src_workspace != dest_workspace:
-            error_msg = f"Cross-workspace operations are not supported. Source and destination must be in the same workspace."
-            self.logger.error(error_msg)
-            return json.dumps({'error': error_msg})
-
-        return await src_workspace.cp(src_relative_path, dest_relative_path)
+        return await self._run_cp_or_mv(
+            operation=lambda workspace, source_path, destination_path: workspace.cp(source_path, destination_path),
+            src_path=src_unc_path,
+            dest_path=dest_unc_path,
+        )
 
     @json_schema(
         'Check if a path is a directory using UNC-style path',
@@ -307,7 +325,8 @@ class WorkspaceTools(Toolset):
         """Asynchronously checks if a path is a directory.
 
         Args:
-            path (str): UNC-style path (//WORKSPACE/path) to check
+           **kwargs: Keyword arguments.
+                path (str): UNC-style path (//WORKSPACE/path) to check
 
         Returns:
             str: JSON string with the result or an error message.
@@ -345,8 +364,9 @@ class WorkspaceTools(Toolset):
         """Asynchronously moves a file or directory.
 
         Args:
-            src_path (str): UNC-style path (//WORKSPACE/path) to the source
-            dest_path (str): UNC-style path (//WORKSPACE/path) to the destination
+            **kwargs: Keyword arguments.
+                src_path (str): UNC-style path (//WORKSPACE/path) to the source
+                dest_path (str): UNC-style path (//WORKSPACE/path) to the destination
 
         Returns:
             str: JSON string with the result or an error message.
@@ -354,23 +374,11 @@ class WorkspaceTools(Toolset):
         src_unc_path = kwargs.get('src_path', '')
         dest_unc_path = kwargs.get('dest_path', '')
 
-        # Validate source path
-        src_error, src_workspace, src_relative_path = self.validate_and_get_workspace_path(src_unc_path)
-        if src_error:
-            return json.dumps({'error': src_error})
-
-        # Validate destination path
-        dest_error, dest_workspace, dest_relative_path = self.validate_and_get_workspace_path(dest_unc_path)
-        if dest_error:
-            return json.dumps({'error': dest_error})
-
-        # Check if both paths are in the same workspace
-        if src_workspace != dest_workspace:
-            error_msg = f"Cross-workspace operations are not supported. Source and destination must be in the same workspace."
-            self.logger.error(error_msg)
-            return json.dumps({'error': error_msg})
-
-        return await src_workspace.mv(src_relative_path, dest_relative_path)
+        return await self._run_cp_or_mv(
+            operation=lambda workspace, source_path, destination_path: workspace.mv(source_path, destination_path),
+            src_path=src_unc_path,
+            dest_path=dest_unc_path,
+        )
 
     @json_schema(
         'Using a UNC-style path, update a text file with multiple string replacements. ',
@@ -406,8 +414,9 @@ class WorkspaceTools(Toolset):
         Asynchronously updates a file with multiple string replacements
 
         Args:
-            path (str): UNC-style path (//WORKSPACE/path) to the file to update
-            updates (list): A list of update operations, each containing 'old_string' and 'new_string'
+            **kwargs: Keyword arguments.
+                path (str): UNC-style path (//WORKSPACE/path) to the file to update
+                updates (list): A list of update operations, each containing 'old_string' and 'new_string'
 
         Returns:
             str: JSON string with a success message or an error message.
@@ -460,10 +469,11 @@ class WorkspaceTools(Toolset):
         """Asynchronously reads a subset of lines from a text file.
 
         Args:
-            path (str): UNC-style path (//WORKSPACE/path) to the file to read
-            start_line (int): The 0-based index of the first line to read
-            end_line (int): The 0-based index of the last line to read (inclusive)
-            include_line_numbers (bool, optional): If True, includes line numbers in the output
+            **kwargs: Keyword arguments.
+                path (str): UNC-style path (//WORKSPACE/path) to the file to read
+                start_line (int): The 0-based index of the first line to read
+                end_line (int): The 0-based index of the last line to read (inclusive)
+                include_line_numbers (bool, optional): If True, includes line numbers in the output
 
         Returns:
             str: JSON string containing the requested lines or an error message.
@@ -527,7 +537,8 @@ class WorkspaceTools(Toolset):
         """Uses CodeExplorer to prepare code overviews.
 
         Args:
-            path (str): UNC-style path (//WORKSPACE/path) to the file to read
+            **kwargs: Keyword arguments.
+                path (str): UNC-style path (//WORKSPACE/path) to the file to read
 
         Returns:
             str: A markdown overview of the code
@@ -584,10 +595,11 @@ class WorkspaceTools(Toolset):
         """Finds strings in a file using exact match or regex pattern.
 
         Args:
-            path (str): UNC-style path (//WORKSPACE/path) to the file to search in
-            search_string (str): The string or pattern to search for
-            use_regex (bool, optional): Whether to treat the search string as a regex pattern
-            max_results (int, optional): Maximum number of results to return (0 for all matches)
+            **kwargs: Keyword arguments.
+                path (str): UNC-style path (//WORKSPACE/path) to the file to search in
+                search_string (str): The string or pattern to search for
+                use_regex (bool, optional): Whether to treat the search string as a regex pattern
+                max_results (int, optional): Maximum number of results to return (0 for all matches)
 
         Returns:
             str: Multi-line string with line numbers and matching lines or an error message.
@@ -632,7 +644,8 @@ class WorkspaceTools(Toolset):
                         matches.append(f"{i}: {line}")
 
                 # Check if we've reached the maximum number of results
-                if max_results > 0 and len(matches) >= max_results:
+                if 0 < max_results <= len(matches):
+                    # same as if max_results > 0 and len(matches) >= max_results:
                     break
 
             if not matches:

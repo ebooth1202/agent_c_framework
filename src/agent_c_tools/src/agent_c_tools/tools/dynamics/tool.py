@@ -6,14 +6,13 @@ import datetime
 import pandas as pd
 
 from bs4 import BeautifulSoup
-from typing import Optional, Dict, Any, cast
+from typing import Optional, Dict, Any
 
 from agent_c.toolsets import json_schema, Toolset
 from agent_c_tools.tools.dynamics.prompt import DynamicsCRMPrompt
 from agent_c_tools.tools.dynamics.util.dynamics_api import DynamicsAPI, InvalidODataQueryError
-from agent_c_tools.tools.workspace import WorkspaceTools
+# Using workspace tool directly via UNC paths now instead of casting
 from agent_c_tools.tools.dynamics.util.dataframe_in_memory import create_excel_in_memory
-
 
 
 class DynamicsTools(Toolset):
@@ -33,8 +32,7 @@ class DynamicsTools(Toolset):
         self.access_token: str = kwargs.get('access_token', '')
         self.user_id: str = kwargs.get('CENTRIC_ID', os.getenv('CENTRIC_ID'))
         self.user_pw: str = kwargs.get('CENTRIC_PW', os.getenv('CENTRIC_PW'))
-        # Workspace tool set up
-        self.workspace_tool: WorkspaceTools = cast(WorkspaceTools, self.tool_chest.active_tools['workspace'])
+        # Workspace tool is accessed directly via tool_chest when needed
         # Main Dynamics API object to work with
         self.dynamics_object = DynamicsAPI(base_url=self.base_url, client_id=self.client_id,
                                            dynamics_scope=self.dynamics_scope, redirect_uri=self.redirect_uri,
@@ -70,13 +68,15 @@ class DynamicsTools(Toolset):
                     "cen_serviceofferingcapabilitieses are service offering names like Data & Analytics, Modern Software Delivery, "
                     "cen_industryverticalsubs are sub-categories of service offerings Software Quality Assurance and Testing, Agile, "
                     "businessunits are geographic city office locations like Boston, Columbus, Chicago,  "
-                    "cen_industryverticals are industry verticals like Healthcare, Financial Services, Retail.",
+                    "cen_industryverticals are industry verticals like Healthcare, Financial Services, Retail.\n"
+                    "The function is optimized to return only necessary fields by default to improve efficiency and reduce token usage.",
         params={
             'entity_type': {
                 'type': 'string',
                 'description': 'The type of Dynamics entity to retrieve.  Common values are "accounts", "leads", "opportunities',
                 'enum': ['accounts', 'leads', 'opportunities', 'contacts', 'annotations', 'appointments', 'tasks',
-                         'emails', 'posts', 'phonecalls', 'cen_serviceofferingcapabilitieses', 'businessunits', 'cen_industryverticalsubs', 'cen_industryverticals'],
+                         'emails', 'posts', 'phonecalls', 'cen_serviceofferingcapabilitieses', 'businessunits',
+                         'cen_industryverticalsubs', 'cen_industryverticals'],
                 'required': True,
                 'default': 'opportunities'
             },
@@ -107,8 +107,34 @@ class DynamicsTools(Toolset):
                 'required': False,
                 'default': False
             },
-        },
-
+            'file_path': {
+                'type': 'string',
+                'description': 'Path within the workspace to save the file (e.g., "reports/dynamics")',
+                'required': False,
+                'default': ''
+            },
+            'additional_fields': {
+                'type': 'array',
+                'items': {
+                    'type': 'string'
+                },
+                'description': 'Optional additional fields to include in the response beyond the default fields',
+                'required': False
+            },
+            'additional_expand': {
+                'type': 'object',
+                'description': 'Optional additional expand relationships to include in the response. Should be a dictionary with Keys representing relationship names and values are arrays of fields to expand.',
+                'required': False,
+            },
+            'override_fields': {
+                'type': 'array',
+                'items': {
+                    'type': 'string'
+                },
+                'description': 'List of specific fields to return for the entity. This will override the default fields returned. Do not use unless you absolutely must.',
+                'required': False
+            },
+        }
     )
     async def get_entities(self, **kwargs):
         entity_id = kwargs.get('entity_id', None)
@@ -118,7 +144,15 @@ class DynamicsTools(Toolset):
         entity_type = kwargs.get('entity_type', 'opportunities')
         statecode_filter = "statecode eq 0"  # we only want active entities
         force_save = kwargs.get('force_save', False)
+        file_path = kwargs.get('file_path', '').strip()
         _OVERSIZE_ENTITY_CAP = 5
+
+        # Allow specifying additional fields
+        additional_fields = kwargs.get('additional_fields', None)
+        # Allow specifying fields that completely override the defaults
+        override_fields = kwargs.get('override_fields', None)
+        # Allow specifying additional expand relationships
+        additional_expand = kwargs.get('additional_expand', None)
 
         # get core lookups
         if self.dynamics_object.common_lookups is None:
@@ -146,9 +180,21 @@ class DynamicsTools(Toolset):
 
         try:
             if entity_id:
-                entities = await self.dynamics_object.get_entities(entity_type=entity_type, entity_id=entity_id)
+                entities = await self.dynamics_object.get_entities(
+                    entity_type=entity_type,
+                    entity_id=entity_id,
+                    additional_fields=additional_fields,
+                    override_fields=override_fields,
+                    additional_expand=additional_expand
+                )
             else:
-                entities = await self.dynamics_object.get_entities(entity_type=entity_type, query_params=query_params)
+                entities = await self.dynamics_object.get_entities(
+                    entity_type=entity_type,
+                    query_params=query_params,
+                    additional_fields=additional_fields,
+                    override_fields=override_fields,
+                    additional_expand=additional_expand
+                )
         except InvalidODataQueryError as e:
             return json.dumps({"error": f"Invalid OData query: {str(e)}"})
         except Exception as e:
@@ -169,24 +215,100 @@ class DynamicsTools(Toolset):
             self.logger.info(f"Dataset token size: ({response_size})")
             self.logger.info(f"Number of records: ({len(entities)})")
 
-            workspace_obj = self.workspace_tool.find_workspace_by_name(workspace_name)
-            if workspace_obj is None:
-                return f"Error loading workspace {self.workspace_tool.name}"
-
             # Create unique file name based on date/time
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             file_name = f'{entity_type}_{timestamp}.xlsx'
 
-            # to use workspace toolsets, I need to write to memory and pass in the bytes to the write tool.
+            # Construct the UNC path, incorporating the file_path if provided
+            if file_path:
+                # Normalize the path (remove leading/trailing slashes)
+                normalized_path = file_path.strip('/')
+                unc_path = f"//{workspace_name}/{normalized_path}/{file_name}"
+            else:
+                unc_path = f"//{workspace_name}/{file_name}"
+
+            # Create the Excel file in memory
             try:
                 # if the entities are not a list of dictionaries, this will fail, usually because dynamics returns
                 # an error message, but a 200 status code like query has unbalanced brackets
                 excel_buffer = create_excel_in_memory(pd.DataFrame(entities))
             except Exception as e:
                 return json.dumps({"error": f"Error creating excel buffer bytes: {str(e)}\n\n{entities}"})
-            result = await workspace_obj.write_bytes(file_path=file_name, mode='write', data=excel_buffer.getvalue())
+
+            # Write the file using the UNC path
+            result = await self.tool_chest.active_tools['workspace'].internal_write_bytes(
+                path=unc_path,
+                mode='write',
+                data=excel_buffer.getvalue()
+            )
             self.logger.debug(result)
-            self.logger.info(f'Saved data to workspace: {workspace_obj.name} with file name: {file_name}')
+            self.logger.info(f'Saved data to workspace: {workspace_name} with file name: {file_name}')
+
+            # Create HTML content for the media event
+            # Determine display path for the UI
+            display_path = file_path if file_path else '(root)'
+
+            # Get the actual OS-level filepath using the workspace's full_path method
+            _, workspace_obj, rel_path = self.tool_chest.active_tools['workspace']._parse_unc_path(unc_path)
+            file_system_path = None
+            if workspace_obj and hasattr(workspace_obj, 'full_path'):
+                # The full_path method handles path normalization and joining with workspace root
+                # Set mkdirs=False since we're just getting the path for a URL, not writing
+                file_system_path = workspace_obj.full_path(rel_path, mkdirs=False)
+
+            # Create a file:// URL from the system path
+            file_url = None
+            if file_system_path:
+                # Convert backslashes to forward slashes for URL
+                url_path = file_system_path.replace('\\', '/')
+
+                # Ensure correct URL format (need 3 slashes for file:// URLs with absolute paths)
+                if url_path.startswith('/'):
+                    file_url = f"file://{url_path}"
+                else:
+                    file_url = f"file:///{url_path}"
+            else:
+                # Fallback if we couldn't get the actual path
+                file_url = f"file:///{unc_path.replace('//', '').replace('\\', '/')}"
+
+            # Determine open command based on path (Windows vs Mac/Linux)
+            open_command = ""
+            if file_system_path:
+                if ':\\' in file_system_path or ':/' in file_system_path:  # Windows path
+                    open_command = f'start "" "{file_system_path}"'
+                else:  # Mac/Linux
+                    open_command = f'open "{file_system_path}"'
+
+            html_content = f"""
+<div style="padding: 20px; font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; background-color: #f8fafc;">
+    <h2 style="color: #334155; margin-top: 0;">File Saved Successfully</h2>
+     
+    <div style="background-color: #fff7ed; border-left: 4px solid #f97316; padding: 16px; margin-bottom: 20px;">
+        <p style="margin: 0; font-weight: 500; color: #9a3412;">Browser Security Notice</p>
+        <p style="margin: 8px 0 0 0;">Due to browser security restrictions, you'll need to manually open the file:</p>
+    </div>
+
+    <div style="margin-bottom: 16px;">
+        <p><strong>File path:</strong> <br/>
+        <code style="background: #e2e8f0; padding: 8px; border-radius: 4px; display: block; margin-top: 8px; word-break: break-all;">{file_system_path if file_system_path else unc_path}</code>
+        <p style="margin: 0;"><strong>Contents:</strong> {len(entities)} records saved.</p>
+        </p>
+    </div>
+
+    <div style="margin-top: 16px;">
+        <a href="{file_url}" target="_blank" style="display: inline-block; background-color: #3b82f6; color: white; text-decoration: none; padding: 10px 16px; border-radius: 6px; font-weight: 500;">Try Direct Link</a>
+        <span style="margin-left: 8px; color: #6b7280;">(may not work due to browser restrictions)</span>
+    </div>
+</div>
+            """
+
+            # Raise the media event
+            await self._raise_render_media(
+                sent_by_class=self.__class__.__name__,
+                sent_by_function='get_entities',
+                content_type="text/html",
+                content=html_content
+            )
 
             if entity_id is None:
                 if len(entities) > _OVERSIZE_ENTITY_CAP:
@@ -196,12 +318,18 @@ class DynamicsTools(Toolset):
             else:
                 entity_data = entities[0]
 
+            # Create a more informative user message that includes path information
+            path_info = f' in {file_path}/' if file_path else ' in the root directory'
+
             return json.dumps({
-                'user_message': f"Display this message to the user.  The response was saved to a file {file_name}. Here are the first {_OVERSIZE_ENTITY_CAP} of "
-                                f"{len(entities)} entities.  The dataset size {response_size} tokens. The query_params used was: {query_params}"
+                'user_message': f"Display this message to the user. The response was saved to a file {file_name}{path_info} of the {workspace_name} workspace. "
+                                f"Here are the first {_OVERSIZE_ENTITY_CAP} of {len(entities)} entities. The dataset size is {response_size} tokens. "
+                                f"The query_params used was: {query_params}"
                                 f"{'The $top query_param limited records' if '$top' in query_params else ''}",
                 'file_name': file_name,
-                'workspace_name': workspace_obj.name,
+                'workspace_name': workspace_name,
+                'file_path': file_path,
+                'unc_path': unc_path,
                 'entity_data': entity_data,
                 'entity_count': len(entities)
             })

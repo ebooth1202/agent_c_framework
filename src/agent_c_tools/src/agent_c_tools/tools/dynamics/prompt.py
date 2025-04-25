@@ -4,7 +4,7 @@ from agent_c.prompting.prompt_section import PromptSection, property_bag_item
 
 class DynamicsCRMPrompt(PromptSection):
     def __init__(self, **data: Any):
-        template = ("The Dynamics toolsets allow you to retrieve and manipulate data from Microsoft Dynamics CRM using odata query parameters. "
+        template = ("The Dynamics toolsets allow you to retrieve and manipulate data from Microsoft Dynamics CRM using odata query parameters. The get_entities function is optimized to return only necessary fields by default to improve efficiency and reduce token usage. You can use the 'fields' parameter to specify exactly which fields you want returned, overriding the default fields. This is useful when you only need a few specific fields and want to minimize token usage. "
                     "You can use these toolsets to search for accounts, opportunities, and leads by their partial names. "
                     "The toolsets are designed to handle authorization and provide accurate results even with partial or fuzzy matches. "
                     "When multiple accounts, leads, or opportunities are found and the user is asking for activity summaries, "
@@ -15,7 +15,7 @@ class DynamicsCRMPrompt(PromptSection):
                     "into smaller queries and pass in the subsequent GUID filter criteria.\n"
                     "2) When multiple entities are saved to a file, always tell teh user about the file and where it is saved.\n"
                     "Display all the entities in the response message to the user.  Do not truncate.\n"
-                    "3) When the user requests entities, espeically opportunities, related to a service offering you have to filter on the 3 service offering fields such as: _cen_serviceofferingcapabiity1_value, _cen_serviceofferingcapability2_value, _cen_serviceofferingcapability3_value\n"
+                    "3) When the user requests entities, especially opportunities, related to a service offering you have to filter on the 3 service offering fields such as: _cen_serviceofferingcapabiity1_value, _cen_serviceofferingcapability2_value, _cen_serviceofferingcapability3_value\n"
                     "4) When the user requests filtering based on primary service offering you have to filter on the first service offering field such as: _cen_serviceofferingcapabiity1_value\n"
                     "5) When searching for an entity by name, consider using the 'contains' function to find partial matches.\n"
                     "6) For single word account names, consider searching multiple fields, such as 'name' and 'websiteurl'.\n"

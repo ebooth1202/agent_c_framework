@@ -1,7 +1,6 @@
 import json
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Union
 import logging
-import codecs
 
 class ReplaceStringsHelper:
     """
@@ -31,6 +30,7 @@ class ReplaceStringsHelper:
         Process string replacements in a file with robust error handling.
         
         Args:
+            encoding: encoding to use for content, defaults to utf-8
             read_function: Async function to read file content
             write_function: Async function to write to file
             path: Path to the file to update
@@ -80,7 +80,8 @@ class ReplaceStringsHelper:
             self.logger.error(error_msg)
             return {'error': error_msg}
             
-    def _validate_updates(self, updates: Any) -> Union[str, None]:
+    @staticmethod
+    def _validate_updates(updates: Any) -> Union[str, None]:
         """
         Validate the updates parameter and return an error message if invalid.
         
@@ -125,7 +126,8 @@ class ReplaceStringsHelper:
         # All validations passed
         return None
         
-    def _parse_file_content(self, response: Any, encoding: str = 'utf-8') -> Union[str, Dict[str, Any]]:
+    @staticmethod
+    def _parse_file_content(response: Any, encoding: str = 'utf-8') -> Union[str, Dict[str, Any]]:
         """
         Parse the file content response from the read operation.
         
@@ -152,11 +154,20 @@ class ReplaceStringsHelper:
                 return response  # Return the error
             if 'contents' in response:
                 return response['contents']  # Extract contents
+        elif isinstance(response, (bytes, bytearray)):
+            # This is unlikely to ever be used, but in case we need it.
+            try:
+                response = response.decode(encoding)
+                return response  # Decode bytes to string
+            except UnicodeDecodeError as e:
+                return {'error': f'Cannot decode bytes with {encoding}: {e}'}
+
         
         # Default case: return response as is
         return response
         
-    def _process_replacements(self, content: str, updates: List[Dict[str, str]], encoding: str = 'utf-8') -> tuple[str, List[Dict[str, Any]]]:
+    @staticmethod
+    def _process_replacements(content: str, updates: List[Dict[str, str]], encoding: str = 'utf-8') -> tuple[str, List[Dict[str, Any]]]:
         """
         Process multiple string replacements in the content with explicit encoding handling.
         
