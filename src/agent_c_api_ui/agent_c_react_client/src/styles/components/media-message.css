@@ -12,7 +12,7 @@
 }
 
 .media-message-card-expanded {
-  max-width: 80%; /* max-w-[80%] */
+  max-width: min(80%, 800px); /* max-w-[80%] but limited for very large screens */
 }
 
 .media-message-card-collapsed {

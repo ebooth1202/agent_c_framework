@@ -477,7 +477,7 @@ const ChatInterfaceInner = ({
         {/* Messages list with ScrollArea for better scrolling experience */}
         <CardContent className="chat-interface-messages flex-grow p-0 overflow-hidden">
           <ScrollArea className="h-full w-full" type="auto">
-            <div className="p-4">
+            <div className="p-2">
               <MessagesList 
                 messages={messages}
                 expandedToolCallMessages={expandedToolCallMessages}

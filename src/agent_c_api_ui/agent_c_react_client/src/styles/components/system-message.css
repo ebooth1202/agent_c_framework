@@ -10,7 +10,7 @@
 
 /* SystemMessage: Normal message styling */
 .system-message-normal {
-  max-width: 80%;
+  max-width: min(80%, 800px);
   border-radius: 0.75rem;
   border: 1px solid var(--system-message-border);
   background-color: var(--system-message-background);

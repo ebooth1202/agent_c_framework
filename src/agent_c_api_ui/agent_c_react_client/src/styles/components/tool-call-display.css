@@ -82,3 +82,11 @@
     margin-left: 0.5rem !important;
   }
 }
+
+/* Large screen optimizations */
+@media (min-width: 1600px) {
+  .tool-call-display {
+    max-width: min(80%, 800px) !important;
+    margin: 0 auto !important;
+  }
+}

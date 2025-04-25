@@ -33,3 +33,17 @@
   padding: var(--spacing-4);
   text-align: center;
 }
+
+/* MessagesList: Large screen optimizations */
+@media (min-width: 1600px) {
+  .messages-list-container {
+    max-width: 100%;
+    margin: 0 auto;
+  }
+  
+  .message-item-wrapper {
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+  }
+}

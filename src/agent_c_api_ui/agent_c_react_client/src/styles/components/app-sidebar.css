@@ -42,6 +42,8 @@
   height: 100dvh;
   overflow-x: hidden;
   transition: margin-left 0.2s ease-in-out;
+  padding-left: 0; /* Remove any padding */
+  margin-left: 0; /* Remove any margin */
 }
 
 /* AppSidebar: Menu labels in the sidebar */

@@ -11,7 +11,7 @@
 
 /* UserMessage: Content */
 .user-message-content {
-  max-width: 80%;
+  max-width: min(90%, 1600px);
   border-radius: 0.75rem;
   border-bottom-right-radius: 0.25rem;
   padding: 1rem;

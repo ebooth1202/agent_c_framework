@@ -23,8 +23,10 @@
 
 /* Layout: Main content area for regular pages */
 .layout-main-page {
-  max-width: 1600px;
+  max-width: 2000px;
+  width: 100%;
   margin: 0 auto;
+  padding: clamp(0.5rem, 1vw, 1rem);
   height: calc(100vh - 60px); /* Subtract header height */
   height: calc(100dvh - 60px); /* Use dynamic viewport height when available */
   overflow-y: auto;

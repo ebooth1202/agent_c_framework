@@ -25,7 +25,7 @@
 
 /* AssistantMessage: Message card */
 .assistant-message-card {
-  max-width: 80%;
+  max-width: min(90%, 1600px);
   border-radius: 0.75rem;
   box-shadow: var(--shadow-sm);
   overflow: hidden;
@@ -106,6 +106,6 @@
 
 @media (max-width: 640px) {
   .assistant-message-card {
-    max-width: 90%;
+    max-width: 95%;
   }
 }

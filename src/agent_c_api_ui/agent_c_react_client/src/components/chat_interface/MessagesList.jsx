@@ -84,7 +84,7 @@ const MessagesList = ({
       className
     )}>
       <ScrollArea 
-        className="flex-1 p-4 pb-3 overflow-hidden"
+        className="flex-1 p-2 pb-3 overflow-hidden"
         type="always"
         scrollHideDelay={100}
         viewportRef={viewportRef}
