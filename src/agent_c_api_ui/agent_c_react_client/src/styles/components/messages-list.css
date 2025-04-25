@@ -1,13 +1,35 @@
 /* ===== COMPONENT: MessagesList ===== */
 /* Description: Handles rendering a list of messages with automatic scrolling */
 
-/* CSS styles moved to Tailwind classes in the component */
+/* MessagesList: Container styling */
+.messages-list-container {
+  position: relative;
+  height: 100%;
+  width: 100%;
+}
 
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
+/* MessagesList: Message spacing */
+.message-item-wrapper {
+  margin-bottom: var(--spacing-4);
+}
+
+/* MessagesList: Scroll indicator */
+.scroll-indicator {
+  position: absolute;
+  bottom: 4rem;
+  right: 1rem;
+  z-index: 10;
+  transition: opacity 0.2s ease-in-out;
+}
+
+/* MessagesList: Empty state */
+.messages-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--muted-foreground);
+  padding: var(--spacing-4);
+  text-align: center;
 }
