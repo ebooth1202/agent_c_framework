@@ -5,8 +5,17 @@ import {
   CardFooter
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Send, Upload, Settings } from "lucide-react";
+import { Send, Upload, Settings, X } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "@/components/ui/tooltip";
 import { SessionContext } from '@/contexts/SessionContext';
 import { API_URL } from "@/config/config";
 import { createClipboardContent } from '@/components/chat_interface/utils/htmlChatFormatter';
@@ -471,6 +480,7 @@ const ChatInterfaceInner = ({
         {/* Options Panel - conditionally rendered between messages and input */}
         {isOptionsOpen && (
           <div className="mx-4 mb-2">
+            <Separator className="mb-2" />
             <CollapsibleOptions
               isOpen={isOptionsOpen}
               setIsOpen={setIsOptionsOpen}
@@ -490,6 +500,7 @@ const ChatInterfaceInner = ({
               onUpdateSettings={onUpdateSettings}
               isInitialized={isInitialized}
             />
+            <Separator className="mt-2" />
           </div>
         )}
         
@@ -504,52 +515,102 @@ const ChatInterfaceInner = ({
             fileInputRef={fileInputRef}
           />
           
+          {/* Display selected files as badges */}
+          {selectedFiles.length > 0 && (
+            <div className="chat-interface-selected-files">
+              <div className="flex flex-wrap gap-2">
+                {selectedFiles.map((file) => (
+                  <Badge key={file.id} variant="secondary" className="flex items-center gap-1">
+                    {file.name}
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-4 w-4 p-0 hover:bg-transparent" 
+                      onClick={() => setSelectedFiles(selectedFiles.filter(f => f.id !== file.id))}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </Badge>
+                ))}
+              </div>
+              <Separator className="mt-2" />
+            </div>
+          )}
+          
           <div className="flex gap-2 w-full">
             {/* Text input with action buttons */}
             <div className="relative flex-1">
-              <textarea
+              <Textarea
                 placeholder="Type your message..."
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={handleKeyPress}
                 disabled={isStreaming}
-                rows="2"
+                rows={2}
                 className="chat-interface-textarea"
+                aria-label="Message input"
               />
               
               {/* Settings gear icon button */}
-              <Button
-                onClick={toggleOptionsPanel}
-                variant="ghost"
-                size="icon"
-                className="chat-interface-action-button chat-interface-settings-button"
-                aria-label="Toggle options panel"
-              >
-                <Settings className="h-4 w-4" />
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={toggleOptionsPanel}
+                      variant="ghost"
+                      size="icon"
+                      className="chat-interface-action-button chat-interface-settings-button"
+                      aria-label="Toggle options panel"
+                    >
+                      <Settings className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Settings</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               
               {/* File upload button positioned inside the input area */}
-              <Button
-                onClick={() => FileUploadManager.openFilePicker(fileInputRef)}
-                variant="ghost"
-                size="icon"
-                disabled={isStreaming}
-                className="chat-interface-action-button chat-interface-upload-button"
-                aria-label="Upload file"
-              >
-                <Upload className="h-4 w-4" />
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={() => FileUploadManager.openFilePicker(fileInputRef)}
+                      variant="ghost"
+                      size="icon"
+                      disabled={isStreaming}
+                      className="chat-interface-action-button chat-interface-upload-button"
+                      aria-label="Upload file"
+                    >
+                      <Upload className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Upload file</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               
               {/* Send button */}
-              <Button
-                onClick={handleSendMessage}
-                disabled={isStreaming}
-                size="icon"
-                className="chat-interface-action-button chat-interface-send-button"
-                aria-label="Send message"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={handleSendMessage}
+                      disabled={isStreaming}
+                      size="icon"
+                      className="chat-interface-action-button chat-interface-send-button"
+                      aria-label="Send message"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Send message</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </div>
           

@@ -45,37 +45,33 @@
 /* ChatInterface: Text input */
 .chat-interface-textarea {
   width: 100%;
-  border-radius: var(--radius-xl, 12px);
-  border: 1px solid hsl(var(--border));
-  background-color: hsl(var(--background) / 0.8);
-  color: hsl(var(--foreground));
-  transition: all 150ms ease;
-  padding: 0.5rem 3rem 0.5rem 0.75rem;
+  border-radius: var(--radius, 0.5rem);
+  padding: 0.5rem 8rem 0.5rem 0.75rem;
   resize: none;
-  font-family: inherit;
-  font-size: 0.9rem;
-  line-height: 1.5;
   min-height: 3rem;
   max-height: 12rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  transition: all 150ms ease;
 }
 
-.chat-interface-textarea::placeholder {
-  color: hsl(var(--muted-foreground));
+/* ChatInterface: Selected files display */
+.chat-interface-selected-files {
+  width: 100%;
+  margin-bottom: 0.5rem;
 }
 
-.chat-interface-textarea:hover {
-  background-color: hsl(var(--background));
-}
-
-.chat-interface-textarea:focus {
-  border-color: hsl(var(--primary));
-  outline: none;
-  box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
-}
-
-.chat-interface-textarea:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
+.chat-interface-selected-files .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background-color: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius, 0.5rem);
+  margin-right: 0.25rem;
+  margin-bottom: 0.25rem;
 }
 
 /* ChatInterface: Action buttons */
