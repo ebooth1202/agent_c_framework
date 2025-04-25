@@ -1,12 +1,42 @@
 /* ===== COMPONENT: UserMessage ===== */
 /* Description: Displays messages sent by the user in the chat interface with consistent styling and copy functionality */
-/* File: src/components/chat_interface/UserMessage.jsx */
 
-/* Tailwind handles most styling, only keeping minimal custom styles */
+/* UserMessage: Container */
+.user-message-container {
+  /* Most styling handled by Tailwind classes */
+}
 
-/* To maintain any custom prose styling if needed */
-.prose .markdown-user-message > * {
+/* UserMessage: Content */
+.user-message-content {
+  /* Most styling handled by Tailwind classes */
+}
+
+/* UserMessage: Markdown content */
+.markdown-user-message > * {
   color: inherit;
 }
 
-/* Any specific overrides that can't be done with Tailwind */
+/* UserMessage: Voice message */
+.user-message-voice {
+  /* Most styling handled by Tailwind classes */
+}
+
+/* UserMessage: Files section */
+.user-message-files {
+  margin-top: 0.5rem;
+}
+
+/* UserMessage: Copy button container */
+.user-message-copy-container {
+  /* Most styling handled by Tailwind classes */
+}
+
+/* UserMessage: Copy button - opacity handled by Tailwind classes */
+.user-message-copy-button {
+  /* Most styling handled by Tailwind classes */
+}
+
+/* UserMessage: Tooltip */
+.user-message-tooltip {
+  /* Most styling handled by Tailwind classes */
+}

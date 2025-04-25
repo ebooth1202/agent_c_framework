@@ -1,7 +1,11 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import { User, Mic, FileIcon } from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import CopyButton from './CopyButton';
 import MarkdownMessage from './MarkdownMessage';
@@ -19,56 +23,85 @@ import MarkdownMessage from './MarkdownMessage';
 const UserMessage = ({ content, files, isVoiceMessage, className }) => {
   return (
     <div className={cn(
-      "flex justify-end items-start gap-2 group", 
+      "user-message-container flex justify-end items-start gap-2 group", 
       className
     )}>
       <Card className={cn(
-        "max-w-[80%] rounded-2xl rounded-br-[0.25rem] p-4",
+        "user-message-content max-w-[80%] rounded-2xl rounded-br-[0.25rem] p-4",
         "bg-primary text-primary-foreground border border-primary/20",
         "shadow-sm"
       )}>
         <CardContent className="p-0 flex justify-between items-start gap-4">
           <div className="flex-1 prose dark:prose-invert">
             {isVoiceMessage ? (
-              <div className="flex items-center gap-2">
-                <Mic className="h-4 w-4" />
+              <div className="user-message-voice flex items-center gap-2" role="status" aria-label="Voice message from user">
+                <Mic className="h-4 w-4" aria-hidden="true" />
                 <span>Voice message</span>
               </div>
             ) : (
-              <div className="markdown-user-message">
+              <div className="markdown-user-message" role="textbox" aria-readonly="true">
                 <MarkdownMessage content={content} />
               </div>
             )}
             
             {/* Display file attachments if any */}
             {files && files.length > 0 && (
-              <div className="mt-2 pt-1 border-t border-primary/20">
-                <div className="text-xs flex items-center gap-1">
-                  <FileIcon className="h-3 w-3" />
-                  <span>Files: {files.join(', ')}</span>
+              <div className="user-message-files" role="region" aria-label="Attached files">
+                <Separator className="my-2" />
+                <div className="flex flex-wrap gap-1.5 items-center">
+                  <FileIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                  {files.map((file, index) => (
+                    <Badge key={index} variant="secondary" className="text-xs">
+                      {file}
+                    </Badge>
+                  ))}
                 </div>
               </div>
             )}
           </div>
           
-          {/* Copy button that appears on hover */}
-          <CopyButton
-            content={content}
-            tooltipText="Copy message"
-            position="left"
-            variant="secondary"
-            size="xs"
-            className="mt-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-          />
+          {/* Copy button with tooltip */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="user-message-copy-container mt-1 flex-shrink-0">
+                  <CopyButton
+                    content={content}
+                    position="left"
+                    variant="secondary"
+                    size="xs"
+                    className="user-message-copy-button opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                    aria-label="Copy message content"
+                  />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="left" className="user-message-tooltip">
+                Copy message
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </CardContent>
       </Card>
-      <Avatar className="h-6 w-6 bg-transparent">
+      <Avatar className="h-6 w-6 bg-transparent" aria-label="User">
         <AvatarFallback className="bg-transparent">
-          <User className="h-4 w-4 text-primary" />
+          <User className="h-4 w-4 text-primary" aria-hidden="true" />
         </AvatarFallback>
       </Avatar>
     </div>
   );
+};
+
+UserMessage.propTypes = {
+  content: PropTypes.string.isRequired,
+  files: PropTypes.arrayOf(PropTypes.string),
+  isVoiceMessage: PropTypes.bool,
+  className: PropTypes.string
+};
+
+UserMessage.defaultProps = {
+  files: [],
+  isVoiceMessage: false,
+  className: ''
 };
 
 export default UserMessage;

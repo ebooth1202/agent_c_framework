@@ -1,10 +1,12 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import UserMessage from './UserMessage';
 import SystemMessage from './SystemMessage';
 import AssistantMessage from './AssistantMessage';
 import ThoughtDisplay from './ThoughtDisplay';
 import MediaMessage from './MediaMessage';
 import ToolCallDisplay from './ToolCallDisplay';
+import { cn } from '../../lib/utils';
 
 /**
  * MessageItem is a factory component that renders the appropriate message type
@@ -24,72 +26,138 @@ const MessageItem = ({
   expandedToolCallMessages,
   toggleToolCallExpansion
 }) => {
-  // User message
+  // Helper function to check if this message has associated tool calls
+  const getAssociatedToolCalls = () => {
+    const nextMsg = messages[index + 1];
+    if (nextMsg && nextMsg.type === 'tool_calls' && nextMsg.toolCalls?.length > 0) {
+      return nextMsg.toolCalls;
+    }
+    return [];
+  };
+
+  // Helper function to check if tool calls should be expanded
+  const isToolCallsExpanded = () => expandedToolCallMessages.includes(index);
+
+  // Render user message
   if (message.role === 'user') {
     return (
-      <UserMessage 
-        content={message.content} 
-        files={message.files} 
-        isVoiceMessage={message.isVoiceMessage} 
-      />
+      <div role="listitem" className="message-item user-message-container" aria-label="User message">
+        <UserMessage 
+          content={message.content} 
+          files={message.files} 
+          isVoiceMessage={message.isVoiceMessage} 
+        />
+      </div>
     );
   }
   
-  // Assistant text message
+  // Render assistant text message
   if (message.role === 'assistant' && message.type === 'content') {
-    // Find associated tool calls (the next message if it's a tool call)
-    const nextMsg = messages[index + 1];
-    const hasToolCalls = nextMsg && nextMsg.type === 'tool_calls' && nextMsg.toolCalls && nextMsg.toolCalls.length > 0;
-    const isToolCallsExpanded = expandedToolCallMessages.includes(index);
+    const toolCalls = getAssociatedToolCalls();
+    const hasToolCalls = toolCalls.length > 0;
     
     return (
-      <AssistantMessage
-        content={message.content}
-        vendor={message.vendor}
-        tokenUsage={message.tokenUsage}
-        toolCalls={hasToolCalls ? nextMsg.toolCalls : []}
-        isToolCallsExpanded={isToolCallsExpanded}
-        onToggleToolCalls={() => toggleToolCallExpansion(index)}
-      />
+      <div 
+        role="listitem" 
+        className="message-item assistant-message-container"
+        aria-label="Assistant message"
+      >
+        <AssistantMessage
+          content={message.content}
+          vendor={message.vendor}
+          tokenUsage={message.tokenUsage}
+          toolCalls={toolCalls}
+          isToolCallsExpanded={isToolCallsExpanded()}
+          onToggleToolCalls={() => toggleToolCallExpansion(index)}
+        />
+      </div>
     );
   }
   
-  // Tool calls
+  // Handle tool calls rendering
   if (message.type === 'tool_calls') {
-    // If the previous message is an assistant message, skip rendering as a separate component
-    // We'll display it inline with the assistant message instead
+    // Skip rendering if this is associated with a previous assistant message
     const prevMsg = messages[index - 1];
     if (prevMsg && prevMsg.role === 'assistant' && prevMsg.type === 'content') {
       return null;
     }
     
-    // Otherwise, render as usual (for standalone tool calls not attached to a message)
-    return <ToolCallDisplay toolCalls={message.toolCalls} />;
-  }
-  
-  // Thinking messages
-  if (message.role === 'assistant' && message.type === 'thinking') {
-    return <ThoughtDisplay content={message.content} vendor={message.vendor} />;
-  }
-  
-  // Media messages
-  if (message.type === 'media') {
-    return <MediaMessage message={message} />;
-  }
-  
-  // System messages
-  if (message.role === 'system') {
+    // Otherwise, render as standalone tool calls
     return (
-      <SystemMessage 
-        content={message.content} 
-        isError={message.type === 'error'} 
-        isCritical={message.critical} 
-      />
+      <div 
+        role="listitem" 
+        className="message-item tool-call-container"
+        aria-label="Tool call results"
+      >
+        <ToolCallDisplay toolCalls={message.toolCalls} />
+      </div>
     );
   }
   
-  // Default fallback
+  // Render thinking messages
+  if (message.role === 'assistant' && message.type === 'thinking') {
+    return (
+      <div 
+        role="listitem" 
+        className="message-item thinking-container"
+        aria-label="Assistant thinking process"
+      >
+        <ThoughtDisplay content={message.content} vendor={message.vendor} />
+      </div>
+    );
+  }
+  
+  // Render media messages
+  if (message.type === 'media') {
+    return (
+      <div 
+        role="listitem" 
+        className="message-item media-container"
+        aria-label="Media message"
+      >
+        <MediaMessage message={message} />
+      </div>
+    );
+  }
+  
+  // Render system messages
+  if (message.role === 'system') {
+    return (
+      <div 
+        role="listitem" 
+        className="message-item system-message-container"
+        aria-label={message.type === 'error' ? 'System error message' : 'System message'}
+      >
+        <SystemMessage 
+          content={message.content} 
+          isError={message.type === 'error'} 
+          isCritical={message.critical} 
+        />
+      </div>
+    );
+  }
+  
+  // Default fallback - render nothing
   return null;
+};
+
+// PropTypes validation for runtime type checking
+MessageItem.propTypes = {
+  message: PropTypes.shape({
+    role: PropTypes.string,
+    content: PropTypes.string,
+    type: PropTypes.string,
+    vendor: PropTypes.string,
+    tokenUsage: PropTypes.object,
+    files: PropTypes.array,
+    isVoiceMessage: PropTypes.bool,
+    toolCalls: PropTypes.array,
+    critical: PropTypes.bool
+  }).isRequired,
+  index: PropTypes.number.isRequired,
+  messages: PropTypes.array.isRequired,
+  expandedToolCallMessages: PropTypes.array.isRequired,
+  toggleToolCallExpansion: PropTypes.func.isRequired
 };
 
 export default MessageItem;
