@@ -119,7 +119,7 @@ const MediaMessage = ({message}) => {
 
     const FullscreenDialog = () => (
         <Dialog open={isFullscreen} onOpenChange={setIsFullscreen}>
-            <DialogContent className="p-0 overflow-hidden max-w-7xl">
+            <DialogContent className="p-0 overflow-hidden max-w-7xl" style={{ backgroundColor: 'var(--media-message-background)' }}>
                 <div className="media-message-fullscreen-content">
                     {message.contentType === 'image/svg+xml' ? (
                         <div

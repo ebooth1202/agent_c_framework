@@ -282,46 +282,46 @@
 }
 
 /* ===== DARK THEME OVERRIDES ===== */
-/* Dark mode theme colors - Override light mode defaults */
+/* Dark mode theme colors - Night Sky palette */
 .dark {
   /* ===== SHADCN THEME VARIABLES - Dark Mode ===== */
-  --background: 224 71% 4%;              /* Gray-950 */
+  --background: 240 35% 18%;             /* Port Gore #1d213e */
   --foreground: 0 0% 100%;               /* White */
   
-  --card: 221 39% 11%;                   /* Gray-900 */
+  --card: 242 32% 24%;                  /* Martinique #2a2e51 */
   --card-foreground: 0 0% 100%;          /* White */
   
-  --popover: 221 39% 11%;                /* Gray-900 */
-  --popover-foreground: 0 0% 100%;        /* White */
+  --popover: 242 32% 24%;               /* Martinique #2a2e51 */
+  --popover-foreground: 0 0% 100%;       /* White */
   
-  --primary: 213 94% 68%;                /* Blue-400 */
-  --primary-foreground: 224 71% 4%;       /* Gray-950 */
+  --primary: 213 94% 68%;               /* Blue-400 - keeping for consistency */
+  --primary-foreground: 240 35% 18%;     /* Port Gore #1d213e */
   
-  --secondary: 215 28% 17%;              /* Gray-800 */
-  --secondary-foreground: 214 32% 91%;    /* Gray-100 */
+  --secondary: 245 28% 33%;             /* Fiord #3d406b */
+  --secondary-foreground: 214 32% 91%;   /* Gray-100 */
   
-  --muted: 215 28% 17%;                  /* Gray-800 */
-  --muted-foreground: 217 10% 65%;        /* Gray-400 */
+  --muted: 245 28% 33%;                 /* Fiord #3d406b */
+  --muted-foreground: 217 10% 80%;       /* Lighter gray for readability */
   
-  --accent: 273 67% 39%;                 /* Purple-800 */
-  --accent-foreground: 268 100% 92%;      /* Purple-200 */
+  --accent: 242 26% 41%;                /* East Bay #4e4e83 */
+  --accent-foreground: 268 100% 92%;     /* Purple-200 */
   
-  --destructive: 0 84% 60%;              /* Red-600 */
-  --destructive-foreground: 0 0% 100%;    /* White */
+  --destructive: 0 84% 60%;             /* Red-600 */
+  --destructive-foreground: 0 0% 100%;   /* White */
   
-  --border: 217 19% 27%;                 /* Gray-700 */
-  --input: 217 19% 27%;                  /* Gray-700 */
-  --ring: 213 94% 68%;                   /* Blue-400 */
+  --border: 240 8% 52%;                 /* Mid Gray #606271 */
+  --input: 245 28% 33%;                 /* Fiord #3d406b */
+  --ring: 242 26% 41%;                  /* East Bay #4e4e83 */
 
   /* ===== SIDEBAR VARIABLES - Dark Mode ===== */
-  --sidebar-background: 221 39% 11%;      /* Gray-900 */
+  --sidebar-background: 240 35% 18%;      /* Port Gore #1d213e */
   --sidebar-foreground: 0 0% 100%;        /* White */
   --sidebar-primary: 213 94% 68%;         /* Blue-400 */
-  --sidebar-primary-foreground: 224 71% 4%; /* Gray-950 */
-  --sidebar-accent: 273 67% 39%;          /* Purple-800 */
+  --sidebar-primary-foreground: 240 35% 18%; /* Port Gore #1d213e */
+  --sidebar-accent: 242 26% 41%;          /* East Bay #4e4e83 */
   --sidebar-accent-foreground: 268 100% 92%; /* Purple-200 */
-  --sidebar-border: 217 19% 27%;          /* Gray-700 */
-  --sidebar-ring: 213 94% 68%;            /* Blue-400 */
+  --sidebar-border: 240 8% 52%;           /* Mid Gray #606271 */
+  --sidebar-ring: 242 26% 41%;            /* East Bay #4e4e83 */
   
   /* ===== MESSAGE TYPES - Dark Mode ===== */
   
@@ -352,18 +352,18 @@
   --thought-inline-code-fg: hsl(40, 80%, 85%);          /* Inline code text */
   
   /* Media Message - Dark Theme (Amber tones) */
-  --media-message-background: hsl(var(--card));        /* Card background */
-  --media-message-foreground: hsl(var(--foreground));  /* Default text */
-  --media-message-border: hsl(23, 83%, 31%);           /* Amber-800 border */
-  --media-message-hover: hsla(23, 83%, 31%, 0.2);      /* Hover state */
-  --media-message-header-background: hsl(22, 78%, 26%, 0.2); /* Amber-900/20 */
-  --media-message-header-hover: hsl(22, 78%, 26%, 0.3); /* Amber-900/30 */
-  --media-message-header-icon: hsl(43, 96%, 56%);      /* Amber-400 */
-  --media-message-header-title: hsl(46, 97%, 65%);     /* Amber-300 */
-  --media-message-action-icon: hsl(43, 96%, 56%);      /* Amber-400 */
+  --media-message-background: hsl(215, 50%, 23%);   /* Deep blue */
+  --media-message-foreground: hsl(214, 100%, 95%);  /* Light blue text */
+  --media-message-border: hsl(217, 55%, 45%);       /* Medium blue border */
+  --media-message-hover: hsla(213, 55%, 45%, 0.2);  /* Hover state */
+  --media-message-header-background: hsl(215, 35%, 30%);
+  --media-message-header-hover: hsl(215, 40%, 35%);
+  --media-message-header-icon: hsl(213, 85%, 65%);
+  --media-message-header-title: hsl(213, 85%, 65%);
+  --media-message-action-icon: hsl(213, 85%, 65%);
   --media-message-action-hover: hsl(46, 97%, 65%);     /* Amber-300 */
-  --media-message-metadata-border: hsl(22, 78%, 26%, 0.3); /* Amber-900/30 */
-  --media-message-metadata-color: hsl(43, 96%, 56%);   /* Amber-400 */
+  --media-message-metadata-border:hsl(215, 40%, 35%);
+  --media-message-metadata-color: hsl(213, 85%, 65%);
   
   /* Tool Call - Dark Theme */
   --tool-call-background: hsl(215, 30%, 22%);
@@ -375,14 +375,14 @@
   
   /* ===== STATE COLORS - Dark Mode ===== */
   --success: var(--color-green-400);
-  --success-background: var(--color-green-900);
-  --success-foreground: var(--color-gray-950);
+  --success-background: hsl(142, 40%, 20%);       /* Darker green that fits with night sky */
+  --success-foreground: var(--color-gray-100);    /* Light text for readability */
   
   --warning: var(--color-amber-400);
-  --warning-background: var(--color-amber-900);
-  --warning-foreground: var(--color-gray-950);
+  --warning-background: hsl(30, 30%, 25%);        /* Darker amber that fits with night sky */
+  --warning-foreground: var(--color-gray-100);    /* Light text for readability */
   
   --info: hsl(var(--primary));
-  --info-background: hsl(224 64% 33%);
-  --info-foreground: hsl(var(--background));
+  --info-background: hsl(242, 32%, 24%);          /* Martinique #2a2e51 */
+  --info-foreground: hsl(var(--foreground));      /* White text */
 }
