@@ -106,7 +106,7 @@
   background-color: rgba(0, 0, 0, 0.08);
   padding: 0.1em 0.3em;
   border-radius: var(--border-radius-md);
-  color: var(--theme-thought-inline-code-fg, hsl(var(--color-purple-800)));
+  color: hsl(var(--color-purple-800));
   font-family: var(--font-mono);
   font-size: 0.9em;
   display: inline-block;
@@ -114,13 +114,13 @@
 
 /* Let component-specific styles override the background and color if needed */
 .thought-display-content-light .markdown-inline-code {
-  background-color: var(--theme-thought-inline-code-bg, rgba(0, 0, 0, 0.08));
-  color: var(--theme-thought-inline-code-fg, hsl(var(--color-purple-800)));
+  background-color: rgba(0, 0, 0, 0.08);
+  color: hsl(var(--color-purple-800));
 }
 
 .thought-display-content-dark .markdown-inline-code {
-  background-color: var(--theme-thought-inline-code-bg, rgba(255, 255, 255, 0.1));
-  color: var(--theme-thought-inline-code-fg, hsl(var(--color-purple-200)));
+  background-color: rgba(255, 255, 255, 0.1);
+  color: hsl(var(--color-purple-200));
 }
 
 /* MarkdownMessage: Blockquote styling */

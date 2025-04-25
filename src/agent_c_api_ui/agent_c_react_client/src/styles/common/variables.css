@@ -88,7 +88,8 @@
   --input: 212 10% 83%;                 /* Gray-300 */
   --ring: 221 83% 53%;                  /* Blue-600 */
 
-  /* Sidebar specific variables */
+  /* ===== SIDEBAR VARIABLES - Light Mode ===== */
+  /* Sidebar-specific theme variables */
   --sidebar-background: 210 40% 98%;     /* Gray-50 */
   --sidebar-foreground: 221 39% 11%;     /* Gray-900 */
   --sidebar-primary: 221 83% 53%;        /* Blue-600 */
@@ -98,88 +99,60 @@
   --sidebar-border: 214 15% 91%;         /* Gray-200 */
   --sidebar-ring: 221 83% 53%;           /* Blue-600 */
 
-  /* Chart colors */
+  /* ===== CHART COLORS ===== */
+  /* Used for data visualization */
   --chart-1: 221 83% 53%;               /* Blue-600 */
   --chart-2: 271 81% 56%;               /* Purple-600 */
   --chart-3: 142 76% 36%;               /* Green-600 */
   --chart-4: 32 95% 44%;                /* Amber-600 */
   --chart-5: 0 84% 60%;                 /* Red-600 */
   
-  /* Border-radius */
+  /* ===== BORDER RADIUS ===== */
   --radius: 0.5rem;                    /* 8px */
 
-  /* ===== LEGACY VARIABLES FOR BACKWARDS COMPATIBILITY ===== */
-  /* These map our old theme variables to the new shadcn format */
+  /* ===== MESSAGE TYPES - Light Mode ===== */
+  /* Styling for different message types in chat */
+  --thought-background: var(--color-amber-50);
+  --thought-foreground: hsl(var(--foreground));
+  --thought-border: var(--color-amber-400);
+  --thought-inline-code-bg: var(--color-amber-100);
+  --thought-inline-code-fg: var(--color-amber-900);
   
-  /* Base theme colors - Light Mode */
-  --theme-background: hsl(var(--background));
-  --theme-foreground: hsl(var(--foreground));
+  --tool-call-background: hsl(var(--card));
+  --tool-call-border: var(--color-blue-400);
+  --tool-call-header-background: hsl(var(--secondary));
+  --tool-call-header-hover: var(--color-blue-200);
+  --tool-call-title: hsl(var(--secondary-foreground));
+  --tool-call-icon: hsl(var(--primary));
   
-  --theme-card: hsl(var(--card));
-  --theme-card-foreground: hsl(var(--card-foreground));
+  --user-message-background: hsl(var(--primary));
+  --user-message-foreground: hsl(var(--primary-foreground));
+  --user-message-border: var(--color-blue-200);
   
-  --theme-popover: hsl(var(--popover));
-  --theme-popover-foreground: hsl(var(--popover-foreground));
+  --assistant-message-background: hsl(var(--secondary));
+  --assistant-message-foreground: hsl(var(--foreground));
+  --assistant-message-border: var(--color-blue-300);
   
-  --theme-primary: hsl(var(--primary));
-  --theme-primary-foreground: hsl(var(--primary-foreground));
+  --system-message-background: hsl(var(--muted));
+  --system-message-foreground: hsl(var(--muted-foreground));
+  --system-message-border: hsl(var(--border));
   
-  --theme-secondary: hsl(var(--secondary));
-  --theme-secondary-foreground: hsl(var(--secondary-foreground));
+  /* ===== STATE COLORS - Light Mode ===== */
+  /* Colors for different states (success, warning, info) */
+  --success: var(--color-green-600);
+  --success-background: var(--color-green-100);
+  --success-foreground: hsl(0 0% 100%);
   
-  --theme-muted: hsl(var(--muted));
-  --theme-muted-foreground: hsl(var(--muted-foreground));
+  --warning: var(--color-amber-600);
+  --warning-background: var(--color-amber-100);
+  --warning-foreground: hsl(0 0% 100%);
   
-  --theme-accent: hsl(var(--accent));
-  --theme-accent-foreground: hsl(var(--accent-foreground));
+  --info: hsl(var(--primary));
+  --info-background: hsl(var(--secondary));
+  --info-foreground: hsl(var(--primary-foreground));
   
-  --theme-border: hsl(var(--border));
-  --theme-input: hsl(var(--input));
-  
-  /* State colors - Light Mode */
-  --theme-success: hsl(var(--color-green-600));
-  --theme-success-background: hsl(var(--color-green-100));
-  --theme-success-foreground: hsl(0 0% 100%);
-  
-  --theme-warning: hsl(var(--color-amber-600));
-  --theme-warning-background: hsl(var(--color-amber-100));
-  --theme-warning-foreground: hsl(0 0% 100%);
-  
-  --theme-error: hsl(var(--destructive));
-  --theme-error-background: hsl(0 84% 90%);
-  --theme-error-foreground: hsl(var(--destructive-foreground));
-  
-  --theme-info: hsl(var(--primary));
-  --theme-info-background: hsl(var(--secondary));
-  --theme-info-foreground: hsl(var(--primary-foreground));
-  
-  /* Component-specific colors - Light Mode */
-  --theme-thought-background: hsl(var(--color-amber-50));
-  --theme-thought-foreground: hsl(var(--foreground));
-  --theme-thought-border: hsl(var(--color-amber-400));
-  --theme-thought-inline-code-bg: hsl(var(--color-amber-100));
-  --theme-thought-inline-code-fg: hsl(var(--color-amber-900));
-  
-  --theme-tool-call-background: hsl(var(--card));
-  --theme-tool-call-border: hsl(var(--color-blue-400));
-  --theme-tool-call-header-background: hsl(var(--secondary));
-  --theme-tool-call-header-hover: hsl(var(--color-blue-200));
-  --theme-tool-call-title: hsl(var(--secondary-foreground));
-  --theme-tool-call-icon: hsl(var(--primary));
-  
-  --theme-user-message-background: hsl(var(--primary));
-  --theme-user-message-foreground: hsl(var(--primary-foreground));
-  --theme-user-message-border: hsl(var(--color-blue-200));
-  
-  --theme-assistant-message-background: hsl(var(--secondary));
-  --theme-assistant-message-foreground: hsl(var(--foreground));
-  --theme-assistant-message-border: hsl(var(--color-blue-300));
-  
-  --theme-system-message-background: hsl(var(--muted));
-  --theme-system-message-foreground: hsl(var(--muted-foreground));
-  --theme-system-message-border: hsl(var(--border));
-  
-  /* Typography */
+  /* ===== TYPOGRAPHY ===== */
+  /* Font families, sizes and weights */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
   --font-mono: 'JetBrains Mono', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
   
@@ -199,7 +172,8 @@
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
   
-  /* Spacing */
+  /* ===== SPACING ===== */
+  /* Consistent spacing values */
   --spacing-1: 0.25rem;  /* 4px */
   --spacing-2: 0.5rem;   /* 8px */
   --spacing-3: 0.75rem;  /* 12px */
@@ -211,7 +185,8 @@
   --spacing-12: 3rem;    /* 48px */
   --spacing-16: 4rem;    /* 64px */
   
-  /* Borders */
+  /* ===== BORDERS ===== */
+  /* Border radiuses for consistent component styling */
   --border-radius-sm: 0.125rem;  /* 2px */
   --border-radius-md: 0.375rem;  /* 6px */
   --border-radius-lg: var(--radius);  /* 8px - using shadcn radius */
@@ -224,13 +199,15 @@
   --border-width-medium: 2px;
   --border-width-thick: 3px;
   
-  /* Shadows */
+  /* ===== SHADOWS ===== */
+  /* Box shadows for elevation */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
   
-  /* Transitions */
+  /* ===== TRANSITIONS ===== */
+  /* Animation timing and easing */
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -240,7 +217,8 @@
   --transition-fade: 200ms ease-out;
   --transition-slide: 200ms cubic-bezier(0.4, 0, 0.2, 1);
   
-  /* Z-index layers */
+  /* ===== Z-INDEX LAYERS ===== */
+  /* Z-index values for consistent layering */
   --z-index-dropdown: 10;
   --z-index-sticky: 20;
   --z-index-fixed: 30;
@@ -249,7 +227,7 @@
   --z-index-popover: 60;
   --z-index-tooltip: 70;
   
-  /* Component-specific variables */
+  /* ===== COMPONENT-SPECIFIC VARIABLES ===== */
   
   /* Layout Component */
   --layout-max-width: 80rem; /* 1280px */
@@ -311,7 +289,7 @@
   --input: 217 19% 27%;                  /* Gray-700 */
   --ring: 213 94% 68%;                   /* Blue-400 */
 
-  /* Sidebar specific variables */
+  /* ===== SIDEBAR VARIABLES - Dark Mode ===== */
   --sidebar-background: 221 39% 11%;      /* Gray-900 */
   --sidebar-foreground: 0 0% 100%;        /* White */
   --sidebar-primary: 213 94% 68%;         /* Blue-400 */
@@ -321,72 +299,42 @@
   --sidebar-border: 217 19% 27%;          /* Gray-700 */
   --sidebar-ring: 213 94% 68%;            /* Blue-400 */
   
-  /* ===== LEGACY VARIABLES FOR BACKWARDS COMPATIBILITY ===== */
-  /* Base theme colors - Dark Mode */
-  --theme-background: hsl(var(--background));
-  --theme-foreground: hsl(var(--foreground));
+  /* ===== MESSAGE TYPES - Dark Mode ===== */
+  --thought-background: hsl(var(--secondary));
+  --thought-foreground: hsl(210 40% 98%);
+  --thought-border: var(--color-blue-700);
+  --thought-inline-code-bg: hsla(var(--accent), 0.3);
+  --thought-inline-code-fg: hsl(var(--accent-foreground));
   
-  --theme-card: hsl(var(--card));
-  --theme-card-foreground: hsl(var(--card-foreground));
+  --tool-call-background: hsl(var(--secondary));
+  --tool-call-border: var(--color-blue-700);
+  --tool-call-header-background: hsla(var(--color-blue-800), 0.5);
+  --tool-call-header-hover: hsla(var(--color-blue-700), 0.6);
+  --tool-call-title: hsl(var(--color-blue-300));
+  --tool-call-icon: hsl(var(--primary));
   
-  --theme-popover: hsl(var(--popover));
-  --theme-popover-foreground: hsl(var(--popover-foreground));
+  --user-message-background: hsl(var(--secondary));
+  --user-message-foreground: hsl(var(--secondary-foreground));
+  --user-message-border: var(--color-blue-700);
   
-  --theme-primary: hsl(var(--primary));
-  --theme-primary-foreground: hsl(var(--primary-foreground));
+  --assistant-message-background: hsl(var(--secondary));
+  --assistant-message-foreground: hsl(var(--secondary-foreground));
+  --assistant-message-border: hsl(var(--accent));
   
-  --theme-secondary: hsl(var(--secondary));
-  --theme-secondary-foreground: hsl(var(--secondary-foreground));
+  --system-message-background: hsl(var(--secondary));
+  --system-message-foreground: hsl(var(--secondary-foreground));
+  --system-message-border: hsl(var(--border));
   
-  --theme-muted: hsl(var(--muted));
-  --theme-muted-foreground: hsl(var(--muted-foreground));
+  /* ===== STATE COLORS - Dark Mode ===== */
+  --success: var(--color-green-400);
+  --success-background: var(--color-green-900);
+  --success-foreground: var(--color-gray-950);
   
-  --theme-accent: hsl(var(--accent));
-  --theme-accent-foreground: hsl(var(--accent-foreground));
+  --warning: var(--color-amber-400);
+  --warning-background: var(--color-amber-900);
+  --warning-foreground: var(--color-gray-950);
   
-  --theme-border: hsl(var(--border));
-  --theme-input: hsl(var(--input));
-  
-  /* State colors - Dark Mode */
-  --theme-success: hsl(var(--color-green-400));
-  --theme-success-background: hsl(var(--color-green-900));
-  --theme-success-foreground: hsl(var(--color-gray-950));
-  
-  --theme-warning: hsl(var(--color-amber-400));
-  --theme-warning-background: hsl(var(--color-amber-900));
-  --theme-warning-foreground: hsl(var(--color-gray-950));
-  
-  --theme-error: hsl(var(--destructive));
-  --theme-error-background: hsl(0 84% 20%);
-  --theme-error-foreground: hsl(var(--background));
-  
-  --theme-info: hsl(var(--primary));
-  --theme-info-background: hsl(224 64% 33%);
-  --theme-info-foreground: hsl(var(--background));
-  
-  /* Component-specific colors - Dark Mode */
-  --theme-thought-background: hsl(var(--secondary));
-  --theme-thought-foreground: hsl(210 40% 98%);
-  --theme-thought-border: hsl(var(--color-blue-700));
-  --theme-thought-inline-code-bg: hsla(var(--accent), 0.3);
-  --theme-thought-inline-code-fg: hsl(var(--accent-foreground));
-  
-  --theme-tool-call-background: hsl(var(--secondary));
-  --theme-tool-call-border: hsl(var(--color-blue-700));
-  --theme-tool-call-header-background: hsla(var(--color-blue-800), 0.5);
-  --theme-tool-call-header-hover: hsla(var(--color-blue-700), 0.6);
-  --theme-tool-call-title: hsl(var(--color-blue-300));
-  --theme-tool-call-icon: hsl(var(--primary));
-  
-  --theme-user-message-background: hsl(var(--secondary));
-  --theme-user-message-foreground: hsl(var(--secondary-foreground));
-  --theme-user-message-border: hsl(var(--color-blue-700));
-  
-  --theme-assistant-message-background: hsl(var(--secondary));
-  --theme-assistant-message-foreground: hsl(var(--secondary-foreground));
-  --theme-assistant-message-border: hsl(var(--accent));
-  
-  --theme-system-message-background: hsl(var(--secondary));
-  --theme-system-message-foreground: hsl(var(--secondary-foreground));
-  --theme-system-message-border: hsl(var(--border));
+  --info: hsl(var(--primary));
+  --info-background: hsl(224 64% 33%);
+  --info-foreground: hsl(var(--background));
 }

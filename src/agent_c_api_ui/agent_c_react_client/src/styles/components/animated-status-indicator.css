@@ -14,12 +14,29 @@
   transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1); /* transition-all duration-300 ease-in-out */
 }
 
-/* AnimatedStatusIndicator: Scale effect when processing */
+/* AnimatedStatusIndicator: Dot colors for different states */
+.status-indicator-dot-idle {
+  background-color: hsl(var(--muted-foreground));
+  transform: scale(1); /* scale-100 */
+}
+
 .status-indicator-dot-processing {
+  background-color: hsl(var(--primary));
   transform: scale(1.1); /* scale-110 */
 }
 
-.status-indicator-dot-idle {
+.status-indicator-dot-success {
+  background-color: hsl(var(--success));
+  transform: scale(1); /* scale-100 */
+}
+
+.status-indicator-dot-warning {
+  background-color: hsl(var(--warning));
+  transform: scale(1); /* scale-100 */
+}
+
+.status-indicator-dot-error {
+  background-color: hsl(var(--destructive));
   transform: scale(1); /* scale-100 */
 }
 
@@ -32,6 +49,23 @@
   animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite; /* animate-ping */
 }
 
+/* AnimatedStatusIndicator: Ping colors for different states */
+.status-indicator-ping-processing {
+  background-color: hsl(var(--primary));
+}
+
+.status-indicator-ping-success {
+  background-color: hsl(var(--success));
+}
+
+.status-indicator-ping-warning {
+  background-color: hsl(var(--warning));
+}
+
+.status-indicator-ping-error {
+  background-color: hsl(var(--destructive));
+}
+
 /* AnimatedStatusIndicator: Pulse animation effect */
 .status-indicator-pulse {
   position: absolute;
@@ -39,6 +73,23 @@
   border-radius: 9999px; /* rounded-full */
   opacity: 0.5; /* opacity-50 */
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; /* animate-pulse */
+}
+
+/* Pulse colors for different states */
+.status-indicator-pulse-processing {
+  background-color: hsl(var(--primary) / 0.3);
+}
+
+.status-indicator-pulse-success {
+  background-color: hsl(var(--success) / 0.3);
+}
+
+.status-indicator-pulse-warning {
+  background-color: hsl(var(--warning) / 0.3);
+}
+
+.status-indicator-pulse-error {
+  background-color: hsl(var(--destructive) / 0.3);
 }
 
 /* Define the ping animation if not already provided by Tailwind */
