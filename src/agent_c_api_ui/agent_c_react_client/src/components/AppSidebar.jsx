@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Settings, Database, PanelLeft } from 'lucide-react';
+import { Home, Settings, Database, PanelLeft, Menu } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -11,6 +11,7 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from './ui/sidebar';
 import { ThemeToggle } from './ui/theme-toggle';
 import { Separator } from './ui/separator';
@@ -82,10 +83,28 @@ const AppSidebar = ({ children, defaultOpen = true }) => {
         </Sidebar>
 
         <div className="sidebar-content">
+          <FloatingToggle />
           {children}
         </div>
       </div>
     </SidebarProvider>
+  );
+};
+
+// Separate component for the floating toggle to access useSidebar within SidebarProvider context
+const FloatingToggle = () => {
+  // Access the sidebar context for the toggle functionality
+  const { toggleSidebar } = useSidebar();
+  
+  return (
+    <button
+      aria-label="Open Sidebar"
+      title="Open Sidebar"
+      className="sidebar-floating-toggle"
+      onClick={toggleSidebar}
+    >
+      <Menu size={18} />
+    </button>
   );
 };
 

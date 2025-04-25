@@ -1,0 +1,49 @@
+/* ===== COMPONENT: SidebarToggle ===== */
+/* Description: Floating sidebar toggle button that remains visible when sidebar is collapsed */
+
+.sidebar-floating-toggle {
+  display: none;
+  position: fixed;
+  top: 1.25rem;
+  left: 1.25rem;
+  z-index: var(--z-index-fixed);
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius);
+  background-color: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-normal);
+}
+
+.sidebar-floating-toggle:hover {
+  background-color: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+/* Only show the floating toggle when sidebar is collapsed with offcanvas mode */
+[data-state="collapsed"][data-collapsible="offcanvas"] ~ .sidebar-content .sidebar-floating-toggle {
+  display: flex;
+}
+
+/* Dark mode specific styles */
+.dark .sidebar-floating-toggle {
+  background-color: hsl(var(--card));
+  border-color: hsl(var(--border));
+}
+
+.dark .sidebar-floating-toggle:hover {
+  background-color: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .sidebar-floating-toggle {
+    top: 0.75rem;
+    left: 0.75rem;
+  }
+}
