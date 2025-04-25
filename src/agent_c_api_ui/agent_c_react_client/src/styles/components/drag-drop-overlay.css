@@ -2,64 +2,15 @@
 /* Description: Displays a visual overlay when dragging files for upload with instructions and feedback */
 /* File: src/components/chat_interface/DragDropOverlay.jsx */
 
-/* DragDropOverlay: Main overlay container */
-.drag-drop-overlay {
-  position: absolute;
-  inset: 0;
-  background-color: hsla(var(--color-primary), 0.1); /* bg-primary/10 */
-  backdrop-filter: blur(4px); /* backdrop-blur-sm */
-  z-index: var(--z-index-modal); /* z-50 */
-  border-radius: var(--border-radius-xl); /* rounded-xl */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: var(--border-width-medium) dashed hsl(var(--color-primary)); /* border-2 border-primary border-dashed */
-}
+/* NOTE: This component has been migrated to use Tailwind CSS utilities directly in the JSX.
+   The following CSS classes have been converted to Tailwind equivalents:
+   
+   .drag-drop-overlay u2192 'absolute inset-0 bg-primary/10 dark:bg-primary/20 backdrop-blur-sm z-50 rounded-xl
+                          flex items-center justify-center border-2 border-primary border-dashed'
+   .drag-drop-overlay-content u2192 'text-center p-6 bg-background/80 dark:bg-gray-800/80 rounded-xl shadow-lg'
+   .drag-drop-overlay-icon u2192 'h-10 w-10 text-primary mx-auto mb-4'
+   .drag-drop-overlay-heading u2192 'text-lg font-semibold text-primary-900 dark:text-primary-300'
+   .drag-drop-overlay-description u2192 'text-sm text-muted-foreground mt-1'
+*/
 
-/* DragDropOverlay: Dark mode variations */
-.dark .drag-drop-overlay {
-  background-color: hsla(var(--color-primary), 0.2); /* dark:bg-primary-900/20 */
-}
-
-/* DragDropOverlay: Inner content container */
-.drag-drop-overlay-content {
-  text-align: center;
-  padding: var(--spacing-6); /* p-6 */
-  background-color: hsla(var(--color-background), 0.8); /* bg-background/80 */
-  border-radius: var(--border-radius-xl); /* rounded-xl */
-  box-shadow: var(--shadow-lg);
-}
-
-/* DragDropOverlay: Dark mode content background */
-.dark .drag-drop-overlay-content {
-  background-color: hsla(var(--color-gray-800), 0.8); /* dark:bg-gray-800/80 */
-}
-
-/* DragDropOverlay: Upload icon styling */
-.drag-drop-overlay-icon {
-  height: 2.5rem; /* h-10 */
-  width: 2.5rem; /* w-10 */
-  color: hsl(var(--color-primary)); /* text-primary */
-  margin-left: auto;
-  margin-right: auto;
-  margin-bottom: var(--spacing-4); /* mb-4 */
-}
-
-/* DragDropOverlay: Heading text */
-.drag-drop-overlay-heading {
-  font-size: var(--font-size-lg); /* text-lg */
-  font-weight: var(--font-weight-semibold); /* font-semibold */
-  color: hsl(var(--color-primary-900, var(--color-primary))); /* text-primary-900 */
-}
-
-/* DragDropOverlay: Dark mode heading */
-.dark .drag-drop-overlay-heading {
-  color: hsl(var(--color-primary-300, var(--color-primary))); /* dark:text-primary-300 */
-}
-
-/* DragDropOverlay: Description text */
-.drag-drop-overlay-description {
-  font-size: var(--font-size-sm); /* text-sm */
-  color: hsl(var(--color-gray-500)); /* text-muted-foreground */
-  margin-top: var(--spacing-1); /* mt-1 */
-}
+/* This file is kept as documentation of the migration to Tailwind. */

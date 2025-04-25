@@ -18,13 +18,18 @@ const DragDropOverlay = ({ isDraggingOver, className }) => {
   
   return (
     <div className={cn(
-      'drag-drop-overlay',
+      'absolute inset-0 bg-primary/10 dark:bg-primary/20 backdrop-blur-sm z-50 rounded-xl',
+      'flex items-center justify-center border-2 border-primary border-dashed',
       className
     )}>
-      <div className="drag-drop-overlay-content">
-        <Upload className="drag-drop-overlay-icon" />
-        <h3 className="drag-drop-overlay-heading">Drop your file here</h3>
-        <p className="drag-drop-overlay-description">Files will be uploaded and processed automatically</p>
+      <div className="text-center p-6 bg-background/80 dark:bg-gray-800/80 rounded-xl shadow-lg">
+        <Upload className="h-10 w-10 text-primary mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-primary-900 dark:text-primary-300">
+          Drop your file here
+        </h3>
+        <p className="text-sm text-muted-foreground mt-1">
+          Files will be uploaded and processed automatically
+        </p>
       </div>
     </div>
   );

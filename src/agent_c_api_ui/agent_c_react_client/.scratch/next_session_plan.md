@@ -1,66 +1,51 @@
-# Next Session Plan: Implementing MessagesList and Analyzing FilesPanel
+# Next Session Implementation Plan
 
-## Progress Update
-We've successfully analyzed the MessagesList component and created a standardized prototype. We've also fixed import path issues in the shadcn/ui sidebar component, and we've successfully implemented the standardized AppSidebar, Layout, and PageHeader components.
+## Focus Areas
 
-## Overview
-In our next session, we'll implement the standardized MessagesList component and begin analyzing the FilesPanel component, which is used to display uploaded files in the chat interface.
+1. **ChatInterface Analysis**
+   - Analyze the ChatInterface component structure
+   - Identify parts that can be standardized with shadcn/ui
+   - Create a prototype for the standardized ChatInterface
+   - Focus on how it integrates with the standardized components we've already created
 
-## Tasks
+2. **ToolSelector Analysis**
+   - Analyze the ToolSelector component
+   - Identify how it can be standardized with shadcn/ui components
+   - Create a prototype for the standardized ToolSelector
 
-### Phase 1: Implement Standardized MessagesList Component
+3. **Continuing Component Standardization**
+   - Analyze any remaining critical UI components
+   - Finalize the implementation of CSS restructuring
+   - Begin implementing standardized versions of shadcn/ui core components
 
-1. **Implement MessagesList Component**
-   - Replace the current MessagesList component with our standardized version
-   - Update the messages-list.css file with our simplified CSS
-   - Update import paths if needed
-   - Ensure proper integration with MessageItem component
+## Immediate Next Steps
 
-2. **Test Implementation**
-   - Test with different types of messages
-   - Verify scrolling and animation behavior
-   - Test in both light and dark modes
-   - Ensure responsiveness across screen sizes
+1. Begin analysis of the ChatInterface component
+2. Document findings in the component analysis document
+3. Create a prototype for the ChatInterface
+4. Analyze the ToolSelector component
+5. Create a prototype for the ToolSelector 
 
-### Phase 2: Analyze FilesPanel Component
+## Considerations
 
-1. **Analyze FilesPanel Component**
-   - Review the existing implementation and structure
-   - Identify issues with styling, component organization, and theme integration
-   - Document current functionality and limitations
-   - Create a component analysis document
+1. **ChatInterface Complexity**:
+   - ChatInterface is a complex component with many moving parts
+   - It may need to be broken down into smaller components
+   - Focus on identifying which parts can be standardized with shadcn/ui
 
-2. **Analyze Related Components**
-   - Review the FileItem component and its relationship with FilesPanel
-   - Analyze the DragDropArea and DragDropOverlay components
-   - Document dependencies and requirements
+2. **ToolSelector Integration**:
+   - Ensure it works with the standardized components we've already created
+   - Verify proper function of tool selection and display
+   - Check compatibility with the FileUploadManager
 
-### Phase 3: Create Standardized Prototype for FilesPanel
-
-1. **Create FilesPanel Prototype**
-   - Create a standardized prototype in the scratchpad
-   - Implement proper shadcn/ui components and Tailwind classes
-   - Address any issues identified during analysis
-   - Ensure proper theme integration and responsiveness
-
-2. **Create CSS for FilesPanel**
-   - Create a standardized CSS file for the component
-   - Use shadcn/ui theme variables consistently
-   - Implement responsive behavior
-   - Ensure proper styling for file items and drag-drop areas
+3. **Tailwind Migration**:
+   - Continue focusing on moving from custom CSS to Tailwind utilities
+   - Ensure proper dark mode handling with Tailwind's dark: variant
+   - Document all CSS class to Tailwind utility mappings
 
 ## Success Criteria
 
-1. MessagesList component is fully standardized and working
-2. All message types display correctly
-3. Scrolling and animation behavior works properly
-4. Theme switching works correctly with all components
-5. No regressions in existing functionality
-6. CSS is clean, organized, and follows our standards
-
-## Next Steps After This Session
-
-1. Continue analyzing and standardizing remaining UI components
-2. Continue CSS variable standardization across the application
-3. Begin work on the FilesPanel component
-4. Continue implementation of standardized versions of other analyzed components
+1. ChatInterface is thoroughly analyzed and a prototype is created
+2. ToolSelector is analyzed and a prototype is created
+3. All components still function correctly in both light and dark mode
+4. Code is more maintainable and follows shadcn/ui best practices

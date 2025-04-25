@@ -77,8 +77,8 @@ const DragDropArea = ({ children, onFileDrop, disabled = false, className }) => 
   return (
     <div 
       className={cn(
-        'drag-drop-area',
-        disabled && 'drag-drop-area-disabled',
+        'relative w-full h-full block',
+        disabled && 'pointer-events-none opacity-70',
         className
       )}
       onDragEnter={handleDragEnter}

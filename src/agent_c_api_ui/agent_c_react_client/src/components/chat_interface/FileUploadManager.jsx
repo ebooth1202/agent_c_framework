@@ -1,7 +1,9 @@
 import React, { useState, useRef, useCallback } from 'react';
-import FilesPanel from './FilesPanel';
 import { API_URL } from "@/config/config";
 import { cn } from "@/lib/utils";
+
+// Import our standardized FilesPanel
+import FilesPanel from './FilesPanel';
 
 /**
  * FileUploadManager handles all file upload functionality including selection,
@@ -265,13 +267,13 @@ const FileUploadManager = ({
   };
 
   return (
-    <div className={cn("file-upload-manager", className)}>
+    <div className={cn("flex flex-col w-full", className)}>
       {/* Hidden file input */}
       <input
         type="file"
         ref={fileInputRef}
         onChange={handleFileSelection}
-        className="file-upload-manager-input"
+        className="hidden"
       />
       
       {/* Files panel showing uploaded files */}
@@ -282,7 +284,7 @@ const FileUploadManager = ({
       
       {/* Expose component API */}
       {React.Children.only(React.createElement('div', {
-        style: { display: 'none' },
+        className: "hidden",
         'data-file-manager-api': JSON.stringify({
           isUploading,
           fileCount: uploadedFiles.length,

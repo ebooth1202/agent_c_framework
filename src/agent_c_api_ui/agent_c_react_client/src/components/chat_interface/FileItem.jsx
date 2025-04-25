@@ -1,8 +1,8 @@
 import React from 'react';
-import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "../../lib/utils";
+import { Badge } from "../ui/badge";
+import { Checkbox } from "../ui/checkbox";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 /**
  * FileItem component displays an individual file with its status and a checkbox
@@ -20,55 +20,56 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
  * @param {string} [props.className] - Additional CSS classes
  */
 const FileItem = ({ file, toggleFileSelection, className }) => {
-  // Define status-specific styles based on processing status
-  const statusStyles = {
-    pending: "file-item-pending",
-    complete: "file-item-complete",
-    failed: "file-item-failed"
+  // Status-specific text and styling
+  const statusConfig = {
+    pending: {
+      text: "Processing...",
+      variant: "secondary",
+      textColor: "text-muted-foreground"
+    },
+    complete: {
+      text: "Ready",
+      variant: "success",
+      textColor: "text-primary-foreground"
+    },
+    failed: {
+      text: "Error",
+      variant: "destructive",
+      textColor: "text-destructive-foreground"
+    }
   };
   
-  // Get the appropriate status style based on file's processing_status
-  const statusStyle = statusStyles[file.processing_status] || statusStyles.pending;
-  
-  // Define badge variants based on processing status
-  const badgeVariants = {
-    pending: "secondary",
-    complete: "success", 
-    failed: "destructive"
-  };
-  
-  // Badge text based on processing status
-  const badgeText = {
-    pending: "Processing...",
-    complete: "Ready",
-    failed: "Error"
-  };
+  // Get the current status configuration
+  const currentStatus = statusConfig[file.processing_status] || statusConfig.pending;
   
   return (
     <div 
       className={cn(
-        "file-item",
-        statusStyle,
+        "flex items-center p-2 border-b border-border transition-colors",
+        "hover:bg-muted/50",
+        file.processing_status === 'pending' && "text-muted-foreground",
+        file.processing_status === 'complete' && "text-foreground",
+        file.processing_status === 'failed' && "text-destructive",
         className
       )}
     >
-      <span className="file-item-name truncate max-w-[70%]">
+      <span className="flex-1 truncate text-sm ml-2 max-w-[70%]">
         {file.name}
       </span>
       
-      <div className="file-item-actions">
-        {/* Status badges */}
+      <div className="flex items-center gap-2">
+        {/* Status badges with appropriate styling */}
         {file.processing_status === 'pending' && (
-          <Badge variant={badgeVariants.pending} className="file-item-status-badge">
-            {badgeText.pending}
+          <Badge variant={currentStatus.variant} className="text-xs font-medium whitespace-nowrap">
+            {currentStatus.text}
           </Badge>
         )}
         
         {file.processing_status === 'failed' && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <Badge variant={badgeVariants.failed} className="file-item-status-badge">
-                {badgeText.failed}
+              <Badge variant={currentStatus.variant} className="text-xs font-medium whitespace-nowrap">
+                {currentStatus.text}
               </Badge>
             </TooltipTrigger>
             <TooltipContent>
@@ -78,8 +79,8 @@ const FileItem = ({ file, toggleFileSelection, className }) => {
         )}
         
         {file.processing_status === 'complete' && (
-          <Badge variant={badgeVariants.complete} className="file-item-status-badge">
-            {badgeText.complete}
+          <Badge variant={currentStatus.variant} className="text-xs font-medium whitespace-nowrap">
+            {currentStatus.text}
           </Badge>
         )}
         
@@ -87,7 +88,7 @@ const FileItem = ({ file, toggleFileSelection, className }) => {
         <Checkbox
           checked={file.selected}
           onCheckedChange={() => toggleFileSelection(file.id)}
-          className="file-item-checkbox"
+          className="h-4 w-4 rounded border border-input transition-colors hover:border-primary"
           id={`file-${file.id}`}
         />
       </div>
