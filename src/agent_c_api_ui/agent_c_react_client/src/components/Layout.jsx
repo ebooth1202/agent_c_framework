@@ -27,11 +27,6 @@ const Layout = ({
 
   return (
     <AppSidebar>
-      {showHeader && (
-        <PageHeader title={title}>
-          {headerActions}
-        </PageHeader>
-      )}
       <main className={cn(
         "layout-main",
         isHome ? "layout-main-home" : "layout-main-page",
