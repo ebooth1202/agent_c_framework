@@ -12,9 +12,24 @@
 /* AppSidebar: Application logo container in sidebar header */
 .sidebar-logo {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  align-items: center;
+  gap: 0.5rem;
   padding: 0.5rem;
+  text-align: left;
+}
+
+/* AppSidebar: Title that disappears when sidebar is collapsed */
+.sidebar-title {
+  transition: opacity 0.2s ease-in-out, width 0.2s ease-in-out;
+  white-space: nowrap;
+}
+
+[data-state="collapsed"] .sidebar-title {
+  opacity: 0;
+  width: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
 /* AppSidebar: Main content area that adapts to sidebar state */
@@ -26,6 +41,32 @@
   height: 100vh;
   height: 100dvh;
   overflow-x: hidden;
+  transition: margin-left 0.2s ease-in-out;
+}
+
+/* AppSidebar: Menu labels in the sidebar */
+.sidebar-menu-label {
+  transition: opacity 0.2s ease-in-out, width 0.2s ease-in-out;
+}
+
+[data-state="collapsed"] .sidebar-menu-label {
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+}
+
+/* Center icons when sidebar is collapsed */
+[data-state="collapsed"] [data-sidebar="menu-button"] {
+  justify-content: center;
+}
+
+[data-state="collapsed"] [data-sidebar="menu-button"] svg {
+  margin-right: 0;
+}
+
+/* In collapsed state, reduce margin since icons are still visible */
+[data-state="collapsed"][data-collapsible="icon"] ~ .sidebar-content {
+  margin-left: calc(var(--sidebar-width-icon) - var(--sidebar-width));
 }
 
 /* Ensure consistent header height with sidebar header */
@@ -44,5 +85,13 @@
   .sidebar-content {
     min-height: 100vh;
     height: 100vh;
+  }
+}
+
+/* Responsive adjustments for mobile */
+@media (max-width: 768px) {
+  /* On mobile, we still want the content to take full width when sidebar is collapsed */
+  [data-state="collapsed"][data-collapsible="icon"] ~ .sidebar-content {
+    margin-left: 0;
   }
 }

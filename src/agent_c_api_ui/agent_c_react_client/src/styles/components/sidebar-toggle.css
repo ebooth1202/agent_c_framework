@@ -1,49 +1,61 @@
 /* ===== COMPONENT: SidebarToggle ===== */
-/* Description: Floating sidebar toggle button that remains visible when sidebar is collapsed */
+/* Description: Styling for the sidebar toggle button */
 
-.sidebar-floating-toggle {
-  display: none;
-  position: fixed;
-  top: 1.25rem;
-  left: 1.25rem;
-  z-index: var(--z-index-fixed);
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: var(--radius);
-  background-color: hsl(var(--background));
-  border: 1px solid hsl(var(--border));
-  box-shadow: var(--shadow-md);
-  cursor: pointer;
-  align-items: center;
-  justify-content: center;
+/* We no longer need the floating toggle button in the Claude-style sidebar */
+/* since we always have the icon bar visible and the toggle is part of the sidebar */
+
+/* Customize the sidebar trigger for better visibility */
+[data-sidebar="trigger"] {
   transition: var(--transition-normal);
 }
 
-.sidebar-floating-toggle:hover {
-  background-color: hsl(var(--accent));
-  color: hsl(var(--accent-foreground));
-}
-
-/* Only show the floating toggle when sidebar is collapsed with offcanvas mode */
-[data-state="collapsed"][data-collapsible="offcanvas"] ~ .sidebar-content .sidebar-floating-toggle {
-  display: flex;
+[data-sidebar="trigger"]:hover {
+  background-color: hsl(var(--accent) / 0.1);
 }
 
 /* Dark mode specific styles */
-.dark .sidebar-floating-toggle {
-  background-color: hsl(var(--card));
-  border-color: hsl(var(--border));
+.dark [data-sidebar="trigger"]:hover {
+  background-color: hsl(var(--accent) / 0.2);
 }
 
-.dark .sidebar-floating-toggle:hover {
+/* Additional style for sidebar rail to make it more visible */
+[data-sidebar="rail"]:hover::after {
   background-color: hsl(var(--accent));
-  color: hsl(var(--accent-foreground));
 }
 
-/* Mobile adjustments */
+/* Mobile specific styles */
 @media (max-width: 768px) {
+  /* The floating toggle functionality is still needed on mobile */
   .sidebar-floating-toggle {
+    display: flex;
+    position: fixed;
     top: 0.75rem;
     left: 0.75rem;
+    z-index: var(--z-index-fixed);
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--radius);
+    background-color: hsl(var(--background));
+    border: 1px solid hsl(var(--border));
+    box-shadow: var(--shadow-md);
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-normal);
+  }
+  
+  .sidebar-floating-toggle:hover {
+    background-color: hsl(var(--accent));
+    color: hsl(var(--accent-foreground));
+  }
+  
+  .dark .sidebar-floating-toggle {
+    background-color: hsl(var(--card));
+    border-color: hsl(var(--border));
+  }
+  
+  .dark .sidebar-floating-toggle:hover {
+    background-color: hsl(var(--accent));
+    color: hsl(var(--accent-foreground));
   }
 }

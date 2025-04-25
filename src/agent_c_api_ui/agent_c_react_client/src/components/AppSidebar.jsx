@@ -25,7 +25,7 @@ import { cn } from '../lib/utils';
  * @param {boolean} [props.defaultOpen=true] - Whether the sidebar is open by default
  * @returns {JSX.Element} AppSidebar component
  */
-const AppSidebar = ({ children, defaultOpen = true }) => {
+const AppSidebar = ({ children, defaultOpen = true, collapsible = "icon" }) => {
   const location = useLocation();
 
   // Application navigation links with icons
@@ -42,13 +42,12 @@ const AppSidebar = ({ children, defaultOpen = true }) => {
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
       <div className="sidebar-layout">
-        <Sidebar>
-          <SidebarHeader className="flex items-center justify-between">
-            <div className="sidebar-logo">
-              <h2 className="text-lg font-semibold">Agent C</h2>
-              <p className="text-xs text-muted-foreground">React UI</p>
+        <Sidebar collapsible={collapsible}>
+          <SidebarHeader className="flex items-center justify-start">
+            <div className="sidebar-logo flex items-center gap-2">
+              <SidebarTrigger />
+              <h2 className="text-lg font-semibold sidebar-title">Agent C</h2>
             </div>
-            <SidebarTrigger />
           </SidebarHeader>
           
           <SidebarContent>
@@ -65,7 +64,7 @@ const AppSidebar = ({ children, defaultOpen = true }) => {
                       )}
                     >
                       {link.icon}
-                      <span>{link.label}</span>
+                      <span className="sidebar-menu-label">{link.label}</span>
                     </SidebarMenuButton>
                   </Link>
                 </SidebarMenuItem>
@@ -76,14 +75,14 @@ const AppSidebar = ({ children, defaultOpen = true }) => {
           <SidebarFooter>
             <Separator className="my-2" />
             <div className="flex items-center justify-between px-2">
-              <p className="text-xs text-muted-foreground">Agent C UI</p>
+              <p className="text-xs text-muted-foreground sidebar-title">Agent C UI</p>
               <ThemeToggle />
             </div>
           </SidebarFooter>
         </Sidebar>
 
         <div className="sidebar-content">
-          <FloatingToggle />
+          <MobileFloatingToggle />
           {children}
         </div>
       </div>
@@ -91,10 +90,12 @@ const AppSidebar = ({ children, defaultOpen = true }) => {
   );
 };
 
-// Separate component for the floating toggle to access useSidebar within SidebarProvider context
-const FloatingToggle = () => {
-  // Access the sidebar context for the toggle functionality
-  const { toggleSidebar } = useSidebar();
+// Mobile-only floating toggle that appears on small screens
+const MobileFloatingToggle = () => {
+  const { toggleSidebar, isMobile } = useSidebar();
+  
+  // Only render on mobile devices
+  if (!isMobile) return null;
   
   return (
     <button
