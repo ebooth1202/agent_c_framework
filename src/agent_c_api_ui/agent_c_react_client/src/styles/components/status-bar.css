@@ -129,9 +129,9 @@
   background: transparent !important;
   border: none !important;
   padding: 0.125rem 0.75rem; /* py-0.5 px-3 */
-  background-color: hsl(var(--primary) / 0.1) !important;
+  background-color: hsl(var(--accent) / 0.1) !important;
   border-radius: 9999px !important; /* rounded-full */
-  border: 1px solid hsl(var(--primary) / 0.2) !important;
+  border: 1px solid hsl(var(--accent) / 0.2) !important;
   transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
@@ -139,13 +139,13 @@
 .tools-icon {
   width: var(--status-bar-icon-size);
   height: var(--status-bar-icon-size);
-  color: hsl(var(--primary));
+  color: hsl(var(--accent-foreground));
 }
 
 /* StatusBar: Tools count text */
 .tools-count-text {
   font-size: var(--status-bar-font-size);
-  color: hsl(var(--primary));
+  color: hsl(var(--accent-foreground));
   white-space: nowrap;
 }
 
@@ -153,7 +153,7 @@
 .tools-info-icon {
   width: var(--status-bar-icon-size);
   height: var(--status-bar-icon-size);
-  color: hsl(var(--primary));
+  color: hsl(var(--accent-foreground));
   cursor: help;
 }
 

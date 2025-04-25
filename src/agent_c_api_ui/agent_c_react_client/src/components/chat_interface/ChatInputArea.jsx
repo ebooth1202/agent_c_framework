@@ -42,7 +42,7 @@ const ChatInputArea = ({
   const isSendDisabled = isStreaming || !inputText.trim();
   
   // Determine if send button should be active
-  const sendButtonVariant = isSendDisabled ? "secondary" : "default";
+  const sendButtonVariant = isSendDisabled ? "secondary" : "accent";
   
   return (
     <div 
