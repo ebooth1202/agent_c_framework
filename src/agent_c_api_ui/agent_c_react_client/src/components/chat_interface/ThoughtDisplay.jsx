@@ -38,11 +38,11 @@ const ThoughtDisplay = ({ content, vendor, className }) => {
                 <ModelIcon vendor={vendor} />
             </div>
             
-            <Card className="max-w-[80%] rounded-2xl shadow-md border border-primary/30 bg-primary/10 text-primary rounded-bl-sm overflow-hidden">
+            <Card className="thought-content" >
                 <CardContent className="flex justify-between items-start gap-4 p-3">
                     <div
                         ref={contentRef}
-                        className="text-sm font-mono flex-1 whitespace-pre-wrap overflow-auto max-h-[200px] min-h-[50px] scrollbar-thin scrollbar-thumb-primary/30 scrollbar-track-primary/10"
+                        className="thought-scrollable-content flex-1 scrollbar-thin scrollbar-thumb-primary/30 scrollbar-track-primary/10"
                     >
                         <div ref={markdownRef}>
                             <MarkdownMessage content={content} />
@@ -55,7 +55,7 @@ const ThoughtDisplay = ({ content, vendor, className }) => {
                         position="left"
                         variant="secondary"
                         size="xs"
-                        className="mt-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-primary hover:bg-primary/20"
+                        className="mt-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
                     />
                 </CardContent>
             </Card>

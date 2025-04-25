@@ -23,13 +23,11 @@ import MarkdownMessage from './MarkdownMessage';
 const UserMessage = ({ content, files, isVoiceMessage, className }) => {
   return (
     <div className={cn(
-      "user-message-container flex justify-end items-start gap-2 group", 
+      "user-message-container group", 
       className
     )}>
       <Card className={cn(
-        "user-message-content max-w-[80%] rounded-2xl rounded-br-[0.25rem] p-4",
-        "bg-primary text-primary-foreground border border-primary/20",
-        "shadow-sm"
+        "user-message-content"
       )}>
         <CardContent className="p-0 flex justify-between items-start gap-4">
           <div className="flex-1 prose dark:prose-invert">

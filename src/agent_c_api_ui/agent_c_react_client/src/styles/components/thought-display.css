@@ -1,7 +1,42 @@
 /* ===== COMPONENT: ThoughtDisplay ===== */
 /* Description: Component for displaying AI thinking processes in a visually distinct container */
 
+/* ThoughtDisplay: Container */
+.thought-container {
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+/* ThoughtDisplay: Main content card */
+.thought-content {
+  max-width: 80%;
+  border-radius: 0.75rem;
+  border-bottom-left-radius: 0.25rem;
+  overflow: hidden;
+  border: 1px solid var(--thought-border);
+  background-color: var(--thought-background);
+  color: var(--thought-foreground);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ThoughtDisplay: Scrollable area */
+.thought-scrollable-content {
+  max-height: 200px;
+  min-height: 50px;
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  white-space: pre-wrap;
+}
+
 /* ThoughtDisplay: Custom styles for inline code inside thought bubbles */
-.prose .markdown-inline-code {
-  @apply bg-primary/20 text-primary px-1.5 py-0.5 rounded text-[0.9em];
+.thought-container .prose .markdown-inline-code {
+  background-color: var(--thought-inline-code-bg);
+  color: var(--thought-inline-code-fg);
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.9em;
 }

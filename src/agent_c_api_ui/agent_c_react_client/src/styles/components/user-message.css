@@ -3,12 +3,22 @@
 
 /* UserMessage: Container */
 .user-message-container {
-  /* Most styling handled by Tailwind classes */
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 0.5rem;
 }
 
 /* UserMessage: Content */
 .user-message-content {
-  /* Most styling handled by Tailwind classes */
+  max-width: 80%;
+  border-radius: 0.75rem;
+  border-bottom-right-radius: 0.25rem;
+  padding: 1rem;
+  border: 1px solid var(--user-message-border);
+  background-color: var(--user-message-background);
+  color: var(--user-message-foreground);
+  box-shadow: var(--shadow-sm);
 }
 
 /* UserMessage: Markdown content */

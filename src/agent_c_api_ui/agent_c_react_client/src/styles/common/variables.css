@@ -112,30 +112,40 @@
 
   /* ===== MESSAGE TYPES - Light Mode ===== */
   /* Styling for different message types in chat */
-  --thought-background: var(--color-amber-50);
-  --thought-foreground: hsl(var(--foreground));
-  --thought-border: var(--color-amber-400);
-  --thought-inline-code-bg: var(--color-amber-100);
-  --thought-inline-code-fg: var(--color-amber-900);
   
-  --tool-call-background: hsl(var(--card));
+  /* Assistant Message - Light Theme (Blue tones) */
+  --assistant-message-background: hsl(214, 94%, 96%);  /* Soft blue */
+  --assistant-message-foreground: hsl(224, 71%, 18%);  /* Dark blue text */
+  --assistant-message-border: hsl(213, 90%, 75%);      /* Light blue border */
+  --assistant-message-hover: hsla(213, 94%, 80%, 0.1); /* Hover state */
+  
+  /* User Message - Light Theme (Green tones) */
+  --user-message-background: hsl(142, 76%, 95%);       /* Soft green */
+  --user-message-foreground: hsl(142, 72%, 16%);       /* Dark green text */
+  --user-message-border: hsl(142, 60%, 75%);           /* Light green border */
+  --user-message-hover: hsla(142, 76%, 80%, 0.1);      /* Hover state */
+  
+  /* System Message - Light Theme (Purple tones) */
+  --system-message-background: hsl(270, 100%, 98%);     /* Soft purple */
+  --system-message-foreground: hsl(273, 67%, 30%);     /* Dark purple text */
+  --system-message-border: hsl(271, 91%, 80%);         /* Light purple border */
+  --system-message-hover: hsla(270, 95%, 80%, 0.1);    /* Hover state */
+  
+  /* Thought Message - Light Theme (Amber tones) */
+  --thought-background: hsl(48, 100%, 96%);            /* Soft amber */
+  --thought-foreground: hsl(22, 78%, 26%);             /* Dark amber text */
+  --thought-border: hsl(43, 96%, 70%);                 /* Light amber border */
+  --thought-hover: hsla(48, 97%, 70%, 0.1);           /* Hover state */
+  --thought-inline-code-bg: hsl(48, 96%, 89%);         /* Inline code background */
+  --thought-inline-code-fg: hsl(22, 78%, 26%);         /* Inline code text */
+  
+  /* Tool Call - Light Theme */
+  --tool-call-background: hsl(214, 95%, 97%);
   --tool-call-border: var(--color-blue-400);
-  --tool-call-header-background: hsl(var(--secondary));
+  --tool-call-header-background: hsl(213, 97%, 92%);
   --tool-call-header-hover: var(--color-blue-200);
-  --tool-call-title: hsl(var(--secondary-foreground));
-  --tool-call-icon: hsl(var(--primary));
-  
-  --user-message-background: hsl(var(--primary));
-  --user-message-foreground: hsl(var(--primary-foreground));
-  --user-message-border: var(--color-blue-200);
-  
-  --assistant-message-background: hsl(var(--secondary));
-  --assistant-message-foreground: hsl(var(--foreground));
-  --assistant-message-border: var(--color-blue-300);
-  
-  --system-message-background: hsl(var(--muted));
-  --system-message-foreground: hsl(var(--muted-foreground));
-  --system-message-border: hsl(var(--border));
+  --tool-call-title: hsl(226, 71%, 40%);
+  --tool-call-icon: hsl(221, 83%, 53%);
   
   /* ===== STATE COLORS - Light Mode ===== */
   /* Colors for different states (success, warning, info) */
@@ -300,30 +310,40 @@
   --sidebar-ring: 213 94% 68%;            /* Blue-400 */
   
   /* ===== MESSAGE TYPES - Dark Mode ===== */
-  --thought-background: hsl(var(--secondary));
-  --thought-foreground: hsl(210 40% 98%);
-  --thought-border: var(--color-blue-700);
-  --thought-inline-code-bg: hsla(var(--accent), 0.3);
-  --thought-inline-code-fg: hsl(var(--accent-foreground));
   
-  --tool-call-background: hsl(var(--secondary));
-  --tool-call-border: var(--color-blue-700);
-  --tool-call-header-background: hsla(var(--color-blue-800), 0.5);
-  --tool-call-header-hover: hsla(var(--color-blue-700), 0.6);
-  --tool-call-title: hsl(var(--color-blue-300));
-  --tool-call-icon: hsl(var(--primary));
+  /* Assistant Message - Dark Theme (Deep blue tones) */
+  --assistant-message-background: hsl(215, 50%, 23%);   /* Deep blue */
+  --assistant-message-foreground: hsl(214, 100%, 95%);  /* Light blue text */
+  --assistant-message-border: hsl(217, 55%, 45%);       /* Medium blue border */
+  --assistant-message-hover: hsla(213, 55%, 45%, 0.2);  /* Hover state */
   
-  --user-message-background: hsl(var(--secondary));
-  --user-message-foreground: hsl(var(--secondary-foreground));
-  --user-message-border: var(--color-blue-700);
+  /* User Message - Dark Theme (Deep green tones) */
+  --user-message-background: hsl(150, 40%, 20%);        /* Deep green */
+  --user-message-foreground: hsl(140, 80%, 90%);        /* Light green text */
+  --user-message-border: hsl(145, 45%, 40%);            /* Medium green border */
+  --user-message-hover: hsla(145, 45%, 40%, 0.2);       /* Hover state */
   
-  --assistant-message-background: hsl(var(--secondary));
-  --assistant-message-foreground: hsl(var(--secondary-foreground));
-  --assistant-message-border: hsl(var(--accent));
+  /* System Message - Dark Theme (Deep purple tones) */
+  --system-message-background: hsl(270, 30%, 25%);      /* Deep purple */
+  --system-message-foreground: hsl(270, 80%, 90%);      /* Light purple text */
+  --system-message-border: hsl(270, 50%, 40%);          /* Medium purple border */
+  --system-message-hover: hsla(270, 50%, 40%, 0.2);     /* Hover state */
   
-  --system-message-background: hsl(var(--secondary));
-  --system-message-foreground: hsl(var(--secondary-foreground));
-  --system-message-border: hsl(var(--border));
+  /* Thought Message - Dark Theme (Amber tones) */
+  --thought-background: hsl(30, 30%, 20%);              /* Deep amber */
+  --thought-foreground: hsl(40, 80%, 90%);              /* Light amber text */
+  --thought-border: hsl(35, 50%, 40%);                  /* Medium amber border */
+  --thought-hover: hsla(35, 50%, 40%, 0.2);             /* Hover state */
+  --thought-inline-code-bg: hsla(30, 30%, 25%, 0.8);    /* Inline code background */
+  --thought-inline-code-fg: hsl(40, 80%, 85%);          /* Inline code text */
+  
+  /* Tool Call - Dark Theme */
+  --tool-call-background: hsl(215, 30%, 22%);
+  --tool-call-border: hsl(217, 55%, 35%);
+  --tool-call-header-background: hsl(215, 35%, 30%);
+  --tool-call-header-hover: hsl(215, 40%, 35%);
+  --tool-call-title: hsl(214, 95%, 80%);
+  --tool-call-icon: hsl(213, 85%, 65%);
   
   /* ===== STATE COLORS - Dark Mode ===== */
   --success: var(--color-green-400);

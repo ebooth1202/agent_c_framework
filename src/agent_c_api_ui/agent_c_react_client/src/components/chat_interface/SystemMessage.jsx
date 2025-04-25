@@ -30,10 +30,9 @@ const SystemMessage = ({ content, isError = false, isCritical = false, className
     >
       <MessageComponent
         className={cn(
-          "max-w-[80%] rounded-2xl shadow-sm",
           isError 
-            ? "border-destructive/50 bg-destructive/10 text-destructive dark:bg-destructive/20" 
-            : "bg-background text-foreground border-border"
+            ? "max-w-[80%] rounded-2xl shadow-sm border-destructive/50 bg-destructive/10 text-destructive dark:bg-destructive/20" 
+            : "system-message-normal"
         )}
         variant={isError ? "destructive" : "default"}
       >

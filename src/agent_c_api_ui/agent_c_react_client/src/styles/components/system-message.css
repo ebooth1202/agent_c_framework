@@ -8,6 +8,16 @@
   gap: 0.5rem;
 }
 
+/* SystemMessage: Normal message styling */
+.system-message-normal {
+  max-width: 80%;
+  border-radius: 0.75rem;
+  border: 1px solid var(--system-message-border);
+  background-color: var(--system-message-background);
+  color: var(--system-message-foreground);
+  box-shadow: var(--shadow-sm);
+}
+
 /* SystemMessage: Animation */
 .system-message-animation {
   animation: system-message-fade-in 0.3s ease-in-out;

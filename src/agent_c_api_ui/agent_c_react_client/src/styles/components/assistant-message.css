@@ -29,9 +29,9 @@
   border-radius: 0.75rem;
   box-shadow: var(--shadow-sm);
   overflow: hidden;
-  border: 1px solid var(--border);
-  background-color: var(--card);
-  color: var(--card-foreground);
+  border: 1px solid var(--assistant-message-border);
+  background-color: var(--assistant-message-background);
+  color: var(--assistant-message-foreground);
 }
 
 /* AssistantMessage: Content area */
