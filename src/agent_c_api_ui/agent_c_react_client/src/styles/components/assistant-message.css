@@ -26,12 +26,15 @@
 /* AssistantMessage: Message card */
 .assistant-message-card {
   max-width: min(90%, 1600px);
+  min-width: 300px; /* Ensure minimum width for content */
   border-radius: 0.75rem;
   box-shadow: var(--shadow-sm);
   overflow: hidden;
   border: 1px solid var(--assistant-message-border);
   background-color: var(--assistant-message-background);
   color: var(--assistant-message-foreground);
+  display: flex;
+  flex-direction: column;
 }
 
 /* AssistantMessage: Content area */
@@ -41,6 +44,9 @@
   align-items: flex-start;
   gap: 1rem;
   padding: 1rem;
+  min-width: 250px; /* Ensure content has sufficient space */
+  height: auto;
+  flex: 1;
 }
 
 .assistant-message-body {
@@ -49,17 +55,33 @@
   overflow-wrap: break-word;
   width: 100%;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start; /* Changed from space-between */
+}
+
+/* AssistantMessage: Main content area */
+.assistant-message-main-content {
+  flex-grow: 0;  /* Don't expand to fill space */
+  flex-shrink: 0; /* Don't shrink */
+  margin-bottom: 0.5rem;
 }
 
 /* AssistantMessage: Footer section */
 .assistant-message-footer {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap; /* NEVER wrap the footer */
   align-items: center;
   gap: 0.5rem;
-  margin-top: 0.5rem;
-  padding-top: 0.25rem;
+  margin-top: auto; /* Push to bottom */
+  padding-top: 0.5rem;
+  padding-bottom: 0.25rem;
   border-top: 1px solid var(--border);
+  min-height: 2.5rem; /* Ensure minimum height for controls */
+  width: 100%;
+  flex-shrink: 0; /* Prevent footer from shrinking */
+  overflow-x: auto; /* Allow horizontal scrolling if needed */
+  white-space: nowrap; /* Prevent any text wrapping */
 }
 
 /* AssistantMessage: Tool calls section */
@@ -70,6 +92,8 @@
   font-size: 0.75rem;
   padding: 0.25rem 0.5rem;
   border-radius: 9999px;
+  min-width: 110px; /* Ensure button text has enough room */
+  white-space: nowrap;
 }
 
 .assistant-message-tool-calls-arrow {
@@ -107,5 +131,19 @@
 @media (max-width: 640px) {
   .assistant-message-card {
     max-width: 95%;
+    min-width: 280px; /* Slightly smaller minimum on mobile but still adequate */
+  }
+  
+  .assistant-message-footer {
+    flex-direction: row; /* Keep row direction even on mobile */
+    align-items: center;
+    min-height: 2.5rem; /* Maintain minimum height */
+    gap: 0.5rem;
+    overflow-x: auto; /* Allow horizontal scrolling on mobile */
+  }
+  
+  /* Ensure the tool call button is properly sized on mobile */
+  .assistant-message-tool-calls-button {
+    min-width: 90px;
   }
 }

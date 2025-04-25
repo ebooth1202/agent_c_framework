@@ -46,7 +46,9 @@ const AssistantMessage = ({
         <Card className="assistant-message-card">
           <CardContent className="assistant-message-content">
             <div className="assistant-message-body">
-              <MarkdownMessage content={content} />
+              <div className="assistant-message-main-content">
+                <MarkdownMessage content={content} />
+              </div>
               
               {/* Footer with token usage and tool call info */}
               <div className="assistant-message-footer">

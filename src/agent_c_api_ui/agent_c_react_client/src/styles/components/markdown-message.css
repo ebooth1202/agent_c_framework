@@ -11,6 +11,8 @@
   /* No border by default as shadcn/ui Card provides this */
   border: none;
   position: relative;
+  align-self: flex-start; /* Don't expand to fill the entire width */
+  width: 100%;
 }
 
 /* MarkdownMessage: Markdown content wrapper */
