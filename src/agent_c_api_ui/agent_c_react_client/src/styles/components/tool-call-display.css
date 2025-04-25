@@ -12,16 +12,16 @@
   font-size: 0.75rem;
   padding: 0.25rem 0.5rem;
   border-radius: 9999px;
-  background-color: var(--muted);
-  color: var(--foreground);
-  border: 1px solid var(--border);
+  background-color: hsl(var(--muted));
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
   cursor: pointer;
   transition: background-color 0.2s;
 }
 
 .tool-call-toggle:hover {
-  background-color: var(--muted-foreground);
-  color: var(--background);
+  background-color: hsl(var(--muted-foreground));
+  color: hsl(var(--background));
 }
 
 /* Message footer with token usage and tool calls */
@@ -32,14 +32,14 @@
   gap: 0.5rem;
   margin-top: 0.5rem;
   padding-top: 0.25rem;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid hsl(var(--border));
 }
 
 /* Integrated tool call content within assistant message */
 .message-tool-calls {
   margin-top: 0.75rem;
   padding-top: 0.5rem;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid hsl(var(--border));
 }
 
 /* Custom scrollbar styling for code blocks */
@@ -49,15 +49,15 @@
 }
 
 .tool-call-code::-webkit-scrollbar-track {
-  background: var(--muted);
+  background: hsl(var(--muted));
   border-radius: 3px;
 }
 
 .tool-call-code::-webkit-scrollbar-thumb {
-  background: var(--muted-foreground);
+  background: hsl(var(--muted-foreground));
   border-radius: 3px;
 }
 
 .tool-call-code::-webkit-scrollbar-thumb:hover {
-  background: var(--primary);
+  background: hsl(var(--primary));
 }

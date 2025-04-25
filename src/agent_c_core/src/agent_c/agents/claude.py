@@ -2,6 +2,7 @@ import asyncio
 import copy
 import json
 import logging
+import threading
 from enum import Enum, auto
 
 from typing import Any, List, Union, Dict, Tuple
@@ -117,6 +118,7 @@ class ClaudeChatAgent(BaseAgent):
     async def chat(self, **kwargs) -> List[dict[str, Any]]:
         """Main method for interacting with Claude API. Split into smaller helper methods for clarity."""
         opts = await self.__interaction_setup(**kwargs)
+        client_wants_cancel: threading.Event = kwargs.get("client_wants_cancel", threading.Event())
         callback_opts = opts["callback_opts"]
         tool_chest = opts['tool_chest']
         session_manager: Union[ChatSessionManager, None] = kwargs.get("session_manager", None)
@@ -134,7 +136,8 @@ class ClaudeChatAgent(BaseAgent):
                         session_manager,
                         messages,
                         callback_opts,
-                        interaction_id
+                        interaction_id,
+                        client_wants_cancel
                     )
                     if state['complete'] and state['stop_reason'] != 'tool_use':
                         return result
@@ -163,7 +166,8 @@ class ClaudeChatAgent(BaseAgent):
 
 
     async def _handle_claude_stream(self, completion_opts, tool_chest, session_manager,
-                                   messages, callback_opts, interaction_id) -> Tuple[List[dict[str, Any]], dict[str, Any]]:
+                                    messages, callback_opts, interaction_id,
+                                    client_wants_cancel: threading.Event) -> Tuple[List[dict[str, Any]], dict[str, Any]]:
         """Handle the Claude API streaming response."""
         await self._raise_completion_start(completion_opts, **callback_opts)
 
@@ -175,6 +179,10 @@ class ClaudeChatAgent(BaseAgent):
             async for event in stream:
                 await self._process_stream_event(event, state, tool_chest, session_manager,
                                                messages, callback_opts)
+
+                if client_wants_cancel.is_set():
+                    state['complete'] = True
+                    state['stop_reason'] = "client_cancel"
 
                 # If we've reached the end of a non-tool response, return
                 if state['complete'] and state['stop_reason'] != 'tool_use':

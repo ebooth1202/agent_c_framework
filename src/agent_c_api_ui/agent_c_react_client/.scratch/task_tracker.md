@@ -81,6 +81,8 @@
 - ✅ Create CSS variable mapping
 - ✅ Create CSS variable standardization plan
 - ✅ Update color variables to use shadcn/ui theme variables
+- ✅ Update core CSS files (cards, badges, interactive)
+- ✅ Update chat interface CSS files (tool-call-display, tool-call-item)
 - □ Remove manual dark mode implementations
 
 ## Phase 3: Component Implementation (NOT STARTED)
