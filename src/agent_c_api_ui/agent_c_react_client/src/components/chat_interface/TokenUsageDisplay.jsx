@@ -35,7 +35,7 @@ const TokenUsageDisplay = ({ usage }) => {
                     aria-label={`Prompt tokens: ${prompt_tokens.toLocaleString()}`}
                 >
                     <span id="prompt-token-label">Prompt:</span>{' '}
-                    <span aria-labelledby="prompt-token-label">{prompt_tokens.toLocaleString()}</span>
+                    <span aria-labelledby="prompt-token-label" className="token-usage-value">{prompt_tokens.toLocaleString()}</span>
                 </span>
                 
                 <span className="token-usage-divider" aria-hidden="true">·</span>
@@ -45,7 +45,7 @@ const TokenUsageDisplay = ({ usage }) => {
                     aria-label={`Completion tokens: ${completion_tokens.toLocaleString()}`}
                 >
                     <span id="completion-token-label">Completion:</span>{' '}
-                    <span aria-labelledby="completion-token-label">{completion_tokens.toLocaleString()}</span>
+                    <span aria-labelledby="completion-token-label" className="token-usage-value">{completion_tokens.toLocaleString()}</span>
                 </span>
                 
                 <span className="token-usage-divider" aria-hidden="true">·</span>
@@ -55,7 +55,7 @@ const TokenUsageDisplay = ({ usage }) => {
                     aria-label={`Total tokens: ${total_tokens.toLocaleString()}`}
                 >
                     <span id="total-token-label">Total:</span>{' '}
-                    <span aria-labelledby="total-token-label">{total_tokens.toLocaleString()}</span>
+                    <span aria-labelledby="total-token-label" className="token-usage-value">{total_tokens.toLocaleString()}</span>
                 </span>
             </div>
         </div>
