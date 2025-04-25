@@ -129,11 +129,10 @@
 
 /* ChatInterface: Status bar */
 .chat-interface-status-bar {
-  margin-top: -0.25rem;
+  margin-top: 0.25rem;
   display: flex;
   justify-content: center;
   width: 100%;
-  transform: translateY(0.25rem);
 }
 
 /* ChatInterface: Options panel container */

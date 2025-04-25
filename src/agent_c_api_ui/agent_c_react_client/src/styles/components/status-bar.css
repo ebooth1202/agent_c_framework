@@ -18,12 +18,20 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--status-bar-padding-y) var(--status-bar-padding-x);
-  background-color: hsl(var(--background) / var(--status-bar-background-opacity));
-  backdrop-filter: blur(4px);
+  background-color: transparent;
+  border-top: 1px solid hsl(var(--border) / 0.3);
   border-radius: var(--radius);
-  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); /* shadow-sm */
   font-size: var(--status-bar-font-size);
   transition: padding 0.2s ease;
+  margin-top: 0.25rem;
+  position: relative;
+  z-index: 10;
+}
+
+/* Add a subtle frosted glass effect in dark mode */
+.dark .status-bar {
+  border-top-color: hsl(var(--border) / 0.4);
+  backdrop-filter: blur(3px);
 }
 
 /* StatusBar: Status section containers */

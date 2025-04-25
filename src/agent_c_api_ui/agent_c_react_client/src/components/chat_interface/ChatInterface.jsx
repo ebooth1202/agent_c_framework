@@ -4,18 +4,11 @@ import {
   CardContent,
   CardFooter
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Send, Upload, Settings, X } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { SessionContext } from '@/contexts/SessionContext';
 import { API_URL } from "@/config/config";
 import { createClipboardContent } from '@/components/chat_interface/utils/htmlChatFormatter';
@@ -26,6 +19,7 @@ import { cn } from "@/lib/utils";
 import MessagesList from './MessagesList';
 import StatusBar from './StatusBar';
 import CollapsibleOptions from './CollapsibleOptions';
+import ChatInputArea from './ChatInputArea';
 import FileUploadManager from './FileUploadManager';
 import DragDropArea from './DragDropArea';
 import { ToolCallProvider, useToolCalls } from './ToolCallContext';
@@ -72,6 +66,7 @@ const ChatInterfaceInner = ({
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [expandedToolCallMessages, setExpandedToolCallMessages] = useState([]);
   const [selectedFiles, setSelectedFiles] = useState([]);
   
@@ -173,6 +168,7 @@ const ChatInterfaceInner = ({
         content: `File uploaded: ${file.name}`,
       },
     ]);
+    setIsUploading(false);
   };
   
   /**
@@ -188,6 +184,7 @@ const ChatInterfaceInner = ({
         content: `Error uploading file: ${errorMessage}`,
       },
     ]);
+    setIsUploading(false);
   };
   
   /**
@@ -196,6 +193,21 @@ const ChatInterfaceInner = ({
    */
   const handleSelectedFilesChange = (files) => {
     setSelectedFiles(files);
+  };
+
+  /**
+   * Handles file selection from the file picker
+   */
+  const handleFileSelection = (e) => {
+    setIsUploading(true);
+    // This is a pass-through function as FileUploadManager will handle the actual file upload
+  };
+  
+  /**
+   * Opens the file picker
+   */
+  const openFilePicker = () => {
+    FileUploadManager.openFilePicker(fileInputRef);
   };
   
   /**
@@ -504,7 +516,7 @@ const ChatInterfaceInner = ({
           </div>
         )}
         
-        {/* Footer with file upload and message input */}
+        {/* Footer with file upload and chat input */}
         <CardFooter className="chat-interface-input-area flex-col space-y-3 px-4 py-3">
           {/* File management component */}
           <FileUploadManager
@@ -537,82 +549,19 @@ const ChatInterfaceInner = ({
             </div>
           )}
           
-          <div className="flex gap-2 w-full">
-            {/* Text input with action buttons */}
-            <div className="relative flex-1">
-              <Textarea
-                placeholder="Type your message..."
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyDown={handleKeyPress}
-                disabled={isStreaming}
-                rows={2}
-                className="chat-interface-textarea"
-                aria-label="Message input"
-              />
-              
-              {/* Settings gear icon button */}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      onClick={toggleOptionsPanel}
-                      variant="ghost"
-                      size="icon"
-                      className="chat-interface-action-button chat-interface-settings-button"
-                      aria-label="Toggle options panel"
-                    >
-                      <Settings className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Settings</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              
-              {/* File upload button positioned inside the input area */}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      onClick={() => FileUploadManager.openFilePicker(fileInputRef)}
-                      variant="ghost"
-                      size="icon"
-                      disabled={isStreaming}
-                      className="chat-interface-action-button chat-interface-upload-button"
-                      aria-label="Upload file"
-                    >
-                      <Upload className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Upload file</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              
-              {/* Send button */}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      onClick={handleSendMessage}
-                      disabled={isStreaming}
-                      size="icon"
-                      className="chat-interface-action-button chat-interface-send-button"
-                      aria-label="Send message"
-                    >
-                      <Send className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Send message</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          </div>
+          {/* Chat input area component */}
+          <ChatInputArea
+            inputText={inputText}
+            setInputText={setInputText}
+            isStreaming={isStreaming}
+            isUploading={isUploading}
+            handleSendMessage={handleSendMessage}
+            handleKeyPress={handleKeyPress}
+            openFilePicker={openFilePicker}
+            toggleOptionsPanel={toggleOptionsPanel}
+            fileInputRef={fileInputRef}
+            handleFileSelection={handleFileSelection}
+          />
           
           {/* StatusBar positioned just below the input */}
           <div className="chat-interface-status-bar">

@@ -189,7 +189,7 @@ StatusBar.propTypes = {
     isInitializing: PropTypes.bool,
     isProcessing: PropTypes.bool,
     sessionId: PropTypes.string,
-    settingsVersion: PropTypes.string,
+    settingsVersion: PropTypes.number,
     getChatCopyContent: PropTypes.func,
     getChatCopyHTML: PropTypes.func,
     messages: PropTypes.array,

@@ -55,9 +55,9 @@
   overflow: hidden;
 }
 
-/* Center icons when sidebar is collapsed */
+/* Left-align icons when sidebar is collapsed */
 [data-state="collapsed"] [data-sidebar="menu-button"] {
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 [data-state="collapsed"] [data-sidebar="menu-button"] svg {

@@ -65,7 +65,7 @@ const ChatInputArea = ({
       />
       
       {/* Text input with action buttons */}
-      <div className="chat-input-container relative flex w-full">
+      <div className="chat-input-container">
         <Textarea
           placeholder="Type your message..."
           value={inputText}
@@ -75,17 +75,15 @@ const ChatInputArea = ({
           rows={2}
           className={cn(
             "chat-input-textarea",
-            "pr-28 min-h-[60px] rounded-xl backdrop-blur-sm",
-            "resize-none transition-colors", 
-            "focus-visible:ring-primary focus-visible:ring-opacity-20",
-            "border-muted-foreground/20"
+            "min-h-[60px] rounded-lg",
+            "resize-none"
           )}
           aria-label="Message input"
           data-streaming={isStreaming ? "true" : "false"}
         />
         
         {/* Action buttons container */}
-        <div className="chat-input-actions absolute right-2 bottom-2 flex items-center space-x-1">
+        <div className="chat-input-actions">
           {/* Settings button with tooltip */}
           <TooltipProvider>
             <Tooltip>
@@ -94,7 +92,7 @@ const ChatInputArea = ({
                   onClick={toggleOptionsPanel}
                   variant="ghost"
                   size="icon"
-                  className="chat-input-settings-button h-8 w-8 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10"
+                  className="chat-input-settings-button"
                   aria-label="Message options"
                 >
                   <Settings className="h-4 w-4" aria-hidden="true" />
@@ -115,7 +113,7 @@ const ChatInputArea = ({
                   variant="ghost"
                   size="icon"
                   disabled={isUploadDisabled}
-                  className="chat-input-upload-button h-8 w-8 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10"
+                  className="chat-input-upload-button"
                   aria-label="Upload file"
                 >
                   <Upload className="h-4 w-4" aria-hidden="true" />
@@ -136,7 +134,7 @@ const ChatInputArea = ({
                   disabled={isSendDisabled}
                   size="icon"
                   variant={sendButtonVariant}
-                  className="chat-input-send-button h-8 w-8 rounded-full bg-primary hover:bg-primary/90"
+                  className="chat-input-send-button"
                   aria-label="Send message"
                 >
                   <Send className="h-4 w-4" aria-hidden="true" />
