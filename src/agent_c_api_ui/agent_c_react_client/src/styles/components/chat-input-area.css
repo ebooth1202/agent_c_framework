@@ -1,21 +1,75 @@
 /* ===== COMPONENT: ChatInputArea ===== */
 /* Description: Provides the user input interface for chat interactions with textarea and action buttons */
-/* File: src/components/chat_interface/ChatInputArea.jsx */
 
-/* This component now primarily uses Tailwind utility classes directly in the JSX */
-/* This CSS file only contains styles that can't be easily achieved with Tailwind */
+/* ChatInputArea: Main container */
+.chat-input-area {
+  /* Styling handled via Tailwind classes in JSX */
+}
 
-/* ChatInputArea: Custom textarea animation */
-.chat-input-area-textarea-enter {
-  transition: height 0.2s ease-in-out, opacity 0.2s ease;
+/* ChatInputArea: Input container */
+.chat-input-container {
+  /* Styling handled via Tailwind classes in JSX */
+}
+
+/* ChatInputArea: Textarea input */
+.chat-input-textarea {
+  /* Basic styling handled via Tailwind */
+  transition: height 0.2s ease-in-out, background-color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Custom styles for disabled state */
+.chat-input-textarea[disabled] {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* ChatInputArea: Textarea input during streaming */
+.chat-input-textarea[data-streaming="true"] {
+  background-color: hsl(var(--muted) / 0.3);
+  border-color: hsl(var(--border) / 0.5);
+}
+
+/* ChatInputArea: Action buttons container */
+.chat-input-actions {
+  /* Styling handled via Tailwind classes in JSX */
+}
+
+/* ChatInputArea: Individual action buttons */
+.chat-input-settings-button,
+.chat-input-upload-button,
+.chat-input-send-button {
+  /* Base styling handled via Tailwind */
+  transition: all 0.2s ease;
+}
+
+/* Button disabled states with improved visual feedback */
+.chat-input-upload-button[disabled],
+.chat-input-send-button[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Media queries for responsive adjustments */
 @media (max-width: 640px) {
-  .chat-input-area-actions {
-    flex-direction: column;
-    bottom: 0;
-    right: 0;
+  .chat-input-actions {
     padding: 0.25rem;
+    /* Keep horizontal layout but with smaller spacing */
+    gap: 0.25rem;
+  }
+  
+  .chat-input-container {
+    padding-bottom: 0.25rem;
+  }
+  
+  .chat-input-textarea {
+    padding-right: 6.5rem; /* Adjust for smaller buttons */
+    min-height: 50px;
+  }
+  
+  .chat-input-settings-button,
+  .chat-input-upload-button,
+  .chat-input-send-button {
+    height: 1.75rem;
+    width: 1.75rem;
   }
 }

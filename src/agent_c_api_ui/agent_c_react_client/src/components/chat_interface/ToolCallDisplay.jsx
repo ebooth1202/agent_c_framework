@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import PropTypes from "prop-types";
 import ToolCallItem from "./ToolCallItem";
 import { Wrench } from "lucide-react";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
@@ -26,34 +27,45 @@ const ToolCallDisplay = ({ toolCalls, className }) => {
   return (
     <Card 
       className={cn(
+        "tool-call-display",
         "border border-muted overflow-hidden",
         isOpen ? "max-w-[50%]" : "w-fit",
         "my-2 ml-8 shadow-lg",
         className
       )}
+      role="region"
+      aria-label="Tool calls"
     >
-      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Collapsible 
+        open={isOpen} 
+        onOpenChange={setIsOpen}
+      >
         <CollapsibleTrigger asChild>
-          <div className={cn(
-            "flex items-center justify-between p-4 cursor-pointer",
-            "bg-muted/50 hover:bg-muted/80 transition-colors",
-            "rounded-t-xl"
-          )}>
+          <div 
+            className={cn(
+              "tool-call-header",
+              "flex items-center justify-between p-4 cursor-pointer",
+              "bg-muted/50 hover:bg-muted/80 transition-colors",
+              "rounded-t-xl"
+            )}
+            aria-expanded={isOpen}
+            aria-controls="tool-call-content"
+          >
             <div className="flex items-center gap-3">
-              <Wrench className="h-5 w-5 text-primary" />
+              <Wrench className="h-5 w-5 text-primary" aria-hidden="true" />
               <h4 className="text-foreground font-medium">Tool Calls</h4>
               <Badge variant="outline" className="bg-muted/80 text-foreground border border-border">
                 {toolCount}
               </Badge>
             </div>
-            <span className="text-primary">
+            <span className="text-primary" aria-hidden="true">
               {isOpen ? "▲" : "▼"}
             </span>
           </div>
         </CollapsibleTrigger>
 
-        <CollapsibleContent>
-          <CardContent className="p-4 space-y-2 bg-card">
+        <CollapsibleContent id="tool-call-content">
+          <CardContent className="tool-call-content p-4 space-y-2 bg-card">
             {validTools.map((toolCall, idx) => (
               <ToolCallItem
                 key={toolCall.id || idx}
@@ -70,6 +82,23 @@ const ToolCallDisplay = ({ toolCalls, className }) => {
       </Collapsible>
     </Card>
   );
+};
+
+ToolCallDisplay.propTypes = {
+  toolCalls: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string,
+      tool_call_id: PropTypes.string,
+      name: PropTypes.string,
+      function: PropTypes.shape({
+        name: PropTypes.string,
+        arguments: PropTypes.oneOfType([PropTypes.string, PropTypes.object])
+      }),
+      arguments: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
+      results: PropTypes.any
+    })
+  ),
+  className: PropTypes.string
 };
 
 export default ToolCallDisplay;

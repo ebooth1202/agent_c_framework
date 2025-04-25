@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import PropTypes from 'prop-types';
 import { PocketKnife, ChevronDown } from 'lucide-react';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import CopyButton from './CopyButton';
 
@@ -15,11 +17,16 @@ function formatData(data) {
 
   try {
     if (typeof data === "string") {
-      const parsed = JSON.parse(data);
-      return JSON.stringify(parsed, null, 2);
+      // Check if it looks like JSON before trying to parse
+      if (data.trim().startsWith('{') || data.trim().startsWith('[')) {
+        const parsed = JSON.parse(data);
+        return JSON.stringify(parsed, null, 2);
+      }
+      return data;
     }
     return JSON.stringify(data, null, 2);
   } catch (e) {
+    // If JSON parsing fails, return as string
     return String(data);
   }
 }
@@ -40,49 +47,57 @@ const ToolCallItem = ({ tool, results, integrated = false, className }) => {
 
   const formattedArguments = tool.arguments ? formatData(tool.arguments) : "";
   const formattedResults = results ? formatData(results) : "";
+  
+  // Generate unique IDs for ARIA relationships
+  const contentId = `tool-call-content-${tool.id || Math.random().toString(36).substr(2, 9)}`;
 
   // Determine styling based on integrated mode
   const cardStyles = integrated 
-    ? "bg-transparent mb-2 overflow-hidden" 
-    : "border border-primary/20 rounded-lg mb-2 overflow-hidden shadow-sm";
+    ? "tool-call-item tool-call-item-integrated bg-transparent mb-2 overflow-hidden" 
+    : "tool-call-item border border-primary/20 rounded-lg mb-2 overflow-hidden shadow-sm";
     
   const headerStyles = integrated
-    ? "bg-muted/40 hover:bg-muted/60 border border-border rounded-md"
-    : "bg-primary/5 hover:bg-primary/10 rounded-lg";
+    ? "tool-call-item-header bg-muted/40 hover:bg-muted/60 border border-border rounded-md"
+    : "tool-call-item-header bg-primary/5 hover:bg-primary/10 rounded-lg";
     
   const contentStyles = integrated
-    ? "bg-muted/20 rounded-b-md border border-t-0 border-border p-3"
-    : "border-t border-primary/20 bg-card p-4 rounded-b-lg";
+    ? "tool-call-item-content bg-muted/20 rounded-b-md border border-t-0 border-border p-3"
+    : "tool-call-item-content border-t border-primary/20 bg-card p-4 rounded-b-lg";
     
-  const codeStyles = integrated
-    ? "bg-card border border-border text-card-foreground p-2 rounded-md text-sm font-mono whitespace-pre-wrap overflow-x-auto max-w-full tool-call-code"
-    : "bg-primary/5 p-2 rounded-md text-sm font-mono whitespace-pre-wrap overflow-x-auto max-w-full tool-call-code";
+  const codeStyles = "tool-call-code bg-muted/50 p-2 rounded-md text-sm font-mono whitespace-pre-wrap overflow-x-auto max-w-full border border-border";
     
   const sectionTitleStyles = "text-sm font-semibold text-primary";
-  const iconStyles = "h-5 w-5 text-primary";
 
   return (
-    <Card className={cn(cardStyles, className)}>
+    <Card 
+      className={cn(cardStyles, className)}
+      role="region"
+      aria-label={`Tool call: ${tool.name}`}
+    >
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <CollapsibleTrigger asChild>
           <div className={cn(
-            "flex items-center justify-between p-3 cursor-pointer transition-colors",
-            headerStyles
-          )}>
+            headerStyles,
+            "flex items-center justify-between p-3 cursor-pointer transition-colors"
+          )}
+          aria-expanded={isOpen}
+          aria-controls={contentId}
+          >
             <div className="flex items-center gap-2">
-              <PocketKnife className={iconStyles} />
+              <PocketKnife className="h-5 w-5 text-primary" aria-hidden="true" />
               <span className="font-medium text-foreground">
                 {tool.name}
               </span>
             </div>
             <div className="flex items-center gap-1">
               {/* Copy entire tool call including arguments and results */}
-              <div onClick={(e) => e.stopPropagation()}>
+              <div onClick={(e) => e.stopPropagation()} aria-label="Copy tool call data">
                 <CopyButton
                   content={() => {
                     const toolData = {
                       name: tool.name,
-                      arguments: tool.arguments ? JSON.parse(typeof tool.arguments === 'string' ? tool.arguments : JSON.stringify(tool.arguments)) : {},
+                      arguments: tool.arguments ? (typeof tool.arguments === 'string' && tool.arguments.trim().startsWith('{') ? 
+                        JSON.parse(tool.arguments) : tool.arguments) : {},
                       results: results
                     };
                     return JSON.stringify(toolData, null, 2);
@@ -98,16 +113,17 @@ const ToolCallItem = ({ tool, results, integrated = false, className }) => {
                   "h-4 w-4 text-primary transition-transform",
                   isOpen && "rotate-180"
                 )}
+                aria-hidden="true"
               />
             </div>
           </div>
         </CollapsibleTrigger>
 
-        <CollapsibleContent>
+        <CollapsibleContent id={contentId}>
           <CardContent className={cn(contentStyles, "p-0")}>
             {formattedArguments && (
-              <div className="mt-2">
-                <div className="flex justify-between items-center mb-1">
+              <div className="tool-call-item-section mt-2">
+                <div className="tool-call-item-section-header flex justify-between items-center mb-1">
                   <h5 className={sectionTitleStyles}>Arguments:</h5>
                   <CopyButton
                     content={formattedArguments}
@@ -124,8 +140,8 @@ const ToolCallItem = ({ tool, results, integrated = false, className }) => {
             )}
 
             {formattedResults && (
-              <div className="mt-2">
-                <div className="flex justify-between items-center mb-1">
+              <div className="tool-call-item-section mt-2">
+                <div className="tool-call-item-section-header flex justify-between items-center mb-1">
                   <h5 className={sectionTitleStyles}>Results:</h5>
                   <CopyButton
                     content={formattedResults}
@@ -145,6 +161,21 @@ const ToolCallItem = ({ tool, results, integrated = false, className }) => {
       </Collapsible>
     </Card>
   );
+};
+
+ToolCallItem.propTypes = {
+  tool: PropTypes.shape({
+    name: PropTypes.string.isRequired,
+    arguments: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
+    id: PropTypes.string
+  }).isRequired,
+  results: PropTypes.any,
+  integrated: PropTypes.bool,
+  className: PropTypes.string
+};
+
+ToolCallItem.defaultProps = {
+  integrated: false
 };
 
 export default ToolCallItem;

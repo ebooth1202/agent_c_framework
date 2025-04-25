@@ -1,8 +1,21 @@
 /* ===== COMPONENT: ToolCallDisplay ===== */
 /* Description: Displays tool calls made by the AI, with collapsible sections for viewing tool parameters and results */
 
-/* Minimal CSS is needed as most styling is handled through Tailwind classes */
-/* This file contains only styles that cannot be easily expressed with Tailwind */
+/* ToolCallDisplay: Main container */
+.tool-call-display {
+  /* Base styling provided by shadcn Card component */
+  /* Custom positioning and sizing handled via Tailwind */
+}
+
+/* ToolCallDisplay: Header section */
+.tool-call-header {
+  /* Styling handled via Tailwind classes */
+}
+
+/* ToolCallDisplay: Content area */
+.tool-call-content {
+  /* Base styling provided by shadcn CardContent */
+}
 
 /* ToolCallDisplay: Tool call toggle button in message footer */
 .tool-call-toggle {
@@ -42,7 +55,7 @@
   border-top: 1px solid hsl(var(--border));
 }
 
-/* Custom scrollbar styling for code blocks */
+/* Custom scrollbar styling for code blocks - moved from ToolCallItem */
 .tool-call-code::-webkit-scrollbar {
   height: 6px;
   width: 6px;
@@ -60,4 +73,12 @@
 
 .tool-call-code::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--primary));
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .tool-call-display {
+    max-width: 90% !important;
+    margin-left: 0.5rem !important;
+  }
 }
