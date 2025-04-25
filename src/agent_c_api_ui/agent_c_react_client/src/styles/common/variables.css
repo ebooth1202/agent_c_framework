@@ -139,6 +139,20 @@
   --thought-inline-code-bg: hsl(48, 96%, 89%);         /* Inline code background */
   --thought-inline-code-fg: hsl(22, 78%, 26%);         /* Inline code text */
   
+  /* Media Message - Light Theme (Amber tones) */
+  --media-message-background: hsl(var(--card));        /* Card background */
+  --media-message-foreground: hsl(var(--foreground));  /* Default text */
+  --media-message-border: hsl(48, 97%, 77%);           /* Amber-200 border */
+  --media-message-hover: hsla(48, 97%, 77%, 0.1);      /* Hover state */
+  --media-message-header-background: hsl(48, 100%, 96%, 0.8); /* Amber-50/80 */
+  --media-message-header-hover: hsl(48, 96%, 89%, 0.9); /* Amber-100/90 */
+  --media-message-header-icon: hsl(32, 95%, 44%);      /* Amber-600 */
+  --media-message-header-title: hsl(23, 83%, 31%);     /* Amber-800 */
+  --media-message-action-icon: hsl(32, 95%, 44%);      /* Amber-600 */
+  --media-message-action-hover: hsl(23, 83%, 31%);     /* Amber-800 */
+  --media-message-metadata-border: hsl(48, 96%, 89%);  /* Amber-100 */
+  --media-message-metadata-color: hsl(32, 95%, 44%);   /* Amber-600 */
+  
   /* Tool Call - Light Theme */
   --tool-call-background: hsl(214, 95%, 97%);
   --tool-call-border: var(--color-blue-400);
@@ -336,6 +350,20 @@
   --thought-hover: hsla(35, 50%, 40%, 0.2);             /* Hover state */
   --thought-inline-code-bg: hsla(30, 30%, 25%, 0.8);    /* Inline code background */
   --thought-inline-code-fg: hsl(40, 80%, 85%);          /* Inline code text */
+  
+  /* Media Message - Dark Theme (Amber tones) */
+  --media-message-background: hsl(var(--card));        /* Card background */
+  --media-message-foreground: hsl(var(--foreground));  /* Default text */
+  --media-message-border: hsl(23, 83%, 31%);           /* Amber-800 border */
+  --media-message-hover: hsla(23, 83%, 31%, 0.2);      /* Hover state */
+  --media-message-header-background: hsl(22, 78%, 26%, 0.2); /* Amber-900/20 */
+  --media-message-header-hover: hsl(22, 78%, 26%, 0.3); /* Amber-900/30 */
+  --media-message-header-icon: hsl(43, 96%, 56%);      /* Amber-400 */
+  --media-message-header-title: hsl(46, 97%, 65%);     /* Amber-300 */
+  --media-message-action-icon: hsl(43, 96%, 56%);      /* Amber-400 */
+  --media-message-action-hover: hsl(46, 97%, 65%);     /* Amber-300 */
+  --media-message-metadata-border: hsl(22, 78%, 26%, 0.3); /* Amber-900/30 */
+  --media-message-metadata-color: hsl(43, 96%, 56%);   /* Amber-400 */
   
   /* Tool Call - Dark Theme */
   --tool-call-background: hsl(215, 30%, 22%);
