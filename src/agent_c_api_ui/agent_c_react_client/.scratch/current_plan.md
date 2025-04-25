@@ -35,6 +35,8 @@
    - u2705 Fix core shadcn/ui components (ScrollArea, ThemeToggle)
    - u2705 Fix CSS import structure
    - u2705 Create CSS variable mapping between custom and shadcn/ui variables
+   - u2705 Create CSS variable standardization plan
+   - u25a1 Update variables.css with shadcn/ui variable structure
    - u25a1 Standardize badge styling across components
 
 3. **Component Implementation Standards**
@@ -44,36 +46,57 @@
 
 ## Next Immediate Steps
 
-1. ✅ Implement the standardized AppSidebar component
-2. ✅ Implement the standardized Layout component
-3. ✅ Implement the standardized PageHeader component
-4. ✅ Fix import paths for shadcn/ui components
-5. ✅ Analyze MessagesList component
-6. ✅ Create standardized prototype for MessagesList
-7. ✅ Implement standardized version of MessagesList
-8. ✅ Analyze FilesPanel component
-9. ✅ Create standardized prototype for FilesPanel and FileItem
-10. ✅ Implement standardized version of FilesPanel and FileItem (TESTED & VERIFIED)
-11. ✅ Analyze DragDropArea component
-12. ✅ Analyze DragDropOverlay component
-13. ✅ Create standardized prototype for DragDropArea component
-14. ✅ Create standardized prototype for DragDropOverlay component
-15. ✅ Implement standardized version of DragDropArea component
-16. ✅ Implement standardized version of DragDropOverlay component
-17. ✅ Analyze FileUploadManager component
-18. ✅ Create standardized prototype for FileUploadManager component
-19. ✅ Implement standardized version of FileUploadManager component
-20. ✅ Analyze ChatInterface component
-21. ✅ Create standardized prototype for ChatInterface component
-22. ✅ Implement standardized version of ChatInterface component
-23. ✅ Analyze ToolSelector component
-24. ✅ Create standardized prototype for ToolSelector component
-25. ✅ Implement standardized version of ToolSelector component
-26. ✅ Analyze core shadcn/ui components (Checkbox, Select, Tabs, Toast, Tooltip)
-27. ✅ Create standardization guide for core shadcn/ui components
-28. □ Standardize badge styling across components
-29. □ Update CSS variables to use shadcn/ui theme variables
-30. □ Remove manual dark mode implementations
+1. u2705 Implement the standardized AppSidebar component
+2. u2705 Implement the standardized Layout component
+3. u2705 Implement the standardized PageHeader component
+4. u2705 Fix import paths for shadcn/ui components
+5. u2705 Analyze MessagesList component
+6. u2705 Create standardized prototype for MessagesList
+7. u2705 Implement standardized version of MessagesList
+8. u2705 Analyze FilesPanel component
+9. u2705 Create standardized prototype for FilesPanel and FileItem
+10. u2705 Implement standardized version of FilesPanel and FileItem (TESTED & VERIFIED)
+11. u2705 Analyze DragDropArea component
+12. u2705 Analyze DragDropOverlay component
+13. u2705 Create standardized prototype for DragDropArea component
+14. u2705 Create standardized prototype for DragDropOverlay component
+15. u2705 Implement standardized version of DragDropArea component
+16. u2705 Implement standardized version of DragDropOverlay component
+17. u2705 Analyze FileUploadManager component
+18. u2705 Create standardized prototype for FileUploadManager component
+19. u2705 Implement standardized version of FileUploadManager component
+20. u2705 Analyze ChatInterface component
+21. u2705 Create standardized prototype for ChatInterface component
+22. u2705 Implement standardized version of ChatInterface component (TESTED & VERIFIED)
+23. u2705 Analyze ToolSelector component
+24. u2705 Create standardized prototype for ToolSelector component
+25. u2705 Implement standardized version of ToolSelector component (TESTED & VERIFIED)
+26. u2705 Analyze core shadcn/ui components (Checkbox, Select, Tabs, Toast, Tooltip)
+27. u2705 Create standardization guide for core shadcn/ui components
+28. u25a1 Update variables.css with shadcn/ui variable structure
+29. u25a1 Update batch 1 component CSS files to use new variables
+30. u25a1 Standardize badge styling across components
+31. u25a1 Remove manual dark mode implementations
+
+## CSS Variable Standardization Plan
+
+### Phase 1: Update Root Variables
+
+1. u25a1 Update variables.css with shadcn/ui variable structure
+2. u25a1 Add translation layer for backward compatibility
+3. u25a1 Test theme switching
+
+### Phase 2: Update Component CSS Files
+
+1. u25a1 Update batch 1 components (layout.css, card.css, badge.css, button.css)
+2. u25a1 Update batch 2 components (chat interface components)
+3. u25a1 Update batch 3 components (file handling components)
+4. u25a1 Update batch 4 components (remaining components)
+
+### Phase 3: Cleanup and Verification
+
+1. u25a1 Remove backward compatibility layer
+2. u25a1 Final testing in both light and dark modes
 
 ## Key Findings So Far
 
