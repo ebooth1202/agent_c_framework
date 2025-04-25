@@ -64,10 +64,7 @@
   margin-right: 0;
 }
 
-/* In collapsed state, reduce margin since icons are still visible */
-[data-state="collapsed"][data-collapsible="icon"] ~ .sidebar-content {
-  margin-left: calc(var(--sidebar-width-icon) - var(--sidebar-width));
-}
+
 
 /* Ensure consistent header height with sidebar header */
 .page-header {
@@ -77,6 +74,16 @@
   padding: 0 1.5rem;
   border-bottom: 1px solid hsl(var(--border));
   background-color: hsl(var(--background));
+}
+
+/* AppSidebar: Theme toggle container that hides when sidebar is collapsed */
+.theme-toggle-container {
+  transition: opacity 0.2s ease-in-out;
+}
+
+[data-state="collapsed"] .theme-toggle-container {
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* For screens that might not have a dvh unit */

@@ -81,6 +81,7 @@ const StatusBar = ({
             className={cn("status-bar", className)} 
             role="status" 
             aria-live="polite"
+            style={{ padding: '0.125rem 0.5rem' /* Inline override for more compact size */ }}
         >
             <div className="status-bar-section" aria-label="System status information">
                 <div className="status-indicator-section">

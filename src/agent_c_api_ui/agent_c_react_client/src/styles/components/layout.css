@@ -13,6 +13,7 @@
   padding: 1.5rem;
   color: hsl(var(--foreground));
   background-color: hsl(var(--background));
+  transition: all 0.2s ease-in-out;
 }
 
 /* Layout: Main content area for home page (full height) */

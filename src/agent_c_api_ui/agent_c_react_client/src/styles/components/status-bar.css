@@ -4,11 +4,11 @@
 /* StatusBar: Variables */
 :root {
   --status-bar-padding-x: 0.5rem;
-  --status-bar-padding-y: 0.25rem;
+  --status-bar-padding-y: 0.125rem; /* Reduced padding */
   --status-bar-icon-size: 0.75rem;
   --status-bar-font-size: 0.75rem;
-  --status-bar-gap-small: 0.5rem;
-  --status-bar-gap-large: 1rem;
+  --status-bar-gap-small: 0.375rem; /* Reduced gap */
+  --status-bar-gap-large: 0.75rem; /* Reduced gap */
   --status-bar-background-opacity: 0.95;
 }
 
@@ -17,13 +17,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--status-bar-padding-y) var(--status-bar-padding-x);
+  padding: 0.125rem var(--status-bar-padding-x); /* Reduced vertical padding */
   background-color: transparent;
   border-top: 1px solid hsl(var(--border) / 0.3);
   border-radius: var(--radius);
   font-size: var(--status-bar-font-size);
   transition: padding 0.2s ease;
-  margin-top: 0.25rem;
+  margin-top: 0; /* Removed margin */
   position: relative;
   z-index: 10;
 }

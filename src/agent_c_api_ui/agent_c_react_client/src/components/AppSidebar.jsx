@@ -76,7 +76,9 @@ const AppSidebar = ({ children, defaultOpen = true, collapsible = "icon" }) => {
             <Separator className="my-2" />
             <div className="flex items-center justify-between px-2">
               <p className="text-xs text-muted-foreground sidebar-title">Agent C UI</p>
-              <ThemeToggle />
+              <div className="theme-toggle-container">
+                <ThemeToggle />
+              </div>
             </div>
           </SidebarFooter>
         </Sidebar>
