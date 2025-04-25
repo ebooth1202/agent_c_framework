@@ -282,46 +282,46 @@
 }
 
 /* ===== DARK THEME OVERRIDES ===== */
-/* Dark mode theme colors - Night Sky palette */
+/* Dark mode theme colors - Cold Autumn Forest Grunge palette */
 .dark {
   /* ===== SHADCN THEME VARIABLES - Dark Mode ===== */
-  --background: 240 35% 18%;             /* Port Gore #1d213e */
+  --background: 41 20% 9%;               /* Rangoon #1a1914 */
   --foreground: 0 0% 100%;               /* White */
   
-  --card: 242 32% 24%;                  /* Martinique #2a2e51 */
+  --card: 42 10% 13%;                   /* Rangitoto #25241e */
   --card-foreground: 0 0% 100%;          /* White */
   
-  --popover: 242 32% 24%;               /* Martinique #2a2e51 */
+  --popover: 42 10% 13%;                /* Rangitoto #25241e */
   --popover-foreground: 0 0% 100%;       /* White */
   
   --primary: 213 94% 68%;               /* Blue-400 - keeping for consistency */
-  --primary-foreground: 240 35% 18%;     /* Port Gore #1d213e */
+  --primary-foreground: 41 20% 9%;       /* Rangoon #1a1914 */
   
-  --secondary: 245 28% 33%;             /* Fiord #3d406b */
+  --secondary: 81 8% 19%;               /* Heavy Metal #32352e */
   --secondary-foreground: 214 32% 91%;   /* Gray-100 */
   
-  --muted: 245 28% 33%;                 /* Fiord #3d406b */
+  --muted: 81 8% 19%;                   /* Heavy Metal #32352e */
   --muted-foreground: 217 10% 80%;       /* Lighter gray for readability */
   
-  --accent: 242 26% 41%;                /* East Bay #4e4e83 */
-  --accent-foreground: 268 100% 92%;     /* Purple-200 */
+  --accent: 60 18% 22%;                 /* Kelp #44442f */
+  --accent-foreground: 60 80% 90%;       /* Light olive */
   
   --destructive: 0 84% 60%;             /* Red-600 */
   --destructive-foreground: 0 0% 100%;   /* White */
   
-  --border: 240 8% 52%;                 /* Mid Gray #606271 */
-  --input: 245 28% 33%;                 /* Fiord #3d406b */
-  --ring: 242 26% 41%;                  /* East Bay #4e4e83 */
+  --border: 220 6% 27%;                 /* Mako #3f4146 - slightly darker */
+  --input: 81 8% 19%;                   /* Heavy Metal #32352e */
+  --ring: 60 18% 22%;                   /* Kelp #44442f */
 
   /* ===== SIDEBAR VARIABLES - Dark Mode ===== */
-  --sidebar-background: 240 35% 18%;      /* Port Gore #1d213e */
+  --sidebar-background: 41 20% 9%;        /* Rangoon #1a1914 */
   --sidebar-foreground: 0 0% 100%;        /* White */
   --sidebar-primary: 213 94% 68%;         /* Blue-400 */
-  --sidebar-primary-foreground: 240 35% 18%; /* Port Gore #1d213e */
-  --sidebar-accent: 242 26% 41%;          /* East Bay #4e4e83 */
-  --sidebar-accent-foreground: 268 100% 92%; /* Purple-200 */
-  --sidebar-border: 240 8% 52%;           /* Mid Gray #606271 */
-  --sidebar-ring: 242 26% 41%;            /* East Bay #4e4e83 */
+  --sidebar-primary-foreground: 41 20% 9%; /* Rangoon #1a1914 */
+  --sidebar-accent: 60 18% 22%;           /* Kelp #44442f */
+  --sidebar-accent-foreground: 60 80% 90%; /* Light olive */
+  --sidebar-border: 220 6% 27%;           /* Mako #3f4146 - slightly darker */
+  --sidebar-ring: 60 18% 22%;             /* Kelp #44442f */
   
   /* ===== MESSAGE TYPES - Dark Mode ===== */
   
@@ -352,18 +352,18 @@
   --thought-inline-code-fg: hsl(40, 80%, 85%);          /* Inline code text */
   
   /* Media Message - Dark Theme (Amber tones) */
-  --media-message-background: hsl(215, 50%, 23%);   /* Deep blue */
-  --media-message-foreground: hsl(214, 100%, 95%);  /* Light blue text */
-  --media-message-border: hsl(217, 55%, 45%);       /* Medium blue border */
-  --media-message-hover: hsla(213, 55%, 45%, 0.2);  /* Hover state */
-  --media-message-header-background: hsl(215, 35%, 30%);
-  --media-message-header-hover: hsl(215, 40%, 35%);
-  --media-message-header-icon: hsl(213, 85%, 65%);
-  --media-message-header-title: hsl(213, 85%, 65%);
-  --media-message-action-icon: hsl(213, 85%, 65%);
-  --media-message-action-hover: hsl(46, 97%, 65%);     /* Amber-300 */
-  --media-message-metadata-border:hsl(215, 40%, 35%);
-  --media-message-metadata-color: hsl(213, 85%, 65%);
+  --media-message-background: hsl(30, 30%, 20%);           /* Deep amber background */
+  --media-message-foreground: hsl(40, 80%, 90%);           /* Light amber text */
+  --media-message-border: hsl(35, 50%, 40%);               /* Medium amber border */
+  --media-message-hover: hsla(35, 50%, 40%, 0.2);          /* Hover state */
+  --media-message-header-background: hsl(30, 30%, 25%, 0.8); /* Transparent amber */
+  --media-message-header-hover: hsl(30, 35%, 30%, 0.9);    /* Hover state */
+  --media-message-header-icon: hsl(43, 96%, 56%);          /* Amber-400 */
+  --media-message-header-title: hsl(40, 80%, 75%);         /* Light amber text */
+  --media-message-action-icon: hsl(43, 96%, 56%);          /* Amber-400 */
+  --media-message-action-hover: hsl(40, 80%, 65%);         /* Light amber hover */
+  --media-message-metadata-border: hsl(30, 35%, 30%);      /* Darker amber */
+  --media-message-metadata-color: hsl(40, 80%, 75%);       /* Light amber text */
   
   /* Tool Call - Dark Theme */
   --tool-call-background: hsl(215, 30%, 22%);
@@ -375,14 +375,14 @@
   
   /* ===== STATE COLORS - Dark Mode ===== */
   --success: var(--color-green-400);
-  --success-background: hsl(142, 40%, 20%);       /* Darker green that fits with night sky */
+  --success-background: hsl(81, 15%, 25%);        /* Green-tinted dark that fits forest theme */
   --success-foreground: var(--color-gray-100);    /* Light text for readability */
   
   --warning: var(--color-amber-400);
-  --warning-background: hsl(30, 30%, 25%);        /* Darker amber that fits with night sky */
+  --warning-background: hsl(60, 18%, 25%);        /* Olive-tinted dark that fits forest theme */
   --warning-foreground: var(--color-gray-100);    /* Light text for readability */
   
   --info: hsl(var(--primary));
-  --info-background: hsl(242, 32%, 24%);          /* Martinique #2a2e51 */
+  --info-background: hsl(42, 10%, 13%);           /* Rangitoto #25241e */
   --info-foreground: hsl(var(--foreground));      /* White text */
 }
