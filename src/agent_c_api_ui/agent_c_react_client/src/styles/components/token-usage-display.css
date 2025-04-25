@@ -1,0 +1,68 @@
+/* ===== COMPONENT: TokenUsageDisplay ===== */
+/* Description: Displays token usage statistics for AI responses including prompt, completion, and total tokens */
+
+/* TokenUsageDisplay: Container */
+.token-usage-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+  font-size: var(--font-size-xs);
+  color: var(--muted-foreground);
+}
+
+/* TokenUsageDisplay: Icon */
+.token-usage-icon {
+  height: 0.75rem;
+  width: 0.75rem;
+  flex-shrink: 0;
+}
+
+/* TokenUsageDisplay: Stats container */
+.token-usage-stats {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* TokenUsageDisplay: Stat item */
+.token-usage-stat {
+  display: flex;
+  align-items: center;
+}
+
+/* TokenUsageDisplay: Divider */
+.token-usage-divider {
+  color: var(--muted-foreground);
+  opacity: 0.5;
+}
+
+/* Mobile styles */
+@media (max-width: 640px) {
+  .token-usage-container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+  
+  .token-usage-stats {
+    gap: 0.5rem;
+  }
+}
+
+/* Dark mode enhancements */
+[data-theme="dark"] .token-usage-container {
+  border-top-color: var(--border);
+}
+
+/* Hover state for better interaction */
+.token-usage-stat {
+  position: relative;
+}
+
+.token-usage-stat:hover {
+  color: var(--foreground);
+}

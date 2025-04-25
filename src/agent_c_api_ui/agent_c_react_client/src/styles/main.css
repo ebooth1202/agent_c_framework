@@ -39,6 +39,7 @@
 @import './components/collapsible-options.css';
 @import './components/tool-selector.css';
 @import './components/chat-interface.css';
+@import './components/token-usage-display.css';
 
 /* We've removed the import of component-styles.css as it created duplicate imports */
 /* All component styles are now directly imported above */
