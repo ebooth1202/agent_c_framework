@@ -32,6 +32,15 @@
   overflow-y: auto;
 }
 
+/* Mobile layout adjustments */
+@media (max-width: 640px) {
+  .layout-main-page {
+    padding: 0.25rem;
+    height: calc(100vh - 45px); /* Smaller header height on mobile */
+    height: calc(100dvh - 45px);
+  }
+}
+
 /* For screens that don't support dvh */
 @supports not (height: 100dvh) {
   .layout-main-page {

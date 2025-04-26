@@ -12,7 +12,7 @@
 /* UserMessage: Content */
 .user-message-content {
   max-width: min(95%, 1600px); /* Match the assistant message width */
-  min-width: 300px; /* Ensure minimum width for content */
+  min-width: 280px; /* Reduced minimum width for better mobile compatibility */
   border-radius: 0.75rem;
   border-bottom-right-radius: 0.25rem;
   padding: 0.5rem; /* Reduced padding from 1rem to 0.5rem */
@@ -20,11 +20,26 @@
   background-color: var(--user-message-background);
   color: var(--user-message-foreground);
   box-shadow: var(--shadow-md); /* Enhanced shadow for better depth */
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
 }
 
 /* UserMessage: Markdown content */
 .markdown-user-message > * {
   color: inherit;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+/* Mobile adjustments */
+@media (max-width: 640px) {
+  .user-message-content {
+    min-width: 0; /* Remove minimum width on mobile */
+    width: calc(100% - 16px); /* Allow some margin */
+    max-width: 98%; /* Take nearly full width */
+  }
 }
 
 /* UserMessage: Voice message */

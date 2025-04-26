@@ -80,7 +80,7 @@ const MessagesList = ({
   
   return (
     <div className={cn(
-      "messages-list-container relative flex h-full w-full min-h-0 flex-col overflow-hidden",
+      "messages-list-container relative flex h-full w-full min-h-0 flex-col overflow-hidden overflow-x-hidden",
       className
     )}>
       <ScrollArea 
@@ -90,7 +90,7 @@ const MessagesList = ({
         viewportRef={viewportRef}
         aria-label="Chat messages"
       >
-        <div className="w-full overflow-x-hidden pt-4 pb-4">
+        <div className="w-full overflow-x-hidden max-w-full pt-4 pb-4">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4 text-center">
               <p>No messages yet. Start a conversation!</p>

@@ -6,11 +6,15 @@
   position: relative;
   height: 100%;
   width: 100%;
+  overflow-x: hidden; /* Prevent horizontal overflow */
 }
 
 /* MessagesList: Message spacing */
 .message-item-wrapper {
   margin-bottom: var(--spacing-4);
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden; /* Prevent horizontal overflow */
 }
 
 /* MessagesList: Scroll indicator */

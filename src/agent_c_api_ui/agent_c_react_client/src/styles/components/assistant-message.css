@@ -26,7 +26,7 @@
 /* AssistantMessage: Message card */
 .assistant-message-card {
   max-width: min(95%, 1600px);
-  min-width: 300px; /* Ensure minimum width for content */
+  min-width: 280px; /* Reduced minimum width for mobile compatibility */
   width: 100%; /* Ensure the card takes full width available */
   border-radius: 0.75rem;
   box-shadow: var(--shadow-md); /* Enhanced shadow for better depth */
@@ -36,6 +36,8 @@
   color: var(--assistant-message-foreground);
   display: flex;
   flex-direction: column;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
 }
 
 /* AssistantMessage: Content area */
@@ -69,6 +71,8 @@
   flex-grow: 0;  /* Don't expand to fill space */
   flex-shrink: 0; /* Don't shrink */
   margin-bottom: 0.5rem;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 /* AssistantMessage: Footer section */
@@ -172,7 +176,8 @@
 @media (max-width: 640px) {
   .assistant-message-card {
     max-width: 98%; /* Take up more width on mobile */
-    min-width: 280px; /* Slightly smaller minimum on mobile but still adequate */
+    min-width: 0; /* No minimum width on mobile to prevent overflow */
+    width: calc(100% - 16px); /* Ensure there's a bit of margin */
   }
   
   .assistant-message-footer {

@@ -3,7 +3,7 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Form, Depends
 import logging
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 import traceback
 
 from agent_c_api.api.dependencies import get_agent_manager
@@ -99,3 +99,40 @@ async def chat_endpoint(
     #         "Transfer-Encoding": "chunked"  # Force chunked transfer encoding
     #     }
     # )
+
+
+@router.post("/cancel")
+async def cancel_chat(
+        ui_session_id: str = Form(...),
+        agent_manager=Depends(get_agent_manager)
+):
+    """
+    Endpoint for cancelling an ongoing chat interaction.
+    
+    Args:
+        ui_session_id: Session ID
+        agent_manager: Agent manager dependency
+        
+    Returns:
+        JSONResponse: Status of the cancellation request
+    """
+    logger.info(f"Received cancellation request for session: {ui_session_id}")
+    session_data = agent_manager.get_session_data(ui_session_id)
+    
+    if not session_data:
+        logger.error(f"No session found for session_id: {ui_session_id}")
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    # Trigger cancellation
+    success = agent_manager.cancel_interaction(ui_session_id)
+    
+    if success:
+        return JSONResponse({
+            "status": "success",
+            "message": f"Cancellation signal sent for session: {ui_session_id}"
+        })
+    else:
+        return JSONResponse({
+            "status": "error",
+            "message": f"Failed to cancel interaction for session: {ui_session_id}"
+        }, status_code=500)
