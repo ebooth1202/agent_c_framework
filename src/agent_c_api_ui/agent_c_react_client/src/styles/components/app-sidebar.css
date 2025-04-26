@@ -5,8 +5,9 @@
 .sidebar-layout {
   display: flex;
   width: 100%;
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100vh; /* Ensure the sidebar layout takes full viewport height */
+  height: 100dvh; /* Use dynamic viewport height when available */
+  overflow: hidden; /* Prevent any content overflow */
 }
 
 /* AppSidebar: Application logo container in sidebar header */
@@ -38,9 +39,7 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: 100vh;
-  height: 100dvh;
-  overflow-x: hidden;
+  overflow: hidden; /* Control overflow at this level */
   transition: margin-left 0.2s ease-in-out;
   padding-left: 0; /* Remove any padding */
   margin-left: 0; /* Remove any margin */
@@ -51,7 +50,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 100%;
+  overflow: hidden; /* Control overflow at this level too */
 }
 
 /* AppSidebar: Menu labels in the sidebar */
@@ -98,9 +97,7 @@
 
 /* For screens that might not have a dvh unit */
 @supports not (height: 100dvh) {
-  .sidebar-layout,
-  .sidebar-content {
-    min-height: 100vh;
+  .sidebar-layout {
     height: 100vh;
   }
 }

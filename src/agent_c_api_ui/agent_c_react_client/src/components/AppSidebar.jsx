@@ -1,4 +1,5 @@
 import React from 'react';
+import footerLogo from '../assets/footer-logo.svg';
 import { Link, useLocation } from 'react-router-dom';
 import { Home, Settings, Database, PanelLeft, Menu, History } from 'lucide-react';
 import {
@@ -30,10 +31,9 @@ const AppSidebar = ({ children, defaultOpen = true, collapsible = "icon" }) => {
 
   // Application navigation links with icons
   const navLinks = [
-    { path: '/', label: 'Home', icon: <Home className="mr-2" size={18} /> },
     { path: '/chat', label: 'Chat', icon: <PanelLeft className="mr-2" size={18} /> },
     { path: '/rag', label: 'RAG', icon: <Database className="mr-2" size={18} /> },
-    { path: '/interactions', label: 'Sessions', icon: <History className="mr-2" size={18} /> },
+    { path: '/interactions', label: 'Event Logs', icon: <History className="mr-2" size={18} /> },
     { path: '/settings', label: 'Settings', icon: <Settings className="mr-2" size={18} /> },
   ];
 
@@ -75,10 +75,12 @@ const AppSidebar = ({ children, defaultOpen = true, collapsible = "icon" }) => {
 
           <SidebarFooter>
             <Separator className="my-2" />
-            <div className="flex items-center justify-between px-2">
-              /* footer logo here */
+            <div className="flex flex-col items-center px-2 gap-3">
               <div className="theme-toggle-container">
                 <ThemeToggle/>
+              </div>
+              <div className="footer-logo-container">
+                <img src={footerLogo} alt="Footer Logo" className="footer-logo" />
               </div>
             </div>
           </SidebarFooter>

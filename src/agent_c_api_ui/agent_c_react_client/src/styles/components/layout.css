@@ -27,8 +27,7 @@
   width: 100%;
   margin: 0 auto;
   padding: clamp(0.5rem, 1vw, 1rem);
-  height: calc(100vh - 60px); /* Subtract header height */
-  height: calc(100dvh - 60px); /* Use dynamic viewport height when available */
+  /* Remove fixed height calculation to use flex layout instead */
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -39,14 +38,8 @@
 @media (max-width: 640px) {
   .layout-main-page {
     padding: 0.25rem;
-    height: calc(100vh - 45px); /* Smaller header height on mobile */
-    height: calc(100dvh - 45px);
+    /* Remove fixed height calculation */
   }
 }
 
-/* For screens that don't support dvh */
-@supports not (height: 100dvh) {
-  .layout-main-page {
-    height: calc(100vh - 60px);
-  }
-}
+/* Removed fallback for non-dvh since we're using flex now */
