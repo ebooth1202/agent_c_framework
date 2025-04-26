@@ -1,5 +1,5 @@
 import React, {useState} from 'react';
-import {Monitor, ChevronDown, Maximize2, Info} from 'lucide-react';
+import {ChevronDown, Maximize2} from 'lucide-react';
 import {Dialog, DialogContent} from "@/components/ui/dialog";
 import {Card} from "@/components/ui/card";
 import CopyButton from './CopyButton';
@@ -107,7 +107,6 @@ const MediaMessage = ({message}) => {
 
         return (
             <div className="media-message-metadata">
-                <Info className="media-message-metadata-icon"/>
                 <span className="media-message-metadata-text">
                     {sent_by_class}
                     {sent_by_class && sent_by_function && <span className="media-message-metadata-separator">{"\u2022"}</span>}
@@ -119,7 +118,7 @@ const MediaMessage = ({message}) => {
 
     const FullscreenDialog = () => (
         <Dialog open={isFullscreen} onOpenChange={setIsFullscreen}>
-            <DialogContent className="p-0 overflow-hidden max-w-7xl">
+            <DialogContent className="p-0 overflow-hidden max-w-7xl" style={{ backgroundColor: 'var(--media-message-background)' }}>
                 <div className="media-message-fullscreen-content">
                     {message.contentType === 'image/svg+xml' ? (
                         <div
@@ -156,10 +155,7 @@ const MediaMessage = ({message}) => {
                     onClick={() => setIsExpanded(!isExpanded)}
                 >
                     <div className="media-message-header-content">
-                        <Monitor className="media-message-header-icon"/>
-                        <span className="media-message-header-title">
-                            {getContentTypeDisplay()}
-                        </span>
+                        {renderMetadata()}
                     </div>
                     <div className="media-message-header-actions">
                         {/* Copy button that stops event propagation */}
@@ -182,7 +178,6 @@ const MediaMessage = ({message}) => {
                         <div className="media-message-content-wrapper">
                             {renderContent()}
                         </div>
-                        {renderMetadata()}
                     </div>
                 )}
             </Card>

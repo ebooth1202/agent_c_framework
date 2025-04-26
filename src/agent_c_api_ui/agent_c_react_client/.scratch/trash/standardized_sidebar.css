@@ -1,0 +1,58 @@
+/* ===== COMPONENT: AppSidebar ===== */
+/* Description: Main navigation sidebar for the application built with shadcn/ui sidebar components */
+/* File: src/components/AppSidebar.jsx */
+
+/* AppSidebar: Additional styling for the sidebar component */
+.app-sidebar {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* AppSidebar: Title section styling */
+.sidebar-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  padding: var(--spacing-4) var(--spacing-6);
+  color: hsl(var(--foreground));
+}
+
+/* AppSidebar: Icon within navigation items */
+.sidebar-item-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: var(--spacing-2);
+}
+
+/* AppSidebar: Link styling */
+.sidebar-item-link {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  text-decoration: none;
+}
+
+/* AppSidebar: Disabled item styling */
+.sidebar-item-disabled {
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-2) var(--spacing-4);
+  color: hsl(var(--muted-foreground));
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* AppSidebar: Footer container */
+.sidebar-footer-container {
+  margin-top: auto;
+  border-top: 1px solid hsl(var(--border));
+}
+
+/* AppSidebar: Footer content */
+.sidebar-footer {
+  padding: var(--spacing-4);
+  font-size: var(--font-size-sm);
+  color: hsl(var(--muted-foreground));
+}

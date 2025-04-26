@@ -12,25 +12,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--border-radius-md);
+  border-radius: var(--radius);
   padding: var(--spacing-1) var(--spacing-2);
   font-size: var(--font-size-sm);
   transition: var(--transition-hover);
-  background-color: hsl(var(--color-gray-800));
-  color: white;
+  background-color: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
 }
 
 .copy-button:hover {
-  background-color: hsl(var(--color-gray-700));
-}
-
-.dark .copy-button {
-  background-color: hsl(var(--color-gray-700));
-  color: hsl(var(--color-gray-50));
-}
-
-.dark .copy-button:hover {
-  background-color: hsl(var(--color-gray-600));
+  background-color: hsl(var(--secondary) / 0.8);
 }
 
 /* Icon button */
@@ -38,20 +29,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: hsl(var(--color-gray-500));
+  color: hsl(var(--muted-foreground));
   transition: var(--transition-hover);
 }
 
 .icon-button:hover {
-  color: hsl(var(--color-gray-900));
-}
-
-.dark .icon-button {
-  color: hsl(var(--color-gray-400));
-}
-
-.dark .icon-button:hover {
-  color: hsl(var(--color-gray-50));
+  color: hsl(var(--foreground));
 }
 
 /* Hover-reveal container */

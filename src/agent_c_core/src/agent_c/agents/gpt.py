@@ -1,6 +1,8 @@
 import os
 import json
 import asyncio
+import threading
+
 import openai
 import tiktoken
 import logging
@@ -251,7 +253,7 @@ class GPTChatAgent(BaseAgent):
         session_manager = kwargs.get("session_manager", None)
         tool_chest = opts['tool_chest']
         callback_opts = opts['callback_opts']
-
+        client_wants_cancel: threading.Event = kwargs.get("client_wants_cancel", threading.Event())
         delay = 1  # Initial delay between retries
 
         async with self.semaphore:
@@ -268,7 +270,8 @@ class GPTChatAgent(BaseAgent):
                         session_manager,
                         messages,
                         callback_opts,
-                        interaction_id
+                        interaction_id,
+                        client_wants_cancel
                     )
 
                     # If we completed without tool calls, we're done
@@ -304,7 +307,8 @@ class GPTChatAgent(BaseAgent):
         return messages
 
     async def _handle_gpt_stream(self, completion_opts, tool_chest, session_manager,
-                                 messages, callback_opts, interaction_id) -> Tuple[
+                                 messages, callback_opts, interaction_id,
+                                 client_wants_cancel: threading.Event) -> Tuple[
         List[Dict[str, Any]], Dict[str, Any]]:
         """
         Handle the OpenAI stream processing.
@@ -324,6 +328,10 @@ class GPTChatAgent(BaseAgent):
                 # Process each chunk through appropriate handler
                 await self._process_stream_chunk(chunk, state, tool_chest, session_manager,
                                                  messages, callback_opts)
+
+                if client_wants_cancel.is_set():
+                    state['complete'] = True
+                    state['stop_reason'] = "client_cancel"
 
                 # If we've completed processing and it's not a tool call, we're done
                 if state['complete'] and not state['tool_calls_processed']:

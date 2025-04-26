@@ -1,88 +1,53 @@
 /* ===== COMPONENT: UserMessage ===== */
 /* Description: Displays messages sent by the user in the chat interface with consistent styling and copy functionality */
-/* File: src/components/chat_interface/UserMessage.jsx */
 
-/* UserMessage: Message row layout */
-.user-message-row {
+/* UserMessage: Container */
+.user-message-container {
   display: flex;
   justify-content: flex-end;
   align-items: flex-start;
-  gap: var(--spacing-2);
+  gap: 0.5rem;
 }
 
-/* UserMessage: Message bubble styling */
-.user-message-bubble {
-  max-width: 80%;
-  border-radius: var(--border-radius-2xl);
-  padding: var(--spacing-4) var(--spacing-4);
-  margin-left: var(--spacing-12);
-  box-shadow: var(--shadow-sm);
-  background-color: var(--theme-user-message-background);
-  color: var(--theme-user-message-foreground);
-  border: var(--border-width-thin) solid var(--theme-user-message-border);
-  font-family: Georgia, serif;
-  border-bottom-right-radius: var(--spacing-1);
-}
-
-/* UserMessage: Inner content layout */
+/* UserMessage: Content */
 .user-message-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: var(--spacing-4);
+  max-width: min(95%, 1600px); /* Match the assistant message width */
+  min-width: 300px; /* Ensure minimum width for content */
+  border-radius: 0.75rem;
+  border-bottom-right-radius: 0.25rem;
+  padding: 0.5rem; /* Reduced padding from 1rem to 0.5rem */
+  border: 1px solid var(--user-message-border);
+  background-color: var(--user-message-background);
+  color: var(--user-message-foreground);
+  box-shadow: var(--shadow-md); /* Enhanced shadow for better depth */
 }
 
-/* UserMessage: Message body */
-.user-message-body {
-  flex: 1;
+/* UserMessage: Markdown content */
+.markdown-user-message > * {
+  color: inherit;
 }
 
-/* UserMessage: Voice message style */
+/* UserMessage: Voice message */
 .user-message-voice {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
+  /* Most styling handled by Tailwind classes */
 }
 
-/* UserMessage: Files attachment footer */
+/* UserMessage: Files section */
 .user-message-files {
-  margin-top: var(--spacing-2);
-  padding-top: var(--spacing-1);
-  border-top: var(--border-width-thin) solid var(--theme-user-message-border);
+  margin-top: 0.5rem;
 }
 
-/* UserMessage: Files text styling */
-.user-message-files-text {
-  font-size: var(--font-size-xs);
-  color: var(--theme-user-message-foreground);
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-1);
+/* UserMessage: Copy button container */
+.user-message-copy-container {
+  /* Most styling handled by Tailwind classes */
 }
 
-/* UserMessage: Copy button */
+/* UserMessage: Copy button - opacity handled by Tailwind classes */
 .user-message-copy-button {
-  margin-top: var(--spacing-1);
-  flex-shrink: 0;
-  opacity: 0;
-  transition: opacity var(--transition-hover);
-  background-color: var(--theme-user-message-background);
-  color: var(--theme-user-message-foreground);
+  /* Most styling handled by Tailwind classes */
 }
 
-/* UserMessage: Copy button hover state */
-.user-message-copy-button:hover {
-  background-color: var(--theme-secondary);
-}
-
-/* UserMessage: Show copy button on hover */
-.user-message-row:hover .user-message-copy-button {
-  opacity: 1;
-}
-
-/* UserMessage: User icon */
-.user-message-icon {
-  height: 1.5rem;
-  width: 1.5rem;
-  color: var(--theme-primary);
+/* UserMessage: Tooltip */
+.user-message-tooltip {
+  /* Most styling handled by Tailwind classes */
 }

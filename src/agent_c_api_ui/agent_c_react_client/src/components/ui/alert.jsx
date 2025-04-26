@@ -1,5 +1,6 @@
 import * as React from "react"
-import { cva } from "class-variance-authority"
+import { cva } from "class-variance-authority";
+
 import { cn } from "@/lib/utils"
 
 const alertVariants = cva(
@@ -23,8 +24,7 @@ const Alert = React.forwardRef(({ className, variant, ...props }, ref) => (
     ref={ref}
     role="alert"
     className={cn(alertVariants({ variant }), className)}
-    {...props}
-  />
+    {...props} />
 ))
 Alert.displayName = "Alert"
 
@@ -32,8 +32,7 @@ const AlertTitle = React.forwardRef(({ className, ...props }, ref) => (
   <h5
     ref={ref}
     className={cn("mb-1 font-medium leading-none tracking-tight", className)}
-    {...props}
-  />
+    {...props} />
 ))
 AlertTitle.displayName = "AlertTitle"
 
@@ -41,8 +40,7 @@ const AlertDescription = React.forwardRef(({ className, ...props }, ref) => (
   <div
     ref={ref}
     className={cn("text-sm [&_p]:leading-relaxed", className)}
-    {...props}
-  />
+    {...props} />
 ))
 AlertDescription.displayName = "AlertDescription"
 

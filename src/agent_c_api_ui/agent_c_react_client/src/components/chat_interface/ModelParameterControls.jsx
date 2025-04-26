@@ -1,4 +1,5 @@
 import React, {useState, useEffect} from 'react';
+import PropTypes from 'prop-types';
 import {Label} from '@/components/ui/label';
 import {Slider} from '@/components/ui/slider';
 import {Switch} from '@/components/ui/switch';
@@ -25,6 +26,7 @@ const ModelParameterControls = ({
                                     selectedModel,
                                     onParameterChange,
                                     currentParameters = {},
+                                    id = 'model-parameters'
                                 }) => {
     // For temperature settings - Used by non-reasoning models
     const [temperature, setTemperature] = useState(currentParameters?.temperature);
@@ -213,23 +215,38 @@ const ModelParameterControls = ({
         default: selectedModel.parameters?.extended_thinking?.budget_tokens?.default
     };
 
+    const parametersGroupId = `${id}-controls`;
+    const temperatureLabelId = `${id}-temperature-label`;
+    const reasoningEffortLabelId = `${id}-reasoning-effort-label`;
+    const extendedThinkingLabelId = `${id}-extended-thinking-label`;
+    const thinkingBudgetLabelId = `${id}-thinking-budget-label`;
+
     return (
-        <div className="parameter-controls-container">
+        <div 
+            className="parameter-controls-container"
+            id={id}
+            role="group" 
+            aria-label="Model parameter controls"
+        >
             {selectedModel.parameters?.temperature && (
-                <div className="parameter-section">
+                <div 
+                    className="parameter-section"
+                    role="group" 
+                    aria-labelledby={temperatureLabelId}
+                >
                     <div className="parameter-header">
-                        <Label className="parameter-label">Temperature</Label>
-                        <span className="parameter-value-badge">
+                        <Label className="parameter-label" id={temperatureLabelId}>Temperature</Label>
+                        <span className="parameter-value-badge" aria-live="polite">
                             {localTemperature.toFixed(1)}
                         </span>
                     </div>
                     <div className="parameter-slider-container">
-                        <div className="parameter-slider-labels">
+                        <div className="parameter-slider-labels" aria-hidden="true">
                             <span>Focused</span>
                             <span>Balanced</span>
                             <span>Creative</span>
                         </div>
-                        <div className="parameter-slider-markers">
+                        <div className="parameter-slider-markers" aria-hidden="true">
                             <div className="parameter-slider-marker"></div>
                             <div className="parameter-slider-marker"></div>
                             <div className="parameter-slider-marker"></div>
@@ -245,24 +262,40 @@ const ModelParameterControls = ({
                             onValueChange={handleTemperatureChange}  // Smooth UI updates
                             onValueCommit={handleTemperatureCommit}  // Backend update on finish
                             className="w-full"
+                            aria-labelledby={temperatureLabelId}
+                            aria-valuenow={localTemperature}
+                            aria-valuemin={temperatureConfig.min}
+                            aria-valuemax={temperatureConfig.max}
                         />
                     </div>
-                    <div className="parameter-helper-text">
+                    <div className="parameter-helper-text" id="temperature-helper">
                         Higher values make output more creative but less predictable
                     </div>
                 </div>
             )}
 
             {selectedModel.parameters?.reasoning_effort && reasoningEffortOptions && (
-                <div className="parameter-section">
-                    <Label htmlFor="reasoning-effort" className="parameter-label">Reasoning Effort</Label>
+                <div 
+                    className="parameter-section" 
+                    role="group" 
+                    aria-labelledby={reasoningEffortLabelId}
+                >
+                    <Label 
+                        htmlFor="reasoning-effort" 
+                        className="parameter-label"
+                        id={reasoningEffortLabelId}
+                    >
+                        Reasoning Effort
+                    </Label>
                     <Select
                         value={reasoningEffort}
                         onValueChange={handleReasoningEffortChange}
+                        aria-labelledby={reasoningEffortLabelId}
                     >
                         <SelectTrigger
                             id="reasoning-effort"
                             className="parameter-select-trigger"
+                            aria-label="Select reasoning effort level"
                         >
                             <SelectValue placeholder="Select reasoning effort"/>
                         </SelectTrigger>
@@ -282,26 +315,52 @@ const ModelParameterControls = ({
             )}
 
             {selectedModel.parameters?.extended_thinking && (
-                <div className="parameter-section">
+                <div 
+                    className="parameter-section"
+                    role="group" 
+                    aria-labelledby={extendedThinkingLabelId}
+                >
                     <div className="parameter-header">
-                        <Label htmlFor="extended-thinking" className="parameter-label">
+                        <Label 
+                            htmlFor="extended-thinking" 
+                            className="parameter-label"
+                            id={extendedThinkingLabelId}
+                        >
                             Extended Thinking
                         </Label>
                         <Switch
                             id="extended-thinking"
                             checked={extendedThinkingEnabled}
                             onCheckedChange={handleExtendedThinkingChange}
+                            aria-labelledby={extendedThinkingLabelId}
+                            aria-describedby="extended-thinking-description"
                         />
                     </div>
-                    <div className="parameter-helper-text">
+                    <div 
+                        className="parameter-helper-text"
+                        id="extended-thinking-description"
+                    >
                         Enable deep reasoning for complex problems
                     </div>
 
                     {extendedThinkingEnabled && (
-                        <div className="extended-thinking-section">
+                        <div 
+                            className="extended-thinking-section"
+                            role="group" 
+                            aria-labelledby={thinkingBudgetLabelId}
+                        >
                             <div className="parameter-header">
-                                <Label className="parameter-label">Thinking Budget</Label>
-                                <span className="parameter-value-badge">
+                                <Label 
+                                    className="parameter-label"
+                                    id={thinkingBudgetLabelId}
+                                    htmlFor="budget-tokens-slider"
+                                >
+                                    Thinking Budget
+                                </Label>
+                                <span 
+                                    className="parameter-value-badge"
+                                    aria-live="polite"
+                                >
                                     {budgetTokens.toLocaleString()} tokens
                                 </span>
                             </div>
@@ -314,8 +373,15 @@ const ModelParameterControls = ({
                                 onValueChange={handleBudgetTokensChange}
                                 onValueCommit={handleBudgetTokensCommit}
                                 className="w-full"
+                                aria-labelledby={thinkingBudgetLabelId}
+                                aria-valuenow={budgetTokens}
+                                aria-valuemin={budgetTokensConfig.min}
+                                aria-valuemax={budgetTokensConfig.max}
                             />
-                            <div className="parameter-helper-text">
+                            <div 
+                                className="parameter-helper-text"
+                                id="thinking-budget-description"
+                            >
                                 Higher values allow more thorough analysis but may take longer
                             </div>
                         </div>
@@ -324,6 +390,56 @@ const ModelParameterControls = ({
             )}
         </div>
     );
+};
+
+ModelParameterControls.propTypes = {
+    /**
+     * Selected model configuration object containing parameter definitions
+     */
+    selectedModel: PropTypes.shape({
+        parameters: PropTypes.shape({
+            temperature: PropTypes.shape({
+                min: PropTypes.number,
+                max: PropTypes.number,
+                default: PropTypes.number,
+            }),
+            reasoning_effort: PropTypes.oneOfType([
+                PropTypes.array,
+                PropTypes.shape({
+                    options: PropTypes.array,
+                    default: PropTypes.string,
+                })
+            ]),
+            extended_thinking: PropTypes.shape({
+                enabled: PropTypes.bool,
+                budget_tokens: PropTypes.shape({
+                    min: PropTypes.number,
+                    max: PropTypes.number,
+                    default: PropTypes.number,
+                })
+            })
+        })
+    }).isRequired,
+    
+    /**
+     * Callback function for parameter changes
+     */
+    onParameterChange: PropTypes.func.isRequired,
+    
+    /**
+     * Current parameter values
+     */
+    currentParameters: PropTypes.shape({
+        temperature: PropTypes.number,
+        reasoning_effort: PropTypes.string,
+        extended_thinking: PropTypes.bool,
+        budget_tokens: PropTypes.number,
+    }),
+    
+    /**
+     * Unique identifier for the component
+     */
+    id: PropTypes.string,
 };
 
 export default ModelParameterControls;

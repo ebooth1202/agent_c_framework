@@ -6,27 +6,20 @@
   display: inline-block;
   padding: 0.1rem 0.4rem;
   margin: 0 0.2rem;
-  font-family: var(--font-mono);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  color: hsl(var(--color-amber-700));
-  background-color: hsl(var(--color-amber-100));
-  border-radius: var(--border-radius-sm);
-  border: var(--border-width-thin) solid hsl(var(--color-amber-300));
-}
-
-/* Dark mode parameter docs */
-.dark .thought-container code {
-  color: hsl(var(--color-amber-300));
-  background-color: hsl(var(--color-amber-900));
-  border-color: hsl(var(--color-amber-700));
+  font-family: 'JetBrains Mono', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  font-size: 0.75rem; /* 12px, text-xs */
+  font-weight: 500; /* font-medium */
+  color: hsl(var(--accent-foreground));
+  background-color: hsl(var(--accent) / 0.2);
+  border-radius: 0.125rem; /* 2px, rounded-sm */
+  border: 1px solid hsl(var(--accent) / 0.4);
 }
 
 /* Parameter documentation list items */
 .thought-container .markdown-li {
-  margin-left: var(--spacing-4);
+  margin-left: 1rem; /* 16px, ml-4 */
   position: relative;
-  padding-left: var(--spacing-1);
+  padding-left: 0.25rem; /* 4px, pl-1 */
   line-height: 1.6;
   list-style-type: none;
 }
@@ -36,23 +29,19 @@
   content: "•";
   position: absolute;
   left: -1rem;
-  color: hsl(var(--color-amber-600));
-  font-weight: var(--font-weight-bold);
-}
-
-.dark .thought-container .markdown-li::before {
-  color: hsl(var(--color-amber-400));
+  color: hsl(var(--accent-foreground));
+  font-weight: 700; /* font-bold */
 }
 
 /* Parameter documentation list margins */
 .thought-container .markdown-ul {
-  margin-top: var(--spacing-2);
-  margin-bottom: var(--spacing-2);
+  margin-top: 0.5rem; /* 8px, mt-2 */
+  margin-bottom: 0.5rem; /* 8px, mb-2 */
 }
 
 /* Parameter documentation paragraphs */
 .thought-container .markdown-paragraph {
   line-height: 1.6;
-  margin-top: var(--spacing-2);
-  margin-bottom: var(--spacing-2);
+  margin-top: 0.5rem; /* 8px, mt-2 */
+  margin-bottom: 0.5rem; /* 8px, mb-2 */
 }

@@ -8,11 +8,32 @@
   gap: var(--spacing-2);
   align-items: flex-start;
   /* Preserve Tailwind prose classes via direct reference */
+  /* No border by default as shadcn/ui Card provides this */
+  border: none;
+  position: relative;
+  align-self: flex-start; /* Don't expand to fill the entire width */
+  width: 100%;
+}
+
+/* Remove shadow when inside message bubbles */
+.no-shadow {
+  box-shadow: none !important;
+  background-color: transparent !important;
+}
+
+/* When MarkdownMessage is used directly in AssistantMessage,
+   we want to ensure it has appropriate styling */
+.assistant-message-card .markdown-container {
+  box-shadow: none;
+  background-color: transparent;
 }
 
 /* MarkdownMessage: Markdown content wrapper */
 .markdown-content {
   flex: 1;
+  padding: var(--spacing-1); /* Reduced padding from var(--spacing-3) to var(--spacing-1) */
+  /* Ensure proper background when inside bubbles */
+  background-color: inherit;
 }
 
 /* MarkdownMessage: Heading styles */
@@ -63,7 +84,6 @@
 /* MarkdownMessage: Strong text */
 .markdown-strong {
   font-weight: var(--font-weight-bold);
-  color: hsl(var(--color-purple-800));
 }
 
 /* MarkdownMessage: Code blocks and inline code */
@@ -102,7 +122,6 @@
   background-color: rgba(0, 0, 0, 0.08);
   padding: 0.1em 0.3em;
   border-radius: var(--border-radius-md);
-  color: var(--theme-thought-inline-code-fg, hsl(var(--color-purple-800)));
   font-family: var(--font-mono);
   font-size: 0.9em;
   display: inline-block;
@@ -110,18 +129,16 @@
 
 /* Let component-specific styles override the background and color if needed */
 .thought-display-content-light .markdown-inline-code {
-  background-color: var(--theme-thought-inline-code-bg, rgba(0, 0, 0, 0.08));
-  color: var(--theme-thought-inline-code-fg, hsl(var(--color-purple-800)));
+  background-color: rgba(0, 0, 0, 0.08);
 }
 
 .thought-display-content-dark .markdown-inline-code {
-  background-color: var(--theme-thought-inline-code-bg, rgba(255, 255, 255, 0.1));
-  color: var(--theme-thought-inline-code-fg, hsl(var(--color-purple-200)));
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 /* MarkdownMessage: Blockquote styling */
 .markdown-blockquote {
-  border-left: var(--border-width-thick) solid hsl(var(--color-purple-300));
+  border-left: var(--border-width-thick) solid ;
   padding-left: var(--spacing-4);
   margin-top: var(--spacing-4);
   margin-bottom: var(--spacing-4);
@@ -140,11 +157,14 @@
   margin-top: var(--spacing-6);
   margin-bottom: var(--spacing-6);
   border-top-width: var(--border-width-medium);
-  border-color: hsl(var(--color-purple-100));
+
 }
 
 /* MarkdownMessage: Copy button container */
 .markdown-copy-button-container {
+  position: absolute;
+  top: var(--spacing-2);
+  right: var(--spacing-2);
   flex-shrink: 0;
   opacity: 0;
   transition: opacity var(--transition-hover);

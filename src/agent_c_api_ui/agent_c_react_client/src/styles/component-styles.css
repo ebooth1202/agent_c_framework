@@ -1,6 +1,7 @@
-/* component-styles.css */
-/* This file aggregates all component styles for compatibility */
-/* While we transition to the modular approach, this ensures styles are applied */
+/* DEPRECATED: component-styles.css */
+/* This file is now deprecated and will be removed in a future update */
+/* All component styles are now imported directly in main.css */
+/* DO NOT ADD NEW IMPORTS HERE */
 
 /* Import all component styles */
 @import './components/layout.css';
@@ -22,3 +23,4 @@
 @import './components/drag-drop-overlay.css';
 @import './components/page-header.css';
 @import './components/sidebar.css';
+@import './components/messages-list.css';

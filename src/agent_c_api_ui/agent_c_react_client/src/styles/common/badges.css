@@ -18,65 +18,35 @@
 
 /* Primary badge */
 .badge-primary {
-  background-color: hsl(var(--color-blue-50));
-  color: hsl(var(--color-blue-700));
-  border-color: hsl(var(--color-blue-200));
-}
-
-.dark .badge-primary {
-  background-color: hsla(var(--color-blue-900), 0.3);
-  color: hsl(var(--color-blue-300));
-  border-color: hsla(var(--color-blue-800), 0.3);
+  background-color: hsl(var(--primary) / 0.1);
+  color: hsl(var(--primary));
+  border-color: hsl(var(--primary) / 0.2);
 }
 
 /* Success badge */
 .badge-success {
-  background-color: hsl(var(--color-green-50));
-  color: hsl(var(--color-green-700));
-  border-color: hsl(var(--color-green-200));
-}
-
-.dark .badge-success {
-  background-color: hsla(var(--color-green-900), 0.3);
-  color: hsl(var(--color-green-300));
-  border-color: hsla(var(--color-green-800), 0.3);
+  background-color: hsl(142 76% 36% / 0.1);
+  color: hsl(142 76% 36%);
+  border-color: hsl(142 76% 36% / 0.2);
 }
 
 /* Warning badge */
 .badge-warning {
-  background-color: hsl(var(--color-amber-50));
-  color: hsl(var(--color-amber-700));
-  border-color: hsl(var(--color-amber-200));
-}
-
-.dark .badge-warning {
-  background-color: hsla(var(--color-amber-900), 0.3);
-  color: hsl(var(--color-amber-300));
-  border-color: hsla(var(--color-amber-800), 0.3);
+  background-color: hsl(38 92% 50% / 0.1);
+  color: hsl(38 92% 50%);
+  border-color: hsl(38 92% 50% / 0.2);
 }
 
 /* Info badge */
 .badge-info {
-  background-color: hsl(var(--color-purple-50));
-  color: hsl(var(--color-purple-700));
-  border-color: hsl(var(--color-purple-200));
-}
-
-.dark .badge-info {
-  background-color: hsla(var(--color-purple-900), 0.3);
-  color: hsl(var(--color-purple-300));
-  border-color: hsla(var(--color-purple-800), 0.3);
+  background-color: hsl(var(--accent) / 0.1);
+  color: hsl(var(--accent));
+  border-color: hsl(var(--accent) / 0.2);
 }
 
 /* Disabled badge */
 .badge-disabled {
-  background-color: hsl(var(--color-gray-100));
-  color: hsl(var(--color-gray-500));
-  border-color: hsl(var(--color-gray-200));
-}
-
-.dark .badge-disabled {
-  background-color: hsla(var(--color-gray-700), 0.3);
-  color: hsl(var(--color-gray-400));
-  border-color: hsla(var(--color-gray-700), 0.4);
+  background-color: hsl(var(--muted) / 0.5);
+  color: hsl(var(--muted-foreground));
+  border-color: hsl(var(--muted) / 0.2);
 }

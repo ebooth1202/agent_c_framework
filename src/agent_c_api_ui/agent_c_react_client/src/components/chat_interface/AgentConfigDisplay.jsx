@@ -1,13 +1,13 @@
-import React, {useState, useEffect, useRef} from 'react';
-import {Settings} from 'lucide-react';
-import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
-import * as Portal from '@radix-ui/react-portal';
-import {API_URL} from "@/config/config";
+import React, { useState, useEffect, useRef } from 'react';
+import { Settings } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { API_URL } from "@/config/config";
 // CSS already imported through main.css
 
 /**
  * AgentConfigDisplay is a component that fetches and displays agent configuration
- * information in a tooltip interface.
+ * information in a tooltip interface using shadcn/ui components.
  *
  * @component
  * @param {Object} props
@@ -15,28 +15,12 @@ import {API_URL} from "@/config/config";
  * @param {string} [props.className=""] - Additional CSS classes to apply
  * @param {number} props.settingsVersion - Version identifier that triggers config refresh
  */
-const AgentConfigDisplay = ({sessionId, className = "", settingsVersion}) => {
+const AgentConfigDisplay = ({ sessionId, className = "", settingsVersion }) => {
     const [config, setConfig] = useState(null);
     const [error, setError] = useState(null);
     const lastFetchRef = useRef(null);
 
-    // Debug log when props change
-    // useEffect(() => {
-    //   console.log('AgentConfigDisplay props updated:', {
-    //     sessionId,
-    //     settingsVersion,
-    //     currentConfig: config
-    //   });
-    // }, [sessionId, settingsVersion, config]);
-
     useEffect(() => {
-        /**
-         * Fetches the agent configuration from the API
-         * @async
-         * @function
-         * @throws {Error} When the API request fails
-         */
-        // Add this line at the beginning of the effect
         if (sessionId) {
             // Clear config when session changes to avoid showing stale data
             setConfig(null);
@@ -101,15 +85,6 @@ const AgentConfigDisplay = ({sessionId, className = "", settingsVersion}) => {
             }
         };
 
-        /**
-         * Handles API error states
-         * @param {Error} err - The error object from the API call
-         */
-        const handleError = (err) => {
-            setError(err.message);
-            console.error('Error fetching agent config:', err);
-        };
-
         console.log('Triggering config fetch, settingsVersion:', settingsVersion);
         fetchConfig();
     }, [sessionId, settingsVersion]);
@@ -126,8 +101,8 @@ const AgentConfigDisplay = ({sessionId, className = "", settingsVersion}) => {
     if (!config) {
         return (
             <div className={`agent-config-container agent-config-loading ${className}`}>
-                <Settings className="agent-config-loading-icon" />
-                <span className="agent-config-loading-text">Loading...</span>
+                <Settings className="agent-config-icon" size={16} />
+                <span className="agent-config-text">Loading...</span>
             </div>
         );
     }
@@ -138,10 +113,6 @@ const AgentConfigDisplay = ({sessionId, className = "", settingsVersion}) => {
     ).join(', ');
 
     // Format the configuration information for display
-    /**
-     * Formats the configuration data for display in the tooltip
-     * @type {Record<string, string|number>}
-     */
     const configDisplay = {
         "Model": config.model_info?.name ?? "undefined",
         "Backend": config.backend ?? "undefined",
@@ -173,16 +144,18 @@ const AgentConfigDisplay = ({sessionId, className = "", settingsVersion}) => {
             <Tooltip>
                 <TooltipTrigger asChild>
                     <div className={`agent-config-container agent-config-loaded ${className}`}>
-                        <Settings className="agent-config-loaded-icon" />
-                        <span className="agent-config-loaded-text">
+                        <Settings className="agent-config-icon" size={16} />
+                        <span className="agent-config-text">
                             Current Config
                         </span>
                     </div>
                 </TooltipTrigger>
-                <Portal.Root>
-                    <TooltipContent side="right" className="agent-config-tooltip">
-                        <div className="agent-config-tooltip-container">
-                            <h4 className="agent-config-tooltip-header">Agent Configuration</h4>
+                <TooltipContent side="right" className="agent-config-tooltip p-0" sideOffset={5}>
+                    <Card className="w-[320px] border-0 shadow-none">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-base">Agent Configuration</CardTitle>
+                        </CardHeader>
+                        <CardContent>
                             <div className="agent-config-tooltip-items">
                                 {Object.entries(configDisplay).map(([key, value]) => (
                                     <div key={key} className="agent-config-tooltip-item">
@@ -191,9 +164,9 @@ const AgentConfigDisplay = ({sessionId, className = "", settingsVersion}) => {
                                     </div>
                                 ))}
                             </div>
-                        </div>
-                    </TooltipContent>
-                </Portal.Root>
+                        </CardContent>
+                    </Card>
+                </TooltipContent>
             </Tooltip>
         </TooltipProvider>
     );

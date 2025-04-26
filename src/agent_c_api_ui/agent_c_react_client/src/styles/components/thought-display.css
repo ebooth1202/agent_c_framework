@@ -1,54 +1,42 @@
 /* ===== COMPONENT: ThoughtDisplay ===== */
 /* Description: Component for displaying AI thinking processes in a visually distinct container */
-/* File: src/components/chat_interface/ThoughtDisplay.jsx */
 
-/* ThoughtDisplay: Thought container styles */
+/* ThoughtDisplay: Container */
 .thought-container {
-  position: relative;
-  max-width: 80%;
-  border-radius: var(--border-radius-2xl);
-  padding: var(--spacing-3) var(--spacing-4);
-  box-shadow: var(--shadow-md);
-  background-color: var(--theme-thought-background);
-  color: var(--theme-thought-foreground);
-  border: var(--border-width-thin) solid var(--theme-thought-border);
-  border-bottom-left-radius: var(--border-radius-sm);
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
 }
 
-/* ThoughtDisplay: Base styles for thought display content area */
-.thought-display-content {
-  scrollbar-width: thin;
-  text-align: left;
-  white-space: pre-wrap;
-  overflow: auto;
+/* ThoughtDisplay: Main content card */
+.thought-content {
+  max-width: min(90%, 40rem); /* Aligned with user messages but slightly wider */
+  border-radius: 0.75rem;
+  border-bottom-left-radius: 0.25rem;
+  overflow: hidden;
+  border: 1px solid var(--thought-border);
+  background-color: var(--thought-background);
+  color: var(--thought-foreground);
+  box-shadow: var(--shadow-md); /* Enhanced shadow for better depth */
+}
+
+/* ThoughtDisplay: Scrollable area */
+.thought-scrollable-content {
   max-height: 200px;
   min-height: 50px;
-  flex: 1;
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  white-space: pre-wrap;
 }
 
-/* ThoughtDisplay: Scrollbar colors (using theme variables) */
-.thought-display-content {
-  scrollbar-color: var(--theme-thought-border) var(--theme-thought-background);
-}
-
-/* ThoughtDisplay: For WebKit browsers (Chrome, Safari, newer Edge) */
-.thought-display-content::-webkit-scrollbar {
-  width: 8px;
-}
-
-.thought-display-content::-webkit-scrollbar-thumb {
-  background-color: var(--theme-thought-border);
-}
-
-.thought-display-content::-webkit-scrollbar-track {
-  background-color: var(--theme-thought-background);
-}
-
-/* ThoughtDisplay: Code formatting inside thought bubbles */
-.thought-display-content code.markdown-inline-code {
-  background-color: var(--theme-thought-inline-code-bg);
-  color: var(--theme-thought-inline-code-fg);
-  padding: 0.1em 0.3em;
-  border-radius: var(--border-radius-sm);
+/* ThoughtDisplay: Custom styles for inline code inside thought bubbles */
+.thought-container .prose .markdown-inline-code {
+  background-color: var(--thought-inline-code-bg);
+  color: var(--thought-inline-code-fg);
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
   font-size: 0.9em;
 }

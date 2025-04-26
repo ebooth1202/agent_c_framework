@@ -18,24 +18,31 @@
 @import './components/markdown-message.css';
 @import './components/agent-config-display.css';
 @import './components/agent-config-hover-card.css';
-@import './components/mobile-nav.css';
+@import './components/app-sidebar.css';
 @import './components/persona-selector.css';
 @import './components/status-bar.css';
 @import './components/tool-call-display.css';
-@import './components/tool-call-item.css';
-@import './components/tool-call-item-integrated.css';
 @import './components/parameter-documentation.css';
 @import './components/chat-input-area.css';
 @import './components/file-item.css';
+@import './components/files-panel.css';
+@import './components/file-upload-manager.css';
 @import './components/media-message.css';
 @import './components/model-parameter-controls.css';
 @import './components/animated-status-indicator.css';
 @import './components/drag-drop-overlay.css';
+@import './components/drag-drop-area.css';
 @import './components/page-header.css';
-@import './components/sidebar.css';
 @import './components/assistant-message.css';
 @import './components/user-message.css';
 @import './components/system-message.css';
+@import './components/collapsible-options.css';
+@import './components/tool-selector.css';
+@import './components/chat-interface.css';
+@import './components/token-usage-display.css';
+@import './components/export-html-button.css';
+@import './components/sidebar-toggle.css';
+@import './components/icon.css';
 
-/* Import component-styles.css for backwards compatibility */
-@import './component-styles.css';
+/* We've removed the import of component-styles.css as it created duplicate imports */
+/* All component styles are now directly imported above */

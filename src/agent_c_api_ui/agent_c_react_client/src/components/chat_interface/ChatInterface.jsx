@@ -1,16 +1,25 @@
 import React, { useState, useRef, useEffect, useCallback, useContext } from "react";
-import { Card } from "@/components/ui/card";
+import { 
+  Card,
+  CardContent,
+  CardFooter
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Send, Upload, Settings } from "lucide-react";
+import { X } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { SessionContext } from '@/contexts/SessionContext';
 import { API_URL } from "@/config/config";
 import { createClipboardContent } from '@/components/chat_interface/utils/htmlChatFormatter';
 import { processMessageStream } from './utils/MessageStreamProcessor';
+import { cn } from "@/lib/utils";
 
 // Import our refactored components
 import MessagesList from './MessagesList';
 import StatusBar from './StatusBar';
 import CollapsibleOptions from './CollapsibleOptions';
+import ChatInputArea from './ChatInputArea';
 import FileUploadManager from './FileUploadManager';
 import DragDropArea from './DragDropArea';
 import { ToolCallProvider, useToolCalls } from './ToolCallContext';
@@ -33,7 +42,8 @@ const ChatInterfaceInner = ({
   modelConfigs,
   selectedModel,
   onUpdateSettings,
-  isInitialized
+  isInitialized,
+  className
 }) => {
   // Access tool call context
   const { 
@@ -56,6 +66,7 @@ const ChatInterfaceInner = ({
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [expandedToolCallMessages, setExpandedToolCallMessages] = useState([]);
   const [selectedFiles, setSelectedFiles] = useState([]);
   
@@ -157,6 +168,7 @@ const ChatInterfaceInner = ({
         content: `File uploaded: ${file.name}`,
       },
     ]);
+    setIsUploading(false);
   };
   
   /**
@@ -172,6 +184,7 @@ const ChatInterfaceInner = ({
         content: `Error uploading file: ${errorMessage}`,
       },
     ]);
+    setIsUploading(false);
   };
   
   /**
@@ -180,6 +193,21 @@ const ChatInterfaceInner = ({
    */
   const handleSelectedFilesChange = (files) => {
     setSelectedFiles(files);
+  };
+
+  /**
+   * Handles file selection from the file picker
+   */
+  const handleFileSelection = (e) => {
+    setIsUploading(true);
+    // This is a pass-through function as FileUploadManager will handle the actual file upload
+  };
+  
+  /**
+   * Opens the file picker
+   */
+  const openFilePicker = () => {
+    FileUploadManager.openFilePicker(fileInputRef);
   };
   
   /**
@@ -261,7 +289,15 @@ const ChatInterfaceInner = ({
         },
         
         onToolCalls: (toolCalls) => {
-          const newToolCalls = handleToolStart(toolCalls);
+          // Filter out 'think' tool calls - they should not be displayed
+          const displayableToolCalls = toolCalls.filter(tool => 
+            tool.name !== 'think' && tool.function?.name !== 'think'
+          );
+          
+          // If all tool calls were 'think' tools, don't display anything
+          if (displayableToolCalls.length === 0) return;
+          
+          const newToolCalls = handleToolStart(displayableToolCalls);
           
           setMessages((prev) => {
             const lastMessage = prev[prev.length - 1];
@@ -443,21 +479,28 @@ const ChatInterfaceInner = ({
     <DragDropArea 
       onFileDrop={handleFileDrop}
       disabled={isStreaming}
-      className="flex flex-col h-full min-h-0 relative z-0 group"
+      className="chat-interface-container"
     >
-      <Card className="flex flex-col h-full min-h-0 bg-card/90 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-300 dark:border-gray-700 shadow-xl rounded-xl">
-        {/* Messages list */}
-        <MessagesList 
-          messages={messages}
-          expandedToolCallMessages={expandedToolCallMessages}
-          toggleToolCallExpansion={toggleToolCallExpansion}
-          toolSelectionInProgress={toolSelectionState.inProgress}
-          toolSelectionName={toolSelectionState.toolName}
-        />
+      <Card className="chat-interface-card">
+        {/* Messages list with ScrollArea for better scrolling experience */}
+        <CardContent className="chat-interface-messages flex-grow p-0 overflow-hidden">
+          <ScrollArea className="h-full w-full" type="auto">
+            <div className="p-2">
+              <MessagesList 
+                messages={messages}
+                expandedToolCallMessages={expandedToolCallMessages}
+                toggleToolCallExpansion={toggleToolCallExpansion}
+                toolSelectionInProgress={toolSelectionState.inProgress}
+                toolSelectionName={toolSelectionState.toolName}
+              />
+            </div>
+          </ScrollArea>
+        </CardContent>
         
         {/* Options Panel - conditionally rendered between messages and input */}
         {isOptionsOpen && (
           <div className="mx-4 mb-2">
+            <Separator className="mb-2" />
             <CollapsibleOptions
               isOpen={isOptionsOpen}
               setIsOpen={setIsOptionsOpen}
@@ -477,11 +520,12 @@ const ChatInterfaceInner = ({
               onUpdateSettings={onUpdateSettings}
               isInitialized={isInitialized}
             />
+            <Separator className="mt-2" />
           </div>
         )}
         
-        {/* Footer with file upload and message input */}
-        <div className="border-t border-gray-300 dark:border-gray-700 bg-card/90 dark:bg-gray-800/50 backdrop-blur-sm p-4 space-y-3 rounded-b-xl">
+        {/* Footer with file upload and chat input */}
+        <CardFooter className="chat-interface-input-area flex-col space-y-3 px-4 py-3">
           {/* File management component */}
           <FileUploadManager
             sessionId={sessionId}
@@ -491,56 +535,44 @@ const ChatInterfaceInner = ({
             fileInputRef={fileInputRef}
           />
           
-          <div className="flex gap-2">
-            {/* Text input with action buttons */}
-            <div className="relative flex-1">
-              <textarea
-                placeholder="Type your message..."
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyDown={handleKeyPress}
-                disabled={isStreaming}
-                rows="2"
-                className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm transition-colors
-                hover:bg-white dark:hover:bg-gray-700/80 focus:border-blue-400 dark:focus:border-blue-600 focus:ring focus:ring-blue-200 dark:focus:ring-blue-800 focus:ring-opacity-50
-                placeholder-gray-500 dark:placeholder-gray-500 text-gray-900 dark:text-gray-100 py-2 pl-3 pr-12 resize-none"
-              />
-              
-              {/* Settings gear icon button */}
-              <Button
-                onClick={toggleOptionsPanel}
-                variant="ghost"
-                size="icon"
-                className="absolute right-20 bottom-2 h-8 w-8 text-gray-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-full transition-colors"
-              >
-                <Settings className="h-4 w-4" />
-              </Button>
-              
-              {/* File upload button positioned inside the input area */}
-              <Button
-                onClick={() => FileUploadManager.openFilePicker(fileInputRef)}
-                variant="ghost"
-                size="icon"
-                disabled={isStreaming}
-                className="absolute right-12 bottom-2 h-8 w-8 text-gray-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-full transition-colors"
-              >
-                <Upload className="h-4 w-4" />
-              </Button>
-              
-              {/* Send button */}
-              <Button
-                onClick={handleSendMessage}
-                disabled={isStreaming}
-                size="icon"
-                className="absolute right-2 bottom-2 h-8 w-8 rounded-full bg-blue-500 hover:bg-blue-600 transition-colors"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
+          {/* Display selected files as badges */}
+          {selectedFiles.length > 0 && (
+            <div className="chat-interface-selected-files">
+              <div className="flex flex-wrap gap-2">
+                {selectedFiles.map((file) => (
+                  <Badge key={file.id} variant="secondary" className="flex items-center gap-1">
+                    {file.name}
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-4 w-4 p-0 hover:bg-transparent" 
+                      onClick={() => setSelectedFiles(selectedFiles.filter(f => f.id !== file.id))}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </Badge>
+                ))}
+              </div>
+              <Separator className="mt-2" />
             </div>
-          </div>
+          )}
+          
+          {/* Chat input area component */}
+          <ChatInputArea
+            inputText={inputText}
+            setInputText={setInputText}
+            isStreaming={isStreaming}
+            isUploading={isUploading}
+            handleSendMessage={handleSendMessage}
+            handleKeyPress={handleKeyPress}
+            openFilePicker={openFilePicker}
+            toggleOptionsPanel={toggleOptionsPanel}
+            fileInputRef={fileInputRef}
+            handleFileSelection={handleFileSelection}
+          />
           
           {/* StatusBar positioned just below the input */}
-          <div className="-mt-1 flex justify-center w-full transform translate-y-1">
+          <div className="chat-interface-status-bar">
             <StatusBar
               isReady={isReady}
               activeTools={activeTools}
@@ -552,7 +584,7 @@ const ChatInterfaceInner = ({
               messages={messages}
             />
           </div>
-        </div>
+        </CardFooter>
       </Card>
     </DragDropArea>
   );

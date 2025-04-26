@@ -3,16 +3,11 @@
 
 /* Base card style */
 .card {
-  background-color: var(--card-background);
-  border-radius: var(--card-border-radius);
-  border: var(--border-width-thin) solid var(--card-border-color);
-  box-shadow: var(--card-shadow);
-  padding: var(--card-padding-y) var(--card-padding-x);
-}
-
-.dark .card {
-  background-color: hsl(var(--color-gray-800));
-  border-color: hsl(var(--color-gray-700));
+  background-color: hsl(var(--card));
+  border-radius: var(--radius);
+  border: var(--border-width-thin) solid hsl(var(--border) / 0.2);
+  box-shadow: var(--shadow-md);
+  padding: var(--spacing-3) var(--spacing-4);
 }
 
 /* Card with hover effect */
@@ -27,38 +22,25 @@
 
 /* Info card - used for tooltips and popovers */
 .info-card {
-  background-color: var(--card-background);
-  border-radius: var(--card-border-radius);
-  border: var(--border-width-thin) solid var(--card-border-color);
+  background-color: hsl(var(--popover));
+  border-radius: var(--radius);
+  border: var(--border-width-thin) solid hsl(var(--border) / 0.2);
   box-shadow: var(--shadow-lg);
   z-index: var(--z-index-popover);
-}
-
-.dark .info-card {
-  background-color: hsl(var(--color-gray-800));
-  border-color: hsl(var(--color-gray-700));
 }
 
 /* Card header */
 .card-header {
   padding-bottom: var(--spacing-2);
   margin-bottom: var(--spacing-2);
-  border-bottom: var(--border-width-thin) solid hsl(var(--color-gray-200));
-}
-
-.dark .card-header {
-  border-bottom-color: hsl(var(--color-gray-700));
+  border-bottom: var(--border-width-thin) solid hsl(var(--border));
 }
 
 /* Card footer */
 .card-footer {
   padding-top: var(--spacing-2);
   margin-top: var(--spacing-2);
-  border-top: var(--border-width-thin) solid hsl(var(--color-gray-200));
-}
-
-.dark .card-footer {
-  border-top-color: hsl(var(--color-gray-700));
+  border-top: var(--border-width-thin) solid hsl(var(--border));
 }
 
 /* Card with hover reveal */
