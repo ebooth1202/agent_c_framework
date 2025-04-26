@@ -44,7 +44,7 @@ const MessageItem = ({
   // Render user message
   if (message.role === 'user') {
     return (
-      <div role="listitem" className="message-item user-message-container" aria-label="User message">
+      <div role="listitem" className="message-item user-message-container overflow-hidden w-full" aria-label="User message">
         <UserMessage 
           content={message.content} 
           files={message.files} 
@@ -62,7 +62,7 @@ const MessageItem = ({
     return (
       <div 
         role="listitem" 
-        className="message-item assistant-message-container"
+        className="message-item assistant-message-container overflow-hidden w-full"
         aria-label="Assistant message"
       >
         <AssistantMessage

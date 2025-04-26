@@ -107,6 +107,7 @@
   overflow-x: auto;
   max-width: 100%;
   border: 1px solid hsl(var(--border));
+  word-break: break-word;
 }
 
 /* Responsive adjustments */

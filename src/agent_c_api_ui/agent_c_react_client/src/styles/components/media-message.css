@@ -126,6 +126,18 @@
   height: 100%;
   object-fit: contain; /* Keep this to maintain aspect ratio */
   display: block; /* Remove any default inline spacing */
+  max-width: 100%;
+}
+
+@media (max-width: 640px) {
+  .media-message-card {
+    margin-left: 0.75rem;
+    max-width: calc(100% - 1.5rem);
+  }
+  
+  .media-message-card-expanded {
+    max-width: calc(100% - 1.5rem);
+  }
 }
 
 /* MediaMessage: HTML content styling */

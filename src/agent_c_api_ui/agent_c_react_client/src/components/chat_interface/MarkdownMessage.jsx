@@ -88,7 +88,7 @@ const MarkdownMessage = ({content, standalone = false}) => {
                                             className="markdown-code-block-copy-button-style"
                                         />
                                     </div>
-                                    <ScrollArea className="w-full max-h-[500px]" type="always" scrollHideDelay={0}>
+                                    <ScrollArea className="w-full max-h-[500px] max-w-full" type="always" scrollHideDelay={0}>
                                         <SyntaxHighlighter
                                             style={oneDark}
                                             language={language || 'text'}
