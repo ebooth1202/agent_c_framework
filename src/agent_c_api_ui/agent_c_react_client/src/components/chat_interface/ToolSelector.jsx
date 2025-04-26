@@ -12,7 +12,7 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
-import { Check, AlertCircle } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 /**
@@ -93,7 +93,7 @@ const ToolCategory = ({ title, tools = [], selectedTools, activeTools, onToolTog
                                             {tool.name}
                                             {isActive && (
                                                 <span className="tool-active-badge">
-                                                    <Check className="tool-active-icon"/>
+                                                    <Icon icon="fa-regular fa-check" hoverIcon="fa-solid fa-check" className="tool-active-icon"/>
                                                     Active
                                                 </span>
                                             )}
@@ -201,7 +201,7 @@ const ToolSelector = ({ availableTools, onEquipTools, activeTools = [], sessionI
                 </CardHeader>
                 <CardContent>
                     <div className="tool-selector-waiting">
-                        <AlertCircle className="h-5 w-5"/>
+                        <Icon icon="fa-regular fa-circle-exclamation" hoverIcon="fa-solid fa-circle-exclamation" size="lg" className="text-yellow-500" />
                         <p>Waiting for agent initialization...</p>
                     </div>
                 </CardContent>

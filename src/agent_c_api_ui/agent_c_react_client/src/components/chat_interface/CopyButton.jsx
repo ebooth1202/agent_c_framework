@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 /**
@@ -80,7 +80,10 @@ const CopyButton = ({
             className={`hover:bg-gray-100 transition-colors ${className}`}
             onClick={copyToClipboard}
           >
-            {isCopied ? <Check className="h-4 w-4 text-green-500" /> : (icon || <Copy className="h-4 w-4" />)}
+            {isCopied ? 
+              <Icon icon="fa-solid fa-check" className="text-green-500" /> : 
+              (icon || <Icon icon="fa-regular fa-copy" hoverIcon="fa-solid fa-copy" />)
+            }
           </Button>
         </TooltipTrigger>
         <TooltipContent side={position}>

@@ -84,7 +84,6 @@
 /* MarkdownMessage: Strong text */
 .markdown-strong {
   font-weight: var(--font-weight-bold);
-  color: hsl(var(--color-purple-800));
 }
 
 /* MarkdownMessage: Code blocks and inline code */

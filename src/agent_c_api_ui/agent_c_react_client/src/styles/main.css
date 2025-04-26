@@ -42,6 +42,7 @@
 @import './components/token-usage-display.css';
 @import './components/export-html-button.css';
 @import './components/sidebar-toggle.css';
+@import './components/icon.css';
 
 /* We've removed the import of component-styles.css as it created duplicate imports */
 /* All component styles are now directly imported above */
