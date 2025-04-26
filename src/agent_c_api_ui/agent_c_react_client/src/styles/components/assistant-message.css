@@ -138,6 +138,7 @@
   width: calc(100% - 3rem); /* Allow it to take up more space than the message */
   max-width: 95%;
   animation: slideDown 0.2s ease-out;
+  position: relative;
 }
 
 @keyframes slideDown {
@@ -149,20 +150,6 @@
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-.assistant-message-tool-calls-content {
-  background-color: var(--card-background);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1rem;
-  box-shadow: var(--shadow-sm);
-}
-
-.assistant-message-tool-calls-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
 }
 
 /* AssistantMessage: Actions */

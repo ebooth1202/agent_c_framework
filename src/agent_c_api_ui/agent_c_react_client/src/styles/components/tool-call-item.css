@@ -5,14 +5,21 @@
 .tool-call-item {
   margin-bottom: 0.5rem; /* 8px, mb-2 */
   overflow: hidden;
+  transition: all 0.2s ease-in-out;
 }
 
 /* Non-integrated mode specific styles - now used for below-bubble displays */
 .tool-call-item:not(.tool-call-item-integrated) {
-  border: 1px solid hsl(var(--primary) / 0.2);
+  border: 1px solid var(--tool-call-border, hsl(var(--primary) / 0.4));
   border-radius: var(--radius);
-  background-color: hsl(var(--card));
-  box-shadow: var(--shadow-md); /* Lighter shadow for below-bubble displays */
+  background-color: var(--tool-call-item-background, hsl(var(--card) / 0.95));
+  box-shadow: var(--shadow-md); /* Enhanced shadow for better visibility */
+  backdrop-filter: blur(2px);
+}
+
+.tool-call-item:not(.tool-call-item-integrated):hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
 }
 
 /* Integrated mode specific styles - kept for compatibility */
@@ -32,12 +39,13 @@
 
 /* Non-integrated header styles */
 .tool-call-item:not(.tool-call-item-integrated) .tool-call-item-header {
-  background-color: hsl(var(--primary) / 0.05);
+  background-color: var(--tool-call-header-background, hsl(var(--primary) / 0.1));
   border-radius: var(--radius);
+  border-bottom: 1px solid var(--tool-call-border, hsl(var(--primary) / 0.4));
 }
 
 .tool-call-item:not(.tool-call-item-integrated) .tool-call-item-header:hover {
-  background-color: hsl(var(--primary) / 0.1);
+  background-color: var(--tool-call-header-hover, hsl(var(--primary) / 0.15));
 }
 
 /* Integrated header styles */
