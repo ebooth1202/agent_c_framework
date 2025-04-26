@@ -18,8 +18,14 @@ import { cn } from "@/lib/utils";
 const ToolCallDisplay = ({ toolCalls, className }) => {
   const [isOpen, setIsOpen] = useState(false); // Default to collapsed
 
-  // Ensure toolCalls is an array and filter out any null values
-  const validTools = Array.isArray(toolCalls) ? toolCalls.filter(tool => tool) : [];
+  // Ensure toolCalls is an array, filter out any null values and 'think' tool calls
+  const validTools = Array.isArray(toolCalls) 
+    ? toolCalls.filter(tool => 
+        tool && 
+        tool.name !== 'think' && 
+        tool.function?.name !== 'think'
+      ) 
+    : [];
   const toolCount = validTools.length;
 
   if (toolCount === 0) return null;

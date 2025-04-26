@@ -26,11 +26,14 @@ const MessageItem = ({
   expandedToolCallMessages,
   toggleToolCallExpansion
 }) => {
-  // Helper function to check if this message has associated tool calls
+  // Helper function to check if this message has associated tool calls (excluding 'think')
   const getAssociatedToolCalls = () => {
     const nextMsg = messages[index + 1];
     if (nextMsg && nextMsg.type === 'tool_calls' && nextMsg.toolCalls?.length > 0) {
-      return nextMsg.toolCalls;
+      // Filter out 'think' tool calls
+      return nextMsg.toolCalls.filter(
+        tool => tool.name !== 'think' && tool.function?.name !== 'think'
+      );
     }
     return [];
   };
@@ -82,6 +85,16 @@ const MessageItem = ({
       return null;
     }
     
+    // Filter out 'think' tool calls
+    const displayableToolCalls = message.toolCalls?.filter(
+      tool => tool.name !== 'think' && tool.function?.name !== 'think'
+    );
+    
+    // If no displayable tool calls left, don't render anything
+    if (!displayableToolCalls || displayableToolCalls.length === 0) {
+      return null;
+    }
+    
     // Otherwise, render as standalone tool calls
     return (
       <div 
@@ -89,7 +102,7 @@ const MessageItem = ({
         className="message-item tool-call-container"
         aria-label="Tool call results"
       >
-        <ToolCallDisplay toolCalls={message.toolCalls} />
+        <ToolCallDisplay toolCalls={displayableToolCalls} />
       </div>
     );
   }

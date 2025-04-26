@@ -35,8 +35,13 @@ const AssistantMessage = ({
   onToggleToolCalls,
   className
 }) => {
-  const hasToolCalls = toolCalls && toolCalls.length > 0;
-  const toolCallCount = hasToolCalls ? toolCalls.length : 0;
+  // Filter out 'think' tool calls
+  const displayableToolCalls = toolCalls?.filter(
+    tool => tool.name !== 'think' && tool.function?.name !== 'think'
+  ) || [];
+  
+  const hasToolCalls = displayableToolCalls.length > 0;
+  const toolCallCount = displayableToolCalls.length;
   
   return (
     <div className={cn("assistant-message-wrapper", className)}>
@@ -104,7 +109,7 @@ const AssistantMessage = ({
         >
           <div className="assistant-message-tool-calls-content">
             <div className="assistant-message-tool-calls-list">
-              {toolCalls.map((toolCall, toolIdx) => (
+              {displayableToolCalls.map((toolCall, toolIdx) => (
                 <ToolCallItem
                   key={toolCall.id || toolIdx}
                   tool={{

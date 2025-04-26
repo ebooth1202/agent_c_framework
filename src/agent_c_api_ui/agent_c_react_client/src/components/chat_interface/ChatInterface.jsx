@@ -289,7 +289,15 @@ const ChatInterfaceInner = ({
         },
         
         onToolCalls: (toolCalls) => {
-          const newToolCalls = handleToolStart(toolCalls);
+          // Filter out 'think' tool calls - they should not be displayed
+          const displayableToolCalls = toolCalls.filter(tool => 
+            tool.name !== 'think' && tool.function?.name !== 'think'
+          );
+          
+          // If all tool calls were 'think' tools, don't display anything
+          if (displayableToolCalls.length === 0) return;
+          
+          const newToolCalls = handleToolStart(displayableToolCalls);
           
           setMessages((prev) => {
             const lastMessage = prev[prev.length - 1];
