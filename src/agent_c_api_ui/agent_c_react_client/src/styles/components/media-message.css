@@ -24,7 +24,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 1rem; /* py-3 px-4 */
+  padding: 0.5rem 0.75rem; /* Slightly reduced padding py-2 px-3 */
   cursor: pointer;
   background-color: var(--media-message-header-background);
   transition: background-color 200ms ease;
@@ -38,20 +38,7 @@
 .media-message-header-content {
   display: flex;
   align-items: center;
-  gap: 0.5rem; /* gap-2 */
-}
-
-/* MediaMessage: Header icon */
-.media-message-header-icon {
-  height: 1.25rem;
-  width: 1.25rem;
-  color: var(--media-message-header-icon);
-}
-
-/* MediaMessage: Header title */
-.media-message-header-title {
-  font-weight: 600; /* font-semibold */
-  color: var(--media-message-header-title);
+  padding: 0.125rem 0; /* Slight vertical padding py-0.5 */
 }
 
 /* MediaMessage: Header actions */
@@ -59,6 +46,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem; /* gap-2 */
+  margin-left: auto; /* ml-auto to push it to the right */
 }
 
 /* MediaMessage: Copy button styling */
@@ -185,20 +173,10 @@
 
 /* MediaMessage: Metadata styling */
 .media-message-metadata {
-  margin-top: 1rem; /* mt-4 */
-  padding-top: 0.75rem; /* pt-3 */
-  border-top: 1px solid var(--media-message-metadata-border);
   display: flex;
   align-items: center;
-  gap: 0.5rem; /* gap-2 */
   font-size: 0.75rem; /* text-xs */
   color: var(--media-message-metadata-color);
-}
-
-.media-message-metadata-icon {
-  height: 1rem;
-  width: 1rem;
-  flex-shrink: 0;
 }
 
 .media-message-metadata-text {
@@ -206,5 +184,5 @@
 }
 
 .media-message-metadata-separator {
-  margin: 0 0.5rem; /* mx-2 */
+  margin: 0 0.25rem; /* mx-1 - reduced for compactness */
 }
