@@ -51,9 +51,19 @@
 /* ToolSelector: Equip button */
 .tool-selector-equip-button {
   width: 100%;
-  margin-top: 0.5rem;
-  background: hsl(var(--secondary));
-  color: hsl(var(--secondary-foreground));
+  margin-bottom: 1rem;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  font-weight: 500;
+  padding: 0.75rem;
+  font-size: 1rem;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.tool-selector-equip-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Enhance button visibility in dark mode */

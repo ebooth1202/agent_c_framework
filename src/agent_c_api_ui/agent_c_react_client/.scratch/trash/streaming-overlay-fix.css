@@ -1,0 +1,67 @@
+/* ===== COMPONENT: Streaming Overlay Fix ===== */
+/* Description: Ensures chat bubbles and tool calls can be interacted with during streaming */
+
+/* CRITICAL: Remove ALL dimming effects during message streaming */
+*[data-streaming="true"],
+div[data-streaming="true"],
+body[data-streaming="true"],
+.chat-interface-card[data-streaming="true"],
+.chat-interface-container[data-streaming="true"],
+.messages-list-container[data-streaming="true"],
+.message-item-wrapper[data-streaming="true"] {
+  opacity: 1 !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  background-color: inherit !important;
+  pointer-events: auto !important;
+}
+
+/* Ensure all nested elements are fully visible and interactive */
+*[data-streaming="true"] *,
+div[data-streaming="true"] *,
+body[data-streaming="true"] * {
+  opacity: 1 !important;
+  filter: none !important;
+  pointer-events: auto !important;
+}
+
+/* Make sure elements can be clicked during streaming */
+div[data-streaming="true"] button,
+div[data-streaming="true"] a,
+div[data-streaming="true"] .collapsible-trigger,
+div[data-streaming="true"] [role="button"] {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+/* Ensure scrolling works during streaming */
+div[data-streaming="true"] .messages-list-container {
+  overflow: auto !important;
+}
+
+/* Remove any overlay that might be preventing interaction */
+body::before,
+.messages-list-container::before,
+.chat-interface-container::before,
+.chat-interface-card::before,
+.messages-list-container::after,
+.chat-interface-container::after,
+.chat-interface-card::after {
+  content: none !important;
+  display: none !important;
+  opacity: 0 !important;
+  position: static !important;
+  z-index: -1 !important;
+}
+
+/* Ensure no backdrop filters are applied */
+.backdrop-blur,
+.backdrop-blur-sm,
+.backdrop-blur-md,
+.backdrop-blur-lg,
+.backdrop-blur-xl,
+.backdrop-blur-2xl,
+.backdrop-blur-3xl {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
