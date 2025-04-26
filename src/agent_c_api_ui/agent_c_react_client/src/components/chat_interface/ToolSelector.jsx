@@ -288,6 +288,7 @@ const ToolSelector = ({ availableTools, onEquipTools, activeTools = [], sessionI
                 <Button
                     onClick={handleEquipTools}
                     disabled={!isReady || isLoading}
+                    variant="default"
                     className="tool-selector-equip-button"
                 >
                     {isLoading ? 'Updating Tools...' : 'Equip Selected Tools'}
