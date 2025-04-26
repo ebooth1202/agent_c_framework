@@ -44,7 +44,7 @@ const ChatPage = () => {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3.5rem)] overflow-hidden">
+    <div className="flex flex-col flex-1 overflow-hidden">
       <div className="flex flex-col space-y-2 mb-1">
         {error && (
           <Alert variant="destructive" className="mb-2">
