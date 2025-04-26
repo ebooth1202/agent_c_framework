@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import PropTypes from "prop-types";
-import { Send, Upload, Settings, Square } from "lucide-react";
+import { Send, Upload, Settings, Square, Clipboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
  * @param {React.RefObject} props.fileInputRef - Ref for the file input element
  * @param {Function} props.handleFileSelection - Function to handle file selection
  * @param {Function} props.handleCancelStream - Function to cancel streaming response
+ * @param {Function} props.handleClipboardPaste - Function to handle pasted files from clipboard
  * @param {string} [props.className] - Additional CSS classes
  */
 const ChatInputArea = ({
@@ -37,6 +38,7 @@ const ChatInputArea = ({
   fileInputRef,
   handleFileSelection,
   handleCancelStream,
+  handleClipboardPaste,
   className
 }) => {
   const isInputDisabled = isStreaming;
@@ -45,6 +47,67 @@ const ChatInputArea = ({
   
   // Determine if send button should be active
   const sendButtonVariant = isSendDisabled ? "secondary" : "accent";
+  
+  // State for paste animation
+  const [pasteAnimating, setPasteAnimating] = useState(false);
+  
+  // Reset paste animation after it plays
+  useEffect(() => {
+    if (pasteAnimating) {
+      const timer = setTimeout(() => {
+        setPasteAnimating(false);
+      }, 1000); // Match animation duration
+      return () => clearTimeout(timer);
+    }
+  }, [pasteAnimating]);
+  
+  // Handle paste events to capture files
+  const handlePaste = useCallback((e) => {
+    // Check if we should handle this paste event
+    if (isInputDisabled || isUploading) return;
+    
+    // Get clipboard items
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    
+    // Check if there are files in the clipboard
+    const files = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      // Look for images or files
+      if (item.kind === 'file') {
+        const file = item.getAsFile();
+        if (file) {
+          // If it's an image without a name, give it a name
+          if (file.type.startsWith('image/') && (!file.name || file.name === 'image.png')) {
+            const fileExtension = file.type.split('/')[1] || 'png';
+            const newFile = new File([file], `pasted-image-${new Date().getTime()}.${fileExtension}`, {
+              type: file.type
+            });
+            files.push(newFile);
+          } else {
+            files.push(file);
+          }
+        }
+      }
+    }
+    
+    // If we found files, handle them
+    if (files.length > 0) {
+      // Stop propagation to prevent the text from also being pasted if it's an image
+      if (files.some(file => file.type.startsWith('image/'))) {
+        e.stopPropagation();
+        e.preventDefault();
+      }
+      
+      // Activate the paste animation
+      setPasteAnimating(true);
+      
+      // Send files to handler
+      handleClipboardPaste(files);
+      return;
+    }
+  }, [isInputDisabled, isUploading, handleClipboardPaste]);
   
   return (
     <div 
@@ -68,12 +131,16 @@ const ChatInputArea = ({
       />
       
       {/* Text input with action buttons */}
-      <div className="chat-input-container">
+      <div className={cn(
+        "chat-input-container", 
+        pasteAnimating && "paste-in-progress"
+      )}>
         <Textarea
           placeholder="Type your message..."
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={handleKeyPress}
+          onPaste={handlePaste}
           disabled={isInputDisabled}
           rows={2}
           className={cn(
@@ -82,6 +149,7 @@ const ChatInputArea = ({
             "resize-none"
           )}
           aria-label="Message input"
+          data-paste-enabled="true"
           // Removed data-streaming attribute to prevent scrolling issues
         />
         
@@ -123,7 +191,7 @@ const ChatInputArea = ({
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Upload file</p>
+                <p>Upload file (or paste from clipboard)</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -178,6 +246,7 @@ ChatInputArea.propTypes = {
   fileInputRef: PropTypes.oneOfType([PropTypes.func, PropTypes.shape({ current: PropTypes.any })]).isRequired,
   handleFileSelection: PropTypes.func.isRequired,
   handleCancelStream: PropTypes.func.isRequired,
+  handleClipboardPaste: PropTypes.func.isRequired,
   className: PropTypes.string
 };
 

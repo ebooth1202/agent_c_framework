@@ -142,6 +142,10 @@ const ChatInterfaceInner = ({
    * Handles file drop from drag and drop
    * @param {FileList} files - The dropped files
    */
+  /**
+   * Handles file drop from drag and drop
+   * @param {FileList} files - The dropped files
+   */
   const handleFileDrop = (files) => {
     if (files && files.length > 0) {
       console.log('File dropped:', files[0].name);
@@ -170,6 +174,46 @@ const ChatInterfaceInner = ({
       handleFileSelection({
         target: {
           files: files
+        }
+      });
+    }
+  };
+  
+  /**
+   * Handles files pasted from clipboard
+   * @param {Array<File>} files - The files from clipboard
+   */
+  const handleClipboardPaste = (files) => {
+    if (files && files.length > 0) {
+      console.log('File pasted from clipboard:', files[0].name);
+      
+      // Set uploading state first
+      setIsUploading(true);
+      
+      // Since we can only process one file at a time in the current implementation,
+      // take the first file - this can be extended to handle multiple files later
+      const file = files[0];
+      
+      // We no longer need to add a message here as the file uploaded message will be sufficient
+      
+      // Process the pasted file
+      // Directly call the file upload function similar to drag and drop handling
+      if (fileInputRef.current) {
+        // Update the file input to maintain consistency
+        try {
+          const dataTransfer = new DataTransfer();
+          dataTransfer.items.add(file);
+          fileInputRef.current.files = dataTransfer.files;
+        } catch (err) {
+          console.warn('Could not update file input element:', err);
+          // Continue anyway as we'll handle the file directly
+        }
+      }
+      
+      // Call the handleFileSelection function which will trigger the upload
+      handleFileSelection({
+        target: {
+          files: [file]
         }
       });
     }
@@ -782,6 +826,7 @@ const ChatInterfaceInner = ({
             fileInputRef={fileInputRef}
             handleFileSelection={handleFileSelection}
             handleCancelStream={handleCancelStream}
+            handleClipboardPaste={handleClipboardPaste}
           />
           
           {/* StatusBar positioned just below the input */}
