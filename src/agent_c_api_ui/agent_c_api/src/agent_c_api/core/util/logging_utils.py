@@ -220,6 +220,7 @@ class LoggingManager:
             "anthropic": "WARNING",
             "openai": "WARNING",
             "readability": "WARNING",
+            "selenium": "WARNING",
             # Add others as needed
         }
 
