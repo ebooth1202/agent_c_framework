@@ -4,7 +4,7 @@
 /* MediaMessage: Main container and card styling */
 .media-message-card {
   background-color: var(--media-message-background);
-  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); /* shadow-sm */
+  box-shadow: var(--shadow-lg); /* Enhanced to stronger shadow for better visibility */
   overflow: hidden;
   margin-left: 2rem; /* 32px, ml-8 */
   border: 1px solid var(--media-message-border);

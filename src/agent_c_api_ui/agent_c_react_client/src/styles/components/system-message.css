@@ -15,7 +15,7 @@
   border: 1px solid var(--system-message-border);
   background-color: var(--system-message-background);
   color: var(--system-message-foreground);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md); /* Enhanced shadow for better depth */
 }
 
 /* SystemMessage: Animation */

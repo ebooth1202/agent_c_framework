@@ -29,7 +29,7 @@
   min-width: 300px; /* Ensure minimum width for content */
   width: 100%; /* Ensure the card takes full width available */
   border-radius: 0.75rem;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md); /* Enhanced shadow for better depth */
   overflow: hidden;
   border: 1px solid var(--assistant-message-border);
   background-color: var(--assistant-message-background);

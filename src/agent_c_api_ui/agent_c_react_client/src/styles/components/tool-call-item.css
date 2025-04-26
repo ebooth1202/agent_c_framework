@@ -12,7 +12,7 @@
   border: 1px solid hsl(var(--primary) / 0.2);
   border-radius: var(--radius);
   background-color: hsl(var(--card));
-  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); /* shadow-sm */
+  box-shadow: var(--shadow-lg); /* Enhanced to stronger shadow for better visibility */
 }
 
 /* Integrated mode specific styles */

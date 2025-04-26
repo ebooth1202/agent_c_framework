@@ -19,7 +19,7 @@
   border: 1px solid var(--thought-border);
   background-color: var(--thought-background);
   color: var(--thought-foreground);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md); /* Enhanced shadow for better depth */
 }
 
 /* ThoughtDisplay: Scrollable area */

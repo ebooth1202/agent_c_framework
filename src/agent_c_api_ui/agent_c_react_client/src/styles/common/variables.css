@@ -284,6 +284,19 @@
 /* ===== DARK THEME OVERRIDES ===== */
 /* Dark mode theme colors - Cold Autumn Forest Grunge palette */
 .dark {
+  /* ===== SHADOWS - Dark Mode Enhancement ===== */
+  /* Enhanced shadows for better visibility in dark mode */
+  --shadow-sm-dark: 0 2px 4px 0 rgba(0, 0, 0, 0.5), 0 1px 3px 0 rgba(0, 0, 0, 0.4);
+  --shadow-md-dark: 0 8px 10px -2px rgba(0, 0, 0, 0.5), 0 6px 8px -2px rgba(0, 0, 0, 0.4);
+  --shadow-lg-dark: 0 15px 20px -3px rgba(0, 0, 0, 0.5), 0 10px 15px -4px rgba(0, 0, 0, 0.4);
+  --shadow-xl-dark: 0 30px 35px -6px rgba(0, 0, 0, 0.5), 0 18px 20px -6px rgba(0, 0, 0, 0.4);
+
+  /* Override shadow variables to use dark-enhanced versions */
+  --shadow-sm: var(--shadow-sm-dark);
+  --shadow-md: var(--shadow-md-dark);
+  --shadow-lg: var(--shadow-lg-dark);
+  --shadow-xl: var(--shadow-xl-dark);
+
   /* ===== SHADCN THEME VARIABLES - Dark Mode ===== */
   --background: 41 20% 9%;               /* Rangoon #1a1914 */
   --foreground: 0 0% 100%;               /* White */

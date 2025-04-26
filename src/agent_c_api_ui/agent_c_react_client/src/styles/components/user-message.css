@@ -18,7 +18,7 @@
   border: 1px solid var(--user-message-border);
   background-color: var(--user-message-background);
   color: var(--user-message-foreground);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md); /* Enhanced shadow for better depth */
 }
 
 /* UserMessage: Markdown content */
