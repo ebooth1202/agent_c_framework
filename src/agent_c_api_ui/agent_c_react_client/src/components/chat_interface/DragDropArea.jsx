@@ -78,7 +78,7 @@ const DragDropArea = ({ children, onFileDrop, disabled = false, className }) => 
     <div 
       className={cn(
         'relative w-full h-full block',
-        disabled && 'pointer-events-none opacity-70',
+        disabled && 'opacity-70', // Removed pointer-events-none to allow scrolling while streaming
         className
       )}
       onDragEnter={handleDragEnter}

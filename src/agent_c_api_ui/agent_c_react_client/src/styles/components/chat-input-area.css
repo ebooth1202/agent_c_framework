@@ -69,11 +69,7 @@
   cursor: not-allowed;
 }
 
-/* ChatInputArea: Textarea input during streaming */
-.chat-input-textarea[data-streaming="true"] {
-  background-color: hsl(var(--muted) / 0.3);
-  border-color: hsl(var(--border) / 0.5);
-}
+/* Removed streaming styles to prevent scrolling issues */
 
 /* ChatInputArea: Action buttons container */
 .chat-input-actions {

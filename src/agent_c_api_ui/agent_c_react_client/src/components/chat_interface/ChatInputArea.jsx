@@ -79,7 +79,7 @@ const ChatInputArea = ({
             "resize-none"
           )}
           aria-label="Message input"
-          data-streaming={isStreaming ? "true" : "false"}
+          // Removed data-streaming attribute to prevent scrolling issues
         />
         
         {/* Action buttons container */}
