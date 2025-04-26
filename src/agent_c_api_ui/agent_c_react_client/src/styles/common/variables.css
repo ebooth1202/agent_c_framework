@@ -279,6 +279,11 @@
   --badge-padding-y: 0.25rem;  /* 4px */
   --badge-font-size: var(--font-size-xs);
   --badge-border-radius: var(--border-radius-full);
+
+  /* Sidebar Components */
+  --sidebar-width: 8rem;
+  --sidebar-width-mobile: 18rem;
+  --sidebar-width-icon: 3.5rem;
 }
 
 /* ===== DARK THEME OVERRIDES ===== */
