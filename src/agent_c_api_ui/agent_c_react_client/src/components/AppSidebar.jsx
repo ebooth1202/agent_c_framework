@@ -76,16 +76,16 @@ const AppSidebar = ({ children, defaultOpen = true, collapsible = "icon" }) => {
           <SidebarFooter>
             <Separator className="my-2" />
             <div className="flex items-center justify-between px-2">
-              <p className="text-xs text-muted-foreground sidebar-title">Agent C UI</p>
+              /* footer logo here */
               <div className="theme-toggle-container">
-                <ThemeToggle />
+                <ThemeToggle/>
               </div>
             </div>
           </SidebarFooter>
         </Sidebar>
 
         <div className="sidebar-content">
-          <MobileFloatingToggle />
+          <MobileFloatingToggle/>
           {children}
         </div>
       </div>

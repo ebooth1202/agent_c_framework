@@ -46,6 +46,14 @@
   margin-left: 0; /* Remove any margin */
 }
 
+/* AppSidebar: Ensure all children of sidebar-content have full height */
+.sidebar-content > * {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
 /* AppSidebar: Menu labels in the sidebar */
 .sidebar-menu-label {
   transition: opacity 0.2s ease-in-out, width 0.2s ease-in-out;

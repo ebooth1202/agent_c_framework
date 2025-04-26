@@ -69,7 +69,8 @@ const DragDropArea = ({ children, onFileDrop, disabled = false, className }) => 
     
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       if (onFileDrop) {
-        onFileDrop(e.dataTransfer.files[0]);
+        // Pass all dropped files instead of just the first one
+        onFileDrop(e.dataTransfer.files);
       }
     }
   };

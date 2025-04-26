@@ -20,7 +20,7 @@ import MarkdownMessage from './MarkdownMessage';
  * @param {boolean} [props.isVoiceMessage] - Whether this is a voice message
  * @param {string} [props.className] - Optional additional class names
  */
-const UserMessage = ({ content, files, isVoiceMessage, className }) => {
+const UserMessage = ({ content, files = [], isVoiceMessage = false, className = '' }) => {
   return (
     <div className={cn(
       "user-message-container group", 
@@ -96,10 +96,6 @@ UserMessage.propTypes = {
   className: PropTypes.string
 };
 
-UserMessage.defaultProps = {
-  files: [],
-  isVoiceMessage: false,
-  className: ''
-};
+// Default props are now handled via parameter destructuring with default values
 
 export default UserMessage;

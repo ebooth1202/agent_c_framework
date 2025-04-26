@@ -77,11 +77,13 @@ const FileUploadManager = ({
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
       setSelectedFileForUpload(file);
+      console.log('FileUploadManager: File selected', file.name);
       
       // Automatically upload the file when selected
+      // Use a small timeout to ensure the React state update completes
       setTimeout(() => {
         handleUploadFile(file);
-      }, 0);
+      }, 10);
     } else {
       setSelectedFileForUpload(null);
     }
@@ -103,8 +105,12 @@ const FileUploadManager = ({
   const handleUploadFile = async (fileToUpload = null) => {
     // Use provided file or the selected file from state
     const fileToProcess = fileToUpload || selectedFileForUpload;
-    if (!fileToProcess) return;
+    if (!fileToProcess) {
+      console.error('No file to upload!');
+      return;
+    }
 
+    console.log('FileUploadManager: Starting upload of', fileToProcess.name);
     setIsUploading(true);
     if (onFileUploadStart) {
       onFileUploadStart(fileToProcess);
@@ -115,6 +121,7 @@ const FileUploadManager = ({
     formData.append("file", fileToProcess);
 
     try {
+      console.log('Uploading file:', fileToProcess.name);
       // Upload the file
       const response = await fetch(`${API_URL}/upload_file`, {
         method: "POST",
@@ -122,10 +129,12 @@ const FileUploadManager = ({
       });
 
       if (!response.ok) {
+        console.error(`Upload failed with status: ${response.status}`);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log('Upload successful:', data);
 
       // Add file to state with initial "pending" status
       const newFile = {
@@ -164,8 +173,14 @@ const FileUploadManager = ({
 
     } catch (error) {
       console.error("Error uploading file:", error);
+      // Create a more detailed error message
+      const errorMessage = `Failed to upload file: ${error.message}. Please try again.`;
       if (onFileError) {
-        onFileError(error.message);
+        onFileError(errorMessage);
+      }
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = null;
       }
     } finally {
       setIsUploading(false);

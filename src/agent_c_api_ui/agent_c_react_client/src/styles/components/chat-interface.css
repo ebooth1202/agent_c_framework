@@ -10,6 +10,7 @@
   position: relative;
   z-index: 0;
   padding: clamp(0.25rem, 0.5vw, 0.75rem);
+  flex: 1 1 auto;
 }
 
 /* ChatInterface: Card */
