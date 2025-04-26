@@ -5,6 +5,7 @@
 .tool-call-display {
   /* Base styling provided by shadcn Card component */
   /* Custom positioning and sizing handled via Tailwind */
+  /* For standalone tool call displays (not attached to messages) */
 }
 
 /* ToolCallDisplay: Header section */

@@ -7,15 +7,15 @@
   overflow: hidden;
 }
 
-/* Non-integrated mode specific styles */
+/* Non-integrated mode specific styles - now used for below-bubble displays */
 .tool-call-item:not(.tool-call-item-integrated) {
   border: 1px solid hsl(var(--primary) / 0.2);
   border-radius: var(--radius);
   background-color: hsl(var(--card));
-  box-shadow: var(--shadow-lg); /* Enhanced to stronger shadow for better visibility */
+  box-shadow: var(--shadow-md); /* Lighter shadow for below-bubble displays */
 }
 
-/* Integrated mode specific styles */
+/* Integrated mode specific styles - kept for compatibility */
 .tool-call-item-integrated {
   background-color: transparent;
 }

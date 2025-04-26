@@ -56,44 +56,21 @@ const AssistantMessage = ({
                 
                 {/* Tool call toggle button - only show if there are tool calls */}
                 {hasToolCalls && (
-                  <Collapsible
-                    open={isToolCallsExpanded}
-                    onOpenChange={onToggleToolCalls}
-                    className="assistant-message-tool-calls-collapsible"
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="assistant-message-tool-calls-button"
+                    onClick={onToggleToolCalls}
+                    aria-label={`${isToolCallsExpanded ? 'Hide' : 'Show'} ${toolCallCount} tool call${toolCallCount !== 1 ? 's' : ''}`}
+                    aria-expanded={isToolCallsExpanded}
+                    aria-controls="assistant-message-tool-calls-content"
                   >
-                    <CollapsibleTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="assistant-message-tool-calls-button"
-                        aria-label={`${isToolCallsExpanded ? 'Hide' : 'Show'} ${toolCallCount} tool call${toolCallCount !== 1 ? 's' : ''}`}
-                      >
-                        <Wrench className="h-3 w-3" />
-                        <span>Tool Calls {toolCallCount}</span>
-                        <span className="assistant-message-tool-calls-arrow">
-                          {isToolCallsExpanded ? "▲" : "▼"}
-                        </span>
-                      </Button>
-                    </CollapsibleTrigger>
-                    
-                    <CollapsibleContent className="assistant-message-tool-calls-content">
-                      <Separator className="my-2" />
-                      <div className="assistant-message-tool-calls-list">
-                        {toolCalls.map((toolCall, toolIdx) => (
-                          <ToolCallItem
-                            key={toolCall.id || toolIdx}
-                            tool={{
-                              name: toolCall.name || toolCall.function?.name,
-                              arguments: toolCall.arguments || toolCall.function?.arguments,
-                              id: toolCall.id || toolCall.tool_call_id
-                            }}
-                            results={toolCall.results}
-                            integrated={true}
-                          />
-                        ))}
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
+                    <Wrench className="h-3 w-3" />
+                    <span>Tool Calls {toolCallCount}</span>
+                    <span className="assistant-message-tool-calls-arrow">
+                      {isToolCallsExpanded ? "▲" : "▼"}
+                    </span>
+                  </Button>
                 )}
               </div>
             </div>
@@ -118,6 +95,31 @@ const AssistantMessage = ({
           </CardContent>
         </Card>
       </div>
+      
+      {/* Tool call content displayed outside and below the message bubble */}
+      {hasToolCalls && isToolCallsExpanded && (
+        <div 
+          id="assistant-message-tool-calls-content"
+          className="assistant-message-tool-calls-container"
+        >
+          <div className="assistant-message-tool-calls-content">
+            <div className="assistant-message-tool-calls-list">
+              {toolCalls.map((toolCall, toolIdx) => (
+                <ToolCallItem
+                  key={toolCall.id || toolIdx}
+                  tool={{
+                    name: toolCall.name || toolCall.function?.name,
+                    arguments: toolCall.arguments || toolCall.function?.arguments,
+                    id: toolCall.id || toolCall.tool_call_id
+                  }}
+                  results={toolCall.results}
+                  integrated={false}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
