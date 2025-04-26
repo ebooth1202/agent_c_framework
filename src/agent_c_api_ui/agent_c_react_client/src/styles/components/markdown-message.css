@@ -15,10 +15,25 @@
   width: 100%;
 }
 
+/* Remove shadow when inside message bubbles */
+.no-shadow {
+  box-shadow: none !important;
+  background-color: transparent !important;
+}
+
+/* When MarkdownMessage is used directly in AssistantMessage,
+   we want to ensure it has appropriate styling */
+.assistant-message-card .markdown-container {
+  box-shadow: none;
+  background-color: transparent;
+}
+
 /* MarkdownMessage: Markdown content wrapper */
 .markdown-content {
   flex: 1;
   padding: var(--spacing-3);
+  /* Ensure proper background when inside bubbles */
+  background-color: inherit;
 }
 
 /* MarkdownMessage: Heading styles */

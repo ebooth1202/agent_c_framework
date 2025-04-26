@@ -4,6 +4,7 @@ import {Prism as SyntaxHighlighter} from 'react-syntax-highlighter';
 import {oneDark} from 'react-syntax-highlighter/dist/esm/styles/prism';
 import CopyButton from './CopyButton';
 import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 
@@ -40,7 +41,7 @@ const MarkdownMessage = ({content}) => {
     }, [content]);
 
     return (
-        <Card ref={markdownRef} className="prose prose-sm max-w-none prose-p:my-1 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-1 markdown-container">
+        <Card ref={markdownRef} className={cn("prose prose-sm max-w-none prose-p:my-1 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-1 markdown-container", "no-shadow")}>
             <CardContent className="p-0"> {/* Remove default padding to match original design */}
                 {/* Main content */}
                 <div className="markdown-content">
