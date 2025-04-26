@@ -31,7 +31,7 @@ const Layout = ({
         "layout-main",
         isHome ? "layout-main-home" : "layout-main-page",
         className
-      )}>
+      )} style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto' }}>
         {children}
       </main>
     </AppSidebar>

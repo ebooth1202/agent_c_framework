@@ -16,7 +16,7 @@ import CopyButton from './CopyButton';
  * @param {boolean} [props.isCritical=false] - Whether this is a critical error
  * @param {string} [props.className] - Optional additional class names
  */
-const SystemMessage = ({ content, isError = false, isCritical = false, className }) => {
+const SystemMessage = ({ content, isError = false, isCritical = false, className = '' }) => {
   // Use Alert for error messages, Card for regular messages
   const MessageComponent = isError ? Alert : Card;
   const ContentComponent = isError ? AlertDescription : CardContent;
@@ -83,10 +83,6 @@ SystemMessage.propTypes = {
   className: PropTypes.string
 };
 
-SystemMessage.defaultProps = {
-  isError: false,
-  isCritical: false,
-  className: ''
-};
+// Default props are now handled via parameter destructuring with default values
 
 export default SystemMessage;

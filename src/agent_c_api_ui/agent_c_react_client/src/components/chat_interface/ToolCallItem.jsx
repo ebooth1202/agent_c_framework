@@ -40,7 +40,7 @@ function formatData(data) {
  * @param {boolean} [props.integrated=false] - Whether this is integrated in an assistant message
  * @param {string} [props.className] - Optional additional class names
  */
-const ToolCallItem = ({ tool, results, integrated = false, className }) => {
+const ToolCallItem = ({ tool, results, integrated = false, className = undefined }) => {
   const [isOpen, setIsOpen] = useState(false); // Default to collapsed
 
   if (!tool?.name) return null;
@@ -174,8 +174,6 @@ ToolCallItem.propTypes = {
   className: PropTypes.string
 };
 
-ToolCallItem.defaultProps = {
-  integrated: false
-};
+// Default props are now handled via parameter destructuring with default values
 
 export default ToolCallItem;

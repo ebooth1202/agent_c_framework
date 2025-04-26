@@ -28,8 +28,8 @@ import { cn } from "@/lib/utils";
 const ChatInputArea = ({
   inputText,
   setInputText,
-  isStreaming,
-  isUploading,
+  isStreaming = false,
+  isUploading = false,
   handleSendMessage,
   handleKeyPress,
   openFilePicker,
@@ -64,6 +64,7 @@ const ChatInputArea = ({
         className="hidden"
         aria-hidden="true"
         tabIndex="-1"
+        accept="*/*" // Accept all file types
       />
       
       {/* Text input with action buttons */}
@@ -180,9 +181,6 @@ ChatInputArea.propTypes = {
   className: PropTypes.string
 };
 
-ChatInputArea.defaultProps = {
-  isStreaming: false,
-  isUploading: false
-};
+// Default props are now handled via parameter destructuring with default values
 
 export default ChatInputArea;

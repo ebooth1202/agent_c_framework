@@ -30,6 +30,9 @@
   height: calc(100vh - 60px); /* Subtract header height */
   height: calc(100dvh - 60px); /* Use dynamic viewport height when available */
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
 }
 
 /* Mobile layout adjustments */

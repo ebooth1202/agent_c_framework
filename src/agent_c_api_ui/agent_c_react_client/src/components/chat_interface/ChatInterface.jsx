@@ -140,13 +140,15 @@ const ChatInterfaceInner = ({
   
   /**
    * Handles file drop from drag and drop
-   * @param {File} file - The dropped file
+   * @param {FileList} files - The dropped files
    */
-  const handleFileDrop = (file) => {
-    if (file && fileInputRef.current) {
+  const handleFileDrop = (files) => {
+    if (files && files.length > 0 && fileInputRef.current) {
       // Trigger the FileUploadManager to handle the file
+      // Note: We can only process one file at a time with the current implementation
+      // So we'll take the first file from the drop
       const dataTransfer = new DataTransfer();
-      dataTransfer.items.add(file);
+      dataTransfer.items.add(files[0]);
       fileInputRef.current.files = dataTransfer.files;
       
       // Trigger the change event
