@@ -1,0 +1,85 @@
+/* ===== SHADCN THEME VARIABLES - Light Mode ===== */
+/* Updated light mode variables for a cleaner, more professional appearance */
+
+/* Base shadcn/ui variables - Refined Light Mode */
+--background: 210 20% 98%;            /* Nearly white with very slight blue tint #f8fafc */
+--foreground: 224 71% 4%;             /* Nearly black with blue undertone #080a0c */
+
+--card: 0 0% 100%;                    /* Pure white #ffffff */
+--card-foreground: 224 71% 4%;        /* Nearly black with blue undertone #080a0c */
+
+--popover: 0 0% 100%;                 /* Pure white #ffffff */
+--popover-foreground: 224 71% 4%;     /* Nearly black #080a0c */
+
+--primary: 221 83% 53%;               /* Blue-600 (unchanged) */
+--primary-foreground: 0 0% 100%;      /* White (unchanged) */
+
+--secondary: 210 40% 96.1%;           /* Very light cool gray #f1f5f9 */
+--secondary-foreground: 222.2 47.4% 11.2%; /* Dark blue-gray #0f172a */
+
+--muted: 210 40% 96.1%;               /* Very light cool gray #f1f5f9 */
+--muted-foreground: 220 9% 46%;      /* Medium gray #757575 */
+
+--accent: 217.2 91.2% 59.8%;          /* Vibrant blue #3b82f6 */
+--accent-foreground: 0 0% 100%;       /* White #ffffff */
+
+--destructive: 0 84% 60%;             /* Red-600 (unchanged) */
+--destructive-foreground: 0 0% 100%;  /* White (unchanged) */
+
+--border: 214.3 31.8% 91.4%;          /* Light gray border #e2e8f0 */
+--input: 214.3 31.8% 91.4%;           /* Light gray input #e2e8f0 */
+--ring: 221 83% 53%;                  /* Blue-600 (unchanged) */
+
+/* ===== SIDEBAR VARIABLES - Light Mode ===== */
+--sidebar-background: 0 0% 100%;       /* Pure white #ffffff */
+--sidebar-foreground: 224 71% 4%;      /* Nearly black #080a0c */
+--sidebar-primary: 221 83% 53%;        /* Blue-600 (unchanged) */
+--sidebar-primary-foreground: 0 0% 100%; /* White (unchanged) */
+--sidebar-accent: 210 40% 96.1%;       /* Very light cool gray #f1f5f9 */
+--sidebar-accent-foreground: 222.2 47.4% 11.2%; /* Dark blue-gray #0f172a */
+--sidebar-border: 214.3 31.8% 91.4%;   /* Light gray border #e2e8f0 */
+--sidebar-ring: 221 83% 53%;           /* Blue-600 (unchanged) */
+
+/* ===== MESSAGE TYPES - Light Mode ===== */
+/* Styling for different message types in chat */
+
+/* Assistant Message - Light Theme (Blue tones) */
+--assistant-message-background: 213 94% 97%;   /* Very light blue #f0f6ff */
+--assistant-message-foreground: 224 76% 30%;   /* Dark blue #162a5a for contrast */
+--assistant-message-border: 213 94% 87%;       /* Light blue border #cce3ff */
+--assistant-message-hover: 213 94% 94%;        /* Slightly darker on hover #dae8fd */
+
+/* User Message - Light Theme (Blue tones) */
+--user-message-background: 221 83% 53%;        /* Blue-600 - consistent with primary */
+--user-message-foreground: 0 0% 100%;          /* White text for contrast */
+--user-message-border: 224 76% 48%;            /* Slightly darker blue border #3a5cbd */
+--user-message-hover: 224 76% 48%;             /* Same as border for consistency */
+
+/* System Message - Light Theme (Purple tones) */
+--system-message-background: 250 100% 98%;     /* Very light purple #f5f5ff */
+--system-message-foreground: 271 72% 47%;      /* Dark purple text #6d28d9 for contrast */
+--system-message-border: 250 95% 90%;          /* Light purple border #e4e0ff */
+--system-message-hover: 250 95% 94%;           /* Slightly darker on hover #eae6ff */
+
+/* Thought Message - Light Theme (Amber tones) */
+--thought-background: 48 96% 98%;              /* Very light amber #fffbeb */
+--thought-foreground: 26 90% 37%;              /* Dark amber text #b45309 for contrast */
+--thought-border: 48 96% 89%;                  /* Light amber border #fef3c7 */
+--thought-hover: 48 96% 94%;                   /* Slightly darker on hover #fef9e7 */
+--thought-inline-code-bg: 48 96% 92%;          /* Light amber code bg #fef6d6 */
+--thought-inline-code-fg: 26 90% 37%;          /* Dark amber text #b45309 for contrast */
+
+/* Tool Call - Light Theme (Cyan tones) */
+--tool-call-background: 197 100% 98%;          /* Very light cyan #f0fafb */
+--tool-call-border: 197 85% 85%;               /* Light cyan border #c5edf0 */
+--tool-call-header-background: 197 90% 92%;    /* Light cyan header #dbf4f6 */
+--tool-call-header-hover: 197 85% 88%;         /* Slightly darker on hover #d0eef1 */
+--tool-call-title: 195 100% 30%;               /* Dark cyan title #009bab for contrast */
+--tool-call-icon: 195 100% 45%;                /* Medium cyan icon #00b8cc */
+
+/* ===== SHADOWS ===== */
+/* Enhanced box shadows for better depth perception */
+--shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.04);
+--shadow-md: 0 4px 6px rgba(0, 0, 0, 0.04), 0 2px 4px rgba(0, 0, 0, 0.03);
+--shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.04), 0 4px 6px rgba(0, 0, 0, 0.02);
+--shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.04), 0 8px 10px rgba(0, 0, 0, 0.02);

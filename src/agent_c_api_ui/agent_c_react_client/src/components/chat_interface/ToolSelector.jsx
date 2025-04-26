@@ -242,7 +242,7 @@ const ToolSelector = ({ availableTools, onEquipTools, activeTools = [], sessionI
                     </div>
                 )}
                 <Tabs 
-                    defaultValue={availableTools.essential_tools && availableTools.essential_tools.length > 0 ? "essential" : availableTools.categories[0] || ""} 
+                    defaultValue={availableTools.categories.includes("core") ? "core" : (availableTools.essential_tools && availableTools.essential_tools.length > 0 ? "essential" : availableTools.categories[0] || "")} 
                     className="tool-selector-tabs"
                 >
                     <TabsList className="tool-selector-tabs-list">

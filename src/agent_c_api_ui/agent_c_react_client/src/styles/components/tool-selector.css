@@ -52,25 +52,13 @@
 .tool-selector-equip-button {
   width: 100%;
   margin-top: 0.5rem;
-  background-color: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
-  border: 1px solid transparent;
-  transition: background-color var(--transition-hover), box-shadow var(--transition-hover);
+  background: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
 }
 
-.tool-selector-equip-button:hover {
-  background-color: hsl(var(--primary) / 0.9);
-  box-shadow: var(--shadow-sm);
-}
-
-.tool-selector-equip-button:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--primary));
-}
-
-.tool-selector-equip-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+/* Enhance button visibility in dark mode */
+.dark .tool-selector-equip-button {
+  box-shadow: 0 2px 5px hsl(var(--primary) / 0.4), 0 0 0 1px hsl(var(--primary) / 0.3);
 }
 
 /* ToolSelector: Waiting message */
