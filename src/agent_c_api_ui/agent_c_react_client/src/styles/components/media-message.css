@@ -39,6 +39,7 @@
   display: flex;
   align-items: center;
   padding: 0.125rem 0; /* Slight vertical padding py-0.5 */
+  flex: 1; /* Take up available space */
 }
 
 /* MediaMessage: Header actions */
@@ -181,12 +182,13 @@
 .media-message-metadata {
   display: flex;
   align-items: center;
-  font-size: 0.75rem; /* text-xs */
+  font-size: 0.875rem; /* text-sm to match the controls */
   color: var(--media-message-metadata-color);
 }
 
 .media-message-metadata-text {
   font-weight: 500; /* font-medium */
+  line-height: 1.25; /* Better vertical alignment with buttons */
 }
 
 .media-message-metadata-separator {
