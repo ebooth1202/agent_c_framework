@@ -114,13 +114,13 @@
   /* Styling for different message types in chat */
   
   /* Assistant Message - Light Theme (Blue tones) */
-  --assistant-message-background: hsl(214, 94%, 96%);  /* Soft blue */
-  --assistant-message-foreground: hsl(224, 71%, 18%);  /* Dark blue text */
+  --assistant-message-background: hsl(182.61, 76.67%, 88.24%);  /* Soft blue */
+  --assistant-message-foreground: hsl(228.51, 100%, 90.78%);
   --assistant-message-border: hsl(213, 90%, 75%);      /* Light blue border */
   --assistant-message-hover: hsla(213, 94%, 80%, 0.1); /* Hover state */
   
   /* User Message - Light Theme (Green tones) */
-  --user-message-background: hsl(142, 76%, 95%);       /* Soft green */
+  --user-message-background: hsl(228.93, 89.36%, 36.86%);
   --user-message-foreground: hsl(142, 72%, 16%);       /* Dark green text */
   --user-message-border: hsl(142, 60%, 75%);           /* Light green border */
   --user-message-hover: hsla(142, 76%, 80%, 0.1);      /* Hover state */
@@ -132,7 +132,7 @@
   --system-message-hover: hsla(270, 95%, 80%, 0.1);    /* Hover state */
   
   /* Thought Message - Light Theme (Amber tones) */
-  --thought-background: hsl(48, 100%, 96%);            /* Soft amber */
+  --thought-background: rgb(198, 250, 250);
   --thought-foreground: hsl(22, 78%, 26%);             /* Dark amber text */
   --thought-border: hsl(43, 96%, 70%);                 /* Light amber border */
   --thought-hover: hsla(48, 97%, 70%, 0.1);           /* Hover state */
@@ -140,11 +140,11 @@
   --thought-inline-code-fg: hsl(22, 78%, 26%);         /* Inline code text */
   
   /* Media Message - Light Theme (Amber tones) */
-  --media-message-background: hsl(var(--card));        /* Card background */
+  --media-message-background: hsl(182.61, 76.67%, 88.24%);        /* Card background */
   --media-message-foreground: hsl(var(--foreground));  /* Default text */
   --media-message-border: hsl(48, 97%, 77%);           /* Amber-200 border */
   --media-message-hover: hsla(48, 97%, 77%, 0.1);      /* Hover state */
-  --media-message-header-background: hsl(48, 100%, 96%, 0.8); /* Amber-50/80 */
+  --media-message-header-background: hsl(184.78, 77.93%, 71.57%);
   --media-message-header-hover: hsl(48, 96%, 89%, 0.9); /* Amber-100/90 */
   --media-message-header-icon: hsl(32, 95%, 44%);      /* Amber-600 */
   --media-message-header-title: hsl(23, 83%, 31%);     /* Amber-800 */
@@ -326,16 +326,16 @@
   /* ===== MESSAGE TYPES - Dark Mode ===== */
   
   /* Assistant Message - Dark Theme (Deep blue tones) */
-  --assistant-message-background: hsl(215, 50%, 23%);   /* Deep blue */
+  --assistant-message-background: hsl(224.29, 52.5%, 15.69%);   /* Deep blue */
   --assistant-message-foreground: hsl(214, 100%, 95%);  /* Light blue text */
   --assistant-message-border: hsl(217, 55%, 45%);       /* Medium blue border */
   --assistant-message-hover: hsla(213, 55%, 45%, 0.2);  /* Hover state */
   
   /* User Message - Dark Theme (Deep green tones) */
-  --user-message-background: hsl(150, 40%, 20%);        /* Deep green */
+  --user-message-background: hsl(228, 80.65%, 36.47%);
   --user-message-foreground: hsl(140, 80%, 90%);        /* Light green text */
-  --user-message-border: hsl(145, 45%, 40%);            /* Medium green border */
-  --user-message-hover: hsla(145, 45%, 40%, 0.2);       /* Hover state */
+  --user-message-border: hsl(229.23, 90.7%, 16.86%);            /* Medium green border */
+  --user-message-hover: hsl(228, 80.65%, 36.47%);       /* Hover state */
   
   /* System Message - Dark Theme (Deep purple tones) */
   --system-message-background: hsl(270, 30%, 25%);      /* Deep purple */
@@ -344,25 +344,25 @@
   --system-message-hover: hsla(270, 50%, 40%, 0.2);     /* Hover state */
   
   /* Thought Message - Dark Theme (Amber tones) */
-  --thought-background: hsl(30, 30%, 20%);              /* Deep amber */
+  --thought-background: hsl(223.85, 29.89%, 34.12%);              /* Deep amber */
   --thought-foreground: hsl(40, 80%, 90%);              /* Light amber text */
-  --thought-border: hsl(35, 50%, 40%);                  /* Medium amber border */
+  --thought-border: hsl(224.29, 52.5%, 15.69%);
   --thought-hover: hsla(35, 50%, 40%, 0.2);             /* Hover state */
-  --thought-inline-code-bg: hsla(30, 30%, 25%, 0.8);    /* Inline code background */
+  --thought-inline-code-bg: hsl(222.5, 42.86%, 10.98%);    /* Inline code background */
   --thought-inline-code-fg: hsl(40, 80%, 85%);          /* Inline code text */
   
   /* Media Message - Dark Theme (Amber tones) */
-  --media-message-background: hsl(30, 30%, 20%);           /* Deep amber background */
+  --media-message-background: hsl(224.12, 55.43%, 36.08%);
   --media-message-foreground: hsl(40, 80%, 90%);           /* Light amber text */
-  --media-message-border: hsl(35, 50%, 40%);               /* Medium amber border */
-  --media-message-hover: hsla(35, 50%, 40%, 0.2);          /* Hover state */
-  --media-message-header-background: hsl(30, 30%, 25%, 0.8); /* Transparent amber */
-  --media-message-header-hover: hsl(30, 35%, 30%, 0.9);    /* Hover state */
+  --media-message-border:  hsl(224.29, 52.5%, 15.69%);
+  --media-message-hover: hsl(225.14, 46.38%, 46.08%);
+  --media-message-header-background: hsl(224.12, 55.43%, 36.08%);
+  --media-message-header-hover: hsl(224.12, 55.43%, 36.08%);;    /* Hover state */
   --media-message-header-icon: hsl(43, 96%, 56%);          /* Amber-400 */
   --media-message-header-title: hsl(40, 80%, 75%);         /* Light amber text */
   --media-message-action-icon: hsl(43, 96%, 56%);          /* Amber-400 */
   --media-message-action-hover: hsl(40, 80%, 65%);         /* Light amber hover */
-  --media-message-metadata-border: hsl(30, 35%, 30%);      /* Darker amber */
+  --media-message-metadata-border: hsl(224.12, 55.43%, 36.08%);;      /* Darker amber */
   --media-message-metadata-color: hsl(40, 80%, 75%);       /* Light amber text */
   
   /* Tool Call - Dark Theme */
