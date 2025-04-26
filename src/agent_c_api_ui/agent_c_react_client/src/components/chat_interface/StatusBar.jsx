@@ -14,6 +14,7 @@ import {
 import CopyButton from './CopyButton';
 import ExportHTMLButton from './ExportHTMLButton';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 
 /**
@@ -47,7 +48,8 @@ const StatusBar = ({
     messages,
     className
 }) => {
-
+    // Use mobile detection hook to adapt UI
+    const isMobile = useIsMobile();
 
     const getStatusInfo = () => {
         if (isProcessing) {
@@ -104,7 +106,7 @@ const StatusBar = ({
                                         aria-hidden="true"
                                     />
                                     <span className="status-text">
-                                        Status: {statusInfo.message}
+                                        {isMobile ? statusInfo.message : `Status: ${statusInfo.message}`}
                                     </span>
                                 </div>
                             </TooltipTrigger>
@@ -113,7 +115,8 @@ const StatusBar = ({
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
-                    {isReady && sessionId && (
+                    {/* Only show AgentConfigHoverCard on desktop */}
+                    {isReady && sessionId && !isMobile && (
                         <AgentConfigHoverCard
                             sessionId={sessionId}
                             className="ml-2"

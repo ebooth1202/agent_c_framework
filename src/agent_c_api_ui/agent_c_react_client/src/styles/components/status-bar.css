@@ -215,36 +215,59 @@
 /* Mobile responsive styles */
 @media (max-width: 640px) {
   .status-bar {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
     gap: var(--status-bar-gap-small);
-    padding: 0.5rem;
+    padding: 0.25rem;
+    /* Reduce height on mobile */
+    height: auto;
+    min-height: 32px;
   }
   
   .status-bar-section {
-    width: 100%;
-    justify-content: space-between;
+    width: auto;
+    justify-content: center;
   }
   
-  .chat-export-actions {
-    width: 100%;
-    justify-content: flex-end;
-    margin-top: 0.25rem;
+  /* Hide elements on mobile except status indicator and status text */
+  .tools-badge,
+  .chat-export-actions,
+  .tools-count-text,
+  .agent-config-hover-card-trigger,
+  .agent-config-hover-card-text {
+    display: none !important;
   }
   
-  /* Hide text on very small screens */
-  @media (max-width: 400px) {
-    .status-text {
-      max-width: 100px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    
-    .tools-count-text {
-      max-width: 80px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
+  /* Keep status text visible but make it compact */
+  .status-text {
+    font-size: 0.7rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+  }
+  
+  /* Make status indicator more prominent */
+  .status-indicator-icon-processing,
+  .status-indicator-icon-initializing,
+  .status-indicator-icon-ready {
+    width: 0.9rem;
+    height: 0.9rem;
+  }
+  
+  .status-indicator-wrapper {
+    padding: 0.25rem;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+}
+
+/* Hide SessionInfo button text on mobile */
+@media (max-width: 768px) {
+  .agent-config-hover-card-text {
+    display: none;
   }
 }
