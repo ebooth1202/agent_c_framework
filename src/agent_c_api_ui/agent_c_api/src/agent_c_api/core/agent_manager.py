@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import threading
 import uuid
 from typing import Dict, Optional, List, Any, AsyncGenerator
 import traceback
@@ -33,6 +34,7 @@ class UItoAgentBridgeManager:
 
         self.ui_sessions: Dict[str, Dict[str, Any]] = {}
         self._locks: Dict[str, asyncio.Lock] = {}
+        self._cancel_events: Dict[str, threading.Event] = {}
 
 
     def get_session_data(self, ui_session_id: str) -> Dict[str, Any]:
@@ -113,6 +115,10 @@ class UItoAgentBridgeManager:
             # Now initialize the agent. This fully initializes the agent and its tools as well - with a passed in session manager
             await agent.initialize()
 
+            # Create a cancellation event for this session
+            cancel_event = threading.Event()
+            self._cancel_events[ui_session_id] = cancel_event
+            
             # Update sessions dictionary
             self.ui_sessions[ui_session_id] = {
                 "agent": agent,
@@ -120,6 +126,7 @@ class UItoAgentBridgeManager:
                 "created_at": agent._current_timestamp(),
                 "agent_name": f"Agent_{ui_session_id}",
                 "agent_c_session_id": agent.session_id,
+                "cancel_event": cancel_event
             }
 
             self.logger.info(f"Session {ui_session_id} created with agent: {agent}")
@@ -141,6 +148,9 @@ class UItoAgentBridgeManager:
         if ui_session_id in self.ui_sessions:
             try:
                 session_data = self.ui_sessions[ui_session_id]
+                # Clean up the cancel event
+                if ui_session_id in self._cancel_events:
+                    del self._cancel_events[ui_session_id]
                 # agent: BaseAgent = session_data.get("agent")
                 # if agent:
                 # if hasattr(agent, 'tool_chest') and agent.tool_chest:
@@ -187,22 +197,18 @@ class UItoAgentBridgeManager:
         agent = session_data["agent"]
 
         try:
+            # Get the cancel event for this session
+            cancel_event = self._cancel_events.get(ui_session_id)
+            opts = {'user_message': user_message, 'custom_prompt': custom_prompt,
+                    'client_wants_cancel': cancel_event}
+
             # Pass file_ids to the agent's stream_chat method if it accepts them
             if file_ids and hasattr(agent, "file_handler") and agent.file_handler is not None:
-                # For agents with file handling capabilities
-                async for chunk in agent.stream_chat(
-                        user_message=user_message,
-                        file_ids=file_ids,
-                        custom_prompt=custom_prompt
-                ):
-                    yield chunk
-            else:
-                # For agents without file handling or no files
-                async for chunk in agent.stream_chat(
-                        user_message=user_message,
-                        custom_prompt=custom_prompt
-                ):
-                    yield chunk
+                opts['file_ids'] = file_ids
+
+
+            async for chunk in agent.stream_chat(**opts):
+                yield chunk
 
         except Exception as e:
             self.logger.error(f"Error in stream_response: {e}")
@@ -210,6 +216,29 @@ class UItoAgentBridgeManager:
             error_traceback = traceback.format_exc()
             self.logger.error(f"Error in agent_manager.py:stream_response - {error_type}: {str(e)}\n{error_traceback}")
 
+    def cancel_interaction(self, ui_session_id: str) -> bool:
+        """
+        Cancel an ongoing interaction for the specified session.
+        
+        Args:
+            ui_session_id: The session identifier
+            
+        Returns:
+            bool: True if cancellation was triggered, False if session not found
+        """
+        if ui_session_id not in self._cancel_events:
+            self.logger.warning(f"No cancel event found for session: {ui_session_id}")
+            return False
+            
+        # Set the event to signal cancellation
+        self.logger.info(f"Cancelling interaction for session: {ui_session_id}")
+        self._cancel_events[ui_session_id].set()
+        
+        # Reset the event for future use
+        self._cancel_events[ui_session_id] = threading.Event()
+        
+        return True
+        
     async def debug_session(self, ui_session_id: str):
         """
         Generate a diagnostic report for a session to help debug issues.

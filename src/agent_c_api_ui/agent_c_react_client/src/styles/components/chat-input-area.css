@@ -84,7 +84,8 @@
 /* ChatInputArea: Individual action buttons */
 .chat-input-settings-button,
 .chat-input-upload-button,
-.chat-input-send-button {
+.chat-input-send-button,
+.chat-input-stop-button {
   border-radius: 9999px;
   height: 2rem;
   width: 2rem;
@@ -110,9 +111,35 @@
   background-color: hsl(var(--accent) / 0.9);
 }
 
+/* Stop button styling */
+.chat-input-stop-button {
+  background-color: hsl(var(--destructive));
+  color: hsl(var(--destructive-foreground));
+  animation: pulse 2s infinite;
+}
+
+.chat-input-stop-button:hover {
+  background-color: hsl(var(--destructive) / 0.9);
+  box-shadow: 0 0 12px hsla(var(--destructive) / 0.6);
+  animation: none;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 hsla(var(--destructive) / 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 5px hsla(var(--destructive) / 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 hsla(var(--destructive) / 0);
+  }
+}
+
 /* Button disabled states with improved visual feedback */
 .chat-input-upload-button[disabled],
-.chat-input-send-button[disabled] {
+.chat-input-send-button[disabled],
+.chat-input-stop-button[disabled] {
   opacity: 0.5;
   cursor: not-allowed;
   box-shadow: none;
@@ -125,6 +152,15 @@
 
 .dark .chat-input-send-button:hover {
   box-shadow: 0 0 12px hsla(var(--accent) / 0.6);
+}
+
+/* Dark mode stop button */
+.dark .chat-input-stop-button {
+  box-shadow: 0 0 8px hsla(var(--destructive) / 0.4);
+}
+
+.dark .chat-input-stop-button:hover {
+  box-shadow: 0 0 12px hsla(var(--destructive) / 0.6);
 }
 
 /* Media queries for responsive adjustments */
@@ -146,7 +182,8 @@
   
   .chat-input-settings-button,
   .chat-input-upload-button,
-  .chat-input-send-button {
+  .chat-input-send-button,
+  .chat-input-stop-button {
     height: 1.75rem;
     width: 1.75rem;
   }

@@ -211,6 +211,33 @@ const ChatInterfaceInner = ({
   };
   
   /**
+   * Cancels the current streaming response by sending a request to the cancel endpoint
+   */
+  const handleCancelStream = async () => {
+    if (!isStreaming) return;
+    
+    try {
+      const formData = new FormData();
+      formData.append("ui_session_id", sessionId);
+      
+      const response = await fetch(`${API_URL}/cancel`, {
+        method: "POST",
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        console.error(`Error cancelling stream: ${response.status}`);
+      } else {
+        console.log("Stream cancelled successfully");
+        // We'll let the stream processing handle setting isStreaming to false
+        // as the stream will close naturally after cancellation
+      }
+    } catch (error) {
+      console.error("Error cancelling stream:", error);
+    }
+  };
+  
+  /**
    * Sends a message to the chat backend and processes the response stream
    * @returns {Promise<void>}
    */
@@ -569,6 +596,7 @@ const ChatInterfaceInner = ({
             toggleOptionsPanel={toggleOptionsPanel}
             fileInputRef={fileInputRef}
             handleFileSelection={handleFileSelection}
+            handleCancelStream={handleCancelStream}
           />
           
           {/* StatusBar positioned just below the input */}

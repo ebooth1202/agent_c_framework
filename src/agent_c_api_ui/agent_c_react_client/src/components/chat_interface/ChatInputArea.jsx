@@ -1,6 +1,6 @@
 import React from "react";
 import PropTypes from "prop-types";
-import { Send, Upload, Settings } from "lucide-react";
+import { Send, Upload, Settings, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
  * @param {Function} props.toggleOptionsPanel - Function to toggle the options panel
  * @param {React.RefObject} props.fileInputRef - Ref for the file input element
  * @param {Function} props.handleFileSelection - Function to handle file selection
+ * @param {Function} props.handleCancelStream - Function to cancel streaming response
  * @param {string} [props.className] - Additional CSS classes
  */
 const ChatInputArea = ({
@@ -35,6 +36,7 @@ const ChatInputArea = ({
   toggleOptionsPanel,
   fileInputRef,
   handleFileSelection,
+  handleCancelStream,
   className
 }) => {
   const isInputDisabled = isStreaming;
@@ -125,23 +127,35 @@ const ChatInputArea = ({
             </Tooltip>
           </TooltipProvider>
           
-          {/* Send button with tooltip */}
+          {/* Send/Stop button with tooltip */}
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  onClick={handleSendMessage}
-                  disabled={isSendDisabled}
-                  size="icon"
-                  variant={sendButtonVariant}
-                  className="chat-input-send-button"
-                  aria-label="Send message"
-                >
-                  <Send className="h-4 w-4" aria-hidden="true" />
-                </Button>
+                {isStreaming ? (
+                  <Button
+                    onClick={handleCancelStream}
+                    size="icon"
+                    variant="destructive"
+                    className="chat-input-stop-button"
+                    aria-label="Stop response"
+                  >
+                    <Square className="h-4 w-4" aria-hidden="true" />
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleSendMessage}
+                    disabled={isSendDisabled}
+                    size="icon"
+                    variant={sendButtonVariant}
+                    className="chat-input-send-button"
+                    aria-label="Send message"
+                  >
+                    <Send className="h-4 w-4" aria-hidden="true" />
+                  </Button>
+                )}
               </TooltipTrigger>
               <TooltipContent>
-                <p>Send message</p>
+                <p>{isStreaming ? "Stop response" : "Send message"}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -162,6 +176,7 @@ ChatInputArea.propTypes = {
   toggleOptionsPanel: PropTypes.func.isRequired,
   fileInputRef: PropTypes.oneOfType([PropTypes.func, PropTypes.shape({ current: PropTypes.any })]).isRequired,
   handleFileSelection: PropTypes.func.isRequired,
+  handleCancelStream: PropTypes.func.isRequired,
   className: PropTypes.string
 };
 
