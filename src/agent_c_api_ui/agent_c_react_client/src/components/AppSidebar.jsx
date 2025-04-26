@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Settings, Database, PanelLeft, Menu } from 'lucide-react';
+import { Home, Settings, Database, PanelLeft, Menu, History } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -33,6 +33,7 @@ const AppSidebar = ({ children, defaultOpen = true, collapsible = "icon" }) => {
     { path: '/', label: 'Home', icon: <Home className="mr-2" size={18} /> },
     { path: '/chat', label: 'Chat', icon: <PanelLeft className="mr-2" size={18} /> },
     { path: '/rag', label: 'RAG', icon: <Database className="mr-2" size={18} /> },
+    { path: '/interactions', label: 'Sessions', icon: <History className="mr-2" size={18} /> },
     { path: '/settings', label: 'Settings', icon: <Settings className="mr-2" size={18} /> },
   ];
 

@@ -122,7 +122,6 @@
   background-color: rgba(0, 0, 0, 0.08);
   padding: 0.1em 0.3em;
   border-radius: var(--border-radius-md);
-  color: hsl(var(--color-purple-800));
   font-family: var(--font-mono);
   font-size: 0.9em;
   display: inline-block;
@@ -131,17 +130,15 @@
 /* Let component-specific styles override the background and color if needed */
 .thought-display-content-light .markdown-inline-code {
   background-color: rgba(0, 0, 0, 0.08);
-  color: hsl(var(--color-purple-800));
 }
 
 .thought-display-content-dark .markdown-inline-code {
   background-color: rgba(255, 255, 255, 0.1);
-  color: hsl(var(--color-purple-200));
 }
 
 /* MarkdownMessage: Blockquote styling */
 .markdown-blockquote {
-  border-left: var(--border-width-thick) solid hsl(var(--color-purple-300));
+  border-left: var(--border-width-thick) solid ;
   padding-left: var(--spacing-4);
   margin-top: var(--spacing-4);
   margin-bottom: var(--spacing-4);
@@ -160,7 +157,7 @@
   margin-top: var(--spacing-6);
   margin-bottom: var(--spacing-6);
   border-top-width: var(--border-width-medium);
-  border-color: hsl(var(--color-purple-100));
+
 }
 
 /* MarkdownMessage: Copy button container */
