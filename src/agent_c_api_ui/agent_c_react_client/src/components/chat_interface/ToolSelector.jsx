@@ -241,6 +241,18 @@ const ToolSelector = ({ availableTools, onEquipTools, activeTools = [], sessionI
                         {error}
                     </div>
                 )}
+                <Button
+                    onClick={handleEquipTools}
+                    disabled={!isReady || isLoading}
+                    variant="default"
+                    className="tool-selector-equip-button"
+                >
+                    {isLoading ? 'Updating Tools...' : <>
+                        <Icon icon="fa-regular fa-check-circle" hoverIcon="fa-solid fa-check-circle" className="mr-2" />
+                        Equip Selected Tools
+                    </>}
+                </Button>
+
                 <Tabs 
                     defaultValue={availableTools.categories.includes("core") ? "core" : (availableTools.essential_tools && availableTools.essential_tools.length > 0 ? "essential" : availableTools.categories[0] || "")} 
                     className="tool-selector-tabs"
@@ -285,14 +297,6 @@ const ToolSelector = ({ availableTools, onEquipTools, activeTools = [], sessionI
                         ))}
                     </ScrollArea>
                 </Tabs>
-                <Button
-                    onClick={handleEquipTools}
-                    disabled={!isReady || isLoading}
-                    variant="default"
-                    className="tool-selector-equip-button"
-                >
-                    {isLoading ? 'Updating Tools...' : 'Equip Selected Tools'}
-                </Button>
             </CardContent>
         </Card>
     );
