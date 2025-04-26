@@ -67,37 +67,37 @@
   --color-amber-900: 22 78% 26%;
 
   /* ===== SHADCN THEME VARIABLES - Light Mode ===== */
-  /* Base shadcn/ui variables */
-  --background: 214 32% 91%;            /* Gray-100 */
-  --foreground: 221 39% 11%;            /* Gray-900 */
-  --card: 210 40% 98%;                  /* Gray-50 */
-  --card-foreground: 221 39% 11%;       /* Gray-900 */
-  --popover: 210 40% 98%;               /* Gray-50 */
-  --popover-foreground: 221 39% 11%;    /* Gray-900 */
-  --primary: 221 83% 53%;               /* Blue-600 */
-  --primary-foreground: 0 0% 100%;      /* White */
-  --secondary: 214 95% 93%;             /* Blue-100 */
-  --secondary-foreground: 226 71% 40%;  /* Blue-800 */
-  --muted: 214 32% 91%;                 /* Gray-100 */
-  --muted-foreground: 215 14% 34%;      /* Gray-600 */
-  --accent: 269 100% 95%;               /* Purple-100 */
-  --accent-foreground: 273 67% 39%;     /* Purple-800 */
-  --destructive: 0 84% 60%;             /* Red-600 */
-  --destructive-foreground: 0 0% 100%;  /* White */
-  --border: 214 15% 91%;                /* Gray-200 */
-  --input: 212 10% 83%;                 /* Gray-300 */
-  --ring: 221 83% 53%;                  /* Blue-600 */
+  /* Base shadcn/ui variables - Spun Pearl palette */
+  --background: 196 64% 89%;            /* Link Water #d4ecf3 */
+  --foreground: 221 39% 11%;            /* Gray-900 (unchanged) */
+  --card: 187 82% 94%;                  /* Polar #e7f7fa */
+  --card-foreground: 221 39% 11%;       /* Gray-900 (unchanged) */
+  --popover: 180 100% 99%;              /* Twilight Blue #f7ffff */
+  --popover-foreground: 221 39% 11%;    /* Gray-900 (unchanged) */
+  --primary: 221 83% 53%;               /* Blue-600 (unchanged) */
+  --primary-foreground: 0 0% 100%;      /* White (unchanged) */
+  --secondary: 196 47% 82%;             /* Jagged Ice #bbdae6 */
+  --secondary-foreground: 226 71% 40%;  /* Blue-800 (unchanged) */
+  --muted: 196 47% 82%;                 /* Jagged Ice #bbdae6 */
+  --muted-foreground: 215 14% 34%;      /* Gray-600 (unchanged) */
+  --accent: 234 52% 77%;                /* Cold Purple #aab0de */
+  --accent-foreground: 273 67% 39%;     /* Purple-800 (unchanged) */
+  --destructive: 0 84% 60%;             /* Red-600 (unchanged) */
+  --destructive-foreground: 0 0% 100%;  /* White (unchanged) */
+  --border: 196 50% 82%;                /* Slightly darker Link Water */
+  --input: 187 60% 85%;                 /* Slightly darker Polar */
+  --ring: 221 83% 53%;                  /* Blue-600 (unchanged) */
 
   /* ===== SIDEBAR VARIABLES - Light Mode ===== */
-  /* Sidebar-specific theme variables */
-  --sidebar-background: 210 40% 98%;     /* Gray-50 */
-  --sidebar-foreground: 221 39% 11%;     /* Gray-900 */
-  --sidebar-primary: 221 83% 53%;        /* Blue-600 */
-  --sidebar-primary-foreground: 0 0% 100%; /* White */
-  --sidebar-accent: 269 100% 95%;        /* Purple-100 */
-  --sidebar-accent-foreground: 273 67% 39%; /* Purple-800 */
-  --sidebar-border: 214 15% 91%;         /* Gray-200 */
-  --sidebar-ring: 221 83% 53%;           /* Blue-600 */
+  /* Sidebar-specific theme variables - Spun Pearl palette */
+  --sidebar-background: 187 82% 94%;     /* Polar #e7f7fa */
+  --sidebar-foreground: 221 39% 11%;     /* Gray-900 (unchanged) */
+  --sidebar-primary: 221 83% 53%;        /* Blue-600 (unchanged) */
+  --sidebar-primary-foreground: 0 0% 100%; /* White (unchanged) */
+  --sidebar-accent: 234 52% 77%;         /* Cold Purple #aab0de */
+  --sidebar-accent-foreground: 273 67% 39%; /* Purple-800 (unchanged) */
+  --sidebar-border: 196 50% 82%;         /* Slightly darker Link Water */
+  --sidebar-ring: 221 83% 53%;           /* Blue-600 (unchanged) */
 
   /* ===== CHART COLORS ===== */
   /* Used for data visualization */
@@ -114,16 +114,16 @@
   /* Styling for different message types in chat */
   
   /* Assistant Message - Light Theme (Blue tones) */
-  --assistant-message-background: hsl(182.61, 76.67%, 88.24%);  /* Soft blue */
-  --assistant-message-foreground: hsl(228.51, 100%, 90.78%);
-  --assistant-message-border: hsl(213, 90%, 75%);      /* Light blue border */
-  --assistant-message-hover: hsla(213, 94%, 80%, 0.1); /* Hover state */
+  --assistant-message-background: hsl(221, 83%, 95%);  /* Light blue distinct from backgrounds */
+  --assistant-message-foreground: hsl(228, 70%, 20%);  /* Dark blue text for contrast */
+  --assistant-message-border: hsl(234, 52%, 77%);      /* Cold Purple #aab0de */
+  --assistant-message-hover: hsla(221, 83%, 90%, 0.2); /* Hover state */
   
-  /* User Message - Light Theme (Green tones) */
-  --user-message-background: hsl(228.93, 89.36%, 36.86%);
-  --user-message-foreground: hsl(142, 72%, 16%);       /* Dark green text */
-  --user-message-border: hsl(142, 60%, 75%);           /* Light green border */
-  --user-message-hover: hsla(142, 76%, 80%, 0.1);      /* Hover state */
+  /* User Message - Light Theme (Blue tones) */
+  --user-message-background: hsl(228.93, 89.36%, 36.86%); /* Keep the existing blue */
+  --user-message-foreground: hsl(0, 0%, 100%);         /* White text for contrast */
+  --user-message-border: hsl(229.23, 90.7%, 26.86%);   /* Darker blue border */
+  --user-message-hover: hsla(228, 90%, 30%, 0.1);      /* Hover state */
   
   /* System Message - Light Theme (Purple tones) */
   --system-message-background: hsl(270, 100%, 98%);     /* Soft purple */
@@ -132,34 +132,34 @@
   --system-message-hover: hsla(270, 95%, 80%, 0.1);    /* Hover state */
   
   /* Thought Message - Light Theme (Amber tones) */
-  --thought-background: rgb(198, 250, 250);
+  --thought-background: hsl(48, 100%, 96%);            /* Very light amber distinct from backgrounds */
   --thought-foreground: hsl(22, 78%, 26%);             /* Dark amber text */
   --thought-border: hsl(43, 96%, 70%);                 /* Light amber border */
   --thought-hover: hsla(48, 97%, 70%, 0.1);           /* Hover state */
   --thought-inline-code-bg: hsl(48, 96%, 89%);         /* Inline code background */
   --thought-inline-code-fg: hsl(22, 78%, 26%);         /* Inline code text */
   
-  /* Media Message - Light Theme (Amber tones) */
-  --media-message-background: hsl(182.61, 76.67%, 88.24%);        /* Card background */
+  /* Media Message - Light Theme (Gray tones) */
+  --media-message-background: hsl(210, 20%, 96%);       /* Very light gray background */
   --media-message-foreground: hsl(var(--foreground));  /* Default text */
-  --media-message-border: hsl(48, 97%, 77%);           /* Amber-200 border */
-  --media-message-hover: hsla(48, 97%, 77%, 0.1);      /* Hover state */
-  --media-message-header-background: hsl(184.78, 77.93%, 71.57%);
-  --media-message-header-hover: hsl(48, 96%, 89%, 0.9); /* Amber-100/90 */
-  --media-message-header-icon: hsl(32, 95%, 44%);      /* Amber-600 */
-  --media-message-header-title: hsl(23, 83%, 31%);     /* Amber-800 */
-  --media-message-action-icon: hsl(32, 95%, 44%);      /* Amber-600 */
-  --media-message-action-hover: hsl(23, 83%, 31%);     /* Amber-800 */
-  --media-message-metadata-border: hsl(48, 96%, 89%);  /* Amber-100 */
-  --media-message-metadata-color: hsl(32, 95%, 44%);   /* Amber-600 */
+  --media-message-border: hsl(214, 15%, 85%);          /* Light gray border */
+  --media-message-hover: hsla(214, 15%, 85%, 0.1);     /* Hover state */
+  --media-message-header-background: hsl(214, 15%, 91%); /* Slightly darker gray header */
+  --media-message-header-hover: hsl(214, 15%, 88%);    /* Hover state */
+  --media-message-header-icon: hsl(215, 14%, 34%);     /* Dark gray icon */
+  --media-message-header-title: hsl(215, 28%, 17%);    /* Very dark gray title */
+  --media-message-action-icon: hsl(215, 14%, 34%);     /* Dark gray icon */
+  --media-message-action-hover: hsl(215, 28%, 17%);    /* Very dark gray hover */
+  --media-message-metadata-border: hsl(214, 15%, 91%); /* Light gray border */
+  --media-message-metadata-color: hsl(215, 14%, 34%);  /* Dark gray text */
   
-  /* Tool Call - Light Theme */
-  --tool-call-background: hsl(214, 95%, 97%);
-  --tool-call-border: var(--color-blue-400);
-  --tool-call-header-background: hsl(213, 97%, 92%);
-  --tool-call-header-hover: var(--color-blue-200);
-  --tool-call-title: hsl(226, 71%, 40%);
-  --tool-call-icon: hsl(221, 83%, 53%);
+  /* Tool Call - Light Theme (Cyan tones) */
+  --tool-call-background: hsl(195, 100%, 95%);         /* Very light cyan background */
+  --tool-call-border: hsl(195, 85%, 75%);              /* Medium cyan border */
+  --tool-call-header-background: hsl(195, 90%, 85%);   /* Light cyan header */
+  --tool-call-header-hover: hsl(195, 85%, 80%);        /* Slightly darker on hover */
+  --tool-call-title: hsl(195, 100%, 30%);              /* Dark cyan title */
+  --tool-call-icon: hsl(195, 100%, 45%);               /* Medium cyan icon */
   
   /* ===== STATE COLORS - Light Mode ===== */
   /* Colors for different states (success, warning, info) */
