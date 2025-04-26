@@ -29,7 +29,7 @@ const UserMessage = ({ content, files, isVoiceMessage, className }) => {
       <Card className={cn(
         "user-message-content"
       )}>
-        <CardContent className="p-0 flex justify-between items-start gap-4">
+        <CardContent className="p-0 flex justify-between items-start gap-2">
           <div className="flex-1 prose dark:prose-invert">
             {isVoiceMessage ? (
               <div className="user-message-voice flex items-center gap-2" role="status" aria-label="Voice message from user">

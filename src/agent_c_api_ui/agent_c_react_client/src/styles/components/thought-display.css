@@ -12,7 +12,7 @@
 
 /* ThoughtDisplay: Main content card */
 .thought-content {
-  max-width: min(80%, 800px);
+  max-width: min(90%, 40rem); /* Aligned with user messages but slightly wider */
   border-radius: 0.75rem;
   border-bottom-left-radius: 0.25rem;
   overflow: hidden;

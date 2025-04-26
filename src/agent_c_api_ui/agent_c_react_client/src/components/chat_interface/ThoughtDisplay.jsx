@@ -39,7 +39,7 @@ const ThoughtDisplay = ({ content, vendor, className }) => {
             </div>
             
             <Card className="thought-content" >
-                <CardContent className="flex justify-between items-start gap-4 p-3">
+                <CardContent className="flex justify-between items-start gap-2 p-2">
                     <div
                         ref={contentRef}
                         className="thought-scrollable-content flex-1 scrollbar-thin scrollbar-thumb-primary/30 scrollbar-track-primary/10"

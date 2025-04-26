@@ -31,7 +31,7 @@
 /* MarkdownMessage: Markdown content wrapper */
 .markdown-content {
   flex: 1;
-  padding: var(--spacing-3);
+  padding: var(--spacing-1); /* Reduced padding from var(--spacing-3) to var(--spacing-1) */
   /* Ensure proper background when inside bubbles */
   background-color: inherit;
 }

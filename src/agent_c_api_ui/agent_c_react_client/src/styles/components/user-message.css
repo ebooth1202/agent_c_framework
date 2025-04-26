@@ -11,10 +11,11 @@
 
 /* UserMessage: Content */
 .user-message-content {
-  max-width: min(90%, 1600px);
+  max-width: min(95%, 1600px); /* Match the assistant message width */
+  min-width: 300px; /* Ensure minimum width for content */
   border-radius: 0.75rem;
   border-bottom-right-radius: 0.25rem;
-  padding: 1rem;
+  padding: 0.5rem; /* Reduced padding from 1rem to 0.5rem */
   border: 1px solid var(--user-message-border);
   background-color: var(--user-message-background);
   color: var(--user-message-foreground);
