@@ -77,6 +77,7 @@ const FileUploadManager = ({
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
       setSelectedFileForUpload(file);
+      console.log('FileUploadManager: File selected', file.name);
       
       // Automatically upload the file when selected
       // Use a small timeout to ensure the React state update completes
@@ -104,8 +105,12 @@ const FileUploadManager = ({
   const handleUploadFile = async (fileToUpload = null) => {
     // Use provided file or the selected file from state
     const fileToProcess = fileToUpload || selectedFileForUpload;
-    if (!fileToProcess) return;
+    if (!fileToProcess) {
+      console.error('No file to upload!');
+      return;
+    }
 
+    console.log('FileUploadManager: Starting upload of', fileToProcess.name);
     setIsUploading(true);
     if (onFileUploadStart) {
       onFileUploadStart(fileToProcess);

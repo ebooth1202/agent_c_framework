@@ -143,17 +143,35 @@ const ChatInterfaceInner = ({
    * @param {FileList} files - The dropped files
    */
   const handleFileDrop = (files) => {
-    if (files && files.length > 0 && fileInputRef.current) {
-      // Trigger the FileUploadManager to handle the file
-      // Note: We can only process one file at a time with the current implementation
-      // So we'll take the first file from the drop
-      const dataTransfer = new DataTransfer();
-      dataTransfer.items.add(files[0]);
-      fileInputRef.current.files = dataTransfer.files;
+    if (files && files.length > 0) {
+      console.log('File dropped:', files[0].name);
       
-      // Trigger the change event
-      const event = new Event('change', { bubbles: true });
-      fileInputRef.current.dispatchEvent(event);
+      // Set uploading state first
+      setIsUploading(true);
+      
+      // Since we can only process one file at a time, take the first file
+      const file = files[0];
+      
+      // Directly call the file upload function in FileUploadManager instead of
+      // trying to simulate a change event on the input
+      if (fileInputRef.current) {
+        // Update the file input to maintain consistency
+        try {
+          const dataTransfer = new DataTransfer();
+          dataTransfer.items.add(file);
+          fileInputRef.current.files = dataTransfer.files;
+        } catch (err) {
+          console.warn('Could not update file input element:', err);
+          // Continue anyway as we'll handle the file directly
+        }
+      }
+      
+      // Call the handleFileSelection function which will trigger the upload
+      handleFileSelection({
+        target: {
+          files: files
+        }
+      });
     }
   };
   
@@ -198,11 +216,175 @@ const ChatInterfaceInner = ({
   };
 
   /**
-   * Handles file selection from the file picker
+   * Handles file selection from the file picker or drag and drop
+   * @param {Event} e - The change event or a synthetic event with files
    */
   const handleFileSelection = (e) => {
-    setIsUploading(true);
-    // This is a pass-through function as FileUploadManager will handle the actual file upload
+    if (e.target.files && e.target.files.length > 0) {
+      console.log('File selected:', e.target.files[0].name);
+      setIsUploading(true);
+      
+      // We need to upload the file directly here instead of relying on FileUploadManager
+      // to pick up the change event, which may not be happening reliably
+      const file = e.target.files[0];
+      
+      // Create a FormData object to upload the file
+      const formData = new FormData();
+      formData.append("ui_session_id", sessionId);
+      formData.append("file", file);
+      
+      // Add the file to the UI first to provide immediate feedback
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "system",
+          type: "content",
+          content: `Uploading file: ${file.name}...`,
+        },
+      ]);
+      
+      // Perform the upload
+      fetch(`${API_URL}/upload_file`, {
+        method: "POST",
+        body: formData,
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log('Upload successful:', data);
+        
+        // Create a file object that matches what FileUploadManager expects
+        const newFile = {
+          id: data.id,
+          name: data.filename,
+          type: data.mime_type,
+          size: data.size,
+          selected: true,
+          processing_status: "pending",
+          processing_error: null
+        };
+        
+        // Update selected files
+        setSelectedFiles(prev => [...prev, newFile]);
+        
+        // Notify UI of successful upload
+        setMessages((prev) => {
+          // Replace the 'uploading' message with 'uploaded'
+          const lastIndex = prev.length - 1;
+          const lastMessage = prev[lastIndex];
+          
+          if (lastMessage.role === "system" && lastMessage.content.startsWith("Uploading file: ")) {
+            // Replace the last message
+            return [
+              ...prev.slice(0, lastIndex),
+              {
+                role: "system",
+                type: "content",
+                content: `File uploaded: ${file.name}`,
+              },
+            ];
+          }
+          
+          // Or just add a new message
+          return [
+            ...prev,
+            {
+              role: "system",
+              type: "content",
+              content: `File uploaded: ${file.name}`,
+            },
+          ];
+        });
+        
+        // Start monitoring the processing status
+        checkFileProcessingStatus(data.id);
+        
+        setIsUploading(false);
+      })
+      .catch(error => {
+        console.error("Error uploading file:", error);
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "system",
+            type: "error",
+            content: `Error uploading file: ${error.message}`,
+          },
+        ]);
+        setIsUploading(false);
+      });
+    }
+  };
+  
+  /**
+   * Checks the processing status of a file
+   * @param {string} fileId - The ID of the file to check
+   */
+  const checkFileProcessingStatus = async (fileId) => {
+    // Poll the server every 2 seconds to check processing status
+    let attempts = 0;
+    const maxAttempts = 15; // 15 attempts * 2 seconds = 30 seconds max
+    
+    const checkStatus = async () => {
+      try {
+        const response = await fetch(`${API_URL}/files/${sessionId}`);
+        if (!response.ok) {
+          console.error(`Error fetching file status: ${response.status}`);
+          return true; // Stop polling on error
+        }
+
+        const data = await response.json();
+
+        // Find the file in the response
+        const fileData = data.files.find(f => f.id === fileId);
+        if (!fileData) return false;
+
+        // Update our selected files with the current status
+        setSelectedFiles(prev => prev.map(file => {
+          if (file.id === fileId) {
+            return {
+              ...file,
+              processing_status: fileData.processing_status,
+              processing_error: fileData.processing_error
+            };
+          }
+          return file;
+        }));
+
+        // If processing is complete or failed, stop polling
+        return fileData.processing_status !== "pending";
+      } catch (error) {
+        console.error("Error checking file status:", error);
+        return true; // Stop polling on error
+      }
+    };
+
+    const pollTimer = setInterval(async () => {
+      attempts++;
+      const shouldStop = await checkStatus();
+
+      if (shouldStop || attempts >= maxAttempts) {
+        clearInterval(pollTimer);
+
+        // If we hit max attempts and status is still pending, mark as failed
+        if (attempts >= maxAttempts) {
+          setSelectedFiles(prev => prev.map(file => {
+            if (file.id === fileId && file.processing_status === "pending") {
+              return {
+                ...file,
+                processing_status: "failed",
+                processing_error: "Processing timed out"
+              };
+            }
+            return file;
+          }));
+        }
+      }
+    }, 2000);
   };
   
   /**
@@ -562,6 +744,7 @@ const ChatInterfaceInner = ({
             onFileError={handleFileError}
             onSelectedFilesChange={handleSelectedFilesChange}
             fileInputRef={fileInputRef}
+            uploadedFiles={selectedFiles}
           />
           
           {/* Display selected files as badges */}
