@@ -17,6 +17,7 @@ The MCPToolChest inherits from the ToolChest to provide a way to make MCP based 
 2. We should probably make the Toolset management methods accept a string or an array of strings to make life easier on the application layer devs. 
    - Something like `activate_toolset(self, toolset_name_or_names: Union[str, List[str]])`
    - In addition to the adding  / removing ToolSets, we need a `set_active_toolsets` that just sets what the list should be.
+   - Since these will need to init tools **lazily** the various methods for activating tools must be async and support supplying a new blob of data for the `post_init` on the tool.
 
 ## How toolset initialization CURRENTLY works.
 1. Application layer creates a ToolChest and supplies a list of ToolSets they want available.
@@ -29,7 +30,7 @@ The MCPToolChest inherits from the ToolChest to provide a way to make MCP based 
      - Call it's async `post_init` with hte params supplied by the application in kw args plus a reference to itself.
    - Note that since currently "available" amd "active" mean the same thing, this means we initialize every tool if the registry is used...
 
-## How toolset initialization should works
+## How toolset initialization should work
 1. Application layer creates a ToolChest and supplies a list of ToolSets they want available, and a list that they consider essential.
    - If they don't supply an available list ALL ToolSets in the Toolset.tool_registry are considered available.
    - Again we're talking about class names, not single tool names.
