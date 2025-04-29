@@ -60,7 +60,7 @@ class BaseAgent:
         self.max_delay: int = kwargs.get("max_delay", 10)
         self.concurrency_limit: int = kwargs.get("concurrency_limit", 3)
         self.semaphore: Semaphore = asyncio.Semaphore(self.concurrency_limit)
-        self.tool_chest: ToolChest = kwargs.get("tool_chest", ToolChest(tool_classes=[]))
+        self.tool_chest: ToolChest = kwargs.get("tool_chest")
         self.tool_chest.agent = self
         self.prompt: Optional[str] = kwargs.get("prompt", None)
         self.prompt_builder: Optional[PromptBuilder] = kwargs.get("prompt_builder", None)
