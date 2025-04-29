@@ -3,7 +3,7 @@ import re
 from readability import Document
 from markdownify import markdownify
 
-from agent_c_tools.tools.web.formatters.base import ContentFormatter
+from .base import ContentFormatter
 
 
 class CentricBlogFormatter(ContentFormatter):

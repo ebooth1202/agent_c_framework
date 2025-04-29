@@ -6,13 +6,10 @@ making it easy to start a server from the command line with various configuratio
 import logging
 import sys
 import argparse
-import json
-import tempfile
-import yaml
-import os
 
-from agent_c.toolsets import ToolChest, MCPToolChest
-from agent_c_tools.server.mcp_server import MCPToolChestServer
+
+from agent_c.toolsets import MCPToolChest
+from .mcp_server import MCPToolChestServer
 
 
 def configure_logging(verbose: bool = False) -> None:

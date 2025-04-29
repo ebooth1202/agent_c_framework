@@ -11,8 +11,8 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 
 from agent_c import json_schema, Toolset
-from agent_c_tools.tools.web.formatters import *
-from agent_c_tools.tools.web.util.expires_header import expires_header_to_cache_seconds
+from .formatters import *
+from .util.expires_header import expires_header_to_cache_seconds
 
 
 class WebTools(Toolset):

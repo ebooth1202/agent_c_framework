@@ -6,12 +6,13 @@ server configuration from files, environment variables, and direct settings.
 
 import os
 import re
-import logging
 import json
+import yaml
+import logging
+
+from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Pattern, Union
-import yaml
-from pathlib import Path
 
 
 def _resolve_env_vars(value: str) -> str:

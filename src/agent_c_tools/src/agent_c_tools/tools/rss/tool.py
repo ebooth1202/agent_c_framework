@@ -5,8 +5,8 @@ import feedparser
 from typing import List
 
 from agent_c.toolsets import json_schema, Toolset
-from agent_c_tools.tools.rss.feeds import RSSToolFeed, default_feeds
-from agent_c_tools.tools.rss.prompt import RSSSection
+from .feeds import RSSToolFeed, default_feeds
+from .prompt import RSSSection
 
 
 class RssTools(Toolset):

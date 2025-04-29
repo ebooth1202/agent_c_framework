@@ -1,1 +1,1 @@
-from agent_c_tools.tools.user_bio.tool import UserBioTools
+from .tool import UserBioTools

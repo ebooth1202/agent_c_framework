@@ -1,4 +1,4 @@
-from agent_c_tools.tools.user_preferences import UserPreference
+from .base import UserPreference
 
 
 class AssistantPersonalityPreference(UserPreference):

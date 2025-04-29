@@ -4,14 +4,12 @@ This module provides functions for discovering and loading Agent C tools
 from various packages and registering them with a ToolChest.
 """
 
-import importlib
-import inspect
-import pkgutil
-import sys
 import logging
+import importlib
+
 from typing import Any, Dict, List, Optional, Set, Type
 
-from agent_c.toolsets import ToolChest
+from agent_c.toolsets.tool_chest import ToolChest
 from agent_c.toolsets.tool_set import Toolset
 
 logger = logging.getLogger(__name__)

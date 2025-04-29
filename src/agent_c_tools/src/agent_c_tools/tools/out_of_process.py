@@ -1,1 +1,1 @@
-from agent_c_tools.tools.web.tool import WebTools
+from .web.tool import WebTools

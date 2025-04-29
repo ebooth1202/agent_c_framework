@@ -1,7 +1,7 @@
 from markdownify import markdownify
 from readability import Document
 
-from agent_c_tools.tools.web.formatters.base import ContentFormatter
+from .base import ContentFormatter
 
 
 class ReadableFormatter(ContentFormatter):
