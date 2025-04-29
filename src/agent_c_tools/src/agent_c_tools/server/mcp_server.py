@@ -5,18 +5,13 @@ a ToolChest of Agent C tools through an MCP server interface using the
 official MCP Python SDK.
 """
 
-import asyncio
-import inspect
+import sys
 import json
 import logging
-import os
-import sys
-import re
-import importlib
+
+
 from contextlib import asynccontextmanager
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, AsyncIterator, get_type_hints
-from pathlib import Path
-
 
 from mcp.server.fastmcp import FastMCP, Context
 # MCP parameter handling is done through standard type annotations and dictionaries

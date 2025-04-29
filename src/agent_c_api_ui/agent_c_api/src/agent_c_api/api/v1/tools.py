@@ -81,7 +81,7 @@ async def tools_list():
             tool_groups[category].sort(key=lambda x: x['name'].lower())
 
         return {
-            "essential_tools": essential_tools,
+            "essential_toolsets": essential_tools,
             "groups": tool_groups,
             "categories": list(categories.values()),
             "tool_name_mapping": tool_name_mapping

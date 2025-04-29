@@ -1,6 +1,4 @@
-import json
-
-from agent_c_tools.tools.weather.util import *
+from .util import *
 
 from agent_c import json_schema, Toolset
 

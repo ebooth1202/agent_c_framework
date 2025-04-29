@@ -4,7 +4,7 @@ import json
 from tavily import TavilyClient
 
 from agent_c import json_schema, Toolset
-from agent_c_tools.tools.web_search.tavily_research.prompt import TavilyResearchPrompt
+from .prompt import TavilyResearchPrompt
 
 
 class TavilyResearchTools(Toolset):

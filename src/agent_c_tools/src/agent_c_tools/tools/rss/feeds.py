@@ -1,4 +1,4 @@
-from agent_c_tools.tools.rss.model import RSSToolFeed
+from .model import RSSToolFeed
 
 STD_SCHEMA=['title', 'link', 'pubDate', 'description']
 

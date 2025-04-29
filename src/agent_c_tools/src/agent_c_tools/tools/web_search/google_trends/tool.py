@@ -1,8 +1,9 @@
 import io
 import json
 import logging
-from datetime import datetime, timedelta
 import pandas as pd
+
+from datetime import datetime, timedelta
 from pytrends.request import TrendReq
 from agent_c.toolsets import json_schema, Toolset
 
