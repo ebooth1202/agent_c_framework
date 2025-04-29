@@ -21,6 +21,7 @@ The MCPToolChest inherits from the ToolChest to provide a way to make MCP based 
 ## How toolset initialization CURRENTLY works.
 1. Application layer creates a ToolChest and supplies a list of ToolSets they want available.
    - If they don't supply one ALL tools in the Toolset.tool_registry are considered available.
+   - This list, like the registry **list** are toolset CLASS names.
    - Because of the shortcuts taken, "available" amd "active" mean the same thing.
 2. Later the application calls init_tools on the toolchest 
    - This should loop through any active tool, for which we don't have an instance of in `__tool_instances` and:
@@ -31,6 +32,7 @@ The MCPToolChest inherits from the ToolChest to provide a way to make MCP based 
 ## How toolset initialization should works
 1. Application layer creates a ToolChest and supplies a list of ToolSets they want available, and a list that they consider essential.
    - If they don't supply an available list ALL ToolSets in the Toolset.tool_registry are considered available.
+   - Again we're talking about class names, not single tool names.
 2. Later the application calls init_tools on the toolchest 
    - This should loop through any active / essential ToolSets, for which we don't have an instance of in `__toolset_instances` and:
      - Create an instance of it
