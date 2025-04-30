@@ -39,6 +39,7 @@
 @import './components/collapsible-options.css';
 @import './components/tool-selector.css';
 @import './components/chat-interface.css';
+@import './components/replay-interface.css';
 @import './components/token-usage-display.css';
 @import './components/export-html-button.css';
 @import './components/sidebar-toggle.css';
