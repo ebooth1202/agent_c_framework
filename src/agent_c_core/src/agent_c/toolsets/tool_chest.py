@@ -143,7 +143,7 @@ class ToolChest:
         self._update_toolset_metadata()
         return success
 
-    def dgit eactivate_toolset(self, toolset_name_or_names: Union[str, List[str]]) -> bool:
+    def deactivate_toolset(self, toolset_name_or_names: Union[str, List[str]]) -> bool:
         """
         Deactivate one or more toolsets by name.
         
