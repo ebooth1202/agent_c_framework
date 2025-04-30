@@ -16,7 +16,7 @@ const DEFAULT_TIMEOUT = 30000;
 export const API_CONFIG = {
   baseUrl: import.meta.env.VITE_API_URL || '/api/v1',
   timeout: DEFAULT_TIMEOUT,
-  credentials: 'omit', // 'include' for cookies, 'same-origin' for same-origin requests
+  credentials: 'include',
   headers: {
     'Content-Type': 'application/json',
   },
