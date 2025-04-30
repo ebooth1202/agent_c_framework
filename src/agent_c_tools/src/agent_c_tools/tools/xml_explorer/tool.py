@@ -18,7 +18,7 @@ class XmlExplorerTools(Toolset):
         self.workspace_tool: Optional[WorkspaceTools] = None
 
     async def post_init(self):
-        self.workspace_tool = self.tool_chest.active_tools['workspace']
+        self.workspace_tool = self.tool_chest.active_tools['WorkspaceTools']
 
     @json_schema(
         'Get structure information about a large XML file without loading the entire file.',
