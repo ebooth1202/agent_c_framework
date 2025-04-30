@@ -875,10 +875,9 @@ const EnhancedChatEventReplay = ({
     });
 
     return (
-        <div className="enhanced-chat-replay flex flex-col h-full overflow-y-auto">
-            {/* Fixed controls area - now uses sticky positioning */}
+        <div className="enhanced-chat-replay flex flex-col w-full h-full overflow-hidden">
+            {/* Controls area */}
             <div className="mb-4 flex items-center space-x-4">
-                {/* Controls area */}
                 <Button
                     onClick={isPlaying ? handlePause : handlePlay}
                     variant="default"
@@ -898,33 +897,32 @@ const EnhancedChatEventReplay = ({
                             className="ml-2">({Math.round((currentEventIndex + 1) / events.length * 100)}%)</span>}
                 </div>
             </div>
-            <Card className="chat-interface-card">
-        {/* Messages list with ScrollArea for better scrolling experience */}
-        <CardContent className="chat-interface-messages flex-grow p-0 overflow-hidden">
-          <ScrollArea className="h-full w-full" type="auto">
-            <div className="p-2">
-                        {messages.length === 0 ? (
-                            <div className="text-center text-gray-500 p-4">No messages to display</div>
-                        ) : (
-                            <MessagesList
-                                messages={formattedMessages}
-                                expandedToolCallMessages={[]}
-                                toggleToolCallExpansion={() => {
-                                }}
-                                toolSelectionInProgress={toolSelectionState.inProgress}
-                                toolSelectionName={toolSelectionState.toolName}
-                            />
-                        )}
-
-                        {/* Show tool selection indicator */}
-                        {toolSelectionState.inProgress && (
-                            <div className="flex items-center gap-2 text-sm text-gray-500 italic my-1 ml-8">
-                                <div className="animate-pulse h-2 w-2 bg-purple-400 rounded-full"></div>
-                                <span>Preparing to use: {toolSelectionState.toolName?.replace(/-/g, ' ') || 'tool'}</span>
-                            </div>
-                        )}
-                    </div>
-          </ScrollArea>
+            <Card className="chat-interface-card w-full h-full">
+                {/* Messages list with ScrollArea for better scrolling experience */}
+                <CardContent className="chat-interface-messages h-full flex-grow p-0">
+                    <ScrollArea className="h-full w-full" type="auto">
+                        <div className="p-2">
+                            {messages.length === 0 ? (
+                                <div className="text-center text-gray-500 p-4">No messages to display</div>
+                            ) : (
+                                <MessagesList
+                                    messages={formattedMessages}
+                                    expandedToolCallMessages={[]}
+                                    toggleToolCallExpansion={() => {}}
+                                    toolSelectionInProgress={toolSelectionState.inProgress}
+                                    toolSelectionName={toolSelectionState.toolName}
+                                />
+                            )}
+                            
+                            {/* Show tool selection indicator */}
+                            {toolSelectionState.inProgress && (
+                                <div className="flex items-center gap-2 text-sm text-gray-500 italic my-1 ml-8">
+                                    <div className="animate-pulse h-2 w-2 bg-purple-400 rounded-full"></div>
+                                    <span>Preparing to use: {toolSelectionState.toolName?.replace(/-/g, ' ') || 'tool'}</span>
+                                </div>
+                            )}
+                        </div>
+                    </ScrollArea>
                 </CardContent>
             </Card>
         </div>
