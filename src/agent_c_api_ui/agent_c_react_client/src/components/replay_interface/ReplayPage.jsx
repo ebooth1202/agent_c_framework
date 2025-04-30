@@ -911,7 +911,7 @@ const ReplayPage = () => {
         </div>
       </Card>
 
-      <div className="chat-messages-container">
+      <div className="chat-messages-container" style={{ height: 'auto' }}>
         {/* Only render chat events if we're playing, have clicked "Show All", 
             or have manually moved through events (currentEventIndex > 0) */}
         {(isPlaying || showingAll || currentEventIndex > 0) && events.length > 0 && (
