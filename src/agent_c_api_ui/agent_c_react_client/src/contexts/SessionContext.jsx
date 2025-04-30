@@ -205,6 +205,14 @@ export const SessionProvider = ({children}) => {
                     setCustomPrompt(initialPersona.content);
                 }
 
+                // Verify that the persona exists in the list of available personas
+                const personaExists = personasData.some(p => p.name === initialModel.persona_name);
+                if (!personaExists && initialModel.persona_name && initialModel.persona_name !== 'default') {
+                    console.warn(`Persona '${initialModel.persona_name}' not found in available personas, falling back to default`);
+                    initialModel.persona_name = 'default';
+                    setPersona('default');
+                }
+
                 // Initialize a session with the initial model
                 // console.log('Initializing session with initial model:', initialModel);
                 await initializeSession(false, initialModel, modelsData.models);
@@ -280,7 +288,7 @@ export const SessionProvider = ({children}) => {
             const jsonData = {
                 model_name: currentModel.id,
                 backend: currentModel.backend,
-                persona_name: persona || 'default'
+                persona_name: initialModel && initialModel.persona_name ? initialModel.persona_name : (persona || 'default')
             };
 
             // If we have an existing session and we're not forcing a new one, include the session ID
