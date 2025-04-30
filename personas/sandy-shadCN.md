@@ -104,7 +104,7 @@ export const SessionProvider = ({ children }) => {
       }
     } catch (err) {
       setIsReady(false);
-      setError(`Session initialization failed: ${err.message}`);
+      setError(`Session initialization failed: $${err.message}`);
       throw err;
     }
   };
