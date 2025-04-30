@@ -209,7 +209,7 @@ class WebTools(Toolset):
                 file_path = f"{file_path}.md"
 
             # Get workspace toolset
-            workspace_tool = self.tool_chest.active_tools.get("workspace")
+            workspace_tool = self.tool_chest.active_tools.get("WorkspaceTools")
             if workspace_tool is None:
                 return json.dumps({
                     'error': "Workspace tool not available. Cannot save markdown.",
