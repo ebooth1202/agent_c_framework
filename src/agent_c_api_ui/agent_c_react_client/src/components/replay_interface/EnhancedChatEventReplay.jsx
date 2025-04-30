@@ -875,7 +875,7 @@ const EnhancedChatEventReplay = ({
     });
 
     return (
-        <div className="enhanced-chat-replay flex flex-col w-full h-full overflow-hidden">
+        <div className="enhanced-chat-replay flex flex-col w-full">
             {/* Controls area */}
             <div className="mb-4 flex items-center space-x-4">
                 <Button

@@ -717,7 +717,7 @@ const ReplayPage = () => {
   );
 
   return (
-    <div className="chat-interface-container flex flex-col h-full overflow-y-auto">
+    <div className="chat-interface-container flex flex-col" style={{ height: 'auto', overflowY: 'auto' }}>
       <div className="flex items-center mb-4">
         <Button
           variant="ghost"
@@ -911,7 +911,7 @@ const ReplayPage = () => {
         </div>
       </Card>
 
-      <div className="chat-messages-container flex-grow">
+      <div className="chat-messages-container">
         {/* Only render chat events if we're playing, have clicked "Show All", 
             or have manually moved through events (currentEventIndex > 0) */}
         {(isPlaying || showingAll || currentEventIndex > 0) && events.length > 0 && (
