@@ -125,6 +125,7 @@ class ToolChest:
                         self.__tool_opts = tool_opts
                         self.__tool_opts['tool_chest'] = self
 
+
                     toolset_obj = toolset_class(**self.__tool_opts)
                     
                     # Add to instances and active instances
@@ -142,7 +143,7 @@ class ToolChest:
         self._update_toolset_metadata()
         return success
 
-    def deactivate_toolset(self, toolset_name_or_names: Union[str, List[str]]) -> bool:
+    def dgit eactivate_toolset(self, toolset_name_or_names: Union[str, List[str]]) -> bool:
         """
         Deactivate one or more toolsets by name.
         
@@ -175,22 +176,20 @@ class ToolChest:
         self._update_toolset_metadata()
         return success
 
-    async def set_active_toolsets(self, toolset_names: List[str], tool_opts: Optional[Dict[str, any]] = None) -> bool:
+    async def set_active_toolsets(self, additional_toolset_names: List[str], tool_opts: Optional[Dict[str, any]] = None) -> bool:
         """
         Set the complete list of active toolsets.
         
         Args:
-            toolset_names: List of toolset names to set as active
+            additional_toolset_names: List of toolset names to set as active
             tool_opts: Additional arguments to pass to post_init for newly activated toolsets
             
         Returns:
             bool: True if all toolsets were set successfully, False otherwise
         """
         # Ensure essential toolsets are included
-        for essential in self.__essential_toolsets:
-            if essential not in toolset_names:
-                toolset_names.append(essential)
-        
+        toolset_names = self.__essential_toolsets + additional_toolset_names
+
         # Get current active toolsets that aren't in the new list
         to_deactivate = [name for name in self.__active_toolset_instances
                          if name not in toolset_names and name not in self.__essential_toolsets]

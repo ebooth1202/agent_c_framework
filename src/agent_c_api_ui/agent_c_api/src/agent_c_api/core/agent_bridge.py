@@ -221,7 +221,9 @@ class AgentBridge:
         self.logger.info(f"Agent {self.agent_name} initialized workspaces {local_project.workspace_root}")
 
         try:
-            local_workspaces = json.load(open(".local_workspaces.json", "r"))
+            with open('.local_workspaces.json', 'r') as json_file:
+                local_workspaces = json.load(json_file)
+
             for ws in local_workspaces['local_workspaces']:
                 self.workspaces.append(LocalStorageWorkspace(**ws))
         except FileNotFoundError:
@@ -330,19 +332,14 @@ class AgentBridge:
                     f"Agent {self.agent_name} successfully initialized additional tools: {list(self.tool_chest.active_tools.keys())}")
 
 
-            # From this point on, this is only additional debugging code to troubleshoot when tools don't get initialized
+
             # Usually it's a misspelling of the tool class name from the LLM
             initialized_tools = set(self.tool_chest.active_tools.keys())
-            tool_class_to_instance_name = {
-                tool.__name__: instance.name
-                for instance in self.tool_chest.active_tools.values()
-                for tool in Toolset.tool_registry
-                if isinstance(instance, tool)
-            }
+
             # Find tools that were selected but not initialized
             uninitialized_tools = [
                 tool_name for tool_name in self.selected_tools
-                if tool_class_to_instance_name.get(tool_name) not in initialized_tools
+                if tool_name not in initialized_tools
             ]
             if uninitialized_tools:
                 self.logger.warning(
