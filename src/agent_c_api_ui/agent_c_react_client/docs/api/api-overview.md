@@ -13,37 +13,57 @@ API configuration is defined in `src/config/config.js`, which specifies:
 - Authentication settings
 - Timeout configurations
 
+## API Service Layer
+
+The Agent C React UI implements a dedicated API service layer to separate API calls from state management and UI components. This service layer is organized into specialized service modules:
+
+```
+src/services/
+  ├── api.js           # Base API utilities and common functions
+  ├── chat-api.js       # Chat and message related endpoints
+  ├── index.js          # Re-exports for service modules
+  ├── model-api.js      # Model configuration endpoints
+  ├── persona-api.js    # Persona management endpoints
+  ├── session-api.js    # Session management endpoints
+  └── tools-api.js      # Tool management endpoints
+```
+
+See [Service Layer](./service-layer.md) for detailed implementation guidelines.
+
 ## Major API Endpoints
+
+The Agent C API uses a mixture of REST-style and RPC-style endpoints. For complete details on all endpoints, see [API Endpoints Reference](./api-endpoints.md).
 
 ### Chat Endpoints
 
-- `POST /chat/completions` - Send messages and receive AI responses
-- `GET /chat/sessions` - Retrieve user chat sessions
-- `GET /chat/session/{id}` - Get a specific chat session
-- `DELETE /chat/session/{id}` - Delete a chat session
+- `POST /chat` - Send messages and receive AI responses
+- `GET /messages/{sessionId}` - Retrieve message history for a session
+
+### Session Endpoints
+
+- `POST /initialize` - Create a new chat session
+- `GET /session/{sessionId}` - Get a specific chat session
+- `POST /update_session` - Update session settings
 
 ### Tool Endpoints
 
 - `GET /tools` - Retrieve available tools
-- `POST /tools/{tool_id}/execute` - Execute a specific tool
+- `GET /get_agent_tools/{sessionId}` - Get tools for a specific session
+- `POST /update_tools` - Update enabled tools for a session
+
+### Model Endpoints
+
+- `GET /models` - Retrieve available models
+
+### Persona Endpoints
+
+- `GET /personas` - Retrieve available personas
+- `POST /update_persona` - Update session persona
 
 ### File Endpoints
 
-- `POST /files/upload` - Upload files for use in chat
-- `GET /files` - List uploaded files
-- `DELETE /files/{file_id}` - Delete a file
-
-### RAG Endpoints
-
-- `POST /rag/collections` - Create a document collection
-- `GET /rag/collections` - List document collections
-- `POST /rag/search` - Search across document collections
-
-### User Endpoints
-
-- `POST /auth/login` - User login
-- `POST /auth/logout` - User logout
-- `GET /user/profile` - Get user profile information
+- `POST /upload_file` - Upload files for use in chat
+- `GET /file/{fileId}` - Retrieve file information
 
 ## Request Format
 
