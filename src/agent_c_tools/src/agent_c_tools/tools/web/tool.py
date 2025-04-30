@@ -11,8 +11,8 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 
 from agent_c import json_schema, Toolset
-from agent_c_tools.tools.web.formatters import *
-from agent_c_tools.tools.web.util.expires_header import expires_header_to_cache_seconds
+from .formatters import *
+from .util.expires_header import expires_header_to_cache_seconds
 
 
 class WebTools(Toolset):
@@ -209,7 +209,7 @@ class WebTools(Toolset):
                 file_path = f"{file_path}.md"
 
             # Get workspace toolset
-            workspace_tool = self.tool_chest.active_tools.get("workspace")
+            workspace_tool = self.tool_chest.active_tools.get("WorkspaceTools")
             if workspace_tool is None:
                 return json.dumps({
                     'error': "Workspace tool not available. Cannot save markdown.",

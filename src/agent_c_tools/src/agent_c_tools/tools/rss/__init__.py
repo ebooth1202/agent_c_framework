@@ -1,2 +1,2 @@
-from agent_c_tools.tools.rss.feeds import default_feeds
-from agent_c_tools.tools.rss.tool import RssTools
+from .feeds import default_feeds
+from .tool import RssTools

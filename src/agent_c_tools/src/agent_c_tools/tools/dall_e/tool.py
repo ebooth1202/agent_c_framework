@@ -26,7 +26,7 @@ class DallETools(Toolset):
         if self.workspace is None:
             self.workspace_path = kwargs.get('dalle_workspace_path', os.environ.get('DALLE_IMAGE_SAVE_FOLDER', None))
             if self.workspace_path is not None:
-                self.workspace_tool: WorkspaceTools = cast(WorkspaceTools, self.tool_chest.active_tools.get('workspace'))
+                self.workspace_tool: WorkspaceTools = cast(WorkspaceTools, self.tool_chest.active_tools.get('WorkspaceTools'))
                 if self.workspace_tool is not None:
                     self.workspace = LocalStorageWorkspace(workspace_path=self.workspace_path, max_size=sys.maxsize)
                     self.workspace_tool.add_workspace(self.workspace)

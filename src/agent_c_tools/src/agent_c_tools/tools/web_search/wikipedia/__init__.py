@@ -1,1 +1,1 @@
-from agent_c_tools.tools.web_search.wikipedia.tool import WikipediaTools
+from .tool import WikipediaTools

@@ -29,7 +29,10 @@ class MCPToolChest(ToolChest):
         """Initialize the MCPToolChest.
         
         Args:
-            **kwargs: Arguments to pass to the ToolChest base class
+            **kwargs: Arguments to pass to the ToolChest base class including:
+                - available_toolset_classes: List of toolset classes available for activation
+                - essential_toolset_names: List of names of toolsets that should always be active
+                - mcp_servers: Dict of MCPServer instances to include
         """
         super().__init__(**kwargs)
         self.mcp_servers: Dict[str, MCPServer] = kwargs.get("mcp_servers", {})
@@ -91,6 +94,36 @@ class MCPToolChest(ToolChest):
         self.mcp_servers[server_id] = server
         self.logger.info(f"Added MCP server configuration for {server_id}")
     
+    async def connect_server(self, server_id: str):
+        """Connect to a specific MCP server and create its toolset.
+        
+        Args:
+            server_id: The ID of the server to connect
+            
+        Returns:
+            bool: True if connection was successful, False otherwise
+        """
+        server = self.mcp_servers.get(server_id)
+        if not server:
+            self.logger.warning(f"No MCP server found with ID: {server_id}")
+            return False
+            
+        try:
+            success = await server.connect()
+            
+            # If successfully connected, create a toolset for this server
+            if success:
+                toolset = MCPToolset(server)
+                await self.add_tool_instance(toolset)
+                self.logger.info(f"Added toolset for MCP server {server_id}")
+            else:
+                self.logger.warning(f"Failed to connect to MCP server {server_id}")
+                
+            return success
+        except Exception as e:
+            self.logger.error(f"Error connecting to MCP server {server_id}: {e}")
+            return False
+    
     async def connect_servers(self):
         """Connect to all configured MCP servers.
         
@@ -101,8 +134,8 @@ class MCPToolChest(ToolChest):
         connection_tasks = []
         
         # Create connection tasks for all servers
-        for server_id, server in self.mcp_servers.items():
-            task = asyncio.create_task(server.connect())
+        for server_id in self.mcp_servers.keys():
+            task = asyncio.create_task(self.connect_server(server_id))
             connection_tasks.append((server_id, task))
         
         # Wait for all connections to complete
@@ -110,17 +143,41 @@ class MCPToolChest(ToolChest):
             try:
                 success = await task
                 connection_results[server_id] = success
-                
-                # If successfully connected, create a toolset for this server
-                if success:
-                    toolset = MCPToolset(self.mcp_servers[server_id])
-                    self.add_tool_instance(toolset)
-                    self.logger.info(f"Added toolset for MCP server {server_id}")
             except Exception as e:
-                self.logger.error(f"Error connecting to MCP server {server_id}: {e}")
+                self.logger.error(f"Error handling connection to MCP server {server_id}: {e}")
                 connection_results[server_id] = False
         
         return connection_results
+    
+    async def disconnect_server(self, server_id: str):
+        """Disconnect from a specific MCP server and deactivate its toolset.
+        
+        Args:
+            server_id: The ID of the server to disconnect
+            
+        Returns:
+            bool: True if disconnection was successful, False otherwise
+        """
+        server = self.mcp_servers.get(server_id)
+        if not server:
+            self.logger.warning(f"No MCP server found with ID: {server_id}")
+            return False
+            
+        if not server.connected:
+            # Nothing to do if not connected
+            return True
+            
+        try:
+            # First deactivate the toolset if it exists
+            toolset_name = f"MCPToolset_{server_id}"
+            self.deactivate_toolset(toolset_name)
+            
+            # Then disconnect the server
+            success = await server.disconnect()
+            return success
+        except Exception as e:
+            self.logger.error(f"Error disconnecting from MCP server {server_id}: {e}")
+            return False
     
     async def disconnect_servers(self):
         """Disconnect from all MCP servers.
@@ -131,10 +188,10 @@ class MCPToolChest(ToolChest):
         disconnection_results = {}
         disconnection_tasks = []
         
-        # Create disconnection tasks for all servers
+        # Create disconnection tasks for all connected servers
         for server_id, server in self.mcp_servers.items():
             if server.connected:
-                task = asyncio.create_task(server.disconnect())
+                task = asyncio.create_task(self.disconnect_server(server_id))
                 disconnection_tasks.append((server_id, task))
         
         # Wait for all disconnections to complete
@@ -143,10 +200,71 @@ class MCPToolChest(ToolChest):
                 success = await task
                 disconnection_results[server_id] = success
             except Exception as e:
-                self.logger.error(f"Error disconnecting from MCP server {server_id}: {e}")
+                self.logger.error(f"Error handling disconnection from MCP server {server_id}: {e}")
                 disconnection_results[server_id] = False
         
         return disconnection_results
+    
+    async def activate_toolset(self, toolset_name_or_names: Union[str, List[str]], tool_opts: Optional[Dict[str, any]] = None) -> bool:
+        """Override to handle MCP server connections for toolsets being activated.
+        
+        Args:
+            toolset_name_or_names: A single toolset name or list of toolset names to activate
+            **kwargs: Additional arguments to pass to post_init if needed
+            
+        Returns:
+            bool: True if all toolsets were activated successfully, False otherwise
+        """
+        # First check if any of the requested toolsets are MCP server toolsets
+        toolset_names = [toolset_name_or_names] if isinstance(toolset_name_or_names, str) else toolset_name_or_names
+        
+        # Keep track of success status
+        success = True
+        
+        # Handle regular toolsets first
+        regular_toolsets = []
+        for name in toolset_names:
+            # Check if this is an MCP toolset by name pattern
+            if name.startswith("MCPToolset_"):
+                # Extract server ID from toolset name
+                server_id = name[len("MCPToolset_"):]
+                # Connect to this server if it exists
+                if server_id in self.mcp_servers:
+                    server_success = await self.connect_server(server_id)
+                    if not server_success:
+                        success = False
+                else:
+                    self.logger.warning(f"No MCP server found with ID: {server_id}")
+                    success = False
+            else:
+                # Regular toolset, add to list for regular activation
+                regular_toolsets.append(name)
+        
+        # Activate regular toolsets
+        if regular_toolsets:
+            regular_success = await super().activate_toolset(regular_toolsets, tool_opts)
+            if not regular_success:
+                success = False
+        
+        return success
+    
+    def deactivate_toolset(self, toolset_name_or_names: Union[str, List[str]]) -> bool:
+        """Override to handle MCP server disconnections for toolsets being deactivated.
+        
+        Args:
+            toolset_name_or_names: A single toolset name or list of toolset names to deactivate
+            
+        Returns:
+            bool: True if all toolsets were deactivated successfully, False otherwise
+        """
+        # Process normally, but don't disconnect servers yet
+        success = super().deactivate_toolset(toolset_name_or_names)
+        
+        # We don't need to disconnect servers when toolsets are deactivated
+        # The server connections will be maintained in case the toolset is reactivated
+        # Actual disconnection happens during shutdown or explicit disconnect request
+        
+        return success
     
     async def init_tools(self, **kwargs):
         """Override of ToolChest.init_tools to also initialize MCP servers.
@@ -157,18 +275,24 @@ class MCPToolChest(ToolChest):
         # First init regular tools
         await super().init_tools(**kwargs)
         
-        # Then connect and initialize MCP servers
-        connection_results = await self.connect_servers()
+        # Then connect and initialize MCP servers if we're in backward compatibility mode
+        # or if any MCP toolsets are in the essential toolsets list
+        essential_has_mcp = any(name.startswith("MCPToolset_") for name in self._ToolChest__essential_toolset_names)
         
-        # Log connection results
-        successful = sum(1 for result in connection_results.values() if result)
-        failed = sum(1 for result in connection_results.values() if not result)
-        self.logger.info(f"Initialized MCP servers and tools: {successful} connected, {failed} failed")
+        if not self._ToolChest__essential_toolset_names or essential_has_mcp:
+            connection_results = await self.connect_servers()
+            
+            # Log connection results
+            successful = sum(1 for result in connection_results.values() if result)
+            failed = sum(1 for result in connection_results.values() if not result)
+            self.logger.info(f"Initialized MCP servers and tools: {successful} connected, {failed} failed")
+            
+            if failed > 0:
+                self.logger.warning(f"Some MCP servers failed to connect. Check logs for details.")
+            
+            return connection_results
         
-        if failed > 0:
-            self.logger.warning(f"Some MCP servers failed to connect. Check logs for details.")
-        
-        return connection_results
+        return {}
     
     async def shutdown(self):
         """Shutdown all MCP servers and perform cleanup.

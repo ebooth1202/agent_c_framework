@@ -37,6 +37,18 @@ class MessageEvent(SessionEvent):
     content: str = Field(..., description="The content of the message")
     format: str = Field("markdown", description="The format of the content, default is markdown")
 
+class SystemMessageEvent(SessionEvent):
+    """
+    Sent to notify the UI to display an entire message.
+    """
+    def __init__(self, **data):
+        super().__init__(type = "message", **data)
+
+    content: str = Field(..., description="The content of the message")
+    format: str = Field("markdown", description="The format of the content, default is markdown")
+    severity: str = Field("error", description="The content of the message")
+
+
 class TextDeltaEvent(SessionEvent):
     """
     Sent to notify the UI that a chunk of content text has been received.

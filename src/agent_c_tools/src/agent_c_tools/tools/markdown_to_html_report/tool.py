@@ -35,7 +35,7 @@ class MarkdownToHtmlReportTools(Toolset):
     def __init__(self, **kwargs):
         super().__init__(**kwargs, name="markdown_viewer", use_prefix=False)
         # Get workspace tools for file operations
-        self.workspace_tool = self.tool_chest.active_tools.get('workspace')
+        self.workspace_tool = self.tool_chest.active_tools.get('WorkspaceTools')
         if not self.workspace_tool:
             logger.warning("Workspace toolset not available. This tool requires workspace tools.")
 

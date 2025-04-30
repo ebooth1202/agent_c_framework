@@ -1,5 +1,5 @@
 from typing import Any, List, Callable
-from agent_c_tools.tools.user_preferences import UserPreference
+from .preferences.base import UserPreference
 from agent_c.prompting.prompt_section import PromptSection, property_bag_item
 
 

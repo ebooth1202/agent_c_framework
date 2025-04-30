@@ -7,6 +7,7 @@ import traceback
 from typing import Union, List, Dict, Any, AsyncGenerator, Optional
 from datetime import datetime, timezone
 
+from agent_c import BaseAgent
 from agent_c_api.config.env_config import settings
 
 from agent_c.models.input.image_input import ImageInput
@@ -67,8 +68,8 @@ class AgentBridge:
         model_name (str): Name of the AI model to use. Defaults to 'gpt-4o'.
         persona_name (str): Name of the persona to use. Defaults to 'default'.
         custom_prompt (str): Custom text to use for the agent's persona. Defaults to None.
-        essential_tools (List[str]): List of essential tools the agent must have. Defaults to None.
-        additional_tools (List[str]): List of additional tools to add to the agent. Defaults to None.
+        essential_toolsets (List[str]): List of essential tools the agent must have. Defaults to None.
+        additional_toolsets (List[str]): List of additional tools to add to the agent. Defaults to None.
         **kwargs: Additional optional keyword arguments including:
             temperature (float): Temperature parameter for non-reasoning models
             reasoning_effort (float): Reasoning effort parameter for OpenAI models
@@ -98,7 +99,7 @@ class AgentBridge:
         # - Model Name: The model name used for the agent, defaults to 'gpt-4o'
         self.backend = backend
         self.model_name = model_name
-        self.agent = None
+        self.agent: Optional[BaseAgent] = None
         self.agent_output_format = kwargs.get('output_format', 'raw')
 
         # Non-Reasoning Models Parameters
@@ -153,11 +154,11 @@ class AgentBridge:
         self.tool_cache = ToolCache(cache_dir=self.tool_cache_dir)
 
         if essential_tools is None:
-            self.essential_tools = ['WorkspaceTools', 'ThinkTools', 'RandomNumberTools', 'MarkdownToHtmlReportTools']
+            self.essential_toolsets = ['WorkspaceTools', 'ThinkTools', 'RandomNumberTools', 'MarkdownToHtmlReportTools']
         else:
-            self.essential_tools = essential_tools
-        self.additional_tools = additional_tools or []
-        self.selected_tools = self.essential_tools + self.additional_tools
+            self.essential_toolsets = essential_tools
+        self.additional_toolsets = additional_tools or []
+        self.selected_tools = self.essential_toolsets + self.additional_toolsets
         self.output_tool_arguments = True  # Placeholder for tool argument output preference
 
         # Agent Workspace Setup
@@ -220,7 +221,9 @@ class AgentBridge:
         self.logger.info(f"Agent {self.agent_name} initialized workspaces {local_project.workspace_root}")
 
         try:
-            local_workspaces = json.load(open(".local_workspaces.json", "r"))
+            with open('.local_workspaces.json', 'r') as json_file:
+                local_workspaces = json.load(json_file)
+
             for ws in local_workspaces['local_workspaces']:
                 self.workspaces.append(LocalStorageWorkspace(**ws))
         except FileNotFoundError:
@@ -262,16 +265,14 @@ class AgentBridge:
         self.logger.info(f"Requesting new tool list for agent {self.agent_name} to: {new_tools}")
 
         # Remove duplicates and ensure essential tools are included
-        all_tools = list(set(self.essential_tools + new_tools))
+        all_tools = list(set(self.essential_toolsets + new_tools))
 
-        self.additional_tools = [t for t in new_tools if t not in self.essential_tools]
+        self.additional_toolsets = [t for t in new_tools if t not in self.essential_toolsets]
         self.selected_tools = all_tools
 
         # Reinitialize just the tool chest
-        await self.__init_tool_chest()
-
-        # Reinitialize the agent with new tools but keep the session
-        await self.initialize_agent_parameters()
+        await self.tool_chest.set_active_toolsets(self.additional_toolsets)
+        self.agent.prompt_builder.tool_sections = self.tool_chest.active_tool_sections
 
         self.logger.info(f"Tools updated successfully. Current Active tools: {list(self.tool_chest.active_tools.keys())}")
 
@@ -311,10 +312,7 @@ class AgentBridge:
         """
         self.logger.info(f"Requesting initialization of these tools: {self.selected_tools}")
 
-        self.tool_chest = ToolChest(tool_classes=[
-            tool for tool in Toolset.tool_registry
-            if tool.__name__ in self.selected_tools
-        ])
+        self.tool_chest = ToolChest(essential_toolsets=self.essential_toolsets)
 
         try:
             self.tool_cache = ToolCache(cache_dir=".tool_cache")
@@ -324,23 +322,24 @@ class AgentBridge:
                 'workspaces': self.workspaces,
                 'streaming_callback': self.consolidated_streaming_callback
             }
-            await self.tool_chest.init_tools(**tool_opts)
+            await self.tool_chest.init_tools(tool_opts)
             self.logger.info(
-                f"Agent {self.agent_name} successfully initialized tools: {list(self.tool_chest.active_tools.keys())}")
+                f"Agent {self.agent_name} successfully initialized essential tools: {list(self.tool_chest.active_tools.keys())}")
 
-            # From this point on, this is only additional debugging code to troubleshoot when tools don't get initialized
+            if len(self.additional_toolsets):
+                await self.tool_chest.set_active_toolsets(self.additional_toolsets)
+                self.logger.info(
+                    f"Agent {self.agent_name} successfully initialized additional tools: {list(self.tool_chest.active_tools.keys())}")
+
+
+
             # Usually it's a misspelling of the tool class name from the LLM
             initialized_tools = set(self.tool_chest.active_tools.keys())
-            tool_class_to_instance_name = {
-                tool.__name__: instance.name
-                for instance in self.tool_chest.active_tools.values()
-                for tool in Toolset.tool_registry
-                if isinstance(instance, tool)
-            }
+
             # Find tools that were selected but not initialized
             uninitialized_tools = [
                 tool_name for tool_name in self.selected_tools
-                if tool_class_to_instance_name.get(tool_name) not in initialized_tools
+                if tool_name not in initialized_tools
             ]
             if uninitialized_tools:
                 self.logger.warning(

@@ -15,7 +15,7 @@ from agent_c.models import ChatEvent, ImageInput, MemoryMessage
 from agent_c.models.events.chat import ThoughtDeltaEvent
 from agent_c.models.input import FileInput
 from agent_c.models.input.audio_input import AudioInput
-from agent_c.models.events import MessageEvent, ToolCallEvent, InteractionEvent, TextDeltaEvent, HistoryEvent, CompletionEvent, ToolCallDeltaEvent
+from agent_c.models.events import MessageEvent, ToolCallEvent, InteractionEvent, TextDeltaEvent, HistoryEvent, CompletionEvent, ToolCallDeltaEvent, SystemMessageEvent
 from agent_c.prompting import PromptBuilder
 from agent_c.toolsets import ToolChest, Toolset
 from agent_c.util import MnemonicSlugs
@@ -60,7 +60,7 @@ class BaseAgent:
         self.max_delay: int = kwargs.get("max_delay", 10)
         self.concurrency_limit: int = kwargs.get("concurrency_limit", 3)
         self.semaphore: Semaphore = asyncio.Semaphore(self.concurrency_limit)
-        self.tool_chest: ToolChest = kwargs.get("tool_chest", ToolChest(tool_classes=[]))
+        self.tool_chest: ToolChest = kwargs.get("tool_chest")
         self.tool_chest.agent = self
         self.prompt: Optional[str] = kwargs.get("prompt", None)
         self.prompt_builder: Optional[PromptBuilder] = kwargs.get("prompt_builder", None)
@@ -256,11 +256,12 @@ class BaseAgent:
             logging.critical(
                 f"Failed to log internal error to session: {e}. Original error: {error_type}: {error_message}")
 
-    async def _raise_system_event(self, content: str, **data):
+    async def _raise_system_event(self, content: str, severity: str = "error", **data):
         """
         Raise a system event to the event stream.
         """
-        await self._raise_event(MessageEvent(role="system", content=content, session_id=data.get("session_id", "none")))
+        await self._raise_event(SystemMessageEvent(role="system", severity=severity, content=content,
+                                                   session_id=data.get("session_id", "none")))
 
     async def _raise_completion_start(self, comp_options, **data):
         """

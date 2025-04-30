@@ -236,7 +236,7 @@ class DynamicsTools(Toolset):
                 return json.dumps({"error": f"Error creating excel buffer bytes: {str(e)}\n\n{entities}"})
 
             # Write the file using the UNC path
-            result = await self.tool_chest.active_tools['workspace'].internal_write_bytes(
+            result = await self.tool_chest.active_tools['WorkspaceTools'].internal_write_bytes(
                 path=unc_path,
                 mode='write',
                 data=excel_buffer.getvalue()
@@ -249,7 +249,7 @@ class DynamicsTools(Toolset):
             display_path = file_path if file_path else '(root)'
 
             # Get the actual OS-level filepath using the workspace's full_path method
-            _, workspace_obj, rel_path = self.tool_chest.active_tools['workspace']._parse_unc_path(unc_path)
+            _, workspace_obj, rel_path = self.tool_chest.active_tools['WorkspaceTools']._parse_unc_path(unc_path)
             file_system_path = None
             if workspace_obj and hasattr(workspace_obj, 'full_path'):
                 # The full_path method handles path normalization and joining with workspace root

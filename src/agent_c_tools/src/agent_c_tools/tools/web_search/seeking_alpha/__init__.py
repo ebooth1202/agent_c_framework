@@ -1,1 +1,1 @@
-from agent_c_tools.tools.web_search.seeking_alpha.tool import SeekingAlphaTools
+from .tool import SeekingAlphaTools

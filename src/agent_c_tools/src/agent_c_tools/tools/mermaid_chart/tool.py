@@ -1,7 +1,7 @@
 from mermaid import Mermaid
 from mermaid.graph import Graph
 from agent_c.toolsets import Toolset, json_schema
-from agent_c_tools.tools.mermaid_chart.prompt import MermaidChatSection
+from .prompt import MermaidChatSection
 from agent_c.util.string import to_snake_case
 
 

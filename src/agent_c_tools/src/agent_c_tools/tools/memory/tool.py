@@ -1,7 +1,7 @@
 from typing import Any
 
 from agent_c.toolsets import json_schema, Toolset
-from agent_c_tools.tools.memory.prompt import MemorySection
+from .prompt import MemorySection
 
 
 class MemoryTools(Toolset):

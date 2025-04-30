@@ -125,7 +125,7 @@ class ClaudeChatAgent(BaseAgent):
         messages = opts["completion_opts"]["messages"]
 
         delay = 1  # Initial delay between retries
-        async with self.semaphore:
+        async with (self.semaphore):
             interaction_id = await self._raise_interaction_start(**callback_opts)
             while delay <= self.max_delay:
                 try:
@@ -147,9 +147,12 @@ class ClaudeChatAgent(BaseAgent):
                     # Exponential backoff handled in a helper method
                     delay = await self._handle_retryable_error(e, delay, callback_opts)
                 except Exception as e:
-                    await self._raise_system_event(f"Exception calling `client.messages.stream`.\n\n{e}\n", **callback_opts)
-                    await self._raise_completion_end(opts["completion_opts"], stop_reason="exception", **callback_opts)
-                    return []
+                    if "overloaded" in str(e).lower():
+                        delay = await self._handle_retryable_error(e, delay, callback_opts)
+                    else:
+                        await self._raise_system_event(f"Exception calling `client.messages.stream`.\n\n{e}\n", **callback_opts)
+                        await self._raise_completion_end(opts["completion_opts"], stop_reason="exception", **callback_opts)
+                        return []
 
         return messages
 
@@ -158,7 +161,8 @@ class ClaudeChatAgent(BaseAgent):
         """Handle retryable errors with exponential backoff."""
         error_type = type(error).__name__
         await self._raise_system_event(
-            f"{error_type} during `client.messages.stream`. Delaying for {delay} seconds.\n",
+            f"Warning: The Claude streaming API may be under heavy load or you have hit your rate Limit.\n\nDelaying for {delay} seconds.\n",
+            severity="warning",
             **callback_opts
         )
         await self._exponential_backoff(delay)

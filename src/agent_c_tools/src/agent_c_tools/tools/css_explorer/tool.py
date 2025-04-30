@@ -19,7 +19,7 @@ class CssExplorerTools(Toolset):
         self.workspace_tool: Optional[WorkspaceTools] = None
 
     async def post_init(self):
-        self.workspace_tool = self.tool_chest.active_tools['workspace']
+        self.workspace_tool = self.tool_chest.active_tools['WorkspaceTools']
 
     @json_schema(
         'Obtain an overview of the CSS file structure and components. In a token efficient manner',

@@ -1,14 +1,14 @@
 import React, {createContext, useState, useEffect, useRef} from 'react';
-import {API_URL} from '@/config/config';
 
-if (!API_URL) {
-    console.error('API_URL is not defined! Environment variables may not be loading correctly.');
-    console.log('Current environment variables:', {
-        'import.meta.env.VITE_API_URL': import.meta.env.VITE_API_URL,
-        'process.env.VITE_API_URL': process.env?.VITE_API_URL,
-        'NODE_ENV': process.env?.NODE_ENV
-    });
-}
+// Import services from the new API service layer
+import {
+    api,
+    session as sessionService,
+    model as modelService,
+    tools as toolsService,
+    persona as personaService,
+    showErrorToast
+} from '../services';
 
 export const SessionContext = createContext();
 
@@ -47,74 +47,26 @@ export const SessionProvider = ({children}) => {
     });
     const [activeTools, setActiveTools] = useState([]);
 
-    // --- Business Logic Functions ---
-    const checkResponse = async (response, endpoint) => {
-        const contentType = response.headers.get("content-type");
-        console.log(`Response from ${endpoint}:`, {
-            status: response.status,
-            contentType,
-            ok: response.ok
-        });
-
-        if (!response.ok) {
-            // Try to get error details
-            let errorText;
-            try {
-                errorText = await response.text();
-            } catch (e) {
-                errorText = 'Could not read error response';
-            }
-            throw new Error(`${endpoint} failed: ${response.status} - ${errorText}`);
-        }
-
-        if (!contentType?.includes('application/json')) {
-            throw new Error(`${endpoint} returned non-JSON content-type: ${contentType}`);
-        }
-
-        const text = await response.text();
-        console.log(`Raw response from ${endpoint}:`, text);
-
-        try {
-            return JSON.parse(text);
-        } catch (e) {
-            console.error(`Failed to parse JSON from ${endpoint}:`, text);
-            throw new Error(`Invalid JSON from ${endpoint}: ${e.message}`);
-        }
-    };
-
     // Fetch initial data (personas, tools, models)
     const fetchInitialData = async () => {
         try {
-            console.log('Starting fetchInitialData with API_URL:', API_URL);
-            if (!API_URL) {
-                throw new Error('API_URL is undefined. Please check your environment variables.');
-            }
+            console.log('Starting fetchInitialData');
             setIsLoading(true);
             setIsInitialized(false);
 
-            // Parallel fetching
-            const [personasResponse, toolsResponse, modelsResponse] = await Promise.all([
-                fetch(`${API_URL}/personas`),
-                fetch(`${API_URL}/tools`),
-                fetch(`${API_URL}/models`)
-            ]);
-
-            if (!personasResponse.ok || !toolsResponse.ok || !modelsResponse.ok) {
-                throw new Error('Failed to fetch initial data');
-            }
-
+            // Parallel fetching using the new service layer
             const [personasData, toolsData, modelsData] = await Promise.all([
-                personasResponse.json(),
-                toolsResponse.json(),
-                modelsResponse.json()
+                personaService.getPersonas(),
+                toolsService.getTools(),
+                modelService.getModels()
             ]);
-            // console.log('Fetched initial data:', {personasData, toolsData, modelsData});
-            // Store data returned from backend into their data structures.
+            
+            // Store data returned from backend into their data structures
             setPersonas(personasData);
             setAvailableTools(toolsData);
             setModelConfigs(modelsData.models);
 
-            // try pulling config from localstorage and applying.
+            // Try pulling config from localstorage and applying
             const savedConfig = localStorage.getItem("agent_config");
             if (savedConfig) {
                 try {
@@ -168,9 +120,8 @@ export const SessionProvider = ({children}) => {
                 }
             }
 
-            // this is the default initialization path is a config is not saved.
+            // This is the default initialization path if a config is not saved
             if (modelsData.models.length > 0) {
-                // console.log('Initializing session with model:', modelsData.models[0]);
                 const initialModel = modelsData.models[0];
                 setModelName(initialModel.id);
                 setSelectedModel(initialModel);
@@ -198,7 +149,6 @@ export const SessionProvider = ({children}) => {
 
                 // Choose a default persona (or fall back to the first)
                 if (personasData.length > 0) {
-                    // console.log('Setting initial persona:', personasData[0]);
                     const defaultPersona = personasData.find(p => p.name === 'default');
                     const initialPersona = defaultPersona || personasData[0];
                     setPersona(initialPersona.name);
@@ -214,7 +164,6 @@ export const SessionProvider = ({children}) => {
                 }
 
                 // Initialize a session with the initial model
-                // console.log('Initializing session with initial model:', initialModel);
                 await initializeSession(false, initialModel, modelsData.models);
                 setIsInitialized(true);
             } else {
@@ -223,13 +172,13 @@ export const SessionProvider = ({children}) => {
         } catch (err) {
             console.error('Error fetching initial data:', err);
             setError(`Failed to load initial data: ${err.message}`);
+            showErrorToast(err, 'Failed to load initial data');
         } finally {
             setIsLoading(false);
         }
     };
 
     // Initialize (or reinitialize) a session
-    // Modified initializeSession function to correctly handle passed parameters
     const initializeSession = async (forceNew = false, initialModel = null, modelConfigsData = null) => {
         setIsReady(false);
         try {
@@ -284,8 +233,8 @@ export const SessionProvider = ({children}) => {
 
             console.log('Initializing session with model:', currentModel);
 
-            // Build JSON request body
-            const jsonData = {
+            // Build session configuration
+            const sessionConfig = {
                 model_name: currentModel.id,
                 backend: currentModel.backend,
                 persona_name: initialModel && initialModel.persona_name ? initialModel.persona_name : (persona || 'default')
@@ -293,12 +242,11 @@ export const SessionProvider = ({children}) => {
 
             // If we have an existing session and we're not forcing a new one, include the session ID
             if (sessionId && !forceNew) {
-                jsonData.ui_session_id = sessionId;
+                sessionConfig.ui_session_id = sessionId;
                 console.log(`Using existing session ID: ${sessionId} for model change`);
             }
 
-
-            // Determine which custom prompt to use (cleaner approach)
+            // Determine which custom prompt to use
             let promptToUse = null;
 
             // First priority: custom prompt from initialModel if provided
@@ -309,27 +257,23 @@ export const SessionProvider = ({children}) => {
             // Second priority: current state's custom prompt
             else if (customPrompt) {
                 promptToUse = customPrompt;
-                // console.log('Using current state custom prompt');
             }
 
             // Always include custom prompt if available
             if (promptToUse) {
-                jsonData.custom_prompt = promptToUse;
-                // console.log('Sending custom prompt to backend');
+                sessionConfig.custom_prompt = promptToUse;
             }
 
             // Use parameters directly from initialModel if provided, otherwise use model config
             if (initialModel && typeof initialModel === 'object') {
                 // Add temperature if available from initialModel
                 if ('temperature' in initialModel) {
-                    jsonData.temperature = initialModel.temperature;
-                    // console.log(`Setting initial temperature=${initialModel.temperature}`);
+                    sessionConfig.temperature = initialModel.temperature;
                 }
 
                 // Add reasoning_effort if available from initialModel
                 if ('reasoning_effort' in initialModel) {
-                    jsonData.reasoning_effort = initialModel.reasoning_effort;
-                    // console.log(`Setting initial reasoning_effort=${initialModel.reasoning_effort}`);
+                    sessionConfig.reasoning_effort = initialModel.reasoning_effort;
                 }
 
                 // Handle extended_thinking (either as boolean or object)
@@ -339,50 +283,40 @@ export const SessionProvider = ({children}) => {
                     // Handle both object and boolean formats
                     if (typeof extThinking === 'object') {
                         // It's an object with enabled property
-                        jsonData.extended_thinking = extThinking.enabled;
+                        sessionConfig.extended_thinking = extThinking.enabled;
 
                         // If enabled is true, add budget_tokens
                         if (extThinking.enabled && ('budget_tokens' in initialModel)) {
-                            jsonData.budget_tokens = initialModel.budget_tokens;
+                            sessionConfig.budget_tokens = initialModel.budget_tokens;
                         } else if (extThinking.enabled && ('budget_tokens' in extThinking)) {
-                            jsonData.budget_tokens = extThinking.budget_tokens;
+                            sessionConfig.budget_tokens = extThinking.budget_tokens;
                         }
 
                         console.log(`Setting initial extended_thinking as object with enabled=${extThinking.enabled}`);
                     } else {
                         // It's a boolean
-                        jsonData.extended_thinking = extThinking;
+                        sessionConfig.extended_thinking = extThinking;
 
                         // If enabled is true, add budget_tokens
                         if (extThinking && ('budget_tokens' in initialModel)) {
-                            jsonData.budget_tokens = initialModel.budget_tokens;
+                            sessionConfig.budget_tokens = initialModel.budget_tokens;
                         }
-
-                        // console.log(`Setting extended_thinking=${extThinking}`);
                     }
                 }
                 // Fallback to addModelParameters when no direct parameters were provided
                 else {
-                    addModelParameters(jsonData, currentModel);
+                    addModelParameters(sessionConfig, currentModel);
                 }
             } else {
                 // Use model config parameters
-                addModelParameters(jsonData, currentModel);
+                addModelParameters(sessionConfig, currentModel);
             }
 
-            console.log('initializeSession data being sent:', jsonData);
+            console.log('initializeSession data being sent:', sessionConfig);
 
-            // Send the initialize request
-            const response = await fetch(`${API_URL}/initialize`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(jsonData)
-            });
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-            const data = await response.json();
+            // Call the initialize endpoint via the session service
+            const data = await sessionService.initialize(sessionConfig);
+            
             if (data.ui_session_id) {
                 localStorage.setItem("ui_session_id", data.ui_session_id);
                 setSessionId(data.ui_session_id);
@@ -399,6 +333,7 @@ export const SessionProvider = ({children}) => {
             console.error("Session initialization failed:", err);
             setIsReady(false);
             setError(`Session initialization failed: ${err.message}`);
+            showErrorToast(err, 'Session initialization failed');
         }
     };
 
@@ -408,7 +343,6 @@ export const SessionProvider = ({children}) => {
         if (model.parameters?.temperature) {
             const currentTemp = temperature ?? model.parameters.temperature.default;
             jsonData.temperature = currentTemp;
-            // console.log(`Setting temperature=${currentTemp}`);
         }
 
         // Handle Claude extended thinking parameters
@@ -442,7 +376,6 @@ export const SessionProvider = ({children}) => {
                 : reasoningEffortDefault;
 
             jsonData.reasoning_effort = reasoningEffort;
-            // console.log(`Setting reasoning_effort=${reasoningEffort}`);
         }
     };
 
@@ -450,14 +383,13 @@ export const SessionProvider = ({children}) => {
     const fetchAgentTools = async () => {
         if (!sessionId || !isReady) return;
         try {
-            const response = await fetch(`${API_URL}/get_agent_tools/${sessionId}`);
-            if (!response.ok) throw new Error('Failed to fetch agent tools');
-            const data = await response.json();
+            const data = await toolsService.getSessionTools(sessionId);
             if (data.status === 'success' && Array.isArray(data.initialized_tools)) {
                 setActiveTools(data.initialized_tools.map(tool => tool.class_name));
             }
         } catch (err) {
             console.error('Error fetching agent tools:', err);
+            // We don't set global error or show toast here as this is not critical
         }
     };
 
@@ -474,7 +406,6 @@ export const SessionProvider = ({children}) => {
                     // Update the state first
                     setModelName(values.modelName);
                     setSelectedModel(newModel);
-
 
                     // Determine extended thinking parameters based on new model
                     const hasExtendedThinking = !!newModel.parameters?.extended_thinking;
@@ -505,9 +436,6 @@ export const SessionProvider = ({children}) => {
                         temperature: newParameters.temperature
                     };
 
-                    // console.log('Changing model with custom prompt:', customPrompt ?
-                    //     `${customPrompt.substring(0, 10)}...` : 'None');
-
                     // Initialize new session with the custom prompt
                     await initializeSession(false, modelWithPersona);
                     setSettingsVersion(v => v + 1);
@@ -524,7 +452,7 @@ export const SessionProvider = ({children}) => {
                     setPersona(updatedPersona);
                     setCustomPrompt(updatedPrompt);
 
-                    const jsonData = {
+                    const updateData = {
                         ui_session_id: sessionId,
                         model_name: modelName,
                         backend: selectedModel?.backend,
@@ -532,16 +460,9 @@ export const SessionProvider = ({children}) => {
                         custom_prompt: updatedPrompt
                     };
 
-                    console.log('json data being sent for settings update:', jsonData);
-
-                    const response = await fetch(`${API_URL}/update_settings`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(jsonData)
-                    });
-                    if (!response.ok) throw new Error('Failed to update settings');
+                    console.log('Settings update data being sent:', updateData);
+                    await sessionService.updateSession(sessionId, updateData);
+                    
                     setSettingsVersion(v => v + 1);
                     const updatedSettingsConfig = {
                         persona: updatedPersona,
@@ -559,7 +480,7 @@ export const SessionProvider = ({children}) => {
 
                         // ALWAYS include model_name and backend for all parameter updates
                         // This is critical for complex parameters like extended_thinking
-                        const jsonData = {
+                        const updateData = {
                             ui_session_id: sessionId,
                             model_name: modelName,
                             backend: selectedModel?.backend
@@ -568,13 +489,13 @@ export const SessionProvider = ({children}) => {
                         // non-reasoning model parameters
                         if ('temperature' in values) {
                             updatedParameters.temperature = values.temperature;
-                            jsonData.temperature = values.temperature;
+                            updateData.temperature = values.temperature;
                         }
 
                         // openai reasoning model parameters
                         if ('reasoning_effort' in values) {
                             updatedParameters.reasoning_effort = values.reasoning_effort;
-                            jsonData.reasoning_effort = values.reasoning_effort;
+                            updateData.reasoning_effort = values.reasoning_effort;
                         }
 
                         // claude reasoning model parameters
@@ -587,30 +508,25 @@ export const SessionProvider = ({children}) => {
 
                             if ('budget_tokens' in values) {
                                 updatedParameters.budget_tokens = values.budget_tokens;
-                                jsonData.budget_tokens = values.budget_tokens;
+                                updateData.budget_tokens = values.budget_tokens;
                             } else if (extendedThinking) {
                                 // If UI shows extended thinking enabled but no budget specified,
                                 // use existing or default value
                                 const budgetTokens = updatedParameters.budget_tokens || 5000;
                                 updatedParameters.budget_tokens = budgetTokens;
-                                jsonData.budget_tokens = budgetTokens;
+                                updateData.budget_tokens = budgetTokens;
                             } else {
                                 // If UI shows extended thinking disabled,
                                 // ensure budget_tokens is 0
                                 updatedParameters.budget_tokens = 0;
-                                jsonData.budget_tokens = 0;
+                                updateData.budget_tokens = 0;
                             }
                         }
 
-                        console.log('JSON data being sent:', jsonData);
+                        console.log('Parameter update data being sent:', updateData);
                         setModelParameters(updatedParameters);
-                        await fetch(`${API_URL}/update_settings`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify(jsonData)
-                        });
+                        await modelService.updateModelParameters(sessionId, updateData);
+                        
                         setSettingsVersion(v => v + 1);
                         const updatedParamConfig = {
                             modelParameters: updatedParameters
@@ -624,6 +540,7 @@ export const SessionProvider = ({children}) => {
             }
         } catch (err) {
             setError(`Failed to update settings: ${err.message}`);
+            showErrorToast(err, 'Failed to update settings');
         }
     };
 
@@ -641,27 +558,16 @@ export const SessionProvider = ({children}) => {
         localStorage.setItem("agent_config", JSON.stringify(configToSave));
     };
 
-
     // Handle equipping tools
     const handleEquipTools = async (tools) => {
-        const jsonData = {
-            ui_session_id: sessionId,
-            tools: tools
-        };
         try {
-            const response = await fetch(`${API_URL}/update_tools`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(jsonData)
-            });
-            if (!response.ok) throw new Error("Failed to equip tools");
+            await toolsService.updateSessionTools(sessionId, tools);
             await fetchAgentTools();
             setSettingsVersion(v => v + 1);
             // saveConfigToStorage(); // this does nothing right now, but future request will be to pre-initialize tools
         } catch (err) {
             console.error("Failed to equip tools:", err);
+            showErrorToast(err, 'Failed to equip tools');
             throw err;
         }
     };

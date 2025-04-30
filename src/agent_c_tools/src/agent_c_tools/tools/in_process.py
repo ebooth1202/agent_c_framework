@@ -1,10 +1,10 @@
-from agent_c_tools.tools.workspace import WorkspaceTools
-from agent_c_tools.tools.workspace.local_storage import LocalStorageWorkspace, LocalProjectWorkspace
-from agent_c_tools.tools.workspace.s3_storage import S3StorageWorkspace
-from agent_c_tools.tools.dall_e.tool import DallETools
-from agent_c_tools.tools.dynamics.tool import DynamicsTools
-from agent_c_tools.tools.markdown_to_html_report.tool import MarkdownToHtmlReportTools
-from agent_c_tools.tools.memory import MemoryTools
-from agent_c_tools.tools.random_number import RandomNumberTools
-from agent_c_tools.tools.mermaid_chart import MermaidChartTools
-from agent_c_tools.tools.css_explorer.tool import CssExplorerTools
+from .workspace import WorkspaceTools
+from .workspace.local_storage import LocalStorageWorkspace, LocalProjectWorkspace
+from .workspace.s3_storage import S3StorageWorkspace
+from .dall_e.tool import DallETools
+from .dynamics.tool import DynamicsTools
+from .markdown_to_html_report.tool import MarkdownToHtmlReportTools
+from .memory import MemoryTools
+from .random_number import RandomNumberTools
+from .mermaid_chart import MermaidChartTools
+from .css_explorer.tool import CssExplorerTools
