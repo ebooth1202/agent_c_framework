@@ -8,7 +8,6 @@ import MediaMessage from './MediaMessage';
 import ToolCallDisplay from './ToolCallDisplay';
 import SystemPromptDisplay from '../replay_interface/SystemPromptDisplay';
 import ModelCardDisplay from '../replay_interface/ModelCardDisplay';
-import { cn } from '../../lib/utils';
 
 /**
  * MessageItem is a factory component that renders the appropriate message type
@@ -82,6 +81,7 @@ const MessageItem = ({
   // Handle tool calls rendering
   if (message.type === 'tool_calls') {
     // Skip rendering if this is associated with a previous assistant message
+    // console.log('DEBUG**Tool calls message:', message);
     const prevMsg = messages[index - 1];
     if (prevMsg && prevMsg.role === 'assistant' && prevMsg.type === 'content') {
       return null;

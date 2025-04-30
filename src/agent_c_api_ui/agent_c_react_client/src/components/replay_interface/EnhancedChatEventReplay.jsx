@@ -213,6 +213,9 @@ const EnhancedChatEventReplay = ({
     // State for processed messages
     const [messages, setMessages] = useState([]);
 
+    // State for tracking expanded tool calls
+    const [expandedToolCallMessages, setExpandedToolCallMessages] = useState([]);
+
     // State for tool selection (similar to ChatInterface)
     const [toolSelectionState, setToolSelectionState] = useState({
         inProgress: false,
@@ -312,6 +315,8 @@ const EnhancedChatEventReplay = ({
             toolName: null,
             timestamp: null
         });
+        // Don't reset expanded tool calls here to preserve user's expanded state
+        // when new events come in
 
         // Debug flag to track events being processed
         console.log('Starting event processing...');
@@ -721,15 +726,29 @@ const EnhancedChatEventReplay = ({
         });
 
         // Add each tool call group as a separate message
-        // FIXED: Only add real tool calls (not tool selections)
+        // FIXED: Format tool calls to match what MessageItem expects
         toolCallGroupsRef.current.forEach(toolCallGroup => {
             if (toolCallGroup.toolCalls && toolCallGroup.toolCalls.length > 0) {
-                newMessages.push({
-                    type: 'tool',
-                    toolCalls: toolCallGroup.toolCalls,
+                const toolCallsMessage = {
+                    type: 'tool_calls',  // Changed from 'tool' to 'tool_calls' to match MessageItem expectations
+                    toolCalls: toolCallGroup.toolCalls.map(toolCall => ({
+                        // Format each tool call to match what ToolCallDisplay expects
+                        id: toolCall.id,
+                        name: toolCall.name,
+                        arguments: toolCall.arguments,
+                        results: toolCall.results,
+                        // Add function property for compatibility with ToolCallItem
+                        function: {
+                            name: toolCall.name,
+                            arguments: toolCall.arguments
+                        }
+                    })),
                     timestamp: toolCallGroup.timestamp || new Date().toISOString(),
                     id: toolCallGroup.id
-                });
+                };
+                
+                console.log('Adding formatted tool calls message:', JSON.stringify(toolCallsMessage).substring(0, 200));
+                newMessages.push(toolCallsMessage);
             }
         });
 
@@ -752,7 +771,7 @@ const EnhancedChatEventReplay = ({
             if (msg.type === 'assistant' && (!msg.content || msg.content.trim() === '')) {
                 return false;
             }
-            if (msg.type === 'tool' && (!msg.toolCalls || msg.toolCalls.length === 0)) {
+            if (msg.type === 'tool_calls' && (!msg.toolCalls || msg.toolCalls.length === 0)) {
                 return false;
             }
             return true;
@@ -788,6 +807,26 @@ const EnhancedChatEventReplay = ({
         // If we get here, it's the same set of tool calls
         return false;
     };
+    
+    /**
+     * Toggle tool call expansion for a specific message index
+     * @param {number} index - The index of the message to toggle expansion for
+     */
+    const handleToggleToolCallExpansion = (index) => {
+        setExpandedToolCallMessages(prev => {
+            // If the index is already in the array, remove it (collapse)
+            if (prev.includes(index)) {
+                const newState = prev.filter(i => i !== index);
+                console.log(`Tool call at index ${index} collapsed. New expanded state:`, newState);
+                return newState;
+            }
+            // Otherwise add it to the array (expand)
+            const newState = [...prev, index];
+            console.log(`Tool call at index ${index} expanded. New expanded state:`, newState);
+            return newState;
+        });
+        console.log(`Toggling tool call expansion for message at index ${index}`);
+    };
 
     // Playback controls
     const handlePlay = () => onEventIndexChange(currentEventIndex);
@@ -805,6 +844,8 @@ const EnhancedChatEventReplay = ({
             toolName: null,
             timestamp: null
         });
+        // Reset expanded tool calls when playback is reset
+        setExpandedToolCallMessages([]);
         onEventIndexChange(0);
     };
 
@@ -844,7 +885,7 @@ const EnhancedChatEventReplay = ({
                 type: 'system_prompt',
                 content: message.content
             };
-        } else if (message.type === 'tool') {
+        } else if (message.type === 'tool_calls') {
             return {
                 role: 'assistant',
                 type: 'tool_calls',
@@ -907,12 +948,13 @@ const EnhancedChatEventReplay = ({
                             ) : (
                                 <MessagesList
                                     messages={formattedMessages}
-                                    expandedToolCallMessages={[]}
-                                    toggleToolCallExpansion={() => {}}
+                                    expandedToolCallMessages={expandedToolCallMessages}
+                                    toggleToolCallExpansion={handleToggleToolCallExpansion}
                                     toolSelectionInProgress={toolSelectionState.inProgress}
                                     toolSelectionName={toolSelectionState.toolName}
                                 />
-                            )}
+                            )}  
+                            {console.log('Current expanded tool calls:', expandedToolCallMessages)}
                             
                             {/* Show tool selection indicator */}
                             {toolSelectionState.inProgress && (
