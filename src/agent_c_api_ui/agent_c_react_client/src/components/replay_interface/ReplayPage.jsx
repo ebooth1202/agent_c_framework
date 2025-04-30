@@ -1,5 +1,6 @@
 // src/components/replay_interface/ReplayPage.jsx
 import React, { useState, useEffect, useRef } from 'react';
+import '@/styles/components/replay-interface.css';
 import { useParams, useNavigate } from 'react-router-dom';
 import { API_URL } from '@/config/config';
 import { Button } from '@/components/ui/button';
@@ -716,7 +717,7 @@ const ReplayPage = () => {
   );
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="chat-interface-container flex flex-col" style={{ height: 'auto', overflowY: 'auto' }}>
       <div className="flex items-center mb-4">
         <Button
           variant="ghost"
@@ -731,7 +732,7 @@ const ReplayPage = () => {
       </div>
 
       {sessionInfo && (
-        <Card className="p-4 mb-4">
+        <Card className="replay-header-card p-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <h3 className="font-medium">Session Start</h3>
@@ -753,7 +754,7 @@ const ReplayPage = () => {
         </Card>
       )}
       {/* Dedicated Show All Section */}
-      <Card className="p-4 mb-4 border-2 border-blue-200 bg-blue-50">
+      <Card className="replay-header-card p-4 border-2 border-blue-200 bg-blue-50">
         <div className="flex flex-col space-y-4">
           <div className="flex items-center justify-between">
             <div>
@@ -832,7 +833,7 @@ const ReplayPage = () => {
         </div>
       </Card>
 
-      <Card className="p-4 mb-4">
+      <Card className="replay-header-card p-4">
         <h3 className="text-lg font-semibold mb-3">Playback Controls</h3>
         <div className="flex flex-wrap items-center gap-2 border-t pt-3">
           {showingAll ? (
@@ -910,31 +911,33 @@ const ReplayPage = () => {
         </div>
       </Card>
 
-      {/* Only render chat events if we're playing, have clicked "Show All", 
-          or have manually moved through events (currentEventIndex > 0) */}
-      {(isPlaying || showingAll || currentEventIndex > 0) && events.length > 0 && (
-        <EnhancedChatEventReplay
-          events={events}
-          currentEventIndex={Math.min(currentEventIndex, events.length - 1)}
-          isPlaying={isPlaying}
-          playbackSpeed={playbackSpeed}
-          onEventIndexChange={setCurrentEventIndex}
-        />
-      )}
-      
-      {/* Show a message when no events are loaded but we're trying to display them */}
-      {((isPlaying || showingAll || currentEventIndex > 0) && events.length === 0) && (
-        <Card className="p-8 text-center">
-          <p className="text-gray-500 mb-4">No events found for this session. Try reloading the page.</p>
-        </Card>
-      )}
-      
-      {/* Show a prompt when no events are being displayed by choice */}
-      {!isPlaying && !showingAll && currentEventIndex === 0 && (
-        <Card className="p-8 text-center">
-          <p className="text-gray-500 mb-4">Click Play to start the replay or Show All to view the entire session</p>
-        </Card>
-      )}
+      <div className="chat-messages-container" style={{ height: 'auto' }}>
+        {/* Only render chat events if we're playing, have clicked "Show All", 
+            or have manually moved through events (currentEventIndex > 0) */}
+        {(isPlaying || showingAll || currentEventIndex > 0) && events.length > 0 && (
+          <EnhancedChatEventReplay
+            events={events}
+            currentEventIndex={Math.min(currentEventIndex, events.length - 1)}
+            isPlaying={isPlaying}
+            playbackSpeed={playbackSpeed}
+            onEventIndexChange={setCurrentEventIndex}
+          />
+        )}
+        
+        {/* Show a message when no events are loaded but we're trying to display them */}
+        {((isPlaying || showingAll || currentEventIndex > 0) && events.length === 0) && (
+          <Card className="p-8 text-center">
+            <p className="text-gray-500 mb-4">No events found for this session. Try reloading the page.</p>
+          </Card>
+        )}
+        
+        {/* Show a prompt when no events are being displayed by choice */}
+        {!isPlaying && !showingAll && currentEventIndex === 0 && (
+          <Card className="p-8 text-center">
+            <p className="text-gray-500 mb-4">Click Play to start the replay or Show All to view the entire session</p>
+          </Card>
+        )}
+      </div>
     </div>
   );
 };

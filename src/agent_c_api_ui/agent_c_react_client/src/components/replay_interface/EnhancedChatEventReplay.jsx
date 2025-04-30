@@ -1,11 +1,11 @@
 import React, {useState, useEffect, useRef} from 'react';
-import ChatMessage from '@/components/replay_interface/ChatMessage';
-import ToolCallDisplay from '@/components/chat_interface/ToolCallDisplay';
-import ThoughtDisplay from '@/components/chat_interface/ThoughtDisplay';
-import SystemPromptDisplay from "@/components/replay_interface/SystemPromptDisplay";
-import ModelCardDisplay from '@/components/replay_interface/ModelCardDisplay';
-import TokenUsageDisplay from '@/components/chat_interface/TokenUsageDisplay';
-import MediaMessage from "@/components/chat_interface/MediaMessage";
+import MessagesList from '@/components/chat_interface/MessagesList';
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+    Card,
+    CardContent
+} from "@/components/ui/card";
+import {Button} from "@/components/ui/button";
 
 const getVendor = (name) => {
     if (!name) return 'anthropic'; // Default to anthropic
@@ -29,9 +29,6 @@ const normalizeEvent = (event) => {
     // If we get an array of events, log it but return a special marker
     // This allows the parent component to handle arrays properly
     if (Array.isArray(event)) {
-        // console.log("Number of events in array is:", event.length);
-        // Return a special flag to indicate this is an array of events
-        // The parent component should handle this differently
         return {
             type: 'event_array',
             events: event,
@@ -55,6 +52,8 @@ const normalizeEvent = (event) => {
     let mediaContent = null;
     let mediaContentType = null;
     let mediaMetadata = null;
+    let format = 'markdown'; // Default format
+    let role = null;
 
     // Grab the raw event data
     if (event.raw && event.raw.timestamp && (event.raw.event || event.raw.type)) {
@@ -68,6 +67,8 @@ const normalizeEvent = (event) => {
         // Extract vendor and session ID if available
         vendor = eventData.vendor || vendor;
         sessionId = eventData.session_id || sessionId;
+        format = eventData.format || format;
+        role = eventData.role || null;
 
         // Handle different event types and content extraction
         if (type === 'user_request' && eventData.data && eventData.data.message) {
@@ -75,7 +76,6 @@ const normalizeEvent = (event) => {
             content = eventData.data.message;
         } else if (type === 'completion') {
             // Special handling for completion events
-            // console.log("Processing completion event data:", eventData);
             if (eventData.running === false) {
                 // Only gather token data when running is false
                 tokenUsage = {
@@ -142,10 +142,7 @@ const normalizeEvent = (event) => {
 
                         // Convert Set to Array
                         toolNames = Array.from(baseToolSet);
-                        // console.log('Found base tool categories:', toolNames);
                     }
-                } else {
-                    console.log('No completion options found in event data');
                 }
             }
 
@@ -153,7 +150,6 @@ const normalizeEvent = (event) => {
             content = eventData.content || '';
         } else if (type === 'render_media') {
             // Extract media content and content type from render_media events
-            console.log("Media Detals: ", eventData.data)
             if (eventData.data) {
                 // Handle the specific format of the render_media event
                 const mediaData = eventData.data;
@@ -167,16 +163,9 @@ const normalizeEvent = (event) => {
                     sent_by_class: mediaData.sent_by_class || null,
                     sent_by_function: mediaData.sent_by_function || null
                 };
-
-                console.log('Extracted media data:', {
-                    mediaContent,
-                    mediaContentType,
-                    mediaMetadata,
-                    originalData: mediaData
-                });
             }
         } else {
-            // Default case for other event types
+            // Default case for other event types - including thought_delta and text_delta
             content = eventData.content || '';
         }
 
@@ -203,6 +192,8 @@ const normalizeEvent = (event) => {
         mediaContent,
         mediaContentType,
         mediaMetadata,
+        format,
+        role,
         raw: event
     };
 };
@@ -216,10 +207,14 @@ const EnhancedChatEventReplay = ({
                                      isPlaying = false,
                                      playbackSpeed = 1,
                                      onEventIndexChange = () => {
-                                     }
+                                     },
+                                     className
                                  }) => {
     // State for processed messages
     const [messages, setMessages] = useState([]);
+
+    // State for tracking expanded tool calls
+    const [expandedToolCallMessages, setExpandedToolCallMessages] = useState([]);
 
     // State for tool selection (similar to ChatInterface)
     const [toolSelectionState, setToolSelectionState] = useState({
@@ -320,6 +315,11 @@ const EnhancedChatEventReplay = ({
             toolName: null,
             timestamp: null
         });
+        // Don't reset expanded tool calls here to preserve user's expanded state
+        // when new events come in
+
+        // Debug flag to track events being processed
+        console.log('Starting event processing...');
 
         // Track which model cards we've already added
         const modelCardTracker = new Set();
@@ -329,213 +329,180 @@ const EnhancedChatEventReplay = ({
             const event = normalizeEvent(rawEvent);
             if (!event) return;
 
-            try {
-                // Check if there's a change in event type
-                const eventTypeChanged = previousEventTypeRef.current !== event.type;
+            // Check if there's a change in event type
+            const eventTypeChanged = previousEventTypeRef.current !== event.type;
 
-                // If the event type changed from text_delta to something else, finalize the current assistant message
-                if (previousEventTypeRef.current === 'text_delta' && event.type !== 'text_delta' && currentAssistantMessageRef.current) {
-                    // console.log('Event type changed from text_delta to', event.type, '. Finalizing assistant message.');
-                    currentAssistantMessageRef.current.isComplete = true;
-                    currentAssistantMessageRef.current = null;
-                }
+            // If the event type changed from text_delta to something else, finalize the current assistant message
+            if (previousEventTypeRef.current === 'text_delta' && event.type !== 'text_delta' && currentAssistantMessageRef.current) {
+                currentAssistantMessageRef.current.isComplete = true;
+                currentAssistantMessageRef.current = null;
+            }
 
-                // If the event type changed from thought_delta to something else, finalize the current thought message
-                if (previousEventTypeRef.current === 'thought_delta' && event.type !== 'thought_delta' && currentThoughtMessageRef.current) {
-                    // console.log('Event type changed from thought_delta to', event.type, '. Finalizing thought message.');
-                    currentThoughtMessageRef.current.isComplete = true;
-                    currentThoughtMessageRef.current = null;
-                }
+            // If the event type changed from thought_delta to something else, finalize the current thought message
+            if (previousEventTypeRef.current === 'thought_delta' && event.type !== 'thought_delta' && currentThoughtMessageRef.current) {
+                currentThoughtMessageRef.current.isComplete = true;
+                currentThoughtMessageRef.current = null;
+            }
 
-                // Update the previous event type
-                previousEventTypeRef.current = event.type;
+            // Update the previous event type
+            previousEventTypeRef.current = event.type;
 
-                // Process the event based on its type
-                switch (event.type) {
-                    case 'system_prompt':
-                        // console.log('Processing system prompt event:', event.type);
-                        newMessages.push({
-                            type: 'system',
-                            content: event.content,
-                            timestamp: event.timestamp
-                        });
-                        break;
+            // Process the event based on its type
+            switch (event.type) {
+                case 'system_prompt':
+                    newMessages.push({
+                        type: 'system',
+                        content: event.content,
+                        timestamp: event.timestamp
+                    });
+                    break;
 
-                    case 'user_message':
-                    case 'user_request':
-                        // console.log('Processing user_request event:', event.type);
-                        // Finalize any ongoing assistant message when a new user message arrives
+                case 'user_message':
+                case 'user_request':
+                    // Finalize any ongoing assistant message when a new user message arrives
+                    if (currentAssistantMessageRef.current) {
+                        currentAssistantMessageRef.current.isComplete = true;
+                        currentAssistantMessageRef.current = null;
+                    }
+                    if (currentThoughtMessageRef.current) {
+                        currentThoughtMessageRef.current.isComplete = true;
+                        currentThoughtMessageRef.current = null;
+                    }
+
+                    // Reset the current tool call group
+                    currentToolCallGroupRef.current = null;
+
+                    // Add user message
+                    newMessages.push({
+                        type: 'user',
+                        content: event.content,
+                        timestamp: event.timestamp
+                    });
+                    break;
+
+                case 'text_delta':
+                    // Create a new assistant message if there isn't an active one or if event type changed
+                    if (!currentAssistantMessageRef.current || eventTypeChanged) {
+                        // If there was a previous incomplete message, mark it as complete
                         if (currentAssistantMessageRef.current) {
                             currentAssistantMessageRef.current.isComplete = true;
-                            currentAssistantMessageRef.current = null;
                         }
+
+                        // Create a new message
+                        currentAssistantMessageRef.current = {
+                            id: `assistant-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+                            text: '',
+                            isComplete: false,
+                            timestamp: event.timestamp,
+                            vendor: event.vendor || currentVendor
+                        };
+                        assistantMessagesRef.current.push(currentAssistantMessageRef.current);
+                    }
+
+                    // Accumulate assistant message text
+                    currentAssistantMessageRef.current.text += event.content || '';
+                    break;
+
+                case 'thought_delta':
+                    // Create a new thought message if there isn't an active one or if event type changed
+                    if (!currentThoughtMessageRef.current || eventTypeChanged) {
+                        // If there was a previous incomplete message, mark it as complete
                         if (currentThoughtMessageRef.current) {
                             currentThoughtMessageRef.current.isComplete = true;
-                            currentThoughtMessageRef.current = null;
                         }
 
-                        // Reset the current tool call group
-                        currentToolCallGroupRef.current = null;
+                        // Create a new message
+                        currentThoughtMessageRef.current = {
+                            id: `thought-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+                            text: '',
+                            isComplete: false,
+                            timestamp: event.timestamp,
+                            vendor: event.vendor || currentVendor
+                        };
+                        thoughtMessagesRef.current.push(currentThoughtMessageRef.current);
+                    }
 
-                        // Add user message
-                        newMessages.push({
-                            type: 'user',
-                            content: event.content,
-                            timestamp: event.timestamp
-                        });
-                        break;
+                    // Accumulate thought text
+                    const contentToAdd = event.content || '';
+                    currentThoughtMessageRef.current.text += contentToAdd;
+                    break;
 
-                    case 'text_delta':
-                        // console.log('Processing text_delta event:', event.type);
-                        // Create a new assistant message if there isn't an active one or if event type changed
-                        if (!currentAssistantMessageRef.current || eventTypeChanged) {
-                            // If there was a previous incomplete message, mark it as complete
-                            if (currentAssistantMessageRef.current) {
-                                currentAssistantMessageRef.current.isComplete = true;
-                            }
+                case 'tool_call':
+                    // Finalize current assistant message when a tool call occurs
+                    if (currentAssistantMessageRef.current && currentAssistantMessageRef.current.text) {
+                        currentAssistantMessageRef.current.isComplete = true;
+                        currentAssistantMessageRef.current = null;
+                    }
 
-                            // Create a new message
-                            currentAssistantMessageRef.current = {
-                                id: `assistant-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-                                text: '',
-                                isComplete: false,
-                                timestamp: event.timestamp
-                            };
-                            assistantMessagesRef.current.push(currentAssistantMessageRef.current);
-                        }
+                    // Reset tool selection state
+                    setToolSelectionState({
+                        inProgress: false,
+                        toolName: null,
+                        timestamp: null
+                    });
 
-                        // Accumulate assistant message text
-                        currentAssistantMessageRef.current.text += event.content || '';
-                        break;
+                    // Process the tool call
+                    if (event.toolCalls && event.toolCalls.length > 0) {
+                        // Generate a unique group ID for these tool calls
+                        const toolCallGroupId = `tool-group-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
-                    case 'thought_delta':
-                        // console.log('Processing thought_delta event:', event.type);
-                        // Create a new thought message if there isn't an active one or if event type changed
-                        if (!currentThoughtMessageRef.current || eventTypeChanged) {
-                            // If there was a previous incomplete message, mark it as complete
-                            if (currentThoughtMessageRef.current) {
-                                currentThoughtMessageRef.current.isComplete = true;
-                            }
+                        // Check if we need to create a new tool call group
+                        const isNewToolCallGroup =
+                            !currentToolCallGroupRef.current ||  // No current group
+                            checkIsDifferentToolCallSet(event.toolCalls, currentToolCallGroupRef.current.toolCalls); // Different set of calls
 
-                            // Create a new message
-                            currentThoughtMessageRef.current = {
-                                id: `thought-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-                                text: '',
-                                isComplete: false,
+                        if (isNewToolCallGroup) {
+                            currentToolCallGroupRef.current = {
+                                id: toolCallGroupId,
+                                toolCalls: [],
                                 timestamp: event.timestamp,
-                                vendor: event.vendor || currentVendor
+                                vendor: event.vendor
                             };
-                            thoughtMessagesRef.current.push(currentThoughtMessageRef.current);
+                            toolCallGroupsRef.current.push(currentToolCallGroupRef.current);
                         }
 
-                        // Accumulate thought text
-                        currentThoughtMessageRef.current.text += event.content || '';
-                        break;
+                        // Process and normalize the tool calls
+                        const normalizedToolCalls = event.toolCalls.map(toolCall => {
+                            // Extract the tool call ID based on vendor
+                            const toolId = toolCall.id ||
+                                (toolCall.function ? toolCall.function.name + Date.now() : null) ||
+                                `tool-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
-                    case 'tool_call':
-                        // console.log('Processing tool_call event:', event.type);
+                            // Normalize arguments based on vendor format
+                            const args = toolCall.input || toolCall.arguments || toolCall.parameters || {};
 
-                        // Finalize current assistant message when a tool call occurs
-                        if (currentAssistantMessageRef.current && currentAssistantMessageRef.current.text) {
-                            currentAssistantMessageRef.current.isComplete = true;
-                            currentAssistantMessageRef.current = null;
-                        }
-
-                        // Reset tool selection state
-                        setToolSelectionState({
-                            inProgress: false,
-                            toolName: null,
-                            timestamp: null
+                            // Create a normalized tool call object
+                            return {
+                                id: toolId,
+                                name: toolCall.name || (toolCall.function ? toolCall.function.name : 'unknown-tool'),
+                                arguments: typeof args === 'string' ? args : JSON.stringify(args),
+                                type: toolCall.type || 'function',
+                                timestamp: event.timestamp,
+                                results: null // Will be filled in when results arrive
+                            };
                         });
 
-                        // Process the tool call
-                        if (event.toolCalls && event.toolCalls.length > 0) {
-                            // Generate a unique group ID for these tool calls
-                            const toolCallGroupId = `tool-group-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+                        // Update or add these tool calls to the current group
+                        normalizedToolCalls.forEach(normalizedToolCall => {
+                            // Check if this tool call already exists in the group
+                            const existingIndex = currentToolCallGroupRef.current.toolCalls.findIndex(
+                                tc => tc.id === normalizedToolCall.id
+                            );
 
-                            // Check if we need to create a new tool call group
-                            const isNewToolCallGroup =
-                                !currentToolCallGroupRef.current ||  // No current group
-                                checkIsDifferentToolCallSet(event.toolCalls, currentToolCallGroupRef.current.toolCalls); // Different set of calls
-
-                            if (isNewToolCallGroup) {
-                                // Create a new tool call group
-                                // console.log('Creating new tool call group');
-                                currentToolCallGroupRef.current = {
-                                    id: toolCallGroupId,
-                                    toolCalls: [],
-                                    timestamp: event.timestamp,
-                                    vendor: event.vendor
+                            if (existingIndex >= 0) {
+                                // Update the existing tool call
+                                currentToolCallGroupRef.current.toolCalls[existingIndex] = {
+                                    ...currentToolCallGroupRef.current.toolCalls[existingIndex],
+                                    ...normalizedToolCall
                                 };
-                                toolCallGroupsRef.current.push(currentToolCallGroupRef.current);
+                            } else {
+                                // Add the new tool call to the group
+                                currentToolCallGroupRef.current.toolCalls.push(normalizedToolCall);
                             }
+                        });
 
-                            // Process and normalize the tool calls
-                            const normalizedToolCalls = event.toolCalls.map(toolCall => {
-                                // Extract the tool call ID based on vendor
-                                const toolId = toolCall.id ||
-                                    (toolCall.function ? toolCall.function.name + Date.now() : null) ||
-                                    `tool-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-
-                                // Normalize arguments based on vendor format
-                                const args = toolCall.input || toolCall.arguments || toolCall.parameters || {};
-
-                                // Create a normalized tool call object
-                                return {
-                                    id: toolId,
-                                    name: toolCall.name || (toolCall.function ? toolCall.function.name : 'unknown-tool'),
-                                    arguments: typeof args === 'string' ? args : JSON.stringify(args),
-                                    type: toolCall.type || 'function',
-                                    timestamp: event.timestamp,
-                                    results: null // Will be filled in when results arrive
-                                };
-                            });
-
-                            // Update or add these tool calls to the current group
-                            normalizedToolCalls.forEach(normalizedToolCall => {
-                                // Check if this tool call already exists in the group
-                                const existingIndex = currentToolCallGroupRef.current.toolCalls.findIndex(
-                                    tc => tc.id === normalizedToolCall.id
-                                );
-
-                                if (existingIndex >= 0) {
-                                    // Update the existing tool call
-                                    currentToolCallGroupRef.current.toolCalls[existingIndex] = {
-                                        ...currentToolCallGroupRef.current.toolCalls[existingIndex],
-                                        ...normalizedToolCall
-                                    };
-                                } else {
-                                    // Add the new tool call to the group
-                                    currentToolCallGroupRef.current.toolCalls.push(normalizedToolCall);
-                                }
-                            });
-
-                            // Process any tool results included with this event
-                            if (event.toolResults && event.toolResults.length > 0) {
-                                event.toolResults.forEach(result => {
-                                    // Get the tool ID based on vendor format
-                                    const toolId = result.tool_call_id || result.tool_use_id;
-
-                                    if (toolId) {
-                                        // Find the matching tool call
-                                        const matchingToolCall = currentToolCallGroupRef.current.toolCalls.find(
-                                            tc => tc.id === toolId
-                                        );
-
-                                        if (matchingToolCall) {
-                                            // Add the results to the tool call
-                                            matchingToolCall.results = result.content;
-                                        }
-                                    }
-                                });
-                            }
-                        }
-                        break;
-
-                    case 'tool_results':
-                        // console.log('Processing tool_results event:', event.type);
-                        // Process standalone tool results (when not included with the tool call)
-                        if (event.toolResults && event.toolResults.length > 0 && currentToolCallGroupRef.current) {
+                        // Process any tool results included with this event
+                        if (event.toolResults && event.toolResults.length > 0) {
                             event.toolResults.forEach(result => {
                                 // Get the tool ID based on vendor format
                                 const toolId = result.tool_call_id || result.tool_use_id;
@@ -553,96 +520,87 @@ const EnhancedChatEventReplay = ({
                                 }
                             });
                         }
-                        break;
+                    }
+                    break;
 
-                    case 'completion_options':
-                        // Only process active completion options (for model information)
-                        if (event.active && event.completionOptions) {
-                            setModelInfo(event.completionOptions);
-                        }
-                        break;
+                case 'tool_results':
+                    // Process standalone tool results (when not included with the tool call)
+                    if (event.toolResults && event.toolResults.length > 0 && currentToolCallGroupRef.current) {
+                        event.toolResults.forEach(result => {
+                            // Get the tool ID based on vendor format
+                            const toolId = result.tool_call_id || result.tool_use_id;
 
-                    case 'completion':
-                    case 'completion_status':
-                        // Start of a new completion - create a new assistant message
-                        if (event.running === true) {
-                            if (event.modelInfo) {
-                                // console.log('Setting model info:', event.modelInfo);
-                                setModelInfo(event.modelInfo);
-                                const vendor = getVendor(event.modelInfo.model);
-                                setCurrentVendor(vendor);
-
-                                // Check if we need to start a new thought message
-                                if (currentThoughtMessageRef.current && currentThoughtMessageRef.current.isComplete) {
-                                    currentThoughtMessageRef.current = null;
-                                }
-
-                                // Check if we already have a model card with this model name
-                                const existingModelCard = newMessages.find(msg =>
-                                    msg.type === 'model_card' &&
-                                    msg.modelName === event.modelInfo.model
+                            if (toolId) {
+                                // Find the matching tool call
+                                const matchingToolCall = currentToolCallGroupRef.current.toolCalls.find(
+                                    tc => tc.id === toolId
                                 );
 
-                                // Only add a model card if we don't already have one for this model
-                                if (!existingModelCard) {
-                                    // console.log('Adding new model card for:', event.modelInfo.model);
-                                    newMessages.push({
-                                        type: 'model_card',
-                                        modelName: event.modelInfo.model,
-                                        modelParameters: event.modelInfo,
-                                        toolNames: event.toolNames,
-                                        timestamp: event.timestamp
-                                    });
-                                } else {
-                                    // console.log('Model card already exists for:', event.modelInfo.model);
+                                if (matchingToolCall) {
+                                    // Add the results to the tool call
+                                    matchingToolCall.results = result.content;
                                 }
                             }
+                        });
+                    }
+                    break;
 
-                            // Start a new assistant message for this completion if needed
-                            if (currentAssistantMessageRef.current && currentAssistantMessageRef.current.isComplete) {
-                                currentAssistantMessageRef.current = null;
-                            }
-                        }
+                case 'completion_options':
+                    // Only process active completion options (for model information)
+                    if (event.active && event.completionOptions) {
+                        setModelInfo(event.completionOptions);
+                    }
+                    break;
 
-                        // Mark the current assistant message as complete when completion finishes
-                        if (event.running === false) {
-                            if (currentAssistantMessageRef.current) {
-                                currentAssistantMessageRef.current.isComplete = true;
-                                if (event.tokenUsage) {
-                                    // console.log('Adding token usage to assistant message:', event.tokenUsage);
-                                    currentAssistantMessageRef.current.tokenUsage = event.tokenUsage;
-                                }
-                                currentAssistantMessageRef.current = null;
-                            }
+                case 'completion':
+                case 'completion_status':
+                    // Start of a new completion - create a new assistant message
+                    if (event.running === true) {
+                        if (event.modelInfo) {
+                            setModelInfo(event.modelInfo);
+                            const vendor = getVendor(event.modelInfo.model);
+                            setCurrentVendor(vendor);
 
-                            // Separately handle thought message completion
-                            if (currentThoughtMessageRef.current) {
-                                currentThoughtMessageRef.current.isComplete = true;
+                            // Check if we need to start a new thought message
+                            if (currentThoughtMessageRef.current && currentThoughtMessageRef.current.isComplete) {
                                 currentThoughtMessageRef.current = null;
                             }
 
-                            // Mark the current tool call group as complete
-                            currentToolCallGroupRef.current = null;
+                            // Check if we already have a model card with this model name
+                            const existingModelCard = newMessages.find(msg =>
+                                msg.type === 'model_card' &&
+                                msg.modelName === event.modelInfo.model
+                            );
 
-                            // Reset tool selection state
-                            setToolSelectionState({
-                                inProgress: false,
-                                toolName: null,
-                                timestamp: null
-                            });
+                            // Only add a model card if we don't already have one for this model
+                            if (!existingModelCard) {
+                                newMessages.push({
+                                    type: 'model_card',
+                                    modelName: event.modelInfo.model,
+                                    modelParameters: event.modelInfo,
+                                    toolNames: event.toolNames,
+                                    timestamp: event.timestamp
+                                });
+                            }
                         }
-                        break;
 
-                    case 'interaction_start':
-                        setCurrentInteraction(event.content || 'Interaction');
-                        break;
-
-                    case 'interaction_end':
-                        // Mark the current assistant message as complete when interaction ends
-                        if (currentAssistantMessageRef.current) {
-                            currentAssistantMessageRef.current.isComplete = true;
+                        // Start a new assistant message for this completion if needed
+                        if (currentAssistantMessageRef.current && currentAssistantMessageRef.current.isComplete) {
                             currentAssistantMessageRef.current = null;
                         }
+                    }
+
+                    // Mark the current assistant message as complete when completion finishes
+                    if (event.running === false) {
+                        if (currentAssistantMessageRef.current) {
+                            currentAssistantMessageRef.current.isComplete = true;
+                            if (event.tokenUsage) {
+                                currentAssistantMessageRef.current.tokenUsage = event.tokenUsage;
+                            }
+                            currentAssistantMessageRef.current = null;
+                        }
+
+                        // Separately handle thought message completion
                         if (currentThoughtMessageRef.current) {
                             currentThoughtMessageRef.current.isComplete = true;
                             currentThoughtMessageRef.current = null;
@@ -657,59 +615,83 @@ const EnhancedChatEventReplay = ({
                             toolName: null,
                             timestamp: null
                         });
-                        break;
-                    case "render_media":
-                        // Add a new media message
-                        const mediaMessageObject = {
-                            content: event.mediaContent,
-                            contentType: event.mediaContentType,
-                            metadata: event.mediaMetadata
-                        };
-                        newMessages.push({
-                            type: 'media',
-                            message: mediaMessageObject,
-                            timestamp: event.timestamp
-                        });
-                        break;
+                    }
+                    break;
 
-                    case 'interaction':
-                        // Handle the interaction type which groups multiple events
-                        // We don't need to do specific processing since we handle the individual events
-                        break;
-                    case 'history':
-                        // Handle the history type contains all data for an interaction. Not used yet.
-                        break;
+                case 'interaction_start':
+                    setCurrentInteraction(event.content || 'Interaction');
+                    break;
 
-                    case 'event_array':
-                        // Process array of events
-                        if (event.events && Array.isArray(event.events)) {
-                            console.log(`Processing array of ${event.events.length} events`);
-                            // The events will be processed separately by the parent component
-                            // We don't need special handling here as ReplayInterface already flattens these arrays
+                case 'interaction_end':
+                    // Mark the current assistant message as complete when interaction ends
+                    if (currentAssistantMessageRef.current) {
+                        currentAssistantMessageRef.current.isComplete = true;
+                        currentAssistantMessageRef.current = null;
+                    }
+                    if (currentThoughtMessageRef.current) {
+                        currentThoughtMessageRef.current.isComplete = true;
+                        currentThoughtMessageRef.current = null;
+                    }
+
+                    // Mark the current tool call group as complete
+                    currentToolCallGroupRef.current = null;
+
+                    // Reset tool selection state
+                    setToolSelectionState({
+                        inProgress: false,
+                        toolName: null,
+                        timestamp: null
+                    });
+                    break;
+                case "render_media":
+                    // Add a new media message
+                    const mediaMessageObject = {
+                        content: event.mediaContent,
+                        contentType: event.mediaContentType,
+                        metadata: event.mediaMetadata
+                    };
+                    newMessages.push({
+                        type: 'media',
+                        message: mediaMessageObject,
+                        timestamp: event.timestamp
+                    });
+                    break;
+
+                case 'interaction':
+                    // Handle the interaction type which groups multiple events
+                    // We don't need to do specific processing since we handle the individual events
+                    break;
+                case 'history':
+                    // Handle the history type contains all data for an interaction. Not used yet.
+                    break;
+
+                case 'event_array':
+                    // Process array of events
+                    if (event.events && Array.isArray(event.events)) {
+                        console.log(`Processing array of ${event.events.length} events`);
+                        // The events will be processed separately by the parent component
+                        // We don't need special handling here as ReplayInterface already flattens these arrays
+                    }
+                    break;
+
+                case 'tool_select_delta':
+                    // FIXED: Now just update UI state instead of creating a tool call group
+                    try {
+                        if (event.toolCalls && event.toolCalls.length > 0) {
+                            const toolData = event.toolCalls[0];
+                            setToolSelectionState({
+                                inProgress: true,
+                                toolName: toolData.name || "unknown tool",
+                                timestamp: Date.now()
+                            });
                         }
-                        break;
+                    } catch (err) {
+                        console.error("Error parsing tool selection data:", err);
+                    }
+                    break;
 
-                    case 'tool_select_delta':
-                        // FIXED: Now just update UI state instead of creating a tool call group
-                        try {
-                            if (event.toolCalls && event.toolCalls.length > 0) {
-                                const toolData = event.toolCalls[0];
-                                setToolSelectionState({
-                                    inProgress: true,
-                                    toolName: toolData.name || "unknown tool",
-                                    timestamp: Date.now()
-                                });
-                            }
-                        } catch (err) {
-                            console.error("Error parsing tool selection data:", err);
-                        }
-                        break;
-
-                    default:
-                        console.warn(`Unhandled event type: ${event.type}`, event);
-                }
-            } catch (error) {
-                console.error('Error processing event:', error, event);
+                default:
+                    console.warn(`Unhandled event type: ${event.type}`, event);
             }
         });
 
@@ -731,27 +713,42 @@ const EnhancedChatEventReplay = ({
         // Add any accumulated thought text
         thoughtMessagesRef.current.forEach(thoughtMessage => {
             if (thoughtMessage.text && thoughtMessage.text.trim() !== '') {
-                newMessages.push({
+                const thoughtMessageObj = {
                     type: 'thought',
                     content: thoughtMessage.text,
                     timestamp: thoughtMessage.timestamp || new Date().toISOString(),
                     streaming: !thoughtMessage.isComplete,
                     id: thoughtMessage.id, // Include the ID for proper keying
                     vendor: thoughtMessage.vendor || currentVendor
-                });
+                };
+                newMessages.push(thoughtMessageObj);
             }
         });
 
         // Add each tool call group as a separate message
-        // FIXED: Only add real tool calls (not tool selections)
+        // FIXED: Format tool calls to match what MessageItem expects
         toolCallGroupsRef.current.forEach(toolCallGroup => {
             if (toolCallGroup.toolCalls && toolCallGroup.toolCalls.length > 0) {
-                newMessages.push({
-                    type: 'tool',
-                    toolCalls: toolCallGroup.toolCalls,
+                const toolCallsMessage = {
+                    type: 'tool_calls',  // Changed from 'tool' to 'tool_calls' to match MessageItem expectations
+                    toolCalls: toolCallGroup.toolCalls.map(toolCall => ({
+                        // Format each tool call to match what ToolCallDisplay expects
+                        id: toolCall.id,
+                        name: toolCall.name,
+                        arguments: toolCall.arguments,
+                        results: toolCall.results,
+                        // Add function property for compatibility with ToolCallItem
+                        function: {
+                            name: toolCall.name,
+                            arguments: toolCall.arguments
+                        }
+                    })),
                     timestamp: toolCallGroup.timestamp || new Date().toISOString(),
                     id: toolCallGroup.id
-                });
+                };
+                
+                console.log('Adding formatted tool calls message:', JSON.stringify(toolCallsMessage).substring(0, 200));
+                newMessages.push(toolCallsMessage);
             }
         });
 
@@ -765,11 +762,24 @@ const EnhancedChatEventReplay = ({
         const messagesChanged = messages.length !== newMessages.length ||
             JSON.stringify(messages) !== JSON.stringify(newMessages);
 
+        // Filter out messages with no content before finalizing
+        const validMessages = newMessages.filter(msg => {
+            // Skip messages with empty content
+            if (msg.type === 'thought' && (!msg.content || msg.content.trim() === '')) {
+                return false;
+            }
+            if (msg.type === 'assistant' && (!msg.content || msg.content.trim() === '')) {
+                return false;
+            }
+            if (msg.type === 'tool_calls' && (!msg.toolCalls || msg.toolCalls.length === 0)) {
+                return false;
+            }
+            return true;
+        });
+
         if (messagesChanged) {
             console.log('Message array has changed, updating state');
-            setMessages(newMessages);
-        } else {
-            console.log('No changes to message array, skipping update');
+            setMessages(validMessages);
         }
     };
 
@@ -797,6 +807,26 @@ const EnhancedChatEventReplay = ({
         // If we get here, it's the same set of tool calls
         return false;
     };
+    
+    /**
+     * Toggle tool call expansion for a specific message index
+     * @param {number} index - The index of the message to toggle expansion for
+     */
+    const handleToggleToolCallExpansion = (index) => {
+        setExpandedToolCallMessages(prev => {
+            // If the index is already in the array, remove it (collapse)
+            if (prev.includes(index)) {
+                const newState = prev.filter(i => i !== index);
+                console.log(`Tool call at index ${index} collapsed. New expanded state:`, newState);
+                return newState;
+            }
+            // Otherwise add it to the array (expand)
+            const newState = [...prev, index];
+            console.log(`Tool call at index ${index} expanded. New expanded state:`, newState);
+            return newState;
+        });
+        console.log(`Toggling tool call expansion for message at index ${index}`);
+    };
 
     // Playback controls
     const handlePlay = () => onEventIndexChange(currentEventIndex);
@@ -814,112 +844,129 @@ const EnhancedChatEventReplay = ({
             toolName: null,
             timestamp: null
         });
+        // Reset expanded tool calls when playback is reset
+        setExpandedToolCallMessages([]);
         onEventIndexChange(0);
     };
 
+    // Create an array of messages in the format that MessagesList expects
+    const formattedMessages = messages.map(message => {
+        // Convert our message format to what MessagesList expects
+        if (message.type === 'user') {
+            return {
+                role: 'user',
+                type: 'content',
+                content: message.content
+            };
+        } else if (message.type === 'assistant') {
+            return {
+                role: 'assistant',
+                type: 'content',
+                content: message.content,
+                vendor: message.vendor,
+                tokenUsage: message.tokenUsage
+            };
+        } else if (message.type === 'thought') {
+            return {
+                role: 'assistant',
+                type: 'thinking',
+                content: message.content,
+                vendor: message.vendor
+            };
+        } else if (message.type === 'system') {
+            return {
+                role: 'system',
+                type: 'system_prompt',
+                content: message.content
+            };
+        } else if (message.type === 'system_prompt') {
+            return {
+                role: 'system',
+                type: 'system_prompt',
+                content: message.content
+            };
+        } else if (message.type === 'tool_calls') {
+            return {
+                role: 'assistant',
+                type: 'tool_calls',
+                toolCalls: message.toolCalls
+            };
+        } else if (message.type === 'media') {
+            return {
+                role: 'assistant',
+                type: 'media',
+                content: message.message.content,
+                contentType: message.message.contentType,
+                metadata: message.message.metadata
+            };
+        } else if (message.type === 'model_card') {
+            // For model card messages, use a custom component instead of standard system message
+            // This must include a content property to satisfy the SystemMessage component's requirements
+            const modelDescription = `Model: ${message.modelName}`;
+            return {
+                role: 'system',
+                type: 'model_card', // Special type for handling in MessagesList
+                content: modelDescription, // Provide a fallback content
+                modelName: message.modelName,
+                modelParameters: message.modelParameters,
+                toolNames: message.toolNames
+            };
+        }
+        return message;
+    });
+
     return (
-        <div className="enhanced-chat-replay flex flex-col space-y-4">
+        <div className="enhanced-chat-replay flex flex-col w-full">
+            {/* Controls area */}
             <div className="mb-4 flex items-center space-x-4">
-                <button
+                <Button
                     onClick={isPlaying ? handlePause : handlePlay}
-                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                    variant="default"
                 >
                     {isPlaying ? 'Pause' : 'Play'}
-                </button>
-                <button
+                </Button>
+                <Button
                     onClick={handleReset}
-                    className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
+                    variant="secondary"
                 >
                     Reset
-                </button>
+                </Button>
                 <div className="text-sm text-gray-500">
                     Event {currentEventIndex + 1} of {events && events.length > 0 ? events.length : '?'}
                     {events && events.length > 0 &&
-                        <span className="ml-2">({Math.round((currentEventIndex + 1) / events.length * 100)}%)</span>}
+                        <span
+                            className="ml-2">({Math.round((currentEventIndex + 1) / events.length * 100)}%)</span>}
                 </div>
             </div>
-
-            <div className="chat-messages space-y-4">
-                {messages.map((message, i) => {
-                    // Render different content based on message type
-                    if (message.type === 'user') {
-                        return (
-                            <ChatMessage
-                                key={`user-${i}-${message.timestamp}`}
-                                role="user"
-                                content={message.content}
-                                timestamp={message.timestamp}
-                            />
-                        );
-                    } else if (message.type === 'assistant') {
-                        return (
-                            <ChatMessage
-                                key={`assistant-${message.id || i}-${message.timestamp}`}
-                                role="assistant"
-                                content={message.content}
-                                timestamp={message.timestamp}
-                                streaming={message.streaming}
-                                vendor={message.vendor}
-                                tokenUsage={message.tokenUsage}
-                            />
-                        );
-                    } else if (message.type === 'thought') {
-                        return (
-                            <ThoughtDisplay
-                                key={`thought-${message.id || i}-${message.timestamp}`}
-                                content={message.content}
-                                vendor={message.vendor}
-                            />
-                        );
-                    } else if (message.type === 'system') {
-                        return (
-                            <SystemPromptDisplay
-                                key={`system-${i}-${message.timestamp}`}
-                                content={message.content}
-                            />
-                        );
-                    } else if (message.type === 'tool') {
-                        return (
-                            <ToolCallDisplay
-                                key={`tool-${message.id || i}-${message.timestamp}`}
-                                toolCalls={message.toolCalls}
-                            />
-                        );
-                    } else if (message.type === 'media') {
-                        return (
-                            <MediaMessage
-                                key={`media-${i}-${message.timestamp}`}
-                                message={message.message}
-                            />
-                        );
-                    } else if (message.type === 'model_card') {
-                        return (
-                            <div key={`model-card-${i}-${message.timestamp}`} className="mx-auto w-full max-w-3xl">
-                                <ModelCardDisplay
-                                    modelName={message.modelName}
-                                    modelParameters={message.modelParameters}
-                                    toolNames={message.toolNames}
+            <Card className="chat-interface-card w-full h-full">
+                {/* Messages list with ScrollArea for better scrolling experience */}
+                <CardContent className="chat-interface-messages h-full flex-grow p-0">
+                    <ScrollArea className="h-full w-full" type="auto">
+                        <div className="p-2">
+                            {messages.length === 0 ? (
+                                <div className="text-center text-gray-500 p-4">No messages to display</div>
+                            ) : (
+                                <MessagesList
+                                    messages={formattedMessages}
+                                    expandedToolCallMessages={expandedToolCallMessages}
+                                    toggleToolCallExpansion={handleToggleToolCallExpansion}
+                                    toolSelectionInProgress={toolSelectionState.inProgress}
+                                    toolSelectionName={toolSelectionState.toolName}
                                 />
-                            </div>
-                        );
-                    } else if (message.type === 'token_usage') {
-                        return (
-                            <div key={`token-usage-${i}-${message.timestamp}`} className="mx-auto w-full max-w-3xl">
-                                <TokenUsageDisplay usage={message.usage}/>
-                            </div>
-                        );
-                    }
-                    return null;
-                })}
-
-                {/* Show tool selection indicator - similar to ChatInterface */}
-                {toolSelectionState.inProgress && (
-                    <div className="flex items-center gap-2 text-sm text-gray-500 italic my-1 ml-8">
-                        <div className="animate-pulse h-2 w-2 bg-purple-400 rounded-full"></div>
-                        <span>Preparing to use: {toolSelectionState.toolName?.replace(/-/g, ' ') || 'tool'}</span>
-                    </div>
-                )}
-            </div>
+                            )}  
+                            {console.log('Current expanded tool calls:', expandedToolCallMessages)}
+                            
+                            {/* Show tool selection indicator */}
+                            {toolSelectionState.inProgress && (
+                                <div className="flex items-center gap-2 text-sm text-gray-500 italic my-1 ml-8">
+                                    <div className="animate-pulse h-2 w-2 bg-purple-400 rounded-full"></div>
+                                    <span>Preparing to use: {toolSelectionState.toolName?.replace(/-/g, ' ') || 'tool'}</span>
+                                </div>
+                            )}
+                        </div>
+                    </ScrollArea>
+                </CardContent>
+            </Card>
         </div>
     );
 };
