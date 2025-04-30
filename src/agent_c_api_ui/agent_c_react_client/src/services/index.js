@@ -29,6 +29,7 @@ export {
 
 // Export all service methods from session-api
 export {
+  initialize,
   createSession,
   getSession,
   updateSession,

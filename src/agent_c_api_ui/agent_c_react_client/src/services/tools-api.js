@@ -55,7 +55,7 @@ export async function executeTool(toolId, parameters = {}) {
  */
 export async function getSessionTools(sessionId) {
   try {
-    return await api.get(`/session/${sessionId}/tools`);
+    return await api.get(`/get_agent_tools/${sessionId}`);
   } catch (error) {
     throw api.processApiError(error, 'Failed to retrieve session tools');
   }
@@ -69,7 +69,7 @@ export async function getSessionTools(sessionId) {
  */
 export async function updateSessionTools(sessionId, tools) {
   try {
-    return await api.put(`/session/${sessionId}/tools`, { tools });
+    return await api.post(`/update_tools`, { ui_session_id: sessionId, tools });
   } catch (error) {
     throw api.processApiError(error, 'Failed to update session tools');
   }

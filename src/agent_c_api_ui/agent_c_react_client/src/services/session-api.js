@@ -10,6 +10,19 @@
 import api from './api';
 
 /**
+ * Initialize a session with model and parameters
+ * @param {Object} config - Session configuration with model, parameters, persona, etc.
+ * @returns {Promise<Object>} Session data including ui_session_id
+ */
+export async function initialize(config = {}) {
+  try {
+    return await api.post('/initialize', config);
+  } catch (error) {
+    throw api.processApiError(error, 'Failed to initialize session');
+  }
+}
+
+/**
  * Create a new session
  * @param {Object} config - Initial session configuration
  * @returns {Promise<Object>} Session data
@@ -157,6 +170,7 @@ export async function exportSession(sessionId, format = 'json') {
 }
 
 export default {
+  initialize,
   createSession,
   getSession,
   updateSession,

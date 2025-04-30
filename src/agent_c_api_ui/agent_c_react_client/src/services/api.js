@@ -14,7 +14,7 @@ const DEFAULT_TIMEOUT = 30000;
  * Configuration for API requests
  */
 export const API_CONFIG = {
-  baseUrl: import.meta.env.VITE_API_BASE_URL || '/api',
+  baseUrl: import.meta.env.VITE_API_URL || '/api/v1',
   timeout: DEFAULT_TIMEOUT,
   credentials: 'include',
   headers: {

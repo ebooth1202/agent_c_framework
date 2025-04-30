@@ -314,7 +314,7 @@ Refactor SessionContext to use the new service layer:
 3. Maintain the same context API for backwards compatibility
 4. Make sure all API interactions go through the service layer
 
-### Step 9: Implement Chat Service (Optional in Phase 1)
+### Step 9: Implement Chat Service
 
 If time permits, implement chat-related API calls in a separate service:
 
