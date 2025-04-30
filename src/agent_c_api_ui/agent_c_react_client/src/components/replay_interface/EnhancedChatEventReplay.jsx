@@ -1,18 +1,10 @@
 import React, {useState, useEffect, useRef} from 'react';
-import ChatMessage from '@/components/replay_interface/ChatMessage';
-import ToolCallDisplay from '@/components/chat_interface/ToolCallDisplay';
-import ThoughtDisplay from '@/components/chat_interface/ThoughtDisplay';
-import SystemPromptDisplay from "@/components/replay_interface/SystemPromptDisplay";
-import ModelCardDisplay from '@/components/replay_interface/ModelCardDisplay';
-import TokenUsageDisplay from '@/components/chat_interface/TokenUsageDisplay';
-import MediaMessage from "@/components/chat_interface/MediaMessage";
-import {cn} from "@/lib/utils";
 import MessagesList from '@/components/chat_interface/MessagesList';
 import {
     Card,
     CardContent
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import {Button} from "@/components/ui/button";
 
 const getVendor = (name) => {
     if (!name) return 'anthropic'; // Default to anthropic
@@ -213,7 +205,8 @@ const EnhancedChatEventReplay = ({
                                      currentEventIndex = 0,
                                      isPlaying = false,
                                      playbackSpeed = 1,
-                                     onEventIndexChange = () => {},
+                                     onEventIndexChange = () => {
+                                     },
                                      className
                                  }) => {
     // State for processed messages
@@ -841,7 +834,13 @@ const EnhancedChatEventReplay = ({
         } else if (message.type === 'system') {
             return {
                 role: 'system',
-                type: 'content',
+                type: 'system_prompt',
+                content: message.content
+            };
+        } else if (message.type === 'system_prompt') {
+            return {
+                role: 'system',
+                type: 'system_prompt',
                 content: message.content
             };
         } else if (message.type === 'tool') {
@@ -874,38 +873,42 @@ const EnhancedChatEventReplay = ({
         return message;
     });
 
-    return (<Card className="chat-interface-card">
-                    <CardContent className="chat-interface-messages">
-
-            {/* Controls area */}
-                <Button
-                    onClick={isPlaying ? handlePause : handlePlay}
-                    variant="default"
-                >
-                    {isPlaying ? 'Pause' : 'Play'}
-                </Button>
-                <Button
-                    onClick={handleReset}
-                    variant="secondary"
-                >
-                    Reset
-                </Button>
-                <div className="text-sm text-gray-500">
-                    Event {currentEventIndex + 1} of {events && events.length > 0 ? events.length : '?'}
-                    {events && events.length > 0 &&
-                        <span className="ml-2">({Math.round((currentEventIndex + 1) / events.length * 100)}%)</span>}
+    return (
+        <div className="enhanced-chat-replay flex flex-col">
+            {/* Fixed controls area - now uses sticky positioning */}
+            <div className="mb-4 flex items-center space-x-4">
+                    {/* Controls area */}
+                    <Button
+                        onClick={isPlaying ? handlePause : handlePlay}
+                        variant="default"
+                    >
+                        {isPlaying ? 'Pause' : 'Play'}
+                    </Button>
+                    <Button
+                        onClick={handleReset}
+                        variant="secondary"
+                    >
+                        Reset
+                    </Button>
+                    <div className="text-sm text-gray-500">
+                        Event {currentEventIndex + 1} of {events && events.length > 0 ? events.length : '?'}
+                        {events && events.length > 0 &&
+                            <span
+                                className="ml-2">({Math.round((currentEventIndex + 1) / events.length * 100)}%)</span>}
                 </div>
-                    </CardContent>
+            </div>
+                <Card className="chat-interface-card flex flex-col h-full overflow-hidden">
                     {/*Messages Area*/}
-                    <CardContent className="chat-interface-messages flex-grow p-0 overflow-hidden">
-                        <div className="p-2">
+                    <CardContent className="chat-interface-messages flex-grow p-0 h-[calc(100vh-200px)] flex flex-col">
+                        <div className="h-full p-2">
                             {messages.length === 0 ? (
                                 <div className="text-center text-gray-500 p-4">No messages to display</div>
                             ) : (
                                 <MessagesList
                                     messages={formattedMessages}
                                     expandedToolCallMessages={[]}
-                                    toggleToolCallExpansion={() => {}}
+                                    toggleToolCallExpansion={() => {
+                                    }}
                                     toolSelectionInProgress={toolSelectionState.inProgress}
                                     toolSelectionName={toolSelectionState.toolName}
                                 />
@@ -921,8 +924,8 @@ const EnhancedChatEventReplay = ({
                         </div>
                     </CardContent>
                 </Card>
+        </div>
+            );
+            };
 
-    );
-};
-
-export default EnhancedChatEventReplay;
+            export default EnhancedChatEventReplay;

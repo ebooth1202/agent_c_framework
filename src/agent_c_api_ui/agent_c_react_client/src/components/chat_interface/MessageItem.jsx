@@ -6,6 +6,8 @@ import AssistantMessage from './AssistantMessage';
 import ThoughtDisplay from './ThoughtDisplay';
 import MediaMessage from './MediaMessage';
 import ToolCallDisplay from './ToolCallDisplay';
+import SystemPromptDisplay from '../replay_interface/SystemPromptDisplay';
+import ModelCardDisplay from '../replay_interface/ModelCardDisplay';
 import { cn } from '../../lib/utils';
 
 /**
@@ -132,6 +134,36 @@ const MessageItem = ({
       </div>
     );
   }
+
+  // Order is important here.  Render System prompt and model cards before system messages because they are also system messages
+  if (message.role === 'system' && message.type === 'model_card') {
+  return (
+    <div
+      role="listitem"
+      className="message-item model-card-container"
+      aria-label="Model information"
+    >
+      <ModelCardDisplay
+        modelName={message.modelName}
+        modelParameters={message.modelParameters}
+        toolNames={message.toolNames}
+      />
+    </div>
+  );
+}
+
+  // Render system prompt (before the general system message check)
+if (message.role === 'system' && message.type === 'system_prompt') {
+  return (
+    <div
+      role="listitem"
+      className="message-item system-prompt-container"
+      aria-label="System prompt"
+    >
+      <SystemPromptDisplay content={message.content} />
+    </div>
+  );
+}
   
   // Render system messages
   if (message.role === 'system') {
@@ -165,7 +197,10 @@ MessageItem.propTypes = {
     files: PropTypes.array,
     isVoiceMessage: PropTypes.bool,
     toolCalls: PropTypes.array,
-    critical: PropTypes.bool
+    critical: PropTypes.bool,
+    modelName: PropTypes.string,
+    modelParameters: PropTypes.object,
+    toolNames: PropTypes.array
   }).isRequired,
   index: PropTypes.number.isRequired,
   messages: PropTypes.array.isRequired,
