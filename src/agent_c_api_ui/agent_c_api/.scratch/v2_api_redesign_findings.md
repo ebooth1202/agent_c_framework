@@ -20,9 +20,9 @@ This document tracks our detailed analysis of each component of the v1 API as we
 - [x] `/v1/personas.py` - Examined
 
 ### Session 3: Core API Components - Part 2
-- [ ] `/v1/sessions.py` - Not yet examined
-- [ ] `/v1/tools.py` - Not yet examined
-- [ ] `/v1/chat.py` - Not yet examined
+- [x] `/v1/sessions.py` - Examined
+- [x] `/v1/tools.py` - Examined
+- [x] `/v1/chat.py` - Examined
 
 ### Session 4: File Management and LLM Models
 - [ ] `/v1/files.py` - Not yet examined
@@ -312,6 +312,68 @@ Based on examination of the core components, we can make several key observation
 13. **Debug-Friendly Design**: The inclusion of specific debugging endpoints indicates a developer-friendly approach, facilitating troubleshooting and development.
 
 These observations reinforce the need for a cleaner API design in v2, with consistent naming, logical grouping of endpoints, and clear separation of concerns.
+
+#### `/v1/sessions.py`
+
+This file contains endpoints for session management:
+
+- **Session Initialization**:
+  - `initialize_agent`: Creates a new agent session with specified parameters
+    - Takes an `AgentInitializationParams` object with model name, backend, etc.
+    - Supports transferring chat history from an existing session if `ui_session_id` is provided
+    - Returns both the UI session ID and the internal Agent C session ID
+  
+- **Session Verification**:
+  - `verify_session`: Checks if a session exists and is valid
+    - Takes a `ui_session_id` path parameter
+    - Returns a simple boolean indicating validity
+
+- **Session Deletion**:
+  - `delete_all_sessions`: Removes all active sessions
+    - Requires no parameters
+    - Cleans up resources for all sessions
+    - Returns the count of deleted sessions
+
+The file shows naming inconsistency with the first endpoint being called `initialize_agent` when it's actually creating a session (with an agent configured). There's also no endpoint for deleting a single session, which seems like an oversight. The endpoints follow a mix of RESTful and RPC patterns, with inconsistent path naming (`/initialize` vs `/sessions`).
+
+#### `/v1/tools.py`
+
+This file contains a single endpoint for listing available tools:
+
+- **Tool Listing**:
+  - `tools_list`: Retrieves all available tools from the Agent C Toolset registry
+    - Takes no parameters
+    - Dynamically discovers tools from the Toolset registry
+    - Categorizes tools by module namespace (Core, Demo, Voice, RAG)
+    - Identifies 'essential' tools that are required for basic functionality
+    - Returns a structured object with tool categories and details
+
+The file also handles conditional imports of optional tool modules (agent_c_demo, agent_c_rag), gracefully handling cases where these components aren't installed. The endpoint follows a REST-style GET pattern for a collection (`/tools`).
+
+Tools are treated as configuration items rather than mutable resources - they can be listed and selected but not created or modified through the API. Each tool entry includes name, module, documentation, and 'essential' status.
+
+#### `/v1/chat.py`
+
+This file contains endpoints for the core chat functionality:
+
+- **Chat Interaction**:
+  - `chat_endpoint`: Handles sending messages to the agent and streaming responses
+    - Takes form parameters `ui_session_id`, `message`, and optional `file_ids`
+    - Verifies the session exists
+    - Parses file IDs if provided
+    - Returns a streaming response that yields tokens in real-time
+    - Uses appropriate headers to ensure proper streaming behavior
+
+- **Interaction Cancellation**:
+  - `cancel_chat`: Cancels an ongoing chat interaction
+    - Takes a `ui_session_id` form parameter
+    - Verifies the session exists
+    - Calls the agent_manager to cancel the interaction
+    - Returns a JSON response with the cancellation status
+
+The endpoints follow an RPC-style pattern (`/chat` and `/cancel`) rather than RESTful resource paths. Parameters are provided as form data rather than JSON. The file includes commented-out alternative streaming configurations, suggesting challenges with different environments handling streaming responses.
+
+The core functionality is the streaming chat, which allows real-time responses from the agent and supports attaching files to messages. Both endpoints include thorough error handling and detailed logging.
 
 ## Connection Points
 
