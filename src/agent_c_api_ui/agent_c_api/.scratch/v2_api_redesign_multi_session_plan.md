@@ -1,14 +1,35 @@
 # Agent C API V2 Redesign - Multi-Session Plan
 
-## Session 1: Core API Components - Part 1
+## Session 1: Foundation Core Components
+1. Examine `core/models.py`
+   - Analyze core data models used throughout the API
+   - Identify key structures and their relationships
+   - Document findings and their impact on API design
+
+2. Examine `core/agent_bridge.py` and `core/agent_manager.py`
+   - Analyze how the API interfaces with Agent C core functionality
+   - Identify key functions and their responsibilities
+   - Document findings and potential improvements
+
+3. Examine `core/file_handler.py`
+   - Analyze file management core functionality
+   - Identify how this interfaces with API endpoints
+   - Document findings and potential improvements
+
+4. Examine `core/util/logging_utils.py` and `core/util/middleware_logging.py`
+   - Analyze logging and middleware patterns
+   - Identify how these support the API functionality
+   - Document findings and best practices to maintain
+
+## Session 2: v1 API Core Components - Part 1
 1. Examine `/v1/agent.py`
    - Analyze endpoints, parameters, and response models
-   - Identify functionality and interactions with other components
+   - Identify functionality and interactions with core components
    - Document findings and potential improvements
 
 2. Examine `/v1/models.py`
    - Analyze model listing functionality
-   - Identify data structures and dependencies
+   - Identify relationships with core models
    - Document findings and potential improvements
 
 3. Examine `/v1/personas.py`
@@ -16,7 +37,7 @@
    - Identify data structures and dependencies
    - Document findings and potential improvements
 
-## Session 2: Core API Components - Part 2
+## Session 3: v1 API Core Components - Part 2
 1. Examine `/v1/sessions.py`
    - Analyze session management functionality
    - Identify overlaps with agent management
@@ -32,10 +53,10 @@
    - Identify relationships with sessions and agents
    - Document findings and potential improvements
 
-## Session 3: File Management and LLM Models
+## Session 4: File Management and LLM Models
 1. Examine `/v1/files.py`
    - Analyze file management functionality
-   - Identify how files relate to sessions
+   - Identify how files relate to sessions and core file handler
    - Document findings and potential improvements
 
 2. Examine `/v1/llm_models/agent_params.py`
@@ -48,7 +69,7 @@
    - Identify how they're used throughout the API
    - Document findings and potential improvements
 
-## Session 4: Interactions Core
+## Session 5: Interactions Core
 1. Examine `/v1/interactions/interactions.py`
    - Analyze interactions endpoints
    - Identify key functionality and data flows
@@ -64,7 +85,7 @@
    - Compare documentation with actual implementation
    - Document inconsistencies and improvement areas
 
-## Session 5: Interactions Supporting Components
+## Session 6: Interactions Supporting Components
 1. Examine `/v1/interactions/interaction_models/event_model.py` and `interaction_model.py`
    - Analyze data models
    - Identify relationships and dependencies
@@ -80,7 +101,7 @@
    - Identify reuse opportunities
    - Document findings and potential improvements
 
-## Session 6: API Structure and Support
+## Session 7: API Structure and Support
 1. Examine `/v1/__init__.py`
    - Analyze module initialization
    - Identify routing and configuration
