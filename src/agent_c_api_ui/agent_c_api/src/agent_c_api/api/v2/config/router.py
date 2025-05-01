@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi_versioning import version
 
 from .services import ConfigService
-from .models import (
+from agent_c_api.api.v2.models.config_models import (
     ModelInfo, PersonaInfo, ToolInfo,
     ModelsResponse, PersonasResponse, ToolsResponse, SystemConfigResponse
 )

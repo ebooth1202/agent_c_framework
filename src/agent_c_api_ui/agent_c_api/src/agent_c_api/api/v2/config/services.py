@@ -8,7 +8,7 @@ from agent_c_api.config.config_loader import MODELS_CONFIG
 from agent_c_api.config.env_config import settings
 from agent_c_api.core.agent_manager import UItoAgentBridgeManager
 
-from .models import (
+from agent_c_api.api.v2.models.config_models import (
     ModelInfo, PersonaInfo, ToolInfo, ModelParameter, ToolParameter,
     ModelsResponse, PersonasResponse, ToolsResponse, SystemConfigResponse
 )

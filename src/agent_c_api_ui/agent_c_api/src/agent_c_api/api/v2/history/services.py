@@ -8,8 +8,11 @@ from agent_c_api.api.v1.interactions.interaction_models.interaction_model import
 from agent_c_api.api.v1.interactions.services.event_service import EventService as V1EventService
 from agent_c_api.api.v1.interactions.interaction_models.event_model import EventType as V1EventType
 
-from .models import HistorySummary, HistoryDetail, PaginationParams, HistoryListResponse
-from agent_c_api.api.v2.models.history_models import Event, EventFilter, ReplayStatus, ReplayControl
+from agent_c_api.api.v2.models.response_models import APIResponse, PaginatedResponse, PaginationMeta, APIStatus
+from agent_c_api.api.v2.models.history_models import (
+    Event, EventFilter, ReplayStatus, ReplayControl,
+    HistorySummary, HistoryDetail, PaginationParams, HistoryListResponse
+)
 from agent_c_api.api.v2.models.response_models import APIResponse, PaginatedResponse, PaginationMeta, APIStatus
 
 class HistoryService:

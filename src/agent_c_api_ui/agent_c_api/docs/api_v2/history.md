@@ -1,6 +1,6 @@
 # History API
 
-The History API provides access to session histories and their events. This allows you to list available session histories, retrieve details about specific sessions, and manage history data.
+The History API provides access to session histories and their events. This allows you to list available session histories, retrieve details about specific sessions, access and filter events, and manage history data.
 
 ## Endpoints
 
@@ -104,3 +104,159 @@ Delete a session history and all its files.
 #### Error Responses
 
 - `404 Not Found`: Session history not found or could not be deleted
+
+### Get Session Events
+
+```
+GET /api/v2/history/{session_id}/events
+```
+
+Get events for a specific session with filtering options.
+
+#### Path Parameters
+
+- `session_id` (UUID, required): The ID of the session
+
+#### Query Parameters
+
+- `event_types` (array of strings, optional): Filter by event types (e.g., `user_request`, `text_delta`)
+- `start_time` (datetime, optional): Filter events after this timestamp
+- `end_time` (datetime, optional): Filter events before this timestamp
+- `limit` (integer, default: 100): Maximum number of events to return (1-1000)
+
+#### Response
+
+```json
+{
+  "status": {
+    "success": true,
+    "message": null,
+    "error_code": null
+  },
+  "data": [
+    {
+      "id": "session-id-1",
+      "session_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "timestamp": "2023-01-01T12:00:00Z",
+      "event_type": "user_request",
+      "data": {
+        "role": "user",
+        "content": "Hello, agent",
+        "format": "text"
+      }
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "page_size": 100,
+    "total_items": 1,
+    "total_pages": 1
+  }
+}
+```
+
+#### Error Responses
+
+- `404 Not Found`: No events found for the session
+- `500 Internal Server Error`: Failed to retrieve events
+
+### Stream Session Events
+
+```
+GET /api/v2/history/{session_id}/stream
+```
+
+Stream events for a session, optionally in real-time. Returns a server-sent events (SSE) stream.
+
+#### Path Parameters
+
+- `session_id` (UUID, required): The ID of the session
+
+#### Query Parameters
+
+- `event_types` (array of strings, optional): Filter by event types
+- `real_time` (boolean, default: false): Replay events with original timing
+- `speed_factor` (float, default: 1.0): Speed multiplier for real-time replay (0.1-10.0)
+
+#### Response
+
+A text/event-stream response with JSON event data.
+
+#### Error Responses
+
+- `500 Internal Server Error`: Failed to stream events
+
+### Get Replay Status
+
+```
+GET /api/v2/history/{session_id}/replay
+```
+
+Get the current status of a session replay.
+
+#### Path Parameters
+
+- `session_id` (UUID, required): The ID of the session
+
+#### Response
+
+```json
+{
+  "status": {
+    "success": true,
+    "message": null,
+    "error_code": null
+  },
+  "data": {
+    "session_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "is_playing": true,
+    "current_position": "2023-01-01T12:00:10Z",
+    "start_time": "2023-01-01T12:00:00Z",
+    "end_time": "2023-01-01T12:30:00Z"
+  }
+}
+```
+
+#### Error Responses
+
+- `404 Not Found`: No active replay for the session
+- `500 Internal Server Error`: Failed to get replay status
+
+### Control Replay
+
+```
+POST /api/v2/history/{session_id}/replay
+```
+
+Control a session replay (play, pause, seek).
+
+#### Path Parameters
+
+- `session_id` (UUID, required): The ID of the session
+
+#### Request Body
+
+```json
+{
+  "action": "play",  // "play", "pause", or "seek"
+  "position": "2023-01-01T12:00:10Z",  // Required for "seek" action
+  "speed": 1.5  // Optional playback speed multiplier
+}
+```
+
+#### Response
+
+```json
+{
+  "status": {
+    "success": true,
+    "message": "Replay control 'play' successful",
+    "error_code": null
+  },
+  "data": true
+}
+```
+
+#### Error Responses
+
+- `500 Internal Server Error`: Failed to control replay

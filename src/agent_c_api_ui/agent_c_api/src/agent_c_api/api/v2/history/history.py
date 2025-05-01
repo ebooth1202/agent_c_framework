@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
 
 from agent_c_api.core.util.logging_utils import LoggingManager
-from .models import HistorySummary, HistoryDetail, PaginationParams, HistoryListResponse
+from agent_c_api.api.v2.models.history_models import HistorySummary, HistoryDetail, PaginationParams, HistoryListResponse
 from .services import HistoryService
 
 logging_manager = LoggingManager(__name__)
