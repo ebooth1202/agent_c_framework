@@ -25,9 +25,9 @@ This document tracks our detailed analysis of each component of the v1 API as we
 - [x] `/v1/chat.py` - Examined
 
 ### Session 4: File Management and LLM Models
-- [ ] `/v1/files.py` - Not yet examined
-- [ ] `/v1/llm_models/agent_params.py` - Examined (Part of Session 2)
-- [ ] `/v1/llm_models/tool_model.py` - Examined (Part of Session 2)
+- [x] `/v1/files.py` - Examined
+- [x] `/v1/llm_models/agent_params.py` - Examined
+- [x] `/v1/llm_models/tool_model.py` - Examined
 
 ### Session 5: Interactions Core
 - [ ] `/v1/interactions/interactions.py` - Not yet examined
@@ -384,6 +384,87 @@ The core functionality is the streaming chat, which allows real-time responses f
 - **Session and Agent Relationship**: The API endpoints in `/v1/agent.py` clearly demonstrate the tight coupling between sessions and agents, where agent operations always occur within a session context.
 
 - **Parameter Models and Agent Integration**: The parameter models defined in `/v1/llm_models/agent_params.py` show careful design to bridge between API requests and the specific requirements of different LLM backends, providing flexibility while maintaining a consistent API interface.
+
+#### `/v1/files.py`
+
+This file contains endpoints for file management within sessions:
+
+- **File Upload**:
+  - `upload_file`: Handles file uploads for a specific session
+    - Takes form parameters `ui_session_id` and a file attachment
+    - Verifies the session exists
+    - Saves the file and associates it with the session
+    - Sets the file handler on the agent if it doesn't already have one
+    - Processes the file in the background for text extraction
+    - Returns metadata about the uploaded file
+
+- **File Listing**:
+  - `get_session_files`: Lists all files for a specific session
+    - Takes a `ui_session_id` path parameter
+    - Verifies the session exists
+    - Returns detailed information about all files for the session
+
+- **File Retrieval**:
+  - `get_file`: Retrieves a specific file
+    - Takes `ui_session_id` and `file_id` path parameters
+    - Verifies the session exists
+    - Returns metadata about the requested file (missing actual file download functionality)
+
+- **File Deletion**:
+  - `delete_file`: Deletes a specific file
+    - Takes `ui_session_id` and `file_id` path parameters
+    - Verifies the session exists
+    - Deletes the file both from storage and from the session's file list
+    - Returns a success message
+
+The file also includes a background task for cleaning up expired files based on the retention policy (7 days). The endpoints consistently verify session existence before processing file operations, showing a clear tie between files and sessions. All file operations use appropriate error handling with HTTP status codes.
+
+Interestingly, the `get_file` endpoint appears to not actually return the file content, but only its metadata - which seems like a potential oversight.
+
+Review note: WE will rename this `get_file_meta`
+
+#### `/v1/llm_models/agent_params.py`
+
+This file contains Pydantic models for agent parameters:
+
+- **`AgentCommonParams`**:
+  - Base model with common agent parameters
+  - Fields include:
+    - `persona_name`: Name of the persona to use (defaults to "default")
+    - `custom_prompt`: Optional custom prompt for the persona
+    - `temperature`: Optional temperature parameter for chat models
+    - `reasoning_effort`: Optional reasoning effort parameter for OpenAI models
+    - `budget_tokens`: Optional budget tokens parameter for some Claude models
+
+- **`AgentUpdateParams`**:
+  - Extends `AgentCommonParams` to add session identification
+  - Adds `ui_session_id` field to identify which session to update
+
+- **`AgentInitializationParams`**:
+  - Extends `AgentCommonParams` with parameters for agent initialization
+  - Additional fields include:
+    - `model_name`: Required name of the model to use
+    - `backend`: Optional backend provider (default: "openai")
+    - `max_tokens`: Optional maximum tokens for model output
+    - `ui_session_id`: Optional existing session ID for transferring chat sessions
+  - Implements sophisticated validation and parameter transformation methods:
+    - `validate_and_set_defaults`: Sets appropriate defaults based on the selected model
+    - `to_agent_kwargs`: Maps parameters to the format expected by the underlying agent
+    - `to_additional_params`: Provides additional parameters for session creation
+
+The models in this file provide a structured approach to parameter validation and transformation, ensuring that the API receives well-formed requests and translates them appropriately for the underlying agent system. The validation logic is particularly sophisticated, handling different model types and their specific parameter requirements.
+
+#### `/v1/llm_models/tool_model.py`
+
+This file contains a single, simple model for tool updates:
+
+- **`ToolUpdateRequest`**:
+  - Basic model for tool update requests
+  - Fields include:
+    - `ui_session_id`: Session ID for the agent to update
+    - `tools`: List of tool identifiers to enable for the agent
+
+The minimal nature of this model reflects the simple structure of tool update requests, where only a session ID and a list of tool names are required.
 
 ## Design Recommendations
 
