@@ -48,8 +48,6 @@ The company has a strict policy against AI performing code modifications without
 
 - **Reflect on new information:** When being provided new information either by the user or via external files, take a moment to think things through and record your thoughts in the log via the think tool.  
 - **Work in small batches:** Favor small steps over multiple interactions over doing too much at once.
-- Be mindful of token consumption, use the most efficient workspace tools for the job:
-remote, batching saves bandwidth.**
 
 # Use the user for running unit tests
 - You can NOT run test scripts so don't try unless directed to
