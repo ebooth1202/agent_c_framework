@@ -30,16 +30,16 @@ This document tracks our detailed analysis of each component of the v1 API as we
 - [x] `/v1/llm_models/tool_model.py` - Examined
 
 ### Session 5: Interactions Core
-- [ ] `/v1/interactions/interactions.py` - Not yet examined
-- [ ] `/v1/interactions/events.py` - Not yet examined
-- [ ] `/v1/interactions/interacations_api_explanation.md` - Not yet examined
+- [x] `/v1/interactions/interactions.py` - Examined
+- [x] `/v1/interactions/events.py` - Examined
+- [x] `/v1/agent.py` - Re-examined in context of interaction components
 
 ### Session 6: Interactions Supporting Components
-- [ ] `/v1/interactions/interaction_models/event_model.py` - Not yet examined
-- [ ] `/v1/interactions/interaction_models/interaction_model.py` - Not yet examined
-- [ ] `/v1/interactions/services/event_service.py` - Not yet examined
-- [ ] `/v1/interactions/services/interaction_service.py` - Not yet examined
-- [ ] `/v1/interactions/utils/file_utils.py` - Not yet examined
+- [x] `/v1/interactions/interaction_models/event_model.py` - Examined during Session 5
+- [x] `/v1/interactions/interaction_models/interaction_model.py` - Examined during Session 5
+- [x] `/v1/interactions/services/event_service.py` - Examined during Session 5
+- [x] `/v1/interactions/services/interaction_service.py` - Examined during Session 5
+- [x] `/v1/interactions/utils/file_utils.py` - Examined during Session 5
 
 ### Session 7: API Structure and Support
 - [ ] `/v1/__init__.py` - Not yet examined
@@ -465,6 +465,104 @@ This file contains a single, simple model for tool updates:
     - `tools`: List of tool identifiers to enable for the agent
 
 The minimal nature of this model reflects the simple structure of tool update requests, where only a session ID and a list of tool names are required.
+
+#### `/v1/interactions/interactions.py`
+
+This file implements an API router for managing chat interaction logs:
+
+- **Interaction Listing**:
+  - `list_sessions`: Lists all available interaction sessions with pagination and sorting
+    - Takes optional query parameters for pagination (`limit`, `offset`) and sorting (`sort_by`, `sort_order`)
+    - Returns a list of `InteractionSummary` objects with basic information about each session
+
+- **Interaction Retrieval**:
+  - `get_session`: Gets detailed information about a specific interaction session
+    - Takes a `session_id` path parameter
+    - Returns an `InteractionDetail` object with comprehensive information including files, event types, metadata, etc.
+
+- **Session Files Retrieval**:
+  - `get_session_files`: Gets a list of all JSONL files associated with a specific session
+    - Takes a `session_id` path parameter
+    - Returns a list of file names
+
+- **Session Deletion**:
+  - `delete_session`: Deletes a session directory and all its files
+    - Takes a `session_id` path parameter
+    - Returns a success status message
+
+The router uses the `InteractionService` for session operations, abstracting the underlying storage and retrieval logic. It primarily provides read access to historical chat interactions, with the exception of the delete operation. The routes follow RESTful conventions more closely than some other parts of the API.
+
+#### `/v1/interactions/events.py`
+
+This file implements an API router for working with individual events within interaction sessions:
+
+- **Event Retrieval**:
+  - `get_events`: Retrieves events for a specific session with filtering options
+    - Takes a `session_id` path parameter and optional query parameters for filtering (`event_types`, `start_time`, `end_time`, `limit`)
+    - Returns a list of `Event` objects
+
+- **Event Streaming**:
+  - `stream_events`: Streams events for a specific session, optionally in real-time
+    - Takes a `session_id` path parameter and optional query parameters for filtering and playback options (`event_types`, `real_time`, `speed_factor`)
+    - Returns a streaming response with server-sent events
+
+- **Replay Status**:
+  - `get_replay_status`: Gets the current status of a session replay
+    - Takes a `session_id` path parameter
+    - Returns the current replay status (position, playing/paused, etc.)
+
+- **Replay Control**:
+  - `control_replay`: Controls a session replay (play, pause, stop, seek)
+    - Takes a `session_id` path parameter and a `ReplayControlRequest` body
+    - Returns a success status with the action performed
+
+This router is focused on the detailed events within a session, particularly for replay and analysis purposes. It works with the `EventService` for event operations. The streaming capabilities are notable, allowing for real-time replay of session events at adjustable speeds.
+
+#### `/v1/interactions/interaction_models`
+
+This directory contains models for interaction data:
+
+- **`event_model.py`**:
+  - `ReplayControlRequest`: Model for controlling replay operations (play, pause, stop, seek)
+  - `EventType`: Enum of possible event types (system_prompt, completion, thought_delta, etc.)
+  - `Event`: Comprehensive model for individual interaction events with timestamps, content, and metadata
+
+- **`interaction_model.py`**:
+  - `InteractionSummary`: Basic model for session summary information (ID, timestamps, counts)
+  - `InteractionDetail`: Extended model with detailed session information (files, event types, metadata, etc.)
+
+These models provide a structured representation of interaction data, supporting both summary-level viewing of sessions and detailed examination of individual events.
+
+#### `/v1/interactions/services`
+
+This directory contains service classes that implement the business logic for interaction operations:
+
+- **`event_service.py`**:
+  - `EventService`: Manages event-related operations:
+    - Retrieving filtered events from session files
+    - Streaming events with real-time timing options
+    - Controlling replay operations (play, pause, stop, seek)
+    - Creating structured Event objects from raw data
+
+- **`interaction_service.py`**:
+  - `InteractionService`: Manages session-level operations:
+    - Listing sessions with pagination and sorting
+    - Retrieving detailed session information
+    - Getting files associated with a session
+    - Deleting sessions and their files
+    - Reading and parsing JSONL log files
+
+These services abstract the storage details and provide a clean interface for the API routers to work with. They handle the complexities of file operations, JSON parsing, and data transformation.
+
+#### `/v1/interactions/utils`
+
+This directory contains utility functions for working with interaction files:
+
+- **`file_utils.py`**:
+  - `get_session_directory`: Gets the path to the sessions directory
+  - `read_jsonl_file`: Reads and parses a JSONL file into a list of dictionaries
+
+These utilities provide basic file operations for the interaction services, particularly for locating and reading session log files.
 
 ## Design Recommendations
 
