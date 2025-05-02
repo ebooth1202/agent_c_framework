@@ -14,7 +14,7 @@ This document outlines the specific changes we'll make for the second implementa
 # src/agent_c_api/api/v2/models/session_models.py
 from typing import Dict, List, Optional, Any
 from datetime import datetime
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 from uuid import UUID
 
 from .response_models import APIStatus
@@ -63,7 +63,7 @@ class SessionCreateResponse(BaseModel):
 ```python
 # src/agent_c_api/api/v2/models/agent_models.py
 from typing import Dict, List, Optional, Any, Union
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 
 class ModelParameter(BaseModel):
     """LLM model parameter"""
@@ -111,7 +111,7 @@ class PersonaInfo(BaseModel):
 ```python
 # src/agent_c_api/api/v2/models/tool_models.py
 from typing import Dict, List, Optional, Any, Union
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 
 class ToolParameter(BaseModel):
     """Tool parameter definition"""
@@ -170,7 +170,8 @@ class ToolResult(BaseModel):
 # src/agent_c_api/api/v2/models/chat_models.py
 from typing import Dict, List, Optional, Any, Union, Literal
 from datetime import datetime
-from pydantic import BaseModel, Field, validator
+from enum import Enum
+from pydantic import BaseModel, Field, field_validator
 from uuid import UUID
 
 from .tool_models import ToolCall, ToolResult
@@ -182,15 +183,17 @@ class ChatMessageContent(BaseModel):
     file_id: Optional[str] = Field(None, description="File ID for file content")
     mime_type: Optional[str] = Field(None, description="MIME type for file content")
     
-    @validator('text')
-    def text_required_for_text_type(cls, v, values):
-        if values.get('type') == 'text' and v is None:
+    @field_validator('text')
+    @classmethod
+    def text_required_for_text_type(cls, v: Optional[str], info) -> Optional[str]:
+        if info.data.get('type') == 'text' and v is None:
             raise ValueError('text is required when type is text')
         return v
         
-    @validator('file_id')
-    def file_id_required_for_file_types(cls, v, values):
-        if values.get('type') in ['image', 'file'] and v is None:
+    @field_validator('file_id')
+    @classmethod
+    def file_id_required_for_file_types(cls, v: Optional[str], info) -> Optional[str]:
+        if info.data.get('type') in ['image', 'file'] and v is None:
             raise ValueError('file_id is required when type is image or file')
         return v
 
@@ -208,7 +211,7 @@ class ChatRequest(BaseModel):
     message: ChatMessage = Field(..., description="Message to send")
     stream: bool = Field(True, description="Whether to stream the response")
 
-class ChatEventType(str):
+class ChatEventType(str, Enum):
     """Types of events during a chat interaction"""
     MESSAGE_START = "message_start"
     MESSAGE_TEXT = "message_text"
@@ -232,7 +235,7 @@ class ChatEvent(BaseModel):
 # src/agent_c_api/api/v2/models/file_models.py
 from typing import Dict, List, Optional, Any
 from datetime import datetime
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 from uuid import UUID
 
 class FileMeta(BaseModel):
@@ -261,7 +264,7 @@ class FileUploadResponse(BaseModel):
 # src/agent_c_api/api/v2/models/history_models.py
 from typing import Dict, List, Optional, Any, Union, Literal
 from datetime import datetime
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 from uuid import UUID
 
 from .chat_models import ChatMessage
@@ -305,7 +308,43 @@ class ReplayControl(BaseModel):
     speed: Optional[float] = Field(None, description="Playback speed multiplier (for play action)")
 ```
 
-### 7. Create Model Tests
+### 7. Create Response Models
+
+**File**: `/api/v2/models/response_models.py`
+
+```python
+# src/agent_c_api/api/v2/models/response_models.py
+from typing import Dict, List, Optional, Any, Generic, TypeVar
+from pydantic import BaseModel, Field
+
+T = TypeVar('T')
+
+class APIStatus(BaseModel):
+    """Standard API response status"""
+    success: bool = Field(True, description="Whether the request was successful")
+    message: Optional[str] = Field(None, description="Status message")
+    error_code: Optional[str] = Field(None, description="Error code if unsuccessful")
+
+class APIResponse(Generic[T], BaseModel):
+    """Standard API response wrapper"""
+    status: APIStatus = Field(default_factory=APIStatus, description="Response status")
+    data: Optional[T] = Field(None, description="Response data")
+
+class PaginationMeta(BaseModel):
+    """Metadata for paginated responses"""
+    page: int = Field(..., description="Current page number")
+    page_size: int = Field(..., description="Items per page")
+    total_items: int = Field(..., description="Total number of items")
+    total_pages: int = Field(..., description="Total number of pages")
+
+class PaginatedResponse(Generic[T], BaseModel):
+    """Paginated API response wrapper"""
+    status: APIStatus = Field(default_factory=APIStatus, description="Response status")
+    data: List[T] = Field(default_factory=list, description="Page of items")
+    pagination: PaginationMeta = Field(..., description="Pagination metadata")
+```
+
+### 8. Create Model Tests
 
 Create tests for the new models to ensure they validate correctly.
 
