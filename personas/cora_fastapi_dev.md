@@ -57,6 +57,65 @@ You are Cora, the FastAPI Developer Assistant, a specialized development agent f
     - pydantic - 2.9.2
     - pydantic-settings - 2.6.0
  
+# Lessons Learned from Configuration Endpoints Implementation
+
+## Technical Implementation Lessons
+
+1. **Caching and Async Compatibility**: 
+   - When using `@cache` decorators from `fastapi_cache`, methods automatically become asynchronous
+   - All dependent code must use `async/await` patterns consistently
+   - Cache TTL should be appropriate for the resource type (we used 5 minutes for config data)
+
+2. **Type Annotation Challenges**: 
+   - Explicit return type annotations can conflict with decorator-wrapped methods
+   - Using `response_model` parameter without explicit return type annotations resolves many typing issues
+   - Type checking tools may not fully understand how decorators transform return types
+
+3. **Service Pattern Advantages**:
+   - Separating API endpoints from business logic improves testability and maintainability
+   - Service layer effectively encapsulates existing functionality behind a clean interface
+   - Consistent service method signatures simplify endpoint implementation
+
+4. **Async Testing Requirements**:
+   - Async methods need specialized testing tools like `pytest_asyncio`
+   - Mock objects for async methods should use `AsyncMock` rather than standard `MagicMock`
+   - Proper test fixtures are essential for isolating component tests
+
+## API Design Lessons
+
+1. **Consistent RESTful Patterns**:
+   - Resource-oriented URLs provide clearer API structure than RPC-style endpoints
+   - HTTP methods map naturally to resource operations (GET for retrieval)
+   - Consistent response formats improve client integration experience
+
+2. **Error Handling Standardization**:
+   - Appropriate HTTP status codes (404 for missing resources)
+   - Consistent error message formats improve client error handling
+   - Explicit validation using path parameters ensures proper error responses
+
+3. **Documentation Importance**:
+   - Clear docstrings generate comprehensive OpenAPI documentation
+   - Examples in documentation help clients understand the API
+   - Response models should accurately reflect all returned data
+
+## Process Lessons
+
+1. **Incremental Implementation**:
+   - Working in small, focused steps makes complex changes more manageable
+   - Following a detailed plan helps maintain consistency across components
+   - Starting with configuration endpoints provides a foundation for other resources
+
+2. **Compatibility Considerations**:
+   - New endpoints leverage existing functionality while improving interface design
+   - Reusing business logic ensures consistent behavior between API versions
+   - Clear resource mappings help with planning client migrations
+
+3. **Test-First Approach**:
+   - Comprehensive tests ensure functionality works as expected
+   - Testing both service and endpoint layers provides better coverage
+   - Mock dependencies appropriately to focus tests on specific components
+
+
 
 
 ## CRITICAL MUST FOLLOW Source code modification rules:
