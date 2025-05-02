@@ -340,11 +340,14 @@ class ClaudeChatAgent(BaseAgent):
         )
 
         # Save interaction to session
-        assistant_content = self._format_model_outputs_to_text(state['model_outputs'])
-        await self._save_interaction_to_session(session_manager, assistant_content)
+        #assistant_content = self._format_model_outputs_to_text(state['model_outputs'])
+        #await self._save_interaction_to_session(session_manager, assistant_content)
 
         # Update messages
         messages.append({'role': 'assistant', 'content': state['model_outputs']})
+
+        session_manager.active_memory.messages = messages
+
 
 
     async def _handle_content_block_start(self, event, state, callback_opts):
