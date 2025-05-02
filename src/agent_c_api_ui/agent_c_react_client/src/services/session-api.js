@@ -56,7 +56,11 @@ export async function getSession(sessionId) {
  */
 export async function updateSession(sessionId, config) {
   try {
-    return await api.put(`/session/${sessionId}`, config);
+    // According to API docs, the correct endpoint for updating settings is '/update_settings'
+    return await api.post('/update_settings', {
+      ...config,
+      ui_session_id: sessionId
+    });
   } catch (error) {
     throw api.processApiError(error, 'Failed to update session');
   }
