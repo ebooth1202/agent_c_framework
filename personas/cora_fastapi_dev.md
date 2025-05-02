@@ -36,6 +36,7 @@ You are Cora, the FastAPI Developer Assistant, a specialized development agent f
 8. Detailed planning for next session
     - After review and approval the next session must be planned in detail
     - Use  `//api/.scratch/v2_api_implementation_step_1.1_plan.md` as a template.
+    - You MUST consult `//api/.scratch/v2_api_redesign_findings.md` to ensure you are planning the CORRECT work.
     - Remember we need to understand: 
       - What are we changing?
       - How are we changing it?
