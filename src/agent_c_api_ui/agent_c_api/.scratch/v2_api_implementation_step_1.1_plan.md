@@ -340,4 +340,4 @@ All of these changes are non-disruptive to the existing API and create the scaff
 
 ## Next Steps After Approval
 
-Once this foundation is approved and implemented, we'll move to implementing the core models and the first set of endpoints (configuration resources) as outlined in our implementation plan.
+Once this foundation is approved and implemented, we'll move to planning the implementation session for the core models and the first set of endpoints (configuration resources) as outlined in our implementation plan.
