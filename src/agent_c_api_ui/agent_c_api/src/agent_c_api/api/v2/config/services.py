@@ -1,10 +1,12 @@
 import os
-from typing import List, Dict, Optional, Any
+import glob
+from typing import Optional
 from fastapi_cache.decorator import cache
 
-from agent_c_api.config.config_loader import get_config_value
-from agent_c_api.core.agent_manager import get_available_models, get_available_personas
-from agent_c_api.core.setup import get_available_tools
+from agent_c import Toolset
+from agent_c_api.config.config_loader import MODELS_CONFIG
+from agent_c_api.config.env_config import settings
+from agent_c_api.core.agent_manager import UItoAgentBridgeManager
 
 from .models import (
     ModelInfo, PersonaInfo, ToolInfo, ModelParameter, ToolParameter,
@@ -20,15 +22,18 @@ class ConfigService:
         Get available models using the existing configuration mechanism
         """
         # Using the same approach as in v1/models.py
-        models_config = get_config_value("MODELS_CONFIG", {})
         model_list = []
         
         # Process models in the same format as v1 API
-        for vendor, vendor_models in models_config.items():
-            for model_id, model_data in vendor_models.items():
+        if not MODELS_CONFIG:
+            return ModelsResponse(models=[])
+            
+        for vendor in MODELS_CONFIG.get("vendors", []):
+            vendor_name = vendor.get("vendor")
+            for model in vendor.get("models", []):
                 # Transform to our v2 model format
                 parameters = []
-                for param_name, param_data in model_data.get("parameters", {}).items():
+                for param_name, param_data in model.get("parameters", {}).items():
                     parameters.append(ModelParameter(
                         name=param_name,
                         type=param_data.get("type", "string"),
@@ -37,13 +42,13 @@ class ConfigService:
                     ))
                 
                 model_info = ModelInfo(
-                    id=model_id,
-                    name=model_data.get("label", model_id),
-                    provider=vendor,
-                    description=model_data.get("description", ""),
-                    capabilities=model_data.get("capabilities", []),
+                    id=model["id"],
+                    name=model.get("ui_name", model["id"]),
+                    provider=vendor_name,
+                    description=model.get("description", ""),
+                    capabilities=model.get("capabilities", []),
                     parameters=parameters,
-                    allowed_inputs=model_data.get("allowed_inputs", [])
+                    allowed_inputs=model.get("allowed_inputs", [])
                 )
                 model_list.append(model_info)
         
@@ -66,16 +71,33 @@ class ConfigService:
         Get available personas using the existing file-based mechanism
         """
         # Using the same approach as in v1/personas.py
-        personas = get_available_personas()
         persona_list = []
+        persona_dir = settings.PERSONA_DIR
         
-        for persona in personas:
+        # Ensure directory exists
+        if not os.path.isdir(persona_dir):
+            return PersonasResponse(personas=[])
+            
+        # Get all .md files in personas directory
+        for file_path in glob.glob(os.path.join(persona_dir, "**/*.md"), recursive=True):
+            rel_path = os.path.relpath(file_path, persona_dir)
+            name_with_path: str  = rel_path[:-3]
+            # Replace directory separators with desired character (e.g., '_' or '/')
+            name = name_with_path.replace(os.sep, ' - ')
+            
+            # Read persona content
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+            except Exception as e:
+                continue
+                
             persona_info = PersonaInfo(
-                id=persona.get("id", ""),
-                name=persona.get("name", ""),
-                description=persona.get("description", ""),
-                file_path=persona.get("file_path", ""),
-                content=persona.get("content", "")
+                id=name,  # Use the name as the ID
+                name=name,
+                description="",  # No description available in v1 implementation
+                file_path=file_path,
+                content=content
             )
             persona_list.append(persona_info)
         
@@ -98,36 +120,44 @@ class ConfigService:
         Get available tools using the existing tool discovery mechanism
         """
         # Using the same approach as in v1/tools.py
-        tools_data = get_available_tools()
         tool_list = []
         categories = set()
         essential_tools = []
         
-        for tool in tools_data:
-            # Extract category
-            category = tool.get("category", "general")
+        # Categories mapping similar to v1 implementation
+        category_mapping = {
+            'agent_c_tools': 'Core Tools',
+            'agent_c_demo': 'Demo Tools',
+            'agent_c_voice': 'Voice Tools',
+            'agent_c_rag': 'RAG Tools'
+        }
+        
+        # Get all tools from the Toolset registry
+        for tool_class in Toolset.tool_registry:
+            # Determine category based on module name
+            category = "General"
+            for module_prefix, category_name in category_mapping.items():
+                if tool_class.__module__.startswith(module_prefix):
+                    category = category_name
+                    break
+                    
             categories.add(category)
             
-            # Check if essential
-            is_essential = tool.get("essential", False)
+            # Check if tool is essential
+            is_essential = tool_class.__name__ in UItoAgentBridgeManager.ESSENTIAL_TOOLS
             if is_essential:
-                essential_tools.append(tool.get("id", ""))
+                essential_tools.append(tool_class.__name__)
             
-            # Process parameters
+            # Get parameters from tool class (simplified approach)
             parameters = []
-            for param in tool.get("parameters", []):
-                parameters.append(ToolParameter(
-                    name=param.get("name", ""),
-                    type=param.get("type", "string"),
-                    description=param.get("description", ""),
-                    required=param.get("required", False)
-                ))
+            # For now, we don't have easy access to parameter info
+            # This would require inspecting the tool class more thoroughly
             
             # Create tool info
             tool_info = ToolInfo(
-                id=tool.get("id", ""),
-                name=tool.get("name", ""),
-                description=tool.get("description", ""),
+                id=tool_class.__name__,
+                name=tool_class.__name__,
+                description=tool_class.__doc__ or "",
                 category=category,
                 parameters=parameters,
                 is_essential=is_essential
