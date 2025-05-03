@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
  
 # Copy package files
 COPY src/agent_c_api_ui/agent_c_react_client/package*.json ./
+COPY src/agent_c_api_ui/agent_c_react_client/scripts ./scripts/
  
 # Workaround for the rollup dependency issue by creating a dummy module
 RUN mkdir -p node_modules/@rollup/rollup-linux-x64-gnu && \
