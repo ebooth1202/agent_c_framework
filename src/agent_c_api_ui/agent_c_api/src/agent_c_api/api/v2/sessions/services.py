@@ -1,13 +1,22 @@
 from datetime import datetime
-from typing import Optional, Any
+from typing import Optional, Any, Dict
 
 from fastapi import Depends, HTTPException
 
 from agent_c_api.api.dependencies import get_agent_manager
 from agent_c_api.core.agent_manager import UItoAgentBridgeManager
+import structlog
 
-
-from .models import SessionCreate, SessionDetail, SessionListResponse, SessionSummary, SessionUpdate
+from .models import (
+    SessionCreate, 
+    SessionDetail, 
+    SessionListResponse, 
+    SessionSummary, 
+    SessionUpdate,
+    AgentConfig,
+    AgentUpdate,
+    AgentUpdateResponse
+)
 
 
 class SessionService:
@@ -15,6 +24,7 @@ class SessionService:
 
     def __init__(self, agent_manager: UItoAgentBridgeManager = Depends(get_agent_manager)):
         self.agent_manager = agent_manager
+        self.logger = structlog.get_logger(__name__)
 
     async def create_session(self, session_data: SessionCreate) -> SessionDetail:
         """Create a new session
@@ -38,7 +48,7 @@ class SessionService:
                 "max_tokens": session_data.max_tokens,
             }
             
-            additional_params: dict[str, Any] = {
+            additional_params: Dict[str, Any] = {
                 "persona_name": session_data.persona_id,
                 "custom_prompt": session_data.custom_prompt,
             }
@@ -84,6 +94,7 @@ class SessionService:
                 custom_prompt=session_data.get("custom_prompt"),
             )
         except Exception as e:
+            self.logger.error("create_session_failed", error=str(e))
             raise HTTPException(status_code=500, detail=f"Failed to create session: {str(e)}")
 
     async def get_sessions(self, limit: int = 10, offset: int = 0) -> SessionListResponse:
@@ -226,6 +237,7 @@ class SessionService:
             # Return updated session details
             return await self.get_session(session_id)
         except Exception as e:
+            self.logger.error("update_session_failed", session_id=session_id, error=str(e))
             raise HTTPException(status_code=500, detail=f"Failed to update session: {str(e)}")
 
     async def delete_session(self, session_id: str) -> bool:
@@ -246,7 +258,120 @@ class SessionService:
             await self.agent_manager.cleanup_session(session_id)
             return True
         except Exception as e:
-            # Log the error but still return False
-            import logging
-            logging.error(f"Error deleting session {session_id}: {str(e)}")
+            self.logger.error("delete_session_failed", session_id=session_id, error=str(e))
             return False
+
+    async def get_agent_config(self, session_id: str) -> Optional[AgentConfig]:
+        """Get agent configuration for a session
+        
+        Args:
+            session_id: ID of the session
+            
+        Returns:
+            AgentConfig: Agent configuration if found, None otherwise
+        """
+        # Check if session exists
+        session_data = self.agent_manager.get_session_data(session_id)
+        if not session_data:
+            return None
+            
+        # Get the agent directly from session data
+        agent = session_data.get("agent")
+        if not agent:
+            return None
+            
+        # Get agent configuration using the agent's method
+        agent_config = agent._get_agent_config()
+        if not agent_config:
+            return None
+            
+        # Extract model parameters from agent_parameters
+        agent_params = agent_config.get("agent_parameters", {})
+            
+        # Convert to AgentConfig model
+        return AgentConfig(
+            model_id=agent_config.get("model_name", ""),
+            persona_id=agent_config.get("persona_name", "default"),
+            custom_prompt=agent_config.get("custom_prompt"),
+            temperature=agent_params.get("temperature"),
+            reasoning_effort=agent_params.get("reasoning_effort"),
+            budget_tokens=agent_params.get("budget_tokens"),
+            max_tokens=agent_params.get("max_tokens"),
+            tools=agent_config.get("initialized_tools", [])
+        )
+    
+    async def update_agent_config(self, session_id: str, update_data: AgentUpdate) -> Optional[AgentUpdateResponse]:
+        """Update agent configuration for a session
+        
+        Args:
+            session_id: ID of the session
+            update_data: New agent configuration parameters
+            
+        Returns:
+            AgentUpdateResponse: Response with updated configuration and change details,
+                              or None if session not found
+        """
+        # Check if session exists
+        session_data = self.agent_manager.get_session_data(session_id)
+        if not session_data:
+            return None
+            
+        # Get the agent directly from session data
+        agent = session_data.get("agent")
+        if not agent:
+            return None
+            
+        # Create a dictionary with only the fields that were provided in the update_data
+        updates = update_data.model_dump(exclude_unset=True, exclude_none=True)
+        
+        # Map persona_id to persona_name if it exists
+        if "persona_id" in updates:
+            updates["persona_name"] = updates.pop("persona_id")
+        
+        # Helper function for safe string conversion and truncation
+        def safe_truncate(val, length=10):
+            if val is None:
+                return "None"
+            val_str = str(val)
+            return val_str[:length] + "..." if len(val_str) > length else val_str
+        
+        changes_applied = {}
+        changes_skipped = {}
+        needs_agent_reinitialization = False
+        
+        # Update each parameter that exists in the update payload
+        for key, value in updates.items():
+            if key in ["temperature", "reasoning_effort", "budget_tokens", "max_tokens", "custom_prompt", "persona_name"]:
+                # Only update if value is not None
+                if value is not None:
+                    # Record the change
+                    old_value = getattr(agent, key, None)
+                    
+                    # Update only attributes that changed
+                    if old_value != value:
+                        setattr(agent, key, value)
+                        changes_applied[key] = {
+                            "from": safe_truncate(old_value),
+                            "to": safe_truncate(value)
+                        }
+                        needs_agent_reinitialization = True
+                else:
+                    changes_skipped[key] = "Value is None"
+            else:
+                changes_skipped[key] = "Invalid parameter"
+        
+        # Reinitialize the agent if needed
+        if needs_agent_reinitialization:
+            await agent.initialize_agent_parameters()
+        
+        # Get updated agent configuration
+        updated_config = await self.get_agent_config(session_id)
+        if not updated_config:
+            return None
+        
+        # Return update response
+        return AgentUpdateResponse(
+            agent_config=updated_config,
+            changes_applied=changes_applied,
+            changes_skipped=changes_skipped
+        )

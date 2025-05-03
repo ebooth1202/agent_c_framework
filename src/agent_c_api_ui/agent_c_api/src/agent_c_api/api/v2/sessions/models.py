@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 from pydantic import BaseModel, Field
 
@@ -57,3 +57,32 @@ class SessionListResponse(BaseModel):
     total: int = Field(..., description="Total number of sessions")
     limit: int = Field(..., description="Maximum number of items per page")
     offset: int = Field(..., description="Current offset in the full result set")
+
+
+class AgentConfig(BaseModel):
+    """Detailed agent configuration information"""
+    model_id: str = Field(..., description="ID of the LLM model being used")
+    persona_id: str = Field(..., description="ID of the persona being used")
+    custom_prompt: Optional[str] = Field(None, description="Custom prompt overriding the persona")
+    temperature: Optional[float] = Field(None, description="Temperature parameter for the model")
+    reasoning_effort: Optional[int] = Field(None, description="Reasoning effort parameter (for OpenAI)")
+    budget_tokens: Optional[int] = Field(None, description="Budget tokens parameter (for Claude)")
+    max_tokens: Optional[int] = Field(None, description="Maximum tokens for model output")
+    tools: List[str] = Field(default_factory=list, description="List of enabled tool IDs")
+
+
+class AgentUpdate(BaseModel):
+    """Model for updating agent configuration"""
+    persona_id: Optional[str] = Field(None, description="ID of the persona to use")
+    custom_prompt: Optional[str] = Field(None, description="Custom prompt overriding the persona")
+    temperature: Optional[float] = Field(None, ge=0.0, le=1.0, description="Temperature parameter for the model")
+    reasoning_effort: Optional[int] = Field(None, ge=0, le=10, description="Reasoning effort parameter (for OpenAI)")
+    budget_tokens: Optional[int] = Field(None, ge=0, description="Budget tokens parameter (for Claude)")
+    max_tokens: Optional[int] = Field(None, ge=0, description="Maximum tokens for model output")
+
+
+class AgentUpdateResponse(BaseModel):
+    """Response for agent configuration updates"""
+    agent_config: AgentConfig = Field(..., description="Updated agent configuration")
+    changes_applied: Dict[str, Any] = Field(default_factory=dict, description="Changes that were applied")
+    changes_skipped: Dict[str, Any] = Field(default_factory=dict, description="Changes that were skipped")
