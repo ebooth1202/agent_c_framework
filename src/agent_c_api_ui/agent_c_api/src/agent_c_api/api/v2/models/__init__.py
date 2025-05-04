@@ -9,3 +9,4 @@ from .tool_models import *
 from .chat_models import *
 from .file_models import *
 from .history_models import *
+from .debug_models import *

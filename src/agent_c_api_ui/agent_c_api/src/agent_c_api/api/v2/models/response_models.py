@@ -1,5 +1,5 @@
 # src/agent_c_api/api/v2/models/response_models.py
-from typing import Any, Dict, Generic, List, Optional, TypeVar, Union
+from typing import Generic, List, Optional, TypeVar
 from pydantic import BaseModel, Field
 
 T = TypeVar('T')

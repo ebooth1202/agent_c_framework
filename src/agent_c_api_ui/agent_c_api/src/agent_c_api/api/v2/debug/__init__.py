@@ -3,7 +3,7 @@ from fastapi import APIRouter
 
 router = APIRouter(prefix="/debug")
 
-# These will be included as they're implemented
-# from .debug import router as debug_router
+# Include the debug router
+from .debug import router as debug_router
 
-# router.include_router(debug_router)
+router.include_router(debug_router)
