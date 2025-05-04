@@ -133,7 +133,7 @@ class BaseAgent:
     @staticmethod
     async def _save_message_to_session(mgr: ChatSessionManager, text: str, role: str):
         if mgr is not None:
-            msg = MemoryMessage(role=role, content=text)
+            msg =  {'role':role, 'content': text}
 
             await mgr.add_message(msg)
 

@@ -17,6 +17,7 @@ import {
 import { ThemeToggle } from './ui/theme-toggle';
 import { Separator } from './ui/separator';
 import { cn } from '../lib/utils';
+import {Icon} from "@/components/ui/icon";
 
 /**
  * Main application sidebar using shadcn/ui Sidebar component
@@ -31,10 +32,10 @@ const AppSidebar = ({ children, defaultOpen = true, collapsible = "icon" }) => {
 
   // Application navigation links with icons
   const navLinks = [
-    { path: '/chat', label: 'Chat', icon: <PanelLeft className="mr-2" size={18} /> },
-    { path: '/rag', label: 'RAG', icon: <Database className="mr-2" size={18} /> },
-    { path: '/interactions', label: 'Event Logs', icon: <History className="mr-2" size={18} /> },
-    { path: '/settings', label: 'Settings', icon: <Settings className="mr-2" size={18} /> },
+    { path: '/chat', label: 'Chat', icon: <span className="mr-3 ml-2"><Icon icon="fa-thin fa-messages" hoverIcon="fa-solid fa-messages" size="lg" /></span> },
+    { path: '/rag', label: 'RAG', icon: <span className="mr-3 ml-2"><Icon icon="fa-thin fa-file-circle-plus" hoverIcon="fa-solid fa-file-circle-plus" size="lg" /></span> },
+    { path: '/interactions', label: 'Event Logs', icon: <span className="mr-3 ml-2"><Icon icon="fa-thin fa-list-timeline" hoverIcon="fa-solid fa-list-timeline" size="lg" /></span> },
+    { path: '/settings', label: 'Settings', icon:<span className="mr-3 ml-2"><Icon icon="fa-thin fa-gears" hoverIcon="fa-solid fa-list-gears" size="lg" /></span> },
   ];
 
   // Check if a path is the current active route
@@ -45,7 +46,7 @@ const AppSidebar = ({ children, defaultOpen = true, collapsible = "icon" }) => {
       <div className="sidebar-layout">
         <Sidebar collapsible={collapsible}>
           <SidebarHeader className="flex justify-start">
-            <div className="sidebar-logo flex gap-2">
+            <div className="sidebar-logo flex ">
               <SidebarTrigger />
               <h2 className="text-lg font-semibold sidebar-title">Agent C</h2>
             </div>

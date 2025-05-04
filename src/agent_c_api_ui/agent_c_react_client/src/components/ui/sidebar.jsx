@@ -21,6 +21,7 @@ import {
   TooltipTrigger,
 } from "./tooltip"
 import { ViewVerticalIcon } from "@radix-ui/react-icons"
+import {Icon} from "@/components/ui/icon";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
@@ -228,7 +229,7 @@ const SidebarTrigger = React.forwardRef(({ className, onClick, ...props }, ref) 
         toggleSidebar()
       }}
       {...props}>
-      <ViewVerticalIcon />
+      <span className="mr-2"><Icon icon="fa-thin fa-left-to-bracket" hoverIcon="fa-solid fa-left-to-bracket" size="lg" /></span>
       <span className="sr-only">Toggle Sidebar</span>
     </Button>
   );
@@ -293,7 +294,7 @@ const SidebarHeader = React.forwardRef(({ className, ...props }, ref) => {
     <div
       ref={ref}
       data-sidebar="header"
-      className={cn("flex flex-col gap-2 p-2", className)}
+      className={cn("flex flex-col gap-2 ", className)}
       {...props} />
   );
 })
