@@ -224,9 +224,73 @@ We'll follow these general principles:
 - Write comprehensive tests
 - Document endpoints with OpenAPI annotations
 
-## Phase 4: Chat and Files (Week 4)
+## Phase 4: History and Replay (Week 4)
 
-### 4.1 Chat Functionality
+### 4.1 History Management
+
+**What**: Implement session history management endpoints
+
+**How**:
+
+- Create RESTful endpoints for listing and accessing session histories
+- Leverage existing interaction service logic
+- Enhance filtering and pagination capabilities
+
+**Why**: Provides access to past interactions for analysis
+
+**Tasks**:
+
+- Create `/api/v2/history/history.py` module
+- Implement GET /api/v2/history endpoint (list available histories)
+- Implement GET /api/v2/history/{session_id} endpoint (get summary)
+- Implement DELETE /api/v2/history/{session_id} endpoint (delete history)
+- Write comprehensive tests
+- Document endpoints with OpenAPI annotations
+
+### 4.2 Event Access
+
+**What**: Implement event access endpoints
+
+**How**:
+
+- Create RESTful endpoints for retrieving events with filtering
+- Leverage existing event service logic
+- Enhance filtering and pagination capabilities
+
+**Why**: Provides detailed access to interaction events
+
+**Tasks**:
+
+- Create `/api/v2/history/events.py` module
+- Implement GET /api/v2/history/{session_id}/events endpoint (with filtering)
+- Implement GET /api/v2/history/{session_id}/stream endpoint (SSE streaming)
+- Write comprehensive tests
+- Document endpoints with OpenAPI annotations
+
+### 4.3 Replay Control
+
+**What**: Implement replay control endpoints
+
+**How**:
+
+- Create RESTful endpoints for controlling session replay
+- Leverage existing replay logic
+- Ensure proper state management
+
+**Why**: Allows clients to replay interactions with playback controls
+
+**Tasks**:
+
+- Create `/api/v2/history/replay.py` module
+- Implement GET /api/v2/history/{session_id}/replay endpoint (get status)
+- Implement POST /api/v2/history/{session_id}/replay endpoint (control replay)
+- Write comprehensive tests
+- Document endpoints with OpenAPI annotations
+
+
+## Phase 5: Chat and Files (Week 5)
+
+### 5.1 Chat Functionality
 
 **What**: Implement chat messaging endpoints
 
@@ -247,7 +311,7 @@ We'll follow these general principles:
 - Write comprehensive tests
 - Document endpoints with OpenAPI annotations
 
-### 4.2 File Management
+### 5.2 File Management
 
 **What**: Implement file management endpoints within sessions
 
@@ -270,68 +334,6 @@ We'll follow these general principles:
 - Write comprehensive tests
 - Document endpoints with OpenAPI annotations
 
-## Phase 5: History and Replay (Week 5)
-
-### 5.1 History Management
-
-**What**: Implement session history management endpoints
-
-**How**:
-
-- Create RESTful endpoints for listing and accessing session histories
-- Leverage existing interaction service logic
-- Enhance filtering and pagination capabilities
-
-**Why**: Provides access to past interactions for analysis
-
-**Tasks**:
-
-- Create `/api/v2/history/history.py` module
-- Implement GET /api/v2/history endpoint (list available histories)
-- Implement GET /api/v2/history/{session_id} endpoint (get summary)
-- Implement DELETE /api/v2/history/{session_id} endpoint (delete history)
-- Write comprehensive tests
-- Document endpoints with OpenAPI annotations
-
-### 5.2 Event Access
-
-**What**: Implement event access endpoints
-
-**How**:
-
-- Create RESTful endpoints for retrieving events with filtering
-- Leverage existing event service logic
-- Enhance filtering and pagination capabilities
-
-**Why**: Provides detailed access to interaction events
-
-**Tasks**:
-
-- Create `/api/v2/history/events.py` module
-- Implement GET /api/v2/history/{session_id}/events endpoint (with filtering)
-- Implement GET /api/v2/history/{session_id}/stream endpoint (SSE streaming)
-- Write comprehensive tests
-- Document endpoints with OpenAPI annotations
-
-### 5.3 Replay Control
-
-**What**: Implement replay control endpoints
-
-**How**:
-
-- Create RESTful endpoints for controlling session replay
-- Leverage existing replay logic
-- Ensure proper state management
-
-**Why**: Allows clients to replay interactions with playback controls
-
-**Tasks**:
-
-- Create `/api/v2/history/replay.py` module
-- Implement GET /api/v2/history/{session_id}/replay endpoint (get status)
-- Implement POST /api/v2/history/{session_id}/replay endpoint (control replay)
-- Write comprehensive tests
-- Document endpoints with OpenAPI annotations
 
 ## Phase 6: Debug Resources (Week 6)
 

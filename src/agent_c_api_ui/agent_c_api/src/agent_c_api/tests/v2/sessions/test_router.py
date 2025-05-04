@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from agent_c_api.api.v2.sessions.models import SessionCreate, SessionDetail, SessionUpdate, SessionListResponse, SessionSummary
-from agent_c_api.api.v2.sessions.router import router, get_session_service
+from agent_c_api.api.v2.sessions.sessions import router, get_session_service
 from agent_c_api.main import app
 
 

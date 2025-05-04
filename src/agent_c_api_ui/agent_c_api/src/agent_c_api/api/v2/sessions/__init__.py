@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from .router import router as sessions_router
+from .sessions import router as sessions_router
 from .agent import router as agent_router
 
 router = APIRouter()
