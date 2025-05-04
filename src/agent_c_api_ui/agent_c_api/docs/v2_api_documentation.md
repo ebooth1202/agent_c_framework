@@ -37,9 +37,16 @@ The Agent C API v2 provides a clean, RESTful interface for interacting with Agen
 
 ## Implementation Status
 
-- [ ] Configuration Resources
-- [ ] Session Resources
-- [ ] History Resources
+- [x] Configuration Resources
+- [x] Session Management
+  - [x] Session CRUD operations
+  - [x] Agent configuration
+  - [x] Chat messaging
+  - [ ] File management
+- [x] History Resources
+  - [x] History management
+  - [x] Event access
+  - [x] Replay control
 - [ ] Debug Resources
 
 ## Migration from v1
