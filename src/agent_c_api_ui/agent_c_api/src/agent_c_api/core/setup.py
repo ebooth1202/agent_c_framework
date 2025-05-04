@@ -1,4 +1,5 @@
 import os
+import re
 
 from fastapi import FastAPI, APIRouter
 from starlette.middleware.cors import CORSMiddleware
@@ -12,6 +13,25 @@ from agent_c_api.core.util.middleware_logging import APILoggingMiddleware
 
 logging_manager = LoggingManager(__name__)
 logger = logging_manager.get_logger()
+
+
+def get_origins_regex():
+    allowed_hosts_str = os.getenv("API_ALLOWED_HOSTS", "localhost,.local").replace(".", ".*\\.")
+    patterns = [pattern.strip() for pattern in allowed_hosts_str.split(",")]
+
+    regex_parts = []
+    for pattern in patterns:
+        if pattern.startswith("."):
+            # Domain suffix like .local or .company.com
+            suffix = re.escape(pattern)
+            regex_parts.append(f"[^\/]+{suffix}")
+        else:
+            # Specific host like localhost (with optional port)
+            host = re.escape(pattern)
+            regex_parts.append(f"{host}(:\\d+)?")
+
+    # Combine all patterns with OR operator
+    return f"^https?:\\/\\/({"|".join(patterns)})(:\\d+)?"
 
 def create_application(router: APIRouter, **kwargs) -> FastAPI:
     """
@@ -47,11 +67,11 @@ def create_application(router: APIRouter, **kwargs) -> FastAPI:
 
     # Create the FastAPI application with the lifespan handler.
     app = FastAPI(lifespan=lifespan, **kwargs)
-
+    print(get_origins_regex())
     # Add CORS middleware (adjust origins as necessary)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origin_regex=get_origins_regex(),
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

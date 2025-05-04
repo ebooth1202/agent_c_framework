@@ -10,6 +10,10 @@ module.exports = {
     ],
     prefix: "",
     theme: {
+        fontFamily: {
+            sans: ['Georgia', 'Times New Roman', 'Times', 'serif'],
+            mono: ['Roboto Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', 'monospace'],
+        },
     	container: {
     		center: true,
     		padding: '2rem',

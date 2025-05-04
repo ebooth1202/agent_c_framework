@@ -32,7 +32,7 @@ class ChatMemory(BaseModel):
         Returns a dictionary representation of the message.
     """
 
-    messages: List[MemoryMessage] = Field(
+    messages: List[Dict[str, Any]] = Field(
         default=[], description="A List of Messages or empty List is required"
     )
     metadata: Optional[Dict[str, Any]] = {}
@@ -47,4 +47,4 @@ class ChatMemory(BaseModel):
 
     @property
     def inference_messages(self) -> List[Dict[str, Any]]:
-        return [{"role": d.role, "content": d.content} for d in self.messages]
+        return self.messages

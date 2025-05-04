@@ -16,6 +16,9 @@ export default defineConfig({
   server: {
     host: true,
     strictPort: true,
-    allowedHosts: "all",
-  }
+    allowedHosts: process.env.VITE_ALLOWED_HOSTS
+      ? process.env.VITE_ALLOWED_HOSTS.split(',').map(host => host.trim())
+      : ['localhost', '.local']
+  },
+
 })

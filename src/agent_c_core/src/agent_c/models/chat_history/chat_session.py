@@ -45,7 +45,7 @@ class ChatSession(BaseModel):
     _active_memory: Optional[ChatMemory] = None
 
     @property
-    def messages(self) -> List[MemoryMessage]:
+    def messages(self) -> List[Dict[str, Any]]:
         if self._active_memory is None:
             return []
 
@@ -66,6 +66,6 @@ class ChatSession(BaseModel):
 
         self._active_memory = memory
 
-    async def add_message(self, msg: MemoryMessage):
+    async def add_message(self, msg: Dict[str, Any]):
         self.active_memory.messages.append(msg)
 

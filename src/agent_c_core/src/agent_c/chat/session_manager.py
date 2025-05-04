@@ -70,7 +70,7 @@ class ChatSessionManager:
         self.user = ChatUser(user_id=user_id)
         return await self.new_session(session_id)
 
-    async def add_message(self, msg: MemoryMessage) -> None:
+    async def add_message(self, msg: Dict[str, any]) -> None:
         """
         Adds a message to the current chat session.
 

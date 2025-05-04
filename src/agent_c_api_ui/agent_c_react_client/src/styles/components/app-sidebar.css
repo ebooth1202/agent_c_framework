@@ -13,7 +13,7 @@
 /* AppSidebar: Application logo container in sidebar header */
 .sidebar-logo {
   display: flex;
-  align-items: center;
+  align-items: normal;
   gap: 0.5rem;
   padding: 0.5rem;
   text-align: left;

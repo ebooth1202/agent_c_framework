@@ -133,7 +133,7 @@ class BaseAgent:
     @staticmethod
     async def _save_message_to_session(mgr: ChatSessionManager, text: str, role: str):
         if mgr is not None:
-            msg = MemoryMessage(role=role, content=text)
+            msg =  {'role':role, 'content': text}
 
             await mgr.add_message(msg)
 
@@ -351,7 +351,7 @@ class BaseAgent:
         self._update_session_logger(sess_mgr)
 
         if messages is None and sess_mgr is not None:
-           kwargs['messages'] = [{"role": d.role, "content": d.content} for d in sess_mgr.active_memory.messages]
+           kwargs['messages'] = copy.deepcopy(sess_mgr.active_memory.messages)
 
         user_message = kwargs.get("user_message")
         audio_clips: List[AudioInput] = kwargs.get("audio") or []

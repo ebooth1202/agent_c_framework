@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import {Icon} from "@/components/ui/icon";
 
 /**
  * ChatInputArea component provides a styled input area for the chat interface
@@ -166,7 +167,7 @@ const ChatInputArea = ({
                   className="chat-input-settings-button"
                   aria-label="Message options"
                 >
-                  <Settings className="h-4 w-4" aria-hidden="true" />
+                  <Icon icon="fa-thin fa-sliders" hoverIcon="fa-solid fa-sliders" size="md" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -187,7 +188,7 @@ const ChatInputArea = ({
                   className="chat-input-upload-button"
                   aria-label="Upload file"
                 >
-                  <Upload className="h-4 w-4" aria-hidden="true" />
+                  <Icon icon="fa-thin fa-file-arrow-up" hoverIcon="fa-solid fa-file-arrow-up" size="md" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -219,7 +220,7 @@ const ChatInputArea = ({
                     className="chat-input-send-button"
                     aria-label="Send message"
                   >
-                    <Send className="h-4 w-4" aria-hidden="true" />
+                    <Icon icon="fa-thin fa-message-arrow-up-right" hoverIcon="fa-solid fa-message-arrow-up-right" size="lg" />
                   </Button>
                 )}
               </TooltipTrigger>

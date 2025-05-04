@@ -51,3 +51,6 @@ images/
 
 # Misc
 .DS_Store
+
+# Prevent windows package-lock.json from being copied into the linux container
+**/package-lock.json
