@@ -10,7 +10,7 @@ from .prompt import TavilyResearchPrompt
 class TavilyResearchTools(Toolset):
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs, name='tavily', required_tools=['workspace'], needed_keys=['TAVILI_API_KEY'])
+        super().__init__(**kwargs, name='tavily', needed_keys=['TAVILI_API_KEY'])
         self.section = TavilyResearchPrompt()
 
         self.api_key = kwargs.get('api_key', os.environ['TAVILI_API_KEY'])
