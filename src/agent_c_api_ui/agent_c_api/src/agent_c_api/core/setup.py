@@ -16,7 +16,7 @@ logger = logging_manager.get_logger()
 
 
 def get_origins_regex():
-    allowed_hosts_str = os.getenv("API_ALLOWED_HOSTS", "localhost,.local")
+    allowed_hosts_str = os.getenv("API_ALLOWED_HOSTS", "localhost,.local").replace(".", ".*\\.")
     patterns = [pattern.strip() for pattern in allowed_hosts_str.split(",")]
 
     regex_parts = []
@@ -24,14 +24,14 @@ def get_origins_regex():
         if pattern.startswith("."):
             # Domain suffix like .local or .company.com
             suffix = re.escape(pattern)
-            regex_parts.append(f"[^/]+{suffix}")
+            regex_parts.append(f"[^\/]+{suffix}")
         else:
             # Specific host like localhost (with optional port)
             host = re.escape(pattern)
             regex_parts.append(f"{host}(:\\d+)?")
 
     # Combine all patterns with OR operator
-    return f"^https?://({"|".join(regex_parts)})$"
+    return f"^https?:\\/\\/({"|".join(patterns)})(:\\d+)?"
 
 def create_application(router: APIRouter, **kwargs) -> FastAPI:
     """
