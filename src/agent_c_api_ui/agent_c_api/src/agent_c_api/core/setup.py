@@ -1,5 +1,6 @@
 import os
 import re
+from typing import Dict, Any
 
 from fastapi import FastAPI, APIRouter
 from starlette.middleware.cors import CORSMiddleware
@@ -51,21 +52,51 @@ def create_application(router: APIRouter, **kwargs) -> FastAPI:
         # Shutdown: Optionally, perform any cleanup tasks.
         # For example: await app.state.agent_manager.cleanup_all_sessions()
 
-    # Set up basic metadata from your settings (or fallback defaults).
-    metadata = {
-        "title": getattr(settings, "APP_NAME", "Agent C FastAPI Backend"),
-        "description": getattr(settings, "APP_DESCRIPTION", "A FastAPI backend for Agent C"),
+    # Set up comprehensive OpenAPI metadata from settings (or fallback defaults)
+    app_version = getattr(settings, "APP_VERSION", "2.0.0")
+    
+    # Configure OpenAPI documentation settings
+    openapi_metadata = {
+        "title": getattr(settings, "APP_NAME", "Agent C API"),
+        "description": getattr(settings, "APP_DESCRIPTION", "RESTful API for interacting with Agent C. The API provides resources for session management, chat interactions, file handling, and history access."),
+        "version": app_version,
+        "openapi_tags": [
+            {
+                "name": "config",
+                "description": "Configuration resources for models, personas, tools, and system settings"
+            },
+            {
+                "name": "sessions",
+                "description": "Session management resources for creating, configuring, and interacting with agent sessions"
+            },
+            {
+                "name": "history",
+                "description": "History resources for accessing past interactions and replaying sessions"
+            },
+            {
+                "name": "debug",
+                "description": "Debug resources for accessing detailed information about session and agent state"
+            }
+        ],
         "contact": {
-            "name": getattr(settings, "CONTACT_NAME", "Joseph Ours"),
-            "email": getattr(settings, "CONTACT_EMAIL", "joseph.ours@centricconsulting.com")
+            "name": getattr(settings, "CONTACT_NAME", "Agent C Team"),
+            "email": getattr(settings, "CONTACT_EMAIL", "joseph.ours@centricconsulting.com"),
+            "url": getattr(settings, "CONTACT_URL", "https://www.centricconsulting.com")
         },
         "license_info": {
-            "name": getattr(settings, "LICENSE_NAME", "BSD")
-        }
+            "name": getattr(settings, "LICENSE_NAME", "BSD"),
+            "url": getattr(settings, "LICENSE_URL", "https://opensource.org/licenses/BSD-3-Clause")
+        },
+        "terms_of_service": getattr(settings, "TERMS_URL", "https://www.centricconsulting.com/terms"),
+        "docs_url": getattr(settings, "DOCS_URL", "/docs"),
+        "redoc_url": getattr(settings, "REDOC_URL", "/redoc"),
+        "openapi_url": getattr(settings, "OPENAPI_URL", "/openapi.json")
     }
-    kwargs.update(metadata)
+    
+    # Add any additional kwargs passed to the function
+    kwargs.update(openapi_metadata)
 
-    # Create the FastAPI application with the lifespan handler.
+    # Create the FastAPI application with the lifespan handler and enhanced OpenAPI docs
     app = FastAPI(lifespan=lifespan, **kwargs)
     print(get_origins_regex())
     # Add CORS middleware (adjust origins as necessary)
@@ -94,8 +125,37 @@ def create_application(router: APIRouter, **kwargs) -> FastAPI:
     # Include your router containing your API endpoints.
     app.include_router(router)
 
-    logger.info(
-        f"Application created: {getattr(settings, 'APP_NAME', 'Agent C API')} v{getattr(settings, 'APP_VERSION')}")
-    logger.debug(f"API documentation available at: {getattr(settings, 'DOCS_URL', '/docs')}")
+    # Log application creation details
+    app_name = getattr(settings, 'APP_NAME', 'Agent C API')
+    app_version = getattr(settings, 'APP_VERSION', '2.0.0')
+    docs_url = getattr(settings, 'DOCS_URL', '/docs')
+    redoc_url = getattr(settings, 'REDOC_URL', '/redoc')
+    openapi_url = getattr(settings, 'OPENAPI_URL', '/openapi.json')
+    
+    logger.info(f"Application created: {app_name} v{app_version}")
+    logger.info(f"API documentation available at:
+  - Swagger UI: {docs_url}
+  - ReDoc: {redoc_url}
+  - OpenAPI Schema: {openapi_url}")
+    
+    # Add a utility method to the app for accessing the OpenAPI schema
+    app.openapi_schema_version = app_version
+    
+    # Override the default openapi method to add custom components if needed
+    original_openapi = app.openapi
+    
+    def custom_openapi() -> Dict[str, Any]:
+        if app.openapi_schema:
+            return app.openapi_schema
+            
+        openapi_schema = original_openapi()
+        
+        # Add custom security schemes if needed
+        # This is where you would add JWT security definitions, OAuth flows, etc.
+        
+        app.openapi_schema = openapi_schema
+        return app.openapi_schema
+    
+    app.openapi = custom_openapi
 
     return app
