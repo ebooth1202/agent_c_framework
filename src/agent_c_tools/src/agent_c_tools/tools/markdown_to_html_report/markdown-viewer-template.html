@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Viewer</title>
+    <!-- Highlight.js for syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <!-- Load additional languages -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/csharp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/java.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/typescript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/json.min.js"></script>
+    
+    <!-- Marked.js for markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@4.0.0/marked.min.js"></script>
+    
+    <!-- Mermaid for diagrams -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    
+    <style>
+        :root {
+            --primary-color: #0366d6;
+            --sidebar-width: 300px;
+            --sidebar-min-width: 100px;
+            --sidebar-max-width: 600px;
+            --sidebar-bg: #f6f8fa;
+            --border-color: #e1e4e8;
+            --code-bg: #f6f8fa;
+            --text-color: #24292e;
+            --heading-color: #24292e;
+            --link-color: #0366d6;
+            --folder-icon-color: #79b8ff;
+            --file-icon-color: #959da5;
+            --toggle-btn-color: #586069;
+            --toggle-btn-hover-color: #24292e;
+            --resize-handle-width: 8px;
+            --fullscreen-bg: rgba(0, 0, 0, 0.8);
+            --z-index-fullscreen: 1000;
+            --z-index-drag-handle: 10;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        #sidebar {
+            width: var(--sidebar-width);
+            min-width: var(--sidebar-min-width);
+            max-width: var(--sidebar-max-width);
+            height: 100%;
+            overflow-y: auto;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            padding: 20px 0;
+            box-sizing: border-box;
+            transition: transform 0.3s ease;
+            position: relative;
+            flex-shrink: 0;
+        }
+        
+        #sidebar-resize-handle {
+            position: absolute;
+            top: 0;
+            right: -5px;
+            width: var(--resize-handle-width);
+            height: 100%;
+            cursor: col-resize;
+            z-index: var(--z-index-drag-handle);
+        }
+        
+        #content {
+            flex-grow: 1;
+            height: 100%;
+            overflow-y: auto;
+            padding: 20px 40px;
+            box-sizing: border-box;
+        }
+        
+        #sidebar-toggle {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background-color: var(--sidebar-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            padding: 5px 8px;
+            cursor: pointer;
+            color: var(--toggle-btn-color);
+            font-weight: bold;
+            font-size: 14px;
+            z-index: 5;
+            transition: color 0.3s ease;
+        }
+        
+        #sidebar-toggle:hover {
+            color: var(--toggle-btn-hover-color);
+        }
+        
+        .tree-view {
+            list-style-type: none;
+            padding-left: 15px;
+            margin: 0;
+        }
+        
+        .tree-view li {
+            margin: 5px 0;
+            position: relative;
+        }
+        
+        .folder {
+            cursor: pointer;
+            user-select: none;
+            padding: 5px 8px;
+            border-radius: 3px;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+        }
+        
+        .folder:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+        
+        .folder:before {
+            content: '📁';
+            margin-right: 8px;
+            color: var(--folder-icon-color);
+        }
+
+        .folder.open:before {
+            content: '📂';
+        }
+
+        .file {
+            padding: 5px 8px;
+            cursor: pointer;
+            user-select: none;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+        }
+
+        .file:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        .file:before {
+            content: '📄';
+            margin-right: 8px;
+            color: var(--file-icon-color);
+        }
+        
+        .file.active {
+            background-color: rgba(3, 102, 214, 0.1);
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        /* Markdown content styling */
+        #markdown-content h1 {
+            padding-bottom: 0.3em;
+            font-size: 2em;
+            border-bottom: 1px solid var(--border-color);
+            margin-top: 24px;
+            margin-bottom: 16px;
+            font-weight: 600;
+            line-height: 1.25;
+            color: var(--heading-color);
+        }
+        
+        #markdown-content h2 {
+            padding-bottom: 0.3em;
+            font-size: 1.5em;
+            border-bottom: 1px solid var(--border-color);
+            margin-top: 24px;
+            margin-bottom: 16px;
+            font-weight: 600;
+            line-height: 1.25;
+            color: var(--heading-color);
+        }
+        
+        #markdown-content h3 {
+            font-size: 1.25em;
+            margin-top: 24px;
+            margin-bottom: 16px;
+            font-weight: 600;
+            line-height: 1.25;
+            color: var(--heading-color);
+        }
+        
+        #markdown-content a {
+            color: var(--link-color);
+            text-decoration: none;
+        }
+        
+        #markdown-content a:hover {
+            text-decoration: underline;
+        }
+        
+        #markdown-content code {
+            font-family: SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+            padding: 0.2em 0.4em;
+            margin: 0;
+            font-size: 85%;
+            background-color: var(--code-bg);
+            border-radius: 3px;
+        }
+        
+        #markdown-content pre {
+            background-color: var(--code-bg);
+            border-radius: 6px;
+            padding: 16px;
+            overflow: auto;
+            margin-top: 0;
+            margin-bottom: 16px;
+        }
+        
+        #markdown-content pre code {
+            padding: 0;
+            margin: 0;
+            background-color: transparent;
+            font-size: 85%;
+            line-height: 1.5;
+            display: block;
+            overflow-x: auto;
+        }
+        
+        #markdown-content blockquote {
+            padding: 0 1em;
+            color: #6a737d;
+            border-left: 0.25em solid #dfe2e5;
+            margin: 0 0 16px 0;
+        }
+        
+        #markdown-content table {
+            display: block;
+            width: 100%;
+            overflow: auto;
+            border-spacing: 0;
+            border-collapse: collapse;
+            margin-top: 0;
+            margin-bottom: 16px;
+        }
+        
+        #markdown-content table tr {
+            background-color: #fff;
+            border-top: 1px solid #c6cbd1;
+        }
+        
+        #markdown-content table tr:nth-child(2n) {
+            background-color: #f6f8fa;
+        }
+        
+        #markdown-content table th, #markdown-content table td {
+            padding: 6px 13px;
+            border: 1px solid #dfe2e5;
+        }
+        
+        #markdown-content table th {
+            font-weight: 600;
+        }
+        
+        /* Method signature specific styling */
+        #markdown-content pre code.hljs {
+            padding: 16px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', 'Andale Mono', 'Ubuntu Mono', monospace;
+        }
+        
+        /* C# specific styles */
+        #markdown-content .hljs-keyword {
+            color: #0000ff;
+            font-weight: bold;
+        }
+        
+        #markdown-content .hljs-type,
+        #markdown-content .hljs-class {
+            color: #267f99;
+        }
+        
+        #markdown-content .hljs-string {
+            color: #a31515;
+        }
+        
+        #markdown-content .hljs-function {
+            color: #795e26;
+        }
+        
+        /* Method documentation styling */
+        #markdown-content .method-description {
+            margin-bottom: 24px;
+            padding-left: 16px;
+            border-left: 4px solid #e1e4e8;
+        }
+        
+        /* Full screen overlay for images and diagrams */
+        .fullscreen-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--fullscreen-bg);
+            z-index: var(--z-index-fullscreen);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        
+        .fullscreen-content {
+            max-width: 95%;
+            max-height: 90%;
+            overflow: auto;
+            background-color: white;
+            padding: 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .fullscreen-content img {
+            max-width: 100%;
+            max-height: 85vh;
+            object-fit: contain;
+        }
+        
+        .fullscreen-content .mermaid {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        
+        .fullscreen-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-size: 30px;
+            cursor: pointer;
+            background: rgba(0, 0, 0, 0.5);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            line-height: 1;
+        }
+        
+        .fullscreen-trigger {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: rgba(0, 0, 0, 0.2);
+            color: white;
+            padding: 5px;
+            border-radius: 3px;
+            cursor: pointer;
+            display: none;
+            font-size: 16px;
+            z-index: 10;
+        }
+        
+        #markdown-content .mermaid-wrapper {
+            position: relative;
+            margin-bottom: 16px;
+        }
+        
+        #markdown-content .mermaid-wrapper:hover .fullscreen-trigger,
+        #markdown-content p:has(img):hover .fullscreen-trigger {
+            display: block;
+        }
+        
+        #markdown-content p:has(img) {
+            position: relative;
+            display: inline-block;
+        }
+        
+        /* Responsive layout */
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+            
+            #sidebar {
+                width: 100% !important; /* Override any inline styles */
+                height: auto;
+                max-height: 30vh;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+            
+            #sidebar-resize-handle {
+                display: none;
+            }
+            
+            #content {
+                height: auto;
+                max-height: 70vh;
+            }
+            
+            .fullscreen-content {
+                max-width: 100%;
+                max-height: 80vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+		<button id="sidebar-toggle" title="Toggle Sidebar">.</button> <!--Hide button, disabling for now-->
+        <div id="sidebar-resize-handle" title="Drag to resize"></div>
+        <h3 style="margin: 0 16px 16px 16px;">Agent C Output Viewer</h3>
+		<div><svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
+  <!-- Orange concentric arcs (target/bullseye) -->
+  <path d="M250 150 A100 100 0 0 0 150 250 A100 100 0 0 0 250 350" stroke="#FF6A00" stroke-width="30" fill="none" />
+  <path d="M250 180 A70 70 0 0 0 180 250 A70 70 0 0 0 250 320" stroke="#FF6A00" stroke-width="20" fill="none" />
+  
+  <!-- Purple center circle -->
+  <circle cx="250" cy="250" r="40" fill="#4B0082" />
+  
+  <!-- Connecting lines and nodes -->
+  <line x1="290" y1="250" x2="350" y2="250" stroke="#4B0082" stroke-width="10" />
+  <circle cx="350" cy="250" r="15" fill="#4B0082" />
+  
+  <line x1="277" y1="213" x2="327" y2="163" stroke="#4B0082" stroke-width="10" />
+  <circle cx="327" cy="163" r="15" fill="#4B0082" />
+  
+  <line x1="277" y1="287" x2="327" y2="337" stroke="#4B0082" stroke-width="10" />
+  <circle cx="327" cy="337" r="15" fill="#4B0082" />
+  
+  <line x1="250" y1="290" x2="250" y2="350" stroke="#4B0082" stroke-width="10" />
+  <circle cx="250" cy="350" r="15" fill="#4B0082" />
+  
+  <!-- Text: "AGENT C" -->
+  <text x="250" y="420" font-family="Arial, sans-serif" font-weight="bold" font-size="60" fill="#4B0082" text-anchor="middle">AGENT C</text>
+  
+  <!-- Text: "CENTRIC CONSULTING" -->
+  <text x="250" y="460" font-family="Arial, sans-serif" font-weight="bold" font-size="24" fill="#4B0082" text-anchor="middle">CENTRIC CONSULTING</text>
+</svg></div>
+        <ul id="tree-view" class="tree-view"></ul>
+    </div>
+    <div id="content">
+        <div id="markdown-content"></div>
+    </div>
+    
+    <script>
+        // File structure will be injected here by the generator script
+        const fileStructure = $FILE_STRUCTURE;
+        
+        // DOM elements
+        const treeView = document.getElementById('tree-view');
+        const markdownContent = document.getElementById('markdown-content');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+        const sidebarResizeHandle = document.getElementById('sidebar-resize-handle');
+        const content = document.getElementById('content');
+        
+        // Get saved sidebar width from localStorage or use default
+        const savedSidebarWidth = localStorage.getItem('sidebarWidth');
+        if (savedSidebarWidth) {
+            sidebar.style.width = savedSidebarWidth + 'px';
+        }
+        
+        // Toggle sidebar
+        let sidebarHidden = false;
+        sidebarToggle.addEventListener('click', () => {
+            sidebarHidden = !sidebarHidden;
+            
+            if (sidebarHidden) {
+                const currentWidth = sidebar.offsetWidth;
+                localStorage.setItem('lastSidebarWidth', currentWidth);
+                sidebar.style.width = '0';
+                sidebarToggle.textContent = 'Show';
+                sidebarToggle.style.right = '10px';
+                sidebarToggle.style.position = 'fixed';
+                sidebarResizeHandle.style.display = 'none';
+            } else {
+                const lastWidth = localStorage.getItem('lastSidebarWidth') || 300;
+                sidebar.style.width = lastWidth + 'px';
+                sidebarToggle.textContent = 'Hide';
+                sidebarToggle.style.right = '10px';
+                sidebarToggle.style.position = 'absolute';
+                sidebarResizeHandle.style.display = 'block';
+            }
+        });
+        
+        // Implement sidebar resize functionality
+        let isResizing = false;
+        
+        sidebarResizeHandle.addEventListener('mousedown', function(e) {
+            isResizing = true;
+            document.body.style.cursor = 'col-resize';
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', stopResize);
+            // Prevent selection during resize
+            e.preventDefault();
+        });
+        
+        function handleMouseMove(e) {
+            if (!isResizing) return;
+            
+            let newWidth = e.clientX;
+            
+            // Apply constraints
+            if (newWidth < parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-min-width'))) {
+                newWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-min-width'));
+            }
+            
+            if (newWidth > parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-max-width'))) {
+                newWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-max-width'));
+            }
+            
+            sidebar.style.width = newWidth + 'px';
+            localStorage.setItem('sidebarWidth', newWidth);
+        }
+        
+        function stopResize() {
+            isResizing = false;
+            document.body.style.cursor = '';
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', stopResize);
+        }
+        
+        // Configure marked for proper rendering
+        marked.setOptions({
+            highlight: function(code, lang) {
+                if (lang && hljs.getLanguage(lang)) {
+                    try {
+                        return hljs.highlight(code, { language: lang }).value;
+                    } catch (e) {
+                        console.error(e);
+                    }
+                }
+                return hljs.highlightAuto(code).value;
+            },
+            langPrefix: 'hljs language-',
+            headerIds: true,
+            mangle: false,
+            pedantic: false,
+            gfm: true,
+            breaks: false,
+            sanitize: false,
+            smartLists: true,
+            smartypants: false,
+            xhtml: false
+        });
+        
+        // Custom renderer to handle mermaid diagrams
+        const renderer = new marked.Renderer();
+        const originalCodeRenderer = renderer.code.bind(renderer);
+        const originalImageRenderer = renderer.image.bind(renderer);
+        
+        renderer.code = function (code, language, escaped) {
+            if (language === 'mermaid') {
+                return `<div class="mermaid-wrapper">
+                            <div class="fullscreen-trigger" onclick="openFullscreen(this.nextElementSibling)">⛶</div>
+                            <div class="mermaid">${code}</div>
+                        </div>`;
+            }
+            return originalCodeRenderer(code, language, escaped);
+        };
+        
+        renderer.image = function(href, title, text) {
+            const img = originalImageRenderer(href, title, text);
+            return `<span style="position: relative; display: inline-block;">
+                        <span class="fullscreen-trigger" onclick="openFullscreen(this.nextElementSibling)">⛶</span>
+                        ${img}
+                    </span>`;
+        };
+        
+        marked.use({ renderer });
+        
+        // Function to open fullscreen view
+        window.openFullscreen = function(element) {
+            // Create overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'fullscreen-overlay';
+            
+            // Create content container
+            const content = document.createElement('div');
+            content.className = 'fullscreen-content';
+            
+            // Create close button
+            const closeBtn = document.createElement('div');
+            closeBtn.className = 'fullscreen-close';
+            closeBtn.innerHTML = '×';
+            closeBtn.onclick = function() {
+                document.body.removeChild(overlay);
+            };
+            
+            // Clone the element to show in fullscreen
+            const clone = element.cloneNode(true);
+            
+            // Handle different element types
+            if (element.tagName === 'IMG') {
+                // For images, create a new img element
+                const img = document.createElement('img');
+                img.src = element.src;
+                img.alt = element.alt;
+                content.appendChild(img);
+            } else if (element.classList.contains('mermaid')) {
+                // For mermaid diagrams
+                clone.removeAttribute('style'); // Remove any inline styles
+                content.appendChild(clone);
+                
+                // Re-render the mermaid diagram
+                setTimeout(() => {
+                    mermaid.init(undefined, [clone]);
+                }, 100);
+            }
+            
+            // Add elements to the DOM
+            overlay.appendChild(closeBtn);
+            overlay.appendChild(content);
+            document.body.appendChild(overlay);
+            
+            // Close on escape key
+            document.addEventListener('keydown', function escHandler(e) {
+                if (e.key === 'Escape') {
+                    document.body.removeChild(overlay);
+                    document.removeEventListener('keydown', escHandler);
+                }
+            });
+            
+            // Close on click outside the content
+            overlay.addEventListener('click', function(e) {
+                if (e.target === overlay) {
+                    document.body.removeChild(overlay);
+                }
+            });
+        };
+        
+        // Function to create the tree view
+        function createTreeView(structure, parent) {
+    // Helper function to format display names
+    function formatDisplayName(filename) {
+        // Remove leading numbers and dots (e.g., "01.")
+        let displayName = filename.replace(/^\d+\./, '');
+
+        // Remove file extensions (.md or .markdown)
+        displayName = displayName.replace(/\.(md|markdown)$/i, '');
+
+        // Replace underscores with spaces
+        displayName = displayName.replace(/_/g, ' ');
+
+        // Title case (capitalize first letter of each word)
+        displayName = displayName.split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+
+        return displayName;
+    }
+
+    structure.forEach(item => {
+        const li = document.createElement('li');
+
+        if (item.type === 'folder') {
+            // Create folder
+            const folderElement = document.createElement('div');
+            folderElement.classList.add('folder');
+            folderElement.textContent = formatDisplayName(item.name); // Format folder name
+            li.appendChild(folderElement);
+
+            // Create child list for this folder
+            const ul = document.createElement('ul');
+            ul.classList.add('tree-view', 'hidden');
+            li.appendChild(ul);
+
+            // Toggle visibility on click
+            folderElement.addEventListener('click', (e) => {
+                e.stopPropagation();
+                folderElement.classList.toggle('open');
+                ul.classList.toggle('hidden');
+            });
+
+            // If there are children, create their views
+            if (item.children && item.children.length > 0) {
+                createTreeView(item.children, ul);
+
+                // Auto-expand folders with only one sub-folder
+                if (item.children.length === 1 && item.children[0].type === 'folder') {
+                    folderElement.classList.add('open');
+                    ul.classList.remove('hidden');
+                }
+            }
+        } else {
+            // Create file
+            // Only show markdown files
+            if (item.name.toLowerCase().endsWith('.md') || item.name.toLowerCase().endsWith('.markdown')) {
+                const fileElement = document.createElement('div');
+                fileElement.classList.add('file');
+                fileElement.textContent = formatDisplayName(item.name); // Format file name
+                fileElement.dataset.path = item.path;
+                fileElement.dataset.content = item.content;
+                li.appendChild(fileElement);
+
+                // Handle file click to display content
+                fileElement.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    // Remove active from all files
+                    document.querySelectorAll('.file.active').forEach(el => {
+                        el.classList.remove('active');
+                    });
+                    // Add active to this file
+                    fileElement.classList.add('active');
+
+                    // Render markdown content
+                    renderMarkdown(fileElement.dataset.content);
+
+                    // Update browser history to allow back/forward navigation
+                    updateHistory(item.path);
+
+                    // On mobile, collapse sidebar after selection
+                    if (window.innerWidth <= 768) {
+                        sidebarHidden = true;
+                        sidebar.style.maxHeight = '40px';
+                        sidebar.style.overflow = 'hidden';
+                    }
+                });
+            } else {
+                // Skip non-markdown files
+                return;
+            }
+        }
+
+        parent.appendChild(li);
+    });
+}
+        
+        // Function to render markdown
+        function renderMarkdown(content) {
+            markdownContent.innerHTML = marked.parse(content);
+            
+            // Initialize mermaid diagrams
+            if (window.mermaid) {
+                mermaid.initialize({
+                    startOnLoad: false,
+                    theme: 'default',
+                    securityLevel: 'loose',
+                    logLevel: 5
+                });
+                
+                try {
+                    mermaid.init(undefined, document.querySelectorAll('.mermaid'));
+                } catch (error) {
+                    console.error('Mermaid initialization failed:', error);
+                }
+            }
+            
+            // Highlight all code blocks
+            document.querySelectorAll('pre code').forEach((block) => {
+                hljs.highlightElement(block);
+            });
+            
+            // Process links in the rendered content
+            document.querySelectorAll('#markdown-content a').forEach(link => {
+                // For external links, add target="_blank"
+                if (link.hostname !== window.location.hostname) {
+                    link.setAttribute('target', '_blank');
+                    link.setAttribute('rel', 'noopener noreferrer');
+                }
+                
+                // For internal anchor links (that weren't processed by the Python script)
+                // These could be generated by the markdown renderer from headings
+                if (link.hash && link.href.startsWith(window.location.href.split('#')[0])) {
+                    link.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const anchorId = link.hash.substring(1);
+                        scrollToAnchor(anchorId);
+                    });
+                }
+            });
+            
+            // Scroll to hash if present
+            if (window.location.hash) {
+                const element = document.getElementById(window.location.hash.substring(1));
+                if (element) {
+                    element.scrollIntoView();
+                }
+            }
+        }
+        
+        // Function to update browser history
+        function updateHistory(filePath) {
+            const url = new URL(window.location);
+            url.searchParams.set('file', filePath);
+            window.history.pushState({filePath: filePath}, '', url);
+        }
+        
+        // Function to open a markdown file by path
+        function openMarkdownFile(filePath, anchor = '') {
+            // Check if this is a directory path (no file extension or ends with /)
+            if (filePath.endsWith('/') || !filePath.includes('.')) {
+                // Try to find the first markdown file in this directory
+                const directoryPath = filePath.endsWith('/') ? filePath : filePath + '/';
+                
+                // Look through all file elements to find one in this directory
+                const fileElements = document.querySelectorAll('.file[data-path]');
+                for (const element of fileElements) {
+                    if (element.dataset.path.startsWith(directoryPath)) {
+                        // Found a file in this directory, open it
+                        return openMarkdownFile(element.dataset.path, anchor);
+                    }
+                }
+            }
+            
+            const fileElement = document.querySelector(`[data-path="${filePath}"]`);
+            if (fileElement) {
+                // Set active class
+                document.querySelectorAll('.file.active').forEach(el => {
+                    el.classList.remove('active');
+                });
+                fileElement.classList.add('active');
+                
+                // Render content
+                renderMarkdown(fileElement.dataset.content);
+                
+                // Update history
+                updateHistory(filePath);
+                
+                // Expand parent folders
+                let parent = fileElement.parentElement;
+                while (parent) {
+                    if (parent.tagName === 'UL' && parent.classList.contains('tree-view')) {
+                        parent.classList.remove('hidden');
+                        const folderDiv = parent.previousElementSibling;
+                        if (folderDiv && folderDiv.classList.contains('folder')) {
+                            folderDiv.classList.add('open');
+                        }
+                    }
+                    parent = parent.parentElement;
+                }
+                
+                // Scroll to anchor if provided
+                if (anchor) {
+                    const element = document.getElementById(anchor.substring(1));
+                    if (element) {
+                        setTimeout(() => {
+                            element.scrollIntoView();
+                        }, 100);
+                    }
+                }
+                
+                return true;
+            }
+            return false;
+        }
+        
+        // Function to find file in structure by path
+        function findFileInStructure(structure, path) {
+            for (const item of structure) {
+                if (item.type === 'file' && item.path === path) {
+                    return item;
+                } else if (item.type === 'folder' && item.children) {
+                    const found = findFileInStructure(item.children, path);
+                    if (found) return found;
+                }
+            }
+            return null;
+        }
+        
+        // Function to find and display first markdown file
+        function findAndDisplayFirstMarkdownFile(structure) {
+            const findFirstMdFile = (items) => {
+                for (const item of items) {
+                    if (item.type === 'file' && (item.name.toLowerCase().endsWith('.md') || item.name.toLowerCase().endsWith('.markdown'))) {
+                        return item;
+                    } else if (item.type === 'folder' && item.children && item.children.length > 0) {
+                        const found = findFirstMdFile(item.children);
+                        if (found) return found;
+                    }
+                }
+                return null;
+            };
+            
+            // Check URL parameters first
+            const urlParams = new URLSearchParams(window.location.search);
+            const fileParam = urlParams.get('file');
+            
+            if (fileParam) {
+                const fileItem = findFileInStructure(structure, fileParam);
+                if (fileItem) {
+                    setTimeout(() => {
+                        openMarkdownFile(fileItem.path);
+                    }, 100);
+                    return;
+                }
+            }
+            
+            // If no file in URL or not found, display first file
+            const firstMdFile = findFirstMdFile(structure);
+            if (firstMdFile) {
+                setTimeout(() => {
+                    openMarkdownFile(firstMdFile.path);
+                }, 100);
+            } else {
+                markdownContent.innerHTML = '<h1>No markdown files found</h1>';
+            }
+        }
+        
+        // Handle browser back/forward navigation
+        window.addEventListener('popstate', (event) => {
+            if (event.state && event.state.filePath) {
+                openMarkdownFile(event.state.filePath);
+            } else {
+                // If no state, open first file
+                findAndDisplayFirstMarkdownFile(fileStructure);
+            }
+        });
+        
+        // Initialize the viewer
+        function initializeViewer() {
+            // Create the tree view
+            createTreeView(fileStructure, treeView);
+            
+            // Auto-open the first markdown file
+            findAndDisplayFirstMarkdownFile(fileStructure);
+        }
+        
+        // Function to scroll to an anchor within the current document
+        function scrollToAnchor(anchorId) {
+            const element = document.getElementById(anchorId);
+            if (element) {
+                element.scrollIntoView({behavior: 'smooth'});
+                // Highlight the element briefly
+                const originalBackgroundColor = element.style.backgroundColor;
+                element.style.backgroundColor = 'rgba(255, 255, 0, 0.3)';
+                setTimeout(() => {
+                    element.style.backgroundColor = originalBackgroundColor;
+                }, 1500);
+            } else {
+                console.warn(`Anchor with id '${anchorId}' not found`);
+            }
+        }
+        
+        // Make functions globally available
+        window.openMarkdownFile = openMarkdownFile;
+        window.scrollToAnchor = scrollToAnchor;
+        
+        // Start the application
+        window.addEventListener('DOMContentLoaded', initializeViewer);
+    </script>
+</body>
+</html>

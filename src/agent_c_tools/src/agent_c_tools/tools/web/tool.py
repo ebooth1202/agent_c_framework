@@ -13,6 +13,9 @@ from selenium.webdriver.chrome.options import Options
 from agent_c import json_schema, Toolset
 from .formatters import *
 from .util.expires_header import expires_header_to_cache_seconds
+# Use local import to avoid circular dependencies
+from ..workspace import WorkspaceTools
+from ...helpers.path_helper import ensure_file_extension, create_unc_path, os_file_system_path
 
 
 class WebTools(Toolset):
@@ -26,11 +29,38 @@ class WebTools(Toolset):
     """
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs, name='web', required_tools=['workspace'], use_prefix=False)
+        super().__init__(**kwargs, name='web', use_prefix=False)
         self.default_formatter: ContentFormatter = kwargs.get('wt_default_formatter',
                                                               ReadableFormatter(re.compile(r".*")))
         self.formatters: List[ContentFormatter] = kwargs.get('wt_formatters', [])
         self.driver = self.__init__wd()
+        self.workspace_tool = Optional[WorkspaceTools]
+        
+        # Initialize tool_cache if not provided
+        if not hasattr(self, 'tool_cache') or self.tool_cache is None:
+            try:
+                from agent_c.toolsets.tool_cache import ToolCache
+                self.tool_cache = ToolCache()
+                logging.info("Initialized default ToolCache for WebTools")
+            except ImportError:
+                logging.warning("Could not import ToolCache, caching will be disabled")
+                self.tool_cache = None
+
+    async def post_init(self):
+        self.workspace_tool = self.tool_chest.active_tools.get("WorkspaceTools")
+        # # Defensively access dependencies
+        # if hasattr(self, 'tool_chest') and self.tool_chest is not None:
+        #     self.workspace_tool = self.tool_chest.active_tools.get("WorkspaceTools")
+        #
+        #     # If tool_cache wasn't initialized in __init__, try to get it from tool_chest
+        #     if not hasattr(self, 'tool_cache') or self.tool_cache is None:
+        #         try:
+        #             from agent_c.toolsets.tool_cache import ToolCache
+        #             self.tool_cache = getattr(self.tool_chest, 'tool_cache', ToolCache())
+        #             logging.info("Retrieved ToolCache from tool_chest or created a new one")
+        #         except Exception as e:
+        #             logging.warning(f"Failed to initialize tool_cache: {e}")
+        #             self.tool_cache = None
 
     def __init__wd(self):
         try:
@@ -106,8 +136,11 @@ class WebTools(Toolset):
 
         if url is None:
             return 'url is required'
-
-        response_content: Optional[str] = self.tool_cache.get(url)
+            
+        # Handle case where tool_cache is not initialized
+        # response_content: Optional[str] = None
+        # if hasattr(self, 'tool_cache') and self.tool_cache is not None:
+        response_content = self.tool_cache.get(url)
         if response_content is not None:
             return response_content
 
@@ -129,12 +162,14 @@ class WebTools(Toolset):
                 if not raw:
                     response_content = self.format_content(response_content, url)
 
-                if expires_in is not None:
-                    self.tool_cache.set(url, response_content, expire=expires_in)
-                    logging.debug(f'URL cached with expiration: {url}')
-                else:
-                    self.tool_cache.set(url, response_content, expire=default_expire)
-                    logging.debug(f'URL cached with default expiration: {url}')
+                # Only cache if tool_cache is available
+                if hasattr(self, 'tool_cache') and self.tool_cache is not None:
+                    if expires_in is not None:
+                        self.tool_cache.set(url, response_content, expire=expires_in)
+                        logging.debug(f'URL cached with expiration: {url}')
+                    else:
+                        self.tool_cache.set(url, response_content, expire=default_expire)
+                        logging.debug(f'URL cached with default expiration: {url}')
 
                 return response_content
             except httpx.HTTPStatusError as e:
@@ -161,15 +196,15 @@ class WebTools(Toolset):
                 'required': False,
                 'default': True
             },
-            'workspace_name': {
+            'workspace': {
                 'type': 'string',
-                'description': 'Workspace name to use for saving the markdown file',
+                'description': 'Workspace to use for saving the markdown file',
                 'required': True,
                 'default': 'project'
             },
             'file_path': {
                 'type': 'string',
-                'description': 'File path within the workspace to save the markdown file',
+                'description': 'Relative file path within the workspace to save the markdown file',
                 'required': False
             }
         }
@@ -179,14 +214,11 @@ class WebTools(Toolset):
         raw: bool = kwargs.get("raw", False)
         default_expire: int = kwargs.get("expire_secs", 3600)
         return_to_llm: bool = kwargs.get("save_to_workspace", True)
-        workspace_name: str = kwargs.get("workspace_name", "project")
-        file_path: str = kwargs.get("file_path", None)
+        workspace_name: str = kwargs.get("workspace", "project")
+        file_path: str = kwargs.get("file_path")
 
         if url is None:
             return 'url is required'
-
-        if workspace_name is None:
-            return 'workspace_name is required'
 
         response_content = await self.fetch_webpage(url=url, raw=raw, expire_secs=default_expire)
 
@@ -205,27 +237,37 @@ class WebTools(Toolset):
                 file_path = f"{domain}_{timestamp}.md"
 
             # Ensure file has .md extension
-            if not file_path.endswith('.md'):
-                file_path = f"{file_path}.md"
+            file_path = ensure_file_extension(file_path, "md")
 
             # Get workspace toolset
-            workspace_tool = self.tool_chest.active_tools.get("WorkspaceTools")
-            if workspace_tool is None:
+            if self.workspace_tool is None:
                 return json.dumps({
                     'error': "Workspace tool not available. Cannot save markdown.",
                     'content': response_content
                 })
 
             # Find the workspace and save the content
-            workspace_obj = workspace_tool.find_workspace_by_name(workspace_name)
-            if workspace_obj is None:
-                return json.dumps({
-                    'error': f"No workspace found with the name: {workspace_name}",
-                    'content': response_content
-                })
+            unc_path = create_unc_path(workspace_name, file_path)
+            error, workspace, relative_path = self.workspace_tool.validate_and_get_workspace_path(unc_path)
+            if error:
+                return f"Invalid path: {error}"
+            result = await self.workspace_tool.write(path=unc_path, mode='write', data=response_content)
+            result_data = json.loads(result)
+            if 'error' in result_data:
+                return f"Error writing file: {result_data['error']}"
 
-            # Save the markdown content to the workspace
-            result = await workspace_obj.write(file_path=file_path, mode='write', data=response_content)
+            # Get the full path of the file
+            # os_path = os_file_system_path(self.workspace_tool, unc_path)
+
+            # workspace_obj = workspace_tool.find_workspace_by_name(workspace)
+            # if workspace_obj is None:
+            #     return json.dumps({
+            #         'error': f"No workspace found with the name: {workspace}",
+            #         'content': response_content
+            #     })
+            #
+            # # Save the markdown content to the workspace
+            # result = await workspace_obj.write(file_path=file_path, mode='write', data=response_content)
             logging.info(f'Saved webpage content to workspace: {workspace_name} with file name: {file_path}')
 
             return_dict: Dict[str, str] = {
@@ -245,7 +287,7 @@ class WebTools(Toolset):
             return json.dumps({
                 'error': f'Error saving to workspace: {str(e)}',
                 'content': response_content,
-                'result': result if result is not None else None
+                'result': result if 'result' in locals() else None
             })
 
 

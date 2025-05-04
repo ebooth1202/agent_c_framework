@@ -48,6 +48,7 @@ class ToolChest:
                 - available_toolset_classes: List of toolset classes available for activation
                 - essential_toolset_names: List of names of toolsets that should always be active
                 - (legacy) tool_classes: Alias for available_toolset_classes for backward compatibility
+                - tool_cache: Optional ToolCache instance to use
         """
         # Initialize main dictionaries for toolset tracking
         self.__toolset_instances: dict[str, Toolset] = {}  # All instantiated toolsets
@@ -68,6 +69,9 @@ class ToolChest:
         self.logger = logging.getLogger(__name__)
         self.__active_open_ai_schemas: List[dict] = []
         self._tool_name_to_instance_map: Dict[str, Toolset] = {}
+        
+        # Initialize tool_cache
+        self.tool_cache = kwargs.get('tool_cache')
 
     def _update_toolset_metadata(self):
         """
@@ -99,16 +103,33 @@ class ToolChest:
         # Convert to list if a single string is provided
         toolset_names = [toolset_name_or_names] if isinstance(toolset_name_or_names, str) else toolset_name_or_names
         
+        # Track activation stack to prevent infinite recursion
+        activation_stack = getattr(self, '_activation_stack', [])
+        self._activation_stack = activation_stack
+        
+        # Track which toolsets are initialized during this activation call
+        # This is used to ensure post_init is called in the correct order
+        newly_instantiated = []
+        
         success = True
         for name in toolset_names:
             # Skip if already active
             if name in self.__active_toolset_instances:
                 continue
+            
+            # Check for circular dependencies
+            if name in activation_stack:
+                self.logger.warning(f"Circular dependency detected when activating {name}")
+                success = False
+                continue
+            
+            activation_stack.append(name)
                 
             # Check if we've already instantiated this toolset
             if name in self.__toolset_instances:
                 # Simply mark as active
                 self.__active_toolset_instances[name] = self.__toolset_instances[name]
+                self.logger.info(f"Marked existing toolset {name} as active")
             else:
                 # Find the class for this toolset
                 toolset_class = next((cls for cls in self.__available_toolset_classes 
@@ -117,30 +138,85 @@ class ToolChest:
                 if not toolset_class:
                     self.logger.warning(f"Toolset class {name} not found in available toolsets")
                     success = False
+                    activation_stack.remove(name)
                     continue
+                
+                # Check for required tools BEFORE instantiation
+                from agent_c.toolsets.tool_set import Toolset
+                required_tools = Toolset.get_required_tools(name)
+                
+                # Log dependencies for debugging
+                if required_tools:
+                    self.logger.info(f"Toolset {name} requires: {', '.join(required_tools)}")
                     
+                    # Recursively activate required tools
+                    required_success = await self.activate_toolset(required_tools, tool_opts)
+                    if not required_success:
+                        self.logger.warning(f"Failed to activate required tools for {name}")
+                        success = False
+                        activation_stack.remove(name)
+                        continue
+                    
+                    # Verify all required tools are actually active now
+                    missing_tools = [tool for tool in required_tools if tool not in self.__active_toolset_instances]
+                    if missing_tools:
+                        self.logger.warning(f"Required tools {missing_tools} for {name} not active despite activation attempt")
+                        success = False
+                        activation_stack.remove(name)
+                        continue
+                
+                # Prepare tool_opts with current tool_chest
+                local_tool_opts = {}
+                if tool_opts is not None:
+                    local_tool_opts.update(tool_opts)
+                
+                # Always ensure tool_chest is set to self
+                local_tool_opts['tool_chest'] = self
+                
+                # Pass tool_cache if we have it
+                if hasattr(self, 'tool_cache') and self.tool_cache is not None:
+                    local_tool_opts['tool_cache'] = self.tool_cache
+
                 # Create instance
                 try:
-                    if tool_opts is not None:
-                        self.__tool_opts = tool_opts
-                        self.__tool_opts['tool_chest'] = self
-
-
-                    toolset_obj = toolset_class(**self.__tool_opts)
+                    # Store for use in other methods
+                    self.__tool_opts = local_tool_opts
+                    
+                    # Create the toolset instance
+                    toolset_obj = toolset_class(**local_tool_opts)
                     
                     # Add to instances and active instances
                     self.__toolset_instances[name] = toolset_obj
                     self.__active_toolset_instances[name] = toolset_obj
                     
-                    # Initialize the toolset
-                    await toolset_obj.post_init()
-                    self.logger.info(f"Activated toolset {name}")
+                    # Track for post_init later
+                    newly_instantiated.append(name)
+                    
+                    self.logger.info(f"Created toolset instance {name}")
                 except Exception as e:
-                    self.logger.warning(f"Error activating toolset {name}: {str(e)}")
+                    self.logger.warning(f"Error creating toolset {name}: {str(e)}")
                     success = False
+            
+            activation_stack.remove(name)
         
-        # Update metadata for active toolsets
+        # Update metadata for active toolsets - do this before post_init to ensure
+        # active_tools is properly populated for any toolset that needs to access it
         self._update_toolset_metadata()
+        
+        # Now run post_init on newly instantiated toolsets in order
+        # This is done after all instances are created to ensure dependencies
+        # can be accessed during post_init
+        for name in newly_instantiated:
+            try:
+                toolset_obj = self.__active_toolset_instances.get(name)
+                if toolset_obj:
+                    await toolset_obj.post_init()
+                    self.logger.info(f"Completed post_init for toolset {name}")
+            except Exception as e:
+                self.logger.warning(f"Error in post_init for toolset {name}: {str(e)}")
+                success = False
+                # Don't remove from active instances as it may still be partially functional
+        
         return success
 
     def deactivate_toolset(self, toolset_name_or_names: Union[str, List[str]]) -> bool:
@@ -312,8 +388,17 @@ class ToolChest:
         Args:
             tool_opts: Arguments to pass to toolset initialization.
         """
-        self.__tool_opts = tool_opts
-        await self.activate_toolset(self.__essential_toolsets, tool_opts)
+        # Create a copy of tool_opts to avoid modifying the original
+        local_tool_opts = {}
+        if tool_opts:
+            local_tool_opts.update(tool_opts)
+            
+        # Add tool_cache if available
+        if hasattr(self, 'tool_cache') and self.tool_cache is not None and 'tool_cache' not in local_tool_opts:
+            local_tool_opts['tool_cache'] = self.tool_cache
+            
+        self.__tool_opts = local_tool_opts
+        await self.activate_toolset(self.__essential_toolsets, local_tool_opts)
 
     async def call_tools(self, tool_calls: List[dict], format_type: str = "claude") -> List[dict]:
         """
