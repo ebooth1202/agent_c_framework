@@ -183,12 +183,13 @@ class SessionLogger:
         try:
             # Create a structured representation of the render media event
             # We avoid logging the full content for privacy and size considerations
+
             media_data = {
                 'content_type': render_media_event.content_type,
                 'url': render_media_event.url,
                 'name': render_media_event.name,
                 'content': render_media_event.content,
-                'content_bytes': render_media_event.content_bytes,
+                'content_bytes': len(render_media_event.content_bytes) if render_media_event.content_bytes else None,
                 'sent_by_class': render_media_event.sent_by_class,
                 'sent_by_function': render_media_event.sent_by_function,
                 'role': render_media_event.role,
