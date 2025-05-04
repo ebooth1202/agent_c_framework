@@ -2,7 +2,7 @@ import os
 import copy
 import inspect
 import re
-from typing import Union, List, Dict, Any
+from typing import Union, List, Dict, Any, Optional
 
 from agent_c.models.events import RenderMediaEvent, MessageEvent, TextDeltaEvent
 from agent_c.prompting.prompt_section import PromptSection
@@ -13,17 +13,36 @@ from agent_c.chat.session_manager import ChatSessionManager
 class Toolset:
     tool_registry: List[Any] = []
     tool_sep: str = "_"
+    tool_dependencies: Dict[str, List[str]] = {}
 
     @classmethod
-    def register(cls, tool_cls: Any) -> None:
+    def register(cls, tool_cls: Any, required_tools: Optional[List[str]] = None) -> None:
         """
-        Registers a tool class in the tool registry if it's not already present.
-
+        Registers a tool class in the tool registry with its dependencies.
+        
         Args:
             tool_cls: The class of the tool to be registered.
+            required_tools: List of tool names that this tool requires.
         """
         if tool_cls not in cls.tool_registry:
             cls.tool_registry.append(tool_cls)
+            
+            # Store the required tools mapping if provided
+            if required_tools:
+                cls.tool_dependencies[tool_cls.__name__] = required_tools
+    
+    @classmethod
+    def get_required_tools(cls, toolset_name: str) -> List[str]:
+        """
+        Get the required tools for a specific toolset.
+        
+        Args:
+            toolset_name: The name of the toolset to get required tools for.
+            
+        Returns:
+            List[str]: List of required tool names, or empty list if none.
+        """
+        return cls.tool_dependencies.get(toolset_name, [])
 
     def __init__(self, **kwargs: Any) -> None:
         """
@@ -49,17 +68,40 @@ class Toolset:
         if self.name is None:
             raise ValueError("Toolsets must have a name.")
 
-        self.session_manager: ChatSessionManager = kwargs.get("session_manager")
+        # Store tool_chest first since it's critical for dependencies
         self.tool_chest: 'ToolChest' = kwargs.get("tool_chest")
+        if self.tool_chest is None:
+            # This is a critical warning but not necessarily fatal
+            import logging
+            logging.getLogger(__name__).warning(
+                f"Toolset {self.name} initialized without a tool_chest. "
+                f"Dependencies won't work correctly."
+            )
+        
+        self.session_manager: ChatSessionManager = kwargs.get("session_manager")
         self.use_prefix: bool = kwargs.get("use_prefix", True)
 
-        # Handle required tools activation
-        required_tools: List[str] = kwargs.get("required_tools", [])
-        for tool_name in required_tools:
-            if tool_name not in self.tool_chest.active_tools:
-                self.valid: bool = self.tool_chest.activate_tool(tool_name)
-                if not self.valid:
-                    break
+        # Store required tools but don't activate them (will be handled by ToolChest)
+        self.required_tools: List[str] = kwargs.get("required_tools", [])
+        if self.required_tools:
+            import warnings
+            warnings.warn(
+                "Passing required_tools in __init__ is deprecated. Use Toolset.register(cls, required_tools=['tool1', 'tool2']) instead.",
+                DeprecationWarning, stacklevel=2
+            )
+            
+            # Verify dependencies are registered
+            cls_name = self.__class__.__name__
+            if cls_name not in self.tool_dependencies or not self.tool_dependencies.get(cls_name):
+                # Register them at this point too to ensure they're tracked
+                self.tool_dependencies[cls_name] = self.required_tools
+                
+                import logging
+                logging.getLogger(__name__).info(
+                    f"Auto-registered dependencies for {cls_name}: {self.required_tools}"
+                )
+                
+        self.valid: bool = True # post init will deactivate invalid tools.
 
         self.tool_cache: ToolCache = kwargs.get("tool_cache")
         self.section: Union[PromptSection, None] = kwargs.get('section')
@@ -83,6 +125,48 @@ class Toolset:
         self.output_format: str = kwargs.get('output_format', 'raw')
         self.tool_role: str = kwargs.get('tool_role', 'tool')
 
+    async def post_init(self) -> None:
+        """
+        Post-initialization method for async setup.
+        
+        Note: Required tools are now handled by ToolChest during activation,
+        not in this method anymore.
+        """
+        # The activation of required tools has been moved to ToolChest.activate_toolset
+        # to avoid initialization order problems
+        
+    def get_dependency(self, toolset_name: str) -> Optional['Toolset']:
+        """
+        Safely get a dependency toolset by name.
+        This is a safer way to access dependencies than going through tool_chest.active_tools directly.
+        
+        Args:
+            toolset_name: Name of the dependency toolset to get
+            
+        Returns:
+            The toolset instance if found, None otherwise
+            
+        Example:
+            base_toolset = self.get_dependency('BaseToolset')
+            if base_toolset:
+                # Use the toolset safely
+                pass
+        """
+        if not self.tool_chest:
+            import logging
+            logging.getLogger(__name__).warning(
+                f"Toolset {self.name} attempted to access dependency {toolset_name} but no tool_chest is available"
+            )
+            return None
+            
+        if not hasattr(self.tool_chest, 'active_tools'):
+            import logging
+            logging.getLogger(__name__).warning(
+                f"Toolset {self.name} attempted to access dependency {toolset_name} but tool_chest has no active_tools"
+            )
+            return None
+            
+        return self.tool_chest.active_tools.get(toolset_name)
     @property
     def prefix(self) -> str:
         """
