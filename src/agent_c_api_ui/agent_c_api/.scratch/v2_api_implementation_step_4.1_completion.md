@@ -26,7 +26,7 @@ Created the `HistoryService` class in `api/v2/history/services.py` that:
 
 ### 3. Router Implementation
 
-Created a new router in `api/v2/history/history.py` with three endpoints:
+Created a new router in `api/v2/history/router.py` with three endpoints:
 
 - **GET /api/v2/history**: Lists available session histories with pagination and sorting
 - **GET /api/v2/history/{session_id}**: Retrieves detailed information about a specific session

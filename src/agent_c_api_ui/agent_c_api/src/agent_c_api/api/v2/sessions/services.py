@@ -7,7 +7,7 @@ from agent_c_api.api.dependencies import get_agent_manager
 from agent_c_api.core.agent_manager import UItoAgentBridgeManager
 import structlog
 
-from .models import (
+from agent_c_api.api.v2.models.session_models import (
     SessionCreate, 
     SessionDetail, 
     SessionListResponse, 

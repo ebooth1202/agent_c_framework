@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi_versioning import version
 
-from agent_c_api.api.v2.sessions.models import AgentConfig, AgentUpdate, AgentUpdateResponse
+from agent_c_api.api.v2.models.session_models import AgentConfig, AgentUpdate, AgentUpdateResponse
 from agent_c_api.api.v2.sessions.services import SessionService
 
 
