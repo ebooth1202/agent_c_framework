@@ -3,17 +3,24 @@ Conversion utilities for translating between V1 and V2 API models.
 
 This module provides functions to convert between V1 and V2 data models,
 enabling backward compatibility and smooth transition between API versions.
+It also includes utilities for converting between API models and core models.
 """
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from agent_c_api.api.v1.llm_models.agent_params import (
     AgentInitializationParams, 
     AgentUpdateParams
 )
+from agent_c.models.events.chat import MessageEvent
 from agent_c_api.api.v2.models.agent_models import AgentConfig
 from agent_c_api.api.v2.models.session_models import (
     SessionCreate,
     SessionUpdate
+)
+from agent_c_api.api.v2.models.chat_models import (
+    ChatMessage,
+    ChatMessageContent,
+    ContentBlockUnion
 )
 
 
@@ -98,3 +105,58 @@ def v2_to_v1_session_params(v2_session: SessionCreate) -> AgentInitializationPar
         budget_tokens=None,
         ui_session_id=None
     )
+
+
+# Message model conversion functions
+
+def content_blocks_to_message_content(blocks: List[ContentBlockUnion]) -> List[ChatMessageContent]:
+    """
+    Convert core content blocks to API message content objects.
+    
+    Args:
+        blocks: List of core content blocks
+        
+    Returns:
+        List of API chat message content objects
+    """
+    return [ChatMessageContent.from_content_block(block) for block in blocks]
+
+
+def message_content_to_content_blocks(contents: List[ChatMessageContent]) -> List[ContentBlockUnion]:
+    """
+    Convert API message content objects to core content blocks.
+    
+    Args:
+        contents: List of API chat message content objects
+        
+    Returns:
+        List of core content blocks
+    """
+    return [content.to_content_block() for content in contents]
+
+
+def message_event_to_chat_message(event: MessageEvent) -> ChatMessage:
+    """
+    Convert a core MessageEvent to an API ChatMessage.
+    
+    Args:
+        event: Core message event
+        
+    Returns:
+        API chat message
+    """
+    return ChatMessage.from_message_event(event)
+
+
+def chat_message_to_message_event(message: ChatMessage, session_id: str) -> MessageEvent:
+    """
+    Convert an API ChatMessage to a core MessageEvent.
+    
+    Args:
+        message: API chat message
+        session_id: Session ID to associate with the message
+        
+    Returns:
+        Core message event
+    """
+    return message.to_message_event(session_id)

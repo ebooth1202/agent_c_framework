@@ -5,9 +5,12 @@ from typing import Dict, List, Any
 
 from agent_c_api.api.v2.models.history_models import (
     HistorySummary, HistoryDetail, PaginationParams, 
-    HistoryListResponse, Event, EventFilter, 
+    HistoryListResponse, StoredEvent, HistoryEventUnion, EventFilter, 
     ReplayStatus, ReplayControl
 )
+
+from agent_c.models.events.session_event import SessionEvent
+from agent_c.models.events.chat import MessageEvent
 
 def test_history_models_imports():
     """Verify that history models can be imported correctly from the centralized location"""
@@ -31,17 +34,24 @@ def test_history_model_creation():
     assert summary.session_id == test_uuid
     assert summary.name == "Test Session"
     
-    # Test Event
-    event = Event(
-        id="test-event-1",
-        session_id=test_uuid,
-        timestamp=now,
-        event_type="message",
-        data={"content": "Hello world"}
+    # Test StoredEvent with a MessageEvent
+    message_event = MessageEvent(
+        session_id=str(test_uuid),
+        role="assistant",
+        content="Hello world",
+        format="markdown"
     )
-    assert event.id == "test-event-1"
-    assert event.session_id == test_uuid
-    assert event.event_type == "message"
+    
+    stored_event = StoredEvent(
+        id="test-event-1",
+        event=message_event,
+        timestamp=now
+    )
+    
+    assert stored_event.id == "test-event-1"
+    assert stored_event.event.session_id == str(test_uuid)
+    assert stored_event.event.type == "message"
+    assert stored_event.event.content == "Hello world"
     
     # Test EventFilter
     filter_params = EventFilter(

@@ -5,34 +5,40 @@ from fastapi.responses import StreamingResponse
 from uuid import UUID, uuid4
 
 from agent_c_api.api.v2.history.services import EventService
-from agent_c_api.api.v2.models.history_models import Event, EventFilter, ReplayStatus, ReplayControl
+from agent_c_api.api.v2.models.history_models import StoredEvent, HistoryEventUnion, EventFilter, ReplayStatus, ReplayControl
+from agent_c.models.events.chat import MessageEvent
+from agent_c.models.events.session_event import SessionEvent
 from agent_c_api.api.v2.models.response_models import APIResponse, PaginatedResponse, PaginationMeta, APIStatus
 
 # Test data
 session_id = uuid4()
 
+# Create core event instances
+user_event = MessageEvent(
+    session_id=str(session_id),
+    role="user",
+    content="Hello, agent",
+    format="markdown"
+)
+
+assistant_event = MessageEvent(
+    session_id=str(session_id),
+    role="assistant",
+    content="Hello, user",
+    format="markdown"
+)
+
+# Wrap in StoredEvent for API response
 MOCK_EVENTS = [
-    Event(
+    StoredEvent(
         id=f"{session_id}-1",
-        session_id=session_id,
-        timestamp=datetime.now() - timedelta(minutes=5),
-        event_type="user_request",
-        data={
-            "role": "user",
-            "content": "Hello, agent",
-            "raw": {"original": "data"}
-        }
+        event=user_event,
+        timestamp=datetime.now() - timedelta(minutes=5)
     ),
-    Event(
+    StoredEvent(
         id=f"{session_id}-2",
-        session_id=session_id,
-        timestamp=datetime.now() - timedelta(minutes=4),
-        event_type="text_delta",
-        data={
-            "role": "assistant",
-            "content": "Hello, user",
-            "raw": {"original": "data"}
-        }
+        event=assistant_event,
+        timestamp=datetime.now() - timedelta(minutes=4)
     )
 ]
 
@@ -68,7 +74,7 @@ async def test_get_events(mock_get_events, client):
     data = response.json()
     assert data["status"]["success"] == True
     assert len(data["data"]) == len(MOCK_EVENTS)
-    assert data["data"][0]["event_type"] == "user_request"
+    assert data["data"][0]["event"]["type"] == "message"
 
 @pytest.mark.asyncio
 @patch.object(EventService, "get_events")
@@ -94,7 +100,7 @@ async def test_get_events_with_filters(mock_get_events, client):
     assert response.status_code == 200
     data = response.json()
     assert len(data["data"]) == 1
-    assert data["data"][0]["event_type"] == "user_request"
+    assert data["data"][0]["event"]["type"] == "message"
 
 @pytest.mark.asyncio
 @patch.object(EventService, "get_events")

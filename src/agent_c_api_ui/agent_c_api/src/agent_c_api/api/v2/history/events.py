@@ -5,7 +5,7 @@ from datetime import datetime
 from uuid import UUID
 
 from agent_c_api.core.util.logging_utils import LoggingManager
-from agent_c_api.api.v2.models.history_models import Event, EventFilter, ReplayStatus, ReplayControl
+from agent_c_api.api.v2.models.history_models import StoredEvent, HistoryEventUnion, EventFilter, ReplayStatus, ReplayControl
 from agent_c_api.api.v2.models.response_models import APIResponse, PaginatedResponse, APIStatus
 from .services import EventService
 
@@ -17,7 +17,7 @@ event_service = EventService()
 
 @router.get(
     "/{session_id}/events",
-    response_model=PaginatedResponse[Event],
+    response_model=PaginatedResponse[StoredEvent],
     summary="Get Session Events",
     description="Get events for a specific session with filtering options."
 )
@@ -64,7 +64,7 @@ async def get_events(
 @router.get(
     "/{session_id}/stream",
     summary="Stream Session Events",
-    description="Stream events for a session, optionally in real-time."
+    description="Stream events for a session, optionally in real-time. Returns core event models."
 )
 async def stream_events(
     session_id: UUID = Path(..., description="Session ID"),

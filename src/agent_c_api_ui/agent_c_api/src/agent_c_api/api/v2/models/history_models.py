@@ -1,10 +1,20 @@
 # src/agent_c_api/api/v2/models/history_models.py
-from typing import Dict, List, Optional, Any, Literal
+from typing import Dict, List, Optional, Any, Literal, Union
 from datetime import datetime
 from pydantic import BaseModel, Field
 from uuid import UUID
 
-from .chat_models import ChatMessage
+# Import core event models
+from agent_c.models.events.base import BaseEvent
+from agent_c.models.events.session_event import SessionEvent
+from agent_c.models.events.chat import (
+    InteractionEvent, CompletionEvent, MessageEvent, 
+    SystemMessageEvent, TextDeltaEvent, ThoughtDeltaEvent,
+    HistoryEvent
+)
+from agent_c.models.events.tool_calls import ToolCallEvent, ToolCallDeltaEvent
+
+from .chat_models import ChatMessage, ChatEventUnion
 
 class HistorySummary(BaseModel):
     """Summary of a recorded session history"""
@@ -45,13 +55,19 @@ class EventFilter(BaseModel):
     end_time: Optional[datetime] = Field(None, description="End time for events")
     limit: int = Field(100, description="Maximum number of events to return")
 
-class Event(BaseModel):
-    """A recorded event in session history"""
+# We'll use the core event models directly (ChatEventUnion) instead of defining our own Event class
+# This type alias covers all possible event types coming from stored history
+HistoryEventUnion = ChatEventUnion
+
+# For backwards compatibility with existing endpoint documentation
+class StoredEvent(BaseModel):
+    """
+    A wrapper around core event models with additional metadata
+    Used for stored events in history, primarily for documentation purposes
+    """
     id: str = Field(..., description="Event ID")
-    session_id: UUID = Field(..., description="Session ID")
+    event: HistoryEventUnion = Field(..., description="The actual event data")
     timestamp: datetime = Field(..., description="Event timestamp")
-    event_type: str = Field(..., description="Event type")
-    data: Dict[str, Any] = Field(..., description="Event data")
 
 class ReplayStatus(BaseModel):
     """Status of a session replay"""
