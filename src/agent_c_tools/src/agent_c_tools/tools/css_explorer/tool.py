@@ -211,4 +211,4 @@ class CssExplorerTools(Toolset):
 
 
 # Register the toolset
-Toolset.register(CssExplorerTools)
+Toolset.register(CssExplorerTools, required_tools=['WorkspaceTools'])

@@ -185,14 +185,19 @@ Toolsets are activated during the initialization of the ToolChest:
 2. Each registered toolset class is instantiated with necessary dependencies
 3. Successfully initialized toolsets are added to the active tools
 4. Each toolset's `post_init()` method is called for additional setup
+5. Toolsets can have dependencies on other toolsets, which are resolved during initialization. Declare them during registration using the `required_tools` parameter.
 
 ## Creating Custom Toolsets
 
 ### Basic Structure
 
 ```python
+from typing import Optional
 from agent_c.toolsets.tool_set import Toolset
 from agent_c.toolsets.json_schema import json_schema
+
+from agent_c.toolsets.tool_set import Toolset
+from agent_c_tools.tools.workspace.tool import WorkspaceTools
 
 class ExampleToolset(Toolset):
     def __init__(self, **kwargs):
@@ -201,6 +206,10 @@ class ExampleToolset(Toolset):
         
         # Optional: perform additional initialization
         self.my_custom_property = "some value"
+        
+        # Optional: Define variables that may hold references to other toolsets
+        self.workspace_tool: Optional[WorkspaceTools] = None
+
     
     @json_schema(
         description="Does something useful",
@@ -226,10 +235,10 @@ class ExampleToolset(Toolset):
     async def post_init(self):
         # Optional: perform initialization that requires
         # other toolsets to be available
-        pass
+        self.workspace_tool = self.tool_chest.active_tools.get("WorkspaceTools")
 
 # Register the toolset
-Toolset.register(ExampleToolset)
+Toolset.register(ExampleToolset, required_tools=['WorkspaceTools'])
 ```
 
 ### Toolset Events
@@ -239,6 +248,35 @@ Toolsets can raise different types of events during execution:
 - `_raise_message_event`: Send a complete message
 - `_raise_text_delta_event`: Send incremental text updates
 - `_raise_render_media`: Send rich media (images, charts, etc.)
+The raise_xxxx_events have defined format. It must conform to the RaiseMediaEvent Class
+```python
+class RenderMediaEvent(SessionEvent):
+    """
+    Set when the agent or tool would like to render media to the user.
+    """
+    def __init__(self, **data):
+        super().__init__(type = "render_media", **data)
+    
+    model_config = ConfigDict(populate_by_name=True)
+    content_type: str = Field(..., alias="content-type")
+    url: Optional[str] = None
+    name: Optional[str] = None
+    content: Optional[str] = None
+    content_bytes: Optional[bytes] = None
+    sent_by_class: Optional[str] = None
+    sent_by_function: Optional[str] = None
+```
+Examples
+```python
+await self._raise_render_media(content_type="image/png", url=f"file://{fp}", name=image_file_name, content_bytes=image_bytes, content=base64_json)
+await self._raise_render_media(content_type="image/svg+xml", url=svg_link, name=svg_name, content=rendered_graph.svg_response.text)
+await self._raise_render_media(
+                sent_by_class=self.__class__.__name__,
+                sent_by_function='generate_random_number',
+                content_type="text/html",
+                content=f"<div>Example Raise Media Event: Number is <b>{number}</b></div>"
+            )
+```
 
 ### Using ToolCache
 

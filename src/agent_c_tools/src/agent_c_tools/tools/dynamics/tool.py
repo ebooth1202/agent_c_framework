@@ -17,7 +17,7 @@ from agent_c_tools.tools.dynamics.util.dataframe_in_memory import create_excel_i
 
 class DynamicsTools(Toolset):
     def __init__(self, **kwargs):
-        super().__init__(**kwargs, name='dynamics_crm', required_tools=['workspace'],
+        super().__init__(**kwargs, name='dynamics_crm',
                          needed_keys=['DYNAMICS_ENDPOINT', 'DYNAMICS_CLIENT_ID', 'DYNAMICS_SCOPE',
                                       'REDIRECT_URI', 'TOKEN_ENDPOINT', 'CENTRIC_ID', 'CENTRIC_PW'])
         if not self.tool_valid:
@@ -398,4 +398,4 @@ class DynamicsTools(Toolset):
             return json.dumps({"error": "Failed to create entity"})
 
 
-Toolset.register(DynamicsTools)
+Toolset.register(DynamicsTools, required_tools=['WorkspaceTools'])

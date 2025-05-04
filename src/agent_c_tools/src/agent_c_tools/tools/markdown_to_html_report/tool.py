@@ -13,6 +13,7 @@ from .helpers.media_helper import MediaEventHelper
 from .helpers.markdown_file_collector import MarkdownFileCollector
 from .helpers.markdown_to_docx import MarkdownToDocxConverter
 from .helpers.html_template_manager import HtmlTemplateManager
+from ... import WorkspaceTools
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ class MarkdownToHtmlReportTools(Toolset):
     def __init__(self, **kwargs):
         super().__init__(**kwargs, name="markdown_viewer", use_prefix=False)
         # Get workspace tools for file operations
-        self.workspace_tool = self.tool_chest.active_tools.get('WorkspaceTools')
+        self.workspace_tool = Optional[WorkspaceTools]
         if not self.workspace_tool:
             logger.warning("Workspace toolset not available. This tool requires workspace tools.")
 
@@ -34,6 +35,9 @@ class MarkdownToHtmlReportTools(Toolset):
         self.file_collector = MarkdownFileCollector(self.workspace_tool)
         self.docx_converter = MarkdownToDocxConverter()
         self.template_manager = HtmlTemplateManager()
+
+    async def post_init(self):
+        self.workspace_tool = self.tool_chest.active_tools.get("WorkspaceTools")
 
     async def _safe_operation(self, operation_name, operation_func, *args, **kwargs):
         """Execute operations with standardized error handling."""
@@ -443,4 +447,4 @@ class MarkdownToHtmlReportTools(Toolset):
 
 
 # Register the toolset with the Agent C framework
-Toolset.register(MarkdownToHtmlReportTools)
+Toolset.register(MarkdownToHtmlReportTools, required_tools=['WorkspaceTools'])

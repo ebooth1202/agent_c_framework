@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y \
 COPY src/agent_c_api_ui/agent_c_react_client/ ./
 
 # Install global dependencies and configure npm as needed
+
 RUN npm install -g node-gyp && \
     npm config set legacy-peer-deps true
  

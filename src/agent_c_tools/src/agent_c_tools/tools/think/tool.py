@@ -12,7 +12,7 @@ class ThinkTools(Toolset):
     A simple toolset that allows reasoning models (claude) to think about something.
     """
     def __init__(self, **kwargs):
-        super().__init__(**kwargs, name='think', required_tools=['workspace'], use_prefix=False)
+        super().__init__(**kwargs, name='think', use_prefix=False)
         self.logger = logging.getLogger(__name__)
 
         # TODO: Remove this when the new tools go in.
@@ -57,4 +57,4 @@ class ThinkTools(Toolset):
         return openai_schemas
 
 # Register the tool
-Toolset.register(ThinkTools)
+Toolset.register(ThinkTools, required_tools=['WorkspaceTools'])
