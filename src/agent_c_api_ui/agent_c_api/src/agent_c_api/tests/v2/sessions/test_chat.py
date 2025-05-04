@@ -83,16 +83,27 @@ async def test_send_message_success(chat_service):
         content=[{"type": "text", "text": "Hello, world!"}]
     )
     
+    # Mock the stream_response to return valid JSON strings
+    # The agent manager already returns JSON-encoded strings
+    event1 = json.dumps({"type": "text_delta", "content": "Response token 1"})
+    event2 = json.dumps({"type": "text_delta", "content": "Response token 2"})
+    
+    async def mock_stream_response(*args, **kwargs):
+        yield event1
+        yield event2
+    
+    chat_service.agent_manager.stream_response = AsyncMock(side_effect=mock_stream_response)
+    
     # Get the generator
     generator = chat_service.send_message("test_session_id", message)
     
-    # Collect the response tokens
-    tokens = [token async for token in generator]
+    # Collect the response events (as strings)
+    events = [event async for event in generator]
     
     # Verify the response
-    assert len(tokens) == 2
-    assert tokens[0] == "Response token 1"
-    assert tokens[1] == "Response token 2"
+    assert len(events) == 2
+    assert events[0] == event1
+    assert events[1] == event2
     
     # Verify the manager was called correctly
     chat_service.agent_manager.stream_response.assert_called_once_with(
@@ -114,11 +125,26 @@ async def test_send_message_with_files(chat_service):
         ]
     )
     
+    # Mock the stream_response to return valid JSON strings with file handling
+    event1 = json.dumps({"type": "text_delta", "content": "Processing your file"})
+    event2 = json.dumps({"type": "tool_call", "name": "file_processor", "arguments": {"file_id": "file123"}})
+    
+    async def mock_stream_response(*args, **kwargs):
+        yield event1
+        yield event2
+    
+    chat_service.agent_manager.stream_response = AsyncMock(side_effect=mock_stream_response)
+    
     # Get the generator
     generator = chat_service.send_message("test_session_id", message, ["file123"])
     
-    # Collect the response tokens
-    tokens = [token async for token in generator]
+    # Collect the response events
+    events = [event async for event in generator]
+    
+    # Verify the response
+    assert len(events) == 2
+    assert events[0] == event1
+    assert events[1] == event2
     
     # Verify the manager was called correctly
     chat_service.agent_manager.stream_response.assert_called_once_with(
@@ -196,10 +222,14 @@ async def test_send_chat_message_endpoint(client, monkeypatch, mock_session_serv
     @patch('agent_c_api.api.v2.sessions.chat.SessionService', return_value=mock_session_service)
     @patch('agent_c_api.api.v2.sessions.chat.ChatService')
     def test_endpoint(mock_chat_service, mock_session_svc, client):
-        # Mock the chat service to return a generator
+        # Mock the chat service to return a generator with JSON strings
+        # (this simulates what the agent_manager actually returns)
+        event1 = json.dumps({"type": "text_delta", "content": "Response 1"})
+        event2 = json.dumps({"type": "text_delta", "content": "Response 2"})
+        
         async def mock_send_message(*args, **kwargs):
-            yield "Response 1"
-            yield "Response 2"
+            yield event1
+            yield event2
         
         mock_chat_service.return_value.send_message.side_effect = mock_send_message
         
@@ -220,8 +250,13 @@ async def test_send_chat_message_endpoint(client, monkeypatch, mock_session_serv
         
         # Verify the response
         assert response.status_code == 200
-        assert response.headers["content-type"] == "text/plain; charset=utf-8"
-        assert "Response 1\nResponse 2\n" in response.text
+        assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
+        
+        # The response should contain the two JSON events with newlines
+        expected_event1 = event1 + '\n'  # The endpoint adds a newline if needed
+        expected_event2 = event2 + '\n'
+        assert expected_event1 in response.text
+        assert expected_event2 in response.text
         
         # Verify mocks were called correctly
         mock_session_service.get_session.assert_called_once_with("test_session_id")

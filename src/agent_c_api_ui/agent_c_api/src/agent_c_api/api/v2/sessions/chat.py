@@ -34,7 +34,7 @@ class ChatService:
         session_id: str, 
         message: ChatMessage,
         file_ids: Optional[List[str]] = None
-    ) -> AsyncGenerator[ChatEventUnion, None]:
+    ) -> AsyncGenerator[str, None]:
         """Send a message to the agent and stream the response
         
         Args:
@@ -43,7 +43,7 @@ class ChatService:
             file_ids: Optional list of file IDs to attach to the message
             
         Yields:
-            Stream of chat events from the agent
+            Stream of JSON-encoded chat events from the agent
             
         Raises:
             HTTPException: If the session doesn't exist or other errors occur
@@ -73,15 +73,15 @@ class ChatService:
             
         try:
             # Stream the response from the agent manager
-            async for token in self.agent_manager.stream_response(
+            # The events are already JSON-encoded strings from the agent,
+            # so we just pass them through directly
+            async for event_json in self.agent_manager.stream_response(
                 session_id,
                 user_message=text_content,
                 file_ids=file_ids
             ):
-                # For now, we're returning the raw tokens
-                # In a future enhancement, we could parse these into structured events
-                # based on the format of the token
-                yield token
+                # Just yield the JSON event string directly
+                yield event_json
         except Exception as e:
             self.logger.error("stream_response_error", session_id=session_id, error=str(e))
             raise HTTPException(
@@ -157,23 +157,27 @@ async def send_chat_message(
     if request.stream:
         async def event_stream():
             try:
-                async for token in chat_service.send_message(
+                async for event_json in chat_service.send_message(
                     session_id, 
                     request.message,
                     file_ids if file_ids else None
                 ):
-                    # Each token is a piece of the response
-                    # Ensure newlines for proper streaming
-                    if not token.endswith('\n'):
-                        token += '\n'
-                    yield token
+                    # The events from agent_manager are already JSON strings
+                    # Just make sure they end with a newline for SSE
+                    if not event_json.endswith('\n'):
+                        event_json += '\n'
+                    yield event_json
             except Exception as e:
                 logger.error("chat_streaming_error", error=str(e))
-                yield f"Error: {str(e)}\n"
+                error_event = {
+                    "type": "error",
+                    "content": f"Error: {str(e)}"
+                }
+                yield json.dumps(error_event) + '\n'
         
         return StreamingResponse(
             event_stream(),
-            media_type="text/plain",
+            media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",
                 "Connection": "keep-alive",

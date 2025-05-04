@@ -42,7 +42,24 @@ Sends a message to the agent and receives a streaming response.
 
 ### Response
 
-When `stream` is `true`, the endpoint returns a stream of response chunks in plain text format.
+When `stream` is `true`, the endpoint returns a Server-Sent Events (SSE) stream of JSON-encoded events. Each event has a type and associated data.
+
+Common event types include:
+
+- `text_delta`: Text content updates from the assistant
+- `tool_call`: Tool invocation events
+- `tool_call_delta`: Incremental updates to tool calls
+- `thought_delta`: Thinking process updates (when available)
+- `completion`: Completion status information
+
+Example event:
+
+```json
+{
+  "type": "text_delta",
+  "content": "Hello, I'm Agent C. How can I help you today?"
+}
+```
 
 ### Error Codes
 
@@ -56,7 +73,8 @@ When `stream` is `true`, the endpoint returns a stream of response chunks in pla
 ### Example
 
 ```javascript
-// JavaScript example using fetch
+// JavaScript example using fetch and EventSource for SSE
+// Method 1: Using the Fetch API for manual event processing
 const response = await fetch('/api/v2/sessions/my-session-id/chat', {
   method: 'POST',
   headers: {
@@ -73,10 +91,38 @@ const response = await fetch('/api/v2/sessions/my-session-id/chat', {
 
 // Handle streaming response
 const reader = response.body.getReader();
+let buffer = ''; // Buffer for incomplete JSON objects
+
 while (true) {
   const { done, value } = await reader.read();
   if (done) break;
-  console.log(new TextDecoder().decode(value));
+  
+  // Convert the chunk to text and add to buffer
+  buffer += new TextDecoder().decode(value);
+  
+  // Process complete JSON objects in the buffer
+  const lines = buffer.split('\n');
+  buffer = lines.pop(); // Keep the last incomplete line in the buffer
+  
+  for (const line of lines) {
+    if (line.trim() === '') continue;
+    try {
+      const event = JSON.parse(line);
+      // Handle different event types
+      switch(event.type) {
+        case 'text_delta':
+          console.log('Assistant: ' + event.content);
+          break;
+        case 'tool_call':
+          console.log('Tool call: ' + event.name);
+          break;
+        default:
+          console.log('Event:', event);
+      }
+    } catch (e) {
+      console.error('Invalid JSON:', line);
+    }
+  }
 }
 ```
 
