@@ -85,7 +85,7 @@ def create_application(router: APIRouter, **kwargs) -> FastAPI:
         },
         "license_info": {
             "name": getattr(settings, "LICENSE_NAME", "Business Source License 1.1"),
-            "url": getattr(settings, "LICENSE_URL", "")
+            "url": getattr(settings, "LICENSE_URL", "https://raw.githubusercontent.com/centricconsulting/agent_c_framework/refs/heads/main/LICENSE")
         },
         "terms_of_service": getattr(settings, "TERMS_URL", "https://www.centricconsulting.com/terms"),
         "docs_url": getattr(settings, "DOCS_URL", "/docs"),
