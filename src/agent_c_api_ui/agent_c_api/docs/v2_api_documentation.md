@@ -231,6 +231,7 @@ See the following resources for detailed information about specific API endpoint
 - [Sessions API](/docs/api_v2/agent.md) - Session management and agent configuration
 - [Chat API](/docs/api_v2/chat.md) - Chat interactions and message handling
 - [History API](/docs/api_v2/history.md) - Accessing and managing interaction history
+- [Debug API](/docs/api_v2/debug.md) - Diagnostic and troubleshooting capabilities
 
 ## Migration from v1
 
