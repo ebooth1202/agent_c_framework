@@ -3,11 +3,12 @@ from fastapi import APIRouter
 
 router = APIRouter(prefix="/history")
 
-# These routers will be included as they're implemented
-# from .history import router as history_router
-# from .events import router as events_router
-# from .replay import router as replay_router
+# Import routers
+from .history import router as history_router
+from .events import router as events_router
+# Note: Replay functionality has been incorporated into the events router
+# instead of having a separate replay router as originally planned
 
-# router.include_router(history_router)
-# router.include_router(events_router)
-# router.include_router(replay_router)
+# Include routers
+router.include_router(history_router)
+router.include_router(events_router)

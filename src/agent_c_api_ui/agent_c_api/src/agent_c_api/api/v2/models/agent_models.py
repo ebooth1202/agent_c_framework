@@ -1,5 +1,5 @@
 # src/agent_c_api/api/v2/models/agent_models.py
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, ClassVar
 from pydantic import BaseModel, Field, ConfigDict
 
 
@@ -20,7 +20,7 @@ class AgentConfig(BaseModel):
 
 class AgentUpdate(BaseModel):
     """Parameters for updating agent settings"""
-    model_config = ConfigDict(protected_namespaces=())
+    model_config =  ConfigDict(protected_namespaces=())
     model_id: Optional[str] = Field(None, description="LLM model ID to use")
     persona_id: Optional[str] = Field(None, description="Persona ID to use")
     parameters: Optional[Dict[str, Any]] = Field(None, description="Model parameters to update")

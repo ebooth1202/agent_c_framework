@@ -7,7 +7,7 @@ from agent_c_api.api.dependencies import get_agent_manager
 from agent_c_api.core.agent_manager import UItoAgentBridgeManager
 import structlog
 
-from .models import (
+from agent_c_api.api.v2.models.session_models import (
     SessionCreate, 
     SessionDetail, 
     SessionListResponse, 
@@ -18,6 +18,11 @@ from .models import (
     AgentUpdateResponse
 )
 
+# Session service dependency
+def get_session_service():
+    """Dependency to get the session service"""
+    agent_manager = get_agent_manager()
+    return SessionService(agent_manager=agent_manager)
 
 class SessionService:
     """Service for managing sessions using the underlying agent manager"""

@@ -140,9 +140,7 @@ class ToolChest:
                     success = False
                     activation_stack.remove(name)
                     continue
-                
-                # Check for required tools BEFORE instantiation
-                from agent_c.toolsets.tool_set import Toolset
+
                 required_tools = Toolset.get_required_tools(name)
                 
                 # Log dependencies for debugging

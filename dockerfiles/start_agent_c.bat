@@ -16,7 +16,7 @@ set AGENT_C_LOGS_PATH=%USERPROFILE%\.agent_c\logs
 
 :: Add mappings for workspace folders (Documents, Desktop, and Downloads)
 set DOCUMENTS_WORKSPACE=%USERPROFILE%\Documents
-set DESKTOP_WORKSPACE=%USERPROFILE%\Desktop
+set DESKTOP_WORKSPACE=%PROJECT_ROOT%\src\agent_c_api_ui\agent_c_api
 set DOWNLOADS_WORKSPACE=%USERPROFILE%\Downloads
 
 :: Set PROJECT_WORKSPACE_PATH to the project root directory

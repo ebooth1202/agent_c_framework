@@ -1,5 +1,5 @@
 # src/agent_c_api/api/v2/models/response_models.py
-from typing import Any, Dict, Generic, List, Optional, TypeVar, Union
+from typing import Generic, List, Optional, TypeVar
 from pydantic import BaseModel, Field
 
 T = TypeVar('T')
@@ -10,7 +10,7 @@ class APIStatus(BaseModel):
     message: Optional[str] = Field(None, description="Optional message about the request")
     error_code: Optional[str] = Field(None, description="Error code if applicable")
 
-class APIResponse(Generic[T], BaseModel):
+class APIResponse(BaseModel, Generic[T]):
     """Standard API response wrapper"""
     status: APIStatus = Field(default_factory=APIStatus, description="Response status information")
     data: Optional[T] = Field(None, description="Response data")
@@ -22,7 +22,7 @@ class PaginationMeta(BaseModel):
     total_items: int = Field(..., description="Total number of items")
     total_pages: int = Field(..., description="Total number of pages")
 
-class PaginatedResponse(Generic[T], BaseModel):
+class PaginatedResponse(BaseModel, Generic[T]):
     """Paginated response wrapper"""
     status: APIStatus = Field(default_factory=APIStatus, description="Response status information")
     data: List[T] = Field(default_factory=list, description="Paginated items")
