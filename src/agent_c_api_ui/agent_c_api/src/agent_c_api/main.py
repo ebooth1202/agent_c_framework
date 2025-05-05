@@ -4,7 +4,7 @@ import time
 
 from dotenv import load_dotenv
 from fastapi.logger import logger as fastapi_logger
-from fastapi_versioning import VersionedFastAPI
+# Removed VersionedFastAPI import - using directory structure for versioning
 
 from agent_c_api.core.util.logging_utils import LoggingManager
 
@@ -61,20 +61,13 @@ logging.getLogger("uvicorn.error").setLevel(logging.ERROR)
 logger.info(f"Creating API application")
 _timing["app_creation_start"] = time.time()
 
-# Create the base application with our router
-base_app = create_application(router=router, settings=settings)
-
-# Wrap the app with VersionedFastAPI for proper API versioning
-app = VersionedFastAPI(base_app,
-                     version_format='{major}',
-                     prefix_format='/api/v{major}',
-                     default_version=(1, 0),
-                     enable_latest=True)
+# Create the application with our router
+app = create_application(router=router, settings=settings)
 
 _timing["app_creation_end"] = time.time()
 logger.info(f"Registered {len(app.routes)} routes")
 logger.info(f"API application created in {(_timing['app_creation_end'] - _timing['app_creation_start']):.2f} seconds")
-logger.info("API versioning enabled with prefix format '/api/v{major}'")
+logger.info("API versioning using directory structure with paths '/api/v1' and '/api/v2'")
 logger.info(f"FastAPI Reload Setting is: {settings.RELOAD}.  Starting Uvicorn")
 logger.info(f"Agent_C API server running on {settings.HOST}:{settings.PORT}")
 

@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+# Removed fastapi_versioning import - using directory structure for versioning
 
 from .sessions import router as sessions_router
 from .models import router as models_router
@@ -11,7 +12,10 @@ from .interactions.interactions import router as interactions_router
 from .interactions.events import router as events_router
 
 import logging
-router = APIRouter(prefix="/v1")
+# Add v1 tag for all routes in this version
+router = APIRouter(tags=["v1"])
+
+# Version is now determined by directory structure and router prefixes
 
 # main api routes
 router.include_router(sessions_router)

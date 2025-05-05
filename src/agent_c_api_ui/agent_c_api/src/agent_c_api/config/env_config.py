@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     # FastAPI and CORS settings
     ALLOWED_ORIGINS: list[str] = ["*"]
     HOST: str = "0.0.0.0"
-    PORT: int = 8000
+    PORT: int = 8001
     RELOAD: bool = False
     
     # Agent settings

@@ -216,6 +216,7 @@ class AgentConfig(BaseModel):
     tools: List[str] = Field(default_factory=list, description="List of enabled tool IDs the agent can use")
     
     model_config = ConfigDict(
+        protected_namespaces=(),
         json_schema_extra={
             "example": {
                 "model_id": "gpt-4",

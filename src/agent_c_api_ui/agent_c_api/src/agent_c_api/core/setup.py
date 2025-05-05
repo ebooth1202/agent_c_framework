@@ -3,10 +3,10 @@ import re
 from typing import Dict, Any
 
 from fastapi import FastAPI, APIRouter
+# Removed VersionedFastAPI import - using directory structure for versioning
 from starlette.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-# Import your settings and AgentManager
 from agent_c_api.config.env_config import settings
 from agent_c_api.core.agent_manager import UItoAgentBridgeManager
 from agent_c_api.core.util.logging_utils import LoggingManager
@@ -15,24 +15,35 @@ from agent_c_api.core.util.middleware_logging import APILoggingMiddleware
 logging_manager = LoggingManager(__name__)
 logger = logging_manager.get_logger()
 
+def get_origins_list():
+    allowed_hosts_str = os.getenv("API_ALLOWED_HOSTS", "localhost")
+    hosts = []
+    patterns = [pattern.strip() for pattern in allowed_hosts_str.split(",")]
+    for protocol in ['http', 'https']:
+        for pattern in patterns:
+            hosts.append(f"{protocol}://{pattern}")
+
+    return hosts
+
+
 
 def get_origins_regex():
-    allowed_hosts_str = os.getenv("API_ALLOWED_HOSTS", "localhost,.local").replace(".", ".*\\.")
+    allowed_hosts_str = os.getenv("API_ALLOWED_HOSTS", "localhost,.local")
     patterns = [pattern.strip() for pattern in allowed_hosts_str.split(",")]
-
+    # 1: ^https?:\/\/(localhost|.*\.local)(:\d+)?
+    # 2: ^https?:\/\/(localhost|.*\.local)(:\d+)?
     regex_parts = []
     for pattern in patterns:
         if pattern.startswith("."):
             # Domain suffix like .local or .company.com
             suffix = re.escape(pattern)
-            regex_parts.append(f"[^\/]+{suffix}")
+            regex_parts.append(f".*{suffix}")
         else:
             # Specific host like localhost (with optional port)
             host = re.escape(pattern)
-            regex_parts.append(f"{host}(:\\d+)?")
+            regex_parts.append(f"{host}")
 
-    # Combine all patterns with OR operator
-    return f"^https?:\\/\\/({"|".join(patterns)})(:\\d+)?"
+    return f"^https?://({"|".join(regex_parts)})(:\\d+)?"
 
 def create_application(router: APIRouter, **kwargs) -> FastAPI:
     """
@@ -45,17 +56,18 @@ def create_application(router: APIRouter, **kwargs) -> FastAPI:
 
     # Define a lifespan handler for startup and shutdown tasks.
     @asynccontextmanager
-    async def lifespan(app: FastAPI):
-        # Startup: Initialize your shared AgentManager instance.
-        app.state.agent_manager = UItoAgentBridgeManager()
+    async def lifespan(lifespan_app: FastAPI):
+        # Shared AgentManager instance.
+        lifespan_app.state.agent_manager = UItoAgentBridgeManager()
+
         yield
+
         # Shutdown: Optionally, perform any cleanup tasks.
-        # For example: await app.state.agent_manager.cleanup_all_sessions()
+
 
     # Set up comprehensive OpenAPI metadata from settings (or fallback defaults)
-    app_version = getattr(settings, "APP_VERSION", "2.0.0")
-    
-    # Configure OpenAPI documentation settings
+    app_version = getattr(settings, "APP_VERSION", "0.2.0")
+
     openapi_metadata = {
         "title": getattr(settings, "APP_NAME", "Agent C API"),
         "description": getattr(settings, "APP_DESCRIPTION", "RESTful API for interacting with Agent C. The API provides resources for session management, chat interactions, file handling, and history access."),
@@ -84,8 +96,8 @@ def create_application(router: APIRouter, **kwargs) -> FastAPI:
             "url": getattr(settings, "CONTACT_URL", "https://www.centricconsulting.com")
         },
         "license_info": {
-            "name": getattr(settings, "LICENSE_NAME", "BSD"),
-            "url": getattr(settings, "LICENSE_URL", "https://opensource.org/licenses/BSD-3-Clause")
+            "name": getattr(settings, "LICENSE_NAME", "Business Source License 1.1"),
+            "url": getattr(settings, "LICENSE_URL", "")
         },
         "terms_of_service": getattr(settings, "TERMS_URL", "https://www.centricconsulting.com/terms"),
         "docs_url": getattr(settings, "DOCS_URL", "/docs"),
@@ -98,11 +110,15 @@ def create_application(router: APIRouter, **kwargs) -> FastAPI:
 
     # Create the FastAPI application with the lifespan handler and enhanced OpenAPI docs
     app = FastAPI(lifespan=lifespan, **kwargs)
-    print(get_origins_regex())
+    # Using directory structure for versioning - removed VersionedFastAPI wrapper
+
+    origin_regex = get_origins_regex()
+    origins_list = get_origins_list()
+    print(origin_regex)
     # Add CORS middleware (adjust origins as necessary)
     app.add_middleware(
         CORSMiddleware,
-        allow_origin_regex=get_origins_regex(),
+        allow_origins=origins_list,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

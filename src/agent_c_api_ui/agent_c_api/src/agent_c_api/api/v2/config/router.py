@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, Path, Query
 from typing import Optional
-from fastapi_versioning import version
+# Removed fastapi_versioning import - using directory structure for versioning
 
 from .services import ConfigService
 from agent_c_api.api.v2.models.config_models import (
@@ -49,7 +49,7 @@ def get_config_service():
            response_model=ModelsResponse,
            summary="List Available Models",
            description="Returns a list of all available language models that can be used with Agent C.")
-@version(2)
+# Version is determined by directory structure
 async def list_models(
     service: ConfigService = Depends(get_config_service)
 ):
@@ -76,7 +76,7 @@ async def list_models(
            response_model=ModelInfo,
            summary="Get Model Details",
            description="Returns detailed information about a specific language model.")
-@version(2)
+# Version is determined by directory structure
 async def get_model(
     model_id: str = Path(..., description="The unique identifier of the model to retrieve"),
     service: ConfigService = Depends(get_config_service)
@@ -123,7 +123,7 @@ async def get_model(
            response_model=PersonasResponse,
            summary="List Available Personas",
            description="Returns a list of all available personas that can be used with Agent C.")
-@version(2)
+# Version is determined by directory structure
 async def list_personas(
     service: ConfigService = Depends(get_config_service)
 ):
@@ -150,7 +150,7 @@ async def list_personas(
            response_model=PersonaInfo,
            summary="Get Persona Details",
            description="Returns detailed information about a specific persona.")
-@version(2)
+# Version is determined by directory structure
 async def get_persona(
     persona_id: str = Path(..., description="The unique identifier of the persona to retrieve"),
     service: ConfigService = Depends(get_config_service)
@@ -197,7 +197,7 @@ async def get_persona(
            response_model=ToolsResponse,
            summary="List Available Tools",
            description="Returns a list of all available tools that can be used with Agent C.")
-@version(2)
+# Version is determined by directory structure
 async def list_tools(
     category: Optional[str] = Query(None, description="Filter tools by category"),
     service: ConfigService = Depends(get_config_service)
@@ -236,7 +236,7 @@ async def list_tools(
            response_model=ToolInfo,
            summary="Get Tool Details",
            description="Returns detailed information about a specific tool.")
-@version(2)
+# Version is determined by directory structure
 async def get_tool(
     tool_id: str = Path(..., description="The unique identifier of the tool to retrieve"),
     service: ConfigService = Depends(get_config_service)
@@ -283,7 +283,7 @@ async def get_tool(
            response_model=SystemConfigResponse,
            summary="Get System Configuration",
            description="Returns a combined configuration with models, personas, and tools.")
-@version(2)
+# Version is determined by directory structure
 async def get_system_config(
     service: ConfigService = Depends(get_config_service)
 ):
