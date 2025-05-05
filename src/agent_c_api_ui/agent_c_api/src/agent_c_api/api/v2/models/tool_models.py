@@ -1,5 +1,5 @@
 # src/agent_c_api/api/v2/models/tool_models.py
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, ClassVar
 from pydantic import BaseModel, Field
 
 class ToolParameter(BaseModel):

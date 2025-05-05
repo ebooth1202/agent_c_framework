@@ -14,7 +14,6 @@ class SessionCreate(BaseModel):
     It specifies the LLM model, persona, and other configuration options that determine
     the agent's behavior.
     """
-    model_config = ConfigDict(protected_namespaces=())
     model_id: str = Field(..., description="ID of the LLM model to use")
     persona_id: str = Field(default="default", description="ID of the persona to use")
     name: Optional[str] = Field(None, description="Optional session name")
@@ -28,7 +27,8 @@ class SessionCreate(BaseModel):
     metadata: Optional[Dict[str, Any]] = Field(None, description="Optional metadata for the session")
     
     model_config = ConfigDict(
-        schema_extra={
+        protected_namespaces=(),
+        json_schema_extra={
             "example": {
                 "model_id": "gpt-4",
                 "persona_id": "programmer",
@@ -52,7 +52,6 @@ class SessionSummary(BaseModel):
     This model provides a summary of a session's key properties, suitable for
     displaying in session listings and overview screens.
     """
-    model_config = ConfigDict(protected_namespaces=())
     id: UUID = Field(..., description="Unique identifier for the session")
     model_id: str = Field(..., description="ID of the LLM model being used in the session")
     persona_id: str = Field(..., description="ID of the persona defining the agent's behavior")
@@ -63,7 +62,8 @@ class SessionSummary(BaseModel):
     is_active: bool = Field(..., description="Whether the session is currently active")
     
     model_config = ConfigDict(
-        schema_extra={
+        protected_namespaces=(),
+        json_schema_extra={
             "example": {
                 "id": "550e8400-e29b-41d4-a716-446655440000",
                 "model_id": "gpt-4",
@@ -96,7 +96,7 @@ class SessionDetail(SessionSummary):
     message_count: Optional[int] = Field(None, description="Number of messages exchanged in the session")
     
     model_config = ConfigDict(
-        schema_extra={
+        json_schema_extra={
             "example": {
                 "id": "550e8400-e29b-41d4-a716-446655440000",
                 "model_id": "gpt-4",
@@ -112,7 +112,7 @@ class SessionDetail(SessionSummary):
                 "temperature": 0.7,
                 "reasoning_effort": 5,
                 "max_tokens": 2000,
-                "custom_prompt": null,
+                "custom_prompt": None,
                 "metadata": {
                     "project": "API Redesign",
                     "priority": "high"
@@ -139,7 +139,7 @@ class SessionUpdate(BaseModel):
     metadata: Optional[Dict[str, Any]] = Field(None, description="Metadata to update or add")
     
     model_config = ConfigDict(
-        schema_extra={
+        json_schema_extra={
             "example": {
                 "name": "Refactoring Session",
                 "persona_id": "architect",
@@ -167,7 +167,7 @@ class SessionListResponse(BaseModel):
     offset: int = Field(..., description="Current offset in the full result set")
     
     model_config = ConfigDict(
-        schema_extra={
+        json_schema_extra={
             "example": {
                 "items": [
                     {
@@ -216,14 +216,14 @@ class AgentConfig(BaseModel):
     tools: List[str] = Field(default_factory=list, description="List of enabled tool IDs the agent can use")
     
     model_config = ConfigDict(
-        schema_extra={
+        json_schema_extra={
             "example": {
                 "model_id": "gpt-4",
                 "persona_id": "programmer",
-                "custom_prompt": null,
+                "custom_prompt": None,
                 "temperature": 0.7,
                 "reasoning_effort": 5,
-                "budget_tokens": null,
+                "budget_tokens": None,
                 "max_tokens": 2000,
                 "tools": ["search", "code_analysis", "calculator"]
             }
@@ -245,7 +245,7 @@ class AgentUpdate(BaseModel):
     max_tokens: Optional[int] = Field(None, ge=0, description="Maximum tokens limit for model output")
     
     model_config = ConfigDict(
-        schema_extra={
+        json_schema_extra={
             "example": {
                 "persona_id": "architect",
                 "temperature": 0.8,
@@ -267,15 +267,15 @@ class AgentUpdateResponse(BaseModel):
     changes_skipped: Dict[str, Any] = Field(default_factory=dict, description="Changes that couldn't be applied")
     
     model_config = ConfigDict(
-        schema_extra={
+        json_schema_extra={
             "example": {
                 "agent_config": {
                     "model_id": "gpt-4",
                     "persona_id": "architect",
-                    "custom_prompt": null,
+                    "custom_prompt": None,
                     "temperature": 0.8,
                     "reasoning_effort": 7,
-                    "budget_tokens": null,
+                    "budget_tokens": None,
                     "max_tokens": 1500,
                     "tools": ["search", "code_analysis", "calculator"]
                 },
@@ -314,7 +314,7 @@ class SessionCreateResponse(BaseModel):
     name: str = Field(..., description="User-friendly name of the created session")
     
     model_config = ConfigDict(
-        schema_extra={
+        json_schema_extra={
             "example": {
                 "status": {
                     "success": True,

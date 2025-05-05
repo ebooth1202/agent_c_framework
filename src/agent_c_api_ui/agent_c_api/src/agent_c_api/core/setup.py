@@ -133,11 +133,8 @@ def create_application(router: APIRouter, **kwargs) -> FastAPI:
     openapi_url = getattr(settings, 'OPENAPI_URL', '/openapi.json')
     
     logger.info(f"Application created: {app_name} v{app_version}")
-    logger.info(f"API documentation available at:
-  - Swagger UI: {docs_url}
-  - ReDoc: {redoc_url}
-  - OpenAPI Schema: {openapi_url}")
-    
+    logger.info(f"API documentation available at:\n  - Swagger UI: {docs_url}\n  - ReDoc: {redoc_url}\n  - OpenAPI Schema: {openapi_url}")
+
     # Add a utility method to the app for accessing the OpenAPI schema
     app.openapi_schema_version = app_version
     

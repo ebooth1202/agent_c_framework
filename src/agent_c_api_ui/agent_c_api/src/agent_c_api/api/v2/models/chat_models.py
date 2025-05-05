@@ -1,13 +1,11 @@
 # src/agent_c_api/api/v2/models/chat_models.py
-from typing import Dict, List, Optional, Any, Literal, Union, ForwardRef
+from typing import  List, Optional,  Literal, Union, ClassVar
 from datetime import datetime
 from enum import Enum
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from uuid import UUID
 
 # Import core event models
-from agent_c.models.events.base import BaseEvent
-from agent_c.models.events.session_event import SessionEvent, SemiSessionEvent
 from agent_c.models.events.chat import (
     InteractionEvent, CompletionEvent, MessageEvent, 
     SystemMessageEvent, TextDeltaEvent, ThoughtDeltaEvent,
@@ -15,8 +13,12 @@ from agent_c.models.events.chat import (
 )
 from agent_c.models.events.tool_calls import ToolCallEvent, ToolCallDeltaEvent
 
-# Import or placeholder for core content block models
-from agent_c.models.content import ContentBlock, TextBlock, FileBlock, ImageBlock
+# Import core content block models
+from agent_c.models.common_chat import TextContentBlock as TextBlock, ImageContentBlock as ImageBlock, BaseContentBlock
+class FileBlock(BaseContentBlock):
+    """Placeholder for file content blocks"""
+    file_id: str
+    mime_type: Optional[str] = None
 
 from .tool_models import ToolCall, ToolResult
 
@@ -56,8 +58,8 @@ class ChatMessageContent(BaseModel):
         description="MIME type for file content (e.g., 'image/jpeg', 'application/pdf')"
     )
     
-    model_config = {
-        "schema_extra": {
+    model_config = ConfigDict(
+        json_schema_extra = {
             "examples": [
                 {
                     "type": "text",
@@ -75,7 +77,7 @@ class ChatMessageContent(BaseModel):
                 }
             ]
         }
-    }
+    )
     
     @classmethod
     @field_validator('text')
@@ -94,9 +96,9 @@ class ChatMessageContent(BaseModel):
     def to_content_block(self) -> ContentBlockUnion:
         """Convert to a core content block"""
         if self.type == "text":
-            return TextBlock(content=self.text)
+            return TextBlock(text=self.text)
         elif self.type == "image":
-            return ImageBlock(file_id=self.file_id, mime_type=self.mime_type)
+            return ImageBlock(source={"file_id": self.file_id, "mime_type": self.mime_type})
         elif self.type == "file":
             return FileBlock(file_id=self.file_id, mime_type=self.mime_type)
         else:
@@ -106,9 +108,10 @@ class ChatMessageContent(BaseModel):
     def from_content_block(cls, block: ContentBlockUnion) -> "ChatMessageContent":
         """Create from a core content block"""
         if isinstance(block, TextBlock):
-            return cls(type="text", text=block.content)
+            return cls(type="text", text=block.text)
         elif isinstance(block, ImageBlock):
-            return cls(type="image", file_id=block.file_id, mime_type=block.mime_type)
+            source = block.source
+            return cls(type="image", file_id=source.get("file_id"), mime_type=source.get("mime_type"))
         elif isinstance(block, FileBlock):
             return cls(type="file", file_id=block.file_id, mime_type=block.mime_type)
         else:
@@ -151,8 +154,8 @@ class ChatMessage(BaseModel):
         description="Results returned from tool calls for this message"
     )
     
-    model_config = {
-        "schema_extra": {
+    model_config: ClassVar[dict] = {
+        "json_schema_extra": {
             "examples": [
                 # User message with text only
                 {
@@ -273,8 +276,8 @@ class ChatRequest(BaseModel):
         description="Whether to stream the response as server-sent events (SSE)"
     )
     
-    model_config = {
-        "schema_extra": {
+    model_config: ClassVar[dict] = {
+        "json_schema_extra": {
             "examples": [
                 # Simple text message with streaming
                 {
@@ -328,8 +331,8 @@ class ChatResponse(BaseModel):
         description="Unique identifier for this completion (for reference and tracking)"
     )
     
-    model_config = {
-        "schema_extra": {
+    model_config: ClassVar[dict] = {
+        "json_schema_extra": {
             "examples": [
                 {
                     "message": {

@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any, Union, ClassVar
 from pydantic import BaseModel, Field
 
 class ModelParameter(BaseModel):
@@ -8,8 +8,8 @@ class ModelParameter(BaseModel):
     description: Optional[str] = None
     default: Optional[Any] = None
     
-    class Config:
-        schema_extra = {
+    model_config: ClassVar[dict] = {
+        "json_schema_extra": {
             "example": {
                 "name": "temperature",
                 "type": "float",
@@ -17,6 +17,7 @@ class ModelParameter(BaseModel):
                 "default": 0.7
             }
         }
+    }
 
 class ModelInfo(BaseModel):
     """Information about an available LLM model"""
@@ -28,8 +29,8 @@ class ModelInfo(BaseModel):
     parameters: List[ModelParameter] = Field(default_factory=list, description="Configuration parameters supported by the model")
     allowed_inputs: List[str] = Field(default_factory=list, description="Types of inputs the model can process")
     
-    class Config:
-        schema_extra = {
+    model_config: ClassVar[dict] = {
+        "json_schema_extra": {
             "example": {
                 "id": "gpt-4",
                 "name": "GPT-4",
@@ -53,6 +54,7 @@ class ModelInfo(BaseModel):
                 "allowed_inputs": ["text", "image"]
             }
         }
+    }
 
 class PersonaInfo(BaseModel):
     """Information about an available persona"""
@@ -62,8 +64,8 @@ class PersonaInfo(BaseModel):
     file_path: Optional[str] = Field(None, description="Path to the persona definition file (internal use)")
     content: Optional[str] = Field(None, description="The actual content of the persona definition (may be truncated for large personas)")
     
-    class Config:
-        schema_extra = {
+    model_config: ClassVar[dict] = {
+        "json_schema_extra": {
             "example": {
                 "id": "coder",
                 "name": "Coding Assistant",
@@ -72,6 +74,7 @@ class PersonaInfo(BaseModel):
                 "content": "You are a coding assistant specialized in helping developers write, review, and debug code..."
             }
         }
+    }
 
 class ToolParameter(BaseModel):
     """Parameter for a tool"""
@@ -80,8 +83,8 @@ class ToolParameter(BaseModel):
     description: Optional[str] = Field(None, description="Description of the parameter's purpose and usage")
     required: bool = Field(False, description="Whether this parameter is required for the tool to function")
     
-    class Config:
-        schema_extra = {
+    model_config: ClassVar[dict] = {
+        "json_schema_extra": {
             "example": {
                 "name": "query",
                 "type": "string",
@@ -89,6 +92,7 @@ class ToolParameter(BaseModel):
                 "required": True
             }
         }
+    }
 
 class ToolInfo(BaseModel):
     """Information about an available tool"""
@@ -99,8 +103,8 @@ class ToolInfo(BaseModel):
     parameters: List[ToolParameter] = Field(default_factory=list, description="Parameters accepted by the tool")
     is_essential: bool = Field(False, description="Whether this tool is considered essential for basic agent functionality")
     
-    class Config:
-        schema_extra = {
+    model_config: ClassVar[dict] = {
+        "json_schema_extra": {
             "example": {
                 "id": "web_search",
                 "name": "Web Search",
@@ -123,13 +127,14 @@ class ToolInfo(BaseModel):
                 "is_essential": True
             }
         }
+    }
 
 class ModelsResponse(BaseModel):
     """Response containing available models"""
     models: List[ModelInfo] = Field(description="List of available LLM models")
     
-    class Config:
-        schema_extra = {
+    model_config: ClassVar[dict] = {
+        "json_schema_extra": {
             "example": {
                 "models": [
                     {
@@ -167,13 +172,14 @@ class ModelsResponse(BaseModel):
                 ]
             }
         }
+    }
 
 class PersonasResponse(BaseModel):
     """Response containing available personas"""
     personas: List[PersonaInfo] = Field(description="List of available personas")
     
-    class Config:
-        schema_extra = {
+    model_config: ClassVar[dict] = {
+        "json_schema_extra": {
             "example": {
                 "personas": [
                     {
@@ -193,6 +199,7 @@ class PersonasResponse(BaseModel):
                 ]
             }
         }
+    }
 
 class ToolsResponse(BaseModel):
     """Response containing available tools"""
@@ -200,8 +207,8 @@ class ToolsResponse(BaseModel):
     categories: List[str] = Field(description="Available tool categories for organization")
     essential_tools: List[str] = Field(description="List of tool IDs considered essential for basic functionality")
     
-    class Config:
-        schema_extra = {
+    model_config: ClassVar[dict] = {
+        "json_schema_extra": {
             "example": {
                 "tools": [
                     {
@@ -245,6 +252,7 @@ class ToolsResponse(BaseModel):
                 "essential_tools": ["web_search"]
             }
         }
+    }
 
 class SystemConfigResponse(BaseModel):
     """Combined system configuration response"""
@@ -254,8 +262,8 @@ class SystemConfigResponse(BaseModel):
     tool_categories: List[str] = Field(description="Available tool categories")
     essential_tools: List[str] = Field(description="Tools considered essential for basic functionality")
     
-    class Config:
-        schema_extra = {
+    model_config: ClassVar[dict] = {
+        "json_schema_extra": {
             "example": {
                 "models": [
                     {
@@ -301,3 +309,4 @@ class SystemConfigResponse(BaseModel):
                 "essential_tools": ["web_search"]
             }
         }
+    }

@@ -1,10 +1,9 @@
 from fastapi import APIRouter, HTTPException, Query, Path, status
-from typing import Optional, List, Dict, Any
-from uuid import UUID
+from typing import Dict
 from fastapi_versioning import version
 
 from agent_c_api.core.util.logging_utils import LoggingManager
-from agent_c_api.api.v2.models.history_models import HistorySummary, HistoryDetail, PaginationParams, HistoryListResponse
+from agent_c_api.api.v2.models.history_models import HistoryDetail, PaginationParams, HistoryListResponse
 from agent_c_api.api.v2.models.response_models import APIResponse, APIStatus
 from .services import HistoryService
 
@@ -15,7 +14,7 @@ router = APIRouter(tags=["history"])
 history_service = HistoryService()
 
 @router.get(
-    "",
+    "/",
     response_model=HistoryListResponse,
     summary="List Session Histories",
     description="List all available session histories with pagination and sorting.",
@@ -113,7 +112,7 @@ async def list_histories(
                             "prompt_tokens": 1650
                         },
                         "user_id": "user_12345",
-                        "has_thinking": true,
+                        "has_thinking": True,
                         "tool_calls": ["web_search", "file_reader", "code_interpreter"]
                     }
                 }
@@ -142,7 +141,7 @@ async def list_histories(
     }
 )
 @version(2)
-async def get_history(session_id: UUID = Path(..., description="Unique identifier of the session history to retrieve")):
+async def get_history(session_id: str = Path(..., description="Unique identifier of the session history to retrieve")):
     """Get detailed information about a specific session history."""
     try:
         history = await history_service.get_history(session_id)
@@ -167,9 +166,9 @@ async def get_history(session_id: UUID = Path(..., description="Unique identifie
                 "application/json": {
                     "example": {
                         "status": {
-                            "success": true,
+                            "success": True,
                             "message": "Session history deleted successfully",
-                            "error_code": null
+                            "error_code": None
                         },
                         "data": {
                             "status": "success", 
@@ -202,7 +201,7 @@ async def get_history(session_id: UUID = Path(..., description="Unique identifie
     }
 )
 @version(2)
-async def delete_history(session_id: UUID = Path(..., description="Unique identifier of the session history to delete")):
+async def delete_history(session_id: str = Path(..., description="Unique identifier of the session history to delete")):
     """Delete a session history and all its files."""
     try:
         success = await history_service.delete_history(session_id)

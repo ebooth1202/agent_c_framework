@@ -1,20 +1,10 @@
 # src/agent_c_api/api/v2/models/history_models.py
-from typing import Dict, List, Optional, Any, Literal, Union
+from typing import Dict, List, Optional, Any, Literal
 from datetime import datetime
-from pydantic import BaseModel, Field, field_serializer, model_config
+from pydantic import BaseModel, Field, ConfigDict
 from uuid import UUID
 
-# Import core event models
-from agent_c.models.events.base import BaseEvent
-from agent_c.models.events.session_event import SessionEvent
-from agent_c.models.events.chat import (
-    InteractionEvent, CompletionEvent, MessageEvent, 
-    SystemMessageEvent, TextDeltaEvent, ThoughtDeltaEvent,
-    HistoryEvent
-)
-from agent_c.models.events.tool_calls import ToolCallEvent, ToolCallDeltaEvent
-
-from .chat_models import ChatMessage, ChatEventUnion
+from .chat_models import ChatEventUnion
 
 class HistorySummary(BaseModel):
     """
@@ -95,8 +85,8 @@ class HistoryDetail(HistorySummary):
         description="List of tool names that were called during the session"
     )
     
-    model_config = {
-        "json_schema_extra": {
+    model_config = ConfigDict(
+        json_schema_extra= {
             "example": {
                 "session_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
                 "name": "Task Planning Session",
@@ -117,11 +107,11 @@ class HistoryDetail(HistorySummary):
                     "prompt_tokens": 1650
                 },
                 "user_id": "user_12345",
-                "has_thinking": true,
+                "has_thinking": True,
                 "tool_calls": ["web_search", "file_reader", "code_interpreter"]
             }
-        }
-    }
+        })
+
 
 class PaginationParams(BaseModel):
     """
@@ -150,16 +140,15 @@ class PaginationParams(BaseModel):
         description="Sort direction, either 'asc' (ascending) or 'desc' (descending)"
     )
     
-    model_config = {
-        "json_schema_extra": {
+    model_config = ConfigDict(
+        json_schema_extra= {
             "example": {
                 "limit": 20,
                 "offset": 40,
                 "sort_by": "created_at",
                 "sort_order": "desc"
             }
-        }
-    }
+        })
 
 class HistoryListResponse(BaseModel):
     """
@@ -184,8 +173,8 @@ class HistoryListResponse(BaseModel):
         description="Number of results skipped before this page"
     )
     
-    model_config = {
-        "json_schema_extra": {
+    model_config = ConfigDict(
+        json_schema_extra= {
             "example": {
                 "items": [
                     {
@@ -209,8 +198,8 @@ class HistoryListResponse(BaseModel):
                 "limit": 20,
                 "offset": 0
             }
-        }
-    }
+        })
+
 
 class EventFilter(BaseModel):
     """
@@ -239,8 +228,8 @@ class EventFilter(BaseModel):
         description="Maximum number of events to return (1-1000)"
     )
     
-    model_config = {
-        "json_schema_extra": {
+    model_config = ConfigDict(
+        json_schema_extra= {
             "examples": [
                 # Example 1: Filtering by event type
                 {
@@ -260,8 +249,8 @@ class EventFilter(BaseModel):
                     "limit": 100
                 }
             ]
-        }
-    }
+        })
+
 
 # We'll use the core event models directly (ChatEventUnion) instead of defining our own Event class
 # This type alias covers all possible event types coming from stored history
@@ -289,8 +278,8 @@ class StoredEvent(BaseModel):
         description="When this event occurred in the session timeline"
     )
     
-    model_config = {
-        "json_schema_extra": {
+    model_config = ConfigDict(
+        json_schema_extra= {
             "examples": [
                 # Example of a user message event
                 {
@@ -328,8 +317,7 @@ class StoredEvent(BaseModel):
                     }
                 }
             ]
-        }
-    }
+        })
 
 class ReplayStatus(BaseModel):
     """
@@ -360,17 +348,17 @@ class ReplayStatus(BaseModel):
         description="Timestamp of the last event in the session"
     )
     
-    model_config = {
-        "json_schema_extra": {
+    model_config = ConfigDict(
+        json_schema_extra= {
             "example": {
                 "session_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-                "is_playing": true,
+                "is_playing": True,
                 "current_position": "2025-04-01T14:40:15Z",
                 "start_time": "2025-04-01T14:30:00Z",
                 "end_time": "2025-04-01T15:45:00Z"
             }
         }
-    }
+    )
 
 class ReplayControl(BaseModel):
     """
@@ -394,8 +382,8 @@ class ReplayControl(BaseModel):
         description="Playback speed multiplier (0.1-10.0, where 1.0 is normal speed)"
     )
     
-    model_config = {
-        "json_schema_extra": {
+    model_config = ConfigDict(
+        json_schema_extra= {
             "examples": [
                 # Example 1: Start playback at normal speed
                 {
@@ -417,5 +405,4 @@ class ReplayControl(BaseModel):
                     "position": "2025-04-01T14:35:00Z"
                 }
             ]
-        }
-    }
+        })

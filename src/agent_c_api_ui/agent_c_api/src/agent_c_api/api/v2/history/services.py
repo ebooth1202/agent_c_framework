@@ -3,6 +3,8 @@ from datetime import datetime, timedelta
 from uuid import UUID
 from fastapi import BackgroundTasks
 
+from agent_c.models.events import MessageEvent, InteractionEvent, ToolCallEvent, CompletionEvent, TextDeltaEvent, SessionEvent
+from agent_c.models.events.chat import ThoughtDeltaEvent, HistoryEvent
 from agent_c_api.api.v1.interactions.services.interaction_service import InteractionService
 from agent_c_api.api.v1.interactions.interaction_models.interaction_model import InteractionSummary, InteractionDetail as V1InteractionDetail
 from agent_c_api.api.v1.interactions.services.event_service import EventService as V1EventService
@@ -209,7 +211,7 @@ class EventService:
         event_types: Optional[List[str]] = None,
         real_time: bool = False,
         speed_factor: float = 1.0
-    ) -> AsyncGenerator[HistoryEventUnion, None]:
+    ) -> AsyncGenerator[str, None]:
         """
         Stream events for a session, optionally with real-time timing.
         Returns core event models directly.

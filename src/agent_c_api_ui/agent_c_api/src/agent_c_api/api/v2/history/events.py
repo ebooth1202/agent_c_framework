@@ -4,6 +4,9 @@ from typing import List, Optional
 from datetime import datetime
 from uuid import UUID
 
+from fastapi_versioning import version
+from starlette import status
+
 from agent_c_api.core.util.logging_utils import LoggingManager
 from agent_c_api.api.v2.models.history_models import StoredEvent, HistoryEventUnion, EventFilter, ReplayStatus, ReplayControl
 from agent_c_api.api.v2.models.response_models import APIResponse, PaginatedResponse, APIStatus
@@ -34,9 +37,9 @@ event_service = EventService()
                 "application/json": {
                     "example": {
                         "status": {
-                            "success": true,
-                            "message": null,
-                            "error_code": null
+                            "success": True,
+                            "message": None,
+                            "error_code": None
                         },
                         "data": [
                             {
@@ -188,7 +191,7 @@ async def get_events(
 async def stream_events(
     session_id: UUID = Path(..., description="Unique identifier of the session to stream events from"),
     event_types: Optional[List[str]] = Query(None, description="Filter stream to only include these event types (e.g., 'text_delta', 'tool_call', 'thinking')"),
-    real_time: bool = Query(False, description="When true, replays events with original timing; when false, streams as fast as possible"),
+    real_time: bool = Query(False, description="When True, replays events with original timing; when false, streams as fast as possible"),
     speed_factor: float = Query(1.0, ge=0.1, le=10.0, description="Speed multiplier for real-time replay (0.1-10.0, where 1.0 is original speed)")
 ):
     """Stream events for a session, optionally in real-time."""
@@ -236,13 +239,13 @@ async def stream_events(
                 "application/json": {
                     "example": {
                         "status": {
-                            "success": true,
-                            "message": null,
-                            "error_code": null
+                            "success": True,
+                            "message": None,
+                            "error_code": None
                         },
                         "data": {
                             "session_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-                            "is_playing": true,
+                            "is_playing": True,
                             "current_position": "2025-04-01T14:40:15Z",
                             "start_time": "2025-04-01T14:30:00Z",
                             "end_time": "2025-04-01T15:45:00Z"
@@ -285,8 +288,8 @@ async def stream_events(
 async def get_replay_status(session_id: UUID = Path(..., description="Unique identifier of the session to get replay status for")):
     """Get the current status of a session replay."""
     try:
-        status = event_service.get_replay_status(session_id)
-        if not status:
+        replay_status = event_service.get_replay_status(session_id)
+        if not replay_status:
             raise HTTPException(
                 status_code=404, 
                 detail={
@@ -298,7 +301,7 @@ async def get_replay_status(session_id: UUID = Path(..., description="Unique ide
         
         return APIResponse(
             status=APIStatus(success=True),
-            data=status
+            data=replay_status
         )
     except HTTPException:
         raise
@@ -340,33 +343,33 @@ async def get_replay_status(session_id: UUID = Path(..., description="Unique ide
                             "summary": "Response when starting playback",
                             "value": {
                                 "status": {
-                                    "success": true,
+                                    "success": True,
                                     "message": "Replay control 'play' successful",
-                                    "error_code": null
+                                    "error_code": None
                                 },
-                                "data": true
+                                "data": True
                             }
                         },
                         "pause": {
                             "summary": "Response when pausing playback",
                             "value": {
                                 "status": {
-                                    "success": true,
+                                    "success": True,
                                     "message": "Replay control 'pause' successful",
-                                    "error_code": null
+                                    "error_code": None
                                 },
-                                "data": true
+                                "data": True
                             }
                         },
                         "seek": {
                             "summary": "Response when seeking to position",
                             "value": {
                                 "status": {
-                                    "success": true,
+                                    "success": True,
                                     "message": "Replay control 'seek' successful",
-                                    "error_code": null
+                                    "error_code": None
                                 },
-                                "data": true
+                                "data": True
                             }
                         }
                     }
@@ -402,8 +405,9 @@ async def get_replay_status(session_id: UUID = Path(..., description="Unique ide
 @version(2)
 async def control_replay(
     control: ReplayControl,
+    background_tasks: BackgroundTasks,
     session_id: UUID = Path(..., description="Unique identifier of the session to control replay for"),
-    background_tasks: BackgroundTasks = Depends()
+
 ):
     """Control a session replay (play, pause, seek)."""
     try:
