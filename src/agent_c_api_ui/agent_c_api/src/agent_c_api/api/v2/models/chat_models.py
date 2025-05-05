@@ -33,11 +33,49 @@ ContentBlockUnion = Union[TextBlock, FileBlock, ImageBlock]
 # For backward compatibility and API stability, we'll keep the ChatMessageContent
 # model but update it to be a wrapper around core content blocks
 class ChatMessageContent(BaseModel):
-    """Content of a chat message using core content blocks"""
-    type: Literal["text", "image", "file"] = Field(..., description="Content type")
-    text: Optional[str] = Field(None, description="Text content")
-    file_id: Optional[str] = Field(None, description="File ID for file content")
-    mime_type: Optional[str] = Field(None, description="MIME type for file content")
+    """Content of a chat message using core content blocks
+    
+    This model represents the different types of content that can be included in a chat message,
+    such as text, images, or file attachments. It provides a structured way to handle
+    multimodal messages in the chat API.
+    """
+    type: Literal["text", "image", "file"] = Field(
+        ..., 
+        description="Content type (text, image, or file)"
+    )
+    text: Optional[str] = Field(
+        None, 
+        description="Text content when type is 'text'"
+    )
+    file_id: Optional[str] = Field(
+        None, 
+        description="File ID for file content when type is 'image' or 'file'"
+    )
+    mime_type: Optional[str] = Field(
+        None, 
+        description="MIME type for file content (e.g., 'image/jpeg', 'application/pdf')"
+    )
+    
+    model_config = {
+        "schema_extra": {
+            "examples": [
+                {
+                    "type": "text",
+                    "text": "Hello, can you help me with a Python question?"
+                },
+                {
+                    "type": "image",
+                    "file_id": "f8d7e91c-3f6a-4b1d-8d2e-1a7bb6f5abcd",
+                    "mime_type": "image/jpeg"
+                },
+                {
+                    "type": "file",
+                    "file_id": "a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5cde",
+                    "mime_type": "application/pdf"
+                }
+            ]
+        }
+    }
     
     @classmethod
     @field_validator('text')
@@ -83,13 +121,97 @@ class ChatMessage(BaseModel):
     Uses the core MessageEvent model internally while providing a consistent
     external API interface. This model serves as an adapter between the API and
     the core models.
+    
+    Each message can contain multiple content parts (text, images, files), tool calls
+    made by the assistant, and the results of those tool calls. This structure enables
+    rich, multimodal interactions between users and agents.
     """
-    id: Optional[UUID] = Field(None, description="Message ID")
-    role: Literal["user", "assistant", "system"] = Field(..., description="Message role")
-    created_at: Optional[datetime] = Field(None, description="Creation timestamp")
-    content: List[ChatMessageContent] = Field(..., description="Message content parts")
-    tool_calls: Optional[List[ToolCall]] = Field(None, description="Tool calls made by assistant")
-    tool_results: Optional[List[ToolResult]] = Field(None, description="Results of tool calls")
+    id: Optional[UUID] = Field(
+        None, 
+        description="Unique identifier for the message"
+    )
+    role: Literal["user", "assistant", "system"] = Field(
+        ..., 
+        description="Role of the message sender (user, assistant, or system)"
+    )
+    created_at: Optional[datetime] = Field(
+        None, 
+        description="Timestamp when the message was created"
+    )
+    content: List[ChatMessageContent] = Field(
+        ..., 
+        description="List of content parts that make up the message (text, images, files)"
+    )
+    tool_calls: Optional[List[ToolCall]] = Field(
+        None, 
+        description="List of tool calls initiated by the assistant during this message"
+    )
+    tool_results: Optional[List[ToolResult]] = Field(
+        None, 
+        description="Results returned from tool calls for this message"
+    )
+    
+    model_config = {
+        "schema_extra": {
+            "examples": [
+                # User message with text only
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "How do I read a file in Python?"
+                        }
+                    ]
+                },
+                # User message with text and image
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "What's wrong with this code?"
+                        },
+                        {
+                            "type": "image",
+                            "file_id": "f8d7e91c-3f6a-4b1d-8d2e-1a7bb6f5abcd",
+                            "mime_type": "image/png"
+                        }
+                    ]
+                },
+                # Assistant message with text and tool call
+                {
+                    "role": "assistant",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "Here's the current weather in Seattle:"
+                        }
+                    ],
+                    "tool_calls": [
+                        {
+                            "id": "call_abc123",
+                            "name": "get_weather",
+                            "arguments": {
+                                "location": "Seattle",
+                                "units": "imperial"
+                            }
+                        }
+                    ],
+                    "tool_results": [
+                        {
+                            "call_id": "call_abc123",
+                            "result": {
+                                "temperature": 72,
+                                "condition": "sunny",
+                                "humidity": 65
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    }
     
     def to_message_event(self, session_id: str) -> MessageEvent:
         """Convert to a core MessageEvent
@@ -135,19 +257,108 @@ class ChatMessage(BaseModel):
         )
 
 class ChatRequest(BaseModel):
-    """A request to send a chat message"""
-    message: ChatMessage = Field(..., description="Message to send")
-    stream: bool = Field(True, description="Whether to stream the response")
+    """A request to send a chat message
+    
+    Contains the message to send to the agent and whether to stream the response.
+    When streaming is enabled, the API returns a server-sent events (SSE) stream
+    of response events. When disabled, the API returns a complete response once
+    the interaction is finished.
+    """
+    message: ChatMessage = Field(
+        ..., 
+        description="The message to send to the agent"
+    )
+    stream: bool = Field(
+        True, 
+        description="Whether to stream the response as server-sent events (SSE)"
+    )
+    
+    model_config = {
+        "schema_extra": {
+            "examples": [
+                # Simple text message with streaming
+                {
+                    "message": {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "What is the capital of France?"
+                            }
+                        ]
+                    },
+                    "stream": True
+                },
+                # Message with image attachment
+                {
+                    "message": {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "Can you describe what's in this image?"
+                            },
+                            {
+                                "type": "image",
+                                "file_id": "f8d7e91c-3f6a-4b1d-8d2e-1a7bb6f5abcd"
+                            }
+                        ]
+                    },
+                    "stream": True
+                }
+            ]
+        }
+    }
 
 class ChatResponse(BaseModel):
-    """A response containing a chat message"""
-    message: ChatMessage = Field(..., description="The response message")
-    completion_id: Optional[str] = Field(None, description="Completion ID for reference")
+    """A response containing a chat message
+    
+    This model is used for non-streaming responses. It contains the complete message
+    from the assistant along with a completion ID that can be used for reference.
+    
+    Note: Current API implementation primarily supports streaming responses. Non-streaming
+    responses may be implemented in future versions.
+    """
+    message: ChatMessage = Field(
+        ..., 
+        description="The complete response message from the assistant"
+    )
+    completion_id: Optional[str] = Field(
+        None, 
+        description="Unique identifier for this completion (for reference and tracking)"
+    )
+    
+    model_config = {
+        "schema_extra": {
+            "examples": [
+                {
+                    "message": {
+                        "id": "msg_123abc",
+                        "role": "assistant",
+                        "created_at": "2025-04-04T12:00:00Z",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "Paris is the capital of France. It's known as the 'City of Light' and is famous for landmarks like the Eiffel Tower, the Louvre Museum, and Notre-Dame Cathedral."
+                            }
+                        ]
+                    },
+                    "completion_id": "comp_xyz789"
+                }
+            ]
+        }
+    }
 
 class ChatEventType(str, Enum):
     """
     Types of events during a chat interaction, aligned with core event types.
-    This enum can be used for filtering but the actual events use the core model types.
+    
+    This enum defines the possible event types that can occur during a streaming
+    chat interaction. Each event type corresponds to a specific kind of update
+    from the agent, such as text generation, tool usage, or thinking process.
+    
+    While the streaming API returns core event objects directly, this enum is useful
+    for filtering events and understanding the event structure.
     """
     INTERACTION = "interaction"  # InteractionEvent
     COMPLETION = "completion"    # CompletionEvent
