@@ -5,6 +5,8 @@ from typing import Dict, Any
 from fastapi import FastAPI, APIRouter
 from contextlib import asynccontextmanager
 from starlette.middleware.cors import CORSMiddleware
+from fastapi_cache import FastAPICache
+from fastapi_cache.backends.inmemory import InMemoryBackend
 
 
 from agent_c_api.config.env_config import settings
@@ -47,6 +49,10 @@ def create_application(router: APIRouter, **kwargs) -> FastAPI:
     async def lifespan(lifespan_app: FastAPI):
         # Shared AgentManager instance.
         lifespan_app.state.agent_manager = UItoAgentBridgeManager()
+        
+        # Initialize FastAPICache with InMemoryBackend
+        FastAPICache.init(InMemoryBackend(), prefix="agent_c_api_cache")
+        logger.info("FastAPICache initialized with InMemoryBackend")
 
         yield
 

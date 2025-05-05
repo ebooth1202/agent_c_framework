@@ -41,14 +41,28 @@ class ConfigService:
                         default=param_data.get("default")
                     ))
                 
+                # Transform capabilities from dict to list if needed
+                capabilities = []
+                if isinstance(model.get("capabilities", {}), dict):
+                    capabilities = [key for key, value in model.get("capabilities", {}).items() if value]
+                elif isinstance(model.get("capabilities", []), list):
+                    capabilities = model.get("capabilities", [])
+                
+                # Transform allowed_inputs from dict to list if needed
+                allowed_inputs = []
+                if isinstance(model.get("allowed_inputs", {}), dict):
+                    allowed_inputs = [key for key, value in model.get("allowed_inputs", {}).items() if value]
+                elif isinstance(model.get("allowed_inputs", []), list):
+                    allowed_inputs = model.get("allowed_inputs", [])
+                
                 model_info = ModelInfo(
                     id=model["id"],
                     name=model.get("ui_name", model["id"]),
                     provider=vendor_name,
                     description=model.get("description", ""),
-                    capabilities=model.get("capabilities", []),
+                    capabilities=capabilities,
                     parameters=parameters,
-                    allowed_inputs=model.get("allowed_inputs", [])
+                    allowed_inputs=allowed_inputs
                 )
                 model_list.append(model_info)
         

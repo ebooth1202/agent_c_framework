@@ -1,4 +1,5 @@
 # config.py
+import os
 from pathlib import Path
 from pydantic_settings  import BaseSettings, SettingsConfigDict
 
@@ -23,7 +24,7 @@ class Settings(BaseSettings):
     APP_DESCRIPTION: str = "A FastAPI backend for Agent C"
     CONTACT_NAME: str = "Joseph Ours"
     CONTACT_EMAIL: str = "joseph.ours@centricconsulting.com"
-    LICENSE_NAME: str = "BSD"
+    LICENSE_NAME: str = "BSL 1.1"
     APP_VERSION: str = "0.1.0"
 
     # Base directories
@@ -36,8 +37,8 @@ class Settings(BaseSettings):
 
     # FastAPI and CORS settings
     ALLOWED_ORIGINS: list[str] = ["*"]
-    HOST: str = "0.0.0.0"
-    PORT: int = 8000
+    HOST: str = os.environ.get("AGENT_C_API_HOST", "0.0.0.0")
+    PORT: int = int(os.environ.get("AGENT_C_API_PORT", 8000))
     RELOAD: bool = False
     
     # Agent settings
