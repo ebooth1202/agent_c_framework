@@ -4,7 +4,7 @@ from unittest.mock import patch, MagicMock, AsyncMock
 
 from agent_c_api.main import app
 from agent_c_api.api.v2.config.services import ConfigService
-from agent_c_api.api.v2.config.models import (
+from agent_c_api.api.v2.models import (
     ModelInfo, PersonaInfo, ToolInfo,
     ModelsResponse, PersonasResponse, ToolsResponse, SystemConfigResponse
 )

@@ -3,7 +3,7 @@ import pytest
 from datetime import datetime, timedelta
 from uuid import UUID, uuid4
 from agent_c_api.api.v2.models.history_models import (
-    HistorySummary, EventFilter, Event, ReplayStatus, ReplayControl
+    HistorySummary, EventFilter, ChatEventUnion, ReplayStatus, ReplayControl
 )
 
 def test_history_summary():
@@ -59,25 +59,6 @@ def test_event_filter():
     assert filter.start_time == now - timedelta(hours=1)
     assert filter.end_time == now
     assert filter.limit == 50
-
-def test_event():
-    session_id = uuid4()
-    now = datetime.now()
-    
-    # Test valid event
-    event = Event(
-        id="evt-123",
-        session_id=session_id,
-        timestamp=now,
-        event_type="message",
-        data={"text": "Hello, world!"}
-    )
-    
-    assert event.id == "evt-123"
-    assert event.session_id == session_id
-    assert event.timestamp == now
-    assert event.event_type == "message"
-    assert event.data == {"text": "Hello, world!"}
 
 def test_replay_status():
     session_id = uuid4()

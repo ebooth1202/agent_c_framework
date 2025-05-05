@@ -2,7 +2,7 @@ import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from agent_c_api.api.v2.sessions.models import SessionCreate, SessionDetail, SessionUpdate
+from agent_c_api.api.v2.models import SessionCreate, SessionDetail, SessionUpdate
 from agent_c_api.api.v2.sessions.services import SessionService
 
 

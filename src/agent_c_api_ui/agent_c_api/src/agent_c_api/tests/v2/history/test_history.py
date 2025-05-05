@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, patch
 from fastapi import FastAPI
 from agent_c_api.api.v2.history.services import HistoryService
-from agent_c_api.api.v2.history.models import HistorySummary, HistoryDetail
+from agent_c_api.api.v2.models import HistorySummary, HistoryDetail
 
 # Test data
 MOCK_HISTORY_SUMMARIES = [
