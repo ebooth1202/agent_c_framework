@@ -1,31 +1,19 @@
 import os
 import re
-from typing import Dict, Any
 
+from typing import Dict, Any
 from fastapi import FastAPI, APIRouter
-# Removed VersionedFastAPI import - using directory structure for versioning
-from starlette.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from starlette.middleware.cors import CORSMiddleware
+
 
 from agent_c_api.config.env_config import settings
-from agent_c_api.core.agent_manager import UItoAgentBridgeManager
 from agent_c_api.core.util.logging_utils import LoggingManager
+from agent_c_api.core.agent_manager import UItoAgentBridgeManager
 from agent_c_api.core.util.middleware_logging import APILoggingMiddleware
 
 logging_manager = LoggingManager(__name__)
 logger = logging_manager.get_logger()
-
-def get_origins_list():
-    allowed_hosts_str = os.getenv("API_ALLOWED_HOSTS", "localhost")
-    hosts = []
-    patterns = [pattern.strip() for pattern in allowed_hosts_str.split(",")]
-    for protocol in ['http', 'https']:
-        for pattern in patterns:
-            hosts.append(f"{protocol}://{pattern}")
-
-    return hosts
-
-
 
 def get_origins_regex():
     allowed_hosts_str = os.getenv("API_ALLOWED_HOSTS", "localhost,.local")
@@ -105,29 +93,23 @@ def create_application(router: APIRouter, **kwargs) -> FastAPI:
         "openapi_url": getattr(settings, "OPENAPI_URL", "/openapi.json")
     }
     
-    # Add any additional kwargs passed to the function
-    kwargs.update(openapi_metadata)
 
-    # Create the FastAPI application with the lifespan handler and enhanced OpenAPI docs
+    kwargs.update(openapi_metadata)
     app = FastAPI(lifespan=lifespan, **kwargs)
-    # Using directory structure for versioning - removed VersionedFastAPI wrapper
 
     origin_regex = get_origins_regex()
-    origins_list = get_origins_list()
-    print(origin_regex)
-    # Add CORS middleware (adjust origins as necessary)
+    logger.info(f"CORS allowed host regex: {origin_regex}")
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=origins_list,
+        allow_origin_regex=origin_regex,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
 
-    # Try to get the environment from settings, environment variables, or default to 'development'
+
     environment = getattr(settings, "ENV", os.getenv("ENV", "development")).lower()
     is_production = environment == "production"
-
     logger.info(f"Application running in {environment} environment")
 
     # Add our custom logging middleware
@@ -138,7 +120,6 @@ def create_application(router: APIRouter, **kwargs) -> FastAPI:
         log_response_body=False
     )
 
-    # Include your router containing your API endpoints.
     app.include_router(router)
 
     # Log application creation details
