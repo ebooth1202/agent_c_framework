@@ -153,9 +153,9 @@ class ChatMessage(BaseModel):
         None, 
         description="Results returned from tool calls for this message"
     )
-    
-    model_config: ClassVar[dict] = {
-        "json_schema_extra": {
+
+    model_config = ConfigDict(
+        json_schema_extra={
             "examples": [
                 # User message with text only
                 {
@@ -213,8 +213,8 @@ class ChatMessage(BaseModel):
                     ]
                 }
             ]
-        }
-    }
+        })
+
     
     def to_message_event(self, session_id: str) -> MessageEvent:
         """Convert to a core MessageEvent
@@ -275,9 +275,9 @@ class ChatRequest(BaseModel):
         True, 
         description="Whether to stream the response as server-sent events (SSE)"
     )
-    
-    model_config: ClassVar[dict] = {
-        "json_schema_extra": {
+
+    model_config = ConfigDict(
+        json_schema_extra={
             "examples": [
                 # Simple text message with streaming
                 {
@@ -310,8 +310,8 @@ class ChatRequest(BaseModel):
                     "stream": True
                 }
             ]
-        }
-    }
+        })
+
 
 class ChatResponse(BaseModel):
     """A response containing a chat message
@@ -330,9 +330,9 @@ class ChatResponse(BaseModel):
         None, 
         description="Unique identifier for this completion (for reference and tracking)"
     )
-    
-    model_config: ClassVar[dict] = {
-        "json_schema_extra": {
+
+    model_config = ConfigDict(
+        json_schema_extra={
             "examples": [
                 {
                     "message": {
@@ -349,8 +349,8 @@ class ChatResponse(BaseModel):
                     "completion_id": "comp_xyz789"
                 }
             ]
-        }
-    }
+        })
+
 
 class ChatEventType(str, Enum):
     """
@@ -372,5 +372,3 @@ class ChatEventType(str, Enum):
     TOOL_CALL_DELTA = "tool_select_delta"  # ToolCallDeltaEvent
     HISTORY = "history"        # HistoryEvent
     
-# ChatEvent is replaced by direct use of the core event models (ChatEventUnion type)
-# The StreamingResponse will use these core event types directly

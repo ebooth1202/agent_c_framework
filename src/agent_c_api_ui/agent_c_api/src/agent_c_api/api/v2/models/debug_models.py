@@ -1,6 +1,6 @@
 # src/agent_c_api/api/v2/models/debug_models.py
 from typing import List, Optional, Dict, Any, ClassVar
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class MessagePreview(BaseModel):
@@ -12,9 +12,9 @@ class MessagePreview(BaseModel):
     role: str = Field(..., description="Role of the message sender (user or assistant)")
     content_preview: str = Field(..., description="Preview of the message content (truncated)")
     timestamp: Optional[str] = Field(None, description="Timestamp when the message was sent")
-    
-    model_config: ClassVar[dict] = {
-        "json_schema_extra": {
+
+    model_config = ConfigDict(
+        json_schema_extra={
             "examples": [
                 {
                     "role": "user",
@@ -27,8 +27,8 @@ class MessagePreview(BaseModel):
                     "timestamp": "2025-05-04T14:22:45Z"
                 }
             ]
-        }
-    }
+        })
+
 
 
 class SessionManagerDebug(BaseModel):
@@ -41,9 +41,9 @@ class SessionManagerDebug(BaseModel):
     exists: bool = Field(..., description="Whether the session manager exists")
     user_id: Optional[str] = Field(None, description="User ID associated with the session")
     has_chat_session: Optional[bool] = Field(None, description="Whether the session has an active chat session")
-    
-    model_config: ClassVar[dict] = {
-        "json_schema_extra": {
+
+    model_config = ConfigDict(
+        json_schema_extra={
             "examples": [
                 {
                     "exists": True,
@@ -56,8 +56,8 @@ class SessionManagerDebug(BaseModel):
                     "has_chat_session": False
                 }
             ]
-        }
-    }
+        })
+
 
 
 class ChatSessionDebug(BaseModel):
@@ -68,17 +68,17 @@ class ChatSessionDebug(BaseModel):
     """
     session_id: str = Field(..., description="ID of the chat session")
     has_active_memory: bool = Field(..., description="Whether the session has active memory")
-    
-    model_config: ClassVar[dict] = {
-        "json_schema_extra": {
+
+    model_config = ConfigDict(
+        json_schema_extra={
             "examples": [
                 {
                     "session_id": "chat-sess-abc123",
                     "has_active_memory": True
                 }
             ]
-        }
-    }
+        })
+
 
 
 class MessagesDebug(BaseModel):
@@ -92,9 +92,9 @@ class MessagesDebug(BaseModel):
     user_messages: int = Field(..., description="Number of messages from the user")
     assistant_messages: int = Field(..., description="Number of messages from the assistant")
     latest_message: Optional[str] = Field(None, description="Preview of the latest message")
-    
-    model_config: ClassVar[dict] = {
-        "json_schema_extra": {
+
+    model_config = ConfigDict(
+        json_schema_extra={
             "examples": [
                 {
                     "count": 7,
@@ -103,8 +103,8 @@ class MessagesDebug(BaseModel):
                     "latest_message": "I'll analyze that code snippet now..."
                 }
             ]
-        }
-    }
+        })
+
 
 
 class ToolChestDebug(BaseModel):
@@ -116,9 +116,9 @@ class ToolChestDebug(BaseModel):
     """
     exists: bool = Field(..., description="Whether the tool chest exists")
     active_tools: Optional[List[str]] = Field(None, description="List of active tools")
-    
-    model_config: ClassVar[dict] = {
-        "json_schema_extra": {
+
+    model_config = ConfigDict(
+        json_schema_extra={
             "examples": [
                 {
                     "exists": True,
@@ -129,8 +129,8 @@ class ToolChestDebug(BaseModel):
                     "active_tools": []
                 }
             ]
-        }
-    }
+        })
+
 
 
 class ChatLogDebug(BaseModel):
@@ -142,9 +142,9 @@ class ChatLogDebug(BaseModel):
     """
     exists: bool = Field(..., description="Whether the current chat log exists")
     count: int = Field(..., description="Number of entries in the chat log")
-    
-    model_config: ClassVar[dict] = {
-        "json_schema_extra": {
+
+    model_config = ConfigDict(
+        json_schema_extra={
             "examples": [
                 {
                     "exists": True,
@@ -155,8 +155,8 @@ class ChatLogDebug(BaseModel):
                     "count": 0
                 }
             ]
-        }
-    }
+        })
+
 
 
 class SessionDebugInfo(BaseModel):
@@ -180,9 +180,10 @@ class SessionDebugInfo(BaseModel):
     recent_messages: Optional[List[MessagePreview]] = Field(None, description="Preview of recent messages")
     current_chat_Log: ChatLogDebug = Field(..., description="Debug info about the current chat log")
     tool_chest: ToolChestDebug = Field(..., description="Debug info about the tool chest")
-    
-    model_config: ClassVar[dict] = {
-        "json_schema_extra": {
+
+    model_config = ConfigDict(
+        protected_namespaces=(),
+        json_schema_extra={
             "examples": [
                 {
                     "session_id": "ui-sess-def456",
@@ -228,8 +229,8 @@ class SessionDebugInfo(BaseModel):
                     }
                 }
             ]
-        }
-    }
+        })
+
 
 
 class AgentBridgeParams(BaseModel):
@@ -244,9 +245,9 @@ class AgentBridgeParams(BaseModel):
     extended_thinking: Optional[bool] = Field(None, description="Whether extended thinking is enabled")
     budget_tokens: Optional[int] = Field(None, description="Token budget for the agent")
     max_tokens: Optional[int] = Field(None, description="Maximum tokens for responses")
-    
-    model_config: ClassVar[dict] = {
-        "json_schema_extra": {
+
+    model_config = ConfigDict(
+        json_schema_extra={
             "examples": [
                 {
                     "temperature": 0.7,
@@ -256,8 +257,8 @@ class AgentBridgeParams(BaseModel):
                     "max_tokens": 4000
                 }
             ]
-        }
-    }
+        })
+
 
 
 class InternalAgentParams(BaseModel):

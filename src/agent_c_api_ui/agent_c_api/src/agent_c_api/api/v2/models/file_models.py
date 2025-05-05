@@ -1,7 +1,7 @@
 # src/agent_c_api/api/v2/models/file_models.py
 from typing import Dict, Any, ClassVar
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from uuid import UUID
 
 class FileMeta(BaseModel):
@@ -40,9 +40,9 @@ class FileMeta(BaseModel):
         default_factory=dict, 
         description="Additional metadata including processing status and results"
     )
-    
-    model_config: ClassVar[dict] = {
-        "json_schema_extra": {
+
+    model_config = ConfigDict(
+        json_schema_extra={
             "examples": [
                 {
                     "id": "file_abc123",
@@ -70,8 +70,8 @@ class FileMeta(BaseModel):
                     }
                 }
             ]
-        }
-    }
+        })
+
 
 class FileUploadResponse(BaseModel):
     """Response after file upload
@@ -96,9 +96,9 @@ class FileUploadResponse(BaseModel):
         ..., 
         description="File size in bytes"
     )
-    
-    model_config: ClassVar[dict] = {
-        "json_schema_extra": {
+
+    model_config = ConfigDict(
+        json_schema_extra={
             "examples": [
                 {
                     "file_id": "file_abc123",
@@ -113,5 +113,4 @@ class FileUploadResponse(BaseModel):
                     "size": 153600
                 }
             ]
-        }
-    }
+        })
