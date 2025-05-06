@@ -49,6 +49,7 @@ class ToolChest:
                 - essential_toolset_names: List of names of toolsets that should always be active
                 - (legacy) tool_classes: Alias for available_toolset_classes for backward compatibility
                 - tool_cache: Optional ToolCache instance to use
+                - session_manager: Optional SessionManager instance to use
         """
         # Initialize main dictionaries for toolset tracking
         self.__toolset_instances: dict[str, Toolset] = {}  # All instantiated toolsets
@@ -72,6 +73,7 @@ class ToolChest:
         
         # Initialize tool_cache
         self.tool_cache = kwargs.get('tool_cache')
+        # self.session_manager = kwargs.get('session_manager')
 
     def _update_toolset_metadata(self):
         """
@@ -140,7 +142,7 @@ class ToolChest:
                     success = False
                     activation_stack.remove(name)
                     continue
-
+                
                 required_tools = Toolset.get_required_tools(name)
                 
                 # Log dependencies for debugging
@@ -174,6 +176,9 @@ class ToolChest:
                 # Pass tool_cache if we have it
                 if hasattr(self, 'tool_cache') and self.tool_cache is not None:
                     local_tool_opts['tool_cache'] = self.tool_cache
+
+                if hasattr(self, 'session_manager') and self.session_manager is not None:
+                    local_tool_opts['session_manager'] = self.session_manager
 
                 # Create instance
                 try:
