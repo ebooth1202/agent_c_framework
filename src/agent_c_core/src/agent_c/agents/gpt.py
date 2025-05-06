@@ -321,43 +321,43 @@ class GPTChatAgent(BaseAgent):
         state = self._init_stream_state()
 
         # Start API call
-        response = await self.client.chat.completions.create(**completion_opts)
+        async with await self.client.chat.completions.create(**completion_opts) as stream:
 
-        try:
-            async for chunk in response:
-                # Process each chunk through appropriate handler
-                await self._process_stream_chunk(chunk, state, tool_chest, session_manager,
-                                                 messages, callback_opts)
+            try:
+                async for chunk in stream:
+                    # Process each chunk through appropriate handler
+                    await self._process_stream_chunk(chunk, state, tool_chest, session_manager,
+                                                     messages, callback_opts)
 
-                if client_wants_cancel.is_set():
-                    state['complete'] = True
-                    state['stop_reason'] = "client_cancel"
+                    if client_wants_cancel.is_set():
+                        state['complete'] = True
+                        state['stop_reason'] = "client_cancel"
 
-                # If we've completed processing and it's not a tool call, we're done
-                if state['complete'] and not state['tool_calls_processed']:
-                    # Add the collected content to messages and finalize
-                    output_text = "".join(state["collected_messages"])
-                    if output_text.strip():  # Only add if there's actual content
-                        if state["current_audio_id"] is not None:
-                            messages.append(await self._save_audio_interaction_to_session(
-                                session_manager, state["current_audio_id"], output_text
-                            ))
-                        else:
-                            messages.append(await self._save_interaction_to_session(session_manager, output_text))
+                    # If we've completed processing and it's not a tool call, we're done
+                    if state['complete'] and not state['tool_calls_processed']:
+                        # Add the collected content to messages and finalize
+                        output_text = "".join(state["collected_messages"])
+                        if output_text.strip():  # Only add if there's actual content
+                            if state["current_audio_id"] is not None:
+                                messages.append(await self._save_audio_interaction_to_session(
+                                    session_manager, state["current_audio_id"], output_text
+                                ))
+                            else:
+                                messages.append(await self._save_interaction_to_session(session_manager, output_text))
 
-                    # Finalize events
-                    await self._raise_history_event(messages, **callback_opts)
-                    await self._raise_interaction_end(id=interaction_id, **callback_opts)
-                    return messages, state
+                        # Finalize events
+                        await self._raise_history_event(messages, **callback_opts)
+                        await self._raise_interaction_end(id=interaction_id, **callback_opts)
+                        return messages, state
 
-                # If we've completed and there are tool calls, process them
-                elif state['complete'] and state['tool_calls_processed']:
-                    await self._process_tool_calls(state, tool_chest, session_manager, messages, callback_opts)
-                    return messages, state
+                    # If we've completed and there are tool calls, process them
+                    elif state['complete'] and state['tool_calls_processed']:
+                        await self._process_tool_calls(state, tool_chest, session_manager, messages, callback_opts)
+                        return messages, state
 
-        except Exception as e:
-            self.logger.error(f"Error during stream processing: {e}")
-            raise
+            except Exception as e:
+                self.logger.error(f"Error during stream processing: {e}")
+                raise
 
         # Ensure we handle any pending updates before returning
         if state['collected_messages'] and not state['complete']:
