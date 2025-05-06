@@ -1,11 +1,10 @@
 from fastapi import Request, Depends, HTTPException
-from typing import Dict, Any, Optional, List, Tuple, Set
+from typing import Dict, Any, Optional, List, Tuple, Set, Annotated, cast
 from pydantic import create_model
 import logging
 import re
 from collections import defaultdict
 
-from agent_c_api.core.agent_manager import UItoAgentBridgeManager
 from agent_c_api.config.config_loader import get_allowed_params
 from agent_c_api.core.util.logging_utils import LoggingManager
 
@@ -13,7 +12,7 @@ logging_manager = LoggingManager(__name__)
 logger = logging_manager.get_logger()
 
 
-def get_agent_manager(request: Request) -> UItoAgentBridgeManager:
+def get_agent_manager(request: Request) -> Any:  # Use Any instead of UItoAgentBridgeManager
     return request.app.state.agent_manager
 
 

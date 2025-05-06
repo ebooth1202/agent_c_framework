@@ -2,14 +2,12 @@ from typing import List, Optional, AsyncGenerator, Dict, Any
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Path, Body, status
 from fastapi.responses import StreamingResponse, JSONResponse
-from fastapi_versioning import version
 import json
 import asyncio
 import structlog
 
 from agent_c_api.api.dependencies import get_agent_manager
-from agent_c_api.core.agent_manager import UItoAgentBridgeManager
-from agent_c_api.core.file_handler import FileHandler
+
 
 from agent_c_api.api.v2.models.chat_models import (
     ChatMessage,
@@ -27,7 +25,7 @@ logger = structlog.get_logger(__name__)
 class ChatService:
     """Service for handling chat operations with sessions"""
 
-    def __init__(self, agent_manager: UItoAgentBridgeManager = Depends(get_agent_manager)):
+    def __init__(self, agent_manager: Any = Depends(get_agent_manager)):  # Use Any instead of UItoAgentBridgeManager type
         self.agent_manager = agent_manager
         self.logger = structlog.get_logger(__name__)
 
@@ -36,7 +34,7 @@ class ChatService:
         session_id: str, 
         message: ChatMessage,
         file_ids: Optional[List[str]] = None
-    ) -> AsyncGenerator[str, None]:
+    ):
         """Send a message to the agent and stream the response
         
         This method sends a message to an agent in a specific session and returns a stream
@@ -189,13 +187,12 @@ class ChatService:
         }
     }
 )
-@version(2)
 async def send_chat_message(
-    session_id: UUID = Path(..., description="UUID of the session to send the message to"),
+    session_id: str = Path(..., description="UUID of the session to send the message to"),
     request: ChatRequest = Body(..., description="Chat message request containing the message and streaming preference"),
     chat_service: ChatService = Depends(),
     session_service: SessionService = Depends()
-):
+) -> StreamingResponse:
     """Send a chat message to the agent and receive the response
     
     This endpoint allows sending a message to an agent in a specific session and receiving
@@ -206,7 +203,7 @@ async def send_chat_message(
     have been previously uploaded using the file upload endpoint.
     
     Args:
-        session_id: UUID of the session to send the message to
+        session_id: String ID of  the session to send the message to
         request: The chat message request containing the message and streaming preference
         chat_service: Dependency-injected chat service
         session_service: Dependency-injected session service
@@ -344,7 +341,7 @@ async def send_chat_message(
         }
     }
 )
-@version(2)
+
 async def cancel_chat_interaction(
     session_id: UUID = Path(..., description="UUID of the session with the interaction to cancel"),
     chat_service: ChatService = Depends(),

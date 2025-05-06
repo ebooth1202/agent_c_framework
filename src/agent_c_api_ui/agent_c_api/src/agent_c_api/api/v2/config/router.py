@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Path, Query
+from fastapi import APIRouter, HTTPException, Depends, Path, Query, Request
 from typing import Optional
 # Removed fastapi_versioning import - using directory structure for versioning
 
@@ -41,7 +41,15 @@ router = APIRouter(
 )
 
 # Dependency for getting the config service
-def get_config_service():
+def get_config_service(request: Request):
+    """Dependency to get the config service
+    
+    Args:
+        request: The FastAPI request object
+        
+    Returns:
+        ConfigService: Initialized config service
+    """
     return ConfigService()
 
 # Models endpoints

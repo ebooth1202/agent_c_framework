@@ -103,7 +103,7 @@ class EventService:
             event_types: Optional[List[EventType]],
             real_time: bool,
             speed_factor: float
-    ) -> AsyncGenerator[str, None]:
+    ):
         """
         Stream events for a session, optionally with real-time timing.
         """
