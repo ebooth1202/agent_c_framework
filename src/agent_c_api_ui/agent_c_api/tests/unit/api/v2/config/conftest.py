@@ -1,9 +1,9 @@
 # tests/unit/api/v2/config/conftest.py
-
 import pytest
-import asyncio
 from unittest.mock import patch, MagicMock, AsyncMock
+
 from fastapi_cache import FastAPICache
+from fastapi_cache.decorator import cache as cache_decorator
 from fastapi_cache.backends.inmemory import InMemoryBackend
 
 from agent_c_api.api.v2.config.services import ConfigService
@@ -12,33 +12,38 @@ from agent_c_api.api.v2.models.config_models import (
     ModelsResponse, PersonasResponse, ToolsResponse, SystemConfigResponse
 )
 
-# Initialize FastAPICache before any test module imports
-# This ensures cache decorators are processed correctly
-FastAPICache.init(InMemoryBackend(), prefix="agent_c_api_cache_test")
+
+
+@pytest.fixture(scope="session", autouse=True)
+def init_cache():
+    """Initialize the cache once for all tests."""
+    FastAPICache.init(InMemoryBackend(), prefix="agent_c_api_cache_test")
+    yield
+
 
 @pytest.fixture(autouse=True, scope="function")
 def disable_caching():
     """
-    Fixture to make the cache decorator a no-op for tests.
-    
-    This ensures each test runs with fresh data and not cached results.
+    Fixture to monkey patch the cache decorator function to be a no-op for tests.
     """
-    # Save the original cache implementation
-    original_cache = FastAPICache.cache
-    
-    # Replace with no-op decorator
-    def pass_through_decorator(*args, **kwargs):
+    # Store the original implementation
+    original_implementation = cache_decorator.__wrapped__ if hasattr(cache_decorator, "__wrapped__") else cache_decorator
+
+    # Define a no-op replacement decorator
+    def no_op_cache(*args, **kwargs):
         def inner(func):
-            # Just return the original function unchanged
             return func
+
         return inner
-    
-    FastAPICache.cache = pass_through_decorator
-    
+
+    # Replace the cache decorator with our no-op version
+    import fastapi_cache.decorator
+    fastapi_cache.decorator.cache = no_op_cache
+
     yield
-    
+
     # Restore original implementation
-    FastAPICache.cache = original_cache
+    fastapi_cache.decorator.cache = original_implementation
 
 @pytest.fixture
 def mock_models_config():
