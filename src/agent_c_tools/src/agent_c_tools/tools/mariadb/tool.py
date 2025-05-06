@@ -135,7 +135,7 @@ class MariaDBConnector:
             conn_config = self.config.copy()
             conn_config['use_pure'] = True
             safe_config = {k: v for k, v in conn_config.items() if k != 'password'}
-            # self.logger.debug(f"Attempting connection with: {safe_config}")
+            self.logger.debug(f"Attempting connection with: {safe_config}")
             conn = mysql.connector.connect(**conn_config)
             return conn
         except mysql.connector.Error as e:
