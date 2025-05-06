@@ -1,15 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, Body
-from fastapi_versioning import version
-from typing import Optional
 from uuid import UUID
 
 from agent_c_api.api.v2.models.session_models import SessionCreate, SessionDetail, SessionListResponse, SessionUpdate
-from .services import SessionService
+from .services import SessionService, get_session_service
 
 
-def get_session_service():
-    """Dependency to get the session service"""
-    return SessionService()
+
 
 
 router = APIRouter(
@@ -55,7 +51,6 @@ router = APIRouter(
          status_code=201,
          summary="Create a new agent session",
          description="Creates a new session with the specified model, persona, and configuration parameters")
-@version(2)
 async def create_session(
     session_data: SessionCreate,
     service: SessionService = Depends(get_session_service)
@@ -106,7 +101,6 @@ async def create_session(
          response_model=SessionListResponse,
          summary="List all sessions",
          description="Retrieves a paginated list of all active sessions with support for pagination")
-@version(2)
 async def list_sessions(
     limit: int = Query(10, ge=1, le=100, description="Maximum number of sessions to return (1-100)"),
     offset: int = Query(0, ge=0, description="Number of sessions to skip for pagination"),
@@ -158,7 +152,6 @@ async def list_sessions(
          response_model=SessionDetail,
          summary="Get session details",
          description="Retrieves comprehensive information about a specific session including its configuration")
-@version(2)
 async def get_session(
     session_id: UUID = Path(..., description="Unique identifier of the session to retrieve"),
     service: SessionService = Depends(get_session_service)
@@ -207,7 +200,6 @@ async def get_session(
            response_model=SessionDetail,
            summary="Update session properties",
            description="Updates one or more properties of an existing session, such as name, persona, or model parameters")
-@version(2)
 async def update_session(
     session_id: UUID = Path(..., description="Unique identifier of the session to update"),
     update_data: SessionUpdate = Body(..., description="Session properties to update"),
@@ -268,7 +260,6 @@ async def update_session(
            status_code=204,
            summary="Delete a session",
            description="Permanently removes a session and releases its resources")
-@version(2)
 async def delete_session(
     session_id: UUID = Path(..., description="Unique identifier of the session to delete"),
     service: SessionService = Depends(get_session_service)

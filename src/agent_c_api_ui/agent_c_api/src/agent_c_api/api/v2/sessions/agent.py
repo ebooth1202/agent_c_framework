@@ -3,12 +3,8 @@ from fastapi_versioning import version
 from uuid import UUID
 
 from agent_c_api.api.v2.models.session_models import AgentConfig, AgentUpdate, AgentUpdateResponse
-from agent_c_api.api.v2.sessions.services import SessionService
+from agent_c_api.api.v2.sessions.services import SessionService, get_session_service
 
-
-def get_session_service():
-    """Dependency to get the session service"""
-    return SessionService()
 
 
 router = APIRouter(
