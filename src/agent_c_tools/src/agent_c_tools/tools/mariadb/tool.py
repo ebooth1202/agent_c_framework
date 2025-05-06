@@ -132,10 +132,18 @@ class MariaDBConnector:
         Establish a connection to the MariaDB database.
         """
         try:
-            conn = mysql.connector.connect(**self.config)
+            conn_config = self.config.copy()
+            conn_config['use_pure'] = True
+            safe_config = {k: v for k, v in conn_config.items() if k != 'password'}
+            # self.logger.debug(f"Attempting connection with: {safe_config}")
+            conn = mysql.connector.connect(**conn_config)
             return conn
         except mysql.connector.Error as e:
             error_msg = f"Error connecting to MariaDB: {e}"
+            self.logger.error(error_msg)
+            raise Exception(error_msg)
+        except Exception as e:
+            error_msg = f"Unexpected connection error: {e}"
             self.logger.error(error_msg)
             raise Exception(error_msg)
 
