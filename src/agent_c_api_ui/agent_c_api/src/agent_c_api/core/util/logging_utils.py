@@ -221,6 +221,7 @@ class LoggingManager:
             "openai": "WARNING",
             "readability": "WARNING",
             "selenium": "WARNING",
+            "mysql": "WARNING",
             # Add others as needed
         }
 
