@@ -32,6 +32,13 @@ class Settings(BaseSettings):
     CONFIG_DIR: Path = BASE_DIR / "agent_c_api/config"
     PERSONA_DIR: Path = BASE_DIR.parent.parent.parent.parent / "personas"
 
+    # Redis settings
+    REDIS_HOST: str = os.environ.get("REDIS_HOST", "localhost")
+    REDIS_PORT: int = int(os.environ.get("REDIS_PORT", 6379))
+    REDIS_DB: int = int(os.environ.get("REDIS_DB", 0))
+    REDIS_PASSWORD: str | None = os.environ.get("REDIS_PASSWORD", None)
+    REDIS_USERNAME: str | None = os.environ.get("REDIS_USERNAME", None)
+
     # Specific file paths
     MODEL_CONFIG_PATH: Path = CONFIG_DIR / "model_configs.json"
 
