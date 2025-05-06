@@ -1,49 +1,66 @@
 # Test Migration Session Tracker
 
-**IMPORTANT**: Many of the v2 models and endpoints were created under the false assumption that GUIDs would be used for IDs.  The ID naming rules have been added to your rules for you to be aware of so that we can correct any bad IDs as part of this process.
+**IMPORTANT LESSONS LEARNED**: 
+- Many of the v2 models and endpoints were created under the false assumption that GUIDs would be used for IDs. The ID naming rules have been added to your rules for you to be aware of so that we can correct any bad IDs as part of this process.
+- We've learned that endpoints may not be handling errors correctly and may need to be fixed as part of this process.
+- When testing services that use caching, directly mock the service methods rather than underlying data sources.
+- For async tests, ensure you're using @pytest_asyncio.fixture instead of @pytest.fixture.
+- Be careful with patching module-level variables that may have already been imported - this won't affect code that has already imported the variable.
+- Each test should be completely self-contained with its own setup and teardown to prevent unexpected interactions.
+- When working with FastAPI services, pay close attention to the difference between model objects and dictionaries.
 
 ## Current Session
 
-### Session 2
-- **Target File:** test_endpoints.py (Config module)
-- **Source Path:** //api/src/agent_c_api/tests/v2/config/test_endpoints.py
-- **Destination Path:** //api/tests/unit/api/v2/config/test_endpoints.py
+### Session 3 (Completed on May 6, 2025)
+- **Target File:** test_services.py (Config module)
+- **Source Path:** //api/src/agent_c_api/tests/v2/config/test_services.py
+- **Destination Path:** //api/tests/unit/api/v2/config/test_services.py
 - **Phase:** Migration Complete
-- **Status:** Ready for Final Verification
+- **Status:** Migration Completed with Enhancements and All Tests Passing
 - **Tasks:**
-  - [✅] Examine test coverage for config module endpoints
+  - [✅] Examine test coverage for config module services
   - [✅] Identify relations to implementation in src/agent_c_api/api/v2/config
   - [✅] Document dependencies and fixtures
   - [✅] Identify any issues or gaps
   - [✅] Create detailed analysis document
+  - [✅] Create detailed migration plan
   - [✅] Update session tracker with findings
   - [✅] Implement migration according to plan
   - [✅] Fix dependency injection for proper mocking
-  - [✅] Improve error handling in API endpoints
-  - [ ] Verify all tests pass
+  - [✅] Handle cache-related test issues
+  - [✅] Restructure tests to be more robust
+  - [✅] Verify all tests pass
 
-**Implementation Improvements:**
-- Added consistent error handling to all config endpoints
-- Fixed tests to properly verify error responses
-- Ensured all endpoints return structured error responses
-
-**Analysis Document:** //api/.scratch/config_endpoints_test_analysis.md
-**Migration Plan:** //api/.scratch/config_endpoints_test_migration_plan.md
+**Analysis Document:** //api/.scratch/config_services_test_analysis.md
+**Migration Plan:** //api/.scratch/config_services_test_migration_plan.md
+**Fix Documentation:** //api/.scratch/config_services_test_fixes.md
 
 **Findings:**
-- Current test file has good coverage but lacks organization into classes
-- Three additional error case tests needed for list endpoints
-- ID handling is appropriate (using simple string IDs)
-- Need to use existing fixtures from conftest.py
+- Tests have good coverage but could be improved for error cases and empty data sources
+- Tests don't follow class-based organization
+- No issues found with ID handling (service passes through external IDs)
+- Need to add proper pytest markers
+- Cache decorator was causing test failures by preventing mocks from being effective
+- Discovered critical issue with test reliability when testing cached services
+
+**Implementation Improvements:**
+- Reorganized tests into a proper class structure with appropriate docstrings
+- Added pytest markers (unit, config, services)
+- Added tests for empty data sources (empty model config, empty persona dir, empty tool registry)
+- Added tests for malformed data and more error scenarios
+- Added test for non-existent persona directory
+- Completely redesigned tests to mock at the service method level rather than underlying data sources
+- Created test-specific data within each test for better control and independence
+- Implemented proper test isolation to prevent test interaction
+
+**Major Lessons Learned:**
+- When testing services that use caching, it's better to mock the service methods directly rather than trying to patch underlying data sources
+- Each test should be fully self-contained with its own data and mocks to prevent interaction
+- For async tests, use @pytest_asyncio.fixture instead of @pytest.fixture
+- Be careful with patching module-level variables that may have already been imported
+
 
 ## Upcoming Sessions
-
-### Session 3
-- **Target File:** test_services.py (Config module)
-- **Source Path:** //api/src/agent_c_api/tests/v2/config/test_services.py
-- **Destination Path:** //api/tests/unit/api/v2/config/test_services.py
-- **Phase:** Analysis
-- **Status:** Not Scheduled
 
 ### Session 4
 - **Target File:** test_chat_models.py (Models module)
@@ -197,6 +214,38 @@
 - Organized tests into a class structure with detailed docstrings
 - Added tests for optional fields and empty collections
 - No issues found with ID handling (using external string IDs)
+
+### Session 2
+- **Target File:** test_endpoints.py (Config module)
+- **Source Path:** //api/src/agent_c_api/tests/v2/config/test_endpoints.py
+- **Destination Path:** //api/tests/unit/api/v2/config/test_endpoints.py
+- **Phase:** Migration Complete
+- **Status:** Ready for Final Verification
+- **Tasks:**
+  - [✅] Examine test coverage for config module endpoints
+  - [✅] Identify relations to implementation in src/agent_c_api/api/v2/config
+  - [✅] Document dependencies and fixtures
+  - [✅] Identify any issues or gaps
+  - [✅] Create detailed analysis document
+  - [✅] Update session tracker with findings
+  - [✅] Implement migration according to plan
+  - [✅] Fix dependency injection for proper mocking
+  - [✅] Improve error handling in API endpoints
+  - [✅] Verify all tests pass
+
+**Implementation Improvements:**
+- Added consistent error handling to all config endpoints
+- Fixed tests to properly verify error responses
+- Ensured all endpoints return structured error responses
+
+**Analysis Document:** //api/.scratch/config_endpoints_test_analysis.md
+**Migration Plan:** //api/.scratch/config_endpoints_test_migration_plan.md
+
+**Findings:**
+- Current test file has good coverage but lacks organization into classes
+- Three additional error case tests needed for list endpoints
+- ID handling is appropriate (using simple string IDs)
+- Need to use existing fixtures from conftest.py
 
 ## Migration Phase Guidelines
 

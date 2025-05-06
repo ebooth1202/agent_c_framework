@@ -28,7 +28,16 @@ We have mapped out the work to allow us to spend the time needed on analysis of 
 
 Tracker: `//api/.scratch/test_migration_session_tracker.md` 
 
-CRITICAL NOTE: Many of the v2 models and endpoints were created under the false assumption that GUIDs would be used for IDs.  The ID naming rules have been added to your rules below for you to be aware of so that we can correct any bad IDs as part of this process.
+## Crucial lessons learned.: 
+- Many of the v2 models and endpoints were created under the false assumption that GUIDs would be used for IDs.  The ID naming rules have been added to your rules for you to be aware of so that we can correct any bad IDs as part of this process.
+- We've learned that endpoints may not be handling errors correctly, and made need fixed as part of this process. N
+- Mocking FastAPI Dependencies MUST be done properly for example:
+```python
+from agent_c_api.main import app
+@pytest.fixture
+def client(mock_config_service):
+  app.dependency_overrides[get_config_service] = lambda: mock_config_service
+```
 
 ## Core Principles
 
