@@ -211,7 +211,7 @@ class EventService:
         event_types: Optional[List[str]] = None,
         real_time: bool = False,
         speed_factor: float = 1.0
-    ) -> AsyncGenerator[str, None]:
+    ):
         """
         Stream events for a session, optionally with real-time timing.
         Returns core event models directly.

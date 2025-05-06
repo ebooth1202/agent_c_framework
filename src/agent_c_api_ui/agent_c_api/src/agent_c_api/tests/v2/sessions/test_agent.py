@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from agent_c_api.api.v2.sessions.models import AgentConfig, AgentUpdate, AgentUpdateResponse
+from agent_c_api.api.v2.models import AgentConfig, AgentUpdate, AgentUpdateResponse
 from agent_c_api.api.v2.sessions.services import SessionService
 from agent_c_api.api.v2.sessions.agent import get_agent_config, update_agent_config
 

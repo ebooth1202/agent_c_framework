@@ -4,7 +4,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 from agent_c_api.api.v2.models.chat_models import (
     ChatMessageContent, ChatMessage, ChatRequest, 
-    ChatEventType, ChatEvent
+    ChatEventType, ChatEventUnion
 )
 from agent_c_api.api.v2.models.tool_models import (
     ToolCall, ToolResult
@@ -119,28 +119,3 @@ def test_chat_event_type():
     assert ChatEventType.MESSAGE_END == "message_end"
     assert ChatEventType.ERROR == "error"
 
-def test_chat_event():
-    now = datetime.now()
-    
-    # Test text event
-    event = ChatEvent(
-        event_type=ChatEventType.MESSAGE_TEXT,
-        data={"text": "Hello, world!"},
-        timestamp=now
-    )
-    assert event.event_type == "message_text"
-    assert event.data == {"text": "Hello, world!"}
-    assert event.timestamp == now
-    
-    # Test tool call event
-    event = ChatEvent(
-        event_type=ChatEventType.TOOL_CALL,
-        data={
-            "tool_id": "calculator",
-            "parameters": {"expression": "2+2"}
-        },
-        timestamp=now
-    )
-    assert event.event_type == "tool_call"
-    assert event.data["tool_id"] == "calculator"
-    assert event.timestamp == now

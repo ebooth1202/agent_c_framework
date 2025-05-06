@@ -30,13 +30,11 @@ class SessionCreate(BaseModel):
         protected_namespaces=(),
         json_schema_extra={
             "example": {
-                "model_id": "gpt-4",
-                "persona_id": "programmer",
-                "name": "Code Review Session",
-                "temperature": 0.7,
-                "reasoning_effort": 5,
-                "max_tokens": 2000,
-                "tools": ["search", "code_analysis", "calculator"],
+                "model_id": "claude-3-7-sonnet-latest",
+                "persona_id": "default",
+                "name": "Test Session",
+                "budget_tokens": 10000,
+                "tools": ["WorkspaceTools", "WebTools", "ThinkTools"],
                 "metadata": {
                     "project": "API Redesign",
                     "priority": "high"

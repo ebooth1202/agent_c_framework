@@ -833,7 +833,7 @@ class AgentBridge:
         else:
             self.logger.warning(f"Unhandled event type: {event.type}")
 
-    async def stream_chat(self, user_message: str, custom_prompt: str = None, file_ids: List[str] = None, client_wants_cancel: Optional[threading.Event] = None) -> AsyncGenerator[str, None]:
+    async def stream_chat(self, user_message: str, custom_prompt: str = None, file_ids: List[str] = None, client_wants_cancel: Optional[threading.Event] = None):
         """
         Streams chat responses for a given user message.
 

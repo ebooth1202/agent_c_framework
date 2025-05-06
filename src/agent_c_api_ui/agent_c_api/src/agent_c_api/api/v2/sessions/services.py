@@ -1,10 +1,11 @@
 from datetime import datetime
 from typing import Optional, Any, Dict
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Request
 
 from agent_c_api.api.dependencies import get_agent_manager
 from agent_c_api.core.agent_manager import UItoAgentBridgeManager
+from typing import Any
 import structlog
 
 from agent_c_api.api.v2.models.session_models import (
@@ -19,15 +20,22 @@ from agent_c_api.api.v2.models.session_models import (
 )
 
 # Session service dependency
-def get_session_service():
-    """Dependency to get the session service"""
-    agent_manager = get_agent_manager()
+def get_session_service(request: Request):
+    """Dependency to get the session service
+    
+    Args:
+        request: The FastAPI request object
+        
+    Returns:
+        SessionService: Initialized session service
+    """
+    agent_manager = get_agent_manager(request)
     return SessionService(agent_manager=agent_manager)
 
 class SessionService:
     """Service for managing sessions using the underlying agent manager"""
 
-    def __init__(self, agent_manager: UItoAgentBridgeManager = Depends(get_agent_manager)):
+    def __init__(self, agent_manager: Any):  # Use Any instead of UItoAgentBridgeManager
         self.agent_manager = agent_manager
         self.logger = structlog.get_logger(__name__)
 

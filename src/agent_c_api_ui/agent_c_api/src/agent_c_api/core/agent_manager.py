@@ -172,7 +172,24 @@ class UItoAgentBridgeManager:
             user_message: str,
             custom_prompt: Optional[str] = None,
             file_ids: Optional[List[str]] = None
-    ) -> AsyncGenerator[str, None]:
+    ):
+        """
+        Get streaming response from the agent for a given message.
+        Uses ReactJSAgent's stream_chat method for proper streaming support.
+
+        Args:
+            ui_session_id: The session identifier
+            user_message: The user's message to process
+            custom_prompt: Optional custom prompt to use
+            file_ids: Optional list of file IDs to include with the message
+
+        Yields:
+            Chunks of the response as they become available
+
+        Raises:
+            ValueError: If the session ID is invalid
+            Exception: If streaming fails
+        """
         """
         Get streaming response from the agent for a given message.
         Uses ReactJSAgent's stream_chat method for proper streaming support.

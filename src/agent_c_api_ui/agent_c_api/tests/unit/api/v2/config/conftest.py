@@ -1,0 +1,233 @@
+# tests/unit/api/v2/config/conftest.py
+
+import pytest
+import asyncio
+from unittest.mock import patch, MagicMock, AsyncMock
+from fastapi_cache import FastAPICache
+from fastapi_cache.backends.inmemory import InMemoryBackend
+
+from agent_c_api.api.v2.config.services import ConfigService
+from agent_c_api.api.v2.models.config_models import (
+    ModelInfo, PersonaInfo, ToolInfo, ToolParameter, ModelParameter,
+    ModelsResponse, PersonasResponse, ToolsResponse, SystemConfigResponse
+)
+
+# Initialize FastAPICache before any test module imports
+# This ensures cache decorators are processed correctly
+FastAPICache.init(InMemoryBackend(), prefix="agent_c_api_cache_test")
+
+@pytest.fixture(autouse=True, scope="function")
+def disable_caching():
+    """
+    Fixture to make the cache decorator a no-op for tests.
+    
+    This ensures each test runs with fresh data and not cached results.
+    """
+    # Save the original cache implementation
+    original_cache = FastAPICache.cache
+    
+    # Replace with no-op decorator
+    def pass_through_decorator(*args, **kwargs):
+        def inner(func):
+            # Just return the original function unchanged
+            return func
+        return inner
+    
+    FastAPICache.cache = pass_through_decorator
+    
+    yield
+    
+    # Restore original implementation
+    FastAPICache.cache = original_cache
+
+@pytest.fixture
+def mock_models_config():
+    """
+    Mock the models configuration data source.
+    
+    Provides a sample configuration structure similar to the real implementation.
+    """
+    with patch('agent_c_api.config.config_loader.MODELS_CONFIG', new={
+        "vendors": [
+            {
+                "vendor": "openai",
+                "models": [
+                    {
+                        "id": "gpt-4",
+                        "ui_name": "GPT-4",
+                        "description": "Advanced language model",
+                        "capabilities": ["text"],
+                        "parameters": {
+                            "temperature": {
+                                "type": "float",
+                                "default": 0.7,
+                                "description": "Controls randomness"
+                            }
+                        },
+                        "allowed_inputs": ["text"]
+                    }
+                ]
+            }
+        ]
+    }):
+        yield
+
+@pytest.fixture
+def mock_persona_dir():
+    """
+    Mock the persona directory and file operations.
+    
+    Simulates finding and reading persona files from the filesystem.
+    """
+    with patch('os.path.isdir') as mock_isdir, \
+         patch('glob.glob') as mock_glob, \
+         patch('builtins.open', create=True) as mock_open:
+        # Set up persona directory mock
+        mock_isdir.return_value = True
+        
+        # Mock persona files
+        mock_glob.return_value = [
+            "/personas/default.md"
+        ]
+        
+        # Mock file read
+        mock_file = MagicMock()
+        mock_file.__enter__.return_value.read.return_value = "You are a helpful assistant."
+        mock_open.return_value = mock_file
+        
+        yield
+
+@pytest.fixture
+def mock_toolset():
+    """
+    Mock the Agent C toolset.
+    
+    Simulates tool registry and essential tools configuration.
+    """
+    with patch('agent_c.Toolset.tool_registry') as mock_registry, \
+         patch('agent_c_api.core.agent_manager.UItoAgentBridgeManager.ESSENTIAL_TOOLS', new=["search"]):
+        # Create mock tool classes
+        search_tool = MagicMock()
+        search_tool.__name__ = "search"
+        search_tool.__doc__ = "Search the web"
+        search_tool.__module__ = "agent_c_tools.search"
+        
+        # Add tools to registry
+        mock_registry.__iter__.return_value = [search_tool]
+        
+        yield
+
+@pytest.fixture
+def mock_config_service():
+    """
+    Mock the ConfigService for endpoint testing.
+    
+    Returns a ConfigService mock with preset async method returns.
+    """
+    service = MagicMock(spec=ConfigService)
+    
+    # Setup async methods with AsyncMock
+    service.get_models = AsyncMock(return_value=ModelsResponse(
+        models=[
+            ModelInfo(
+                id="gpt-4",
+                name="GPT-4",
+                provider="openai",
+                description="Advanced language model",
+                capabilities=["text"],
+                parameters=[],
+                allowed_inputs=["text"]
+            )
+        ]
+    ))
+    
+    service.get_model = AsyncMock(return_value=ModelInfo(
+        id="gpt-4",
+        name="GPT-4",
+        provider="openai",
+        description="Advanced language model",
+        capabilities=["text"],
+        parameters=[
+            ModelParameter(
+                name="temperature",
+                type="float",
+                description="Controls randomness",
+                default=0.7
+            )
+        ],
+        allowed_inputs=["text"]
+    ))
+    
+    service.get_personas = AsyncMock(return_value=PersonasResponse(
+        personas=[
+            PersonaInfo(
+                id="default",
+                name="Default Assistant",
+                description="Standard assistant persona",
+                file_path="/path/to/default.md",
+                content="You are a helpful assistant..."
+            )
+        ]
+    ))
+    
+    service.get_persona = AsyncMock(return_value=PersonaInfo(
+        id="default",
+        name="Default Assistant",
+        description="Standard assistant persona",
+        file_path="/path/to/default.md",
+        content="You are a helpful assistant..."
+    ))
+    
+    service.get_tools = AsyncMock(return_value=ToolsResponse(
+        tools=[
+            ToolInfo(
+                id="search",
+                name="Search Tool",
+                category="web",
+                description="Search the web",
+                parameters=[
+                    ToolParameter(
+                        name="query",
+                        type="string",
+                        description="Search query",
+                        required=True
+                    )
+                ],
+                is_essential=True
+            )
+        ],
+        categories=["web"],
+        essential_tools=["search"]
+    ))
+    
+    service.get_tool = AsyncMock(return_value=ToolInfo(
+        id="search",
+        name="Search Tool",
+        category="web",
+        description="Search the web",
+        parameters=[
+            ToolParameter(
+                name="query",
+                type="string",
+                description="Search query",
+                required=True
+            )
+        ],
+        is_essential=True
+    ))
+    
+    service.get_system_config = AsyncMock(return_value=SystemConfigResponse(
+        models=[
+            ModelInfo(id="gpt-4", name="GPT-4", provider="openai")
+        ],
+        personas=[
+            PersonaInfo(id="default", name="Default Assistant")
+        ],
+        tools=[
+            ToolInfo(id="search", name="Search Tool", category="web")
+        ],
+        tool_categories=["web"],
+        essential_tools=["search"]
+    ))
+    
+    return service

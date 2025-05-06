@@ -40,11 +40,11 @@ class TestCustomPersonaPersistence(unittest.TestCase):
             custom_prompt=self.custom_prompt
         )
 
-        # Mock private methods correctly - using the name-mangled version
-        with patch.object(AgentBridge, '_ReactJSAgent__init_session', new_callable=AsyncMock) as mock_init_session:
-            with patch.object(AgentBridge, '_ReactJSAgent__init_tool_chest',
+        # Mock the actual methods (avoid name mangling issues)
+        with patch.object(AgentBridge, '__init_session', new_callable=AsyncMock) as mock_init_session:
+            with patch.object(AgentBridge, '__init_tool_chest',
                               new_callable=AsyncMock) as mock_init_tools:
-                with patch.object(AgentBridge, '_ReactJSAgent__init_agent', new_callable=AsyncMock) as mock_init_agent:
+                with patch.object(AgentBridge, 'initialize_agent_parameters', new_callable=AsyncMock) as mock_init_agent:
                     # Check initial state
                     self.assertEqual(agent.custom_prompt, self.custom_prompt)
 
@@ -160,9 +160,9 @@ class TestCustomPersonaPersistence(unittest.TestCase):
             pass
 
         # Setup patches for the initialization methods
-        with patch.object(AgentBridge, '_ReactJSAgent__init_session', mock_init_session):
-            with patch.object(AgentBridge, '_ReactJSAgent__init_tool_chest', mock_init_tool_chest):
-                with patch.object(AgentBridge, '_ReactJSAgent__init_agent', mock_init_agent):
+        with patch.object(AgentBridge, '__init_session', mock_init_session):
+            with patch.object(AgentBridge, '__init_tool_chest', mock_init_tool_chest):
+                with patch.object(AgentBridge, 'initialize_agent_parameters', mock_init_agent):
                     # Create initial session
                     session_id = self.loop.run_until_complete(
                         self.agent_manager.create_session(

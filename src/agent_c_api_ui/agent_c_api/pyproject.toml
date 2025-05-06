@@ -52,9 +52,14 @@ dev = [
     "pytest-asyncio",
     "respx",
     "asynctest",
+    "pytest-mock",        # More powerful mocking for pytest
+    "pytest-xdist",      # Parallel test execution
+    "pytest-timeout",    # Test timeout enforcement
+    "faker",             # Test data generation
     "black",
     "isort",
     "mypy",
+    "httpx",             # For async HTTP client testing
 ]
 
 [project.urls]
