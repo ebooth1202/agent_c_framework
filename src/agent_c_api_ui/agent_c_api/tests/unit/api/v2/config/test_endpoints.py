@@ -141,8 +141,7 @@ class TestModelEndpoints(TestConfigEndpoints):
         assert response.status_code == 500
         error_detail = response.json()["detail"]
         assert isinstance(error_detail, dict)
-        assert "error_code" in error_detail
-        assert "message" in error_detail
+        assert error_detail["error_code"] == "MODELS_RETRIEVAL_ERROR"
         assert "Failed to retrieve models" in error_detail["message"]
     
     def test_get_model_success(self, client, mock_config_service):
@@ -271,8 +270,7 @@ class TestPersonaEndpoints(TestConfigEndpoints):
         assert response.status_code == 500
         error_detail = response.json()["detail"]
         assert isinstance(error_detail, dict)
-        assert "error_code" in error_detail
-        assert "message" in error_detail
+        assert error_detail["error_code"] == "PERSONAS_RETRIEVAL_ERROR"
         assert "Failed to retrieve personas" in error_detail["message"]
     
     def test_get_persona_success(self, client, mock_config_service):
@@ -434,8 +432,7 @@ class TestToolEndpoints(TestConfigEndpoints):
         assert response.status_code == 500
         error_detail = response.json()["detail"]
         assert isinstance(error_detail, dict)
-        assert "error_code" in error_detail
-        assert "message" in error_detail
+        assert error_detail["error_code"] == "TOOLS_RETRIEVAL_ERROR"
         assert "Failed to retrieve tools" in error_detail["message"]
     
     def test_get_tool_success(self, client, mock_config_service):
