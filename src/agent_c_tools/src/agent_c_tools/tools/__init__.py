@@ -11,6 +11,7 @@ from . import weather
 from . import random_number
 from . import xml_explorer  # XML Explorer toolset
 from . import css_explorer  # CSS Explorer toolset
+from . import mariadb  # MariaDB toolset
 
 __all__ = [
     'workspace',
@@ -24,4 +25,5 @@ __all__ = [
     'random_number',
     'xml_explorer',
     'css_explorer',
+    'mariadb'
 ]

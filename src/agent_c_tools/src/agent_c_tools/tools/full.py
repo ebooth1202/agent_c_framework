@@ -15,6 +15,7 @@ from .think import ThinkTools
 from .dynamics import DynamicsTools
 from .markdown_to_html_report import MarkdownToHtmlReportTools
 from .css_explorer import CssExplorerTools
+from .mariadb import MariaDBTools
 
 __all__ = [
     # Workspace tools
@@ -51,5 +52,6 @@ __all__ = [
     'RandomNumberTools',
     'ThinkTools',
     'MarkdownToHtmlReportTools',
-    'CssExplorerTools'
+    'CssExplorerTools',
+    'MariaDBTools'
 ]
