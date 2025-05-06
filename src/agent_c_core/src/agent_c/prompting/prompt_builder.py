@@ -71,9 +71,11 @@ class PromptBuilder:
 
                     rendered_sections.append(rendered_section)
                 except KeyError as e:
-                    missing_vars: Set[str] = self._get_template_variables(section.template)
+                    missing_key = str(e).strip("'")
+                    template_vars = self._get_template_variables(section.template)
                     logging.error(
-                        f"Missing required keys for section '{section.name}'. Required: {missing_vars}. Data provided: {data.keys()}"
+                        f"Error rendering section '{section.name}': Missing key '{missing_key}'. "
+                        f"Template variables: {template_vars}. Data provided: {data.keys()}"
                     )
                     if section.required:
                         raise
