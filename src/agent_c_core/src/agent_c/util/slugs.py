@@ -1,5 +1,6 @@
 import random
-from typing import Optional
+import hashlib
+from typing import Optional, Union
 
 
 class MnemonicSlugs:
@@ -175,18 +176,160 @@ class MnemonicSlugs:
         return number
 
     @classmethod
-    def from_number_array(cls, numbers: [int]):
+    def from_number_array(cls, numbers: list[int]):
         slugs = []
         for number in numbers:
-            slug = cls.from_number(number)
-            slugs.append(slug)
+            new_slug = cls.from_number(number)
+            slugs.append(new_slug)
 
         return "-".join(slugs)
 
     @classmethod
-    def to_number_array(cls, slug: str):
+    def to_number_array(cls, slug_in: str):
         numbers = []
-        for part in slug.lower().split('-'):
+        for part in slug_in.lower().split('-'):
             numbers.append(cls.to_number(part))
 
         return numbers
+
+    @classmethod
+    def generate_id_slug(cls, word_count: int = 2, seed: Union[int, str, None] = None) -> str:
+        """
+        Generate a deterministic slug based on a seed value.
+        
+        Args:
+            word_count: Number of words to include in the slug (default: 2)
+            seed: A seed value that determines the generated slug
+                 - If int: Used directly as random seed
+                 - If str: Hashed to create a consistent integer seed
+                 - If None: Random slug is generated (non-deterministic)
+                 
+        Returns:
+            A hyphen-separated string of words (a slug)
+        """
+        if seed is None:
+            # No seed provided, generate a random slug
+            return cls.generate_slug(word_count)
+            
+        # Save the current random state to restore later
+        state = random.getstate()
+        
+        try:
+            if isinstance(seed, str):
+                # Convert string to a deterministic integer using hash
+                # Use SHA-256 for stable cross-platform results
+                hash_obj = hashlib.sha256(seed.encode('utf-8'))
+                # Convert first 8 bytes of hash to integer
+                seed_int = int.from_bytes(hash_obj.digest()[:8], byteorder='big')
+                random.seed(seed_int)
+            else:
+                # Use the int seed directly
+                random.seed(seed)
+                
+            # Generate the slug with the seeded random state
+            result = "-".join(random.choices(cls._WORDS, k=word_count))
+            return result
+            
+        finally:
+            # Always restore the random state
+            random.setstate(state)
+            
+    @classmethod
+    def generate_hierarchical_id(cls, id_parts: list[tuple[Union[int, str, None], int]], delimiter: str = ":") -> str:
+        """
+        Generate a hierarchical ID from multiple parts.
+        
+        Args:
+            id_parts: List of tuples, each containing (seed, word_count)
+                     - seed: Same as in generate_id_slug
+                     - word_count: Number of words for this part
+            delimiter: Character(s) to join the parts (default: ":")
+            
+        Returns:
+            A hierarchical ID with parts joined by the delimiter
+            
+        Example:
+            >>> MnemonicSlugs.generate_hierarchical_id([
+            ...     ("user_123", 2),  # User ID with 2 words
+            ...     ("session_456", 1),  # Session ID with 1 word
+            ...     ("message_789", 1)   # Message ID with 1 word
+            ... ])
+            'abraham-absent:acid:actor'
+        """
+        parts = []
+        for seed, word_count in id_parts:
+            parts.append(cls.generate_id_slug(word_count, seed))
+        return delimiter.join(parts)
+    
+    @classmethod
+    def parse_hierarchical_id(cls, hierarchical_id: str, delimiter: str = ":") -> list[str]:
+        """
+        Parse a hierarchical ID back into its component parts.
+        
+        Args:
+            hierarchical_id: A hierarchical ID string
+            delimiter: Character(s) that separate the parts (default: ":")
+            
+        Returns:
+            List of individual slug parts
+            
+        Example:
+            >>> MnemonicSlugs.parse_hierarchical_id('abraham-absent:acid:actor')
+            ['abraham-absent', 'acid', 'actor']
+        """
+        return hierarchical_id.split(delimiter)
+
+if __name__ == "__main__":
+    # Example usage
+    print(f"MnemonicSlugs word count: {len(MnemonicSlugs._WORDS)}")
+    slug = MnemonicSlugs.generate_slug(3)
+    print(f"Generated slug: {slug}")
+
+    number = MnemonicSlugs.to_number(slug)
+    print(f"Converted to number: {number}")
+
+    slug_from_number = MnemonicSlugs.from_number(number)
+    print(f"Converted back to slug: {slug_from_number}")
+
+    assert slug == slug_from_number, "Conversion failed!"
+    
+    # Test deterministic slug generation
+    username = "johnsmith@example.com"
+    id_slug1 = MnemonicSlugs.generate_id_slug(2, username)
+    id_slug2 = MnemonicSlugs.generate_id_slug(2, username)
+    print(f"Deterministic slug for '{username}': {id_slug1}")
+    assert id_slug1 == id_slug2, "Deterministic generation failed!"
+    
+    # Test hierarchical ID generation
+    hierarchical_id = MnemonicSlugs.generate_hierarchical_id([
+        ("user_12345", 2),        # User ID with 2 words
+        ("session_456", 1),       # Session ID with 1 word
+        ("message_789", 1)        # Message ID with 1 word
+    ])
+    print(f"Hierarchical ID: {hierarchical_id}")
+    
+    # Test parsing hierarchical ID
+    parts = MnemonicSlugs.parse_hierarchical_id(hierarchical_id)
+    print(f"Parsed parts: {parts}")
+    
+    # Test nesting context - using parent IDs to seed child IDs
+    user_seed = "user_12345"
+    user_id = MnemonicSlugs.generate_id_slug(2, user_seed)
+    
+    # Use the user_id as part of the session seed
+    session_seed = f"session_{user_id}"
+    session_id = MnemonicSlugs.generate_id_slug(1, session_seed)
+    
+    # Use the session_id as part of the message seed
+    message_seed = f"message_{session_id}"
+    message_id = MnemonicSlugs.generate_id_slug(1, message_seed)
+    
+    print(f"Nested context ID: {user_id}:{session_id}:{message_id}")
+    
+    # Demonstrate that the same seeds always produce the same slugs
+    hierarchical_id2 = MnemonicSlugs.generate_hierarchical_id([
+        ("user_12345", 2),
+        ("session_456", 1),
+        ("message_789", 1)
+    ])
+    assert hierarchical_id == hierarchical_id2, "Deterministic hierarchical ID generation failed!"
