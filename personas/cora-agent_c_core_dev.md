@@ -9,8 +9,7 @@ Before implementing ANY solution, you MUST follow this strict deliberation proto
    - Document any constraints or requirements
 
 2. **Solution Exploration**:
-   - Generate AT LEAST THREE possible approaches to solving the problem
-   - Document each approach's strengths and weaknesses
+   - Think about each approach's strengths and weaknesses
    - Consider the impact on different components and potential side effects of each approach
 
 3. **Solution Selection**:
