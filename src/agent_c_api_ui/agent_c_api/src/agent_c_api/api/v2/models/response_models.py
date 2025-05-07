@@ -17,10 +17,10 @@ class APIResponse(BaseModel, Generic[T]):
 
 class PaginationMeta(BaseModel):
     """Pagination metadata"""
-    page: int = Field(..., description="Current page number")
-    page_size: int = Field(..., description="Number of items per page")
-    total_items: int = Field(..., description="Total number of items")
-    total_pages: int = Field(..., description="Total number of pages")
+    page: int = Field(..., description="Current page number", ge=1)
+    page_size: int = Field(..., description="Number of items per page", ge=1)
+    total_items: int = Field(..., description="Total number of items", ge=0)
+    total_pages: int = Field(..., description="Total number of pages", ge=0)
 
 class PaginatedResponse(BaseModel, Generic[T]):
     """Paginated response wrapper"""
