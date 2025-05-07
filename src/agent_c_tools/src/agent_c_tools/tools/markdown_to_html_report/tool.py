@@ -7,13 +7,13 @@ from typing import Dict, List, Any, Optional
 
 from agent_c.toolsets.tool_set import Toolset
 from agent_c.toolsets.json_schema import json_schema
-from .helpers.path_helper import PathHelper
 from .helpers.validation_helper import ValidationHelper
 from .helpers.media_helper import MediaEventHelper
 from .helpers.markdown_file_collector import MarkdownFileCollector
 from .helpers.markdown_to_docx import MarkdownToDocxConverter
 from .helpers.html_template_manager import HtmlTemplateManager
 from ... import WorkspaceTools
+from ...helpers.path_helper import create_unc_path, ensure_file_extension, os_file_system_path, has_file_extension, normalize_path
 
 logger = logging.getLogger(__name__)
 
@@ -25,19 +25,16 @@ class MarkdownToHtmlReportTools(Toolset):
     def __init__(self, **kwargs):
         super().__init__(**kwargs, name="markdown_viewer", use_prefix=False)
         # Get workspace tools for file operations
-        self.workspace_tool = Optional[WorkspaceTools]
-        if not self.workspace_tool:
-            logger.warning("Workspace toolset not available. This tool requires workspace tools.")
-
-        self.path_helper = PathHelper()
-        self.validation_helper = ValidationHelper(self.workspace_tool)
+        self.workspace_tool: Optional[WorkspaceTools] = None
+        self.validation_helper = ValidationHelper()
+        self.file_collector = None
         self.media_helper = MediaEventHelper()
-        self.file_collector = MarkdownFileCollector(self.workspace_tool)
         self.docx_converter = MarkdownToDocxConverter()
         self.template_manager = HtmlTemplateManager()
 
     async def post_init(self):
         self.workspace_tool = self.tool_chest.active_tools.get("WorkspaceTools")
+        self.file_collector = MarkdownFileCollector(self.workspace_tool)
 
     async def _safe_operation(self, operation_name, operation_func, *args, **kwargs):
         """Execute operations with standardized error handling."""
@@ -47,17 +44,6 @@ class MarkdownToHtmlReportTools(Toolset):
             logger.exception(f"Error in {operation_name}: {str(e)}")
             return {"success": False, "error": f"Error in {operation_name}: {str(e)}"}
 
-    async def _get_file_system_path(self, unc_path: str) -> Optional[str]:
-        """Get the actual file system path from a UNC path."""
-        try:
-            _, workspace_obj, rel_path = self.workspace_tool._parse_unc_path(unc_path)
-            if workspace_obj and hasattr(workspace_obj, 'full_path'):
-                return workspace_obj.full_path(rel_path, mkdirs=False)
-            return None
-        except Exception as e:
-            logger.error(f"Error getting file system path: {e}")
-            return None
-
     @json_schema(
         description="Generate an interactive HTML viewer for markdown files in a workspace directory",
         params={
@@ -66,9 +52,9 @@ class MarkdownToHtmlReportTools(Toolset):
                 "description": "The workspace containing the markdown files",
                 "required": True
             },
-            "input_path": {
+            "file_path": {
                 "type": "string",
-                "description": "The path within the workspace where markdown files are located (or a full UNC path)",
+                "description": "The relative path within the workspace where markdown file(s) are located",
                 "required": True
             },
             "output_filename": {
@@ -96,47 +82,39 @@ class MarkdownToHtmlReportTools(Toolset):
         """Generate an interactive HTML viewer for markdown files in a workspace directory.
 
         Args:
-            workspace: The workspace containing the markdown files
-            input_path: The path within the workspace where markdown files are located (or a full UNC path)
-            output_filename: The name of the output HTML file to generate (can be a simple filename or full UNC path)
-            title: Optional title for the HTML viewer
+            kwargs:
+                workspace: The workspace containing the markdown files
+                file_path: The path within the workspace where markdown files are located (or a full UNC path)
+                output_filename: The name of the output HTML file to generate (can be a simple filename or full UNC path)
+                title: Optional title for the HTML viewer
+                files_to_ignore: Optional flat list of filenames to ignore when generating the HTML viewer
 
         Returns:
             A dictionary with success status and information about the operation
         """
+        validation_error = self.validation_helper.validate_required_fields(
+            kwargs, ["workspace", "file_path", "output_filename"])
+
+        # Validate required fields
+        if validation_error:
+            return json.dumps({"success": False, "error": validation_error})
+
         workspace = kwargs.get('workspace')
-        input_path = kwargs.get('input_path')
+        input_path = kwargs.get('file_path')
         output_filename = kwargs.get('output_filename')
         title = kwargs.get('title', 'output_report.html')
         files_to_ignore = kwargs.get('files_to_ignore', [])
 
-        # Validate required fields
-        validation_error = self.validation_helper.validate_required_fields(
-            kwargs, ["workspace", "input_path", "output_filename"])
-        if validation_error:
-            return json.dumps({"success": False, "error": validation_error})
-
         try:
-            # Process input path
-            input_path_full = self.path_helper.ensure_unc_path(input_path, workspace)
+            # Create UNC input path
+            input_path_full = create_unc_path(workspace, input_path)
 
-            # Validate input path
-            error, workspace_obj, rel_path = await self.validation_helper.validate_path(input_path_full)
-            if error:
-                return json.dumps({"success": False, "error": f"Invalid input path: {error}"})
-
-            # Process output filename
-            output_filename = self.path_helper.ensure_file_extension(output_filename, 'html')
+            # Create UNC output filename
+            output_filename = ensure_file_extension(output_filename, 'html')
             if not output_filename.startswith('//'):
-                output_filename = Path(output_filename).name
-                output_path_full = f"//{workspace}/{output_filename}"
+                output_path_full = create_unc_path(workspace, output_filename)
             else:
                 output_path_full = output_filename
-
-            # Validate output path
-            error, _, _ = await self.validation_helper.validate_path(output_path_full)
-            if error:
-                return json.dumps({"success": False, "error": f"Output path issue: {error}"})
 
             # Check if input directory exists
             logger.debug("Checking if input path exists...")
@@ -217,7 +195,7 @@ class MarkdownToHtmlReportTools(Toolset):
             logger.debug(message)
 
             # Get file system path and raise a media event
-            file_system_path = await self._get_file_system_path(output_path_full)
+            file_system_path = os_file_system_path(self.workspace_tool, output_filename)
 
             # Create output info dictionary
             output_info = {
@@ -273,7 +251,7 @@ class MarkdownToHtmlReportTools(Toolset):
             },
             "input_path": {
                 "type": "string",
-                "description": "The path to the markdown file to convert (UNC-style or relative to workspace)",
+                "description": "The relative path to the markdown file to convert",
                 "required": True
             },
             "output_filename": {
@@ -324,6 +302,12 @@ class MarkdownToHtmlReportTools(Toolset):
                 "error": "Required dependencies not available. Please install python-markdown, python-docx, and beautifulsoup4."
             })
 
+        # Validate required fields
+        validation_error = self.validation_helper.validate_required_fields(
+            kwargs, ["workspace", "input_path"])
+        if validation_error:
+            return json.dumps({"success": False, "error": validation_error})
+
         workspace = kwargs.get('workspace')
         input_path = kwargs.get('input_path')
         output_filename = kwargs.get('output_filename')
@@ -331,30 +315,16 @@ class MarkdownToHtmlReportTools(Toolset):
         include_toc = kwargs.get('include_toc', True)
         page_break_level = kwargs.get('page_break_level', 1)
 
-        # Validate required fields
-        validation_error = self.validation_helper.validate_required_fields(
-            kwargs, ["workspace", "input_path"])
-        if validation_error:
-            return json.dumps({"success": False, "error": validation_error})
-
         try:
             # Process paths
-            input_path_full = self.path_helper.ensure_unc_path(input_path, workspace)
+            input_path_full = create_unc_path(workspace, input_path)
 
-            # Validate input path
-            error, workspace_obj, rel_path = await self.validation_helper.validate_path(input_path_full)
-            if error:
-                return json.dumps({"success": False, "error": f"Invalid input path: {error}"})
-
-            # Extract the filename using string manipulation
-            normalized_path = self.path_helper.normalize_path(input_path_full)
-            input_filename = normalized_path.split('/')[-1]
-
-            if not self.path_helper.is_markdown_file(normalized_path):
+            if not has_file_extension(input_path_full, ['.md', '.markdown']):
                 return json.dumps({
                     "success": False,
-                    "error": f"Input file '{normalized_path}' does not appear to be a markdown file. Expected a .md or .markdown extension."
+                    "error": f"Input file '{input_path_full}' is not a markdown file."
                 })
+            input_filename = normalize_path(input_path_full).split('/')[-1]
 
             # Determine output path
             if not output_filename:
@@ -363,15 +333,10 @@ class MarkdownToHtmlReportTools(Toolset):
                 output_path_full = f"//{workspace}/{output_filename}"
             elif not output_filename.startswith('//'):
                 # Ensure it has .docx extension
-                output_filename = self.path_helper.ensure_file_extension(output_filename, 'docx')
+                output_filename = ensure_file_extension(output_filename, 'docx')
                 output_path_full = f"//{workspace}/{output_filename}"
             else:
                 output_path_full = output_filename
-
-            # Validate output path
-            error, _, _ = await self.validation_helper.validate_path(output_path_full)
-            if error:
-                return json.dumps({"success": False, "error": f"Output path issue: {error}"})
 
             # Read and Process the markdown file
             file_content = await self.workspace_tool.read(path=input_path_full)
@@ -403,7 +368,7 @@ class MarkdownToHtmlReportTools(Toolset):
                 })
 
             # Get file system path
-            file_system_path = await self._get_file_system_path(output_path_full)
+            file_system_path = os_file_system_path(self.workspace_tool, output_path_full)
 
             # Prepare output summary
             result = {

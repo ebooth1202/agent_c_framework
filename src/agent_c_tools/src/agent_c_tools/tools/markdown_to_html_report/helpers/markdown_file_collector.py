@@ -4,7 +4,7 @@ import json
 import re
 from pathlib import Path
 
-from .path_helper import PathHelper
+from ....helpers.path_helper import create_unc_path, ensure_file_extension, os_file_system_path, has_file_extension, normalize_path
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +13,6 @@ class MarkdownFileCollector:
 
     def __init__(self, workspace_tool):
         self.workspace_tool = workspace_tool
-        self.path_helper = PathHelper()
 
     async def collect_markdown_files(self, root_path: str, files_to_ignore: List[str] = None) -> Dict[str, str]:
         """Collect all markdown files in the workspace directory structure."""
@@ -24,7 +23,7 @@ class MarkdownFileCollector:
         # Process a directory to find markdown files recursively
         async def process_directory(dir_path, rel_path=""):
             # Ensure proper UNC path format for directory listing
-            normalized_dir_path = self.path_helper.normalize_path(dir_path)
+            normalized_dir_path = normalize_path(dir_path)
             # Ensure trailing slash for consistent path handling
             if not normalized_dir_path.endswith('/'):
                 normalized_dir_path += '/'
@@ -52,11 +51,11 @@ class MarkdownFileCollector:
                     item_path = f"{normalized_dir_path}{item_name}"
 
                     # First check if it's a markdown file by extension
-                    if self.path_helper.is_markdown_file(item_name):
+                    if has_file_extension(item_name, ['md', 'markdown']):
                         # Add markdown file to our collection
                         file_rel_path = f"{rel_path}/{item_name}" if rel_path else item_name
                         # Normalize path separators in keys
-                        normalized_file_rel_path = self.path_helper.normalize_path(file_rel_path)
+                        normalized_file_rel_path = normalize_path(file_rel_path)
                         markdown_files[normalized_file_rel_path] = item_path
                     else:
                         # Only check if it's a directory - we don't process non-markdown files
@@ -71,7 +70,7 @@ class MarkdownFileCollector:
                 logger.error(f"Error processing directory {normalized_dir_path}: {e}")
 
         # Start processing from the root path
-        normalized_root_path = self.path_helper.normalize_path(root_path).rstrip('/')
+        normalized_root_path = normalize_path(root_path).rstrip('/')
         await process_directory(normalized_root_path)
 
         file_count = len(markdown_files)
@@ -84,17 +83,17 @@ class MarkdownFileCollector:
         folders = {}
 
         # Normalize root path for consistent path handling
-        normalized_root_path = self.path_helper.normalize_path(root_path)
+        normalized_root_path = normalize_path(root_path)
 
         # Sort paths to ensure proper order (parent folders before children)
         for rel_path, unc_path in sorted(markdown_files.items()):
             # Double-check that it's a markdown file before processing
-            if not self.path_helper.is_markdown_file(Path(rel_path).name):
+            if not has_file_extension(Path(rel_path).name, ['md', 'markdown']):
                 logger.debug(f"Skipping non-markdown file: {rel_path}")
                 continue
 
             # Normalize the UNC path for consistent handling
-            normalized_unc_path = self.path_helper.normalize_path(unc_path)
+            normalized_unc_path = normalize_path(unc_path)
 
             # Get path parts for folder hierarchy construction
             path_parts = rel_path.split('/')
@@ -158,8 +157,7 @@ class MarkdownFileCollector:
 
         return structure
 
-    @staticmethod
-    async def _process_markdown_links(content: str, file_rel_path: str, root_path: str,
+    async def _process_markdown_links(self, content: str, file_rel_path: str, root_path: str,
                                       markdown_files: Dict[str, str]) -> str:
         """Convert markdown links to other markdown files into internal viewer links."""
         # Normalize path separators in file_rel_path
@@ -198,7 +196,7 @@ class MarkdownFileCollector:
                 target_file = target_file.replace('\\', '/')
 
                 # Handle UNC paths in links
-                if re.match(UNC_PATH_PATTERN, target_file):
+                if re.match(self.workspace_tool.UNC_PATH_PATTERN, target_file):
                     # If the link target is a UNC path, extract the relative part
                     try:
                         # Extract the part after the workspace
