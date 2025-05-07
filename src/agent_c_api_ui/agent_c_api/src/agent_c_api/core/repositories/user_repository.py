@@ -21,17 +21,12 @@ class UserRepository:
         # Create hash with user data
         user_key = f"user:{user.user_id}"
 
-        # Prepare user data for Redis
-        user_data = {
-            "uuid": user.uuid,
-            "user_id": user.user_id,
-            "email": user.email or "",
-            "first_name": user.first_name or "",
-            "last_name": user.last_name or "",
-            "created_at": user.created_at,
-            "metadata": str(user.metadata or {})  # Convert dict to string for Redis
-        }
-
+        # Get user data using Pydantic model_dump
+        user_data = user.model_dump()
+        
+        # Special handling for metadata since Redis can't store dictionaries directly
+        user_data["metadata"] = str(user_data["metadata"] or {})
+        
         # Store in Redis
         await self.redis.hset(user_key, mapping=user_data)
 
@@ -57,7 +52,9 @@ class UserRepository:
             return None
 
         # Convert Redis data back to ChatUser model
-        user_data["metadata"] = eval(user_data["metadata"])  # Convert string back to dict
+        # Use ast.literal_eval instead of eval for safety
+        import ast
+        user_data["metadata"] = ast.literal_eval(user_data["metadata"])  # Convert string back to dict
         return ChatUser(**user_data)
 
     async def delete_user(self, user_id: str) -> bool:

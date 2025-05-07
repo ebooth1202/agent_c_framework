@@ -38,6 +38,11 @@ class Settings(BaseSettings):
     REDIS_DB: int = int(os.environ.get("REDIS_DB", 0))
     REDIS_PASSWORD: str | None = os.environ.get("REDIS_PASSWORD", None)
     REDIS_USERNAME: str | None = os.environ.get("REDIS_USERNAME", None)
+    
+    # Redis lifecycle management options
+    MANAGE_REDIS_LIFECYCLE: bool = os.environ.get("MANAGE_REDIS_LIFECYCLE", "False").lower() in ("true", "1", "yes")
+    REDIS_DATA_DIR: Path = Path(os.environ.get("REDIS_DATA_DIR", str(BASE_DIR.parent / "data" / "redis")))
+    REDIS_STARTUP_TIMEOUT: int = int(os.environ.get("REDIS_STARTUP_TIMEOUT", 10))
 
     # Specific file paths
     MODEL_CONFIG_PATH: Path = CONFIG_DIR / "model_configs.json"
