@@ -12,6 +12,68 @@
 
 ## Current Session
 
+### Session 12 (In Progress on May 6, 2025)
+- **Target File:** test_model_converters.py (Utils module)
+- **Source Path:** //api/src/agent_c_api/tests/v2/utils/test_model_converters.py
+- **Destination Path:** //api/tests/unit/api/v2/utils/test_model_converters.py
+- **Phase:** Analysis
+- **Status:** Analysis Phase
+- **Tasks:**
+  - [ ] Examine test coverage for model converter utilities
+  - [ ] Identify relationships to implementation in model_converters.py
+  - [ ] Document dependencies and fixtures
+  - [ ] Identify gaps in test coverage
+  - [ ] Create detailed analysis document
+  - [ ] Create detailed migration plan
+  - [ ] Check for UUID vs MnemonicSlug format issues
+  - [ ] Plan for adding appropriate pytest markers
+  - [ ] Plan for improving test documentation
+
+## Completed Sessions
+
+### Session 11 (Completed on May 6, 2025)
+- **Target File:** test_chat_converters.py (Utils module)
+- **Source Path:** //api/src/agent_c_api/tests/v2/utils/test_chat_converters.py
+- **Destination Path:** //api/tests/unit/api/v2/utils/test_chat_converters.py
+- **Phase:** Migration Complete
+- **Status:** Migrated with Enhanced Test Coverage and All Tests Passing
+- **Tasks:**
+  - [✅] Examined test coverage for chat converter utilities
+  - [✅] Identified relationships to implementation in model_converters.py
+  - [✅] Documented dependencies and fixtures
+  - [✅] Identified gaps in test coverage
+  - [✅] Created detailed analysis document
+  - [✅] Created detailed migration plan
+  - [✅] Fixed UUID session_id to use MnemonicSlug format
+  - [✅] Added pytest markers (unit, utils, converters)
+  - [✅] Added docstrings to test class and methods
+  - [✅] Added tests for image and file content types
+  - [✅] Added tests for content block conversion functions
+  - [✅] Added tests for edge cases (empty content, error handling)
+  - [✅] Updated pytest.ini with converters marker and utils marker
+
+**Analysis Document:** //api/.scratch/chat_converters_test_analysis.md
+**Migration Plan:** //api/.scratch/chat_converters_test_migration_plan.md
+
+**Findings:**
+- Tests had good basic coverage but only covered text content, not images or files
+- Tests used UUID for session_id instead of MnemonicSlugs format
+- No tests for content_blocks_to_message_content and message_content_to_content_blocks functions
+- No tests for error cases or edge cases (empty content)
+- No pytest markers were used (needed unit, utils, converters)
+
+**Implementation Improvements:**
+- Fixed session_id format to use MnemonicSlugs instead of UUIDs
+- Added pytest markers (unit, utils, converters)
+- Added proper docstrings to all test methods
+- Added tests for image and file content types
+- Added tests for content_blocks_to_message_content and message_content_to_content_blocks functions
+- Added tests for edge cases (empty content)
+- Updated pytest.ini to include utils and converters markers
+- Maintained the existing class structure while enhancing test coverage
+
+## Completed Sessions
+
 ### Session 10 (Completed on May 6, 2025)
 - **Target File:** test_tool_models.py (Models module)
 - **Source Path:** //api/src/agent_c_api/tests/v2/models/test_tool_models.py
@@ -59,7 +121,41 @@
 - Fixed unexpected test behavior related to empty lists in model validation
 - Adjusted schema documentation testing to accommodate nullable fields
 
-## Completed Sessions
+### Session 9 (Completed on May 6, 2025)
+- **Target File:** test_file_models.py (Models module)
+- **Source Path:** //api/src/agent_c_api/tests/v2/models/test_file_models.py
+- **Destination Path:** //api/tests/unit/api/v2/models/test_file_models.py
+- **Phase:** Migration Complete
+- **Status:** Migrated with Enhancements and All Tests Passing
+- **Tasks:**
+  - [✅] Examined test coverage for file model classes
+  - [✅] Identified relationships to implementation in src/agent_c_api/api/v2/models
+  - [✅] Documented dependencies and fixtures
+  - [✅] Identified gaps in test coverage
+  - [✅] Created detailed analysis document
+  - [✅] Created detailed migration plan
+  - [✅] Implemented tests with improved structure and documentation
+  - [✅] Added additional tests for better coverage
+  - [✅] Updated pytest.ini with new 'files' marker
+
+**Analysis Document:** //api/.scratch/file_models_test_analysis.md
+**Migration Plan:** //api/.scratch/file_models_test_migration_plan.md
+
+**Findings:**
+- Tests have basic coverage but are missing tests for FileBlock in chat_models.py
+- Tests aren't organized into a class structure, making them harder to maintain
+- No issues found with ID handling (using simple string IDs for files)
+- Need to improve validation testing for required and optional fields
+- Missing tests for schema documentation configuration
+
+**Implementation Improvements:**
+- Organized tests into proper class structure with appropriate docstrings
+- Added pytest markers (unit, models, files)
+- Added tests for model_config and schema examples
+- Added tests for FileBlock class from chat_models.py
+- Added tests for complex metadata structures
+- Added conversion tests between FileBlock and ChatMessageContent
+- Added validation testing for all required fields
 
 ### Session 8 (Completed on May 6, 2025)
 - **Target File:** test_session_models.py (Models module)
@@ -153,101 +249,6 @@
 - Enhanced the actual implementation by adding proper validation constraints to PaginationMeta model:
   - Added validation to ensure page and page_size are >= 1
   - Added validation to ensure total_items and total_pages are >= 0
-
-## Upcoming Sessions
-
-### Session 9
-- **Target File:** test_tool_models.py (Models module)
-- **Source Path:** //api/src/agent_c_api/tests/v2/models/test_tool_models.py
-- **Destination Path:** //api/tests/unit/api/v2/models/test_tool_models.py
-- **Phase:** Analysis
-- **Status:** Not Scheduled
-
-### Session 10
-- **Target File:** test_chat_converters.py (Utils module)
-- **Source Path:** //api/src/agent_c_api/tests/v2/utils/test_chat_converters.py
-- **Destination Path:** //api/tests/unit/api/v2/utils/test_chat_converters.py
-- **Phase:** Analysis
-- **Status:** Ready for Analysis
-
-### Session 11
-- **Target File:** test_model_converters.py (Utils module)
-- **Source Path:** //api/src/agent_c_api/tests/v2/utils/test_model_converters.py
-- **Destination Path:** //api/tests/unit/api/v2/utils/test_model_converters.py
-- **Phase:** Analysis
-- **Status:** Not Scheduled
-
-### Session 12
-- **Target File:** test_events.py (History module)
-- **Source Path:** //api/src/agent_c_api/tests/v2/history/test_events.py
-- **Destination Path:** //api/tests/unit/api/v2/history/test_events.py
-- **Phase:** Analysis
-- **Status:** Not Scheduled
-
-### Session 13
-- **Target File:** test_history.py (History module)
-- **Source Path:** //api/src/agent_c_api/tests/v2/history/test_history.py
-- **Destination Path:** //api/tests/unit/api/v2/history/test_history.py
-- **Phase:** Analysis
-- **Status:** Not Scheduled
-
-### Session 14
-- **Target File:** test_models.py (History module)
-- **Source Path:** //api/src/agent_c_api/tests/v2/history/test_models.py
-- **Destination Path:** //api/tests/unit/api/v2/history/test_models.py
-- **Phase:** Analysis
-- **Status:** Not Scheduled
-
-### Session 15
-- **Target File:** test_agent.py (Sessions module)
-- **Source Path:** //api/src/agent_c_api/tests/v2/sessions/test_agent.py
-- **Destination Path:** //api/tests/unit/api/v2/sessions/test_agent.py
-- **Phase:** Analysis
-- **Status:** Not Scheduled
-
-### Session 16
-- **Target File:** test_chat.py (Sessions module)
-- **Source Path:** //api/src/agent_c_api/tests/v2/sessions/test_chat.py
-- **Destination Path:** //api/tests/unit/api/v2/sessions/test_chat.py
-- **Phase:** Analysis
-- **Status:** Not Scheduled
-
-### Session 17
-- **Target File:** test_files.py (Sessions module)
-- **Source Path:** //api/src/agent_c_api/tests/v2/sessions/test_files.py
-- **Destination Path:** //api/tests/unit/api/v2/sessions/test_files.py
-- **Phase:** Analysis
-- **Status:** Not Scheduled
-
-### Session 18
-- **Target File:** test_router.py (Sessions module)
-- **Source Path:** //api/src/agent_c_api/tests/v2/sessions/test_router.py
-- **Destination Path:** //api/tests/unit/api/v2/sessions/test_router.py
-- **Phase:** Analysis
-- **Status:** Not Scheduled
-
-### Session 19
-- **Target File:** test_service.py (Sessions module)
-- **Source Path:** //api/src/agent_c_api/tests/v2/sessions/test_service.py
-- **Destination Path:** //api/tests/unit/api/v2/sessions/test_service.py
-- **Phase:** Analysis
-- **Status:** Not Scheduled
-
-### Session 20
-- **Target File:** test_debug.py (Debug module)
-- **Source Path:** //api/src/agent_c_api/tests/v2/debug/test_debug.py
-- **Destination Path:** //api/tests/unit/api/v2/debug/test_debug.py
-- **Phase:** Analysis
-- **Status:** Not Scheduled
-
-### Session 21
-- **Target File:** test_api_structure.py (Root level)
-- **Source Path:** //api/src/agent_c_api/tests/v2/test_api_structure.py
-- **Destination Path:** //api/tests/unit/api/v2/test_api_structure.py
-- **Phase:** Analysis
-- **Status:** Not Scheduled
-
-## Completed Sessions
 
 ### Session 6 (Completed on May 6, 2025)
 - **Target File:** test_history_models.py (Models module)
