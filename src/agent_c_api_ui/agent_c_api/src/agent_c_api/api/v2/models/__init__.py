@@ -18,12 +18,116 @@ IMPORTANT: When using agent configuration models (AgentConfig, AgentUpdate):
   - agent_models.py re-exports these from session_models.py to maintain compatibility
 """
 
-# Core models
-from .response_models import *
-from .session_models import *
-from .agent_models import *
-from .tool_models import *
-from .chat_models import *
-from .file_models import *
-from .history_models import *
-from .debug_models import *
+# Response models
+from .response_models import (
+    APIStatus,
+    APIResponse,
+    PaginationMeta,
+    PaginatedResponse
+)
+
+# Session models
+from .session_models import (
+    SessionCreate,
+    SessionSummary,
+    SessionDetail,
+    SessionUpdate,
+    SessionListResponse,
+    AgentConfig,
+    AgentUpdate,
+    AgentUpdateResponse,
+    SessionCreateResponse
+)
+
+# Agent models
+from .agent_models import (
+    ModelParameter,
+    ModelInfo,
+    PersonaInfo
+)
+
+# Chat models
+from .chat_models import (
+    FileBlock,
+    ChatMessageContent,
+    ChatMessage,
+    ChatRequest,
+    ChatResponse,
+    ChatEventType
+)
+
+# File models
+from .file_models import (
+    FileMeta,
+    FileUploadResponse
+)
+
+# History models
+from .history_models import (
+    HistorySummary,
+    HistoryDetail,
+    PaginationParams,
+    HistoryListResponse,
+    EventFilter,
+    StoredEvent,
+    ReplayStatus,
+    ReplayControl
+)
+
+# Tool models
+from .tool_models import (
+    ToolParameter,
+    ToolInfo,
+    ToolCategory,
+    ToolsList,
+    SessionTools,
+    ToolsUpdate,
+    ToolCall,
+    ToolResult
+)
+
+# Debug models
+from .debug_models import (
+    MessagePreview,
+    SessionManagerDebug,
+    ChatSessionDebug,
+    MessagesDebug,
+    ToolChestDebug,
+    ChatLogDebug,
+    SessionDebugInfo,
+    AgentBridgeParams,
+    InternalAgentParams,
+    AgentDebugInfo
+)
+
+# Groupings for convenient access
+response_models = [APIStatus, APIResponse, PaginationMeta, PaginatedResponse]
+
+session_models = [
+    SessionCreate, SessionSummary, SessionDetail, SessionUpdate,
+    SessionListResponse, SessionCreateResponse
+]
+
+agent_models = [AgentConfig, AgentUpdate, AgentUpdateResponse, ModelParameter, ModelInfo, PersonaInfo]
+
+chat_models = [
+    FileBlock, ChatMessageContent, ChatMessage, ChatRequest, ChatResponse, ChatEventType
+]
+
+file_models = [FileMeta, FileUploadResponse]
+
+history_models = [
+    HistorySummary, HistoryDetail, PaginationParams, HistoryListResponse,
+    EventFilter, StoredEvent, ReplayStatus, ReplayControl
+]
+
+tool_models = [
+    ToolParameter, ToolInfo, ToolCategory, ToolsList,
+    SessionTools, ToolsUpdate, ToolCall, ToolResult
+]
+
+debug_models = [
+    MessagePreview, SessionManagerDebug, ChatSessionDebug, MessagesDebug,
+    ToolChestDebug, ChatLogDebug, SessionDebugInfo, AgentBridgeParams,
+    InternalAgentParams, AgentDebugInfo
+]
