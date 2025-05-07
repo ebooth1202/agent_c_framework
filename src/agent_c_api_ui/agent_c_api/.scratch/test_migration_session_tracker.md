@@ -10,10 +10,85 @@
 - Many models were incorrectly using UUIDs for IDs instead of the company-standard MnemonicSlugs format - we need to check and fix this for all models as we go.
 - When writing test assertions for error messages, be flexible and account for slight variations in message formatting between different library versions.
 - Model validators can set default values for specific model types - tests need to account for these model-specific defaults rather than assuming direct field mapping.
+- When testing async code with FastAPI background tasks, ensure all AsyncMock objects have proper async side_effect functions and are explicitly awaited to avoid 'coroutine was never awaited' warnings.
 
 ## Next Session
 
-### Session 15 (Completed on May 7, 2025)
+### Session 18 (Completed on May 7, 2025)
+- **Target File:** test_files.py (Sessions module) - Async Fix
+- **Source Path:** //api/tests/unit/api/v2/sessions/test_files.py
+- **Destination Path:** //api/tests/unit/api/v2/sessions/test_files.py
+- **Phase:** Enhancement
+- **Status:** Fixed Async Coroutine Warnings and Improved Testing
+- **Tasks:**
+  - [✅] Identified 'coroutine was never awaited' warnings in test_files.py
+  - [✅] Created utility class (AsyncBackgroundTasks) for testing async background tasks
+  - [✅] Properly implemented async mock functions with awaitable side effects
+  - [✅] Added explicit await calls for all AsyncMock objects
+  - [✅] Added execute_all() method to ensure background tasks are properly awaited
+  - [✅] Documented approach for future tests with similar async requirements
+  - [✅] Created reusable pattern for testing FastAPI background tasks
+
+**Analysis Document:** //api/.scratch/async_test_fixes.md
+
+**Findings:**
+- Multiple 'coroutine was never awaited' warnings throughout tests
+- AsyncMock objects need proper async side_effect functions that can be awaited
+- FastAPI's BackgroundTasks need special handling in test environments
+- Background tasks containing async functions need to be explicitly awaited
+- Need for consistent pattern for testing async functions in FastAPI
+
+**Implementation Improvements:**
+- Created AsyncBackgroundTasks class to simulate FastAPI's BackgroundTasks
+- Implemented execute_all() method to properly await all scheduled tasks
+- Added proper async side_effect functions for all AsyncMock objects
+- Updated all tests to await async operations explicitly
+- Added comprehensive documentation for the async testing pattern
+- Created reusable approach that can be applied to other tests with similar issues
+
+### Session 17 (Completed on May 7, 2025)
+- **Target File:** test_files.py (Sessions module)
+- **Source Path:** //api/src/agent_c_api/tests/v2/sessions/test_files.py
+- **Destination Path:** //api/tests/unit/api/v2/sessions/test_files.py
+- **Phase:** Migration Complete
+- **Status:** Migrated with Significant Enhancements and All Tests Implemented
+- **Tasks:**
+  - [✅] Examined test coverage for file-related session functionality
+  - [✅] Identified relationships to implementation in sessions module
+  - [✅] Documented dependencies and fixtures
+  - [✅] Identified gaps in test coverage
+  - [✅] Created detailed analysis document
+  - [✅] Created detailed migration plan
+  - [✅] Fixed UUID session_id to use MnemonicSlug format
+  - [✅] Reorganized tests into proper class structure with descriptive docstrings
+  - [✅] Added appropriate pytest markers (unit, sessions, files)
+  - [✅] Added tests for edge cases like server errors and empty file lists
+  - [✅] Added model validation tests for FileMeta and FileUploadResponse
+  - [✅] Enhanced test assertions for more comprehensive validation
+
+**Analysis Document:** //api/.scratch/test_files_analysis.md
+**Migration Plan:** //api/.scratch/test_files_migration_plan.md
+
+**Findings:**
+- Original tests had good coverage for happy paths and basic error cases
+- Tests were not organized into classes, making them harder to maintain
+- Tests used UUID for session IDs instead of MnemonicSlugs format
+- Missing tests for server errors during file operations
+- No explicit model validation tests for response structures
+- No tests for empty file list handling
+
+**Implementation Improvements:**
+- Organized tests into five classes by endpoint type
+- Fixed session_id format to use MnemonicSlugs (e.g., "tiger-castle")
+- Added pytest markers (unit, sessions, files)
+- Added comprehensive docstrings to all test classes and methods
+- Added tests for server errors during upload, download, and deletion
+- Added tests for empty file list handling
+- Added explicit model validation tests for response structures
+- Enhanced assertions to verify all model fields and metadata content
+- Made test fixture names more descriptive of their purpose
+
+### Session 16 (Completed on May 7, 2025)
 - **Target File:** test_chat.py (Sessions module)
 - **Source Path:** //api/src/agent_c_api/tests/v2/sessions/test_chat.py
 - **Destination Path:** //api/tests/unit/api/v2/sessions/test_chat.py
@@ -70,7 +145,7 @@
 - Fixed test warnings by renaming TestData class and properly mocking async generators
 - Created documentation of warning fixes in test_warnings_fixes.md
 
-### Session 14 (Completed on May 7, 2025)
+### Session 15 (Completed on May 7, 2025)
 - **Target File:** test_agent.py (Sessions module)
 - **Source Path:** //api/src/agent_c_api/tests/v2/sessions/test_agent.py
 - **Destination Path:** //api/tests/unit/api/v2/sessions/test_agent.py
@@ -109,7 +184,7 @@
 - Added tests for handling unexpected server errors
 - Added validation for AgentUpdateResponse structure
 
-### Session 13 (Completed on May 7, 2025)
+### Session 14 (Completed on May 7, 2025)
 - **Target File:** test_debug.py (Debug module)
 - **Source Path:** //api/src/agent_c_api/tests/v2/debug/test_debug.py
 - **Destination Path:** //api/tests/unit/api/v2/debug/test_debug.py
@@ -149,7 +224,7 @@
 
 ## Completed Sessions
 
-### Session 12 (Completed on May 6, 2025)
+### Session 13 (Completed on May 6, 2025)
 - **Target File:** test_model_converters.py (Utils module)
 - **Source Path:** //api/src/agent_c_api/tests/v2/utils/test_model_converters.py
 - **Destination Path:** //api/tests/unit/api/v2/utils/test_model_converters.py
@@ -193,7 +268,7 @@
 - Added appropriate pytest markers (unit, utils, converters)
 - Fixed a test assertion to account for model-specific default values (max_tokens=8192 for Claude models)
 
-### Session 11 (Completed on May 6, 2025)
+### Session 12 (Completed on May 6, 2025)
 - **Target File:** test_chat_converters.py (Utils module)
 - **Source Path:** //api/src/agent_c_api/tests/v2/utils/test_chat_converters.py
 - **Destination Path:** //api/tests/unit/api/v2/utils/test_chat_converters.py
@@ -236,7 +311,7 @@
 
 ## Completed Sessions
 
-### Session 10 (Completed on May 6, 2025)
+### Session 11 (Completed on May 6, 2025)
 - **Target File:** test_tool_models.py (Models module)
 - **Source Path:** //api/src/agent_c_api/tests/v2/models/test_tool_models.py
 - **Destination Path:** //api/tests/unit/api/v2/models/test_tool_models.py
@@ -283,7 +358,7 @@
 - Fixed unexpected test behavior related to empty lists in model validation
 - Adjusted schema documentation testing to accommodate nullable fields
 
-### Session 9 (Completed on May 6, 2025)
+### Session 10 (Completed on May 6, 2025)
 - **Target File:** test_file_models.py (Models module)
 - **Source Path:** //api/src/agent_c_api/tests/v2/models/test_file_models.py
 - **Destination Path:** //api/tests/unit/api/v2/models/test_file_models.py
@@ -319,7 +394,7 @@
 - Added conversion tests between FileBlock and ChatMessageContent
 - Added validation testing for all required fields
 
-### Session 8 (Completed on May 6, 2025)
+### Session 9 (Completed on May 6, 2025)
 - **Target File:** test_session_models.py (Models module)
 - **Source Path:** //api/src/agent_c_api/tests/v2/models/test_session_models.py
 - **Destination Path:** //api/tests/unit/api/v2/models/test_session_models.py
@@ -370,7 +445,7 @@
 
 ## Completed Sessions
 
-### Session 7 (Completed on May 6, 2025)
+### Session 8 (Completed on May 6, 2025)
 - **Target File:** test_response_models.py (Models module)
 - **Source Path:** //api/src/agent_c_api/tests/v2/models/test_response_models.py
 - **Destination Path:** //api/tests/unit/api/v2/models/test_response_models.py
@@ -412,7 +487,7 @@
   - Added validation to ensure page and page_size are >= 1
   - Added validation to ensure total_items and total_pages are >= 0
 
-### Session 6 (Completed on May 6, 2025)
+### Session 7 (Completed on May 6, 2025)
 - **Target File:** test_history_models.py (Models module)
 - **Source Path:** //api/src/agent_c_api/tests/v2/models/test_history_models.py
 - **Destination Path:** //api/tests/unit/api/v2/models/test_history_models.py
@@ -458,7 +533,7 @@
 - Added tests for model inheritance relationships
 - Added integration tests between related models
 
-### Session 5 (Completed on May 6, 2025)
+### Session 6 (Completed on May 6, 2025)
 - **Target File:** test_chat_models.py (Models module)
 - **Source Path:** //api/src/agent_c_api/tests/v2/models/test_chat_models.py
 - **Destination Path:** //api/tests/unit/api/v2/models/test_chat_models.py
@@ -489,7 +564,7 @@
 - Added tests for the ChatResponse model (previously untested)
 - Added tests for edge cases in conversion methods
 
-### Session 4 (Completed on May 6, 2025)
+### Session 5 (Completed on May 6, 2025)
 - **Target File:** test_file_models.py (Models module)
 - **Source Path:** //api/src/agent_c_api/tests/v2/models/test_file_models.py
 - **Destination Path:** //api/tests/unit/api/v2/models/test_file_models.py
@@ -525,7 +600,7 @@
 - Added conversion tests between FileBlock and ChatMessageContent
 - Added validation testing for all required fields
 
-### Session 3 (Completed on May 6, 2025)
+### Session 4 (Completed on May 6, 2025)
 - **Target File:** test_services.py (Config module)
 - **Source Path:** //api/src/agent_c_api/tests/v2/config/test_services.py
 - **Destination Path:** //api/tests/unit/api/v2/config/test_services.py
@@ -573,7 +648,7 @@
 - For async tests, use @pytest_asyncio.fixture instead of @pytest.fixture
 - Be careful with patching module-level variables that may have already been imported
 
-### Session 2 (Completed on May 6, 2025)
+### Session 3 (Completed on May 6, 2025)
 - **Target File:** test_endpoints.py (Config module)
 - **Source Path:** //api/src/agent_c_api/tests/v2/config/test_endpoints.py
 - **Destination Path:** //api/tests/unit/api/v2/config/test_endpoints.py
@@ -605,7 +680,7 @@
 - ID handling is appropriate (using simple string IDs)
 - Need to use existing fixtures from conftest.py
 
-### Session 1 (Completed on May 6, 2025)
+### Session 2 (Completed on May 6, 2025)
 - **Target File:** test_models.py (Config module)
 - **Source Path:** //api/src/agent_c_api/tests/v2/config/test_models.py
 - **Destination Path:** //api/tests/unit/api/v2/config/test_models.py
