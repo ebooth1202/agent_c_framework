@@ -13,14 +13,14 @@
 
 ## Next Session
 
-### Session 14 (Planned for May 8, 2025)
-- **Target File:** test_agent.py (Sessions module)
-- **Source Path:** //api/src/agent_c_api/tests/v2/sessions/test_agent.py
-- **Destination Path:** //api/tests/unit/api/v2/sessions/test_agent.py
+### Session 15 (Planned for May 8, 2025)
+- **Target File:** test_chat.py (Sessions module)
+- **Source Path:** //api/src/agent_c_api/tests/v2/sessions/test_chat.py
+- **Destination Path:** //api/tests/unit/api/v2/sessions/test_chat.py
 - **Phase:** Not Started
 - **Status:** Awaiting Analysis
 - **Tasks:**
-  - [ ] Examine test coverage for agent-related session functionality
+  - [ ] Examine test coverage for chat-related session functionality
   - [ ] Identify relationships to implementation in sessions module
   - [ ] Document dependencies and fixtures
   - [ ] Identify gaps in test coverage
@@ -28,9 +28,48 @@
   - [ ] Create detailed migration plan
   - [ ] Check for ID format issues (MnemonicSlugs vs UUIDs)
   - [ ] Examine the mocking approach for the agent manager
-  - [ ] Add appropriate pytest markers (unit, sessions)
+  - [ ] Add appropriate pytest markers (unit, session, chat)
   - [ ] Add comprehensive docstrings
   - [ ] Check for response model validation
+
+### Session 14 (Completed on May 7, 2025)
+- **Target File:** test_agent.py (Sessions module)
+- **Source Path:** //api/src/agent_c_api/tests/v2/sessions/test_agent.py
+- **Destination Path:** //api/tests/unit/api/v2/sessions/test_agent.py
+- **Phase:** Migration Complete
+- **Status:** Migrated with Enhancements and All Tests Passing
+- **Tasks:**
+  - [✅] Examined test coverage for agent-related session functionality
+  - [✅] Identified relationships to implementation in sessions module
+  - [✅] Documented dependencies and fixtures
+  - [✅] Identified gaps in test coverage
+  - [✅] Created detailed analysis document
+  - [✅] Created detailed migration plan
+  - [✅] Fixed UUID session_id to use MnemonicSlug format
+  - [✅] Improved the mocking approach for the agent manager
+  - [✅] Added appropriate pytest markers (unit, session, agent)
+  - [✅] Added comprehensive docstrings
+  - [✅] Added response model validation tests
+  - [✅] Added tests for validation errors and server errors
+
+**Analysis Document:** //api/.scratch/test_agent_analysis.md
+**Migration Plan:** //api/.scratch/test_agent_migration_plan.md
+
+**Findings:**
+- Original tests had good coverage but used UUID for session IDs instead of MnemonicSlugs format
+- Tests lacked proper pytest markers and comprehensive docstrings
+- No explicit validation testing for response models or error conditions
+- No tests for handling unexpected server errors or validation errors
+
+**Implementation Improvements:**
+- Fixed session_id format to use MnemonicSlugs (e.g., "tiger-castle")
+- Added pytest markers (unit, session, agent)
+- Added 'agent' marker to pytest.ini
+- Enhanced test structure with comprehensive docstrings
+- Added new test methods for response model validation
+- Added tests for parameter validation errors
+- Added tests for handling unexpected server errors
+- Added validation for AgentUpdateResponse structure
 
 ### Session 13 (Completed on May 7, 2025)
 - **Target File:** test_debug.py (Debug module)
