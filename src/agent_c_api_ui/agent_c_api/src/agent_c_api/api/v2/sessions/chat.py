@@ -1,5 +1,4 @@
 from typing import List, Optional, AsyncGenerator, Dict, Any
-from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Path, Body, status
 from fastapi.responses import StreamingResponse, JSONResponse
 import json
@@ -7,6 +6,20 @@ import asyncio
 import structlog
 
 from agent_c_api.api.dependencies import get_agent_manager
+from fastapi import Request
+
+
+def get_chat_service(request: Request):
+    """Dependency to get the chat service
+    
+    Args:
+        request: The FastAPI request object
+        
+    Returns:
+        ChatService: Initialized chat service
+    """
+    agent_manager = get_agent_manager(request)
+    return ChatService(agent_manager=agent_manager)
 
 
 from agent_c_api.api.v2.models.chat_models import (
@@ -165,7 +178,7 @@ class ChatService:
             "description": "Session not found",
             "content": {
                 "application/json": {
-                    "example": {"detail": "Session 550e8400-e29b-41d4-a716-446655440000 not found"}
+                    "example": {"detail": "Session tiger-castle not found"}
                 }
             }
         },
@@ -190,7 +203,7 @@ class ChatService:
 async def send_chat_message(
     session_id: str = Path(..., description="UUID of the session to send the message to"),
     request: ChatRequest = Body(..., description="Chat message request containing the message and streaming preference"),
-    chat_service: ChatService = Depends(),
+    chat_service: ChatService = Depends(get_chat_service),
     session_service: SessionService = Depends()
 ) -> StreamingResponse:
     """Send a chat message to the agent and receive the response
@@ -237,7 +250,7 @@ async def send_chat_message(
         
         # Send the message and get streaming response
         response = requests.post(
-            "https://api.example.com/api/v2/sessions/550e8400-e29b-41d4-a716-446655440000/chat",
+            "https://api.example.com/api/v2/sessions/tiger-castle/chat",
             json=message,
             stream=True,
             headers={"Accept": "text/event-stream"}
@@ -315,7 +328,7 @@ async def send_chat_message(
                 "application/json": {
                     "example": {
                         "status": "success",
-                        "message": "Cancellation signal sent for session: 550e8400-e29b-41d4-a716-446655440000"
+                        "message": "Cancellation signal sent for session: tiger-castle"
                     }
                 }
             }
@@ -324,7 +337,7 @@ async def send_chat_message(
             "description": "Session not found",
             "content": {
                 "application/json": {
-                    "example": {"detail": "Session 550e8400-e29b-41d4-a716-446655440000 not found"}
+                    "example": {"detail": "Session tiger-castle not found"}
                 }
             }
         },
@@ -334,7 +347,7 @@ async def send_chat_message(
                 "application/json": {
                     "example": {
                         "status": "error",
-                        "message": "Failed to cancel interaction for session: 550e8400-e29b-41d4-a716-446655440000"
+                        "message": "Failed to cancel interaction for session: tiger-castle"
                     }
                 }
             }
@@ -343,8 +356,8 @@ async def send_chat_message(
 )
 
 async def cancel_chat_interaction(
-    session_id: UUID = Path(..., description="UUID of the session with the interaction to cancel"),
-    chat_service: ChatService = Depends(),
+    session_id: str = Path(..., description="ID of the session with the interaction to cancel"),
+    chat_service: ChatService = Depends(get_chat_service),
     session_service: SessionService = Depends()
 ):
     """Cancel an ongoing chat interaction
@@ -357,7 +370,7 @@ async def cancel_chat_interaction(
     but it will attempt to halt processing as soon as possible.
     
     Args:
-        session_id: UUID of the session with the interaction to cancel
+        session_id: ID of the session with the interaction to cancel
         chat_service: Dependency-injected chat service
         session_service: Dependency-injected session service
         
@@ -373,7 +386,7 @@ async def cancel_chat_interaction(
         
         # Send cancellation request
         response = requests.delete(
-            "https://api.example.com/api/v2/sessions/550e8400-e29b-41d4-a716-446655440000/chat",
+            "https://api.example.com/api/v2/sessions/tiger-castle/chat",
         )
         
         result = response.json()
