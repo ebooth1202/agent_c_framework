@@ -2,7 +2,7 @@
 from typing import Dict, List, Optional, Any, Literal
 from datetime import datetime
 from pydantic import BaseModel, Field, ConfigDict
-from uuid import UUID
+# Removed UUID import as it's no longer needed
 
 from .chat_models import ChatEventUnion
 
@@ -13,9 +13,9 @@ class HistorySummary(BaseModel):
     Contains key information about a session's history including identifiers,
     timestamps, and basic metrics like message count and duration.
     """
-    session_id: UUID = Field(
+    session_id: str = Field(
         ..., 
-        description="Unique identifier for the session"
+        description="Unique session identifier in MnemonicSlug format (e.g., 'tiger-castle')"
     )
     name: str = Field(
         ..., 
@@ -41,7 +41,7 @@ class HistorySummary(BaseModel):
     model_config = {
         "json_schema_extra": {
             "example": {
-                "session_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                "session_id": "tiger-castle",
                 "name": "Task Planning Session",
                 "created_at": "2025-04-01T14:30:00Z",
                 "updated_at": "2025-04-01T15:45:00Z",
@@ -88,13 +88,13 @@ class HistoryDetail(HistorySummary):
     model_config = ConfigDict(
         json_schema_extra= {
             "example": {
-                "session_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                "session_id": "tiger-castle",
                 "name": "Task Planning Session",
                 "created_at": "2025-04-01T14:30:00Z",
                 "updated_at": "2025-04-01T15:45:00Z",
                 "message_count": 24,
                 "duration": 4500,
-                "files": ["events_3fa85f64_1.jsonl", "events_3fa85f64_2.jsonl"],
+                "files": ["events_tiger-castle_1.jsonl", "events_tiger-castle_2.jsonl"],
                 "event_types": {
                     "text_delta": 120,
                     "tool_call": 15,
@@ -178,7 +178,7 @@ class HistoryListResponse(BaseModel):
             "example": {
                 "items": [
                     {
-                        "session_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                        "session_id": "tiger-castle",
                         "name": "Task Planning Session",
                         "created_at": "2025-04-01T14:30:00Z",
                         "updated_at": "2025-04-01T15:45:00Z",
@@ -186,7 +186,7 @@ class HistoryListResponse(BaseModel):
                         "duration": 4500
                     },
                     {
-                        "session_id": "8c282a4d-1f5e-4dab-b92a-04a24eb8173c",
+                        "session_id": "apollo-banana",
                         "name": "Code Review Session",
                         "created_at": "2025-04-02T09:15:00Z",
                         "updated_at": "2025-04-02T10:30:00Z",
@@ -327,9 +327,9 @@ class ReplayStatus(BaseModel):
     including playback status and position information. Used to track
     and control session replay functionality.
     """
-    session_id: UUID = Field(
+    session_id: str = Field(
         ..., 
-        description="Unique identifier of the session being replayed"
+        description="Unique session identifier in MnemonicSlug format (e.g., 'tiger-castle')"
     )
     is_playing: bool = Field(
         ..., 
@@ -351,7 +351,7 @@ class ReplayStatus(BaseModel):
     model_config = ConfigDict(
         json_schema_extra= {
             "example": {
-                "session_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                "session_id": "tiger-castle",
                 "is_playing": True,
                 "current_position": "2025-04-01T14:40:15Z",
                 "start_time": "2025-04-01T14:30:00Z",

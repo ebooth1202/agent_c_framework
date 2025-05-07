@@ -258,7 +258,13 @@ def client(mock_config_service):
     Returns:
         TestClient: A FastAPI test client with dependencies properly mocked
     """
-    # Override the get_config_service dependency to use our mock
+    # Reset the mock service before use
+    mock_config_service.reset_mock()
+    
+    # Clear any existing overrides
+    app.dependency_overrides = {}
+    
+    # Set up our dependency override to use the mock service
     app.dependency_overrides[get_config_service] = lambda: mock_config_service
     
     # Create a test client using the app with overridden dependencies
