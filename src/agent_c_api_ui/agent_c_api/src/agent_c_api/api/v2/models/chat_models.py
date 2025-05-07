@@ -1,8 +1,8 @@
 # src/agent_c_api/api/v2/models/chat_models.py
-from typing import  List, Optional,  Literal, Union, ClassVar
+from typing import  List, Optional,  Literal, Union
 from datetime import datetime
 from enum import Enum
-from pydantic import BaseModel, Field, field_validator, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 from uuid import UUID
 
 # Import core event models
@@ -17,6 +17,7 @@ from agent_c.models.events.tool_calls import ToolCallEvent, ToolCallDeltaEvent
 from agent_c.models.common_chat import TextContentBlock as TextBlock, ImageContentBlock as ImageBlock, BaseContentBlock
 class FileBlock(BaseContentBlock):
     """Placeholder for file content blocks"""
+    type: Literal["file"] = "file"
     file_id: str
     mime_type: Optional[str] = None
 
@@ -79,19 +80,17 @@ class ChatMessageContent(BaseModel):
         }
     )
     
-    @classmethod
-    @field_validator('text')
-    def text_required_for_text_type(cls, v: Optional[str], info) -> Optional[str]:
-        if info.data.get('type') == 'text' and v is None:
+    # Use model_validator for cross-field validation - Pydantic v2 approach
+    @model_validator(mode='after')
+    def validate_content_fields(self) -> 'ChatMessageContent':
+        """Validate that required fields are present based on content type"""
+        if self.type == 'text' and self.text is None:
             raise ValueError('text is required when type is text')
-        return v
-        
-    @classmethod
-    @field_validator('file_id')
-    def file_id_required_for_file_types(cls, v: Optional[str], info) -> Optional[str]:
-        if info.data.get('type') in ['image', 'file'] and v is None:
+
+        if self.type in ['image', 'file'] and self.file_id is None:
             raise ValueError('file_id is required when type is image or file')
-        return v
+            
+        return self
         
     def to_content_block(self) -> ContentBlockUnion:
         """Convert to a core content block"""
