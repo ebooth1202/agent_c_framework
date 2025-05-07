@@ -7,53 +7,13 @@
 - Be careful with patching module-level variables that may have already been imported - this won't affect code that has already imported the variable.
 - Each test should be completely self-contained with its own setup and teardown to prevent unexpected interactions.
 - When working with FastAPI services, pay close attention to the difference between model objects and dictionaries.
+- Many models were incorrectly using UUIDs for IDs instead of the company-standard MnemonicSlugs format - we need to check and fix this for all models as we go.
 
 ## Current Session
 
-### Session 6
-- **Target File:** test_file_models.py (Models module)
-- **Source Path:** //api/src/agent_c_api/tests/v2/models/test_file_models.py
-- **Destination Path:** //api/tests/unit/api/v2/models/test_file_models.py
-- **Phase:** Migration Complete
-- **Status:** Ready for Verification
-- **Tasks:**
-  - [✅] Examined test coverage for file model classes
-  - [✅] Identified relationships to implementation in src/agent_c_api/api/v2/models
-  - [✅] Documented dependencies and fixtures
-  - [✅] Identified gaps in test coverage
-  - [✅] Created detailed analysis document
-  - [✅] Created detailed migration plan
-  - [✅] Implemented tests with improved structure and documentation
-  - [✅] Added additional tests for better coverage
-  - [✅] Updated pytest.ini with new 'files' marker
 
-**Analysis Document:** //api/.scratch/file_models_test_analysis.md
-**Migration Plan:** //api/.scratch/file_models_test_migration_plan.md
-
-**Findings:**
-- Tests have basic coverage but are missing tests for FileBlock in chat_models.py
-- Tests aren't organized into a class structure, making them harder to maintain
-- No issues found with ID handling (using simple string IDs for files)
-- Need to improve validation testing for required and optional fields
-- Missing tests for schema documentation configuration
-
-**Implementation Improvements:**
-- Organized tests into proper class structure with appropriate docstrings
-- Added pytest markers (unit, models, files)
-- Added tests for model_config and schema examples
-- Added tests for FileBlock class from chat_models.py
-- Added tests for complex metadata structures
-- Added conversion tests between FileBlock and ChatMessageContent
-- Added validation testing for all required fields
 
 ## Upcoming Sessions
-
-### Session 6
-- **Target File:** test_history_models.py (Models module)
-- **Source Path:** //api/src/agent_c_api/tests/v2/models/test_history_models.py
-- **Destination Path:** //api/tests/unit/api/v2/models/test_history_models.py
-- **Phase:** Analysis
-- **Status:** Not Scheduled
 
 ### Session 7
 - **Target File:** test_response_models.py (Models module)
@@ -162,6 +122,51 @@
 
 ## Completed Sessions
 
+### Session 6 (Completed on May 6, 2025)
+- **Target File:** test_history_models.py (Models module)
+- **Source Path:** //api/src/agent_c_api/tests/v2/models/test_history_models.py
+- **Destination Path:** //api/tests/unit/api/v2/models/test_history_models.py
+- **Phase:** Migration Complete
+- **Status:** Migrated with Significant Enhancements and ID Fixes
+- **Tasks:**
+  - [u2705] Examined test coverage for history model classes
+  - [u2705] Identified relationships to implementation in src/agent_c_api/api/v2/models/history_models.py
+  - [u2705] Documented dependencies and fixtures
+  - [u2705] Identified gaps in test coverage
+  - [u2705] Created detailed analysis document
+  - [u2705] Created detailed migration plan
+  - [u2705] Fixed UUID session_id fields to use MnemonicSlug format
+  - [u2705] Updated tests to work with MnemonicSlug IDs
+  - [u2705] Added specific tests for MnemonicSlug ID validation
+  - [u2705] Implemented tests with improved structure and documentation
+  - [u2705] Added tests for previously untested models
+  - [u2705] Added serialization and schema validation tests
+
+**Analysis Document:** //api/.scratch/history_models_test_analysis.md
+**Migration Plan:** //api/.scratch/history_models_test_migration_plan.md
+**ID Fix Plan:** //api/.scratch/history_models_id_fix_plan.md
+
+**Findings:**
+- Original tests covered only 4 out of 8 models defined in history_models.py
+- No tests for HistoryDetail, PaginationParams, HistoryListResponse, or StoredEvent
+- Tests were not organized into classes, making them harder to maintain
+- Missing tests for schema validation, serialization, and edge cases
+- Critical issue with ID handling: models were using UUIDs instead of MnemonicSlug format
+
+**Implementation Improvements:**
+- Fixed implementation by replacing UUID with string in HistorySummary, HistoryDetail, and ReplayStatus
+- Updated field descriptions to document the MnemonicSlug format
+- Updated schema examples to use MnemonicSlug IDs (e.g., "tiger-castle")
+- Added specific test class for MnemonicSlug ID format validation
+- Organized tests into proper class structure with appropriate docstrings
+- Added pytest markers (unit, models, history)
+- Added tests for all previously untested models
+- Added tests for model_config and schema examples validation
+- Added tests for JSON serialization/deserialization
+- Added validation tests for field constraints (min/max values)
+- Added tests for model inheritance relationships
+- Added integration tests between related models
+
 ### Session 5 (Completed on May 6, 2025)
 - **Target File:** test_chat_models.py (Models module)
 - **Source Path:** //api/src/agent_c_api/tests/v2/models/test_chat_models.py
@@ -169,14 +174,14 @@
 - **Phase:** Migration Complete
 - **Status:** Migrated with Enhancements
 - **Tasks:**
-  - [✅] Examined test coverage for chat model classes
-  - [✅] Identified relationships to implementation in src/agent_c_api/api/v2/models
-  - [✅] Documented dependencies and fixtures
-  - [✅] Identified gaps in test coverage
-  - [✅] Created detailed analysis document
-  - [✅] Created detailed migration plan
-  - [✅] Implemented tests with improved structure and documentation
-  - [✅] Added additional tests for better coverage
+  - [u2705] Examined test coverage for chat model classes
+  - [u2705] Identified relationships to implementation in src/agent_c_api/api/v2/models
+  - [u2705] Documented dependencies and fixtures
+  - [u2705] Identified gaps in test coverage
+  - [u2705] Created detailed analysis document
+  - [u2705] Created detailed migration plan
+  - [u2705] Implemented tests with improved structure and documentation
+  - [u2705] Added additional tests for better coverage
 
 **Analysis Document:** //api/.scratch/chat_models_test_analysis.md
 **Migration Plan:** //api/.scratch/chat_models_test_migration_plan.md
@@ -193,62 +198,41 @@
 - Added tests for the ChatResponse model (previously untested)
 - Added tests for edge cases in conversion methods
 
-### Session 1 (Completed on May 6, 2025)
-- **Target File:** test_models.py (Config module)
-- **Source Path:** //api/src/agent_c_api/tests/v2/config/test_models.py
-- **Destination Path:** //api/tests/unit/api/v2/config/test_models.py
-- **Phase:** Completed
-- **Status:** Migrated with Enhancements
-- **Accomplishments:**
-  - ✅ Examined test coverage for config module models
-  - ✅ Identified relations to implementation in src/agent_c_api/api/v2/config
-  - ✅ Documented dependencies and fixtures
-  - ✅ Identified gaps in test coverage
-  - ✅ Created detailed analysis document
-  - ✅ Created detailed migration plan
-  - ✅ Implemented tests with improved structure and documentation
-  - ✅ Added additional tests for better coverage
-
-**Analysis Document:** //api/.scratch/config_models_test_analysis.md
-**Migration Plan:** //api/.scratch/config_models_test_migration_plan.md
-
-**Notes:**
-- Added proper pytest markers (unit, config, models)
-- Organized tests into a class structure with detailed docstrings
-- Added tests for optional fields and empty collections
-- No issues found with ID handling (using external string IDs)
-
-### Session 2
-- **Target File:** test_endpoints.py (Config module)
-- **Source Path:** //api/src/agent_c_api/tests/v2/config/test_endpoints.py
-- **Destination Path:** //api/tests/unit/api/v2/config/test_endpoints.py
+### Session 4 (Completed on May 6, 2025)
+- **Target File:** test_file_models.py (Models module)
+- **Source Path:** //api/src/agent_c_api/tests/v2/models/test_file_models.py
+- **Destination Path:** //api/tests/unit/api/v2/models/test_file_models.py
 - **Phase:** Migration Complete
-- **Status:** Ready for Final Verification
+- **Status:** Ready for Verification
 - **Tasks:**
-  - [✅] Examine test coverage for config module endpoints
-  - [✅] Identify relations to implementation in src/agent_c_api/api/v2/config
-  - [✅] Document dependencies and fixtures
-  - [✅] Identify any issues or gaps
-  - [✅] Create detailed analysis document
-  - [✅] Update session tracker with findings
-  - [✅] Implement migration according to plan
-  - [✅] Fix dependency injection for proper mocking
-  - [✅] Improve error handling in API endpoints
-  - [✅] Verify all tests pass
+  - [u2705] Examined test coverage for file model classes
+  - [u2705] Identified relationships to implementation in src/agent_c_api/api/v2/models
+  - [u2705] Documented dependencies and fixtures
+  - [u2705] Identified gaps in test coverage
+  - [u2705] Created detailed analysis document
+  - [u2705] Created detailed migration plan
+  - [u2705] Implemented tests with improved structure and documentation
+  - [u2705] Added additional tests for better coverage
+  - [u2705] Updated pytest.ini with new 'files' marker
 
-**Implementation Improvements:**
-- Added consistent error handling to all config endpoints
-- Fixed tests to properly verify error responses
-- Ensured all endpoints return structured error responses
-
-**Analysis Document:** //api/.scratch/config_endpoints_test_analysis.md
-**Migration Plan:** //api/.scratch/config_endpoints_test_migration_plan.md
+**Analysis Document:** //api/.scratch/file_models_test_analysis.md
+**Migration Plan:** //api/.scratch/file_models_test_migration_plan.md
 
 **Findings:**
-- Current test file has good coverage but lacks organization into classes
-- Three additional error case tests needed for list endpoints
-- ID handling is appropriate (using simple string IDs)
-- Need to use existing fixtures from conftest.py
+- Tests have basic coverage but are missing tests for FileBlock in chat_models.py
+- Tests aren't organized into a class structure, making them harder to maintain
+- No issues found with ID handling (using simple string IDs for files)
+- Need to improve validation testing for required and optional fields
+- Missing tests for schema documentation configuration
+
+**Implementation Improvements:**
+- Organized tests into proper class structure with appropriate docstrings
+- Added pytest markers (unit, models, files)
+- Added tests for model_config and schema examples
+- Added tests for FileBlock class from chat_models.py
+- Added tests for complex metadata structures
+- Added conversion tests between FileBlock and ChatMessageContent
+- Added validation testing for all required fields
 
 ### Session 3 (Completed on May 6, 2025)
 - **Target File:** test_services.py (Config module)
@@ -257,18 +241,18 @@
 - **Phase:** Migration Complete
 - **Status:** Migration Completed with Enhancements and All Tests Passing
 - **Tasks:**
-  - [✅] Examine test coverage for config module services
-  - [✅] Identify relations to implementation in src/agent_c_api/api/v2/config
-  - [✅] Document dependencies and fixtures
-  - [✅] Identify any issues or gaps
-  - [✅] Create detailed analysis document
-  - [✅] Create detailed migration plan
-  - [✅] Update session tracker with findings
-  - [✅] Implement migration according to plan
-  - [✅] Fix dependency injection for proper mocking
-  - [✅] Handle cache-related test issues
-  - [✅] Restructure tests to be more robust
-  - [✅] Verify all tests pass
+  - [u2705] Examine test coverage for config module services
+  - [u2705] Identify relations to implementation in src/agent_c_api/api/v2/config
+  - [u2705] Document dependencies and fixtures
+  - [u2705] Identify any issues or gaps
+  - [u2705] Create detailed analysis document
+  - [u2705] Create detailed migration plan
+  - [u2705] Update session tracker with findings
+  - [u2705] Implement migration according to plan
+  - [u2705] Fix dependency injection for proper mocking
+  - [u2705] Handle cache-related test issues
+  - [u2705] Restructure tests to be more robust
+  - [u2705] Verify all tests pass
 
 **Analysis Document:** //api/.scratch/config_services_test_analysis.md
 **Migration Plan:** //api/.scratch/config_services_test_migration_plan.md
@@ -297,6 +281,63 @@
 - Each test should be fully self-contained with its own data and mocks to prevent interaction
 - For async tests, use @pytest_asyncio.fixture instead of @pytest.fixture
 - Be careful with patching module-level variables that may have already been imported
+
+### Session 2 (Completed on May 6, 2025)
+- **Target File:** test_endpoints.py (Config module)
+- **Source Path:** //api/src/agent_c_api/tests/v2/config/test_endpoints.py
+- **Destination Path:** //api/tests/unit/api/v2/config/test_endpoints.py
+- **Phase:** Migration Complete
+- **Status:** Ready for Final Verification
+- **Tasks:**
+  - [u2705] Examine test coverage for config module endpoints
+  - [u2705] Identify relations to implementation in src/agent_c_api/api/v2/config
+  - [u2705] Document dependencies and fixtures
+  - [u2705] Identify any issues or gaps
+  - [u2705] Create detailed analysis document
+  - [u2705] Update session tracker with findings
+  - [u2705] Implement migration according to plan
+  - [u2705] Fix dependency injection for proper mocking
+  - [u2705] Improve error handling in API endpoints
+  - [u2705] Verify all tests pass
+
+**Implementation Improvements:**
+- Added consistent error handling to all config endpoints
+- Fixed tests to properly verify error responses
+- Ensured all endpoints return structured error responses
+
+**Analysis Document:** //api/.scratch/config_endpoints_test_analysis.md
+**Migration Plan:** //api/.scratch/config_endpoints_test_migration_plan.md
+
+**Findings:**
+- Current test file has good coverage but lacks organization into classes
+- Three additional error case tests needed for list endpoints
+- ID handling is appropriate (using simple string IDs)
+- Need to use existing fixtures from conftest.py
+
+### Session 1 (Completed on May 6, 2025)
+- **Target File:** test_models.py (Config module)
+- **Source Path:** //api/src/agent_c_api/tests/v2/config/test_models.py
+- **Destination Path:** //api/tests/unit/api/v2/config/test_models.py
+- **Phase:** Completed
+- **Status:** Migrated with Enhancements
+- **Accomplishments:**
+  - u2705 Examined test coverage for config module models
+  - u2705 Identified relations to implementation in src/agent_c_api/api/v2/config
+  - u2705 Documented dependencies and fixtures
+  - u2705 Identified gaps in test coverage
+  - u2705 Created detailed analysis document
+  - u2705 Created detailed migration plan
+  - u2705 Implemented tests with improved structure and documentation
+  - u2705 Added additional tests for better coverage
+
+**Analysis Document:** //api/.scratch/config_models_test_analysis.md
+**Migration Plan:** //api/.scratch/config_models_test_migration_plan.md
+
+**Notes:**
+- Added proper pytest markers (unit, config, models)
+- Organized tests into a class structure with detailed docstrings
+- Added tests for optional fields and empty collections
+- No issues found with ID handling (using external string IDs)
 
 ## Migration Phase Guidelines
 
