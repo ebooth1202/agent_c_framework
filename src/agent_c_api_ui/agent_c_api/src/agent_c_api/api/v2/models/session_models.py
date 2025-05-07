@@ -50,7 +50,7 @@ class SessionSummary(BaseModel):
     This model provides a summary of a session's key properties, suitable for
     displaying in session listings and overview screens.
     """
-    id: UUID = Field(..., description="Unique identifier for the session")
+    id: str = Field(..., description="Unique identifier for the session in MnemonicSlugs format")
     model_id: str = Field(..., description="ID of the LLM model being used in the session")
     persona_id: str = Field(..., description="ID of the persona defining the agent's behavior")
     name: str = Field(..., description="User-friendly name of the session")
@@ -63,7 +63,7 @@ class SessionSummary(BaseModel):
         protected_namespaces=(),
         json_schema_extra={
             "example": {
-                "id": "550e8400-e29b-41d4-a716-446655440000",
+                "id": "tiger-castle",
                 "model_id": "gpt-4",
                 "persona_id": "programmer",
                 "name": "Code Review Session",
@@ -96,7 +96,7 @@ class SessionDetail(SessionSummary):
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "id": "550e8400-e29b-41d4-a716-446655440000",
+                "id": "tiger-castle",
                 "model_id": "gpt-4",
                 "persona_id": "programmer",
                 "name": "Code Review Session",
@@ -169,7 +169,7 @@ class SessionListResponse(BaseModel):
             "example": {
                 "items": [
                     {
-                        "id": "550e8400-e29b-41d4-a716-446655440000",
+                        "id": "tiger-castle",
                         "model_id": "gpt-4",
                         "persona_id": "programmer",
                         "name": "Code Review Session",
@@ -309,7 +309,7 @@ class SessionCreateResponse(BaseModel):
     It includes the session ID and name along with a status indicator.
     """
     status: APIStatus = Field(default_factory=APIStatus, description="Response status information")
-    session_id: UUID = Field(..., description="Unique identifier for the created session")
+    session_id: str = Field(..., description="Unique identifier for the created session in MnemonicSlugs format")
     name: str = Field(..., description="User-friendly name of the created session")
     
     model_config = ConfigDict(
@@ -319,7 +319,7 @@ class SessionCreateResponse(BaseModel):
                     "success": True,
                     "message": "Session created successfully"
                 },
-                "session_id": "550e8400-e29b-41d4-a716-446655440000",
+                "session_id": "tiger-castle",
                 "name": "Code Review Session"
             }
         }
