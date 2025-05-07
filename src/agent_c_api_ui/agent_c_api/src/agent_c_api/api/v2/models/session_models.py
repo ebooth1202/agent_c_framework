@@ -76,11 +76,17 @@ class SessionSummary(BaseModel):
     )
 
 class SessionDetail(SessionSummary):
-    """Comprehensive session information
+    """Comprehensive session information.
     
     This model extends SessionSummary with detailed configuration information
     about the session, including all agent parameters, tools, and metadata.
     This provides a complete view of a session's configuration and state.
+    
+    Relationships:
+      - Inherits from SessionSummary for basic session info
+      - Contains agent configuration fields (temperature, reasoning_effort, etc.)
+      - Uses the same field structure as parts of AgentConfig
+      - Used as a detailed response for session queries
     """
     agent_internal_id: Optional[str] = Field(None, description="Internal agent session ID used by the backend")
     tools: List[str] = Field(default_factory=list, description="List of enabled tool IDs for this session")
@@ -198,11 +204,22 @@ class SessionListResponse(BaseModel):
 
 # Agent-specific models
 class AgentConfig(BaseModel):
-    """Detailed agent configuration information
+    """Detailed agent configuration information.
     
     This model represents the complete configuration of an AI agent within a session,
     including its LLM model, persona, parameters affecting generation behavior,
     and the tools it has access to.
+    
+    IMPORTANT: This is the authoritative definition of AgentConfig.
+    While this model is re-exported in agent_models.py for backward compatibility,
+    always import it directly from session_models.py.
+    
+    Relationships:
+      - Used in SessionDetail to represent the agent configuration
+      - Referenced by AgentUpdate for modifying configuration
+      - Updated version returned in AgentUpdateResponse
+      - model_id references a ModelInfo from agent_models.py
+      - persona_id references a PersonaInfo from agent_models.py
     """
     model_id: str = Field(..., description="ID of the LLM model being used by the agent")
     persona_id: str = Field(..., description="ID of the persona defining the agent's behavior")
@@ -230,11 +247,20 @@ class AgentConfig(BaseModel):
     )
 
 class AgentUpdate(BaseModel):
-    """Model for updating agent configuration
+    """Model for updating agent configuration.
     
     This model defines the fields that can be updated on an existing agent.
     All fields are optional, allowing partial updates of just the parameters
     that need to change.
+    
+    IMPORTANT: This is the authoritative definition of AgentUpdate.
+    While this model is re-exported in agent_models.py for backward compatibility,
+    always import it directly from session_models.py.
+    
+    Relationships:
+      - Used to update an existing AgentConfig
+      - Results of update operation returned in AgentUpdateResponse
+      - persona_id references a PersonaInfo from agent_models.py
     """
     persona_id: Optional[str] = Field(None, description="ID of the persona to switch to")
     custom_prompt: Optional[str] = Field(None, description="Custom prompt to use instead of the persona")
@@ -255,11 +281,16 @@ class AgentUpdate(BaseModel):
     )
 
 class AgentUpdateResponse(BaseModel):
-    """Response for agent configuration updates
+    """Response for agent configuration updates.
     
     This model provides information about the result of an agent configuration update,
     including the new configuration and details about which changes were successfully
     applied and which were skipped.
+    
+    Relationships:
+      - Contains the updated AgentConfig after an update operation
+      - Tracks changes applied from an AgentUpdate request
+      - Used by the agent endpoints to report update results
     """
     agent_config: AgentConfig = Field(..., description="Updated agent configuration")
     changes_applied: Dict[str, Any] = Field(default_factory=dict, description="Changes that were successfully applied")

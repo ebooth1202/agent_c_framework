@@ -12,10 +12,17 @@ Model organization:
 - history_models.py: Contains models for interaction history
 - response_models.py: Contains common response structure models
 - debug_models.py: Contains debug and diagnostic models
+- registry.py: Contains a registry of all models for validation and documentation
 
 IMPORTANT: When using agent configuration models (AgentConfig, AgentUpdate):
   - Always import from session_models.py, not agent_models.py
   - agent_models.py re-exports these from session_models.py to maintain compatibility
+
+To prevent model duplication, use the registry module to verify model integrity:
+  from agent_c_api.api.v2.models.registry import verify_no_duplicate_models
+
+For documentation and code exploration, you can also use the registry to list all models:
+  from agent_c_api.api.v2.models.registry import list_models_by_domain
 """
 
 # Response models
@@ -98,6 +105,18 @@ from .debug_models import (
     AgentBridgeParams,
     InternalAgentParams,
     AgentDebugInfo
+)
+
+# Registry functions (make accessible at the package level)
+from .registry import (
+    get_model_by_name,
+    get_enum_by_name,
+    get_type_by_name,
+    list_models_by_domain,
+    get_all_model_names,
+    get_all_enum_names,
+    get_all_type_names,
+    verify_no_duplicate_models
 )
 
 # Groupings for convenient access
