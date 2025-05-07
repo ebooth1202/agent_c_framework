@@ -1,10 +1,13 @@
 from datetime import datetime
 import json
-from typing import Dict, List, Any, Optional, Union, Sequence
+from typing import Dict, List, Any, Optional, Union, Sequence, cast
 
 from agent_c.models.events.chat import MessageEvent, InteractionEvent
 from agent_c.models.events.tool_calls import ToolCallEvent
+from agent_c.models.common_chat.models import CommonChatMessage
 from redis import asyncio as aioredis
+
+from ..util.common_chat_converter import CommonChatConverter
 
 class ChatRepository:
     """Repository for managing chat messages in Redis"""
@@ -20,16 +23,50 @@ class ChatRepository:
         self.redis = redis_client
         self.session_id = session_id
     
-    async def add_message(self, message: Union[MessageEvent, Dict[str, Any]]) -> None:
+    async def add_message(self, message: Union[MessageEvent, CommonChatMessage, Dict[str, Any]]) -> None:
         """
         Add a message to the chat session.
         
         Args:
-            message (Union[MessageEvent, Dict[str, Any]]): The message to add
+            message (Union[MessageEvent, CommonChatMessage, Dict[str, Any]]): The message to add
         """
-        # Convert to dict if needed
-        if isinstance(message, MessageEvent):
+        # Handle CommonChatMessage
+        if isinstance(message, CommonChatMessage):
+            # Store the CommonChatMessage as JSON
+            common_msg_json = message.model_dump_json()
+            msg_id = message.id
+            await self.redis.set(
+                f"session:{self.session_id}:common_msg:{msg_id}", 
+                common_msg_json
+            )
+            
+            # Convert to MessageEvent for backward compatibility
+            msg_event = CommonChatConverter.common_chat_to_message_event(message)
+            if msg_event:
+                # Continue with MessageEvent processing
+                msg_data = msg_event.model_dump()
+            else:
+                # This is a tool message, store minimal data
+                msg_data = {
+                    "id": message.id,
+                    "role": message.role.value,
+                    "content": "[Tool Message]",  # Placeholder
+                    "timestamp": message.created_at.isoformat(),
+                    "is_common_chat": "true"
+                }
+        # Handle MessageEvent
+        elif isinstance(message, MessageEvent):
             msg_data = message.model_dump()
+            
+            # Also convert and store as CommonChatMessage for future use
+            common_msg = CommonChatConverter.message_event_to_common_chat(message)
+            common_msg_json = common_msg.model_dump_json()
+            msg_id = common_msg.id
+            await self.redis.set(
+                f"session:{self.session_id}:common_msg:{msg_id}", 
+                common_msg_json
+            )
+        # Handle dict
         else:
             msg_data = message
         
@@ -48,7 +85,8 @@ class ChatRepository:
         await self.redis.hset(f"session:{self.session_id}:meta", "updated_at", 
                             datetime.now().isoformat())
     
-    async def get_messages(self, start: str = "-", end: str = "+", count: int = 100) -> List[Dict[str, Any]]:
+    async def get_messages(self, start: str = "-", end: str = "+", count: int = 100, 
+                      format: str = "default") -> List[Union[Dict[str, Any], CommonChatMessage]]:
         """
         Get messages from the chat session.
         
@@ -56,9 +94,10 @@ class ChatRepository:
             start (str): Start ID for range query
             end (str): End ID for range query
             count (int): Maximum number of messages to retrieve
+            format (str): Message format to return: "default" for original format or "common" for CommonChatMessage
             
         Returns:
-            List[Dict[str, Any]]: List of messages
+            List[Union[Dict[str, Any], CommonChatMessage]]: List of messages
         """
         # Get messages from Redis stream
         messages = await self.redis.xrange(f"session:{self.session_id}:messages", start, end, count)
@@ -89,7 +128,29 @@ class ChatRepository:
             
             # Add message ID
             processed_data["id"] = msg_id_str
-            result.append(processed_data)
+            
+            # Check if we should return CommonChatMessage format
+            if format == "common":
+                # Check if this is a common chat message
+                is_common_chat = processed_data.get("is_common_chat") == "true"
+                
+                # Try to get the stored CommonChatMessage
+                common_msg_json = await self.redis.get(f"session:{self.session_id}:common_msg:{processed_data['id']}")
+                
+                if common_msg_json:
+                    # Deserialize from JSON
+                    common_msg = CommonChatMessage.model_validate_json(
+                        common_msg_json.decode("utf-8") if isinstance(common_msg_json, bytes) else common_msg_json
+                    )
+                    result.append(common_msg)
+                else:
+                    # Convert on the fly if not stored
+                    msg_event = MessageEvent(**processed_data)
+                    common_msg = CommonChatConverter.message_event_to_common_chat(msg_event)
+                    result.append(common_msg)
+            else:
+                # Return original format
+                result.append(processed_data)
         
         return result
     
@@ -180,16 +241,46 @@ class ChatRepository:
         # Set metadata in Redis hash
         await self.redis.hset(f"session:{self.session_id}:managed_meta", key, value)
     
-    async def add_tool_call(self, tool_call: Union[ToolCallEvent, Dict[str, Any]]) -> None:
+    async def add_tool_call(self, tool_call: Union[ToolCallEvent, CommonChatMessage, Dict[str, Any]]) -> None:
         """
         Add a tool call to the chat session.
         
         Args:
-            tool_call (Union[ToolCallEvent, Dict[str, Any]]): The tool call to add
+            tool_call (Union[ToolCallEvent, CommonChatMessage, Dict[str, Any]]): The tool call to add
         """
-        # Convert to dict if needed
-        if isinstance(tool_call, ToolCallEvent):
+        # Handle CommonChatMessage
+        if isinstance(tool_call, CommonChatMessage):
+            # Store the CommonChatMessage as JSON
+            common_msg_json = tool_call.model_dump_json()
+            tool_id = tool_call.id
+            await self.redis.set(
+                f"session:{self.session_id}:common_msg:{tool_id}", 
+                common_msg_json
+            )
+            
+            # Convert to ToolCallEvent for backward compatibility
+            tool_event = CommonChatConverter.common_chat_to_tool_call_event(tool_call)
+            if tool_event:
+                # Continue with ToolCallEvent processing
+                tool_data = tool_event.model_dump()
+                # Add flag to indicate this is a common chat message
+                tool_data["is_common_chat"] = "true"
+            else:
+                # This is not a valid tool message, skip
+                return
+        # Handle ToolCallEvent
+        elif isinstance(tool_call, ToolCallEvent):
             tool_data = tool_call.model_dump()
+            
+            # Also convert and store as CommonChatMessage for future use
+            common_msg = CommonChatConverter.tool_call_event_to_common_chat(tool_call)
+            common_msg_json = common_msg.model_dump_json()
+            tool_id = common_msg.id
+            await self.redis.set(
+                f"session:{self.session_id}:common_msg:{tool_id}", 
+                common_msg_json
+            )
+        # Handle dict
         else:
             tool_data = tool_call
         
@@ -208,7 +299,8 @@ class ChatRepository:
         await self.redis.hset(f"session:{self.session_id}:meta", "updated_at", 
                             datetime.now().isoformat())
     
-    async def get_tool_calls(self, start: str = "-", end: str = "+", count: int = 100) -> List[Dict[str, Any]]:
+    async def get_tool_calls(self, start: str = "-", end: str = "+", count: int = 100,
+                       format: str = "default") -> List[Union[Dict[str, Any], CommonChatMessage]]:
         """
         Get tool calls from the chat session.
         
@@ -216,14 +308,15 @@ class ChatRepository:
             start (str): Start ID for range query
             end (str): End ID for range query
             count (int): Maximum number of tool calls to retrieve
+            format (str): Format to return: "default" for original format or "common" for CommonChatMessage
             
         Returns:
-            List[Dict[str, Any]]: List of tool calls
+            List[Union[Dict[str, Any], CommonChatMessage]]: List of tool calls
         """
         # Get tool calls from Redis stream
         tool_calls = await self.redis.xrange(f"session:{self.session_id}:tool_calls", start, end, count)
         
-        # Process tool calls (same approach as get_messages)
+        # Process tool calls
         result = []
         for call_id, call_data in tool_calls:
             # Convert ID to string
@@ -249,12 +342,34 @@ class ChatRepository:
             
             # Add call ID
             processed_data["id"] = call_id_str
-            result.append(processed_data)
+            
+            # Check if we should return CommonChatMessage format
+            if format == "common":
+                # Check if this is a common chat message
+                is_common_chat = processed_data.get("is_common_chat") == "true"
+                
+                # Try to get the stored CommonChatMessage
+                common_msg_json = await self.redis.get(f"session:{self.session_id}:common_msg:{processed_data['id']}")
+                
+                if common_msg_json:
+                    # Deserialize from JSON
+                    common_msg = CommonChatMessage.model_validate_json(
+                        common_msg_json.decode("utf-8") if isinstance(common_msg_json, bytes) else common_msg_json
+                    )
+                    result.append(common_msg)
+                else:
+                    # Convert on the fly if not stored
+                    tool_event = ToolCallEvent(**processed_data)
+                    common_msg = CommonChatConverter.tool_call_event_to_common_chat(tool_event)
+                    result.append(common_msg)
+            else:
+                # Return original format
+                result.append(processed_data)
         
         return result
     
-    async def add_interaction(self, messages: Sequence[Union[MessageEvent, Dict[str, Any]]], 
-                            tool_calls: Optional[Sequence[Union[ToolCallEvent, Dict[str, Any]]]] = None,
+    async def add_interaction(self, messages: Sequence[Union[MessageEvent, CommonChatMessage, Dict[str, Any]]], 
+                            tool_calls: Optional[Sequence[Union[ToolCallEvent, CommonChatMessage, Dict[str, Any]]]] = None,
                             interaction_id: Optional[str] = None) -> str:
         """
         Add multiple messages as a single interaction to the chat session.
@@ -288,9 +403,40 @@ class ChatRepository:
         
         # Add all messages with the interaction ID
         for i, message in enumerate(messages):
-            # Convert to dict if needed
-            if isinstance(message, MessageEvent):
+            # Handle different message types
+            if isinstance(message, CommonChatMessage):
+                # Store the CommonChatMessage
+                common_msg_json = message.model_dump_json()
+                msg_id = message.id
+                await self.redis.set(
+                    f"session:{self.session_id}:common_msg:{msg_id}", 
+                    common_msg_json
+                )
+                
+                # Convert to MessageEvent for backward compatibility
+                msg_event = CommonChatConverter.common_chat_to_message_event(message)
+                if msg_event:
+                    msg_data = msg_event.model_dump()
+                else:
+                    # This is a tool message, store minimal data
+                    msg_data = {
+                        "id": message.id,
+                        "role": message.role.value,
+                        "content": "[Tool Message]",  # Placeholder
+                        "timestamp": message.created_at.isoformat(),
+                        "is_common_chat": "true"
+                    }
+            elif isinstance(message, MessageEvent):
                 msg_data = message.model_dump()
+                
+                # Also convert and store as CommonChatMessage
+                common_msg = CommonChatConverter.message_event_to_common_chat(message)
+                common_msg_json = common_msg.model_dump_json()
+                msg_id = common_msg.id
+                await self.redis.set(
+                    f"session:{self.session_id}:common_msg:{msg_id}", 
+                    common_msg_json
+                )
             else:
                 msg_data = message.copy()  # Create a copy to avoid modifying the original
             
@@ -312,9 +458,36 @@ class ChatRepository:
         # Add tool calls if provided
         if tool_calls:
             for i, tool_call in enumerate(tool_calls):
-                # Convert to dict if needed
-                if isinstance(tool_call, ToolCallEvent):
+                # Handle different tool call types
+                if isinstance(tool_call, CommonChatMessage):
+                    # Store the CommonChatMessage
+                    common_msg_json = tool_call.model_dump_json()
+                    tool_id = tool_call.id
+                    await self.redis.set(
+                        f"session:{self.session_id}:common_msg:{tool_id}", 
+                        common_msg_json
+                    )
+                    
+                    # Convert to ToolCallEvent for backward compatibility
+                    tool_event = CommonChatConverter.common_chat_to_tool_call_event(tool_call)
+                    if tool_event:
+                        tool_data = tool_event.model_dump()
+                        # Add flag to indicate this is a common chat message
+                        tool_data["is_common_chat"] = "true"
+                    else:
+                        # Skip invalid tool calls
+                        continue
+                elif isinstance(tool_call, ToolCallEvent):
                     tool_data = tool_call.model_dump()
+                    
+                    # Also convert and store as CommonChatMessage
+                    common_msg = CommonChatConverter.tool_call_event_to_common_chat(tool_call)
+                    common_msg_json = common_msg.model_dump_json()
+                    tool_id = common_msg.id
+                    await self.redis.set(
+                        f"session:{self.session_id}:common_msg:{tool_id}", 
+                        common_msg_json
+                    )
                 else:
                     tool_data = tool_call.copy()  # Create a copy to avoid modifying the original
                 
@@ -358,7 +531,7 @@ class ChatRepository:
         return [interaction.decode("utf-8") if isinstance(interaction, bytes) else interaction
                 for interaction in interactions]
     
-    async def get_interaction(self, interaction_id: str) -> Dict[str, Any]:
+    async def get_interaction(self, interaction_id: str, format: str = "default") -> Dict[str, Any]:
         """
         Get details of a specific interaction.
         
@@ -379,14 +552,34 @@ class ChatRepository:
             meta_dict[key] = value
         
         # Get messages for this interaction
-        all_messages = await self.get_messages()
-        interaction_messages = [msg for msg in all_messages 
-                              if msg.get("interaction_id") == interaction_id]
+        all_messages = await self.get_messages(format=format)
+        if format == "common":
+            # For CommonChatMessage objects, filter differently
+            interaction_messages = []
+            for msg in all_messages:
+                # Check interaction_id in provider_metadata.additional_data
+                if hasattr(msg, 'provider_metadata') and msg.provider_metadata:
+                    if msg.provider_metadata.additional_data.get("interaction_id") == interaction_id:
+                        interaction_messages.append(msg)
+        else:
+            # For dict objects, filter normally
+            interaction_messages = [msg for msg in all_messages 
+                                  if msg.get("interaction_id") == interaction_id]
         
         # Get tool calls for this interaction
-        all_tool_calls = await self.get_tool_calls()
-        interaction_tool_calls = [call for call in all_tool_calls 
-                                if call.get("interaction_id") == interaction_id]
+        all_tool_calls = await self.get_tool_calls(format=format)
+        if format == "common":
+            # For CommonChatMessage objects, filter differently
+            interaction_tool_calls = []
+            for call in all_tool_calls:
+                # Check interaction_id in provider_metadata.additional_data
+                if hasattr(call, 'provider_metadata') and call.provider_metadata:
+                    if call.provider_metadata.additional_data.get("interaction_id") == interaction_id:
+                        interaction_tool_calls.append(call)
+        else:
+            # For dict objects, filter normally
+            interaction_tool_calls = [call for call in all_tool_calls 
+                                    if call.get("interaction_id") == interaction_id]
         
         # Sort by interaction_index if available
         interaction_messages.sort(key=lambda x: int(x.get("interaction_index", 0)))

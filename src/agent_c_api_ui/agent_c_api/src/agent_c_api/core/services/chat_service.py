@@ -2,6 +2,7 @@ from typing import Dict, List, Any, Optional, Union, Sequence
 
 from agent_c.models.events.chat import MessageEvent, InteractionEvent
 from agent_c.models.events.tool_calls import ToolCallEvent
+from agent_c.models.common_chat.models import CommonChatMessage
 from ..repositories.chat_repository import ChatRepository
 
 class ChatService:
@@ -18,16 +19,28 @@ class ChatService:
         """
         self.chat_repository = chat_repository
     
-    async def add_message(self, message: Union[MessageEvent, Dict[str, Any]]) -> None:
+    async def add_message(self, message: Union[MessageEvent, CommonChatMessage, Dict[str, Any]]) -> None:
         """
         Add a message to the chat session.
         
         Args:
-            message (Union[MessageEvent, Dict[str, Any]]): The message to add
+            message (Union[MessageEvent, CommonChatMessage, Dict[str, Any]]): The message to add
+        """
+        await self.chat_repository.add_message(message)
+        
+    async def add_common_chat_message(self, message: CommonChatMessage) -> None:
+        """
+        Add a CommonChatMessage to the chat session.
+        
+        This is a convenience method that explicitly accepts CommonChatMessage.
+        
+        Args:
+            message (CommonChatMessage): The message to add
         """
         await self.chat_repository.add_message(message)
     
-    async def get_messages(self, start: str = "-", end: str = "+", count: int = 100) -> List[Dict[str, Any]]:
+    async def get_messages(self, start: str = "-", end: str = "+", count: int = 100, 
+                      format: str = "default") -> List[Union[Dict[str, Any], CommonChatMessage]]:
         """
         Get messages from the chat session.
         
@@ -35,11 +48,28 @@ class ChatService:
             start (str): Start ID for range query
             end (str): End ID for range query
             count (int): Maximum number of messages to retrieve
+            format (str): Message format to return: "default" for original format or "common" for CommonChatMessage
             
         Returns:
-            List[Dict[str, Any]]: List of messages
+            List[Union[Dict[str, Any], CommonChatMessage]]: List of messages
         """
-        return await self.chat_repository.get_messages(start, end, count)
+        return await self.chat_repository.get_messages(start, end, count, format)
+        
+    async def get_common_chat_messages(self, start: str = "-", end: str = "+", count: int = 100) -> List[CommonChatMessage]:
+        """
+        Get messages as CommonChatMessage objects from the chat session.
+        
+        This is a convenience method that explicitly returns CommonChatMessage objects.
+        
+        Args:
+            start (str): Start ID for range query
+            end (str): End ID for range query
+            count (int): Maximum number of messages to retrieve
+            
+        Returns:
+            List[CommonChatMessage]: List of messages in CommonChatMessage format
+        """
+        return await self.chat_repository.get_messages(start, end, count, format="common")
     
     async def get_session_meta(self) -> Dict[str, Any]:
         """
@@ -79,16 +109,28 @@ class ChatService:
         """
         await self.chat_repository.set_managed_meta(key, value)
     
-    async def add_tool_call(self, tool_call: Union[ToolCallEvent, Dict[str, Any]]) -> None:
+    async def add_tool_call(self, tool_call: Union[ToolCallEvent, CommonChatMessage, Dict[str, Any]]) -> None:
         """
         Add a tool call to the chat session.
         
         Args:
-            tool_call (Union[ToolCallEvent, Dict[str, Any]]): The tool call to add
+            tool_call (Union[ToolCallEvent, CommonChatMessage, Dict[str, Any]]): The tool call to add
+        """
+        await self.chat_repository.add_tool_call(tool_call)
+        
+    async def add_common_chat_tool_call(self, tool_call: CommonChatMessage) -> None:
+        """
+        Add a CommonChatMessage as a tool call to the chat session.
+        
+        This is a convenience method that explicitly accepts CommonChatMessage for tool calls.
+        
+        Args:
+            tool_call (CommonChatMessage): The tool call message to add
         """
         await self.chat_repository.add_tool_call(tool_call)
     
-    async def get_tool_calls(self, start: str = "-", end: str = "+", count: int = 100) -> List[Dict[str, Any]]:
+    async def get_tool_calls(self, start: str = "-", end: str = "+", count: int = 100, 
+                       format: str = "default") -> List[Union[Dict[str, Any], CommonChatMessage]]:
         """
         Get tool calls from the chat session.
         
@@ -96,14 +138,31 @@ class ChatService:
             start (str): Start ID for range query
             end (str): End ID for range query
             count (int): Maximum number of tool calls to retrieve
+            format (str): Format to return: "default" for original format or "common" for CommonChatMessage
             
         Returns:
-            List[Dict[str, Any]]: List of tool calls
+            List[Union[Dict[str, Any], CommonChatMessage]]: List of tool calls
         """
-        return await self.chat_repository.get_tool_calls(start, end, count)
+        return await self.chat_repository.get_tool_calls(start, end, count, format)
+        
+    async def get_common_chat_tool_calls(self, start: str = "-", end: str = "+", count: int = 100) -> List[CommonChatMessage]:
+        """
+        Get tool calls as CommonChatMessage objects from the chat session.
+        
+        This is a convenience method that explicitly returns CommonChatMessage objects.
+        
+        Args:
+            start (str): Start ID for range query
+            end (str): End ID for range query
+            count (int): Maximum number of tool calls to retrieve
+            
+        Returns:
+            List[CommonChatMessage]: List of tool calls in CommonChatMessage format
+        """
+        return await self.chat_repository.get_tool_calls(start, end, count, format="common")
     
-    async def add_interaction(self, messages: Sequence[Union[MessageEvent, Dict[str, Any]]], 
-                            tool_calls: Optional[Sequence[Union[ToolCallEvent, Dict[str, Any]]]] = None,
+    async def add_interaction(self, messages: Sequence[Union[MessageEvent, CommonChatMessage, Dict[str, Any]]], 
+                            tool_calls: Optional[Sequence[Union[ToolCallEvent, CommonChatMessage, Dict[str, Any]]]] = None,
                             interaction_id: Optional[str] = None) -> str:
         """
         Add multiple messages as a single interaction to the chat session.
@@ -127,14 +186,29 @@ class ChatService:
         """
         return await self.chat_repository.get_interactions()
     
-    async def get_interaction(self, interaction_id: str) -> Dict[str, Any]:
+    async def get_interaction(self, interaction_id: str, format: str = "default") -> Dict[str, Any]:
         """
         Get details of a specific interaction.
         
         Args:
             interaction_id (str): The interaction ID
+            format (str): Format to return: "default" for original format or "common" for CommonChatMessage
             
         Returns:
             Dict[str, Any]: Interaction details including messages and tool calls
         """
-        return await self.chat_repository.get_interaction(interaction_id)
+        return await self.chat_repository.get_interaction(interaction_id, format)
+        
+    async def get_common_chat_interaction(self, interaction_id: str) -> Dict[str, Any]:
+        """
+        Get details of a specific interaction with messages/tool calls as CommonChatMessage objects.
+        
+        This is a convenience method that explicitly returns messages in CommonChatMessage format.
+        
+        Args:
+            interaction_id (str): The interaction ID
+            
+        Returns:
+            Dict[str, Any]: Interaction details with messages and tool calls as CommonChatMessage objects
+        """
+        return await self.chat_repository.get_interaction(interaction_id, format="common")
