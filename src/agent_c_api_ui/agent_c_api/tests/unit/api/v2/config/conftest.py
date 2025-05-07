@@ -2,10 +2,13 @@
 import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
 
+from fastapi.testclient import TestClient
 from fastapi_cache import FastAPICache
 from fastapi_cache.decorator import cache as cache_decorator
 from fastapi_cache.backends.inmemory import InMemoryBackend
 
+from agent_c_api.main import app
+from agent_c_api.api.v2.config.dependencies import get_config_service
 from agent_c_api.api.v2.config.services import ConfigService
 from agent_c_api.api.v2.models.config_models import (
     ModelInfo, PersonaInfo, ToolInfo, ToolParameter, ModelParameter,
@@ -131,7 +134,7 @@ def mock_config_service():
     """
     service = MagicMock(spec=ConfigService)
     
-    # Setup async methods with AsyncMock
+    # Setup async methods with AsyncMock - return Pydantic model objects
     service.get_models = AsyncMock(return_value=ModelsResponse(
         models=[
             ModelInfo(
@@ -140,7 +143,14 @@ def mock_config_service():
                 provider="openai",
                 description="Advanced language model",
                 capabilities=["text"],
-                parameters=[],
+                parameters=[
+                    ModelParameter(
+                        name="temperature",
+                        type="float",
+                        description="Controls randomness",
+                        default=0.7
+                    )
+                ],
                 allowed_inputs=["text"]
             )
         ]
@@ -236,3 +246,26 @@ def mock_config_service():
     ))
     
     return service
+
+@pytest.fixture
+def client(mock_config_service):
+    """
+    Create a test client with dependency overrides for ConfigService.
+    
+    Args:
+        mock_config_service: The mocked ConfigService fixture
+        
+    Returns:
+        TestClient: A FastAPI test client with dependencies properly mocked
+    """
+    # Override the get_config_service dependency to use our mock
+    app.dependency_overrides[get_config_service] = lambda: mock_config_service
+    
+    # Create a test client using the app with overridden dependencies
+    test_client = TestClient(app)
+    
+    # Yield the client for test use
+    yield test_client
+    
+    # Clear overrides after tests are complete
+    app.dependency_overrides = {}

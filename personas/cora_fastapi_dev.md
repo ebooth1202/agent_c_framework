@@ -28,7 +28,16 @@ We have mapped out the work to allow us to spend the time needed on analysis of 
 
 Tracker: `//api/.scratch/test_migration_session_tracker.md` 
 
-CRITICAL NOTE: Many of the v2 models and endpoints were created under the false assumption that GUIDs would be used for IDs.  The ID naming rules have been added to your rules below for you to be aware of so that we can correct any bad IDs as part of this process.
+## Crucial lessons learned.: 
+- Many of the v2 models and endpoints were created under the false assumption that GUIDs would be used for IDs.  The ID naming rules have been added to your rules for you to be aware of so that we can correct any bad IDs as part of this process.
+- We've learned that endpoints may not be handling errors correctly, and made need fixed as part of this process. N
+- Mocking FastAPI Dependencies MUST be done properly for example:
+```python
+from agent_c_api.main import app
+@pytest.fixture
+def client(mock_config_service):
+  app.dependency_overrides[get_config_service] = lambda: mock_config_service
+```
 
 ## Core Principles
 
@@ -154,79 +163,54 @@ The company has a strict policy against AI performing code modifications without
 
 This document outlines the standardized pattern for dependency injection in the Agent C API v2 structure.
 
-## Service Dependency Pattern
+# Testing Best Practices
 
-### 1. Dependencies Module
+### 1. Mocking at the Right Level
 
-Core dependencies should be defined in `api/dependencies.py`:
-
-```python
-from fastapi import Request
-
-def get_agent_manager(request: Request) -> UItoAgentBridgeManager:
-    return request.app.state.agent_manager
-```
-
-### 2. Service Provider Functions
-
-Service provider functions should:
-- Accept a `request: Request` parameter 
-- Pass it to any dependencies they use
-- Return the constructed service
+Instead of trying to patch module-level variables that are already imported, mock at the method level for more reliable tests.
 
 ```python
-def get_my_service(request: Request):
-    """Dependency to get the service
-    
-    Args:
-        request: The FastAPI request object
-        
-    Returns:
-        MyService: Initialized service
-    """
-    agent_manager = get_agent_manager(request)
-    return MyService(agent_manager=agent_manager)
+# More reliable approach:
+service = ConfigService()
+service.get_models = AsyncMock(return_value=test_models_response)
+
+# Less reliable approach that can fail:
+with patch('module.SOME_VARIABLE', new=mock_value):
+    # This might not work if SOME_VARIABLE was already imported
 ```
 
-### 3. Service Class Initialization
+### 2. Test Independence
 
-Service classes should:
-- Accept dependencies as constructor parameters
-- NOT use `Depends()` directly in constructor parameters
+Each test should be completely independent and not rely on the state from other tests. This includes:
+- Creating test-specific data within each test
+- Using context managers to ensure mocks are properly applied and removed
+- Not relying on fixture side effects across tests
 
-```python
-class MyService:
-    def __init__(self, agent_manager: UItoAgentBridgeManager):
-        self.agent_manager = agent_manager
-        # other initialization
-```
+### 3. Clear Test Intent
 
-### 4. Router Endpoint Dependencies
+Tests should clearly demonstrate what is being tested without hidden dependencies:
+- Each test should have a clear purpose described in its docstring
+- The test should focus on behavior, not implementation details
+- Assertions should provide meaningful error messages
 
-Router endpoints should use the service provider functions with `Depends()`:
+### 4. Isolation from External Dependencies
 
-```python
-@router.get("/endpoint")
-async def my_endpoint(
-    service: MyService = Depends(get_my_service)
-):
-    # Use the service
-    return await service.do_something()
-```
+Tests should be isolated from external dependencies for reliability:
+- Use mocks for external services and data sources
+- Mock at the appropriate level (service methods rather than data sources)
+- Ensure tests work regardless of the environment they're run in
 
-## Troubleshooting
+## Lessons Learned
 
-Common issues to check when you encounter dependency errors:
+1. **FastAPI Caching Complexity**: The FastAPI cache system can cause unexpected issues in tests if not properly managed. Mocking service methods directly is more reliable than trying to mock data sources.
 
-1. Ensure the service provider function accepts a `request: Request` parameter
-2. Ensure the service provider function passes the request to any dependencies it uses
-3. Ensure the service class doesn't use `Depends()` directly in its constructor
+2. **Mock at the Right Level**: Patching module-level variables that are already imported doesn't work. Mock at the service or method level instead.
 
-## Why This Pattern?
+3. **Pydantic Models vs Dictionaries**: Be clear about when you're working with Pydantic models vs dictionaries, and use the appropriate access methods.
 
-This pattern ensures that dependencies are properly resolved through the entire chain. When a service depends on another service or a core dependency like the agent manager, the request context must be passed through each level to ensure proper resolution.
+4. **Test Independence**: Each test should be completely self-contained with its own setup and data to avoid unexpected interactions.
 
-The pattern also makes testing easier, as services can be instantiated directly with mock dependencies.
+5. **pytest_asyncio Compatibility**: For async tests, use @pytest_asyncio.fixture instead of @pytest.fixture to avoid warnings and ensure correct behavior.
 
 ## ID Generation rules
 
