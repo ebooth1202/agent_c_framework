@@ -9,26 +9,87 @@
 - When working with FastAPI services, pay close attention to the difference between model objects and dictionaries.
 - Many models were incorrectly using UUIDs for IDs instead of the company-standard MnemonicSlugs format - we need to check and fix this for all models as we go.
 - When writing test assertions for error messages, be flexible and account for slight variations in message formatting between different library versions.
+- Model validators can set default values for specific model types - tests need to account for these model-specific defaults rather than assuming direct field mapping.
 
-## Current Session
+## Next Session
+
+### Session 14 (Planned for May 8, 2025)
+- **Target File:** test_agent.py (Sessions module)
+- **Source Path:** //api/src/agent_c_api/tests/v2/sessions/test_agent.py
+- **Destination Path:** //api/tests/unit/api/v2/sessions/test_agent.py
+- **Phase:** Not Started
+- **Status:** Awaiting Analysis
+- **Tasks:**
+  - [ ] Examine test coverage for agent-related session functionality
+  - [ ] Identify relationships to implementation in sessions module
+  - [ ] Document dependencies and fixtures
+  - [ ] Identify gaps in test coverage
+  - [ ] Create detailed analysis document
+  - [ ] Create detailed migration plan
+  - [ ] Check for ID format issues (MnemonicSlugs vs UUIDs)
+  - [ ] Examine the mocking approach for the agent manager
+  - [ ] Add appropriate pytest markers (unit, sessions)
+  - [ ] Add comprehensive docstrings
+  - [ ] Check for response model validation
+
+### Session 13 (Completed on May 7, 2025)
+- **Target File:** test_debug.py (Debug module)
+- **Source Path:** //api/src/agent_c_api/tests/v2/debug/test_debug.py
+- **Destination Path:** //api/tests/unit/api/v2/debug/test_debug.py
+- **Phase:** Migration Complete
+- **Status:** Migrated with Enhancements and All Tests Passing
+- **Tasks:**
+  - [✅] Examined test coverage for debug module functionality
+  - [✅] Identified relationships to implementation in debug module
+  - [✅] Documented dependencies and fixtures
+  - [✅] Identified gaps in test coverage
+  - [✅] Created detailed analysis document
+  - [✅] Created detailed migration plan
+  - [✅] Added pytest 'debug' marker to pytest.ini
+  - [✅] Updated session IDs to use MnemonicSlug format
+  - [✅] Added response model validation tests
+  - [✅] Added test for minimal debug information
+  - [✅] Enhanced docstrings and test organization
+
+**Analysis Document:** //api/.scratch/debug_test_analysis.md
+**Migration Plan:** //api/.scratch/debug_test_migration_plan.md
+
+**Findings:**
+- Original tests had good coverage with well-structured classes for both endpoints
+- Tests lacked proper pytest markers (added unit, debug)
+- Found inconsistency with session_id using UUID instead of MnemonicSlug format
+- Lacked test for response model validation (added)
+- Lacked test for minimal debug information with missing optional fields (added)
+
+**Implementation Improvements:**
+- Added pytest 'debug' marker to pytest.ini
+- Enhanced docstrings for all test classes and methods
+- Replaced UUID session_id with MnemonicSlug format (e.g., "tiger-castle")
+- Added new test methods to verify response model structure
+- Added test for minimal debug information with missing optional fields
+- Improved type checking for response fields
+- Kept the existing class structure as it was already well-organized
+
+## Completed Sessions
 
 ### Session 12 (Completed on May 6, 2025)
 - **Target File:** test_model_converters.py (Utils module)
 - **Source Path:** //api/src/agent_c_api/tests/v2/utils/test_model_converters.py
 - **Destination Path:** //api/tests/unit/api/v2/utils/test_model_converters.py
 - **Phase:** Migration Complete
-- **Status:** Migrated with Enhanced Test Coverage
+- **Status:** Migrated with Enhanced Test Coverage and All Tests Passing
 - **Tasks:**
-  - [u2705] Examine test coverage for model converter utilities
-  - [u2705] Identify relationships to implementation in model_converters.py
-  - [u2705] Document dependencies and fixtures
-  - [u2705] Identify gaps in test coverage
-  - [u2705] Create detailed analysis document
-  - [u2705] Create detailed migration plan
-  - [u2705] Implement tests with improved structure and documentation
-  - [u2705] Add tests for message conversion functions
-  - [u2705] Add tests for edge cases and validation errors
-  - [u2705] Check for pytest 'converters' marker (already exists in pytest.ini)
+  - [✅] Examine test coverage for model converter utilities
+  - [✅] Identify relationships to implementation in model_converters.py
+  - [✅] Document dependencies and fixtures
+  - [✅] Identify gaps in test coverage
+  - [✅] Create detailed analysis document
+  - [✅] Create detailed migration plan
+  - [✅] Implement tests with improved structure and documentation
+  - [✅] Add tests for message conversion functions
+  - [✅] Add tests for edge cases and validation errors
+  - [✅] Check for pytest 'converters' marker (already exists in pytest.ini)
+  - [✅] Run tests and fix any issues found
 
 **Analysis Document:** //api/.scratch/model_converters_test_analysis.md
 **Migration Plan:** //api/.scratch/model_converters_test_migration_plan.md
@@ -38,6 +99,7 @@
 - The existing tests were well-structured but lacked docstrings and pytest markers
 - No issues with ID formats in these tests (doesn't deal with UUIDs vs MnemonicSlugs)
 - No tests for edge cases, validation errors, or handling of empty/None values
+- Found that model-specific defaults were applied by validators in the AgentInitializationParams class
 
 **Implementation Improvements:**
 - Kept the existing test structure but enhanced with documentation and pytest markers
@@ -52,8 +114,7 @@
   - Empty metadata dictionaries
 - Added comprehensive docstrings to all test classes and methods
 - Added appropriate pytest markers (unit, utils, converters)
-
-## Completed Sessions
+- Fixed a test assertion to account for model-specific default values (max_tokens=8192 for Claude models)
 
 ### Session 11 (Completed on May 6, 2025)
 - **Target File:** test_chat_converters.py (Utils module)
@@ -62,19 +123,19 @@
 - **Phase:** Migration Complete
 - **Status:** Migrated with Enhanced Test Coverage and All Tests Passing
 - **Tasks:**
-  - [u2705] Examined test coverage for chat converter utilities
-  - [u2705] Identified relationships to implementation in model_converters.py
-  - [u2705] Documented dependencies and fixtures
-  - [u2705] Identified gaps in test coverage
-  - [u2705] Created detailed analysis document
-  - [u2705] Created detailed migration plan
-  - [u2705] Fixed UUID session_id to use MnemonicSlug format
-  - [u2705] Added pytest markers (unit, utils, converters)
-  - [u2705] Added docstrings to test class and methods
-  - [u2705] Added tests for image and file content types
-  - [u2705] Added tests for content block conversion functions
-  - [u2705] Added tests for edge cases (empty content, error handling)
-  - [u2705] Updated pytest.ini with converters marker and utils marker
+  - [✅] Examined test coverage for chat converter utilities
+  - [✅] Identified relationships to implementation in model_converters.py
+  - [✅] Documented dependencies and fixtures
+  - [✅] Identified gaps in test coverage
+  - [✅] Created detailed analysis document
+  - [✅] Created detailed migration plan
+  - [✅] Fixed UUID session_id to use MnemonicSlug format
+  - [✅] Added pytest markers (unit, utils, converters)
+  - [✅] Added docstrings to test class and methods
+  - [✅] Added tests for image and file content types
+  - [✅] Added tests for content block conversion functions
+  - [✅] Added tests for edge cases (empty content, error handling)
+  - [✅] Updated pytest.ini with converters marker and utils marker
 
 **Analysis Document:** //api/.scratch/chat_converters_test_analysis.md
 **Migration Plan:** //api/.scratch/chat_converters_test_migration_plan.md
@@ -105,19 +166,19 @@
 - **Phase:** Migration Complete
 - **Status:** Migrated with Significant Enhancements and All Tests Passing
 - **Tasks:**
-  - [u2705] Examined test coverage for tool model classes
-  - [u2705] Identified overlapping models in config_models.py and tool_models.py
-  - [u2705] Documented dependencies and fixtures
-  - [u2705] Identified gaps in test coverage
-  - [u2705] Created detailed analysis document
-  - [u2705] Created detailed migration plan
-  - [u2705] Documented model overlap issue
-  - [u2705] Added pytest 'tools' marker
-  - [u2705] Reorganized tests into proper class structure with descriptive docstrings
-  - [u2705] Added tests for validation constraints
-  - [u2705] Added tests for serialization/deserialization
-  - [u2705] Added tests for schema documentation
-  - [u2705] Added tests for complex data structures and edge cases
+  - [✅] Examined test coverage for tool model classes
+  - [✅] Identified overlapping models in config_models.py and tool_models.py
+  - [✅] Documented dependencies and fixtures
+  - [✅] Identified gaps in test coverage
+  - [✅] Created detailed analysis document
+  - [✅] Created detailed migration plan
+  - [✅] Documented model overlap issue
+  - [✅] Added pytest 'tools' marker
+  - [✅] Reorganized tests into proper class structure with descriptive docstrings
+  - [✅] Added tests for validation constraints
+  - [✅] Added tests for serialization/deserialization
+  - [✅] Added tests for schema documentation
+  - [✅] Added tests for complex data structures and edge cases
 
 **Analysis Document:** //api/.scratch/tool_models_test_analysis.md
 **Migration Plan:** //api/.scratch/tool_models_test_migration_plan.md
@@ -152,15 +213,15 @@
 - **Phase:** Migration Complete
 - **Status:** Migrated with Enhancements and All Tests Passing
 - **Tasks:**
-  - [u2705] Examined test coverage for file model classes
-  - [u2705] Identified relationships to implementation in src/agent_c_api/api/v2/models
-  - [u2705] Documented dependencies and fixtures
-  - [u2705] Identified gaps in test coverage
-  - [u2705] Created detailed analysis document
-  - [u2705] Created detailed migration plan
-  - [u2705] Implemented tests with improved structure and documentation
-  - [u2705] Added additional tests for better coverage
-  - [u2705] Updated pytest.ini with new 'files' marker
+  - [✅] Examined test coverage for file model classes
+  - [✅] Identified relationships to implementation in src/agent_c_api/api/v2/models
+  - [✅] Documented dependencies and fixtures
+  - [✅] Identified gaps in test coverage
+  - [✅] Created detailed analysis document
+  - [✅] Created detailed migration plan
+  - [✅] Implemented tests with improved structure and documentation
+  - [✅] Added additional tests for better coverage
+  - [✅] Updated pytest.ini with new 'files' marker
 
 **Analysis Document:** //api/.scratch/file_models_test_analysis.md
 **Migration Plan:** //api/.scratch/file_models_test_migration_plan.md
@@ -188,22 +249,22 @@
 - **Phase:** Migration Complete
 - **Status:** Migrated with Significant Enhancements and Implementation Improvements
 - **Tasks:**
-  - [u2705] Examined test coverage for session model classes
-  - [u2705] Identified issues with UUID usage instead of MnemonicSlugs format
-  - [u2705] Documented dependencies and fixtures
-  - [u2705] Identified gaps in test coverage
-  - [u2705] Created detailed analysis document
-  - [u2705] Created detailed migration plan
-  - [u2705] Created ID fix plan for implementation changes
-  - [u2705] Fixed UUID session_id fields to use MnemonicSlug format
-  - [u2705] Updated examples to use MnemonicSlug IDs like 'tiger-castle'
-  - [u2705] Reorganized tests into proper class structure with descriptive docstrings
-  - [u2705] Added pytest markers (unit, models, session)
-  - [u2705] Added tests for previously untested models
-  - [u2705] Added tests for field validation constraints
-  - [u2705] Added tests for serialization/deserialization
-  - [u2705] Added tests for schema documentation
-  - [u2705] Added tests for model integration and inheritance
+  - [✅] Examined test coverage for session model classes
+  - [✅] Identified issues with UUID usage instead of MnemonicSlugs format
+  - [✅] Documented dependencies and fixtures
+  - [✅] Identified gaps in test coverage
+  - [✅] Created detailed analysis document
+  - [✅] Created detailed migration plan
+  - [✅] Created ID fix plan for implementation changes
+  - [✅] Fixed UUID session_id fields to use MnemonicSlug format
+  - [✅] Updated examples to use MnemonicSlug IDs like 'tiger-castle'
+  - [✅] Reorganized tests into proper class structure with descriptive docstrings
+  - [✅] Added pytest markers (unit, models, session)
+  - [✅] Added tests for previously untested models
+  - [✅] Added tests for field validation constraints
+  - [✅] Added tests for serialization/deserialization
+  - [✅] Added tests for schema documentation
+  - [✅] Added tests for model integration and inheritance
 
 **Analysis Document:** //api/.scratch/session_models_test_analysis.md
 **Migration Plan:** //api/.scratch/session_models_test_migration_plan.md
@@ -239,17 +300,17 @@
 - **Phase:** Migration Complete
 - **Status:** Migrated with Significant Enhancements and Implementation Improvements
 - **Tasks:**
-  - [u2705] Examined test coverage for response model classes
-  - [u2705] Identified relationships to implementation in src/agent_c_api/api/v2/models/response_models.py
-  - [u2705] Documented dependencies and fixtures
-  - [u2705] Identified gaps in test coverage
-  - [u2705] Created detailed analysis document
-  - [u2705] Created detailed migration plan
-  - [u2705] Implemented tests with improved structure and documentation
-  - [u2705] Added tests for schema documentation validation
-  - [u2705] Added serialization/deserialization tests
-  - [u2705] Added validation error tests for pagination models
-  - [u2705] Added tests for integration between different response models
+  - [✅] Examined test coverage for response model classes
+  - [✅] Identified relationships to implementation in src/agent_c_api/api/v2/models/response_models.py
+  - [✅] Documented dependencies and fixtures
+  - [✅] Identified gaps in test coverage
+  - [✅] Created detailed analysis document
+  - [✅] Created detailed migration plan
+  - [✅] Implemented tests with improved structure and documentation
+  - [✅] Added tests for schema documentation validation
+  - [✅] Added serialization/deserialization tests
+  - [✅] Added validation error tests for pagination models
+  - [✅] Added tests for integration between different response models
 
 **Analysis Document:** //api/.scratch/response_models_test_analysis.md
 **Migration Plan:** //api/.scratch/response_models_test_migration_plan.md
@@ -281,19 +342,19 @@
 - **Phase:** Migration Complete
 - **Status:** Migrated with Significant Enhancements and Implementation Improvements and ID Fixes
 - **Tasks:**
-  - [u2705] Examined test coverage for history model classes
-  - [u2705] Identified relationships to implementation in src/agent_c_api/api/v2/models/history_models.py
-  - [u2705] Documented dependencies and fixtures
-  - [u2705] Identified gaps in test coverage
-  - [u2705] Created detailed analysis document
-  - [u2705] Created detailed migration plan
-  - [u2705] Fixed UUID session_id fields to use MnemonicSlug format
-  - [u2705] Updated tests to work with MnemonicSlug IDs
-  - [u2705] Added specific tests for MnemonicSlug ID validation
-  - [u2705] Implemented tests with improved structure and documentation
-  - [u2705] Added tests for previously untested models
-  - [u2705] Added serialization and schema validation tests
-  - [u2705] Fixed minor error message format issue in validation test
+  - [✅] Examined test coverage for history model classes
+  - [✅] Identified relationships to implementation in src/agent_c_api/api/v2/models/history_models.py
+  - [✅] Documented dependencies and fixtures
+  - [✅] Identified gaps in test coverage
+  - [✅] Created detailed analysis document
+  - [✅] Created detailed migration plan
+  - [✅] Fixed UUID session_id fields to use MnemonicSlug format
+  - [✅] Updated tests to work with MnemonicSlug IDs
+  - [✅] Added specific tests for MnemonicSlug ID validation
+  - [✅] Implemented tests with improved structure and documentation
+  - [✅] Added tests for previously untested models
+  - [✅] Added serialization and schema validation tests
+  - [✅] Fixed minor error message format issue in validation test
 
 **Analysis Document:** //api/.scratch/history_models_test_analysis.md
 **Migration Plan:** //api/.scratch/history_models_test_migration_plan.md
@@ -327,14 +388,14 @@
 - **Phase:** Migration Complete
 - **Status:** Migrated with Enhancements
 - **Tasks:**
-  - [u2705] Examined test coverage for chat model classes
-  - [u2705] Identified relationships to implementation in src/agent_c_api/api/v2/models
-  - [u2705] Documented dependencies and fixtures
-  - [u2705] Identified gaps in test coverage
-  - [u2705] Created detailed analysis document
-  - [u2705] Created detailed migration plan
-  - [u2705] Implemented tests with improved structure and documentation
-  - [u2705] Added additional tests for better coverage
+  - [✅] Examined test coverage for chat model classes
+  - [✅] Identified relationships to implementation in src/agent_c_api/api/v2/models
+  - [✅] Documented dependencies and fixtures
+  - [✅] Identified gaps in test coverage
+  - [✅] Created detailed analysis document
+  - [✅] Created detailed migration plan
+  - [✅] Implemented tests with improved structure and documentation
+  - [✅] Added additional tests for better coverage
 
 **Analysis Document:** //api/.scratch/chat_models_test_analysis.md
 **Migration Plan:** //api/.scratch/chat_models_test_migration_plan.md
@@ -358,15 +419,15 @@
 - **Phase:** Migration Complete
 - **Status:** Ready for Verification
 - **Tasks:**
-  - [u2705] Examined test coverage for file model classes
-  - [u2705] Identified relationships to implementation in src/agent_c_api/api/v2/models
-  - [u2705] Documented dependencies and fixtures
-  - [u2705] Identified gaps in test coverage
-  - [u2705] Created detailed analysis document
-  - [u2705] Created detailed migration plan
-  - [u2705] Implemented tests with improved structure and documentation
-  - [u2705] Added additional tests for better coverage
-  - [u2705] Updated pytest.ini with new 'files' marker
+  - [✅] Examined test coverage for file model classes
+  - [✅] Identified relationships to implementation in src/agent_c_api/api/v2/models
+  - [✅] Documented dependencies and fixtures
+  - [✅] Identified gaps in test coverage
+  - [✅] Created detailed analysis document
+  - [✅] Created detailed migration plan
+  - [✅] Implemented tests with improved structure and documentation
+  - [✅] Added additional tests for better coverage
+  - [✅] Updated pytest.ini with new 'files' marker
 
 **Analysis Document:** //api/.scratch/file_models_test_analysis.md
 **Migration Plan:** //api/.scratch/file_models_test_migration_plan.md
@@ -394,18 +455,18 @@
 - **Phase:** Migration Complete
 - **Status:** Migration Completed with Enhancements and All Tests Passing
 - **Tasks:**
-  - [u2705] Examine test coverage for config module services
-  - [u2705] Identify relations to implementation in src/agent_c_api/api/v2/config
-  - [u2705] Document dependencies and fixtures
-  - [u2705] Identify any issues or gaps
-  - [u2705] Create detailed analysis document
-  - [u2705] Create detailed migration plan
-  - [u2705] Update session tracker with findings
-  - [u2705] Implement migration according to plan
-  - [u2705] Fix dependency injection for proper mocking
-  - [u2705] Handle cache-related test issues
-  - [u2705] Restructure tests to be more robust
-  - [u2705] Verify all tests pass
+  - [✅] Examine test coverage for config module services
+  - [✅] Identify relations to implementation in src/agent_c_api/api/v2/config
+  - [✅] Document dependencies and fixtures
+  - [✅] Identify any issues or gaps
+  - [✅] Create detailed analysis document
+  - [✅] Create detailed migration plan
+  - [✅] Update session tracker with findings
+  - [✅] Implement migration according to plan
+  - [✅] Fix dependency injection for proper mocking
+  - [✅] Handle cache-related test issues
+  - [✅] Restructure tests to be more robust
+  - [✅] Verify all tests pass
 
 **Analysis Document:** //api/.scratch/config_services_test_analysis.md
 **Migration Plan:** //api/.scratch/config_services_test_migration_plan.md
@@ -442,16 +503,16 @@
 - **Phase:** Migration Complete
 - **Status:** Ready for Final Verification
 - **Tasks:**
-  - [u2705] Examine test coverage for config module endpoints
-  - [u2705] Identify relations to implementation in src/agent_c_api/api/v2/config
-  - [u2705] Document dependencies and fixtures
-  - [u2705] Identify any issues or gaps
-  - [u2705] Create detailed analysis document
-  - [u2705] Update session tracker with findings
-  - [u2705] Implement migration according to plan
-  - [u2705] Fix dependency injection for proper mocking
-  - [u2705] Improve error handling in API endpoints
-  - [u2705] Verify all tests pass
+  - [✅] Examine test coverage for config module endpoints
+  - [✅] Identify relations to implementation in src/agent_c_api/api/v2/config
+  - [✅] Document dependencies and fixtures
+  - [✅] Identify any issues or gaps
+  - [✅] Create detailed analysis document
+  - [✅] Update session tracker with findings
+  - [✅] Implement migration according to plan
+  - [✅] Fix dependency injection for proper mocking
+  - [✅] Improve error handling in API endpoints
+  - [✅] Verify all tests pass
 
 **Implementation Improvements:**
 - Added consistent error handling to all config endpoints
@@ -474,14 +535,14 @@
 - **Phase:** Completed
 - **Status:** Migrated with Enhancements
 - **Accomplishments:**
-  - u2705 Examined test coverage for config module models
-  - u2705 Identified relations to implementation in src/agent_c_api/api/v2/config
-  - u2705 Documented dependencies and fixtures
-  - u2705 Identified gaps in test coverage
-  - u2705 Created detailed analysis document
-  - u2705 Created detailed migration plan
-  - u2705 Implemented tests with improved structure and documentation
-  - u2705 Added additional tests for better coverage
+  - ✅ Examined test coverage for config module models
+  - ✅ Identified relations to implementation in src/agent_c_api/api/v2/config
+  - ✅ Documented dependencies and fixtures
+  - ✅ Identified gaps in test coverage
+  - ✅ Created detailed analysis document
+  - ✅ Created detailed migration plan
+  - ✅ Implemented tests with improved structure and documentation
+  - ✅ Added additional tests for better coverage
 
 **Analysis Document:** //api/.scratch/config_models_test_analysis.md
 **Migration Plan:** //api/.scratch/config_models_test_migration_plan.md
