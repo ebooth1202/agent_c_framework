@@ -17,6 +17,7 @@ This document provides examples of common usage patterns for working with the AP
 ### Creating and Using Models
 
 ```python
+# Always import AgentConfig and AgentUpdate from session_models.py
 from agent_c_api.api.v2.models.session_models import SessionCreate, AgentConfig
 
 # Creating a model instance

@@ -228,11 +228,13 @@ message_response = requests.post(
 See the following resources for detailed information about specific API endpoints:
 
 - [Configuration API](/docs/api_v2/config.md) - Models, personas, tools, and system settings
-- [Sessions API](/docs/api_v2/agent.md) - Session management and agent configuration
+- [Sessions API](/docs/api_v2/session.md) - Session management
+- [Agent API](/docs/api_v2/agent.md) - Agent configuration
+- [Session-Agent Model Unification](/docs/api_v2/session_agent_model_unification.md) - Recent model adjustments
 - [Chat API](/docs/api_v2/chat.md) - Chat interactions and message handling
 - [History API](/docs/api_v2/history.md) - Accessing and managing interaction history
 - [Debug API](/docs/api_v2/debug.md) - Diagnostic and troubleshooting capabilities
 
 ## Migration from v1
 
-See the [migration guide](/docs/api_migration.md) for details on transitioning from v1 to v2 API.
+See the [migration guide](/docs/api_v2/migration_guide.md) for details on transitioning from v1 to v2 API.
