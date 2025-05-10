@@ -1,124 +1,152 @@
-# Improved API Service Layer for v2 API
+# API Service Layer Improvements - Phase 1, Step 1
 
-## Overview
+## Changes to `api.js`
 
-We have designed an improved API service layer to work with the new v2 RESTful API. The service layer maintains the same basic structure as our current implementation but with updated endpoints, parameter handling, and response processing to match the v2 API specifications.
+### 1. Updated API Base URL
 
-## Design Approach
+- Changed the default base URL from `/api/v1` to `/api/v2` in `API_CONFIG`
+- This ensures all API requests will target the v2 endpoints by default
 
-### 1. Base API Service
+```javascript
+export const API_CONFIG = {
+  baseUrl: import.meta.env.VITE_API_URL || '/api/v2',  // Updated from v1 to v2
+  timeout: DEFAULT_TIMEOUT,
+  credentials: 'include',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+};
+```
 
-We've updated the base API service (`api_v2.js`) to support the v2 API:
+### 2. Added `extractResponseData` Utility Function
 
-- Updated base URL to use the v2 endpoint ('/api/v2')
-- Added `extractResponseData` utility to handle the standard response format
-- Enhanced error handling for the v2 error format
-- Added support for pagination in GET requests
-- Added PATCH method for partial updates
+- Created a new utility function to handle the standardized v2 response format
+- Extracts `data`, `meta`, and `errors` fields from the response
+- Falls back to returning the entire response as data if it doesn't match the expected format
 
-### 2. Domain-Specific Services
+```javascript
+export function extractResponseData(response) {
+  // Handle v2 API standard response format
+  if (response && typeof response === 'object') {
+    return {
+      data: response.data !== undefined ? response.data : response,
+      meta: response.meta || {},
+      errors: response.errors || []
+    };
+  }
+  
+  // Return the response itself for endpoints that don't follow the standard format
+  return { data: response, meta: {}, errors: [] };
+}
+```
 
-We've organized the API into domain-specific services that align with the v2 API's resource-oriented approach:
+### 3. Enhanced Error Handling
 
-**Config API Service** (`config-api.js`):
-- System configuration resources (/config/*)
-- Models, personas, and tools information
-- Consolidated system configuration
+- Updated `processApiError` to handle the v2 API error format
+- Added support for extracting detailed error information from the v2 response structure
+- Preserved the error object's compatibility with existing code
 
-**Session API Service** (`session-api.js`):
-- Session management (create, get, list, update, delete)
-- Agent configuration
-- Tool configuration management
+```javascript
+// Extract v2 API specific error format
+if (responseData && responseData.detail) {
+  const detail = responseData.detail;
+  if (detail.message) {
+    errorMessage = detail.message;
+  }
+  errorDetails = {
+    error: detail.error,
+    error_code: detail.error_code,
+    params: detail.params
+  };
+}
+```
 
-**Chat API Service** (`chat-api.js`):
-- Message handling with structured content
-- File upload, management, and attachment
-- Chat generation control
+### 4. Added Pagination Support for GET Requests
 
-**History API Service** (`history-api.js`):
-- Session history listing and details
-- Event retrieval and streaming
-- Replay controls
+- Enhanced the `get` function to handle pagination parameters
+- Added support for query parameters via the `params` option
+- Properly formats and appends parameters to the request URL
 
-**Debug API Service** (`debug-api.js`):
-- Session debugging information
-- Agent state inspection
+```javascript
+export function get(endpoint, options = {}) {
+  // Extract pagination parameters if present
+  const { params, ...restOptions } = options;
+  
+  // If pagination parameters are provided, add them to the query string
+  if (params) {
+    const queryParams = new URLSearchParams();
+    
+    // Add pagination parameters
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        queryParams.append(key, value);
+      }
+    });
+    
+    // Append query string to endpoint if there are parameters
+    const queryString = queryParams.toString();
+    if (queryString) {
+      endpoint = `${endpoint}${endpoint.includes('?') ? '&' : '?'}${queryString}`;
+    }
+  }
+  
+  return apiRequest(endpoint, { 
+    method: 'GET', 
+    ...restOptions 
+  });
+}
+```
 
-### 3. Backward Compatibility
+### 5. Added PATCH Method
 
-To maintain backward compatibility during the transition period, we've created adapter functions (`v1-api-adapters.js`) that:
+- Added a dedicated `patch` function for PATCH requests
+- This supports the RESTful update operations used in the v2 API
 
-- Accept v1 parameter formats and convert them to v2 format
-- Call the v2 API services
-- Transform responses back to v1 format expected by existing components
+```javascript
+export function patch(endpoint, data, options = {}) {
+  return apiRequest(endpoint, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+    ...options,
+  });
+}
+```
 
-## Implementation Files
+### 6. Updated Error Message Extraction
 
-1. **Base API Service**: `api_v2.js`
-2. **Config API Service**: `config-api.js`
-3. **Session API Service**: `session-api.js`
-4. **Chat API Service**: `chat-api.js`
-5. **History API Service**: `history-api.js`
-6. **Debug API Service**: `debug-api.js`
-7. **Combined Export**: `services-index.js`
-8. **v1 Compatibility Adapters**: `v1-api-adapters.js`
+- Enhanced error message extraction to look for v2 API's nested error format
+- Updated the error message extraction in apiRequest to handle both v1 and v2 formats
 
-## Notable Changes from v1 to v2
+```javascript
+const error = new Error(
+  errorData?.detail?.message || errorData?.message || `Request failed with status ${response.status}`
+);
+```
 
-### 1. Endpoint Structure
+### 7. Updated Exports
 
-- Resource-oriented endpoints (e.g., `/sessions/{id}` vs. multiple endpoint patterns)
-- Consistent use of HTTP methods (GET, POST, PUT, PATCH, DELETE)
-- Logical grouping of related functionality
+- Added new functions to the default export object
+- Included the new `extractResponseData` function and `patch` method
 
-### 2. Response Format
+```javascript
+export default {
+  get,
+  post,
+  put,
+  patch,  // New method
+  delete: del,
+  uploadFile,
+  downloadFile,
+  apiRequest,
+  processApiError,
+  showErrorToast,
+  extractResponseData,  // New utility
+  API_CONFIG,
+};
+```
 
-- Standard response wrapper: `{ data, meta, errors }`
-- Pagination information in `meta` for list endpoints
-- Consistent error format with detailed information
+## Additional Information
 
-### 3. Parameter Naming
+These changes form the foundation for the v2 API integration. The updated `api.js` file is now equipped to handle the standardized v2 response format, improved error reporting, and pagination support that will be used throughout the rest of the API service layer implementation.
 
-- Consistent naming: `model_id` vs. `model_name`, `persona_id` vs. `persona_name`
-- RESTful URL parameters instead of body parameters where appropriate
-
-### 4. Streaming Format
-
-- Structured JSON events instead of raw text chunks
-- Event typing for different content types (text, tool calls, etc.)
-- More detailed event information
-
-## Migration Strategy
-
-We recommend a phased approach for implementing this service layer:
-
-### Phase 1: Foundational Infrastructure
-
-1. Implement the core API service with error handling
-2. Create TypeScript interfaces (if using TypeScript)
-3. Implement config service to replace parts of model, persona, and tools APIs
-
-### Phase 2: Key Services Implementation
-
-1. Implement session service with agent configuration
-2. Implement chat service with updated message format
-3. Implement file management functionality
-
-### Phase 3: Extended Functionality
-
-1. Implement history service for event access
-2. Implement debug service for diagnostics
-3. Create combined service exports
-
-### Phase 4: Component Integration
-
-1. Create v1 compatibility adapters
-2. Update component imports to use appropriate services
-3. Test and validate functionality
-4. Gradually replace v1 API usage with v2
-
-## Conclusion
-
-The improved API service layer provides a more structured, maintainable approach to interacting with the v2 API. By leveraging resource-oriented endpoints, consistent response formats, and proper error handling, we'll be able to build a more robust application that takes full advantage of the new API capabilities.
-
-The adapter pattern provides a smooth transition path, allowing components to be migrated incrementally without disrupting the entire application.
+Next steps will involve creating or updating specific service modules for different API resources.

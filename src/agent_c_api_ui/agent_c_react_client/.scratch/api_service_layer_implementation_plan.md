@@ -10,10 +10,10 @@ NOTICE: We will execute a single step of a phase per session to ensure we includ
 
 ### Step 1: Update API Base
 
-- [ ] Update `api.js` with v2 base URL and configuration
-- [ ] Add `extractResponseData` utility for standardized v2 response handling
-- [ ] Enhance error handling for v2 error format
-- [ ] Add support for pagination in GET requests
+- [x] Update `api.js` with v2 base URL and configuration
+- [x] Add `extractResponseData` utility for standardized v2 response handling
+- [x] Enhance error handling for v2 error format
+- [x] Add support for pagination in GET requests
 
 ## Phase 2: New API Services
 

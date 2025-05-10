@@ -1,7 +1,7 @@
 /**
- * Base API service for the v2 API that provides core HTTP functionality and error handling
+ * Base API service that provides core HTTP functionality and error handling
  * 
- * This service serves as the foundation for all API interactions with the v2 API.
+ * This service serves as the foundation for all API interactions in the application.
  * It handles common concerns like authentication, error processing, and request formatting.
  */
 
@@ -14,7 +14,7 @@ const DEFAULT_TIMEOUT = 30000;
  * Configuration for API requests
  */
 export const API_CONFIG = {
-  baseUrl: import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/v2` : '/api/v2',
+  baseUrl: import.meta.env.VITE_API_URL || '/api/v2',  // Updated to v2
   timeout: DEFAULT_TIMEOUT,
   credentials: 'include',
   headers: {
@@ -23,36 +23,22 @@ export const API_CONFIG = {
 };
 
 /**
- * Extract data from the standardized API response format
- * @param {Object} response - API response object
- * @returns {Object} Extracted data with metadata and errors
+ * Extract standardized data from v2 API responses
+ * @param {Object} response - The API response object
+ * @returns {Object} Extracted data with data, meta, and errors fields
  */
 export function extractResponseData(response) {
-  // Handle v2 API standard response format with data, meta, errors
+  // Handle v2 API standard response format
   if (response && typeof response === 'object') {
-    if (response.data !== undefined) {
-      return {
-        data: response.data,
-        meta: response.meta || {},
-        errors: response.errors || []
-      };
-    }
-    
-    // Some endpoints might not follow the standard format
-    // Return the response itself
-    return { 
-      data: response, 
-      meta: {}, 
-      errors: [] 
+    return {
+      data: response.data !== undefined ? response.data : response,
+      meta: response.meta || {},
+      errors: response.errors || []
     };
   }
   
-  // For primitive responses
-  return { 
-    data: response, 
-    meta: {}, 
-    errors: [] 
-  };
+  // Return the response itself for endpoints that don't follow the standard format
+  return { data: response, meta: {}, errors: [] };
 }
 
 /**
@@ -90,7 +76,7 @@ export function processApiError(error, fallbackMessage = 'An unexpected error oc
   let errorMessage = fallbackMessage;
   let statusCode = null;
   let responseData = null;
-  let errorCode = null;
+  let errorDetails = null;
   
   // Handle fetch Response objects
   if (error instanceof Response) {
@@ -109,18 +95,25 @@ export function processApiError(error, fallbackMessage = 'An unexpected error oc
       responseData = error.response.data;
     }
   }
-  // Handle v2 API error format
-  else if (error && error.detail) {
-    errorMessage = error.detail.message || error.detail.error || fallbackMessage;
-    errorCode = error.detail.error_code;
-    responseData = error.detail.params;
+  
+  // Extract v2 API specific error format
+  if (responseData && responseData.detail) {
+    const detail = responseData.detail;
+    if (detail.message) {
+      errorMessage = detail.message;
+    }
+    errorDetails = {
+      error: detail.error,
+      error_code: detail.error_code,
+      params: detail.params
+    };
   }
   
   // Create enhanced error object
   const enhancedError = new Error(errorMessage);
   enhancedError.statusCode = statusCode;
   enhancedError.responseData = responseData;
-  enhancedError.errorCode = errorCode;
+  enhancedError.errorDetails = errorDetails; // Add v2 API specific error details
   enhancedError.originalError = error;
   enhancedError.isProcessed = true;
   
@@ -188,8 +181,13 @@ export async function apiRequest(endpoint, options = {}) {
         );
       }
       
-      // Process error using v2 error format
-      throw processApiError(errorData);
+      // Create detailed error with parsed error information
+      const error = new Error(
+        errorData?.detail?.message || errorData?.message || `Request failed with status ${response.status}`
+      );
+      error.statusCode = response.status;
+      error.responseData = errorData;
+      throw processApiError(error);
     }
     
     return await parseResponse(response);
@@ -200,15 +198,36 @@ export async function apiRequest(endpoint, options = {}) {
 }
 
 /**
- * Shorthand for GET requests
+ * Shorthand for GET requests with pagination support
  * @param {string} endpoint - API endpoint
  * @param {object} options - Request options
  * @returns {Promise<any>} Response data
  */
 export function get(endpoint, options = {}) {
+  // Extract pagination parameters if present
+  const { params, ...restOptions } = options;
+  
+  // If pagination parameters are provided, add them to the query string
+  if (params) {
+    const queryParams = new URLSearchParams();
+    
+    // Add pagination parameters
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        queryParams.append(key, value);
+      }
+    });
+    
+    // Append query string to endpoint if there are parameters
+    const queryString = queryParams.toString();
+    if (queryString) {
+      endpoint = `${endpoint}${endpoint.includes('?') ? '&' : '?'}${queryString}`;
+    }
+  }
+  
   return apiRequest(endpoint, { 
     method: 'GET', 
-    ...options 
+    ...restOptions 
   });
 }
 
