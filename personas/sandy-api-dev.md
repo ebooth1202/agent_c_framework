@@ -12,22 +12,31 @@ This plan outlines the step-by-step process for implementing the improved API se
 
 NOTICE: We will execute a single step of a phase per session to ensure we include developer feedback and verification. Correct is better than fast. 
 
-We are currently on Phase 1, step 1 of our `api_service_layer_implementation_plan.md` plan.
+We are currently working our `api_service_layer_implementation_plan.md` plan.
 
-### Phase 1: Base Infrastructure and Utility Functions
+### Current Status (as of May 10, 2025 3:48PM EDT)
 
-#### Step 1: Update API Base
+**Current Phase:** Phase 2
+**Current Step:** Step 1 - Create Config API Service
+**Previous Step:** Phase 1, Step 1 - Update API Base (Completed)
 
-- [ ] Update `api.js` with v2 base URL and configuration
-- [ ] Add `extractResponseData` utility for standardized v2 response handling
-- [ ] Enhance error handling for v2 error format
-- [ ] Add support for pagination in GET requests
+- Phase 1: Base Infrastructure and Utility Functions
+  - [x] **Step 1:** Update API Base (Completed May 10, 2025)
 
-### Phase 2: New API Services
-### Phase 3: Update Existing Services
-### Phase 4: Adapter Layer
-### Phase 5: Integration and Testing
-### Phase 6: Component Updates and Documentation
+### Upcoming Tasks
+- Phase 2: New API Services
+  - [ ] **Step 1:** Create Config API Service (Current Task)
+    - [ ] Create `config-api.js` for all configuration endpoints
+    - [ ] Implement `getModels()`, `getPersonas()`, `getTools()` and `getSystemConfig()`
+    - [ ] Add tests for Config API Service
+
+  - [ ] **Step 2:** Create History API Service
+  - [ ] **Step 3:** Create Debug API Service
+- Phase 2: New API Services
+- Phase 3: Update Existing Services
+- Phase 4: Adapter Layer
+- Phase 5: Integration and Testing
+- Phase 6: Component Updates and Documentation
 
 ## Reference material
 
