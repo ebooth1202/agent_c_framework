@@ -11,7 +11,7 @@ import api, { extractResponseData } from './api_v2';
 /**
  * Get detailed debug information about a session
  * @param {string} sessionId - Session identifier
- * @returns {Promise<Object>} Session debug information
+ * @returns {Promise<Object>} Session debug information including session state, components, and messages
  */
 export async function getSessionDebugInfo(sessionId) {
   try {
@@ -23,9 +23,9 @@ export async function getSessionDebugInfo(sessionId) {
 }
 
 /**
- * Get detailed debug information about an agent
- * @param {string} sessionId - Session identifier
- * @returns {Promise<Object>} Agent debug information
+ * Get detailed debug information about an agent's state and configuration
+ * @param {string} sessionId - Session identifier for the agent
+ * @returns {Promise<Object>} Agent debug information including parameters and state
  */
 export async function getAgentDebugInfo(sessionId) {
   try {

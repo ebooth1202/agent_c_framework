@@ -11,6 +11,7 @@ import toolsService from './tools-api';
 import personaService from './persona-api';
 import chatService from './chat-api';
 import configService from './config-api';
+import historyService from './history-api';
 
 // Export individual services
 export const api = apiService;
@@ -20,6 +21,7 @@ export const tools = toolsService;
 export const persona = personaService;
 export const chat = chatService;
 export const config = configService;
+export const history = historyService;
 
 // Export individual functions from each service
 export {
@@ -93,6 +95,17 @@ export {
   getModelParameters as getConfigModelParameters,
 } from './config-api';
 
+// Export all service methods from history-api
+export {
+  listHistories,
+  getHistoryDetails,
+  deleteHistory,
+  getEvents,
+  streamEvents,
+  getReplayStatus,
+  controlReplay,
+} from './history-api';
+
 // Default export combining all services
 export default {
   api: apiService,
@@ -102,4 +115,5 @@ export default {
   persona: personaService,
   chat: chatService,
   config: configService,
+  history: historyService,
 };
