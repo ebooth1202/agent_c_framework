@@ -4,8 +4,10 @@
 
 The Session Management API allows you to create, retrieve, update, and delete AI agent sessions. Sessions are the core concept in the Agent C platform, representing an ongoing conversation with an AI agent configured with specific parameters.
 
+In Agent C, sessions and agents have a unified model structure where each session contains an agent with its configuration. The agent configuration is an integral part of the session and is managed through both session endpoints and dedicated agent endpoints.
+
 Each session has:
-- A unique identifier (UUID)
+- A unique identifier (MnemonicSlug format, e.g., "tiger-castle")
 - An associated AI model and persona
 - Configuration parameters that determine the agent's behavior
 - A lifecycle from creation to deletion
@@ -77,7 +79,7 @@ Creates a new AI agent session with the specified configuration parameters.
 
 ```json
 {
-  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "id": "tiger-castle",
   "model_id": "gpt-4",
   "persona_id": "programmer",
   "name": "Code Review Session",
@@ -182,7 +184,7 @@ Retrieves a paginated list of all active sessions.
 {
   "items": [
     {
-      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "id": "tiger-castle",
       "model_id": "gpt-4",
       "persona_id": "programmer",
       "name": "Code Review Session",
@@ -192,7 +194,7 @@ Retrieves a paginated list of all active sessions.
       "is_active": true
     },
     {
-      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "id": "blue-ocean",
       "model_id": "claude-3-opus",
       "persona_id": "researcher",
       "name": "Data Analysis",
@@ -266,13 +268,13 @@ Retrieves detailed information about a specific session.
 
 | Parameter   | Type   | Description              | Required |
 |------------|--------|---------------------------|----------|
-| session_id | UUID   | The unique session ID     | Yes      |
+| session_id | string | The unique session ID in MnemonicSlug format | Yes      |
 
 #### Response
 
 ```json
 {
-  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "id": "tiger-castle",
   "model_id": "gpt-4",
   "persona_id": "programmer",
   "name": "Code Review Session",
@@ -310,7 +312,7 @@ import requests
 from uuid import UUID
 
 api_key = "YOUR_API_KEY"
-session_id = UUID("550e8400-e29b-41d4-a716-446655440000")
+session_id = "tiger-castle"
 
 response = requests.get(
     f"https://your-agent-c-instance.com/api/v2/sessions/{session_id}",
@@ -335,7 +337,7 @@ Updates one or more properties of a specific session.
 
 | Parameter   | Type   | Description              | Required |
 |------------|--------|---------------------------|----------|
-| session_id | UUID   | The unique session ID     | Yes      |
+| session_id | string | The unique session ID in MnemonicSlug format | Yes      |
 
 #### Request Body
 
@@ -384,7 +386,7 @@ import requests
 from uuid import UUID
 
 api_key = "YOUR_API_KEY"
-session_id = UUID("550e8400-e29b-41d4-a716-446655440000")
+session_id = "tiger-castle"
 
 # Update the session name and temperature
 update_data = {
@@ -416,7 +418,7 @@ Permanently removes a session and releases its resources.
 
 | Parameter   | Type   | Description              | Required |
 |------------|--------|---------------------------|----------|
-| session_id | UUID   | The unique session ID     | Yes      |
+| session_id | string | The unique session ID in MnemonicSlug format | Yes      |
 
 #### Response
 
@@ -437,7 +439,7 @@ import requests
 from uuid import UUID
 
 api_key = "YOUR_API_KEY"
-session_id = UUID("550e8400-e29b-41d4-a716-446655440000")
+session_id = "tiger-castle"
 
 response = requests.delete(
     f"https://your-agent-c-instance.com/api/v2/sessions/{session_id}",
@@ -460,7 +462,7 @@ else:
 
 The unique identifier for the session. This is automatically generated when a session is created.
 
-- **Format**: UUID (e.g., "550e8400-e29b-41d4-a716-446655440000")
+- **Format**: MnemonicSlug (e.g., "tiger-castle", "blue-ocean")
 - **Usage**: Use this ID in all API calls that target a specific session
 
 #### name

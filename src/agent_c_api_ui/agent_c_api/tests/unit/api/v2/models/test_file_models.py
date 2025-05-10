@@ -27,7 +27,7 @@ class TestFileMeta:
         the required fields, and that default values are properly applied to
         optional fields.
         """
-        session_id = uuid4()
+        session_id = str(uuid4())  # Convert UUID to string for MnemonicSlug format
         now = datetime.now()
         
         file_meta = FileMeta(
@@ -52,7 +52,7 @@ class TestFileMeta:
         This test verifies that the FileMeta model can be instantiated with all
         fields, including optional ones, and that all values are correctly stored.
         """
-        session_id = uuid4()
+        session_id = str(uuid4())  # Convert UUID to string for MnemonicSlug format
         now = datetime.now()
         
         file_meta = FileMeta(
@@ -115,7 +115,7 @@ class TestFileMeta:
         This test verifies that the metadata field can store complex nested structures,
         which is useful for extended file information like processing results.
         """
-        session_id = uuid4()
+        session_id = str(uuid4())  # Convert UUID to string for MnemonicSlug format
         now = datetime.now()
         
         complex_metadata = {

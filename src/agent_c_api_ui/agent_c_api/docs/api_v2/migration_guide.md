@@ -1172,9 +1172,9 @@ async def get_agent_debug_info(client, session_id):
 
 ### Session Management Breaking Changes
 
-1. **Session IDs**: Session IDs are now UUIDs rather than strings
-   - All endpoints that accept session IDs expect valid UUID format
-   - UUIDs must be properly formatted in URL paths
+1. **Session IDs**: Session IDs now use the MnemonicSlug format (e.g., "tiger-castle", "blue-ocean")
+   - All endpoints that accept session IDs expect properly formatted string IDs
+   - MnemonicSlugs provide more readable and memorable identifiers than UUIDs
 
 2. **Parameter Naming**:
    - `model_name` → `model_id`
