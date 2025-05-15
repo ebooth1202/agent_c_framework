@@ -1,5 +1,4 @@
-"""
-Conversion utilities for translating between V1 and V2 API models.
+"""Conversion utilities for translating between V1 and V2 API models.
 
 This module provides functions to convert between V1 and V2 data models,
 enabling backward compatibility and smooth transition between API versions.
@@ -12,8 +11,9 @@ from agent_c_api.api.v1.llm_models.agent_params import (
     AgentUpdateParams
 )
 from agent_c.models.events.chat import MessageEvent
-from agent_c_api.api.v2.models.agent_models import AgentConfig
+# Updated import to use session_models for AgentConfig
 from agent_c_api.api.v2.models.session_models import (
+    AgentConfig,
     SessionCreate,
     SessionUpdate
 )

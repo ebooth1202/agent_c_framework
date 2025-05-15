@@ -4,6 +4,8 @@
 
 The Agent Configuration API allows you to manage the configuration of an AI agent within a specific session. This includes retrieving the current configuration and updating various parameters that control the agent's behavior.
 
+In Agent C, sessions and agents have a unified model structure. The agent configuration (defined by AgentConfig in session_models.py) is an integral part of each session. While the Session API allows you to create and manage sessions, the Agent API provides focused endpoints for working specifically with the agent configuration within a session.
+
 Agent configuration parameters determine how the AI agent responds to user inputs, what tools it can use, and how it generates responses. Properly configuring these parameters is essential for optimizing the agent's performance for different use cases.
 
 ## Authentication
@@ -37,7 +39,7 @@ Retrieves the current configuration of the agent associated with the specified s
 
 | Parameter   | Type   | Description              | Required |
 |------------|--------|---------------------------|----------|
-| session_id | UUID   | The unique session ID     | Yes      |
+| session_id | string | The unique session ID in MnemonicSlug format | Yes      |
 
 #### Response
 
@@ -82,7 +84,7 @@ import requests
 from uuid import UUID
 
 api_key = "YOUR_API_KEY"
-session_id = UUID("550e8400-e29b-41d4-a716-446655440000")
+session_id = "tiger-castle"
 
 response = requests.get(
     f"https://your-agent-c-instance.com/api/v2/sessions/{session_id}/agent",
@@ -99,7 +101,7 @@ if response.status_code == 200:
 ```javascript
 // Using fetch in JavaScript
 const apiKey = 'YOUR_API_KEY';
-const sessionId = '550e8400-e29b-41d4-a716-446655440000';
+const sessionId = 'tiger-castle';
 
 fetch(`https://your-agent-c-instance.com/api/v2/sessions/${sessionId}/agent`, {
   method: 'GET',
@@ -121,7 +123,7 @@ fetch(`https://your-agent-c-instance.com/api/v2/sessions/${sessionId}/agent`, {
 
 ```json
 {
-  "detail": "Session 550e8400-e29b-41d4-a716-446655440000 not found"
+  "detail": "Session tiger-castle not found"
 }
 ```
 
@@ -137,7 +139,7 @@ Updates one or more configuration parameters of the agent associated with the sp
 
 | Parameter   | Type   | Description              | Required |
 |------------|--------|---------------------------|----------|
-| session_id | UUID   | The unique session ID     | Yes      |
+| session_id | string | The unique session ID in MnemonicSlug format | Yes      |
 
 #### Request Body
 
@@ -216,7 +218,7 @@ import requests
 from uuid import UUID
 
 api_key = "YOUR_API_KEY"
-session_id = UUID("550e8400-e29b-41d4-a716-446655440000")
+session_id = "tiger-castle"
 
 # Update the agent's persona and temperature
 update_data = {
@@ -243,7 +245,7 @@ if response.status_code == 200:
 ```javascript
 // Using fetch in JavaScript
 const apiKey = 'YOUR_API_KEY';
-const sessionId = '550e8400-e29b-41d4-a716-446655440000';
+const sessionId = 'tiger-castle';
 
 const updateData = {
   persona_id: 'researcher',
@@ -285,6 +287,8 @@ fetch(`https://your-agent-c-instance.com/api/v2/sessions/${sessionId}/agent`, {
 ```
 
 ## Configuration Parameters
+
+> **Important Note**: The primary AgentConfig model is defined in session_models.py and re-exported in agent_models.py for backward compatibility. Always import AgentConfig from session_models.py directly in new code.
 
 ### Model Parameters
 

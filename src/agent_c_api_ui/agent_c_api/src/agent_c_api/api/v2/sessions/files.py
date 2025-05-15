@@ -1,7 +1,7 @@
 # src/agent_c_api/api/v2/sessions/files.py
 import logging
 from typing import List
-from uuid import UUID
+
 
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, BackgroundTasks, status, Path
 from fastapi.responses import FileResponse
@@ -72,7 +72,7 @@ def cleanup_expired_files():
 )
 @version(2)
 async def upload_file(
-    session_id: UUID = Path(..., description="UUID of the session to upload the file to"),
+    session_id: str = Path(..., description="MnemonicSlug ID of the session to upload the file to (e.g., 'tiger-castle')"),
     file: UploadFile = File(..., description="The file to upload (multipart/form-data)"),
     background_tasks: BackgroundTasks = BackgroundTasks(),
     session_service: SessionService = Depends(get_session_service)
@@ -87,7 +87,7 @@ async def upload_file(
     which helps the agent understand and reference the file content.
     
     Args:
-        session_id: The UUID of the session to upload the file to
+        session_id: The MnemonicSlug ID of the session (e.g., 'tiger-castle') to upload the file to
         file: The file to upload as multipart/form-data
         background_tasks: FastAPI background tasks for async processing
         session_service: Session service dependency injection
@@ -107,7 +107,7 @@ async def upload_file(
         with open('document.pdf', 'rb') as f:
             files = {'file': ('document.pdf', f, 'application/pdf')}
             response = requests.post(
-                'https://api.example.com/api/v2/sessions/550e8400-e29b-41d4-a716-446655440000/files',
+                'https://api.example.com/api/v2/sessions/tiger-castle/files',
                 files=files
             )
             
@@ -170,7 +170,7 @@ async def upload_file(
                             "content_type": "application/pdf",
                             "size": 1048576,
                             "uploaded_at": "2025-04-04T12:00:00Z",
-                            "session_id": "550e8400-e29b-41d4-a716-446655440000",
+                            "session_id": "tiger-castle",
                             "metadata": {
                                 "processed": True,
                                 "processing_status": "complete",
@@ -183,7 +183,7 @@ async def upload_file(
                             "content_type": "image/png",
                             "size": 256000,
                             "uploaded_at": "2025-04-04T12:30:00Z",
-                            "session_id": "550e8400-e29b-41d4-a716-446655440000",
+                            "session_id": "tiger-castle",
                             "metadata": {
                                 "processed": True,
                                 "processing_status": "complete"
@@ -213,7 +213,7 @@ async def upload_file(
 )
 @version(2)
 async def list_files(
-    session_id: UUID = Path(..., description="UUID of the session to list files for"),
+    session_id: str = Path(..., description="MnemonicSlug ID of the session to list files for (e.g., 'tiger-castle')"),
     session_service: SessionService = Depends(get_session_service)
 ) -> List[FileMeta]:
     """List all files for a session
@@ -223,7 +223,7 @@ async def list_files(
     and processing status.
     
     Args:
-        session_id: The UUID of the session to list files for
+        session_id: The MnemonicSlug ID of the session (e.g., 'tiger-castle') to list files for
         session_service: Session service dependency injection
         
     Returns:
@@ -239,7 +239,7 @@ async def list_files(
         
         # List all files in a session
         response = requests.get(
-            'https://api.example.com/api/v2/sessions/550e8400-e29b-41d4-a716-446655440000/files'
+            'https://api.example.com/api/v2/sessions/tiger-castle/files'
         )
         
         files = response.json()
@@ -327,7 +327,7 @@ async def list_files(
 )
 @version(2)
 async def get_file_metadata(
-    session_id: UUID = Path(..., description="UUID of the session the file belongs to"),
+    session_id: str = Path(..., description="MnemonicSlug ID of the session the file belongs to (e.g., 'tiger-castle')"),
     file_id: str = Path(..., description="ID of the file to retrieve metadata for"),
     session_service: SessionService = Depends(get_session_service)
 ) -> FileMeta:
@@ -338,7 +338,7 @@ async def get_file_metadata(
     processing status and any additional metadata generated during file analysis.
     
     Args:
-        session_id: The UUID of the session the file belongs to
+        session_id: The MnemonicSlug ID of the session (e.g., 'tiger-castle') the file belongs to
         file_id: The unique identifier of the file to retrieve metadata for
         session_service: Session service dependency injection
         
@@ -355,7 +355,7 @@ async def get_file_metadata(
         
         # Get metadata for a specific file
         response = requests.get(
-            'https://api.example.com/api/v2/sessions/550e8400-e29b-41d4-a716-446655440000/files/file_abc123'
+            'https://api.example.com/api/v2/sessions/tiger-castle/files/file_abc123'
         )
         
         file_meta = response.json()
@@ -433,7 +433,7 @@ async def get_file_metadata(
 )
 @version(2)
 async def download_file(
-    session_id: UUID = Path(..., description="UUID of the session the file belongs to"),
+    session_id: str = Path(..., description="MnemonicSlug ID of the session the file belongs to (e.g., 'tiger-castle')"),
     file_id: str = Path(..., description="ID of the file to download"),
     session_service: SessionService = Depends(get_session_service)
 ):
@@ -444,7 +444,7 @@ async def download_file(
     making it suitable for direct downloading in browsers.
     
     Args:
-        session_id: The UUID of the session the file belongs to
+        session_id: The MnemonicSlug ID of the session (e.g., 'tiger-castle') the file belongs to
         file_id: The unique identifier of the file to download
         session_service: Session service dependency injection
         
@@ -461,7 +461,7 @@ async def download_file(
         
         # Download a file (binary content)
         response = requests.get(
-            'https://api.example.com/api/v2/sessions/550e8400-e29b-41d4-a716-446655440000/files/file_abc123/content',
+            'https://api.example.com/api/v2/sessions/tiger-castle/files/file_abc123/content',
             stream=True  # Important for large files
         )
         
@@ -527,7 +527,7 @@ async def download_file(
 )
 @version(2)
 async def delete_file(
-    session_id: UUID = Path(..., description="UUID of the session the file belongs to"),
+    session_id: str = Path(..., description="MnemonicSlug ID of the session the file belongs to (e.g., 'tiger-castle')"),
     file_id: str = Path(..., description="ID of the file to delete"),
     session_service: SessionService = Depends(get_session_service)
 ) -> None:
@@ -538,7 +538,7 @@ async def delete_file(
     be undone.
     
     Args:
-        session_id: The UUID of the session the file belongs to
+        session_id: The MnemonicSlug ID of the session (e.g., 'tiger-castle') the file belongs to
         file_id: The unique identifier of the file to delete
         session_service: Session service dependency injection
         
@@ -555,7 +555,7 @@ async def delete_file(
         
         # Delete a file
         response = requests.delete(
-            'https://api.example.com/api/v2/sessions/550e8400-e29b-41d4-a716-446655440000/files/file_abc123'
+            'https://api.example.com/api/v2/sessions/tiger-castle/files/file_abc123'
         )
         
         # Check if deletion was successful (204 No Content)

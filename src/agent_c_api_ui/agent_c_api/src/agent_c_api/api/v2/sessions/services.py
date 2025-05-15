@@ -96,10 +96,13 @@ class SessionService:
                 id=ui_session_id,
                 model_id=session_data.get("model_name", ""),
                 persona_id=session_data.get("persona_name", "default"),
+                name=session_data.get("name", f"Session {ui_session_id}"),  # Required field with default
+                is_active=True,  # Set default active status
                 created_at=session_data.get("created_at", datetime.now()),
                 last_activity=session_data.get("last_activity"),
                 agent_internal_id=agent_c_session_id,
                 tools=session_data.get("additional_tools", []),
+                tool_ids=session_data.get("additional_tools", []),  # Duplicate tools for tool_ids field
                 temperature=session_data.get("temperature"),
                 reasoning_effort=session_data.get("reasoning_effort"),
                 budget_tokens=session_data.get("budget_tokens"),
@@ -129,6 +132,8 @@ class SessionService:
                 id=session_id,
                 model_id=session_data.get("model_name", ""),
                 persona_id=session_data.get("persona_name", "default"),
+                name=session_data.get("name", f"Session {session_id}"),  # Required field with default
+                is_active=session_data.get("is_active", True),  # Required field with default
                 created_at=session_data.get("created_at", datetime.now()),
                 last_activity=session_data.get("last_activity"),
             )
@@ -172,10 +177,13 @@ class SessionService:
             id=session_id,
             model_id=session_data.get("model_name", ""),
             persona_id=session_data.get("persona_name", "default"),
+            name=session_data.get("name", f"Session {session_id}"),  # Required field with default
+            is_active=session_data.get("is_active", True),  # Required field with default
             created_at=session_data.get("created_at", datetime.now()),
             last_activity=session_data.get("last_activity"),
             agent_internal_id=agent_c_session_id,
             tools=tools,
+            tool_ids=tools,  # Duplicate tools for tool_ids field
             temperature=session_data.get("temperature"),
             reasoning_effort=session_data.get("reasoning_effort"),
             budget_tokens=session_data.get("budget_tokens"),

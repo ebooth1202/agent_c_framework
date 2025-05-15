@@ -2,7 +2,7 @@
 from typing import Dict, Any, ClassVar
 from datetime import datetime
 from pydantic import BaseModel, Field, ConfigDict
-from uuid import UUID
+# We use MnemonicSlugs for session_id (format: "tiger-castle")
 
 class FileMeta(BaseModel):
     """Metadata about an uploaded file
@@ -32,9 +32,9 @@ class FileMeta(BaseModel):
         ..., 
         description="Timestamp when the file was uploaded"
     )
-    session_id: UUID = Field(
+    session_id: str = Field(
         ..., 
-        description="UUID of the session this file belongs to"
+        description="MnemonicSlug ID of the session this file belongs to (e.g., 'tiger-castle')"
     )
     metadata: Dict[str, Any] = Field(
         default_factory=dict, 
@@ -50,7 +50,7 @@ class FileMeta(BaseModel):
                     "content_type": "application/pdf",
                     "size": 1048576,
                     "uploaded_at": "2025-04-04T12:00:00Z",
-                    "session_id": "550e8400-e29b-41d4-a716-446655440000",
+                    "session_id": "tiger-castle",
                     "metadata": {
                         "processed": True,
                         "processing_status": "complete",
@@ -63,7 +63,7 @@ class FileMeta(BaseModel):
                     "content_type": "image/png",
                     "size": 256000,
                     "uploaded_at": "2025-04-04T12:30:00Z",
-                    "session_id": "550e8400-e29b-41d4-a716-446655440000",
+                    "session_id": "tiger-castle",
                     "metadata": {
                         "processed": True,
                         "processing_status": "complete"

@@ -14,7 +14,7 @@ const DEFAULT_TIMEOUT = 30000;
  * Configuration for API requests
  */
 export const API_CONFIG = {
-  baseUrl: import.meta.env.VITE_API_URL || '/api/v2', // Updated to v2
+  baseUrl: import.meta.env.VITE_API_URL || '/api/v2',  // Updated to v2
   timeout: DEFAULT_TIMEOUT,
   credentials: 'include',
   headers: {
@@ -47,11 +47,6 @@ export function extractResponseData(response) {
  * @returns {Promise<any>} Parsed response data
  */
 async function parseResponse(response) {
-  // Handle 204 No Content responses
-  if (response.status === 204) {
-    return { status: 204 }; // Return a minimal object with status
-  }
-  
   const contentType = response.headers.get('content-type') || '';
   
   if (contentType.includes('application/json')) {
@@ -167,14 +162,7 @@ function createRequestOptions(options = {}) {
  * @throws {Error} Enhanced error with context
  */
 export async function apiRequest(endpoint, options = {}) {
-  // Make sure endpoint starts with a slash if it's not an absolute URL
-  const normalizedEndpoint = endpoint.startsWith('/') || endpoint.startsWith('http') ? endpoint : `/${endpoint}`;
-  
-  // Ensure we have a valid URL by combining with base URL
-  const url = normalizedEndpoint.startsWith('http') 
-    ? normalizedEndpoint 
-    : `${API_CONFIG.baseUrl}${normalizedEndpoint}`;
-  
+  const url = `${API_CONFIG.baseUrl}${endpoint}`;
   const requestOptions = createRequestOptions(options);
   
   try {

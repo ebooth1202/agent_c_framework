@@ -70,7 +70,7 @@ class TestAPIStatus:
         assert status.message == long_message
 
 
-class TestData(BaseModel):
+class ExampleData(BaseModel):
     """Simple test data model for use in APIResponse tests."""
     name: str
     value: int
@@ -79,7 +79,7 @@ class TestData(BaseModel):
 class ComplexTestData(BaseModel):
     """More complex test data model with nested structures."""
     title: str
-    items: List[TestData]
+    items: List[ExampleData]
     metadata: Dict[str, Any] = {}
 
 
@@ -92,7 +92,7 @@ class TestAPIResponse:
     
     def test_with_default_status(self):
         """Test with default status (success=True)."""
-        response = APIResponse[TestData](data=TestData(name="test", value=42))
+        response = APIResponse[ExampleData](data=ExampleData(name="test", value=42))
         assert response.status.success is True
         assert response.data.name == "test"
         assert response.data.value == 42
@@ -100,7 +100,7 @@ class TestAPIResponse:
     def test_with_custom_status(self):
         """Test with custom error status."""
         status = APIStatus(success=False, message="Error", error_code="TEST_ERROR")
-        response = APIResponse[TestData](status=status, data=None)
+        response = APIResponse[ExampleData](status=status, data=None)
         assert response.status.success is False
         assert response.status.message == "Error"
         assert response.data is None
@@ -127,8 +127,8 @@ class TestAPIResponse:
         complex_data = ComplexTestData(
             title="Test",
             items=[
-                TestData(name="item1", value=1),
-                TestData(name="item2", value=2)
+                ExampleData(name="item1", value=1),
+                ExampleData(name="item2", value=2)
             ],
             metadata={"key": "value"}
         )
@@ -139,9 +139,9 @@ class TestAPIResponse:
     
     def test_serialization(self):
         """Test serialization to and from JSON."""
-        response = APIResponse[TestData](
+        response = APIResponse[ExampleData](
             status=APIStatus(success=True),
-            data=TestData(name="test", value=123)
+            data=ExampleData(name="test", value=123)
         )
         
         json_str = response.model_dump_json()
@@ -152,14 +152,14 @@ class TestAPIResponse:
         assert data["data"]["value"] == 123
         
         # Test deserialization
-        deserialized = APIResponse[TestData].model_validate_json(json_str)
+        deserialized = APIResponse[ExampleData].model_validate_json(json_str)
         assert deserialized.status.success is True
         assert deserialized.data.name == "test"
         assert deserialized.data.value == 123
     
     def test_schema_documentation(self):
         """Test that schema documentation is correctly defined."""
-        schema = APIResponse[TestData].model_json_schema()
+        schema = APIResponse[ExampleData].model_json_schema()
         
         assert "status" in schema["properties"]
         assert "data" in schema["properties"]
@@ -292,11 +292,11 @@ class TestPaginatedResponse:
         """Test with complex model objects as items."""
         pagination = PaginationMeta(page=1, page_size=2, total_items=2, total_pages=1)
         items = [
-            TestData(name="first", value=1),
-            TestData(name="second", value=2)
+            ExampleData(name="first", value=1),
+            ExampleData(name="second", value=2)
         ]
         
-        response = PaginatedResponse[TestData](
+        response = PaginatedResponse[ExampleData](
             data=items,
             pagination=pagination
         )
@@ -345,7 +345,7 @@ class TestPaginatedResponse:
     
     def test_schema_documentation(self):
         """Test that schema documentation is correctly defined."""
-        schema = PaginatedResponse[TestData].model_json_schema()
+        schema = PaginatedResponse[ExampleData].model_json_schema()
         
         assert "status" in schema["properties"]
         assert "data" in schema["properties"]
