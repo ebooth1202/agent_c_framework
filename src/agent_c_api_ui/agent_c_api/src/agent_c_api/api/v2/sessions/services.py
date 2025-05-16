@@ -7,7 +7,7 @@ import structlog
 from agent_c_api.api.dependencies import get_agent_manager
 from agent_c_api.core.agent_manager import UItoAgentBridgeManager
 from agent_c_api.config.redis_config import RedisConfig
-from agent_c_api.core.repositories.session_repository import SessionRepository
+from agent_c_api.core.repositories.session_repository import SessionRepository as SessionRepositoryClass
 
 from agent_c_api.api.v2.models.session_models import (
     SessionCreate, 
@@ -32,13 +32,13 @@ async def get_session_service(request: Request):
     """
     agent_manager = get_agent_manager(request)
     redis_client = await RedisConfig.get_redis_client()
-    session_repository = SessionRepository(redis_client)
+    session_repository = SessionRepositoryClass(redis_client)
     return SessionService(agent_manager=agent_manager, session_repository=session_repository)
 
 class SessionService:
     """Service for managing sessions using Redis storage and the agent manager"""
 
-    def __init__(self, agent_manager: Any, session_repository: SessionRepository):
+    def __init__(self, agent_manager: Any, session_repository: Any):
         """Initialize the session service
         
         Args:
