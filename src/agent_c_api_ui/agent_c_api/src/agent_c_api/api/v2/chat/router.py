@@ -3,7 +3,7 @@ from typing import Optional, Dict, List, Any, Sequence, Union
 
 from agent_c.models.events.chat import MessageEvent, InteractionEvent
 from agent_c.models.events.tool_calls import ToolCallEvent
-from .services import ChatService
+from agent_c_api.api.v2.sessions.chat import ChatService
 from ..models.chat_models import ChatMessage, ChatRequest, ChatResponse
 
 # Create router with prefix and tags
