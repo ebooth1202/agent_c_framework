@@ -199,14 +199,6 @@ class GPTChatAgent(BaseAgent):
             'tool_chest': tool_chest
         }
 
-    async def one_shot(self, **kwargs) -> str:
-        """
-        Perform the chat operation as a one shot.
-        """
-        kwargs['output_format'] = kwargs.get('output_format', 'raw')
-        messages = await self.chat(**kwargs)
-        return messages[-1]['content']
-
     async def _save_audio_interaction_to_session(self, mgr: ChatSessionManager, audio_id, transcript: str):
         """
         Save audio interaction to the session.

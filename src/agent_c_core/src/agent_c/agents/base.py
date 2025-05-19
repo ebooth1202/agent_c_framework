@@ -57,7 +57,7 @@ class BaseAgent:
         """
         self.model_name: str = kwargs.get("model_name")
         self.temperature: float = kwargs.get("temperature", 0.5)
-        self.max_delay: int = kwargs.get("max_delay", 10)
+        self.max_delay: int = kwargs.get("max_delay", 120)
         self.concurrency_limit: int = kwargs.get("concurrency_limit", 3)
         self.semaphore: Semaphore = asyncio.Semaphore(self.concurrency_limit)
         self.tool_chest: ToolChest = kwargs.get("tool_chest")
@@ -119,7 +119,8 @@ class BaseAgent:
 
     async def one_shot(self, **kwargs) -> str:
         """For text in, text out processing. without chat"""
-        raise NotImplementedError
+        messages = await self.chat(**kwargs)
+        return messages[-1]["content"][0]["text"]
 
     async def parallel_one_shots(self, inputs: List[str], **kwargs):
         """Run multiple one-shot tasks in parallel"""

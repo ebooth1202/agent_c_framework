@@ -21,19 +21,22 @@ NOTICE: We will execute a single step of a phase per session to ensure we includ
 ### Current Status (as of May 10, 2025 5:25PM EDT)
 Current Status (as of May 10, 2025 6:30PM EDT)
 
-**Current Phase:** Phase 2
-**Current Step:** Step 3 - Create Debug API Service
-**Previous Step:** Phase 2, Step 2 - Create History API Service (Completed)
+# Current Status (as of May 10, 2025 6:45PM EDT)
+**Current Phase:** Phase 3
+**Current Step:** Step 1 - Update Session API Service
+**Previous Step:** Phase 2, Step 3 - Create Debug API Service (Completed)
+
 
 ### Upcoming Tasks
-- Phase 2: New API Services
-  - Step 1: Create Config API Service (complete)
-  - Step 2: History API Service (complete)
-  - Step 3: Debug API Service
-		- Create `debug-api.js` for debugging endpoints
-		- Implement session and agent debug information methods
-		- Add tests for Debug API Service
 - Phase 3: Update Existing Services
+	- Step 1: Session API Service
+		- Update `session-api.js` for v2 session endpoints
+		- Update session creation, verification, listing, and deletion methods
+		- Add agent configuration methods
+		- Update tool management methods
+		- Add tests for updated Session API Service
+	- Step 2: Chat API Service
+	- Step 3: Update index.js
 - Phase 4: Adapter Layer
 - Phase 5: Integration and Testing
 - Phase 6: Component Updates and Documentation

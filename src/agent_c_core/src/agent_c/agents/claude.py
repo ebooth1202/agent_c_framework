@@ -146,14 +146,19 @@ class ClaudeChatAgent(BaseAgent):
                 except (APITimeoutError, RateLimitError) as e:
                     # Exponential backoff handled in a helper method
                     delay = await self._handle_retryable_error(e, delay, callback_opts)
+                    self.logger.warning(f"Timeout / Ratelimit. Retrying...Delay is {delay} seconds")
                 except Exception as e:
                     if "overloaded" in str(e).lower():
+                        self.logger.warning(f"Claude API is overloaded. Retrying... Delay is {delay} seconds")
                         delay = await self._handle_retryable_error(e, delay, callback_opts)
                     else:
                         await self._raise_system_event(f"Exception calling `client.messages.stream`.\n\n{e}\n", **callback_opts)
                         await self._raise_completion_end(opts["completion_opts"], stop_reason="exception", **callback_opts)
                         return []
 
+        self.logger.warning("Claude API is overloaded. GIVING UP")
+        await self._raise_system_event(f"Claude API is overloaded. GIVING UP.\n", **callback_opts)
+        await self._raise_completion_end(opts["completion_opts"], stop_reason="overload", **callback_opts)
         return messages
 
 
@@ -182,7 +187,7 @@ class ClaudeChatAgent(BaseAgent):
         async with self.client.beta.messages.stream(**completion_opts) as stream:
             async for event in stream:
                 await self._process_stream_event(event, state, tool_chest, session_manager,
-                                               messages, callback_opts)
+                                                 messages, callback_opts)
 
                 if client_wants_cancel.is_set():
                     state['complete'] = True
@@ -345,8 +350,8 @@ class ClaudeChatAgent(BaseAgent):
 
         # Update messages
         messages.append({'role': 'assistant', 'content': state['model_outputs']})
-
-        session_manager.active_memory.messages = messages
+        if session_manager is not None:
+            session_manager.active_memory.messages = messages
 
 
 

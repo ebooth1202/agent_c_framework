@@ -12,7 +12,7 @@ class PromptBuilder:
         sections (List[PromptSection]): A list of PromptSection objects that define the structure of the prompt.
     """
 
-    def __init__(self, sections: List[PromptSection], tool_sections: List[PromptSection]) -> None:
+    def __init__(self, sections: List[PromptSection], tool_sections: List[PromptSection]=None) -> None:
         """
         Initialize the PromptBuilder with a list of sections.
 
@@ -20,7 +20,7 @@ class PromptBuilder:
             sections (List[PromptSection]): A list of PromptSection objects.
         """
         self.sections: List[PromptSection] = sections
-        self.tool_sections: List[PromptSection] = tool_sections
+        self.tool_sections: List[PromptSection] = tool_sections or []
 
     @staticmethod
     def _get_template_variables(template: str) -> Set[str]:

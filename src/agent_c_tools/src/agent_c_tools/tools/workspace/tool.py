@@ -559,13 +559,70 @@ class WorkspaceTools(Toolset):
 
         return context
 
+
+    @json_schema(
+        description="Find files matching a glob pattern in a workspace. Equivlient to `glob.glob` in Python",
+        params={
+            "path": {
+                "type": "string",
+                "description": "UNC-style path (//WORKSPACE/path) with glob pattern to find matching files",
+                "required": True
+            },
+            "recursive": {
+                "type": "boolean",
+                "description": "Whether to search recursively, matching ** patterns",
+                "required": False
+            },
+            "include_hidden": {
+                "type": "boolean",
+                "description": "Whether to include hidden files in ** pattern matching",
+                "required": False
+            }
+        }
+    )
+    async def glob(self, **kwargs: Any) -> str:
+        """Find files matching a glob pattern in a workspace.
+        
+        Args:
+            **kwargs: Keyword arguments.
+                path (str): UNC-style path (//WORKSPACE/path) with glob pattern to find matching files
+                recursive (bool): Whether to search recursively (defaults to False)
+                include_hidden (bool): Whether to include hidden files (defaults to False)
+                
+        Returns:
+            str: JSON string with the list of matching files or an error message.
+        """
+        # Get the path with the glob pattern
+        unc_path = kwargs.get('path', '')
+        recursive = kwargs.get('recursive', False)
+        include_hidden = kwargs.get('include_hidden', False)
+        
+        if not unc_path:
+            return json.dumps({'error': '`path` cannot be empty'})
+            
+        workspace_name, workspace, relative_pattern = self._parse_unc_path(unc_path)
+        
+        if not workspace:
+            return json.dumps({'error': f'Invalid workspace: {workspace_name}'})
+            
+        try:
+            # Use the workspace's glob method to find matching files
+            matching_files = await workspace.glob(relative_pattern, recursive=recursive, include_hidden=include_hidden)
+            
+            # Convert the files back to UNC paths
+            unc_files = [f'//{workspace_name}/{file}' for file in matching_files]
+            
+            return json.dumps({'files': unc_files})
+        except Exception as e:
+            return json.dumps({'error': f'Error during glob operation: {str(e)}'})
+
     @json_schema(
         'Run `grep -n`  over files in workspaces using UNC-style paths',
         {
             'paths': {
                 "type": "array",
                 "items": {
-                    "type": "number"
+                    "type": "string"
                 },
                 'description': 'UNC-style paths (//WORKSPACE/path) to grep, wildcards ARE supported',
                 'required': True
@@ -588,13 +645,32 @@ class WorkspaceTools(Toolset):
         }
     )
     async def grep(self, **kwargs: Any) -> str:
-        unc_paths = kwargs.get('paths', '')
+        """Run grep over files in workspaces using UNC-style paths.
+        
+        Args:
+            **kwargs: Keyword arguments.
+                paths (list): UNC-style paths (//WORKSPACE/path) to grep
+                pattern (str): Grep pattern to search for
+                recursive (bool): Set to true to recursively search subdirectories
+                ignore_case (bool): Set to true to ignore case
+                
+        Returns:
+            str: Output of grep command with line numbers.
+        """
+        unc_paths = kwargs.get('paths', [])
         pattern = kwargs.get('pattern', '')
         ignore_case = kwargs.get('ignore_case', False)
         recursive = kwargs.get('recursive', False)
         errors = []
         queue = {}
         results = []
+        
+        if not pattern:
+            return json.dumps({'error': '`pattern` cannot be empty'})
+        
+        if not unc_paths:
+            return json.dumps({'error': '`paths` cannot be empty'})
+
         for punc_path in unc_paths:
             error, workspace, relative_path = self.validate_and_get_workspace_path(punc_path)
             if error:
@@ -605,22 +681,21 @@ class WorkspaceTools(Toolset):
 
             queue[workspace].append(relative_path)
 
-            if not pattern:
-                return json.dumps({'error': '`pattern` cannot be empty'})
+        # Now process each workspace's files
+        for workspace, paths in queue.items():
+            try:
+                # Use the workspace's grep method to search for the pattern
+                result = await workspace.grep(
+                    pattern=pattern,
+                    file_paths=paths,
+                    ignore_case=ignore_case,
+                    recursive=recursive
+                )
+                results.append(result)
 
-            for workspace, paths in queue.items():
-                try:
-                    # Use the workspace's grep method to search for the pattern
-                    result = await workspace.grep(
-                        pattern=pattern,
-                        file_paths=paths,
-                        ignore_case=ignore_case,
-                        recursive=recursive
-                    )
-                    results.append(result)
-
-                except Exception as e:
-                    results.append(f'Error reading file: {str(e)}')
+            except Exception as e:
+                results.append(f'Error searching files: {str(e)}')
+        
         err_str = ""
         if errors:
             err_str = f"Errors:\n{"\n".join(errors)}\n\n"

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from io import StringIO
 from unidiff import PatchSet
 from tempfile import NamedTemporaryFile
@@ -199,3 +199,20 @@ class BaseWorkspace:
             NotImplementedError: This method should be implemented by subclasses.
         """
         raise NotImplementedError
+        
+    async def glob(self, pattern: str, recursive: bool = False, include_hidden: bool = False) -> List[str]:
+        """
+        Abstract method to find paths matching the specified pattern.
+        
+        Args:
+            pattern (str): The glob pattern to match against paths in the workspace.
+            recursive (bool): Whether to search recursively, matching ** patterns.
+            include_hidden (bool): Whether to include hidden files in ** pattern matching.
+            
+        Returns:
+            List[str]: A list of relative paths that match the pattern.
+            
+        Raises:
+            NotImplementedError: This method should be implemented by subclasses.
+        """
+        raise NotImplementedError("glob method must be implemented")
