@@ -33,16 +33,51 @@ mkdir -p "$AGENT_C_IMAGES_PATH"
 mkdir -p "$AGENT_C_PERSONAS_PATH"
 mkdir -p "$AGENT_C_LOGS_PATH"
 
-# Check if config file exists
+# Check if config file exists and set up AI keys
 if [ ! -f "$AGENT_C_CONFIG_PATH/agent_c.config" ]; then
+    echo "Creating new configuration file..."
     cp agent_c.config.example "$AGENT_C_CONFIG_PATH/agent_c.config"
-    echo "** Warning**:  Configuration file not found at $AGENT_C_CONFIG_PATH/agent_c.config"
-    echo "An example configuration file is being copied to $AGENT_C_CONFIG_PATH"
+    
+    # Prompt for OpenAI API key
+    read -p "Please enter your OpenAI API key: " OPENAI_API_KEY
+    if [ -n "$OPENAI_API_KEY" ]; then
+        sed -i '' "s/OPENAI_API_KEY=FROM-OPEN-AI/OPENAI_API_KEY=$OPENAI_API_KEY/" "$AGENT_C_CONFIG_PATH/agent_c.config"
+    fi
+    
+    # Prompt for Anthropic API key
+    read -p "Please enter your Anthropic API key (press Enter to skip): " ANTHROPIC_API_KEY
+    if [ -n "$ANTHROPIC_API_KEY" ]; then
+        sed -i '' "s/^#ANTHROPIC_API_KEY=.*/ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY/" "$AGENT_C_CONFIG_PATH/agent_c.config"
+    fi
+    
+    # Prompt for Zep API key
+    read -p "Please enter your Zep API key (press Enter to skip if using Zep CE): " ZEP_API_KEY
+    if [ -n "$ZEP_API_KEY" ]; then
+        sed -i '' "s/ZEP_API_KEY=FROM-ZEP/ZEP_API_KEY=$ZEP_API_KEY/" "$AGENT_C_CONFIG_PATH/agent_c.config"
+    else
+        # If no Zep API key, prompt for Zep CE configuration
+        read -p "Are you using Zep CE locally? (y/n): " USE_ZEP_CE
+        if [ "$USE_ZEP_CE" = "y" ]; then
+            read -p "Enter your Zep CE key: " ZEP_CE_KEY
+            read -p "Enter your Zep CE URL (default: http://localhost:8001): " ZEP_URL
+            ZEP_URL=${ZEP_URL:-http://localhost:8001}
+            
+            # Comment out Zep Cloud settings and uncomment Zep CE settings
+            sed -i '' 's/^ZEP_API_KEY=.*/#&/' "$AGENT_C_CONFIG_PATH/agent_c.config"
+            sed -i '' 's/^#ZEP_CE_KEY=.*/ZEP_CE_KEY='"$ZEP_CE_KEY"'/' "$AGENT_C_CONFIG_PATH/agent_c.config"
+            sed -i '' 's/^#ZEP_URL=.*/ZEP_URL='"$ZEP_URL"'/' "$AGENT_C_CONFIG_PATH/agent_c.config"
+        fi
+    fi
+    
+    # Prompt for user ID
+    read -p "Enter your user ID (default: Taytay): " USER_ID
+    USER_ID=${USER_ID:-Taytay}
+    sed -i '' "s/CLI_CHAT_USER_ID=Taytay/CLI_CHAT_USER_ID=$USER_ID/" "$AGENT_C_CONFIG_PATH/agent_c.config"
+    
+    echo "Configuration file has been created at $AGENT_C_CONFIG_PATH/agent_c.config"
+    echo "Please review and edit the configuration file if needed."
     echo ""
-    echo "Please edit the configuration file with a text editor and rerun this script."
-    echo ""
-    read -p "Press Enter to exit..."
-    exit 1
+    read -p "Press Enter to continue..."
 fi
 
 # Set platform flag for ARM processors
