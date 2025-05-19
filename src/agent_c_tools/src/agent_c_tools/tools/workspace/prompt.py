@@ -19,6 +19,8 @@ class WorkspaceSection(PromptSection):
                     "- **Appending**: Use `write` with the optional `mode` parameter set to `append`\n"
                     "= **Searching**: Use `grep` to search for patterns in files.  This uses the same syntax as the grep CLI.\n"
                     "- **Navigation**: Use `tree` for broader holistic views. Us `ls` to list a specific directory contents\n"
+                    "- **Metadata**: The meta tools allow you to read/write to a dictionary stored in the workspace\n"
+                    "  - This supports nested dictionaries\n"
                     "- **File Management**: Use `cp` to copy and `mv` to move files or directories\n"
                     "  - Both source and destination must be in the same workspace\n"    
                     "- Workspace text files are UTF-8 encoded\n"

@@ -3,6 +3,7 @@ centric_tools
 __pycache__/
 *.py[cod]
 *$py.class
+.agent_c_meta.yaml
 .web_tools_cache
 .tool_cache
 docker_stack/zepcli*.*

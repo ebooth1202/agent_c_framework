@@ -10,6 +10,7 @@ docker_stack/zepcli*.*
 temp/*
 !temp/.KEEP
 .local_workspaces.json
+.agent_c_meta.yaml
 
 #py-env
 .python-version
