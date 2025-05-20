@@ -13,6 +13,7 @@ from . import xml_explorer  # XML Explorer toolset
 from . import css_explorer  # CSS Explorer toolset
 from . import mariadb  # MariaDB toolset
 from . import reverse_engineering  # Reverse Engineering toolset
+from . import math  # Math toolset
 __all__ = [
     'workspace',
     'web', 
@@ -26,5 +27,6 @@ __all__ = [
     'xml_explorer',
     'css_explorer',
     'mariadb',
-    "reverse_engineering"
+    'reverse_engineering',
+    'math'
 ]

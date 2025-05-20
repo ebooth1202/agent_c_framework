@@ -16,6 +16,7 @@ from .dynamics import DynamicsTools
 from .markdown_to_html_report import MarkdownToHtmlReportTools
 from .css_explorer import CssExplorerTools
 from .mariadb import MariaDBTools
+from .math import MathTools
 
 __all__ = [
     # Workspace tools
@@ -53,5 +54,6 @@ __all__ = [
     'ThinkTools',
     'MarkdownToHtmlReportTools',
     'CssExplorerTools',
-    'MariaDBTools'
+    'MariaDBTools',
+    'MathTools'
 ]
