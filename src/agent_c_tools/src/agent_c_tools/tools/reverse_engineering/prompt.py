@@ -12,6 +12,6 @@ class RevEngSection(PromptSection):
                     "  - This tool will provide extremely detailed analysis of the code files as well as reverse engineer requirements for each file.\n"
                     "- **query_analysis**: Make a request of an expert on the analysis of the codebase in a given workspace. \n"
                     "  - The expert will be able to answer questions about the codebase and/or the analysis done on it.\n"
-                    "  - The expert will need the ouput of `analyze_source` to be in the workspace.\n")
-        super().__init__(template=TEMPLATE, required=True, name="Workspaces", render_section_header=True, **data)
+                    "  - The expert will need the output of `analyze_source` to be in the workspace.\n")
+        super().__init__(template=TEMPLATE, required=True, name="Reverse Engineering", render_section_header=True, **data)
 

@@ -78,7 +78,7 @@ class ReverseEngineeringTools(PersonaOneshotBase):
         ws = self.workspace_tool.find_workspace_by_name(workspace)
         persona = persona_data.replace('[workspace]', workspace).replace('[workspace_tree]', await ws.tree(7,3))
 
-        return
+        return await self.persona_oneshot(query, persona, custom=True)
 
 
     async def _pass_one(self, workspace, files: list[str], batch_size: int = 2) -> list[str]:

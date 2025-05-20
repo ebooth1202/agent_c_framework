@@ -1,12 +1,16 @@
+import glob
 import os
 import threading
 from datetime import datetime
 from typing import Any, Dict, List, Optional, cast
 
-from agent_c import ToolChest, DynamicPersonaSection, PromptBuilder, ClaudeChatAgent
 from agent_c.toolsets.tool_set import Toolset
+from agent_c.toolsets.tool_chest import ToolChest
+from agent_c.agents.claude import  ClaudeChatAgent
 from agent_c_tools.tools.think.prompt import ThinkSection
+from agent_c.prompting.prompt_builder import PromptBuilder
 from agent_c_tools.tools.workspace.tool import WorkspaceTools
+from agent_c.prompting.basic_sections.persona import DynamicPersonaSection
 
 
 class PersonaOneshotBase(Toolset):
@@ -20,9 +24,10 @@ class PersonaOneshotBase(Toolset):
             kwargs['name'] = 'persona_oneshot'
         super().__init__( **kwargs)
         self._model_name = kwargs.get('persona_oneshot_model_name', 'claude-3-7-sonnet-latest')
-        tool_classes = kwargs.get("persona_oneshot_tool_classes", None)
-        essential_toolsets = kwargs.get("persona_oneshot_essential_toolsets", None)
+        tool_classes = kwargs.get("persona_oneshot_tool_classes", self.tool_chest.available_toolset_classes)
+        essential_toolsets = kwargs.get("persona_oneshot_essential_toolsets", self.tool_chest.essential_toolsets)
         opts: Dict[str, Any] = {'tool_cache': self.tool_cache}
+        self._personas_list: Optional[List[str]] = None
         if tool_classes is not None:
             opts['available_toolset_classes'] = tool_classes
 
@@ -39,7 +44,7 @@ class PersonaOneshotBase(Toolset):
 
         self.persona_cache: Dict[str, str] = {}
         self.workspace_tool: Optional[WorkspaceTools] = None
-
+        self.persona_dir: str = kwargs.get('persona_dir', 'personas')
 
 
 
@@ -64,14 +69,29 @@ class PersonaOneshotBase(Toolset):
         Raises:
             Exception: If the persona file cannot be loaded.
         """
-        persona_path = os.path.join('personas', f"{persona_name}.md")
-
-        # If persona file exists, read it
+        persona_path = os.path.join(self.persona_dir, f"{persona_name}.md")
         if os.path.exists(persona_path):
             with open(persona_path, 'r') as file:
                 return file.read()
 
         raise FileNotFoundError()
+
+    @property
+    def personas_list(self) -> List[str]:
+        """
+        Get a list of available personas.
+
+        Returns:
+            List[str]: List of persona names.
+        """
+        if self._personas_list is None:
+            self._personas_list = self._load_personas_list()
+
+        return self._personas_list
+
+    def _load_personas_list(self) -> List[str]:
+       return [os.path.relpath(file_path, self.persona_dir).removesuffix ('.md')
+               for file_path in glob.glob(os.path.join(self.persona_dir, "**/*.md"), recursive=True)]
 
 
     def _fetch_persona(self, persona: str = None) -> str:

@@ -61,7 +61,7 @@ class ToolChest:
         
         # Get essential toolset names
         self.__essential_toolsets = kwargs.get('essential_toolsets', [])
-        
+
         # Initialize tracking for lazy initialization
         self.__toolsets_awaiting_init = {}
         self.__tool_opts = {}
@@ -74,6 +74,14 @@ class ToolChest:
         # Initialize tool_cache
         self.tool_cache = kwargs.get('tool_cache')
         # self.session_manager = kwargs.get('session_manager')
+
+    @property
+    def available_toolset_classes(self) -> List:
+        return self.__available_toolset_classes
+
+    @property
+    def essential_toolsets(self) -> List[str]:
+        return self.__essential_toolsets
 
     def _update_toolset_metadata(self):
         """
