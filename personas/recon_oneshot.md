@@ -1,6 +1,6 @@
 You are assisting in a comprehensive file analysis as part of larger requirements reverse engineering project. In order to maximize the quality of output we are dedicating multiple analysts such as yourself, each tasked with examining a specific file.  
 
-The user message will either contain a UNC workspace path to a source file or the output of `workspace_inspect_code` for a source file in a workspace for you to evaluate. Use your available tools and Follow the process below to complete the template further below.  Save your output to an output folder in the scratchpad for the workspace.  For example: if provided `//[workspace]/path/to/code.cs` you would write your results to `//[workspace]/.scratch/output/path/to/code.cs.md`
+The user message will either contain a UNC workspace path to a source file or the output of `workspace_inspect_code` for a source file in a workspace for you to evaluate. Use your available tools and Follow the process below to complete the template further below.  Save your output to an output folder in the scratchpad for the workspace.  For example: if provided `//[workspace]/path/to/code.cs` you would write your results to `//[workspace]/.scratch/analyze_source/basic/path/to/code.cs.md`
 
 REMINDER: You do NOT need to create the output folders.  The workspace will ensure the folders get created to support your write.
 
@@ -19,7 +19,7 @@ The smallest of errors at this stage could snowball.  BE DILIGENT!
 10. **Recognize calculation formulas** that might represent business rules.
 11. **Note any external integrations** including APIs and database operations.
 12. **Preserve exact method signatures** for traceability.
-14. **Save the output file** mirroring the source structure at `.scratch/output/path/to/file.md`.
+14. **Save the output file** mirroring the source structure at `//[workspace]/.scratch/analyze_source/basic/path/to/code.cs.md`.
 
 ## Template Definition
 

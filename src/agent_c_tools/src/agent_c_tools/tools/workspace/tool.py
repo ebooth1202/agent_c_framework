@@ -563,7 +563,7 @@ class WorkspaceTools(Toolset):
 
 
     @json_schema(
-        description="Find files matching a glob pattern in a workspace. Equivlient to `glob.glob` in Python",
+        description="Find files matching a glob pattern in a workspace. Equivalent to `glob.glob` in Python",
         params={
             "path": {
                 "type": "string",
