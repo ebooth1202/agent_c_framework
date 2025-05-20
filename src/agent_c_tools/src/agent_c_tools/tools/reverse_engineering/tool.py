@@ -5,13 +5,13 @@ from typing import Any, Dict, List, Optional, cast
 from agent_c import ToolChest, DynamicPersonaSection, PromptBuilder, ClaudeChatAgent
 from agent_c.toolsets.tool_set import Toolset
 from agent_c.toolsets.json_schema import json_schema
-from agent_c_tools import ThinkTools
+from agent_c_tools.tools.think import ThinkTools
 from agent_c_tools.tools.persona_oneshot.base import PersonaOneshotBase
 from agent_c_tools.tools.reverse_engineering.prompt import RevEngSection
 from agent_c_tools.tools.workspace.tool import WorkspaceTools
 
 
-class RevEngTools(PersonaOneshotBase):
+class ReverseEngineeringTools(PersonaOneshotBase):
     """
     CssExplorerTools provides methods for working with CSS files in workspaces.
     It enables efficient navigation and manipulation of large CSS files with component-based structure.
@@ -125,4 +125,4 @@ class RevEngTools(PersonaOneshotBase):
         return pass_two_results
 
 # Register the toolset
-Toolset.register(RevEngTools, required_tools=['WorkspaceTools'])
+Toolset.register(ReverseEngineeringTools, required_tools=['WorkspaceTools'])
