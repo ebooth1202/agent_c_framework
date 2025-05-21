@@ -14,7 +14,12 @@ class HtmlTemplateManager:
         """Get the HTML template for the markdown viewer."""
         try:
             # If no workspace template found, try local file system
-            local_template_path = Path(__file__).parent / "markdown-viewer-template.html"
+            # Try the updated template first
+            local_template_path = Path(__file__).parent / "markdown-viewer-template-updated.html"
+            
+            # If updated template doesn't exist, fall back to the original template
+            if not local_template_path.exists():
+                local_template_path = Path(__file__).parent / "markdown-viewer-template.html"
 
             # Check if the template file exists
             if not local_template_path.exists():

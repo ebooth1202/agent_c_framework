@@ -107,14 +107,34 @@ class SessionService:
             # Extract agent_c_session_id
             agent_c_session_id = session_data.get("agent_c_session_id", "")
             
+
             # Update Redis session with agent_internal_id
             await self.session_repository.update_session(
                 str(session.id),
                 SessionUpdate(agent_internal_id=agent_c_session_id)
+
+            # Transform into our response model
+            return SessionDetail(
+                id=ui_session_id,
+                model_id=session_data.get("model_name", ""),
+                persona_id=session_data.get("persona_name", "default"),
+                name=session_data.get("name", f"Session {ui_session_id}"),  # Required field with default
+                is_active=True,  # Set default active status
+                created_at=session_data.get("created_at", datetime.now()),
+                last_activity=session_data.get("last_activity"),
+                agent_internal_id=agent_c_session_id,
+                tools=session_data.get("additional_tools", []),
+                tool_ids=session_data.get("additional_tools", []),  # Duplicate tools for tool_ids field
+                temperature=session_data.get("temperature"),
+                reasoning_effort=session_data.get("reasoning_effort"),
+                budget_tokens=session_data.get("budget_tokens"),
+                max_tokens=session_data.get("max_tokens"),
+                custom_prompt=session_data.get("custom_prompt"),
+
             )
             
             # Return the session details
-            return await self.session_repository.get_session(str(session.id))
+            #return await self.session_repository.get_session(str(session.id))
             
         except Exception as e:
             self.logger.error("create_session_failed", error=str(e))
@@ -130,7 +150,38 @@ class SessionService:
         Returns:
             SessionListResponse: Paginated list of sessions
         """
-        return await self.session_repository.list_sessions(limit, offset)
+
+        #return await self.session_repository.list_sessions(limit, offset)
+
+        # Get all sessions from the agent manager
+        sessions = self.agent_manager.ui_sessions
+        
+        # Convert to list for pagination
+        session_list = [
+            SessionSummary(
+                id=session_id,
+                model_id=session_data.get("model_name", ""),
+                persona_id=session_data.get("persona_name", "default"),
+                name=session_data.get("name", f"Session {session_id}"),  # Required field with default
+                is_active=session_data.get("is_active", True),  # Required field with default
+                created_at=session_data.get("created_at", datetime.now()),
+                last_activity=session_data.get("last_activity"),
+            )
+            for session_id, session_data in sessions.items()
+        ]
+        
+        # Apply pagination
+        total = len(session_list)
+        paginated_sessions = session_list[offset : offset + limit]
+        
+        # Return paginated response
+        return SessionListResponse(
+            items=paginated_sessions,
+            total=total,
+            limit=limit,
+            offset=offset,
+        )
+
 
     async def get_session(self, session_id: str) -> Optional[SessionDetail]:
         """Get detailed information about a specific session
@@ -141,7 +192,39 @@ class SessionService:
         Returns:
             SessionDetail: Session details if found, None otherwise
         """
-        return await self.session_repository.get_session(session_id)
+
+        #return await self.session_repository.get_session(session_id)
+
+        # Get session data using the manager's method
+        session_data = self.agent_manager.get_session_data(session_id)
+        if not session_data:
+            return None
+            
+        # Extract agent_c_session_id
+        agent_c_session_id = session_data.get("agent_c_session_id", "")
+        
+        # Get tools - use the tools that were provided at creation time
+        tools = session_data.get("additional_tools", [])
+        
+        # Construct and return the SessionDetail response
+        return SessionDetail(
+            id=session_id,
+            model_id=session_data.get("model_name", ""),
+            persona_id=session_data.get("persona_name", "default"),
+            name=session_data.get("name", f"Session {session_id}"),  # Required field with default
+            is_active=session_data.get("is_active", True),  # Required field with default
+            created_at=session_data.get("created_at", datetime.now()),
+            last_activity=session_data.get("last_activity"),
+            agent_internal_id=agent_c_session_id,
+            tools=tools,
+            tool_ids=tools,  # Duplicate tools for tool_ids field
+            temperature=session_data.get("temperature"),
+            reasoning_effort=session_data.get("reasoning_effort"),
+            budget_tokens=session_data.get("budget_tokens"),
+            max_tokens=session_data.get("max_tokens"),
+            custom_prompt=session_data.get("custom_prompt"),
+        )
+
 
     async def update_session(self, session_id: str, update_data: SessionUpdate) -> SessionDetail:
         """Update session properties

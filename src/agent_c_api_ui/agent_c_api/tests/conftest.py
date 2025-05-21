@@ -1,13 +1,14 @@
 # tests/conftest.py
 
 import pytest
+import pytest_asyncio
 import asyncio
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi.testclient import TestClient
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.inmemory import InMemoryBackend
-
+from fastapi_cache.decorator import cache as cache_decorator
 from agent_c_api.main import app
 
 
@@ -15,38 +16,27 @@ from agent_c_api.main import app
 # Global Setup and Teardown Fixtures
 #################################################
 
-@pytest.fixture(autouse=True, scope="function")
+@pytest_asyncio.fixture(autouse=True, scope="function")
 async def setup_test_cache():
     """
-    Fixture to properly initialize FastAPICache for testing and make the cache decorator a no-op.
+    Fixture to properly initialize FastAPICache for testing.
     
     This fixture:
-    1. Initializes the FastAPICache system (required by the framework)
-    2. Makes the @cache decorator function as a pass-through (no actual caching)
-    3. Cleans up after each test
+    1. Initializes FastAPICache with an in-memory backend
+    2. Ensures each test starts with a clean cache state
     """
-    # Save the original cache implementation
-    original_cache = FastAPICache.cache
-    
-    # Initialize the cache system with a test backend
-    # This is necessary to avoid "You must call init first!" errors
-    FastAPICache.init(InMemoryBackend(), prefix="agent_c_api_cache")
-    
-    # Replace the cache decorator with a pass-through version
-    def pass_through_decorator(*args, **kwargs):
-        def inner(func):
-            # Just return the original function unchanged
-            return func
-        return inner
-    
-    # Apply our no-op version
-    FastAPICache.cache = pass_through_decorator
+    # Initialize cache if not already initialized
+    # The try/except handles cases where it might already be initialized
+    try:
+        FastAPICache.init(InMemoryBackend(), prefix="test_cache")
+    except ValueError:
+        # Already initialized, just clear it
+        await FastAPICache.clear()
     
     # Let the test run
     yield
     
-    # Clean up: restore the original cache implementation and clear the cache
-    FastAPICache.cache = original_cache
+    # Clear the cache after the test
     await FastAPICache.clear()
 
 

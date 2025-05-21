@@ -270,8 +270,15 @@ class AgentBridge:
         self.additional_toolsets = [t for t in new_tools if t not in self.essential_toolsets]
         self.selected_tools = all_tools
 
+        # Ensure you grab all the necessary options for the tool chest
+        tool_opts = {
+            'tool_cache': self.tool_cache,
+            'session_manager': self.session_manager,
+            'workspaces': self.workspaces,
+            'streaming_callback': self.consolidated_streaming_callback
+        }
         # Reinitialize just the tool chest
-        await self.tool_chest.set_active_toolsets(self.additional_toolsets)
+        await self.tool_chest.set_active_toolsets(self.additional_toolsets, tool_opts=tool_opts)
         self.agent.prompt_builder.tool_sections = self.tool_chest.active_tool_sections
 
         self.logger.info(f"Tools updated successfully. Current Active tools: {list(self.tool_chest.active_tools.keys())}")
@@ -312,22 +319,26 @@ class AgentBridge:
         """
         self.logger.info(f"Requesting initialization of these tools: {self.selected_tools}")
 
-        self.tool_chest = ToolChest(essential_toolsets=self.essential_toolsets)
+        # self.tool_cache = ToolCache(cache_dir=".tool_cache") # self.tool_cache is already initialized in __init__
 
         try:
-            self.tool_cache = ToolCache(cache_dir=".tool_cache")
             tool_opts = {
                 'tool_cache': self.tool_cache,
                 'session_manager': self.session_manager,
                 'workspaces': self.workspaces,
                 'streaming_callback': self.consolidated_streaming_callback
             }
+
+            # Initialize the tool chest with essential tools first
+            self.tool_chest = ToolChest(essential_toolsets=self.essential_toolsets, **tool_opts)
+
+            # Initialize the tool chest essential tools
             await self.tool_chest.init_tools(tool_opts)
             self.logger.info(
                 f"Agent {self.agent_name} successfully initialized essential tools: {list(self.tool_chest.active_tools.keys())}")
 
             if len(self.additional_toolsets):
-                await self.tool_chest.set_active_toolsets(self.additional_toolsets)
+                await self.tool_chest.set_active_toolsets(self.additional_toolsets, tool_opts=tool_opts)
                 self.logger.info(
                     f"Agent {self.agent_name} successfully initialized additional tools: {list(self.tool_chest.active_tools.keys())}")
 

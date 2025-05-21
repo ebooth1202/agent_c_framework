@@ -14,7 +14,7 @@ const DEFAULT_TIMEOUT = 30000;
  * Configuration for API requests
  */
 export const API_CONFIG = {
-  baseUrl: import.meta.env.VITE_API_URL || '/api/v1',
+  baseUrl: import.meta.env.VITE_API_URL || '/api/v2', // Updated to v2
   timeout: DEFAULT_TIMEOUT,
   credentials: 'include',
   headers: {
@@ -23,11 +23,35 @@ export const API_CONFIG = {
 };
 
 /**
+ * Extract standardized data from v2 API responses
+ * @param {Object} response - The API response object
+ * @returns {Object} Extracted data with data, meta, and errors fields
+ */
+export function extractResponseData(response) {
+  // Handle v2 API standard response format
+  if (response && typeof response === 'object') {
+    return {
+      data: response.data !== undefined ? response.data : response,
+      meta: response.meta || {},
+      errors: response.errors || []
+    };
+  }
+  
+  // Return the response itself for endpoints that don't follow the standard format
+  return { data: response, meta: {}, errors: [] };
+}
+
+/**
  * Parse the response based on content type
  * @param {Response} response - Fetch Response object
  * @returns {Promise<any>} Parsed response data
  */
 async function parseResponse(response) {
+  // Handle 204 No Content responses
+  if (response.status === 204) {
+    return { status: 204 }; // Return a minimal object with status
+  }
+  
   const contentType = response.headers.get('content-type') || '';
   
   if (contentType.includes('application/json')) {
@@ -57,6 +81,7 @@ export function processApiError(error, fallbackMessage = 'An unexpected error oc
   let errorMessage = fallbackMessage;
   let statusCode = null;
   let responseData = null;
+  let errorDetails = null;
   
   // Handle fetch Response objects
   if (error instanceof Response) {
@@ -76,10 +101,24 @@ export function processApiError(error, fallbackMessage = 'An unexpected error oc
     }
   }
   
+  // Extract v2 API specific error format
+  if (responseData && responseData.detail) {
+    const detail = responseData.detail;
+    if (detail.message) {
+      errorMessage = detail.message;
+    }
+    errorDetails = {
+      error: detail.error,
+      error_code: detail.error_code,
+      params: detail.params
+    };
+  }
+  
   // Create enhanced error object
   const enhancedError = new Error(errorMessage);
   enhancedError.statusCode = statusCode;
   enhancedError.responseData = responseData;
+  enhancedError.errorDetails = errorDetails; // Add v2 API specific error details
   enhancedError.originalError = error;
   enhancedError.isProcessed = true;
   
@@ -128,7 +167,14 @@ function createRequestOptions(options = {}) {
  * @throws {Error} Enhanced error with context
  */
 export async function apiRequest(endpoint, options = {}) {
-  const url = `${API_CONFIG.baseUrl}${endpoint}`;
+  // Make sure endpoint starts with a slash if it's not an absolute URL
+  const normalizedEndpoint = endpoint.startsWith('/') || endpoint.startsWith('http') ? endpoint : `/${endpoint}`;
+  
+  // Ensure we have a valid URL by combining with base URL
+  const url = normalizedEndpoint.startsWith('http') 
+    ? normalizedEndpoint 
+    : `${API_CONFIG.baseUrl}${normalizedEndpoint}`;
+  
   const requestOptions = createRequestOptions(options);
   
   try {
@@ -149,7 +195,7 @@ export async function apiRequest(endpoint, options = {}) {
       
       // Create detailed error with parsed error information
       const error = new Error(
-        errorData?.message || `Request failed with status ${response.status}`
+        errorData?.detail?.message || errorData?.message || `Request failed with status ${response.status}`
       );
       error.statusCode = response.status;
       error.responseData = errorData;
@@ -164,15 +210,36 @@ export async function apiRequest(endpoint, options = {}) {
 }
 
 /**
- * Shorthand for GET requests
+ * Shorthand for GET requests with pagination support
  * @param {string} endpoint - API endpoint
  * @param {object} options - Request options
  * @returns {Promise<any>} Response data
  */
 export function get(endpoint, options = {}) {
+  // Extract pagination parameters if present
+  const { params, ...restOptions } = options;
+  
+  // If pagination parameters are provided, add them to the query string
+  if (params) {
+    const queryParams = new URLSearchParams();
+    
+    // Add pagination parameters
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        queryParams.append(key, value);
+      }
+    });
+    
+    // Append query string to endpoint if there are parameters
+    const queryString = queryParams.toString();
+    if (queryString) {
+      endpoint = `${endpoint}${endpoint.includes('?') ? '&' : '?'}${queryString}`;
+    }
+  }
+  
   return apiRequest(endpoint, { 
     method: 'GET', 
-    ...options 
+    ...restOptions 
   });
 }
 
@@ -201,6 +268,21 @@ export function post(endpoint, data, options = {}) {
 export function put(endpoint, data, options = {}) {
   return apiRequest(endpoint, {
     method: 'PUT',
+    body: JSON.stringify(data),
+    ...options,
+  });
+}
+
+/**
+ * Shorthand for PATCH requests
+ * @param {string} endpoint - API endpoint
+ * @param {any} data - Request body data
+ * @param {object} options - Additional request options
+ * @returns {Promise<any>} Response data
+ */
+export function patch(endpoint, data, options = {}) {
+  return apiRequest(endpoint, {
+    method: 'PATCH',
     body: JSON.stringify(data),
     ...options,
   });
@@ -279,11 +361,13 @@ export default {
   get,
   post,
   put,
+  patch,
   delete: del,
   uploadFile,
   downloadFile,
   apiRequest,
   processApiError,
   showErrorToast,
+  extractResponseData,
   API_CONFIG,
 };

@@ -6,13 +6,12 @@ import datetime
 import pandas as pd
 
 from bs4 import BeautifulSoup
-from typing import Optional, Dict, Any
 
 from agent_c.toolsets import json_schema, Toolset
 from agent_c_tools.tools.dynamics.prompt import DynamicsCRMPrompt
 from agent_c_tools.tools.dynamics.util.dynamics_api import DynamicsAPI, InvalidODataQueryError
 # Using workspace tool directly via UNC paths now instead of casting
-from agent_c_tools.tools.dynamics.util.dataframe_in_memory import create_excel_in_memory
+from agent_c_tools.helpers.dataframe_in_memory import create_excel_in_memory
 
 
 class DynamicsTools(Toolset):

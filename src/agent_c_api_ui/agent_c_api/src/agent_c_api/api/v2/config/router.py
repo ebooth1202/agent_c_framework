@@ -78,7 +78,17 @@ async def list_models(
         models = response.json()["models"]
         ```
     """
-    return await service.get_models()
+    try:
+        return await service.get_models()
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, 
+            detail={
+                "error": "Failed to retrieve models",
+                "error_code": "MODELS_RETRIEVAL_ERROR",
+                "message": str(e)
+            }
+        )
 
 @router.get("/models/{model_id}", 
            response_model=ModelInfo,
@@ -152,7 +162,17 @@ async def list_personas(
         personas = response.json()["personas"]
         ```
     """
-    return await service.get_personas()
+    try:
+        return await service.get_personas()
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, 
+            detail={
+                "error": "Failed to retrieve personas",
+                "error_code": "PERSONAS_RETRIEVAL_ERROR",
+                "message": str(e)
+            }
+        )
 
 @router.get("/personas/{persona_id}", 
            response_model=PersonaInfo,
@@ -238,7 +258,17 @@ async def list_tools(
     """
     # Note: The actual implementation would use the category parameter to filter results
     # This is a placeholder for demonstration purposes
-    return await service.get_tools()
+    try:
+        return await service.get_tools()
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, 
+            detail={
+                "error": "Failed to retrieve tools",
+                "error_code": "TOOLS_RETRIEVAL_ERROR",
+                "message": str(e)
+            }
+        )
 
 @router.get("/tools/{tool_id}", 
            response_model=ToolInfo,
