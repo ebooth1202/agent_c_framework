@@ -546,7 +546,7 @@ class ToolChest:
                 logging.warning(f"Requested toolset '{name}' not found in available toolsets")
         
         if not valid_toolsets:
-            return {"schemas": [], "sections": []}
+            return {"tools": [], "sections": []}
             
         # Collect OpenAI-format schemas from the specified toolsets
         openai_schemas = []

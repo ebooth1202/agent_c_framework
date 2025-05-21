@@ -1,17 +1,20 @@
-import glob
 import os
+import glob
+import json
 import threading
+
 from datetime import datetime
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Dict, List, Optional
 
 from agent_c.toolsets.tool_set import Toolset
-from agent_c.toolsets.tool_chest import ToolChest
-from agent_c.agents.claude import  ClaudeChatAgent
+from agent_c.models.persona_file import PersonaFile
 from agent_c_tools.tools.think.prompt import ThinkSection
 from agent_c.prompting.prompt_builder import PromptBuilder
 from agent_c_tools.tools.workspace.tool import WorkspaceTools
+from agent_c.agents.gpt import BaseAgent, GPTChatAgent, AzureGPTChatAgent
+from agent_c.agents.claude import ClaudeChatAgent, ClaudeBedrockChatAgent
 from agent_c.prompting.basic_sections.persona import DynamicPersonaSection
-from agent_c.models.persona_file import PersonaFile
+
 
 
 class PersonaOneshotBase(Toolset):
@@ -19,31 +22,62 @@ class PersonaOneshotBase(Toolset):
     CssExplorerTools provides methods for working with CSS files in workspaces.
     It enables efficient navigation and manipulation of large CSS files with component-based structure.
     """
+    __vendor_agent_map = {
+        "azure_openai": AzureGPTChatAgent,
+        "openai": GPTChatAgent,
+        "claude": ClaudeChatAgent,
+        "claude_aws": ClaudeBedrockChatAgent
+    }
 
     def __init__(self, **kwargs: Any):
         if not 'name' in kwargs:
             kwargs['name'] = 'persona_oneshot'
         super().__init__( **kwargs)
+        self.model_configs: Dict[str, Any] = self._load_model_config(kwargs.get('model_config_path'))
+        self.agent_cache: Dict[str, BaseAgent] = {}
         self._model_name = kwargs.get('persona_oneshot_model_name', 'claude-3-7-sonnet-latest')
-        tool_classes = kwargs.get("persona_oneshot_tool_classes", self.tool_chest.available_toolset_classes)
-        essential_toolsets = kwargs.get("persona_oneshot_essential_toolsets", self.tool_chest.essential_toolsets)
-        opts: Dict[str, Any] = {'tool_cache': self.tool_cache}
         self._personas_list: Optional[List[str]] = None
-        if tool_classes is not None:
-            opts['available_toolset_classes'] = tool_classes
-
-        if essential_toolsets is not None:
-            opts['essential_toolsets'] = essential_toolsets
 
         self.client_wants_cancel: threading.Event = threading.Event()
-        sections = [ThinkSection(), DynamicPersonaSection()]
-        prompt_builder = PromptBuilder(sections=sections)
-        self.agent = ClaudeChatAgent(model_name=self._model_name, tool_chest=self.tool_chest,
-                                     prompt_builder=prompt_builder)
-
+        self.agent_sections = [ThinkSection(), DynamicPersonaSection()]
         self.persona_cache: Dict[str, PersonaFile] = {}
         self.workspace_tool: Optional[WorkspaceTools] = None
         self.persona_dir: str = kwargs.get('persona_dir', 'personas')
+
+    def _persona_agent(self, persona: PersonaFile):
+        if persona.name in self.agent_cache:
+            return self.agent_cache[persona.model_id]
+        else:
+            self.agent_cache[persona.name] = self._agent_for_persona(persona)
+            return self.agent_cache[persona.name]
+
+    def _agent_for_persona(self, persona: PersonaFile) -> BaseAgent:
+        model_config = self.model_configs[persona.model_id]
+        agent_cls = self.__vendor_agent_map[model_config["vendor"]]
+
+        auth_info = persona.agent_params.auth.model_dump() if persona.agent_params.auth is not None else  {}
+        client = agent_cls.client(**auth_info)
+        return agent_cls(
+            model_name=model_config["id"],
+            client = client,
+            prompt_builder=PromptBuilder(sections=self.agent_sections),
+        )
+
+
+    @staticmethod
+    def _load_model_config(config_path: str) -> Dict[str, Any]:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        result: Dict[str, Any] = {}
+        for vendor_info in data["vendors"]:
+            vendor_name = vendor_info["vendor"]
+            for model in vendor_info["models"]:
+                model_with_vendor = model.copy()
+                model_with_vendor["vendor"] = vendor_name
+                result[model["id"]] = model_with_vendor
+
+        return result
 
     def _load_persona(self, persona_name: str = None) -> PersonaFile:
         """
@@ -69,7 +103,7 @@ class PersonaOneshotBase(Toolset):
         if persona_path.endswith('yaml'):
             persona = PersonaFile.from_yaml(file_contents)
         else:
-            persona = PersonaFile(persona=file_contents, model_id=self._model_name)
+            persona = PersonaFile(persona=file_contents, model_id=self._model_name, uid=str(persona_path))
 
         return persona
 
@@ -106,29 +140,27 @@ class PersonaOneshotBase(Toolset):
 
         return persona_prompt
 
-    async def __chat_params(self, persona: PersonaFile) -> Dict[str, Any]:
+    async def __chat_params(self, persona: PersonaFile, agent: BaseAgent) -> Dict[str, Any]:
         if len(persona.tools):
             self.tool_chest.initialize_toolsets(persona.tools)
 
 
         prompt_metadata = await self.__build_prompt_metadata(persona)
+        agent_params = persona.agent_params.model_dump(exclude_none=True)
 
         chat_params = {
             "prompt_metadata": prompt_metadata,
             "output_format": 'raw',
             "client_wants_cancel": self.client_wants_cancel,
-            "budget_tokens": 10000,
-            "max_tokens": 120000,
             "tool_chest": self.tool_chest,
         }
 
         if len(persona.tools):
-            # TODO: openAI
-            idata = self.tool_chest.get_inference_data(persona.tools, "claude")
-            chat_params['tools'] = idata['schemas']
+            idata = self.tool_chest.get_inference_data(persona.tools, agent.tool_format)
+            chat_params['tools'] = idata['tools']
             chat_params['sections'] = idata['sections']
 
-        return chat_params
+        return chat_params | agent_params
 
     async def __build_prompt_metadata(self, persona: PersonaFile) -> Dict[str, Any]:
         return {
@@ -138,13 +170,15 @@ class PersonaOneshotBase(Toolset):
         }
 
     async def persona_oneshot(self, user_message: str, persona: PersonaFile) -> str:
-        chat_params = await self.__chat_params(persona)
-        result: str = await self.agent.one_shot(user_message=user_message, **chat_params)
+        agent = self._persona_agent(persona)
+        chat_params = await self.__chat_params(persona, agent)
+        result: str = await agent.one_shot(user_message=user_message, **chat_params)
         return result
 
     async def parallel_persona_oneshots(self, user_messages: List[str], persona: PersonaFile) -> List[str]:
-        chat_params = await self.__chat_params(persona)
-        result: List[str] = await self.agent.parallel_one_shots(inputs=user_messages, **chat_params)
+        agent = self._persona_agent(persona)
+        chat_params = await self.__chat_params(persona, agent)
+        result: List[str] = await agent.parallel_one_shots(inputs=user_messages, **chat_params)
         return result
 
 

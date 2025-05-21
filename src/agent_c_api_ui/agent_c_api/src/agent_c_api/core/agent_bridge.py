@@ -8,7 +8,7 @@ from typing import Union, List, Dict, Any, AsyncGenerator, Optional
 from datetime import datetime, timezone
 
 from agent_c import BaseAgent
-from agent_c_api.config.env_config import settings
+from agent_c_api.config.env_config import settings, Settings
 
 from agent_c.models.input.image_input import ImageInput
 from agent_c.models.input.audio_input import AudioInput
@@ -326,7 +326,8 @@ class AgentBridge:
                 'tool_cache': self.tool_cache,
                 'session_manager': self.session_manager,
                 'workspaces': self.workspaces,
-                'streaming_callback': self.consolidated_streaming_callback
+                'streaming_callback': self.consolidated_streaming_callback,
+                'model_config_path': Settings.MODEL_CONFIG_PATH
             }
 
             # Initialize the tool chest with essential tools first

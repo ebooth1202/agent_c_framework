@@ -2,11 +2,12 @@ import asyncio
 import copy
 import json
 import logging
+import os
 import threading
 from enum import Enum, auto
 
 from typing import Any, List, Union, Dict, Tuple
-from anthropic import AsyncAnthropic, APITimeoutError, Anthropic, RateLimitError
+from anthropic import AsyncAnthropic, APITimeoutError, Anthropic, RateLimitError, AsyncAnthropicBedrock
 from anthropic.types import OverloadedError
 
 from agent_c.agents.base import BaseAgent
@@ -57,9 +58,10 @@ class ClaudeChatAgent(BaseAgent):
         """
         kwargs['token_counter'] = kwargs.get('token_counter', ClaudeChatAgent.ClaudeTokenCounter())
         super().__init__(**kwargs)
-        self.client: AsyncAnthropic = kwargs.get("client", AsyncAnthropic())
+        self.client: Union[AsyncAnthropic,AsyncAnthropicBedrock] = kwargs.get("client", self.__class__.client())
         self.supports_multimodal = True
         self.can_use_tools = True
+        self.allow_betas = kwargs.get("allow_betas", True)
 
         # Initialize logger
         logging_manager = LoggingManager(__name__)
@@ -70,6 +72,13 @@ class ClaudeChatAgent(BaseAgent):
         self.max_tokens = kwargs.get("max_tokens", self.CLAUDE_MAX_TOKENS)
         self.budget_tokens = kwargs.get("budget_tokens", 0)
 
+    @classmethod
+    def client(cls, **opts):
+        return AsyncAnthropic(**opts)
+
+    @property
+    def tool_format(self) -> str:
+        return "claude"
 
     async def __interaction_setup(self, **kwargs) -> dict[str, Any]:
         model_name: str = kwargs.get("model_name", self.model_name)
@@ -100,7 +109,11 @@ class ClaudeChatAgent(BaseAgent):
             if max_searches > 0:
                 functions.append({"type": "web_search_20250305", "name": "web_search", "max_uses": max_searches})
 
-            completion_opts['betas'] = ["token-efficient-tools-2025-02-19", "output-128k-2025-02-19"]
+            if self.allow_betas:
+                if max_tokens == self.CLAUDE_MAX_TOKENS:
+                    completion_opts['max_tokens'] = 128000
+
+                completion_opts['betas'] = ["token-efficient-tools-2025-02-19", "output-128k-2025-02-19"]
 
 
         budget_tokens: int = kwargs.get("budget_tokens", self.budget_tokens)
@@ -601,3 +614,12 @@ class ClaudeChatAgent(BaseAgent):
             # does not like you passing in prior messages with a role of tool
             tool_response_content = "[Tool Response] " + content
             await self._save_message_to_session(session_manager, tool_response_content, 'assistant')
+
+class ClaudeBedrockChatAgent(ClaudeChatAgent):
+    def __init__(self, **kwargs) -> None:
+        kwargs['allow_betas'] = False
+        super().__init__(**kwargs)
+
+    @classmethod
+    def client(cls, **opts):
+        return AsyncAnthropicBedrock(**opts)

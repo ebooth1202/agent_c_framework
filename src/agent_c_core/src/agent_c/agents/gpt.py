@@ -85,6 +85,17 @@ class GPTChatAgent(BaseAgent):
         if self.model_name in self.__class__.REASONING_MODELS:
             self.root_message_role = "developer"
 
+    @classmethod
+    def client(cls, **opts):
+        return AsyncOpenAI(**opts)
+
+    @property
+    def tool_format(self) -> str:
+        """
+        Returns the tool format for the agent.
+        """
+        return "openai"
+
     def _generate_multi_modal_user_message(self, user_input: str, images: List[ImageInput],
                                            audio_clips: List[AudioInput], files: List[FileInput] = None) -> Union[
         List[dict[str, Any]], None]:
@@ -496,3 +507,12 @@ class GPTChatAgent(BaseAgent):
 
     async def __tool_calls_to_messages(self, tool_calls, tool_chest):
         return await tool_chest.call_tools(tool_calls, format_type="openai")
+
+class AzureGPTChatAgent(GPTChatAgent):
+    """
+    Azure-specific implementation of the GPTChatAgent.
+    Inherits from GPTChatAgent and overrides the client initialization.
+    """
+    @classmethod
+    def client(cls, **opts):
+        return AsyncAzureOpenAI(**opts)

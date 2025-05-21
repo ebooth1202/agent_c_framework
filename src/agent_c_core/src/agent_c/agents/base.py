@@ -78,6 +78,14 @@ class BaseAgent:
 
         self.initialize_session_logger(**kwargs)
 
+    @classmethod
+    def client(cls, **opts):
+        raise NotImplementedError
+
+    @property
+    def tool_format(self) -> str:
+        raise NotImplementedError
+
     def initialize_session_logger(self, **kwargs):
         # For smart logging
         session_manager = kwargs.get("session_manager")
