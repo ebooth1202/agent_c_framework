@@ -109,9 +109,9 @@ class SessionService:
             
 
             # Update Redis session with agent_internal_id
-            await self.session_repository.update_session(
-                str(session.id),
-                SessionUpdate(agent_internal_id=agent_c_session_id)
+            # await self.session_repository.update_session(
+            #     str(session.id),
+            #     SessionUpdate(agent_internal_id=agent_c_session_id)
 
             # Transform into our response model
             return SessionDetail(
