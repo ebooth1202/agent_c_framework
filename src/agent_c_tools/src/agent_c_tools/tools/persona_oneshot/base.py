@@ -44,7 +44,7 @@ class PersonaOneshotBase(Toolset):
         self.workspace_tool: Optional[WorkspaceTools] = None
         self.persona_dir: str = kwargs.get('persona_dir', 'personas')
 
-    def _persona_agent(self, persona: PersonaFile):
+    def agent_for_persona(self, persona: PersonaFile):
         if persona.name in self.agent_cache:
             return self.agent_cache[persona.model_id]
         else:
@@ -57,12 +57,35 @@ class PersonaOneshotBase(Toolset):
 
         auth_info = persona.agent_params.auth.model_dump() if persona.agent_params.auth is not None else  {}
         client = agent_cls.client(**auth_info)
-        return agent_cls(
-            model_name=model_config["id"],
-            client = client,
-            prompt_builder=PromptBuilder(sections=self.agent_sections),
-        )
+        return agent_cls(model_name=model_config["id"], client=client,prompt_builder=PromptBuilder(sections=self.agent_sections))
 
+    async def __chat_params(self, persona: PersonaFile, agent: BaseAgent, session_id: Optional[str]) -> Dict[str, Any]:
+        tool_params = {}
+        prompt_metadata = await self.__build_prompt_metadata(persona, session_id)
+        chat_params = {"prompt_metadata": prompt_metadata, "output_format": 'raw',
+                       "client_wants_cancel": self.client_wants_cancel, "tool_chest": self.tool_chest}
+
+        if len(persona.tools):
+            self.tool_chest.initialize_toolsets(persona.tools)
+            tool_params = self.tool_chest.get_inference_data(persona.tools, agent.tool_format)
+
+        return chat_params | tool_params | persona.agent_params.model_dump(exclude_none=True)
+
+    @staticmethod
+    async def __build_prompt_metadata(persona: PersonaFile, session_id: Optional[str] = None) -> Dict[str, Any]:
+        return { "session_id": session_id, "persona_prompt": persona.persona, "timestamp": datetime.now().isoformat()}
+
+    async def persona_oneshot(self, user_message: str, persona: PersonaFile, session_id: Optional[str] = None) -> str:
+        agent = self.agent_for_persona(persona)
+        chat_params = await self.__chat_params(persona, agent, session_id)
+        result: str = await agent.one_shot(user_message=user_message, **chat_params)
+        return result
+
+    async def parallel_persona_oneshots(self, user_messages: List[str], persona: PersonaFile, session_id: Optional[str] = None) -> List[str]:
+        agent = self.agent_for_persona(persona)
+        chat_params = await self.__chat_params(persona, agent, session_id)
+        result: List[str] = await agent.parallel_one_shots(inputs=user_messages, **chat_params)
+        return result
 
     @staticmethod
     def _load_model_config(config_path: str) -> Dict[str, Any]:
@@ -121,12 +144,11 @@ class PersonaOneshotBase(Toolset):
         return self._personas_list
 
     def _load_personas_list(self) -> List[str]:
-       new_style = [os.path.relpath(file_path, self.persona_dir).removesuffix ('.yaml')
-                    for file_path in glob.glob(os.path.join(self.persona_dir, "**/*.yaml"), recursive=True)]
-       old_style = [os.path.relpath(file_path, self.persona_dir).removesuffix('.md')
-                    for file_path in glob.glob(os.path.join(self.persona_dir, "**/*.md"), recursive=True)]
-       return new_style + old_style
-
+        new_style = [os.path.relpath(file_path, self.persona_dir).removesuffix('.yaml')
+                     for file_path in glob.glob(os.path.join(self.persona_dir, "**/*.yaml"), recursive=True)]
+        old_style = [os.path.relpath(file_path, self.persona_dir).removesuffix('.md')
+                     for file_path in glob.glob(os.path.join(self.persona_dir, "**/*.md"), recursive=True)]
+        return new_style + old_style
 
     def _fetch_persona(self, persona: str = None) -> PersonaFile:
         if persona in self.persona_cache:
@@ -139,46 +161,4 @@ class PersonaOneshotBase(Toolset):
                 raise Exception(f"Persona {persona} not found.")
 
         return persona_prompt
-
-    async def __chat_params(self, persona: PersonaFile, agent: BaseAgent) -> Dict[str, Any]:
-        if len(persona.tools):
-            self.tool_chest.initialize_toolsets(persona.tools)
-
-
-        prompt_metadata = await self.__build_prompt_metadata(persona)
-        agent_params = persona.agent_params.model_dump(exclude_none=True)
-
-        chat_params = {
-            "prompt_metadata": prompt_metadata,
-            "output_format": 'raw',
-            "client_wants_cancel": self.client_wants_cancel,
-            "tool_chest": self.tool_chest,
-        }
-
-        if len(persona.tools):
-            idata = self.tool_chest.get_inference_data(persona.tools, agent.tool_format)
-            chat_params['tools'] = idata['tools']
-            chat_params['sections'] = idata['sections']
-
-        return chat_params | agent_params
-
-    async def __build_prompt_metadata(self, persona: PersonaFile) -> Dict[str, Any]:
-        return {
-            "session_id": "none",
-            "persona_prompt": persona.persona,
-            "timestamp": datetime.now().isoformat(),
-        }
-
-    async def persona_oneshot(self, user_message: str, persona: PersonaFile) -> str:
-        agent = self._persona_agent(persona)
-        chat_params = await self.__chat_params(persona, agent)
-        result: str = await agent.one_shot(user_message=user_message, **chat_params)
-        return result
-
-    async def parallel_persona_oneshots(self, user_messages: List[str], persona: PersonaFile) -> List[str]:
-        agent = self._persona_agent(persona)
-        chat_params = await self.__chat_params(persona, agent)
-        result: List[str] = await agent.parallel_one_shots(inputs=user_messages, **chat_params)
-        return result
-
 
