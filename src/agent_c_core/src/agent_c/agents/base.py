@@ -8,7 +8,7 @@ import uuid
 from asyncio import Semaphore
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Union, Optional, Callable, Awaitable
+from typing import Any, Dict, List, Union, Optional, Callable, Awaitable, Tuple
 
 from agent_c.chat import ChatSessionManager
 from agent_c.models import ChatEvent, ImageInput, MemoryMessage
@@ -156,24 +156,13 @@ class BaseAgent:
     async def _save_user_message_to_session(self, mgr: ChatSessionManager, user_message: str):
         return await self._save_message_to_session(mgr, user_message, "user")
 
-    async def _render_system_prompt(self, **kwargs) -> str:
-        """
-        Renders a system prompt for the agent.
-
-        Parameters
-        ----------
-        kwargs : Dict[str, Any]
-            A dictionary of options for the system prompt.
-
-        Returns
-        -------
-        str
-            The system prompt.
-        """
+    async def _render_contexts(self, **kwargs) -> Tuple[dict[str, Any], dict[str, Any]]:
+        tool_call_context = kwargs.get("tool_call_context", {})
+        prompt_context = kwargs.get("prompt_metadata", {})
         prompt_builder: Union[PromptBuilder, None] = kwargs.get("prompt_builder", self.prompt_builder)
+
         sys_prompt: str = "Warn the user there's no system prompt with each response."
         if prompt_builder is not None:
-            prompt_context = kwargs.get("prompt_metadata")
             prompt_context["agent"] = self
             prompt_context["tool_chest"] = kwargs.get("tool_chest", self.tool_chest)
             sys_prompt = await prompt_builder.render(prompt_context, tool_sections=kwargs.get("tool_sections", None))
@@ -184,7 +173,9 @@ class BaseAgent:
         if hasattr(self, 'session_logger') and self.session_logger:
             await self.session_logger.log_system_prompt(sys_prompt)
 
-        return sys_prompt
+        prompt_context['system_prompt'] = sys_prompt
+
+        return tool_call_context | prompt_context, prompt_context
 
     @staticmethod
     def _callback_opts(**kwargs) -> Dict[str, str]:

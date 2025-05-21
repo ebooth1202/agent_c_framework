@@ -98,7 +98,8 @@ class ClaudeChatAgent(BaseAgent):
             kwargs['tool_sections'] = inference_data['sections']
 
         messages = await self._construct_message_array(**kwargs)
-        sys_prompt: str = await self._render_system_prompt(**kwargs)
+        (tool_context, prompt_context) = await self._render_contexts(**kwargs)
+        sys_prompt: str = prompt_context["system_prompt"]
 
         completion_opts = {"model": model_name, "messages": messages,
                            "system": sys_prompt,  "max_tokens": max_tokens,
@@ -129,7 +130,7 @@ class ClaudeChatAgent(BaseAgent):
         if session_manager is not None:
             completion_opts["metadata"] = {'user_id': session_manager.user.user_id}
 
-        opts = {"callback_opts": callback_opts, "completion_opts": completion_opts, 'tool_chest': tool_chest}
+        opts = {"callback_opts": callback_opts, "completion_opts": completion_opts, 'tool_chest': tool_chest, 'tool_context': tool_context}
         return opts
 
 

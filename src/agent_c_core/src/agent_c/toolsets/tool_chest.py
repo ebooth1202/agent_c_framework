@@ -416,7 +416,7 @@ class ToolChest:
         self.__tool_opts = local_tool_opts
         await self.activate_toolset(self.__essential_toolsets, local_tool_opts)
 
-    async def call_tools(self, tool_calls: List[dict], format_type: str = "claude") -> List[dict]:
+    async def call_tools(self, tool_calls: List[dict], tool_context: Dict[str,Any], format_type: str = "claude") -> List[dict]:
         """
         Execute multiple tool calls concurrently and return the results.
         
@@ -451,6 +451,7 @@ class ToolChest:
                 }
                 
             try:
+                args['tool_context'] = tool_context
                 function_response = await self._execute_tool_call(fn, args)
                 
                 if format_type == "claude":

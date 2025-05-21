@@ -153,8 +153,8 @@ class GPTChatAgent(BaseAgent):
         if model_name is None:
             raise ValueError('GPT agent is missing a model_name')
 
-        kwargs['prompt'] = kwargs.get('prompt', self.prompt)
-        sys_prompt: str = await self._render_system_prompt(**kwargs)
+        (tool_context, prompt_context) = await self._render_contexts(**kwargs)
+        sys_prompt: str = prompt_context["system_prompt"]
         temperature: float = kwargs.get("temperature", self.temperature)
         max_tokens: Optional[int] = kwargs.get("max_tokens", None)
         tool_choice: str = kwargs.get("tool_choice", "auto")
@@ -207,7 +207,8 @@ class GPTChatAgent(BaseAgent):
         return {
             'completion_opts': completion_opts,
             'callback_opts': self._callback_opts(**kwargs),
-            'tool_chest': tool_chest
+            'tool_chest': tool_chest,
+            'tool_context': tool_context
         }
 
     async def _save_audio_interaction_to_session(self, mgr: ChatSessionManager, audio_id, transcript: str):
@@ -311,7 +312,8 @@ class GPTChatAgent(BaseAgent):
 
     async def _handle_gpt_stream(self, completion_opts, tool_chest, session_manager,
                                  messages, callback_opts, interaction_id,
-                                 client_wants_cancel: threading.Event) -> Tuple[
+                                 client_wants_cancel: threading.Event,
+                                 tool_context: Dict[str, Any]) -> Tuple[
         List[Dict[str, Any]], Dict[str, Any]]:
         """
         Handle the OpenAI stream processing.
@@ -355,7 +357,7 @@ class GPTChatAgent(BaseAgent):
 
                     # If we've completed and there are tool calls, process them
                     elif state['complete'] and state['tool_calls_processed']:
-                        await self._process_tool_calls(state, tool_chest, session_manager, messages, callback_opts)
+                        await self._process_tool_calls(state, tool_chest, session_manager, messages, callback_opts, tool_context)
                         return messages, state
 
             except Exception as e:
@@ -478,7 +480,7 @@ class GPTChatAgent(BaseAgent):
                 **callback_opts
             ))
 
-    async def _process_tool_calls(self, state, tool_chest, session_manager, messages, callback_opts):
+    async def _process_tool_calls(self, state, tool_chest, session_manager, messages, callback_opts, tool_context):
         """
         Process tool calls after stream completion.
         """
@@ -493,7 +495,7 @@ class GPTChatAgent(BaseAgent):
 
         try:
             # Execute tool calls
-            result_messages = await self.__tool_calls_to_messages(tool_calls, tool_chest)
+            result_messages = await self.__tool_calls_to_messages(tool_calls, tool_chest, tool_context)
 
             if result_messages:
                 # End tool call event with results
@@ -505,8 +507,8 @@ class GPTChatAgent(BaseAgent):
             await self._raise_tool_call_end(tool_calls, [], vendor="open_ai", **callback_opts)
             await self._raise_system_event(f"An error occurred while processing tool calls: {e}", **callback_opts)
 
-    async def __tool_calls_to_messages(self, tool_calls, tool_chest):
-        return await tool_chest.call_tools(tool_calls, format_type="openai")
+    async def __tool_calls_to_messages(self, tool_calls, tool_chest, tool_context):
+        return await tool_chest.call_tools(tool_calls, tool_context, format_type="openai")
 
 class AzureGPTChatAgent(GPTChatAgent):
     """
