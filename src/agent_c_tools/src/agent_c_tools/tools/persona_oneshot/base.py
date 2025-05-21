@@ -39,7 +39,7 @@ class PersonaOneshotBase(Toolset):
         self._personas_list: Optional[List[str]] = None
 
         self.client_wants_cancel: threading.Event = threading.Event()
-        self.agent_sections = [ThinkSection(), DynamicPersonaSection()]
+
         self.persona_cache: Dict[str, PersonaFile] = {}
         self.workspace_tool: Optional[WorkspaceTools] = None
         self.persona_dir: str = kwargs.get('persona_dir', 'personas')
@@ -57,7 +57,12 @@ class PersonaOneshotBase(Toolset):
 
         auth_info = persona.agent_params.auth.model_dump() if persona.agent_params.auth is not None else  {}
         client = agent_cls.client(**auth_info)
-        return agent_cls(model_name=model_config["id"], client=client,prompt_builder=PromptBuilder(sections=self.agent_sections))
+        if "ThinkTools" in persona.tools:
+            agent_sections = [ThinkSection(), DynamicPersonaSection()]
+        else:
+            agent_sections = [DynamicPersonaSection()]
+
+        return agent_cls(model_name=model_config["id"], client=client,prompt_builder=PromptBuilder(sections=agent_sections))
 
     async def __chat_params(self, persona: PersonaFile, agent: BaseAgent, session_id: Optional[str]) -> Dict[str, Any]:
         tool_params = {}
@@ -130,7 +135,7 @@ class PersonaOneshotBase(Toolset):
         if persona_path.endswith('yaml'):
             persona = PersonaFile.from_yaml(file_contents)
         else:
-            persona = PersonaFile(persona=file_contents, model_id=self._model_name, uid=str(persona_path))
+            persona = PersonaFile(persona=file_contents, model_id=self._model_name, uid=str(persona_path), agent_description='Legacy persona')
 
         return persona
 
