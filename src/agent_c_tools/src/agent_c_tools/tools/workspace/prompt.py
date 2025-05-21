@@ -37,7 +37,7 @@ class WorkspaceSection(PromptSection):
         super().__init__(template=TEMPLATE, required=True, name="Workspaces", render_section_header=True, **data)
 
     @property_bag_item
-    async def workspace_list(self):
+    async def workspace_list(self, data: dict[str, Any]) -> str:
         """Generate a compact table-like representation of available workspaces."""
         if not hasattr(self, 'tool') or not self.tool:
             return "No workspaces available"
@@ -47,7 +47,15 @@ class WorkspaceSection(PromptSection):
         
         if not workspaces:
             return "No workspaces available"
-            
+
+        allowed_spaces = data.get('allowed_workspaces', [])
+        disallowed_spaces = data.get('disallowed_workspaces', [])
+        if len(allowed_spaces) > 0:
+            workspaces = [space for space in workspaces if space.name in allowed_spaces]
+
+        if len(disallowed_spaces) > 0:
+            workspaces = [space for space in workspaces if space.name not in disallowed_spaces]
+
         lines = []
         for space in workspaces:
             lines.append(f"- `{space.name}` ({space.write_status}) - {space.description}")
