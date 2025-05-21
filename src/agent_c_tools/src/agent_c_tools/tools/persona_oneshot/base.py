@@ -69,11 +69,15 @@ class PersonaOneshotBase(Toolset):
             self.tool_chest.initialize_toolsets(persona.tools)
             tool_params = self.tool_chest.get_inference_data(persona.tools, agent.tool_format)
 
-        return chat_params | tool_params | persona.agent_params.model_dump(exclude_none=True)
+        agent_params = persona.agent_params.model_dump(exclude_none=True)
+        if "model" not in agent_params:
+            agent_params["model"] = persona.model_id
+
+        return chat_params | tool_params | agent_params
 
     @staticmethod
     async def __build_prompt_metadata(persona: PersonaFile, session_id: Optional[str] = None) -> Dict[str, Any]:
-        return { "session_id": session_id, "persona_prompt": persona.persona, "timestamp": datetime.now().isoformat()}
+        return {"session_id": session_id, "persona_prompt": persona.persona, "timestamp": datetime.now().isoformat()}
 
     async def persona_oneshot(self, user_message: str, persona: PersonaFile, session_id: Optional[str] = None) -> str:
         agent = self.agent_for_persona(persona)

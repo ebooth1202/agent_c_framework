@@ -21,12 +21,14 @@ class PersonaFile(BaseModel):
             "example": {
                 "name": "Example Coding Assistant",
                 "model_id": "claude-3-7-sonnet-latest",
+                "agent_description": "This is just an example",
                 "persona": "You are a helpful coding assistant.",
                  # Using ClaudeReasoningParams fields
-                 "interaction_params": {
+                 "agent_params": {
                     "type": "claude_reasoning",
                     "budget_tokens": 20000,
-                    "max_searches": 3
+                    "max_searches": 3,
+                    "auth": { "api_key": "your_api_key" }
                 },
                 "tools": ["ThinkTools", "WorkspaceTools", "CssExplorerTools", "XmlExplorerTools"]
             }
