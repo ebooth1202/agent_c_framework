@@ -97,6 +97,9 @@ class ClaudeChatAgent(BaseAgent):
 
         if '3-7-sonnet' in model_name:
             max_searches: int = kwargs.get("max_searches", 5)
+            if max_searches > 0:
+                functions.append({"type": "web_search_20250305", "name": "web_search", "max_uses": max_searches})
+
             completion_opts['betas'] = ["token-efficient-tools-2025-02-19", "output-128k-2025-02-19"]
 
 
