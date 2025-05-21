@@ -1,0 +1,305 @@
+import asyncio
+import importlib
+import json
+import logging
+import sys
+import time
+from typing import Dict, List, Any, Type, Optional, Union
+
+# Import the base ToolChest class
+from agent_c import ToolChest, ToolCache
+
+
+# Add a mock for TokenCounter to fix the error in local_storage.py
+class MockTokenCounter:
+    @staticmethod
+    def count(text):
+        # Simple mock that returns a token count based on text length
+        # This avoids the "NoneType has no attribute 'count_tokens'" error when using Workspaces without an agent
+        return len(text) // 10  # Rough approximation (10 chars per token)
+
+# Add the mock to sys.modules so it can be imported by local_storage.py
+sys.modules['agent_c.util.token_counter'] = type('TokenCounterModule', (), {'TokenCounter': MockTokenCounter})
+
+
+class ToolDebugger:
+    """
+    A testing framework for agent_c tools.
+    Allows dynamically importing and testing any tool with configurable payloads.
+    """
+
+    def __init__(self, log_level=logging.INFO, init_local_workspaces: bool = True):
+        """
+        Initialize the tool tester with optional logging configuration.
+
+        Args:
+            log_level: Logging level (default: logging.INFO)
+            init_local_workspaces: Flag to initialize local workspaces (default: True). Helpful when tools have dependencies on local workspaces. If you set to false and your toolset requires local workspaces, it will likely blow up.
+        """
+        # Configure logging
+        logging.basicConfig(level=log_level,
+                            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        self.logger = logging.getLogger(__name__)
+
+        # Prep for workspaces if needed
+        self.init_local_workspaces = init_local_workspaces
+        self.workspaces = None
+
+        ## if workspace and local setup.  This is manually controlled.  If a dependent tool needs them initialized and you set this to False
+        # your dependent tool is likely to blow up.
+        if self.init_local_workspaces:
+            self.logger.info("Initializing local workspaces")
+            # Initialize local workspaces
+            self.init_workspaces()
+
+        # Tool Cache
+        self.tool_cache_dir = ".tool_cache"
+        self.tool_cache = ToolCache(cache_dir=self.tool_cache_dir)
+
+        # Initialize the tool chest
+        self.tool_chest = ToolChest()
+        self.logger.info("ToolDebugger initialized")
+
+
+
+    async def import_tool_class(self, tool_import_path: str) -> Type:
+        """
+        Dynamically import a tool class from its import path.
+
+        Args:
+            tool_import_path: Import path of the tool class (e.g., 'agent_c_tools.FlashDocsTools')
+                              Format: 'module_path.ClassName'
+
+        Returns:
+            The imported tool class
+        """
+        try:
+            # Split the import path into module and class name
+            if '.' in tool_import_path:
+                module_path, class_name = tool_import_path.rsplit('.', 1)
+
+                # Import the module
+                self.logger.info(f"Importing module: {module_path}")
+                module = importlib.import_module(module_path)
+
+                # Get the class from the module
+                self.logger.info(f"Getting class: {class_name}")
+                tool_class = getattr(module, class_name)
+
+                return tool_class
+            else:
+                # Assume it's a class in the current module
+                current_module = importlib.import_module('__main__')
+                return getattr(current_module, tool_import_path)
+
+        except (ImportError, AttributeError) as e:
+            self.logger.error(f"Failed to import tool class {tool_import_path}: {str(e)}")
+            raise
+
+    async def setup_tool(self, tool_import_path: str, tool_opts: Dict[str, Any] = None) -> None:
+        """
+        Import and initialize a tool in the tool chest.
+
+        Args:
+            tool_import_path: Import path of the tool class
+            tool_opts: Dictionary of initialization parameters for the tool, wrapped in 'tool_opts'
+        """
+        try:
+            # Import the tool class
+            tool_class = await self.import_tool_class(tool_import_path)
+
+            # Add the tool class to the tool chest
+            self.logger.info(f"Adding tool class {tool_class.__name__} to tool chest")
+            self.tool_chest.add_tool_class(tool_class)
+
+            # Initialize the tool cache
+            if not self.tool_cache is None:
+                tool_opts['tool_cache'] = self.tool_cache
+
+            # Add workspace to tool_opts if local workspaces are initialized included
+            # if a dependent tool needs them initialized and you set this to False your dependent tool is likely to blow up
+            if self.init_local_workspaces:
+                tool_opts['workspaces'] = self.workspaces
+
+            # Initialize the tools with parameters
+            self.logger.info(f"Initializing tools with parameters: {tool_opts}")
+            await self.tool_chest.init_tools(tool_opts=tool_opts)
+
+            # Set the active toolsets
+            await self.tool_chest.set_active_toolsets([tool_class.__name__], tool_opts=tool_opts)
+            self.logger.info(f"Set active toolset: {tool_class.__name__}")
+
+            self.logger.info(f"Tool {tool_class.__name__} setup complete")
+
+            # Log available tools for debugging
+            self.logger.info(f"Active tools: {list(self.tool_chest.active_tools.keys())}")
+
+            if 'WorkspaceTools' in self.tool_chest.active_tools and not self.init_local_workspaces:
+                self.logger.warning(
+                    f"ALERT: Tool {tool_class.__name__} has activated WorkspaceTools as a dependency, "
+                    f"but init_local_workspaces is set to False. This may cause errors when running tools."
+                )
+
+        except Exception as e:
+            self.logger.error(f"Failed to setup tool {tool_import_path}: {str(e)}")
+            raise
+
+    def init_workspaces(self) -> None:
+        if not self.init_local_workspaces:
+            return
+
+        from agent_c_tools.tools.workspace.local_storage import LocalStorageWorkspace
+        from agent_c_tools.tools.workspace.local_project import LocalProjectWorkspace
+
+        local_project = LocalProjectWorkspace()
+
+        self.workspaces = [local_project]
+        self.logger.info(f"Initialized workspaces {local_project.workspace_root}")
+
+        try:
+            with open('.local_workspaces.json', 'r') as json_file:
+                local_workspaces = json.load(json_file)
+
+            for ws in local_workspaces['local_workspaces']:
+                self.workspaces.append(LocalStorageWorkspace(**ws))
+        except FileNotFoundError:
+            pass
+
+    def print_tool_info(self) -> None:
+        """
+        Print detailed information about the available tools for debugging.
+        """
+        print("\n=== Tool Information ===")
+
+        for name, tool in self.tool_chest.active_tools.items():
+            print(f"\nTool '{name}' details:")
+            print(f"  Class: {tool.__class__.__name__}")
+            print(f"  Name attribute: {tool.name if hasattr(tool, 'name') else 'No name attribute'}")
+            print(f"  Available methods:")
+
+            # Get methods that don't start with _ and are callable
+            methods = [method for method in dir(tool)
+                       if not method.startswith('_') and callable(getattr(tool, method))]
+
+            for method in methods:
+                print(f"    - {method}")
+
+        # Print schema information
+        print("\nToolset schemas:")
+        for name, toolset in self.tool_chest.active_tools.items():
+            print(f"\nToolset '{name}' schemas:")
+            try:
+                for i, schema in enumerate(toolset.openai_schemas):
+                    function_name = schema.get('function', {}).get('name', 'unknown')
+                    print(f"  Schema {i}: function name = {function_name}")
+            except Exception as e:
+                print(f"  Error getting schemas: {e}")
+
+        # Debug the _tool_name_to_instance_map that's used for lookups
+        print("\nTool name to instance map:")
+        try:
+            for name, instance in self.tool_chest._tool_name_to_instance_map.items():
+                print(f"  {name} -> {instance.__class__.__name__}")
+        except Exception as e:
+            print(f"  Error accessing map: {e}")
+
+    async def run_tool_test(self, tool_name: str, tool_params: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        Run a test for a specific tool with given parameters.
+
+        Args:
+            tool_name: Name of the tool to call (e.g., 'flash_docs_outline_to_powerpoint')
+            tool_params: Parameters for the tool call
+
+        Returns:
+            The raw tool results
+        """
+        test_id = f"test_{int(time.time())}"
+
+        # Format the tool call
+        tool_call = [{
+            "id": test_id,
+            "name": tool_name,
+            "input": tool_params
+        }]
+
+        try:
+            self.logger.info(f"Executing tool call: {tool_name}")
+            self.logger.debug(f"Tool parameters: {json.dumps(tool_params, indent=2, default=str)}")
+
+            # Call the tool
+            results = await self.tool_chest.call_tools(tool_call)
+
+            return results
+
+        except Exception as e:
+            error_msg = f"Error executing tool call {tool_name}: {str(e)}"
+            self.logger.error(error_msg)
+            return [{"error": error_msg}]
+
+    def extract_content_from_results(self, results: List[Dict[str, Any]]) -> str:
+        """
+        Helper method to extract content from the standard results format.
+
+        Args:
+            results: Results from a tool call
+
+        Returns:
+            Extracted content as a string, or error message if extraction fails
+        """
+        try:
+            # First, check if this is an error response
+            if results and isinstance(results, list) and len(results) == 1 and 'error' in results[0]:
+                return f"Error: {results[0]['error']}"
+
+            # Check for error messages in the standard format
+            if len(results) > 1 and 'content' in results[1]:
+                content_list = results[1]['content']
+                for content_item in content_list:
+                    if isinstance(content_item, dict) and 'content' in content_item and 'type' in content_item:
+                        if content_item['type'] == 'tool_result':
+                            return content_item['content']
+
+            # Fallback - return the full results as a JSON string
+            return f"Could not extract content, full results: {json.dumps(results, indent=2, default=str)}"
+
+        except Exception as e:
+            self.logger.error(f"Error extracting content: {str(e)}")
+            return f"Error extracting content: {str(e)}"
+
+    def extract_structured_content(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Extract content from results and parse it as JSON if possible.
+
+        Args:
+            results: Results from a tool call
+
+        Returns:
+            Parsed JSON content as a dictionary, or None if parsing fails
+        """
+        content_str = self.extract_content_from_results(results)
+
+        try:
+            # Attempt to parse as JSON
+            if isinstance(content_str, str) and content_str.startswith('{'):
+                return json.loads(content_str)
+            return None
+        except json.JSONDecodeError:
+            self.logger.warning(f"Could not parse content as JSON: {content_str}")
+            return None
+
+    def get_available_tool_names(self) -> List[str]:
+        """
+        Get a list of all available tool names that can be used in run_tool_test.
+
+        Returns:
+            List of tool names
+        """
+        tool_names = []
+        try:
+            tool_names = list(self.tool_chest._tool_name_to_instance_map.keys())
+        except Exception as e:
+            self.logger.error(f"Error getting tool names: {str(e)}")
+
+        return tool_names
+
