@@ -1,5 +1,6 @@
 from typing import List, Optional, AsyncGenerator, Dict, Any, Union, Sequence
 from uuid import UUID
+from typing import List, Optional, AsyncGenerator, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Path, Body, status
 from fastapi.responses import StreamingResponse, JSONResponse
 import json
@@ -13,6 +14,20 @@ from agent_c_api.api.dependencies import get_agent_manager
 from agent_c_api.config.redis_config import RedisConfig
 from agent_c_api.core.repositories.chat_repository import ChatRepository
 from agent_c_api.core.services.chat_service import ChatService as CoreChatService
+from fastapi import Request
+
+
+def get_chat_service(request: Request):
+    """Dependency to get the chat service
+
+    Args:
+        request: The FastAPI request object
+
+    Returns:
+        ChatService: Initialized chat service
+    """
+    agent_manager = get_agent_manager(request)
+    return ChatService(agent_manager=agent_manager)
 
 from agent_c_api.api.v2.models.chat_models import (
     ChatMessage,
