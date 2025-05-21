@@ -386,7 +386,7 @@ class MariadbTools(Toolset):
 
     async def post_init(self):
         # Get the workspace tool after all dependencies set up
-        self.workspace_tool = self.tool_chest.active_tools.get("WorkspaceTools")
+        self.workspace_tool = self.tool_chest.available_tools.get("WorkspaceTools")
 
         # Get tool cached connections when tool_cache is guaranteed to be available
         self._check_cached_connection()

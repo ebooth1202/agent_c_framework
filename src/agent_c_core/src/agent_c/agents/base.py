@@ -168,7 +168,7 @@ class BaseAgent:
             prompt_context = kwargs.get("prompt_metadata")
             prompt_context["agent"] = self
             prompt_context["tool_chest"] = kwargs.get("tool_chest", self.tool_chest)
-            sys_prompt = await prompt_builder.render(prompt_context)
+            sys_prompt = await prompt_builder.render(prompt_context, tool_sections=kwargs.get("tool_sections", None))
         else:
             sys_prompt: str = kwargs.get("prompt", sys_prompt)
 

@@ -1,6 +1,6 @@
 import re
 import logging
-from typing import List, Dict, Any, Set
+from typing import List, Dict, Any, Set, Optional
 from agent_c.prompting.prompt_section import PromptSection
 
 
@@ -35,13 +35,14 @@ class PromptBuilder:
         """
         return set(re.findall(r'\{(.+?)\}', template))
 
-    async def render(self, data: Dict[str, Any]) -> str:
+    async def render(self, data: Dict[str, Any], tool_sections: Optional[List[PromptSection]] = None) -> str:
         """
         Render the prompt sections with the provided data.
 
         Args:
             data (Dict[str, Any]): A dictionary containing the data to render the sections with.
-
+            tool_sections (Optional[List[PromptSection]]): A list of prompt sections to use in the rendering process
+                                                           instead of the active tool sections from the toolchest
         Returns:
             str: The rendered prompt as a string.
 
@@ -50,7 +51,10 @@ class PromptBuilder:
             Exception: If an unexpected error occurs during rendering.
         """
         rendered_sections: List[str] = []
-        section_lists = [self.sections, self.tool_sections]
+        if tool_sections is None:
+            tool_sections = self.tool_sections
+
+        section_lists = [self.sections, tool_sections]
         section_list_titles= ["Core Operating Guidelines", "Additional Tool Operation Guidelines"]
 
         for index, section_list in enumerate(section_lists):

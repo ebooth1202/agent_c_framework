@@ -75,23 +75,30 @@ class ClaudeChatAgent(BaseAgent):
         model_name: str = kwargs.get("model_name", self.model_name)
         if model_name is None:
             raise ValueError('Claude agent is missing a model_name')
-        sys_prompt: str = await self._render_system_prompt(**kwargs)
+
         temperature: float = kwargs.get("temperature", self.temperature)
         max_tokens: int = kwargs.get("max_tokens", self.max_tokens)
+        callback_opts = self._callback_opts(**kwargs)
+        tool_chest = kwargs.get("tool_chest", self.tool_chest)
+        toolsets: List[str] = kwargs.get("toolsets", [])
+        if len(toolsets) == 0:
+            functions: List[Dict[str, Any]] = tool_chest.active_claude_schemas
+        else:
+            inference_data = tool_chest.get_inference_data(toolsets, "claude")
+            functions: List[Dict[str, Any]] = inference_data['schemas']
+            kwargs['tool_sections'] = inference_data['sections']
 
         messages = await self._construct_message_array(**kwargs)
-        callback_opts = self._callback_opts(**kwargs)
-
-        tool_chest = kwargs.get("tool_chest", self.tool_chest)
-
-        functions: List[Dict[str, Any]] = tool_chest.active_claude_schemas
+        sys_prompt: str = await self._render_system_prompt(**kwargs)
 
         completion_opts = {"model": model_name, "messages": messages,
                            "system": sys_prompt,  "max_tokens": max_tokens,
                            'temperature': temperature}
 
         if '3-7-sonnet' in model_name:
+            max_searches: int = kwargs.get("max_searches", 5)
             completion_opts['betas'] = ["token-efficient-tools-2025-02-19", "output-128k-2025-02-19"]
+
 
         budget_tokens: int = kwargs.get("budget_tokens", self.budget_tokens)
         if budget_tokens > 0:

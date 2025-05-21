@@ -40,7 +40,7 @@ class PersonaOneshotTools(PersonaOneshotBase):
         return await self.persona_oneshot(request, persona)
 
     @json_schema(
-        'Load an agent persona as a string for you to review',
+        'Load an agent persona as a YAML string for you to review',
         {
             'persona_id': {
                 'type': 'string',
@@ -51,7 +51,7 @@ class PersonaOneshotTools(PersonaOneshotBase):
     )
     async def load_persona(self, **kwargs) -> str:
         try:
-            return self._load_persona(kwargs.get('persona_id'))
+            return self._load_persona(kwargs.get('persona_id')).to_yaml()
         except FileNotFoundError:
             return f"Error: Persona {kwargs.get('persona_id')} not found in {self.persona_dir}."
 

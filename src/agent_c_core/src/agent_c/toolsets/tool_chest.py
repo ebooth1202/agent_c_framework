@@ -4,6 +4,7 @@ import json
 import logging
 from typing import Type, List, Union, Dict, Any, Tuple, Optional
 
+from fastapi_pagination.utils import await_if_async
 from pyarrow.ipc import new_stream
 
 from agent_c.prompting.basic_sections.tool_guidelines import EndToolGuideLinesSection, BeginToolGuideLinesSection
@@ -22,7 +23,6 @@ class ToolChest:
         __available_toolset_classes (list[Type[Toolset]]): A private list to store all available toolset classes.
         __toolsets_awaiting_init (dict[str, Toolset]): A private dictionary to store toolsets created but awaiting post_init.
         __tool_opts (dict): A private dictionary to store the kwargs from the last init_tools call.
-        __tool_sections (List[PromptSection]): A private list to store sections of the prompt.
         __active_open_ai_schemas (List[dict]): A private list to store OpenAI schemas for active toolsets.
         _tool_name_to_instance_map (Dict[str, Toolset]): A mapping from tool function names to their toolset instance.
         logger (logging.Logger): An instance of a logger.
@@ -88,7 +88,6 @@ class ToolChest:
         Update tool sections, schemas, and maps based on active toolsets.
         """
         # Clear existing metadata
-        self.__tool_sections = []
         self.__active_open_ai_schemas = []
         self._tool_name_to_instance_map = {}
         
@@ -99,13 +98,17 @@ class ToolChest:
                 self.__active_open_ai_schemas.append(schema)
                 self._tool_name_to_instance_map[schema['function']['name']] = toolset
 
-    async def activate_toolset(self, toolset_name_or_names: Union[str, List[str]], tool_opts: Optional[Dict[str, any]] = None) -> bool:
+    async def initialize_toolsets(self, toolset_name_or_names: Union[str, List[str]], tool_opts: Optional[Dict[str, any]] = None) -> bool:
+        return await self.activate_toolset(toolset_name_or_names, tool_opts, True)
+
+    async def activate_toolset(self, toolset_name_or_names: Union[str, List[str]], tool_opts: Optional[Dict[str, any]] = None, init_only: bool = False) -> bool:
         """
         Activate one or more toolsets by name.
         
         Args:
             toolset_name_or_names: A single toolset name or list of toolset names to activate
             tool_opts: Additional arguments to pass to post_init if the toolset needs initialization
+            init_only: If True, only initialize the toolset without activating it
             
         Returns:
             bool: True if all toolsets were activated successfully, False otherwise
@@ -138,8 +141,9 @@ class ToolChest:
             # Check if we've already instantiated this toolset
             if name in self.__toolset_instances:
                 # Simply mark as active
-                self.__active_toolset_instances[name] = self.__toolset_instances[name]
-                self.logger.info(f"Marked existing toolset {name} as active")
+                if not init_only:
+                    self.__active_toolset_instances[name] = self.__toolset_instances[name]
+                    self.logger.info(f"Marked existing toolset {name} as active")
             else:
                 # Find the class for this toolset
                 toolset_class = next((cls for cls in self.__available_toolset_classes 
@@ -158,7 +162,7 @@ class ToolChest:
                     self.logger.info(f"Toolset {name} requires: {', '.join(required_tools)}")
                     
                     # Recursively activate required tools
-                    required_success = await self.activate_toolset(required_tools, tool_opts)
+                    required_success = await self.activate_toolset(required_tools, tool_opts, init_only)
                     if not required_success:
                         self.logger.warning(f"Failed to activate required tools for {name}")
                         success = False
@@ -198,7 +202,8 @@ class ToolChest:
                     
                     # Add to instances and active instances
                     self.__toolset_instances[name] = toolset_obj
-                    self.__active_toolset_instances[name] = toolset_obj
+                    if not init_only:
+                        self.__active_toolset_instances[name] = toolset_obj
                     
                     # Track for post_init later
                     newly_instantiated.append(name)
@@ -516,3 +521,52 @@ class ToolChest:
         except Exception as e:
             logging.exception(f"Failed calling {function_id} on {src_obj.name}. {e}", stacklevel=3)
             return f"Important! Tell the user an error occurred calling {function_id} on {src_obj.name}. {e}"
+
+    def get_inference_data(self, toolset_names: List[str], tool_format: str = "claude") -> Dict[str, Any]:
+        """
+        Get inference data (schemas and prompt sections) for specified toolsets.
+        Uses __toolset_instances rather than __active_toolset_instances to support
+        on-the-fly tool usage without requiring activation.
+        
+        Args:
+            toolset_names: List of toolset names to get inference data for
+            tool_format: Format for tool schemas ("claude" or "openai")
+            
+        Returns:
+            Dictionary containing:
+                - 'schemas': List of tool schemas in the requested format
+                - 'sections': List of PromptSection objects for the toolsets
+        """
+        # Validate and filter toolset names
+        valid_toolsets = []
+        for name in toolset_names:
+            if name in self.__toolset_instances:
+                valid_toolsets.append(self.__toolset_instances[name])
+            else:
+                logging.warning(f"Requested toolset '{name}' not found in available toolsets")
+        
+        if not valid_toolsets:
+            return {"schemas": [], "sections": []}
+            
+        # Collect OpenAI-format schemas from the specified toolsets
+        openai_schemas = []
+        for toolset in valid_toolsets:
+            openai_schemas.extend(toolset.tool_schemas())
+        
+        # Convert to requested format
+        if tool_format.lower() == "claude":
+            schemas = []
+            for schema in openai_schemas:
+                new_schema = copy.deepcopy(schema['function'])
+                new_schema['input_schema'] = new_schema.pop('parameters')
+                schemas.append(new_schema)
+        else:  # Default to OpenAI format
+            schemas = openai_schemas
+        
+        # Collect prompt sections
+        sections = [toolset.section for toolset in valid_toolsets if toolset.section is not None]
+        
+        return {
+            "schemas": schemas,
+            "sections": sections
+        }

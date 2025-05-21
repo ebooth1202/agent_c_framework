@@ -3,6 +3,7 @@ import threading
 from typing import Any, Dict, List, Optional, cast
 
 from agent_c import ToolChest, DynamicPersonaSection, PromptBuilder, ClaudeChatAgent
+from agent_c.models.persona_file import PersonaFile
 from agent_c.toolsets.tool_set import Toolset
 from agent_c.toolsets.json_schema import json_schema
 from agent_c_tools.tools.think import ThinkTools
@@ -74,11 +75,11 @@ class ReverseEngineeringTools(PersonaOneshotBase):
     async def query_analysis(self, **kwargs) -> str:
         query: str = kwargs.get('query')
         workspace: str = kwargs.get('workspace')
-        persona_data = self._load_persona("recon_answers_oneshot")
+        persona_data = self._load_persona("recon_answers_oneshot").model_dump()
         ws = self.workspace_tool.find_workspace_by_name(workspace)
-        persona = persona_data.replace('[workspace]', workspace).replace('[workspace_tree]', await ws.tree(7,3))
-
-        return await self.persona_oneshot(query, persona, custom=True)
+        persona_data['persona'] = persona_data['persona'].replace('[workspace]', workspace).replace('[workspace_tree]', await ws.tree(7,3))
+        new_persona = PersonaFile.model_validate(persona_data)
+        return await self.persona_oneshot(query, new_persona)
 
 
     async def _pass_one(self, workspace, files: list[str], batch_size: int = 2) -> list[str]:
