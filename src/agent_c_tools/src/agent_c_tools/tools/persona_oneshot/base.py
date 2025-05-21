@@ -82,7 +82,8 @@ class PersonaOneshotBase(Toolset):
 
     @staticmethod
     async def __build_prompt_metadata(persona: PersonaFile, session_id: Optional[str] = None) -> Dict[str, Any]:
-        return {"session_id": session_id, "persona_prompt": persona.persona, "timestamp": datetime.now().isoformat()}
+        persona_props = persona.prompt_metadata if persona.prompt_metadata else {}
+        return {"session_id": session_id, "persona_prompt": persona.persona, "timestamp": datetime.now().isoformat()} | persona_props
 
     async def persona_oneshot(self, user_message: str, persona: PersonaFile, session_id: Optional[str] = None) -> str:
         agent = self.agent_for_persona(persona)
