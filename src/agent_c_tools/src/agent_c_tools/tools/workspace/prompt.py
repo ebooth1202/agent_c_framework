@@ -7,11 +7,11 @@ class WorkspaceSection(PromptSection):
     tool: Any  # Reference to the workspace tool
 
     def __init__(self, **data: Any):
-        TEMPLATE = ("The workspace tools provide you a way to work with files in one or more workspaces.\n"
+        TEMPLATE = ("The workspace tools provide you a way to work with files in one or more workspaces. "
                     "Available workspaces are listed below\n"
-                    "### Available Workspace List \n"
-                    "${workspace_list}\n\n"
-                    "## Workspace Operations Guide\n"
+                    "#\n## Available Workspace List \n"
+                    "${workspace_list}\n"
+                    "\n## Workspace Operations Guide\n"
                     "- **UNC Paths**: Always use UNC-style paths in the format `//WORKSPACE/path/to/file` where WORKSPACE is the workspace name\n"
                     "- **Reading**: Use `read` to get file contents; assume paths exist rather than checking first\n"
                     "               Use `read_lines` to read a portion of a file\n"
@@ -24,7 +24,7 @@ class WorkspaceSection(PromptSection):
                     "- **File Management**: Use `cp` to copy and `mv` to move files or directories\n"
                     "  - Both source and destination must be in the same workspace\n"    
                     "- Workspace text files are UTF-8 encoded\n"
-                    "## CRITICAL: Workspace Traceability rules:\n"
+                    "\n## CRITICAL: Workspace Efficiency Rules:\n"
                     "- Prefer `inspect_code` over reading entire code files in Python, or C# code.\n" 
                     "   - This will give you the signatures and doc strings for code files"
                     "   - Line numbers are included for methods allowing you to target reads and updates more easily"
@@ -41,8 +41,7 @@ class WorkspaceSection(PromptSection):
         """Generate a compact table-like representation of available workspaces."""
         if not hasattr(self, 'tool') or not self.tool:
             return "No workspaces available"
-        
-        # Create a compact table-like format for workspaces
+
         workspaces = self.tool.workspaces
         
         if not workspaces:
@@ -56,8 +55,11 @@ class WorkspaceSection(PromptSection):
         if len(disallowed_spaces) > 0:
             workspaces = [space for space in workspaces if space.name not in disallowed_spaces]
 
+        force_read_only = data.get('force_read_only', False)
+
         lines = []
         for space in workspaces:
-            lines.append(f"- `{space.name}` ({space.write_status}) - {space.description}")
+            rw_status = "RO" if force_read_only else  space.write_status
+            lines.append(f"- `{space.name}` ({rw_status}) - {space.description}")
             
         return "\n".join(lines)
