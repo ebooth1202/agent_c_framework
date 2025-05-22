@@ -40,16 +40,25 @@ class WorkspacePlanningTools(Toolset):
         """Get the plans metadata dictionary for a workspace."""
         if not self.workspace_tool:
             raise RuntimeError("WorkspaceTools not available")
-        
-        plans_meta = await self.workspace_tool.read_meta_value(workspace=workspace_name, key="_plans")
+        error, workspace, key = self.workspace_tool.validate_and_get_workspace_path(f"//{workspace_name}/_kg")
+        if error is not None:
+            raise ValueError(f"Invalid workspace path: {workspace_name}. Error: {error}")
+
+        plans_meta = await workspace.safe_metadata("_plans")
         return plans_meta or {}
     
     async def _save_plans_meta(self, workspace_name: str, plans_meta: Dict[str, Any]) -> None:
         """Save the plans metadata dictionary for a workspace."""
         if not self.workspace_tool:
             raise RuntimeError("WorkspaceTools not available")
+
+        error, workspace, key = self.workspace_tool.validate_and_get_workspace_path(f"//{workspace_name}/_kg")
+        if error is not None:
+            raise ValueError(f"Invalid workspace path: {workspace_name}. Error: {error}")
         
-        await self.workspace_tool.write_meta_value(workspace=workspace_name, key="_plans", value=plans_meta)
+        val = await workspace.safe_metadata_write("_plans", plans_meta)
+        await workspace.save_metadata()
+        return val
     
     async def _get_plan(self, plan_path: str) -> Optional[PlanModel]:
         """Get a plan by its path."""

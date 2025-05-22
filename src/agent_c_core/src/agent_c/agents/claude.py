@@ -105,7 +105,7 @@ class ClaudeChatAgent(BaseAgent):
                            "system": sys_prompt,  "max_tokens": max_tokens,
                            'temperature': temperature}
 
-        if '3-7-sonnet' in model_name:
+        if '3-7-sonnet' in model_name or '-4-' in model_name:
             max_searches: int = kwargs.get("max_searches", 5)
             if max_searches > 0:
                 functions.append({"type": "web_search_20250305", "name": "web_search", "max_uses": max_searches})
@@ -113,8 +113,10 @@ class ClaudeChatAgent(BaseAgent):
             if self.allow_betas:
                 if max_tokens == self.CLAUDE_MAX_TOKENS:
                     completion_opts['max_tokens'] = 128000
-
-                completion_opts['betas'] = ["token-efficient-tools-2025-02-19", "output-128k-2025-02-19"]
+                if '-4-' in model_name:
+                    completion_opts['betas'] = ['interleaved-thinking-2025-05-14', "output-128k-2025-02-19"]
+                else:
+                    completion_opts['betas'] = ["token-efficient-tools-2025-02-19", "output-128k-2025-02-19"]
 
 
         budget_tokens: int = kwargs.get("budget_tokens", self.budget_tokens)

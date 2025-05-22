@@ -1,10 +1,13 @@
 import json
 import logging
 import re
+from idlelib.window import add_windows_to_menu
+
 import yaml
-from typing import Any, List, Tuple, Optional, Callable, Awaitable, Union
+
 from ts_tool import api
 from yaml import FullLoader
+from typing import Any, List, Tuple, Optional, Callable, Awaitable, Union
 
 from agent_c.toolsets.tool_set import Toolset
 from agent_c.toolsets.json_schema import json_schema
@@ -32,7 +35,6 @@ class WorkspaceTools(Toolset):
     def add_workspace(self, workspace: BaseWorkspace) -> None:
         """Add a workspace to the list of workspaces."""
         self.workspaces.append(workspace)
-        self._create_section()
 
     def _create_section(self):
         self.section = WorkspaceSection(tool=self)
@@ -704,254 +706,74 @@ class WorkspaceTools(Toolset):
 
         return f"{err_str}Results:\n{"\n\n".join(results)}"
 
+
     @json_schema(
-        description="Read the entire metadata yaml file for a workspace",
+        description="Read a from the metadata for a workspace using a UNC style path. Nested paths are supported using slash notation ",
         params={
-            "workspace": {
+            "path": {
                 "type": "string",
-                "description": "Name of the workspace to read metadata from",
+                "description": "UNC style path in the form of //[workspace]/meta/toplevel/subkey1/subkey2",
                 "required": True
             }
         }
     )
     async def read_meta(self, **kwargs: Any) -> str:
         """
-        Asynchronously reads the entire metadata from the workspace's .agent_c.meta.yaml file.
-
-        Args:
-            **kwargs: Keyword arguments.
-                workspace (str): Name of the workspace to read metadata from
-
-        Returns:
-            str: The content of the metadata file as a YAML formatted string or an error message.
-        """
-        workspace_name = kwargs.get("workspace")
-        if not workspace_name:
-            return json.dumps({"error": "Workspace name is required"})
-
-        # Find the workspace
-        workspace = self.find_workspace_by_name(workspace_name)
-        if not workspace:
-            return json.dumps({"error": f"Workspace '{workspace_name}' not found"})
-
-        # Read the metadata file
-        meta_file_path = ".agent_c.meta.yaml"
-        
-        try:
-            if not await workspace.path_exists(meta_file_path):
-                # If the file doesn't exist, return an empty YAML document
-                return "{}"
-            
-            # Read the content of the metadata file
-            content = await workspace.read_internal(meta_file_path)
-            return content
-        except Exception as e:
-            return json.dumps({"error": f"Failed to read metadata file: {str(e)}"})
-
-    @json_schema(
-        description="Read a specific value from the metadata yaml file for a workspace",
-        params={
-            "workspace": {
-                "type": "string",
-                "description": "Name of the workspace to read metadata from",
-                "required": True
-            },
-            "key": {
-                "type": "string",
-                "description": "The key to read, supports dot notation for nested keys (e.g., 'parent.child')",
-                "required": True
-            }
-        }
-    )
-    async def read_meta_value(self, **kwargs: Any) -> str:
-        """
         Asynchronously reads a specific value from the workspace's metadata file.
 
         Args:
             **kwargs: Keyword arguments.
-                workspace (str): Name of the workspace to read metadata from
-                key (str): The key to read, supports dot notation for nested keys (e.g., 'parent.child')
-
+                path (str): The UNC path to the key to read, supports slash notation for nested keys (e.g., 'parent/child')
         Returns:
             str: The value for the specified key as a YAML formatted string or an error message.
         """
-        workspace_name = kwargs.get("workspace")
-        key = kwargs.get("key")
-        
-        if not workspace_name:
-            return json.dumps({"error": "Workspace name is required"})
-        if not key:
-            return json.dumps({"error": "Key is required"})
+        path = kwargs.get("path")
+        error, workspace, key = self._parse_unc_path(path)
 
-        # Find the workspace
-        workspace = self.find_workspace_by_name(workspace_name)
-        if not workspace:
-            return json.dumps({"error": f"Workspace '{workspace_name}' not found"})
+        if error is not None:
+            return json.dumps({"error": error})
 
-        # Read the metadata file
-        meta_file_path = ".agent_c.meta.yaml"
-        
         try:
-            if not await workspace.path_exists(meta_file_path):
-                return json.dumps({"error": f"Metadata file does not exist in workspace '{workspace_name}'"})
-            
-            # Read and parse the metadata
-            content = await workspace.read_internal(meta_file_path)
-            data = yaml.load(content, FullLoader) or {}
-            
-            # Navigate to the requested key using dot notation
-            key_parts = key.split('.')
-            value = data
-            for part in key_parts:
-                if isinstance(value, dict) and part in value:
-                    value = value[part]
-                else:
-                    return json.dumps({"error": f"Key '{key}' not found in metadata"})
-            
-            # Return the value as YAML
-            return yaml.dump(value, default_flow_style=False)
+            value = workspace.metadata(key)
+            if isinstance(value, dict) or isinstance(value, list):
+                return yaml.dump(value, Dumper=yaml.Dumper, default_flow_style=False)
+
+            return str(value)
         except Exception as e:
-            return json.dumps({"error": f"Failed to read metadata value: {str(e)}"})
+            return  f"Failed to read metadata value: {str(e)}"
 
     @json_schema(
-        description="Write the entire metadata yaml file for a workspace",
+        description="Write to the metadata for a workspace using a UNC style path. Nested paths are supported using slash notation ",
         params={
-            "workspace": {
+            "path": {
                 "type": "string",
                 "description": "Name of the workspace to write metadata to",
                 "required": True
             },
             "data": {
-                "type": "object",
+                "type": ["object", "array", "string", "number", "boolean", "null"],
                 "description": "The complete metadata to write as a dictionary",
                 "required": True
             }
         }
     )
     async def write_meta(self, **kwargs: Any) -> str:
-        """
-        Asynchronously writes the entire metadata to the workspace's .agent_c.meta.yaml file.
-
-        Args:
-            **kwargs: Keyword arguments.
-                workspace (str): Name of the workspace to write metadata to
-                data (dict): The complete metadata to write as a dictionary
-
-        Returns:
-            str: Success message or an error message.
-        """
-        workspace_name = kwargs.get("workspace")
         data = kwargs.get("data")
-        
-        if not workspace_name:
-            return json.dumps({"error": "Workspace name is required"})
-        if data is None:
-            return json.dumps({"error": "Data is required"})
+        path = kwargs.get("path")
+        error, workspace, key = self._parse_unc_path(path)
 
-        # Find the workspace
-        workspace = self.find_workspace_by_name(workspace_name)
-        if not workspace:
-            return json.dumps({"error": f"Workspace '{workspace_name}' not found"})
+        if error is not None:
+            return json.dumps({"error": error})
 
         # Check if workspace is read-only
         if workspace.read_only:
-            return json.dumps({"error": f"Workspace '{workspace_name}' is read-only"})
+            return json.dumps({"error": f"Workspace '{workspace.name}' is read-only"})
 
-        # Write the metadata file
-        meta_file_path = ".agent_c.meta.yaml"
-        
         try:
-            # Convert data to YAML
-            yaml_content = yaml.dump(data, default_flow_style=False, allow_unicode=True)
-            
-            # Write the content to the metadata file
-            await workspace.write(meta_file_path, "write", yaml_content)
-            return json.dumps({"success": f"Metadata successfully written to workspace '{workspace_name}'"})
+            val = await workspace.safe_metadata_write(key, data)
+            await workspace.save_metadata()
+            return val
         except Exception as e:
             return json.dumps({"error": f"Failed to write metadata: {str(e)}"})
-
-    @json_schema(
-        description="Write a specific value to the metadata yaml file for a workspace",
-        params={
-            "workspace": {
-                "type": "string",
-                "description": "Name of the workspace to write metadata to",
-                "required": True
-            },
-            "key": {
-                "type": "string",
-                "description": "The key to write, supports dot notation for nested keys (e.g., 'parent.child')",
-                "required": True
-            },
-            "value": {
-                "type": "object",
-                "description": "The value to write for the specified key",
-                "required": True
-            }
-        }
-    )
-    async def write_meta_value(self, **kwargs: Any) -> str:
-        """
-        Asynchronously writes a specific value to the workspace's metadata file.
-
-        Args:
-            **kwargs: Keyword arguments.
-                workspace (str): Name of the workspace to write metadata to
-                key (str): The key to write, supports dot notation for nested keys (e.g., 'parent.child')
-                value: The value to write for the specified key
-
-        Returns:
-            str: Success message or an error message.
-        """
-        workspace_name = kwargs.get("workspace")
-        key = kwargs.get("key")
-        value = kwargs.get("value")
-        
-        if not workspace_name:
-            return json.dumps({"error": "Workspace name is required"})
-        if not key:
-            return json.dumps({"error": "Key is required"})
-        if value is None:
-            return json.dumps({"error": "Value is required"})
-
-        # Find the workspace
-        workspace = self.find_workspace_by_name(workspace_name)
-        if not workspace:
-            return json.dumps({"error": f"Workspace '{workspace_name}' not found"})
-
-        # Check if workspace is read-only
-        if workspace.read_only:
-            return json.dumps({"error": f"Workspace '{workspace_name}' is read-only"})
-
-        # Read the metadata file or initialize an empty dict
-        meta_file_path = ".agent_c.meta.yaml"
-        data = {}
-        
-        try:
-            if await workspace.path_exists(meta_file_path):
-                content = await workspace.read_internal(meta_file_path)
-                data = yaml.load(content, FullLoader) or {}
-            
-            # Update the data with the new value using dot notation
-            key_parts = key.split('.')
-            current = data
-            
-            # Navigate to the parent of the final key
-            for i, part in enumerate(key_parts[:-1]):
-                if part not in current or not isinstance(current[part], dict):
-                    current[part] = {}
-                current = current[part]
-            
-            # Set the value at the final key
-            current[key_parts[-1]] = value
-            
-            # Convert updated data to YAML and write it back
-            yaml_content = yaml.dump(data, default_flow_style=False, allow_unicode=True)
-            await workspace.write(meta_file_path, "write", yaml_content)
-            
-            return json.dumps({"success": f"Metadata value for key '{key}' successfully written to workspace '{workspace_name}'"})
-        except Exception as e:
-            return json.dumps({"error": f"Failed to write metadata value: {str(e)}"})
-
 
 Toolset.register(WorkspaceTools)

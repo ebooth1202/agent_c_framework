@@ -40,17 +40,27 @@ class WorkspaceKnowledgeTools(Toolset):
         """Get the knowledge graphs metadata dictionary for a workspace."""
         if not self.workspace_tool:
             raise RuntimeError("WorkspaceTools not available")
+
+        error, workspace, key = self.workspace_tool.validate_and_get_workspace_path(f"//{workspace_name}/_kg")
+        if error is not None:
+            raise ValueError(f"Invalid workspace path: {workspace_name}. Error: {error}")
         
-        kg_meta = await self.workspace_tool.read_meta_value(workspace=workspace_name, key="_kg")
+        kg_meta = await workspace.safe_metadata("_kg")
         return kg_meta or {}
     
-    async def _save_kg_meta(self, workspace_name: str, kg_meta: Dict[str, Any]) -> None:
+    async def _save_kg_meta(self, workspace_name: str, kg_meta: Dict[str, Any]) -> Any:
         """Save the knowledge graphs metadata dictionary for a workspace."""
         if not self.workspace_tool:
             raise RuntimeError("WorkspaceTools not available")
-        
-        await self.workspace_tool.write_meta_value(workspace=workspace_name, key="_kg", value=kg_meta)
-    
+
+        error, workspace, key = self.workspace_tool.validate_and_get_workspace_path(f"//{workspace_name}/_kg")
+        if error is not None:
+            raise ValueError(f"Invalid workspace path: {workspace_name}. Error: {error}")
+
+        val = await workspace.safe_metadata_write("_kg", kg_meta)
+        await workspace.save_metadata()
+        return val
+
     async def _get_kg(self, kg_path: str) -> Optional[KnowledgeGraph]:
         """Get a knowledge graph by its path."""
         workspace_name, kg_id = self._parse_kg_path(kg_path)

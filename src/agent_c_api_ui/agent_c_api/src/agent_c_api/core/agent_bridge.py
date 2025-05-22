@@ -80,8 +80,6 @@ class AgentBridge:
             tool_cache_dir (str): Directory for tool cache
             file_handler (Optional[FileHandler]): Handler for file operations.
         """
-
-
         # Agent events setup, must come first
         self.__init_events()
 
@@ -439,9 +437,8 @@ class AgentBridge:
             # Only pass reasoning_effort if it's set and we're using a reasoning model
             if self.reasoning_effort is not None and any(
                     reasoning_model in self.model_name
-                    for reasoning_model in ["o1", "o1-mini", "o3", "o3-mini"]
-            ):
-                agent_params["reasoning_effort"] = self.reasoning_effort
+                    for reasoning_model in ["o1", "o1-mini", "o3", "o3-mini"]):
+                        agent_params["reasoning_effort"] = self.reasoning_effort
 
             self.agent = GPTChatAgent(**agent_params)
 
