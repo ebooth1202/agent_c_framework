@@ -1,12 +1,14 @@
 import asyncio
+import base64
 import copy
 import json
 import logging
+import os
 import threading
 from enum import Enum, auto
 
 from typing import Any, List, Union, Dict, Tuple
-from anthropic import AsyncAnthropic, APITimeoutError, Anthropic, RateLimitError
+from anthropic import AsyncAnthropic, APITimeoutError, Anthropic, RateLimitError, AsyncAnthropicBedrock
 from anthropic.types import OverloadedError
 
 from agent_c.agents.base import BaseAgent
@@ -57,9 +59,10 @@ class ClaudeChatAgent(BaseAgent):
         """
         kwargs['token_counter'] = kwargs.get('token_counter', ClaudeChatAgent.ClaudeTokenCounter())
         super().__init__(**kwargs)
-        self.client: AsyncAnthropic = kwargs.get("client", AsyncAnthropic())
+        self.client: Union[AsyncAnthropic,AsyncAnthropicBedrock] = kwargs.get("client", self.__class__.client())
         self.supports_multimodal = True
         self.can_use_tools = True
+        self.allow_betas = kwargs.get("allow_betas", True)
 
         # Initialize logger
         logging_manager = LoggingManager(__name__)
@@ -70,28 +73,56 @@ class ClaudeChatAgent(BaseAgent):
         self.max_tokens = kwargs.get("max_tokens", self.CLAUDE_MAX_TOKENS)
         self.budget_tokens = kwargs.get("budget_tokens", 0)
 
+    @classmethod
+    def client(cls, **opts):
+        return AsyncAnthropic(**opts)
+
+    @property
+    def tool_format(self) -> str:
+        return "claude"
 
     async def __interaction_setup(self, **kwargs) -> dict[str, Any]:
         model_name: str = kwargs.get("model_name", self.model_name)
         if model_name is None:
             raise ValueError('Claude agent is missing a model_name')
-        sys_prompt: str = await self._render_system_prompt(**kwargs)
+
         temperature: float = kwargs.get("temperature", self.temperature)
         max_tokens: int = kwargs.get("max_tokens", self.max_tokens)
+        callback_opts = self._callback_opts(**kwargs)
+        tool_chest = kwargs.get("tool_chest", self.tool_chest)
+        toolsets: List[str] = kwargs.get("toolsets", [])
+        if len(toolsets) == 0:
+            functions: List[Dict[str, Any]] = tool_chest.active_claude_schemas
+        else:
+            inference_data = tool_chest.get_inference_data(toolsets, "claude")
+            functions: List[Dict[str, Any]] = inference_data['schemas']
+            kwargs['tool_sections'] = inference_data['sections']
 
         messages = await self._construct_message_array(**kwargs)
-        callback_opts = self._callback_opts(**kwargs)
-
-        tool_chest = kwargs.get("tool_chest", self.tool_chest)
-
-        functions: List[Dict[str, Any]] = tool_chest.active_claude_schemas
+        (tool_context, prompt_context) = await self._render_contexts(**kwargs)
+        sys_prompt: str = prompt_context["system_prompt"]
 
         completion_opts = {"model": model_name, "messages": messages,
                            "system": sys_prompt,  "max_tokens": max_tokens,
                            'temperature': temperature}
 
-        if '3-7-sonnet' in model_name:
-            completion_opts['betas'] = ["token-efficient-tools-2025-02-19", "output-128k-2025-02-19"]
+        if '3-7-sonnet' in model_name or '-4-' in model_name:
+            max_searches: int = kwargs.get("max_searches", 5)
+            if max_searches > 0:
+                functions.append({"type": "web_search_20250305", "name": "web_search", "max_uses": max_searches})
+
+            if self.allow_betas:
+                functions.append({"type": "code_execution_20250522","name": "code_execution"})
+                if '-4-' in model_name:
+                    if max_tokens == self.CLAUDE_MAX_TOKENS:
+                        completion_opts['max_tokens'] = 64000
+
+                    completion_opts['betas'] = ['interleaved-thinking-2025-05-14', "files-api-2025-04-14", "code-execution-2025-05-22"]
+                else:
+                    completion_opts['betas'] = ["token-efficient-tools-2025-02-19", "output-128k-2025-02-19", "files-api-2025-04-14", "code-execution-2025-05-22"]
+                    if max_tokens == self.CLAUDE_MAX_TOKENS:
+                        completion_opts['max_tokens'] = 128000
+
 
         budget_tokens: int = kwargs.get("budget_tokens", self.budget_tokens)
         if budget_tokens > 0:
@@ -106,7 +137,7 @@ class ClaudeChatAgent(BaseAgent):
         if session_manager is not None:
             completion_opts["metadata"] = {'user_id': session_manager.user.user_id}
 
-        opts = {"callback_opts": callback_opts, "completion_opts": completion_opts, 'tool_chest': tool_chest}
+        opts = {"callback_opts": callback_opts, "completion_opts": completion_opts, 'tool_chest': tool_chest, 'tool_context': tool_context}
         return opts
 
 
@@ -137,7 +168,8 @@ class ClaudeChatAgent(BaseAgent):
                         messages,
                         callback_opts,
                         interaction_id,
-                        client_wants_cancel
+                        client_wants_cancel,
+                        opts["tool_context"]
                     )
                     if state['complete'] and state['stop_reason'] != 'tool_use':
                         return result
@@ -146,14 +178,19 @@ class ClaudeChatAgent(BaseAgent):
                 except (APITimeoutError, RateLimitError) as e:
                     # Exponential backoff handled in a helper method
                     delay = await self._handle_retryable_error(e, delay, callback_opts)
+                    self.logger.warning(f"Timeout / Ratelimit. Retrying...Delay is {delay} seconds")
                 except Exception as e:
                     if "overloaded" in str(e).lower():
+                        self.logger.warning(f"Claude API is overloaded. Retrying... Delay is {delay} seconds")
                         delay = await self._handle_retryable_error(e, delay, callback_opts)
                     else:
                         await self._raise_system_event(f"Exception calling `client.messages.stream`.\n\n{e}\n", **callback_opts)
                         await self._raise_completion_end(opts["completion_opts"], stop_reason="exception", **callback_opts)
                         return []
 
+        self.logger.warning("Claude API is overloaded. GIVING UP")
+        await self._raise_system_event(f"Claude API is overloaded. GIVING UP.\n", **callback_opts)
+        await self._raise_completion_end(opts["completion_opts"], stop_reason="overload", **callback_opts)
         return messages
 
 
@@ -171,7 +208,8 @@ class ClaudeChatAgent(BaseAgent):
 
     async def _handle_claude_stream(self, completion_opts, tool_chest, session_manager,
                                     messages, callback_opts, interaction_id,
-                                    client_wants_cancel: threading.Event) -> Tuple[List[dict[str, Any]], dict[str, Any]]:
+                                    client_wants_cancel: threading.Event,
+                                    tool_context: Dict[str, Any]) -> Tuple[List[dict[str, Any]], dict[str, Any]]:
         """Handle the Claude API streaming response."""
         await self._raise_completion_start(completion_opts, **callback_opts)
 
@@ -182,7 +220,7 @@ class ClaudeChatAgent(BaseAgent):
         async with self.client.beta.messages.stream(**completion_opts) as stream:
             async for event in stream:
                 await self._process_stream_event(event, state, tool_chest, session_manager,
-                                               messages, callback_opts)
+                                                 messages, callback_opts)
 
                 if client_wants_cancel.is_set():
                     state['complete'] = True
@@ -197,7 +235,7 @@ class ClaudeChatAgent(BaseAgent):
                 # If we've reached the end of a tool call response, continue after processing tool calls
                 elif state['complete'] and state['stop_reason'] == 'tool_use':
                     await self._finalize_tool_calls(state, tool_chest, session_manager,
-                                                  messages, callback_opts)
+                                                  messages, callback_opts, tool_context)
                     await self._raise_history_event(messages, **callback_opts)
                     return  messages, state
 
@@ -345,8 +383,8 @@ class ClaudeChatAgent(BaseAgent):
 
         # Update messages
         messages.append({'role': 'assistant', 'content': state['model_outputs']})
-
-        session_manager.active_memory.messages = messages
+        if session_manager is not None:
+            session_manager.active_memory.messages = messages
 
 
 
@@ -427,14 +465,15 @@ class ClaudeChatAgent(BaseAgent):
         state['stop_reason'] = event.delta.stop_reason
 
 
-    async def _finalize_tool_calls(self, state, tool_chest, session_manager, messages, callback_opts):
+    async def _finalize_tool_calls(self, state, tool_chest, session_manager, messages, callback_opts, tool_context):
         """Finalize tool calls after receiving a complete message."""
         await self._raise_tool_call_start(state['collected_tool_calls'], vendor="anthropic", **callback_opts)
 
         # Process tool calls and get response messages
         tool_response_messages = await self.__tool_calls_to_messages(
             state['collected_tool_calls'],
-            tool_chest
+            tool_chest,
+            tool_context
         )
 
         # Add tool response messages to the conversation history
@@ -448,7 +487,7 @@ class ClaudeChatAgent(BaseAgent):
         )
 
 
-    def _generate_multi_modal_user_message(self, user_input: str, images: List[ImageInput], audio: List[AudioInput],
+    async def _generate_multi_modal_user_message(self, user_input: str, images: List[ImageInput], audio: List[AudioInput],
                                            files: List[FileInput]) -> Union[List[dict[str, Any]], None]:
         """
         Generates a multimodal message containing text, images, and file content.
@@ -483,29 +522,36 @@ class ClaudeChatAgent(BaseAgent):
             logging.info(f"Processing {len(files)} file inputs in Claude _generate_multi_modal_user_message")
 
             for idx, file in enumerate(files):
-                # Always try to use get_text_content() to get extracted text
                 extracted_text = None
-
-                # Check if get_text_content method exists and call it
-                if hasattr(file, 'get_text_content') and callable(file.get_text_content):
-                    extracted_text = file.get_text_content()
-                    logging.info(
-                        f"Claude: File {idx} ({file.file_name}): get_text_content() returned {len(extracted_text) if extracted_text else 0} chars")
+                if self.allow_betas:
+                    try:
+                        file_upload = await self.client.beta.files.upload(file=(file.file_name, base64.b64decode(file.content), file.content_type))
+                        contents.append({"type": "document", "source": {"type": "file","file_id": file_upload.id}})
+                    except Exception as e:
+                        logging.exception(f"Error uploading file {file.file_name}: {e}", exc_info=True)
+                        continue
+                elif "pdf" in file.content_type.lower() or ".pdf" in str(file.file_name).lower():
+                    pdf_source = {"type": "base64", "media_type": file.content_type, "data": file.content}
+                    contents.append({"type": "document", "source": pdf_source,"cache_control": {"type": "ephemeral"}})
                 else:
-                    logging.warning(f"Claude: File {idx} ({file.file_name}): get_text_content() method not available")
+                    # Check if get_text_content method exists and call it
+                    if hasattr(file, 'get_text_content') and callable(file.get_text_content):
+                        extracted_text = file.get_text_content()
+                        logging.info(
+                            f"Claude: File {idx} ({file.file_name}): get_text_content() returned {len(extracted_text) if extracted_text else 0} chars")
 
-                if extracted_text:
-                    file_name = file.file_name or "unknown file"
-                    content_block = f"Content from file {file_name}:\n\n{extracted_text}"
+                    if extracted_text:
+                        file_name = file.file_name or "unknown file"
+                        content_block = f"Content from file {file_name}:\n\n{extracted_text}"
 
-                    file_content_blocks.append(content_block)
-                    logging.info(f"Claude: File {idx} ({file.file_name}): Added extracted text to message")
-                else:
-                    # Fall back to mentioning the file without content
-                    file_name = file.file_name or "unknown file"
-                    file_content_blocks.append(f"[File attached: {file_name} (content could not be extracted)]")
-                    logging.warning(
-                        f"Claude: File {idx} ({file.file_name}): No text content available, adding file name only")
+                        file_content_blocks.append(content_block)
+                        logging.info(f"Claude: File {idx} ({file.file_name}): Added extracted text to message")
+                    else:
+                        # Fall back to mentioning the file without content
+                        file_name = file.file_name or "unknown file"
+                        file_content_blocks.append(f"[File attached: {file_name} (content could not be extracted)]")
+                        logging.warning(
+                            f"Claude: File {idx} ({file.file_name}): No text content available, adding file name only")
 
         # Prepare the main text content with file content
         main_text = user_input or ""
@@ -514,10 +560,6 @@ class ClaudeChatAgent(BaseAgent):
         if file_content_blocks:
             all_file_content = "\n\n".join(file_content_blocks)
             main_text = f"{all_file_content}\n\n{main_text}"
-
-        # Add PI mitigation if needed
-        if self.mitigate_image_prompt_injection and images:
-            main_text = f"{main_text}{BaseAgent.IMAGE_PI_MITIGATION}"
 
         # Add the combined text as the final content block
         contents.append({"type": "text", "text": main_text})
@@ -529,9 +571,9 @@ class ClaudeChatAgent(BaseAgent):
 
         return [{"role": "user", "content": contents}]
 
-    async def __tool_calls_to_messages(self, tool_calls, tool_chest):
+    async def __tool_calls_to_messages(self, tool_calls, tool_chest, tool_context):
         # Use the new centralized tool call handling in ToolChest
-        return await tool_chest.call_tools(tool_calls, format_type="claude")
+        return await tool_chest.call_tools(tool_calls, tool_context, format_type="claude")
 
     def _format_model_outputs_to_text(self, model_outputs: List[Dict[str, Any]]) -> str:
         """
@@ -586,3 +628,12 @@ class ClaudeChatAgent(BaseAgent):
             # does not like you passing in prior messages with a role of tool
             tool_response_content = "[Tool Response] " + content
             await self._save_message_to_session(session_manager, tool_response_content, 'assistant')
+
+class ClaudeBedrockChatAgent(ClaudeChatAgent):
+    def __init__(self, **kwargs) -> None:
+        kwargs['allow_betas'] = False
+        super().__init__(**kwargs)
+
+    @classmethod
+    def client(cls, **opts):
+        return AsyncAnthropicBedrock(**opts)

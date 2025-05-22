@@ -1,5 +1,4 @@
-from typing import Any, Dict, List, Optional
-
+from typing import Any, Dict, List, Optional, cast
 
 from agent_c.toolsets.tool_set import Toolset
 from agent_c.toolsets.json_schema import json_schema
@@ -19,7 +18,8 @@ class CssExplorerTools(Toolset):
         self.workspace_tool: Optional[WorkspaceTools] = None
 
     async def post_init(self):
-        self.workspace_tool = self.tool_chest.active_tools['WorkspaceTools']
+        self.workspace_tool = cast(WorkspaceTools, self.tool_chest.available_tools.get('WorkspaceTools'))
+
 
     @json_schema(
         'Obtain an overview of the CSS file structure and components. In a token efficient manner',

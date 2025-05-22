@@ -6,10 +6,13 @@ pushd %CD%
 
 :: Install the requirements
 echo Installing dependencies.
+python -m pip install --upgrade pip
+
 cd src
 pip install ace_proto/ts_tool-0.1.0-py3-none-any.whl
 pip install -e agent_c_core
 pip install -e agent_c_tools
+playwright install
 pip install -e agent_c_api_ui/agent_c_api[dev]
 pip install -e ..\test\unit\agent_c_tools
 

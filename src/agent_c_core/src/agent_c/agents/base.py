@@ -8,7 +8,7 @@ import uuid
 from asyncio import Semaphore
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Union, Optional, Callable, Awaitable
+from typing import Any, Dict, List, Union, Optional, Callable, Awaitable, Tuple
 
 from agent_c.chat import ChatSessionManager
 from agent_c.models import ChatEvent, ImageInput, MemoryMessage
@@ -57,7 +57,7 @@ class BaseAgent:
         """
         self.model_name: str = kwargs.get("model_name")
         self.temperature: float = kwargs.get("temperature", 0.5)
-        self.max_delay: int = kwargs.get("max_delay", 10)
+        self.max_delay: int = kwargs.get("max_delay", 120)
         self.concurrency_limit: int = kwargs.get("concurrency_limit", 3)
         self.semaphore: Semaphore = asyncio.Semaphore(self.concurrency_limit)
         self.tool_chest: ToolChest = kwargs.get("tool_chest")
@@ -77,6 +77,14 @@ class BaseAgent:
             TokenCounter.set_counter(self.token_counter)
 
         self.initialize_session_logger(**kwargs)
+
+    @classmethod
+    def client(cls, **opts):
+        raise NotImplementedError
+
+    @property
+    def tool_format(self) -> str:
+        raise NotImplementedError
 
     def initialize_session_logger(self, **kwargs):
         # For smart logging
@@ -119,7 +127,8 @@ class BaseAgent:
 
     async def one_shot(self, **kwargs) -> str:
         """For text in, text out processing. without chat"""
-        raise NotImplementedError
+        messages = await self.chat(**kwargs)
+        return messages[-1]["content"][0]["text"]
 
     async def parallel_one_shots(self, inputs: List[str], **kwargs):
         """Run multiple one-shot tasks in parallel"""
@@ -147,27 +156,16 @@ class BaseAgent:
     async def _save_user_message_to_session(self, mgr: ChatSessionManager, user_message: str):
         return await self._save_message_to_session(mgr, user_message, "user")
 
-    async def _render_system_prompt(self, **kwargs) -> str:
-        """
-        Renders a system prompt for the agent.
-
-        Parameters
-        ----------
-        kwargs : Dict[str, Any]
-            A dictionary of options for the system prompt.
-
-        Returns
-        -------
-        str
-            The system prompt.
-        """
+    async def _render_contexts(self, **kwargs) -> Tuple[dict[str, Any], dict[str, Any]]:
+        tool_call_context = kwargs.get("tool_call_context", {})
+        prompt_context = kwargs.get("prompt_metadata", {})
         prompt_builder: Union[PromptBuilder, None] = kwargs.get("prompt_builder", self.prompt_builder)
+
         sys_prompt: str = "Warn the user there's no system prompt with each response."
         if prompt_builder is not None:
-            prompt_context = kwargs.get("prompt_metadata")
             prompt_context["agent"] = self
             prompt_context["tool_chest"] = kwargs.get("tool_chest", self.tool_chest)
-            sys_prompt = await prompt_builder.render(prompt_context)
+            sys_prompt = await prompt_builder.render(prompt_context, tool_sections=kwargs.get("tool_sections", None))
         else:
             sys_prompt: str = kwargs.get("prompt", sys_prompt)
 
@@ -175,7 +173,9 @@ class BaseAgent:
         if hasattr(self, 'session_logger') and self.session_logger:
             await self.session_logger.log_system_prompt(sys_prompt)
 
-        return sys_prompt
+        prompt_context['system_prompt'] = sys_prompt
+
+        return tool_call_context | prompt_context, prompt_context
 
     @staticmethod
     def _callback_opts(**kwargs) -> Dict[str, str]:
@@ -379,7 +379,7 @@ class BaseAgent:
                 files=files
             )
 
-        return self.__construct_message_array(**kwargs)
+        return await self.__construct_message_array(**kwargs)
 
     def _update_session_logger(self, sess_mgr: ChatSessionManager):
         """
@@ -465,13 +465,13 @@ class BaseAgent:
             return False
 
 
-    def _generate_multi_modal_user_message(self, user_input: str,  images: List[ImageInput], audio: List[AudioInput], files: List[FileInput]) -> Union[List[dict[str, Any]], None]:
+    async def _generate_multi_modal_user_message(self, user_input: str,  images: List[ImageInput], audio: List[AudioInput], files: List[FileInput]) -> Union[List[dict[str, Any]], None]:
         """
         Subclasses will implement this method to generate a multimodal user message.
         """
         return None
 
-    def __construct_message_array(self, **kwargs) -> List[dict[str, Any]]:
+    async def __construct_message_array(self, **kwargs) -> List[dict[str, Any]]:
         """
        Construct a message using an array of messages.
 
@@ -502,7 +502,7 @@ class BaseAgent:
             message_array += messages
 
         if len(images) > 0 or len(audio_clips) > 0 or len(files) > 0:
-            multimodal_user_message = self._generate_multi_modal_user_message(user_message, images, audio_clips, files)
+            multimodal_user_message = await self._generate_multi_modal_user_message(user_message, images, audio_clips, files)
             message_array += multimodal_user_message
         else:
             message_array.append({"role": "user", "content": user_message})

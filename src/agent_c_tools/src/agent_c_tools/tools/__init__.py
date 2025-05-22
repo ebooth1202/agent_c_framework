@@ -12,7 +12,12 @@ from . import random_number
 from . import xml_explorer  # XML Explorer toolset
 from . import css_explorer  # CSS Explorer toolset
 from . import mariadb  # MariaDB toolset
-
+from . import reverse_engineering  # Reverse Engineering toolset
+from . import math  # Math toolset
+from . import workspace_planning  # Workspace Planning toolset
+from . import workspace_knowledge  # Workspace Knowledge toolset
+from . import workspace_sequential_thinking  # Workspace Sequential Thinking toolset
+from . import browser_playwright  # Browser Playwright toolset
 __all__ = [
     'workspace',
     'web', 
@@ -25,5 +30,11 @@ __all__ = [
     'random_number',
     'xml_explorer',
     'css_explorer',
-    'mariadb'
+    'mariadb',
+    'reverse_engineering',
+    'math',
+    'workspace_planning',
+    'workspace_knowledge',
+    'workspace_sequential_thinking',
+    'browser_playwright'
 ]

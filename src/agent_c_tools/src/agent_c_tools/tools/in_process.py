@@ -8,3 +8,5 @@ from .memory import MemoryTools
 from .random_number import RandomNumberTools
 from .mermaid_chart import MermaidChartTools
 from .css_explorer.tool import CssExplorerTools
+from .reverse_engineering import ReverseEngineeringTools
+from .math.tool import MathTools

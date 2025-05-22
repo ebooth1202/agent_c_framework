@@ -8,7 +8,7 @@ from typing import Union, List, Dict, Any, AsyncGenerator, Optional
 from datetime import datetime, timezone
 
 from agent_c import BaseAgent
-from agent_c_api.config.env_config import settings
+from agent_c_api.config.env_config import settings, Settings
 
 from agent_c.models.input.image_input import ImageInput
 from agent_c.models.input.audio_input import AudioInput
@@ -31,7 +31,7 @@ from agent_c.chat import ChatSessionManager
 from agent_c.prompting import PromptBuilder, CoreInstructionSection
 from agent_c_tools.tools.workspace.local_storage import LocalProjectWorkspace
 from agent_c_tools.tools import *
-
+from agent_c_api.config.config_loader import MODELS_CONFIG
 
 class AgentBridge:
     """
@@ -80,8 +80,6 @@ class AgentBridge:
             tool_cache_dir (str): Directory for tool cache
             file_handler (Optional[FileHandler]): Handler for file operations.
         """
-
-
         # Agent events setup, must come first
         self.__init_events()
 
@@ -326,7 +324,8 @@ class AgentBridge:
                 'tool_cache': self.tool_cache,
                 'session_manager': self.session_manager,
                 'workspaces': self.workspaces,
-                'streaming_callback': self.consolidated_streaming_callback
+                'streaming_callback': self.consolidated_streaming_callback,
+                'model_configs': MODELS_CONFIG
             }
 
             # Initialize the tool chest with essential tools first
@@ -356,7 +355,8 @@ class AgentBridge:
                 self.logger.warning(
                     f"The following selected tools were not initialized: {uninitialized_tools} for Agent {self.agent_name}")
         except Exception as e:
-            print(f"Error initializing tools: {e}")
+            self.logger.exception("Error initializing tools: %s", e, exc_info=True)
+
         return
 
     async def _sys_prompt_builder(self) -> PromptBuilder:
@@ -437,9 +437,8 @@ class AgentBridge:
             # Only pass reasoning_effort if it's set and we're using a reasoning model
             if self.reasoning_effort is not None and any(
                     reasoning_model in self.model_name
-                    for reasoning_model in ["o1", "o1-mini", "o3", "o3-mini"]
-            ):
-                agent_params["reasoning_effort"] = self.reasoning_effort
+                    for reasoning_model in ["o1", "o1-mini", "o3", "o3-mini"]):
+                        agent_params["reasoning_effort"] = self.reasoning_effort
 
             self.agent = GPTChatAgent(**agent_params)
 

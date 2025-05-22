@@ -47,7 +47,7 @@ class WebTools(Toolset):
                 self.tool_cache = None
 
     async def post_init(self):
-        self.workspace_tool = self.tool_chest.active_tools.get("WorkspaceTools")
+        self.workspace_tool = self.tool_chest.available_tools.get("WorkspaceTools")
         # # Defensively access dependencies
         # if hasattr(self, 'tool_chest') and self.tool_chest is not None:
         #     self.workspace_tool = self.tool_chest.active_tools.get("WorkspaceTools")

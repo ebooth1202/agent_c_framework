@@ -8,8 +8,6 @@ dependencies = [
     "pyarrow==17.0.0", # googletrends (overlap agent_c_demo)
     "mermaid-py==0.6.0", # mermaid
     "feedparser==6.0.11", # rss
-    # "pydantic==2.9.2",     # rss/user_preferences handled by agent_c_core
-    # "openai==1.47.0",      # dall-e handled by agent_c_core
     "readability-lxml==0.8.1", # web
     "markdownify==0.13.1", # web
     "selenium==4.25.0", # web, dynamics
@@ -38,7 +36,8 @@ dependencies = [
     "pyyaml>=6.0", # Configuration file support
     "python-docx==1.1.2", # markdown html report tool
     "sqlparse",
-    "mysql-connector-python"
+    "mysql-connector-python",
+    "pytest-playwright"
 ]
 
 requires-python = ">=3.10"

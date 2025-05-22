@@ -33,7 +33,7 @@ class MarkdownToHtmlReportTools(Toolset):
         self.template_manager = HtmlTemplateManager()
 
     async def post_init(self):
-        self.workspace_tool = self.tool_chest.active_tools.get("WorkspaceTools")
+        self.workspace_tool = self.tool_chest.available_tools.get("WorkspaceTools")
         self.file_collector = MarkdownFileCollector(self.workspace_tool)
 
     async def _safe_operation(self, operation_name, operation_func, *args, **kwargs):

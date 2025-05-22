@@ -19,6 +19,7 @@ setup(
         "agent_c-core",
         "mcp",
         "pyyaml",
+        "playwright",
     ],
     entry_points={
         'console_scripts': [

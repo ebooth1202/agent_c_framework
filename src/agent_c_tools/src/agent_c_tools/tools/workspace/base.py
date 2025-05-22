@@ -1,7 +1,13 @@
-from typing import Optional
+import logging
+from typing import Optional, List, Any
 from io import StringIO
+
+import yaml
+from sympy.physics.units import current
 from unidiff import PatchSet
 from tempfile import NamedTemporaryFile
+
+from yaml import FullLoader
 
 
 class BaseWorkspace:
@@ -30,11 +36,14 @@ class BaseWorkspace:
                       - 'read_only' (bool): If the workspace should be read-only.
         """
         self.name: str = kwargs.get('name','').lower()
+        self.meta_file_path: str = kwargs.get('meta_file_path', '.agent_c.meta.yaml')
         self.description: Optional[str] = kwargs.get('description')
         self.type_name: str = type_name
         self.read_only: bool = kwargs.get('read_only', False)
         self.write_status: str = "RO" if self.read_only else "R/W"
         self.max_filename_length: int = -1
+        self._metadata: Optional[dict[str, Any]] = None
+        self.logger = kwargs.get("logger", logging.getLogger(__name__))
 
     def __str__(self) -> str:
         """
@@ -199,3 +208,97 @@ class BaseWorkspace:
             NotImplementedError: This method should be implemented by subclasses.
         """
         raise NotImplementedError
+        
+    async def glob(self, pattern: str, recursive: bool = False, include_hidden: bool = False) -> List[str]:
+        """
+        Abstract method to find paths matching the specified pattern.
+        
+        Args:
+            pattern (str): The glob pattern to match against paths in the workspace.
+            recursive (bool): Whether to search recursively, matching ** patterns.
+            include_hidden (bool): Whether to include hidden files in ** pattern matching.
+            
+        Returns:
+            List[str]: A list of relative paths that match the pattern.
+            
+        Raises:
+            NotImplementedError: This method should be implemented by subclasses.
+        """
+        raise NotImplementedError("glob method must be implemented")
+
+    async def safe_metadata(self, key: str) -> Any:
+        if self._metadata is None:
+            await self.load_metadata()
+
+        return self.metadata(key)
+
+    def metadata(self, key: str) -> Any:
+        """
+        Property to access the metadata of the workspace.
+
+        Returns:
+            Optional[dict[str, Any]]: The metadata dictionary or None if not set.
+        """
+        key_parts = key.removeprefix('meta/').split('/')
+        value = self._metadata
+        if len(key_parts):
+            for part in key_parts:
+                if isinstance(value, dict) and part in value:
+                    value = value[part]
+                else:
+                    raise ValueError(f"Key '{key}' not found in metadata for workspace '{self.name}'")
+        return value
+
+    async def safe_metadata_write(self, key: str, value: any) -> Any:
+        if self._metadata is None:
+            await self.load_metadata()
+
+        return self.metadata_write(key, value)
+
+    def metadata_write(self, key: str, value: Any) -> Any:
+        """
+        Property to access the metadata of the workspace.
+
+        Returns:
+            Optional[dict[str, Any]]: The metadata dictionary or None if not set.
+        """
+        key_parts = key.removeprefix('meta/').split('/')
+        current = self._metadata
+        if len(key_parts) > 0:
+            for i, part in enumerate(key_parts[:-1]):
+                if part not in current or not isinstance(current[part], dict):
+                    current[part] = {}
+
+                current = current[part]
+
+            # Set the value at the final key
+            current[key_parts[-1]] = value
+
+        return value
+
+    async def save_metadata(self, meta_file_path: Optional[str] = None):
+        try:
+            if meta_file_path is None:
+                meta_file_path = self.meta_file_path
+
+            yaml_content = yaml.dump(self._metadata, default_flow_style=False, allow_unicode=True)
+            await self.write(meta_file_path, "write", yaml_content)
+        except Exception as e:
+            self.logger.exception(f"Failed to save metadata to //{self.name}/{meta_file_path}: {e}", exc_info=True)
+            raise e
+
+    async def load_metadata(self, meta_file_path: Optional[str] = None):
+        try:
+            if meta_file_path is None:
+                meta_file_path = self.meta_file_path
+
+            if not await self.path_exists(meta_file_path):
+                if self._metadata is None:
+                    self._metadata = {}
+            else:
+                content = await self.read_internal(meta_file_path)
+                self._metadata = yaml.load(content, FullLoader) or {}
+        except Exception as e:
+            self.logger.exception(f"Failed to load metadata from //{self.name}/{meta_file_path}: {e}", exc_info=True)
+
+        return self._metadata
