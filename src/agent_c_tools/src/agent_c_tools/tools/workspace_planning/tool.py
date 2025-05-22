@@ -42,7 +42,9 @@ class WorkspacePlanningTools(Toolset):
         """Get the plans metadata dictionary for a workspace."""
         if not self.workspace_tool:
             raise RuntimeError("WorkspaceTools not available")
+
         error, workspace, key = self.workspace_tool.validate_and_get_workspace_path(f"//{workspace_name}/_kg")
+
         if error is not None:
             raise ValueError(f"Invalid workspace path: {workspace_name}. Error: {error}")
 
@@ -108,8 +110,17 @@ class WorkspacePlanningTools(Toolset):
             }
         }
     )
-    async def create_plan(self, plan_path: str, title: str, description: str = "") -> str:
+    async def create_plan(self, **kwargs) -> str:
         """Create a new plan in the specified workspace."""
+        plan_path = kwargs.get('plan_path')
+        title = kwargs.get('title')
+        description = kwargs.get('description', "")
+        
+        if not plan_path:
+            return "Error: plan_path is required"
+        if not title:
+            return "Error: title is required"
+            
         workspace_name, plan_id = self._parse_plan_path(plan_path)
         plans_meta = await self._get_plans_meta(workspace_name)
         
@@ -131,8 +142,13 @@ class WorkspacePlanningTools(Toolset):
             }
         }
     )
-    async def list_plans(self, workspace: str) -> str:
+    async def list_plans(self, **kwargs) -> str:
         """List all plans in the specified workspace."""
+        workspace = kwargs.get('workspace')
+        
+        if not workspace:
+            return "Error: workspace is required"
+            
         plans_meta = await self._get_plans_meta(workspace)
         
         plans_list = []
@@ -157,8 +173,13 @@ class WorkspacePlanningTools(Toolset):
             }
         }
     )
-    async def get_plan(self, plan_path: str) -> str:
+    async def get_plan(self, **kwargs) -> str:
         """Get details of a plan."""
+        plan_path = kwargs.get('plan_path')
+        
+        if not plan_path:
+            return "Error: plan_path is required"
+            
         plan = await self._get_plan(plan_path)
         
         if not plan:
@@ -199,10 +220,20 @@ class WorkspacePlanningTools(Toolset):
             }
         }
     )
-    async def create_task(self, plan_path: str, title: str, description: str = "", 
-                        priority: PriorityType = "medium", parent_id: Optional[str] = None,
-                        context: str = "") -> str:
+    async def create_task(self, **kwargs) -> str:
         """Create a new task in the specified plan."""
+        plan_path = kwargs.get('plan_path')
+        title = kwargs.get('title')
+        description = kwargs.get('description', "")
+        priority = kwargs.get('priority', "medium")
+        parent_id = kwargs.get('parent_id')
+        context = kwargs.get('context', "")
+        
+        if not plan_path:
+            return "Error: plan_path is required"
+        if not title:
+            return "Error: title is required"
+            
         plan = await self._get_plan(plan_path)
         
         if not plan:
@@ -268,10 +299,21 @@ class WorkspacePlanningTools(Toolset):
             }
         }
     )
-    async def update_task(self, plan_path: str, task_id: str, title: Optional[str] = None,
-                         description: Optional[str] = None, priority: Optional[PriorityType] = None,
-                         completed: Optional[bool] = None, context: Optional[str] = None) -> str:
+    async def update_task(self, **kwargs) -> str:
         """Update an existing task in the specified plan."""
+        plan_path = kwargs.get('plan_path')
+        task_id = kwargs.get('task_id')
+        title = kwargs.get('title')
+        description = kwargs.get('description')
+        priority = kwargs.get('priority')
+        completed = kwargs.get('completed')
+        context = kwargs.get('context')
+        
+        if not plan_path:
+            return "Error: plan_path is required"
+        if not task_id:
+            return "Error: task_id is required"
+            
         plan = await self._get_plan(plan_path)
         
         if not plan:
@@ -316,8 +358,16 @@ class WorkspacePlanningTools(Toolset):
             }
         }
     )
-    async def get_task(self, plan_path: str, task_id: str) -> str:
+    async def get_task(self, **kwargs) -> str:
         """Get details of a task."""
+        plan_path = kwargs.get('plan_path')
+        task_id = kwargs.get('task_id')
+        
+        if not plan_path:
+            return "Error: plan_path is required"
+        if not task_id:
+            return "Error: task_id is required"
+            
         plan = await self._get_plan(plan_path)
         
         if not plan:
@@ -344,8 +394,14 @@ class WorkspacePlanningTools(Toolset):
             }
         }
     )
-    async def list_tasks(self, plan_path: str, parent_id: Optional[str] = None) -> str:
+    async def list_tasks(self, **kwargs) -> str:
         """List tasks in a plan, optionally filtered by parent task."""
+        plan_path = kwargs.get('plan_path')
+        parent_id = kwargs.get('parent_id')
+        
+        if not plan_path:
+            return "Error: plan_path is required"
+            
         plan = await self._get_plan(plan_path)
         
         if not plan:
@@ -381,8 +437,19 @@ class WorkspacePlanningTools(Toolset):
             }
         }
     )
-    async def add_lesson_learned(self, plan_path: str, lesson: str, learned_task_id: str) -> str:
+    async def add_lesson_learned(self, **kwargs) -> str:
         """Add a lesson learned to a plan."""
+        plan_path = kwargs.get('plan_path')
+        lesson = kwargs.get('lesson')
+        learned_task_id = kwargs.get('learned_task_id')
+        
+        if not plan_path:
+            return "Error: plan_path is required"
+        if not lesson:
+            return "Error: lesson is required"
+        if not learned_task_id:
+            return "Error: learned_task_id is required"
+            
         plan = await self._get_plan(plan_path)
         
         if not plan:
@@ -413,8 +480,14 @@ class WorkspacePlanningTools(Toolset):
             }
         }
     )
-    async def list_lessons_learned(self, plan_path: str, task_id: Optional[str] = None) -> str:
+    async def list_lessons_learned(self, **kwargs) -> str:
         """List lessons learned in a plan, optionally filtered by task."""
+        plan_path = kwargs.get('plan_path')
+        task_id = kwargs.get('task_id')
+        
+        if not plan_path:
+            return "Error: plan_path is required"
+            
         plan = await self._get_plan(plan_path)
         
         if not plan:
@@ -445,8 +518,16 @@ class WorkspacePlanningTools(Toolset):
             }
         }
     )
-    async def delete_task(self, plan_path: str, task_id: str) -> str:
+    async def delete_task(self, **kwargs) -> str:
         """Delete a task and all its subtasks from a plan."""
+        plan_path = kwargs.get('plan_path')
+        task_id = kwargs.get('task_id')
+        
+        if not plan_path:
+            return "Error: plan_path is required"
+        if not task_id:
+            return "Error: task_id is required"
+            
         plan = await self._get_plan(plan_path)
         
         if not plan:
