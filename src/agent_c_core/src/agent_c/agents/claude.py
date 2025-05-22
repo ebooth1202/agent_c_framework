@@ -231,6 +231,8 @@ class ClaudeChatAgent(BaseAgent):
 
                 # If we've reached the end of a non-tool response, return
                 if state['complete'] and state['stop_reason'] != 'tool_use':
+                    messages.extend(state['server_tool_calls'])
+                    messages.extend(state['server_tool_responses'])
                     await self._raise_history_event(messages, **callback_opts)
                     await self._raise_interaction_end(id=state['interaction_id'], **callback_opts)
                     return messages, state
@@ -239,6 +241,10 @@ class ClaudeChatAgent(BaseAgent):
                 elif state['complete'] and state['stop_reason'] == 'tool_use':
                     await self._finalize_tool_calls(state, tool_chest, session_manager,
                                                   messages, callback_opts, tool_context)
+
+                    messages.extend(state['server_tool_calls'])
+                    messages.extend(state['server_tool_responses'])
+
                     await self._raise_history_event(messages, **callback_opts)
                     return  messages, state
 
@@ -250,6 +256,8 @@ class ClaudeChatAgent(BaseAgent):
         return {
             "collected_messages": [],
             "collected_tool_calls": [],
+            "server_tool_calls": [],
+            "server_tool_responses": [],
             "input_tokens": 0,
             "output_tokens": 0,
             "model_outputs": [],
@@ -403,13 +411,14 @@ class ClaudeChatAgent(BaseAgent):
             await self._handle_text_block_start(event, state, callback_opts)
         elif state['current_block_type'] == "tool_use":
             await self._handle_tool_use_block(event, state, callback_opts)
+        elif state['current_block_type'] == "server_tool_use":
+            await self._handle_server_tool_use_block(event, state, callback_opts)
+        elif state['current_block_type'] in ['web_search_tool_result', 'code_execution_tool_result']:
+            state['server_tool_responses'].append(event.content_block.model_dump())
         elif state['current_block_type'] in ["thinking", "redacted_thinking"]:
             await self._handle_thinking_block(event, state, callback_opts)
         else:
-            await self._raise_system_event(
-                f"content_block_start Unknown content type: {state['current_block_type']}",
-                **callback_opts
-            )
+            self.logger.warning(f"content_block_start Unknown content type: {state['current_block_type']}")
 
 
     async def _handle_text_block_start(self, event, state, callback_opts):
@@ -428,8 +437,15 @@ class ClaudeChatAgent(BaseAgent):
             state['think_tool_state'] = ThinkToolState.WAITING
 
         state['collected_tool_calls'].append(tool_call)
-        await self._raise_tool_call_delta(state['collected_tool_calls'], **callback_opts)
+        await self._raise_tool_call_delta(state['collected_tool_calls'] + state['server_tool_calls'], **callback_opts)
 
+
+
+    async def _handle_server_tool_use_block(self, event, state, callback_opts):
+        """Handle tool use block event."""
+        tool_call = event.content_block.model_dump()
+        state['server_tool_calls'].append(tool_call)
+        await self._raise_tool_call_delta(state['collected_tool_calls'] + state['server_tool_calls'], **callback_opts)
 
     async def _handle_thinking_block(self, event, state, callback_opts):
         """Handle thinking block event."""
@@ -474,13 +490,16 @@ class ClaudeChatAgent(BaseAgent):
 
         # Process tool calls and get response messages
         tool_response_messages = await self.__tool_calls_to_messages(
-            state['collected_tool_calls'],
+            state,
             tool_chest,
             tool_context
         )
 
+
         # Add tool response messages to the conversation history
         messages.extend(tool_response_messages)
+
+
 
         await self._raise_tool_call_end(
             state['collected_tool_calls'],
@@ -574,9 +593,11 @@ class ClaudeChatAgent(BaseAgent):
 
         return [{"role": "user", "content": contents}]
 
-    async def __tool_calls_to_messages(self, tool_calls, tool_chest, tool_context):
+    async def __tool_calls_to_messages(self, state, tool_chest, tool_context):
         # Use the new centralized tool call handling in ToolChest
-        return await tool_chest.call_tools(tool_calls, tool_context, format_type="claude")
+        tools_calls = await tool_chest.call_tools(tool_calls, tool_context, format_type="claude")
+
+        return tools_calls
 
     def _format_model_outputs_to_text(self, model_outputs: List[Dict[str, Any]]) -> str:
         """

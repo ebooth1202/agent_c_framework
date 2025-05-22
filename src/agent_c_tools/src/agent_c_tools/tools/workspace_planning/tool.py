@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Optional, Union, cast
 from datetime import datetime
 import json
+from typing import Any, Dict, List, Optional, cast
 
 import yaml
 
@@ -567,6 +568,167 @@ class WorkspacePlanningTools(Toolset):
         del plan.tasks[task_id]
         
         return deleted_tasks
+
+    @json_schema(
+        description="Export a plan to a markdown report file in the .scratch folder or specified location",
+        params={
+            "plan_path": {
+                "type": "string",
+                "description": "Path to the plan in the format //workspace/plan_id",
+                "required": True
+            },
+            "output_path": {
+                "type": "string",
+                "description": "Optional output path. If not provided, saves to //workspace/.scratch/plan_id_report.md",
+                "required": False
+            }
+        }
+    )
+    async def export_plan_report(self, **kwargs) -> str:
+        """Export a plan to a markdown report file."""
+        plan_path = kwargs.get('plan_path')
+        output_path = kwargs.get('output_path')
+        
+        if not plan_path:
+            return "Error: plan_path is required"
+        
+        try:
+            workspace_name, plan_id = self._parse_plan_path(plan_path)
+            plan = self._get_plan(plan_path)
+            
+            if not plan:
+                return f"Plan not found at path: {plan_path}"
+            
+            # Generate default output path if not provided
+            if not output_path:
+                output_path = f"//{workspace_name}/.scratch/{plan_id}_report.md"
+            
+            # Generate the markdown report
+            markdown_content = self._generate_plan_markdown(plan, workspace_name, plan_id)
+            
+            # Save the report using workspace tools
+            result = await self.workspace_tool.write(
+                path=output_path,
+                data=markdown_content
+            )
+            
+            # Check if write was successful
+            if "Error" in result:
+                return f"Error writing report: {result}"
+            
+            return f"Plan report exported successfully to: {output_path}"
+            
+        except Exception as e:
+            return f"Error exporting plan report: {str(e)}"
+    
+    def _generate_plan_markdown(self, plan: PlanModel, workspace_name: str, plan_id: str) -> str:
+        """Generate markdown content for a plan report."""
+        lines = []
+        
+        # Header
+        lines.append(f"# {plan.title}")
+        lines.append("")
+        
+        # Overview
+        if plan.description:
+            lines.append("## Overview")
+            lines.append("")
+            lines.append(plan.description)
+            lines.append("")
+        
+        # Plan metadata
+        lines.append("## Plan Information")
+        lines.append("")
+        lines.append(f"- **Workspace:** {workspace_name}")
+        lines.append(f"- **Plan ID:** {plan_id}")
+        lines.append(f"- **Created:** {plan.created_at}")
+        lines.append(f"- **Last Updated:** {plan.updated_at}")
+        
+        # Task statistics
+        total_tasks = len(plan.tasks)
+        completed_tasks = sum(1 for task in plan.tasks.values() if task.completed)
+        lines.append(f"- **Total Tasks:** {total_tasks}")
+        completion_pct = (completed_tasks/total_tasks*100) if total_tasks > 0 else 0
+        lines.append(f"- **Completed Tasks:** {completed_tasks} ({completion_pct:.1f}%)")
+        lines.append("")
+        
+        # Tasks section
+        if plan.tasks:
+            lines.append("## Tasks")
+            lines.append("")
+            
+            # Get root tasks (tasks without parent)
+            root_tasks = [task for task in plan.tasks.values() if not task.parent_id]
+            
+            # Sort by priority and creation date
+            priority_order = {"high": 0, "medium": 1, "low": 2}
+            root_tasks.sort(key=lambda t: (priority_order.get(t.priority, 1), t.created_at))
+            
+            for task in root_tasks:
+                self._add_task_to_markdown(lines, task, plan.tasks, 0)
+        
+        # Lessons learned section
+        if plan.lessons_learned:
+            lines.append("## Lessons Learned")
+            lines.append("")
+            
+            for lesson in plan.lessons_learned:
+                lines.append(f"### {lesson.created_at}")
+                lines.append("")
+                lines.append(f"**Task:** {lesson.learned_task_id}")
+                lines.append("")
+                lines.append(lesson.lesson)
+                lines.append("")
+        
+        # Footer with generation timestamp
+        lines.append("---")
+        lines.append(f"*Report generated on {datetime.now().isoformat()}*")
+        
+        return "\n".join(lines)
+    
+    def _add_task_to_markdown(self, lines: List[str], task: TaskModel, all_tasks: Dict[str, TaskModel], indent_level: int) -> None:
+        """Add a task and its subtasks to the markdown lines."""
+        indent = "  " * indent_level
+        
+        # Task checkbox and title
+        checkbox = "[x]" if task.completed else "[ ]"
+        priority_indicator = ""
+        if task.priority == "high":
+            priority_indicator = " 🔴"
+        elif task.priority == "low":
+            priority_indicator = " 🟡"
+        
+        lines.append(f"{indent}- {checkbox} **{task.title}**{priority_indicator}")
+        
+        # Task description
+        if task.description:
+            lines.append(f"{indent}  {task.description}")
+        
+        # Task context
+        if task.context:
+            lines.append(f"{indent}  ")
+            lines.append(f"{indent}  *Context:*")
+            # Split context into lines and indent each
+            context_lines = task.context.split('\n')
+            for context_line in context_lines:
+                if context_line.strip():
+                    lines.append(f"{indent}  {context_line}")
+        
+        # Task metadata
+        lines.append(f"{indent}  ")
+        lines.append(f"{indent}  *Created: {task.created_at} | Updated: {task.updated_at} | Priority: {task.priority.title()}*")
+        
+        # Add child tasks
+        if task.child_tasks:
+            child_tasks = [all_tasks[child_id] for child_id in task.child_tasks if child_id in all_tasks]
+            # Sort child tasks by priority and creation date
+            priority_order = {"high": 0, "medium": 1, "low": 2}
+            child_tasks.sort(key=lambda t: (priority_order.get(t.priority, 1), t.created_at))
+            
+            for child_task in child_tasks:
+                self._add_task_to_markdown(lines, child_task, all_tasks, indent_level + 1)
+        
+        lines.append("")
 
 
 Toolset.register(WorkspacePlanningTools, required_tools=['WorkspaceTools'])
