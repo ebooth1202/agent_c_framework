@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import copy
 import json
 import logging
@@ -111,12 +112,14 @@ class ClaudeChatAgent(BaseAgent):
                 functions.append({"type": "web_search_20250305", "name": "web_search", "max_uses": max_searches})
 
             if self.allow_betas:
+                functions.append({"type": "code_execution_20250522","name": "code_execution"})
                 if '-4-' in model_name:
                     if max_tokens == self.CLAUDE_MAX_TOKENS:
                         completion_opts['max_tokens'] = 64000
-                    completion_opts['betas'] = ['interleaved-thinking-2025-05-14', "output-128k-2025-02-19"]
+
+                    completion_opts['betas'] = ['interleaved-thinking-2025-05-14', "files-api-2025-04-14", "code-execution-2025-05-22"]
                 else:
-                    completion_opts['betas'] = ["token-efficient-tools-2025-02-19", "output-128k-2025-02-19"]
+                    completion_opts['betas'] = ["token-efficient-tools-2025-02-19", "output-128k-2025-02-19", "files-api-2025-04-14", "code-execution-2025-05-22"]
                     if max_tokens == self.CLAUDE_MAX_TOKENS:
                         completion_opts['max_tokens'] = 128000
 
@@ -484,7 +487,7 @@ class ClaudeChatAgent(BaseAgent):
         )
 
 
-    def _generate_multi_modal_user_message(self, user_input: str, images: List[ImageInput], audio: List[AudioInput],
+    async def _generate_multi_modal_user_message(self, user_input: str, images: List[ImageInput], audio: List[AudioInput],
                                            files: List[FileInput]) -> Union[List[dict[str, Any]], None]:
         """
         Generates a multimodal message containing text, images, and file content.
@@ -519,29 +522,36 @@ class ClaudeChatAgent(BaseAgent):
             logging.info(f"Processing {len(files)} file inputs in Claude _generate_multi_modal_user_message")
 
             for idx, file in enumerate(files):
-                # Always try to use get_text_content() to get extracted text
                 extracted_text = None
-
-                # Check if get_text_content method exists and call it
-                if hasattr(file, 'get_text_content') and callable(file.get_text_content):
-                    extracted_text = file.get_text_content()
-                    logging.info(
-                        f"Claude: File {idx} ({file.file_name}): get_text_content() returned {len(extracted_text) if extracted_text else 0} chars")
+                if self.allow_betas:
+                    try:
+                        file_upload = await self.client.beta.files.upload(file=(file.file_name, base64.b64decode(file.content), file.content_type))
+                        contents.append({"type": "document", "source": {"type": "file","file_id": file_upload.id}})
+                    except Exception as e:
+                        logging.exception(f"Error uploading file {file.file_name}: {e}", exc_info=True)
+                        continue
+                elif "pdf" in file.content_type.lower() or ".pdf" in str(file.file_name).lower():
+                    pdf_source = {"type": "base64", "media_type": file.content_type, "data": file.content}
+                    contents.append({"type": "document", "source": pdf_source,"cache_control": {"type": "ephemeral"}})
                 else:
-                    logging.warning(f"Claude: File {idx} ({file.file_name}): get_text_content() method not available")
+                    # Check if get_text_content method exists and call it
+                    if hasattr(file, 'get_text_content') and callable(file.get_text_content):
+                        extracted_text = file.get_text_content()
+                        logging.info(
+                            f"Claude: File {idx} ({file.file_name}): get_text_content() returned {len(extracted_text) if extracted_text else 0} chars")
 
-                if extracted_text:
-                    file_name = file.file_name or "unknown file"
-                    content_block = f"Content from file {file_name}:\n\n{extracted_text}"
+                    if extracted_text:
+                        file_name = file.file_name or "unknown file"
+                        content_block = f"Content from file {file_name}:\n\n{extracted_text}"
 
-                    file_content_blocks.append(content_block)
-                    logging.info(f"Claude: File {idx} ({file.file_name}): Added extracted text to message")
-                else:
-                    # Fall back to mentioning the file without content
-                    file_name = file.file_name or "unknown file"
-                    file_content_blocks.append(f"[File attached: {file_name} (content could not be extracted)]")
-                    logging.warning(
-                        f"Claude: File {idx} ({file.file_name}): No text content available, adding file name only")
+                        file_content_blocks.append(content_block)
+                        logging.info(f"Claude: File {idx} ({file.file_name}): Added extracted text to message")
+                    else:
+                        # Fall back to mentioning the file without content
+                        file_name = file.file_name or "unknown file"
+                        file_content_blocks.append(f"[File attached: {file_name} (content could not be extracted)]")
+                        logging.warning(
+                            f"Claude: File {idx} ({file.file_name}): No text content available, adding file name only")
 
         # Prepare the main text content with file content
         main_text = user_input or ""
@@ -550,10 +560,6 @@ class ClaudeChatAgent(BaseAgent):
         if file_content_blocks:
             all_file_content = "\n\n".join(file_content_blocks)
             main_text = f"{all_file_content}\n\n{main_text}"
-
-        # Add PI mitigation if needed
-        if self.mitigate_image_prompt_injection and images:
-            main_text = f"{main_text}{BaseAgent.IMAGE_PI_MITIGATION}"
 
         # Add the combined text as the final content block
         contents.append({"type": "text", "text": main_text})

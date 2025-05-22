@@ -379,7 +379,7 @@ class BaseAgent:
                 files=files
             )
 
-        return self.__construct_message_array(**kwargs)
+        return await self.__construct_message_array(**kwargs)
 
     def _update_session_logger(self, sess_mgr: ChatSessionManager):
         """
@@ -465,13 +465,13 @@ class BaseAgent:
             return False
 
 
-    def _generate_multi_modal_user_message(self, user_input: str,  images: List[ImageInput], audio: List[AudioInput], files: List[FileInput]) -> Union[List[dict[str, Any]], None]:
+    async def _generate_multi_modal_user_message(self, user_input: str,  images: List[ImageInput], audio: List[AudioInput], files: List[FileInput]) -> Union[List[dict[str, Any]], None]:
         """
         Subclasses will implement this method to generate a multimodal user message.
         """
         return None
 
-    def __construct_message_array(self, **kwargs) -> List[dict[str, Any]]:
+    async def __construct_message_array(self, **kwargs) -> List[dict[str, Any]]:
         """
        Construct a message using an array of messages.
 
@@ -502,7 +502,7 @@ class BaseAgent:
             message_array += messages
 
         if len(images) > 0 or len(audio_clips) > 0 or len(files) > 0:
-            multimodal_user_message = self._generate_multi_modal_user_message(user_message, images, audio_clips, files)
+            multimodal_user_message = await self._generate_multi_modal_user_message(user_message, images, audio_clips, files)
             message_array += multimodal_user_message
         else:
             message_array.append({"role": "user", "content": user_message})
