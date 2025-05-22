@@ -59,6 +59,10 @@ class SessionLogger:
             logging.exception(f"Error creating log directory: {e}")
             return False
 
+    @staticmethod
+    def stringify_unserializable(obj):
+        return str(obj)
+
     async def log_event(self, event: Any) -> bool:
         """
         Log a single event to the file with timestamp.
@@ -97,10 +101,10 @@ class SessionLogger:
 
             # Write the entry to the log file
             with open(self.log_file_path, 'a', encoding='utf-8') as f:
-                f.write(json.dumps(log_entry) + '\n')
+                f.write(json.dumps(log_entry, default=self.stringify_unserializable) + '\n')
             return True
         except Exception as e:
-            logging.exception(f"Error logging event: {e}")
+            logging.exception(f"Error logging event: {e}", exc_info=True)
             return False
     
     async def log_system_prompt(self, prompt: str) -> None:

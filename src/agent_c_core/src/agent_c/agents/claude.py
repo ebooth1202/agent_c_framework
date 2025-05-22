@@ -161,7 +161,8 @@ class ClaudeChatAgent(BaseAgent):
                         messages,
                         callback_opts,
                         interaction_id,
-                        client_wants_cancel
+                        client_wants_cancel,
+                        opts["tool_context"]
                     )
                     if state['complete'] and state['stop_reason'] != 'tool_use':
                         return result
@@ -200,7 +201,8 @@ class ClaudeChatAgent(BaseAgent):
 
     async def _handle_claude_stream(self, completion_opts, tool_chest, session_manager,
                                     messages, callback_opts, interaction_id,
-                                    client_wants_cancel: threading.Event) -> Tuple[List[dict[str, Any]], dict[str, Any]]:
+                                    client_wants_cancel: threading.Event,
+                                    tool_context: Dict[str, Any]) -> Tuple[List[dict[str, Any]], dict[str, Any]]:
         """Handle the Claude API streaming response."""
         await self._raise_completion_start(completion_opts, **callback_opts)
 
@@ -226,7 +228,7 @@ class ClaudeChatAgent(BaseAgent):
                 # If we've reached the end of a tool call response, continue after processing tool calls
                 elif state['complete'] and state['stop_reason'] == 'tool_use':
                     await self._finalize_tool_calls(state, tool_chest, session_manager,
-                                                  messages, callback_opts)
+                                                  messages, callback_opts, tool_context)
                     await self._raise_history_event(messages, **callback_opts)
                     return  messages, state
 
@@ -456,14 +458,15 @@ class ClaudeChatAgent(BaseAgent):
         state['stop_reason'] = event.delta.stop_reason
 
 
-    async def _finalize_tool_calls(self, state, tool_chest, session_manager, messages, callback_opts):
+    async def _finalize_tool_calls(self, state, tool_chest, session_manager, messages, callback_opts, tool_context):
         """Finalize tool calls after receiving a complete message."""
         await self._raise_tool_call_start(state['collected_tool_calls'], vendor="anthropic", **callback_opts)
 
         # Process tool calls and get response messages
         tool_response_messages = await self.__tool_calls_to_messages(
             state['collected_tool_calls'],
-            tool_chest
+            tool_chest,
+            tool_context
         )
 
         # Add tool response messages to the conversation history
@@ -558,9 +561,9 @@ class ClaudeChatAgent(BaseAgent):
 
         return [{"role": "user", "content": contents}]
 
-    async def __tool_calls_to_messages(self, tool_calls, tool_chest):
+    async def __tool_calls_to_messages(self, tool_calls, tool_chest, tool_context):
         # Use the new centralized tool call handling in ToolChest
-        return await tool_chest.call_tools(tool_calls, format_type="claude")
+        return await tool_chest.call_tools(tool_calls, tool_context, format_type="claude")
 
     def _format_model_outputs_to_text(self, model_outputs: List[Dict[str, Any]]) -> str:
         """
