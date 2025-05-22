@@ -76,7 +76,7 @@ class PromptSection(BaseModel):
         return dynamic_props
 
     async def render(self, data: Dict[str, Any]) -> str:
-        section_data: Dict[str, Any] = {**data, ** await self.get_dynamic_properties(data)}
+        section_data: Dict[str, Any] = {**data, **await self.get_dynamic_properties(data)}
         template: Template = Template(self.template)
         result = template.substitute(section_data)
         return result

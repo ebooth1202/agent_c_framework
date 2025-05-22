@@ -2,11 +2,12 @@ from datetime import datetime
 from typing import Optional, Any, Dict
 
 from fastapi import Depends, HTTPException, Request
+import structlog
 
 from agent_c_api.api.dependencies import get_agent_manager
 from agent_c_api.core.agent_manager import UItoAgentBridgeManager
-from typing import Any
-import structlog
+from agent_c_api.config.redis_config import RedisConfig
+from agent_c_api.core.repositories.session_repository import SessionRepository as SessionRepositoryClass
 
 from agent_c_api.api.v2.models.session_models import (
     SessionCreate, 
@@ -20,7 +21,7 @@ from agent_c_api.api.v2.models.session_models import (
 )
 
 # Session service dependency
-def get_session_service(request: Request):
+async def get_session_service(request: Request):
     """Dependency to get the session service
     
     Args:
@@ -30,13 +31,22 @@ def get_session_service(request: Request):
         SessionService: Initialized session service
     """
     agent_manager = get_agent_manager(request)
-    return SessionService(agent_manager=agent_manager)
+    redis_client = await RedisConfig.get_redis_client()
+    session_repository = SessionRepositoryClass(redis_client)
+    return SessionService(agent_manager=agent_manager, session_repository=session_repository)
 
 class SessionService:
-    """Service for managing sessions using the underlying agent manager"""
+    """Service for managing sessions using Redis storage and the agent manager"""
 
-    def __init__(self, agent_manager: Any):  # Use Any instead of UItoAgentBridgeManager
+    def __init__(self, agent_manager: Any, session_repository: Any):
+        """Initialize the session service
+        
+        Args:
+            agent_manager: The agent manager instance
+            session_repository: The session repository instance
+        """
         self.agent_manager = agent_manager
+        self.session_repository = session_repository
         self.logger = structlog.get_logger(__name__)
 
     async def create_session(self, session_data: SessionCreate) -> SessionDetail:
@@ -52,8 +62,12 @@ class SessionService:
             HTTPException: If session creation fails
         """
         try:
+            # Create session in Redis first
+            session = await self.session_repository.create_session(session_data)
+            if not session:
+                raise HTTPException(status_code=500, detail="Failed to create session in Redis")
+            
             # Convert SessionCreate to kwargs for agent_manager.create_session
-            # This matches how v1 API initializes sessions
             model_params = {
                 "temperature": session_data.temperature,
                 "reasoning_effort": session_data.reasoning_effort,
@@ -66,21 +80,23 @@ class SessionService:
                 "custom_prompt": session_data.custom_prompt,
             }
             
-            # Handle tools parameter - must be List[str] or None
-            # The session_data.tools might be None, an empty list, or a populated list
+            # Handle tools parameter
             if session_data.tools is not None and len(session_data.tools) > 0:
-                # Ensure all items are strings
                 additional_params["additional_tools"] = session_data.tools
             
             # Filter out None values
             model_params = {k: v for k, v in model_params.items() if v is not None}
             additional_params = {k: v for k, v in additional_params.items() if v is not None}
             
-            # Create the session in the agent manager
+            # Create the session in the agent manager with existing session ID
+            session_params = {"existing_ui_session_id": str(session.id)}
+            
+            # Create session in agent manager
             ui_session_id = await self.agent_manager.create_session(
                 llm_model=session_data.model_id,
                 **model_params,
-                **additional_params
+                **additional_params,
+                **session_params
             )
             
             # Get the created session data
@@ -91,6 +107,12 @@ class SessionService:
             # Extract agent_c_session_id
             agent_c_session_id = session_data.get("agent_c_session_id", "")
             
+
+            # Update Redis session with agent_internal_id
+            # await self.session_repository.update_session(
+            #     str(session.id),
+            #     SessionUpdate(agent_internal_id=agent_c_session_id)
+
             # Transform into our response model
             return SessionDetail(
                 id=ui_session_id,
@@ -108,7 +130,12 @@ class SessionService:
                 budget_tokens=session_data.get("budget_tokens"),
                 max_tokens=session_data.get("max_tokens"),
                 custom_prompt=session_data.get("custom_prompt"),
+
             )
+            
+            # Return the session details
+            #return await self.session_repository.get_session(str(session.id))
+            
         except Exception as e:
             self.logger.error("create_session_failed", error=str(e))
             raise HTTPException(status_code=500, detail=f"Failed to create session: {str(e)}")
@@ -123,6 +150,9 @@ class SessionService:
         Returns:
             SessionListResponse: Paginated list of sessions
         """
+
+        #return await self.session_repository.list_sessions(limit, offset)
+
         # Get all sessions from the agent manager
         sessions = self.agent_manager.ui_sessions
         
@@ -152,6 +182,7 @@ class SessionService:
             offset=offset,
         )
 
+
     async def get_session(self, session_id: str) -> Optional[SessionDetail]:
         """Get detailed information about a specific session
         
@@ -161,6 +192,9 @@ class SessionService:
         Returns:
             SessionDetail: Session details if found, None otherwise
         """
+
+        #return await self.session_repository.get_session(session_id)
+
         # Get session data using the manager's method
         session_data = self.agent_manager.get_session_data(session_id)
         if not session_data:
@@ -191,12 +225,9 @@ class SessionService:
             custom_prompt=session_data.get("custom_prompt"),
         )
 
+
     async def update_session(self, session_id: str, update_data: SessionUpdate) -> SessionDetail:
-        """Update session properties by recreating the session with new parameters
-        
-        Since UItoAgentBridgeManager doesn't provide a direct update method,
-        we implement updates by creating a new session with the updated parameters
-        and transferring the session ID.
+        """Update session properties
         
         Args:
             session_id: ID of the session to update
@@ -208,28 +239,37 @@ class SessionService:
         Raises:
             HTTPException: If session not found or update fails
         """
-        # Get current session data
-        current_session = self.agent_manager.get_session_data(session_id)
-        if not current_session:
-            raise HTTPException(status_code=404, detail=f"Session {session_id} not found")
-            
         try:
-            # Prepare update parameters by merging current and new values
-            # Get only non-None values from the update
+            # Get current session
+            current_session = await self.session_repository.get_session(session_id)
+            if not current_session:
+                raise HTTPException(status_code=404, detail=f"Session {session_id} not found")
+            
+            # Update session in Redis
+            updated_session = await self.session_repository.update_session(session_id, update_data)
+            if not updated_session:
+                raise HTTPException(status_code=500, detail="Failed to update session in Redis")
+            
+            # Get current session data from agent manager
+            current_agent_data = self.agent_manager.get_session_data(session_id)
+            if not current_agent_data:
+                raise HTTPException(status_code=404, detail=f"Agent session {session_id} not found")
+            
+            # Prepare update parameters
             updates = update_data.model_dump(exclude_unset=True, exclude_none=True)
             
             # Create new parameters based on current session
             model_params = {
-                "temperature": current_session.get("temperature"),
-                "reasoning_effort": current_session.get("reasoning_effort"),
-                "budget_tokens": current_session.get("budget_tokens"),
-                "max_tokens": current_session.get("max_tokens"),
+                "temperature": current_session.temperature,
+                "reasoning_effort": current_session.reasoning_effort,
+                "budget_tokens": current_session.budget_tokens,
+                "max_tokens": current_session.max_tokens,
             }
             
             additional_params = {
-                "persona_name": current_session.get("persona_name", "default"),
-                "custom_prompt": current_session.get("custom_prompt"),
-                "additional_tools": current_session.get("additional_tools", []),
+                "persona_name": current_session.persona_id,
+                "custom_prompt": current_session.custom_prompt,
+                "additional_tools": current_session.tools,
             }
             
             # Apply updates
@@ -240,7 +280,7 @@ class SessionService:
                     model_params[key] = value
                 elif key in additional_params:
                     additional_params[key] = value
-                    
+            
             # Remove None values
             model_params = {k: v for k, v in model_params.items() if v is not None}
             additional_params = {k: v for k, v in additional_params.items() if v is not None}
@@ -248,21 +288,25 @@ class SessionService:
             # Create a new session with existing session ID
             session_params = {"existing_ui_session_id": session_id}
             
+            # Update agent manager session
             await self.agent_manager.create_session(
-                llm_model=current_session.get("model_name"),
+                llm_model=current_session.model_id,
                 **model_params,
                 **additional_params,
                 **session_params
             )
             
             # Return updated session details
-            return await self.get_session(session_id)
+            return updated_session
+            
+        except HTTPException:
+            raise
         except Exception as e:
             self.logger.error("update_session_failed", session_id=session_id, error=str(e))
             raise HTTPException(status_code=500, detail=f"Failed to update session: {str(e)}")
 
     async def delete_session(self, session_id: str) -> bool:
-        """Delete a specific session by cleaning it up
+        """Delete a specific session
         
         Args:
             session_id: ID of the session to delete
@@ -270,11 +314,11 @@ class SessionService:
         Returns:
             bool: True if successful, False if session not found
         """
-        # Check if the session exists
-        if not self.agent_manager.get_session_data(session_id):
+        # Delete from Redis first
+        if not await self.session_repository.delete_session(session_id):
             return False
-
-        # Delete the session in the agent manager using cleanup_session
+            
+        # Then clean up in agent manager
         try:
             await self.agent_manager.cleanup_session(session_id)
             return True
@@ -291,7 +335,12 @@ class SessionService:
         Returns:
             AgentConfig: Agent configuration if found, None otherwise
         """
-        # Check if session exists
+        # Get session from Redis
+        session = await self.session_repository.get_session(session_id)
+        if not session:
+            return None
+            
+        # Get agent data from manager
         session_data = self.agent_manager.get_session_data(session_id)
         if not session_data:
             return None
@@ -332,7 +381,12 @@ class SessionService:
             AgentUpdateResponse: Response with updated configuration and change details,
                               or None if session not found
         """
-        # Check if session exists
+        # Get session from Redis
+        session = await self.session_repository.get_session(session_id)
+        if not session:
+            return None
+            
+        # Get agent data from manager
         session_data = self.agent_manager.get_session_data(session_id)
         if not session_data:
             return None
@@ -384,6 +438,12 @@ class SessionService:
         # Reinitialize the agent if needed
         if needs_agent_reinitialization:
             await agent.initialize_agent_parameters()
+            
+            # Update Redis session with new values
+            await self.session_repository.update_session(
+                session_id,
+                SessionUpdate(**{k: v["to"] for k, v in changes_applied.items()})
+            )
         
         # Get updated agent configuration
         updated_config = await self.get_agent_config(session_id)
