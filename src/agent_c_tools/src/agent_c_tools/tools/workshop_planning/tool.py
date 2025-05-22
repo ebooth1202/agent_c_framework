@@ -2,7 +2,7 @@
 from typing import Any, Dict, List, Optional, cast
 from agent_c.toolsets.tool_set import Toolset
 from agent_c.toolsets.json_schema import json_schema
-from agent_c_tools.tools.planner.prompt import WorkspacePlanSection
+from agent_c_tools.tools.workshop_planning.prompt import WorkspacePlanSection
 from agent_c_tools.tools.workspace.tool import WorkspaceTools
 
 class WorkshopPlanningTools(Toolset):

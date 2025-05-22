@@ -31,7 +31,7 @@ from agent_c.chat import ChatSessionManager
 from agent_c.prompting import PromptBuilder, CoreInstructionSection
 from agent_c_tools.tools.workspace.local_storage import LocalProjectWorkspace
 from agent_c_tools.tools import *
-
+from agent_c_api.config.config_loader import MODELS_CONFIG
 
 class AgentBridge:
     """
@@ -327,7 +327,7 @@ class AgentBridge:
                 'session_manager': self.session_manager,
                 'workspaces': self.workspaces,
                 'streaming_callback': self.consolidated_streaming_callback,
-                'model_config_path': Settings.MODEL_CONFIG_PATH
+                'model_configs': MODELS_CONFIG
             }
 
             # Initialize the tool chest with essential tools first
@@ -357,7 +357,8 @@ class AgentBridge:
                 self.logger.warning(
                     f"The following selected tools were not initialized: {uninitialized_tools} for Agent {self.agent_name}")
         except Exception as e:
-            print(f"Error initializing tools: {e}")
+            self.logger.exception("Error initializing tools: %s", e, exc_info=True)
+
         return
 
     async def _sys_prompt_builder(self) -> PromptBuilder:

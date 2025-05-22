@@ -33,7 +33,7 @@ class PersonaOneshotBase(Toolset):
         if not 'name' in kwargs:
             kwargs['name'] = 'persona_oneshot'
         super().__init__( **kwargs)
-        self.model_configs: Dict[str, Any] = self._load_model_config(kwargs.get('model_config_path'))
+        self.model_configs: Dict[str, Any] = self._load_model_config(kwargs.get('model_configs'))
         self.agent_cache: Dict[str, BaseAgent] = {}
         self._model_name = kwargs.get('persona_oneshot_model_name', 'claude-3-7-sonnet-latest')
         self._personas_list: Optional[List[str]] = None
@@ -103,10 +103,7 @@ class PersonaOneshotBase(Toolset):
         return result
 
     @staticmethod
-    def _load_model_config(config_path: str) -> Dict[str, Any]:
-        with open(config_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-
+    def _load_model_config(data: dict[str, Any]) -> Dict[str, Any]:
         result: Dict[str, Any] = {}
         for vendor_info in data["vendors"]:
             vendor_name = vendor_info["vendor"]
