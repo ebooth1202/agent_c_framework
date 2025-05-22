@@ -115,7 +115,10 @@ class ClaudeChatAgent(BaseAgent):
                 functions.append({"type": "code_execution_20250522","name": "code_execution"})
                 if '-4-' in model_name:
                     if max_tokens == self.CLAUDE_MAX_TOKENS:
-                        completion_opts['max_tokens'] = 64000
+                        if 'sonnet' in model_name:
+                            completion_opts['max_tokens'] = 64000
+                        else:
+                            completion_opts['max_tokens'] = 32000
 
                     completion_opts['betas'] = ['interleaved-thinking-2025-05-14', "files-api-2025-04-14", "code-execution-2025-05-22"]
                 else:

@@ -246,7 +246,7 @@ class BaseWorkspace:
                 if isinstance(value, dict) and part in value:
                     value = value[part]
                 else:
-                    raise ValueError(f"Key '{key}' not found in metadata for workspace '{self.name}'")
+                    value = {}
         return value
 
     async def safe_metadata_write(self, key: str, value: any) -> Any:
