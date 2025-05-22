@@ -594,7 +594,7 @@ class WorkspacePlanningTools(Toolset):
         
         try:
             workspace_name, plan_id = self._parse_plan_path(plan_path)
-            plan = self._get_plan(plan_path)
+            plan = await self._get_plan(plan_path)
             
             if not plan:
                 return f"Plan not found at path: {plan_path}"

@@ -595,7 +595,7 @@ class ClaudeChatAgent(BaseAgent):
 
     async def __tool_calls_to_messages(self, state, tool_chest, tool_context):
         # Use the new centralized tool call handling in ToolChest
-        tools_calls = await tool_chest.call_tools(tool_calls, tool_context, format_type="claude")
+        tools_calls = await tool_chest.call_tools(state['collected_tool_calls'], tool_context, format_type="claude")
 
         return tools_calls
 
