@@ -20,6 +20,7 @@ from .math import MathTools
 from .workspace_planning import WorkspacePlanningTools
 from .workspace_knowledge import WorkspaceKnowledgeTools
 from .workspace_sequential_thinking import WorkspaceSequentialThinkingTools
+from .browser_playwright import BrowserPlaywrightTools
 
 __all__ = [
     # Workspace tools
@@ -61,5 +62,6 @@ __all__ = [
     'MathTools',
     'WorkspacePlanningTools',
     'WorkspaceKnowledgeTools',
-    'WorkspaceSequentialThinkingTools'
+    'WorkspaceSequentialThinkingTools',
+    'BrowserPlaywrightTools'
 ]
