@@ -2,6 +2,8 @@ from typing import Any, Dict, List, Optional, Union, cast
 from datetime import datetime
 import json
 
+import yaml
+
 from agent_c.toolsets.tool_set import Toolset
 from agent_c.toolsets.json_schema import json_schema
 from agent_c_tools.tools.workspace_planning.prompt import WorkspacePlanSection
@@ -106,22 +108,19 @@ class WorkspacePlanningTools(Toolset):
             }
         }
     )
-    async def create_plan(self, plan_path: str, title: str, description: str = "") -> Dict[str, Any]:
+    async def create_plan(self, plan_path: str, title: str, description: str = "") -> str:
         """Create a new plan in the specified workspace."""
         workspace_name, plan_id = self._parse_plan_path(plan_path)
         plans_meta = await self._get_plans_meta(workspace_name)
         
         if plan_id in plans_meta:
-            return {"success": False, "error": f"Plan with ID '{plan_id}' already exists"}
+            return f"Plan with ID '{plan_id}' already exists"
         
         new_plan = PlanModel(title=title, description=description)
         await self._save_plan(plan_path, new_plan)
         
-        return {
-            "success": True,
-            "plan": new_plan.model_dump()
-        }
-    
+        return f"Plan '{title}' created successfully with ID '{plan_id}'"
+
     @json_schema(
         description="List all plans in a workspace",
         params={
@@ -132,7 +131,7 @@ class WorkspacePlanningTools(Toolset):
             }
         }
     )
-    async def list_plans(self, workspace: str) -> Dict[str, Any]:
+    async def list_plans(self, workspace: str) -> str:
         """List all plans in the specified workspace."""
         plans_meta = await self._get_plans_meta(workspace)
         
@@ -146,11 +145,8 @@ class WorkspacePlanningTools(Toolset):
                 "updated_at": plan_data.get("updated_at", "")
             })
         
-        return {
-            "success": True,
-            "plans": plans_list
-        }
-    
+        return yaml.dump({ "plans": plans_list }, default_flow_style=False, sort_keys=False, allow_unicode=True)
+
     @json_schema(
         description="Get details of a plan",
         params={
@@ -161,17 +157,15 @@ class WorkspacePlanningTools(Toolset):
             }
         }
     )
-    async def get_plan(self, plan_path: str) -> Dict[str, Any]:
+    async def get_plan(self, plan_path: str) -> str:
         """Get details of a plan."""
         plan = await self._get_plan(plan_path)
         
         if not plan:
-            return {"success": False, "error": f"Plan not found at path: {plan_path}"}
-        
-        return {
-            "success": True,
-            "plan": plan.model_dump()
-        }
+            return f"Plan not found at path: {plan_path}"
+
+        return yaml.dump({"plan": plan.model_dump()}, default_flow_style=False, sort_keys=False, allow_unicode=True)
+
     
     @json_schema(
         description="Create a new task in a plan",
@@ -207,16 +201,16 @@ class WorkspacePlanningTools(Toolset):
     )
     async def create_task(self, plan_path: str, title: str, description: str = "", 
                         priority: PriorityType = "medium", parent_id: Optional[str] = None,
-                        context: str = "") -> Dict[str, Any]:
+                        context: str = "") -> str:
         """Create a new task in the specified plan."""
         plan = await self._get_plan(plan_path)
         
         if not plan:
-            return {"success": False, "error": f"Plan not found at path: {plan_path}"}
+            return  f"Plan not found at path: {plan_path}"
         
         # Validate parent task if provided
         if parent_id and parent_id not in plan.tasks:
-            return {"success": False, "error": f"Parent task with ID '{parent_id}' not found"}
+            return f"Parent task with ID '{parent_id}' not found"
         
         # Create the new task
         new_task = TaskModel(
@@ -236,10 +230,7 @@ class WorkspacePlanningTools(Toolset):
         plan.tasks[new_task.id] = new_task
         await self._save_plan(plan_path, plan)
         
-        return {
-            "success": True,
-            "task": new_task.model_dump()
-        }
+        return f"Task '{title}' created successfully with ID '{new_task.id}'"
     
     @json_schema(
         description="Update an existing task",
@@ -279,15 +270,15 @@ class WorkspacePlanningTools(Toolset):
     )
     async def update_task(self, plan_path: str, task_id: str, title: Optional[str] = None,
                          description: Optional[str] = None, priority: Optional[PriorityType] = None,
-                         completed: Optional[bool] = None, context: Optional[str] = None) -> Dict[str, Any]:
+                         completed: Optional[bool] = None, context: Optional[str] = None) -> str:
         """Update an existing task in the specified plan."""
         plan = await self._get_plan(plan_path)
         
         if not plan:
-            return {"success": False, "error": f"Plan not found at path: {plan_path}"}
+            return f"Plan not found at path: {plan_path}"
         
         if task_id not in plan.tasks:
-            return {"success": False, "error": f"Task with ID '{task_id}' not found in the plan"}
+            return f"Task with ID '{task_id}' not found in the plan"
         
         task = plan.tasks[task_id]
         
@@ -308,11 +299,8 @@ class WorkspacePlanningTools(Toolset):
         
         await self._save_plan(plan_path, plan)
         
-        return {
-            "success": True,
-            "task": task.model_dump()
-        }
-    
+        return f"Task '{task_id}' updated successfully"
+
     @json_schema(
         description="Get details of a task",
         params={
@@ -328,23 +316,20 @@ class WorkspacePlanningTools(Toolset):
             }
         }
     )
-    async def get_task(self, plan_path: str, task_id: str) -> Dict[str, Any]:
+    async def get_task(self, plan_path: str, task_id: str) -> str:
         """Get details of a task."""
         plan = await self._get_plan(plan_path)
         
         if not plan:
-            return {"success": False, "error": f"Plan not found at path: {plan_path}"}
+            return f"Plan not found at path: {plan_path}"
         
         if task_id not in plan.tasks:
-            return {"success": False, "error": f"Task with ID '{task_id}' not found in the plan"}
+            return f"Task with ID '{task_id}' not found in the plan"
         
         task = plan.tasks[task_id]
-        
-        return {
-            "success": True,
-            "task": task.model_dump()
-        }
-    
+
+        return yaml.dump( {"task": task.model_dump()}, default_flow_style=False, sort_keys=False, allow_unicode=True)
+
     @json_schema(
         description="List tasks in a plan",
         params={
@@ -359,12 +344,12 @@ class WorkspacePlanningTools(Toolset):
             }
         }
     )
-    async def list_tasks(self, plan_path: str, parent_id: Optional[str] = None) -> Dict[str, Any]:
+    async def list_tasks(self, plan_path: str, parent_id: Optional[str] = None) -> str:
         """List tasks in a plan, optionally filtered by parent task."""
         plan = await self._get_plan(plan_path)
         
         if not plan:
-            return {"success": False, "error": f"Plan not found at path: {plan_path}"}
+            return f"Plan not found at path: {plan_path}"
         
         tasks_list = []
         
@@ -374,10 +359,7 @@ class WorkspacePlanningTools(Toolset):
             if (parent_id and task.parent_id == parent_id) or (parent_id is None and not task.parent_id):
                 tasks_list.append(task.model_dump())
         
-        return {
-            "success": True,
-            "tasks": tasks_list
-        }
+        return yaml.dump({"tasks": tasks_list}, default_flow_style=False, sort_keys=False, allow_unicode=True)
     
     @json_schema(
         description="Add a lesson learned to a plan",
@@ -399,30 +381,23 @@ class WorkspacePlanningTools(Toolset):
             }
         }
     )
-    async def add_lesson_learned(self, plan_path: str, lesson: str, learned_task_id: str) -> Dict[str, Any]:
+    async def add_lesson_learned(self, plan_path: str, lesson: str, learned_task_id: str) -> str:
         """Add a lesson learned to a plan."""
         plan = await self._get_plan(plan_path)
         
         if not plan:
-            return {"success": False, "error": f"Plan not found at path: {plan_path}"}
+            return f"Plan not found at path: {plan_path}"
         
         if learned_task_id not in plan.tasks:
-            return {"success": False, "error": f"Task with ID '{learned_task_id}' not found in the plan"}
+            return f"Task with ID '{learned_task_id}' not found in the plan"
+
+        new_lesson = LessonLearnedModel(lesson=lesson, learned_task_id=learned_task_id)
         
-        # Create the new lesson learned
-        new_lesson = LessonLearnedModel(
-            lesson=lesson,
-            learned_task_id=learned_task_id
-        )
-        
-        # Add to plan's lessons learned
+
         plan.lessons_learned.append(new_lesson)
         await self._save_plan(plan_path, plan)
-        
-        return {
-            "success": True,
-            "lesson": new_lesson.model_dump()
-        }
+        return yaml.dump({"lesson": new_lesson.model_dump()}, default_flow_style=False, sort_keys=False, allow_unicode=True)
+
     
     @json_schema(
         description="List lessons learned in a plan",
@@ -438,12 +413,12 @@ class WorkspacePlanningTools(Toolset):
             }
         }
     )
-    async def list_lessons_learned(self, plan_path: str, task_id: Optional[str] = None) -> Dict[str, Any]:
+    async def list_lessons_learned(self, plan_path: str, task_id: Optional[str] = None) -> str:
         """List lessons learned in a plan, optionally filtered by task."""
         plan = await self._get_plan(plan_path)
         
         if not plan:
-            return {"success": False, "error": f"Plan not found at path: {plan_path}"}
+            return f"Plan not found at path: {plan_path}"
         
         lessons_list = []
         
@@ -451,11 +426,9 @@ class WorkspacePlanningTools(Toolset):
             # If task_id is provided, filter by task_id
             if task_id is None or lesson.learned_task_id == task_id:
                 lessons_list.append(lesson.model_dump())
-        
-        return {
-            "success": True,
-            "lessons": lessons_list
-        }
+
+        return yaml.dump({"lessons": lessons_list}, default_flow_style=False, sort_keys=False, allow_unicode=True)
+
     
     @json_schema(
         description="Delete a task and its subtasks",
@@ -472,15 +445,15 @@ class WorkspacePlanningTools(Toolset):
             }
         }
     )
-    async def delete_task(self, plan_path: str, task_id: str) -> Dict[str, Any]:
+    async def delete_task(self, plan_path: str, task_id: str) -> str:
         """Delete a task and all its subtasks from a plan."""
         plan = await self._get_plan(plan_path)
         
         if not plan:
-            return {"success": False, "error": f"Plan not found at path: {plan_path}"}
+            return f"Plan not found at path: {plan_path}"
         
         if task_id not in plan.tasks:
-            return {"success": False, "error": f"Task with ID '{task_id}' not found in the plan"}
+            return f"Task with ID '{task_id}' not found in the plan"
         
         # Get the task and its subtasks
         deleted_tasks = self._delete_task_recursive(plan, task_id)
@@ -494,10 +467,7 @@ class WorkspacePlanningTools(Toolset):
         
         await self._save_plan(plan_path, plan)
         
-        return {
-            "success": True,
-            "deleted_tasks": deleted_tasks
-        }
+        return f"{len(deleted_tasks)} task(s) deleted successfully"
     
     def _delete_task_recursive(self, plan: PlanModel, task_id: str) -> List[str]:
         """Recursively delete a task and all its subtasks."""

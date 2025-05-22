@@ -12,7 +12,6 @@ dependencies = [
     "fastapi>=0.115.12",
     "fastapi-pagination>=0.13.1",
     "fastapi-versioning>=0.10.0",
-    "fastapi-cache2>=0.2.2",
     "fastapi-jwt-auth>=0.5.0",
     "structlog>=25.3.0",
     "pyhumps>=3.8.0",
@@ -25,8 +24,8 @@ dependencies = [
     "python-multipart",
     "markitdown==0.0.2",
     "aiofiles",
-    "redis>=5.0.0",
-    "fastapi-cache2[redis]>=0.2.2"
+    "fastapi-cache2>=0.2.2",
+    "redis>=5.0.0"
 ]
 
 requires-python = ">=3.12"
