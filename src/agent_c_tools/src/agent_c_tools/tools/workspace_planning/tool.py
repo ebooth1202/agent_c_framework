@@ -2,12 +2,12 @@
 from typing import Any, Dict, List, Optional, cast
 from agent_c.toolsets.tool_set import Toolset
 from agent_c.toolsets.json_schema import json_schema
-from agent_c_tools.tools.workshop_planning.prompt import WorkspacePlanSection
+from agent_c_tools.tools.workspace_planning.prompt import WorkspacePlanSection
 from agent_c_tools.tools.workspace.tool import WorkspaceTools
 
-class WorkshopPlanningTools(Toolset):
+class WorkspacePlanningTools(Toolset):
     """
-    WorkshopPlanningTools provides methods for creating and tracking plans using the metadata of a workspace.
+    WorkspacePlanningTools provides methods for creating and tracking plans using the metadata of a workspace.
     """
 
     def __init__(self, **kwargs: Any):
@@ -19,4 +19,4 @@ class WorkshopPlanningTools(Toolset):
         self.workspace_tool = cast(WorkspaceTools, self.tool_chest.available_tools.get('WorkspaceTools'))
 
 
-Toolset.register(WorkshopPlanningTools, required_tools=['WorkspaceTools'])
+Toolset.register(WorkspacePlanningTools, required_tools=['WorkspaceTools'])
