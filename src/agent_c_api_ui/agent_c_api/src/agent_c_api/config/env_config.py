@@ -1,7 +1,8 @@
 # config.py
 import os
 from pathlib import Path
-from pydantic_settings  import BaseSettings, SettingsConfigDict
+from typing import Optional
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 def get_project_root(marker: str = "pyproject.toml") -> Path:
@@ -40,19 +41,39 @@ class Settings(BaseSettings):
     HOST: str = os.environ.get("AGENT_C_API_HOST", "0.0.0.0")
     PORT: int = int(os.environ.get("AGENT_C_API_PORT", 8000))
     RELOAD: bool = False
-    
+
     # Agent settings
     CALLBACK_TIMEOUT: float = 300.0  # Timeout in seconds for stream callbacks
 
     # Profile API App
     PROFILING_ENABLED: bool = False
 
+    # Redis Configuration
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_DB: int = 0
+    REDIS_USERNAME: Optional[str] = None
+    REDIS_PASSWORD: Optional[str] = None
+    REDIS_DATA_DIR: Path = Path("./data/redis")
+    REDIS_STARTUP_TIMEOUT: int = 30
+    MANAGE_REDIS_LIFECYCLE: bool = True
+
+    # Session Configuration
+    SESSION_TTL: int = 24 * 60 * 60  # 24 hours
+    SESSION_CLEANUP_INTERVAL: int = 60 * 60  # 1 hour
+    SESSION_CLEANUP_BATCH_SIZE: int = 100
+
+    # Feature Flags
+    USE_REDIS_SESSIONS: bool = True
+
     # Allows you to override settings via a .env file
     model_config = SettingsConfigDict(
-        env_file=str(BASE_DIR.parent.parent.parent.parent / ".env"), # Get the .env file from the root of the project
+        env_file=str(BASE_DIR.parent.parent.parent.parent / ".env"),  # Get the .env file from the root of the project
         env_file_encoding="utf-8",
         extra="allow"  # This permits extra keys not defined in the model
     )
+
+
 # Can use getattr(settings, "SECRET_KEY", None) to get the value of SECRET_KEY
 # Instantiate the settings
 settings = Settings()
