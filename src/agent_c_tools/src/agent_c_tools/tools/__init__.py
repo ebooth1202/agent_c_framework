@@ -14,6 +14,8 @@ from . import css_explorer  # CSS Explorer toolset
 from . import mariadb  # MariaDB toolset
 from . import reverse_engineering  # Reverse Engineering toolset
 from . import math  # Math toolset
+from . import workspace_planning  # Workspace Planning toolset
+from . import workspace_knowledge  # Workspace Knowledge toolset
 __all__ = [
     'workspace',
     'web', 
@@ -28,5 +30,7 @@ __all__ = [
     'css_explorer',
     'mariadb',
     'reverse_engineering',
-    'math'
+    'math',
+    'workspace_planning',
+    'workspace_knowledge'
 ]

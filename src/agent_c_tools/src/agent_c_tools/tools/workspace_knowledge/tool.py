@@ -1,0 +1,625 @@
+from typing import Any, Dict, List, Optional, Union, cast
+from datetime import datetime
+import json
+
+from agent_c.toolsets.tool_set import Toolset
+from agent_c.toolsets.json_schema import json_schema
+from agent_c_tools.tools.workspace_knowledge.prompt import WorkspaceKnowledgeSection
+from agent_c_tools.tools.workspace_knowledge.models import KnowledgeGraph, Entity, Relation
+from agent_c_tools.tools.workspace.tool import WorkspaceTools
+
+
+class WorkspaceKnowledgeTools(Toolset):
+    """
+    WorkspaceKnowledgeTools provides methods for creating and managing knowledge graphs using the metadata of a workspace.
+    """
+
+    def __init__(self, **kwargs: Any):
+        super().__init__(name='wkg', **kwargs)
+        self.section = WorkspaceKnowledgeSection()
+        self.workspace_tool: Optional[WorkspaceTools] = None
+
+    async def post_init(self):
+        self.workspace_tool = cast(WorkspaceTools, self.tool_chest.available_tools.get('WorkspaceTools'))
+    
+    def _parse_kg_path(self, kg_path: str) -> tuple[str, str]:
+        """Parse a knowledge graph path into workspace name and knowledge graph ID."""
+        if not kg_path.startswith("//"):
+            raise ValueError(f"Invalid knowledge graph path format: {kg_path}. Must start with //")
+        
+        parts = kg_path.split("/")
+        if len(parts) < 3:
+            raise ValueError(f"Invalid knowledge graph path format: {kg_path}. Format should be //workspace/knowledge_graph_id")
+        
+        workspace_name = parts[2]
+        kg_id = "/".join(parts[3:]) if len(parts) > 3 else "default"
+        
+        return workspace_name, kg_id
+    
+    async def _get_kg_meta(self, workspace_name: str) -> Dict[str, Any]:
+        """Get the knowledge graphs metadata dictionary for a workspace."""
+        if not self.workspace_tool:
+            raise RuntimeError("WorkspaceTools not available")
+        
+        kg_meta = await self.workspace_tool.read_meta_value(workspace=workspace_name, key="_kg")
+        return kg_meta or {}
+    
+    async def _save_kg_meta(self, workspace_name: str, kg_meta: Dict[str, Any]) -> None:
+        """Save the knowledge graphs metadata dictionary for a workspace."""
+        if not self.workspace_tool:
+            raise RuntimeError("WorkspaceTools not available")
+        
+        await self.workspace_tool.write_meta_value(workspace=workspace_name, key="_kg", value=kg_meta)
+    
+    async def _get_kg(self, kg_path: str) -> Optional[KnowledgeGraph]:
+        """Get a knowledge graph by its path."""
+        workspace_name, kg_id = self._parse_kg_path(kg_path)
+        kg_meta = await self._get_kg_meta(workspace_name)
+        
+        if kg_id not in kg_meta:
+            return None
+        
+        # Convert the JSON dict back to a KnowledgeGraph
+        try:
+            return KnowledgeGraph.model_validate(kg_meta[kg_id])
+        except Exception as e:
+            self._log.error(f"Error deserializing knowledge graph: {e}")
+            return None
+    
+    async def _save_kg(self, kg_path: str, kg: KnowledgeGraph) -> None:
+        """Save a knowledge graph to its path."""
+        workspace_name, kg_id = self._parse_kg_path(kg_path)
+        kg_meta = await self._get_kg_meta(workspace_name)
+        
+        # Update the knowledge graph's updated_at timestamp
+        kg.updated_at = datetime.now()
+        
+        # Convert the KnowledgeGraph to a dict for storage
+        kg_meta[kg_id] = kg.model_dump()
+        await self._save_kg_meta(workspace_name, kg_meta)
+    
+    @json_schema(
+        description="Create a new knowledge graph in a workspace",
+        params={
+            "kg_path": {
+                "type": "string",
+                "description": "Path to the knowledge graph in the format //workspace/knowledge_graph_id",
+                "required": True
+            },
+            "title": {
+                "type": "string",
+                "description": "Title of the knowledge graph",
+                "required": True
+            },
+            "description": {
+                "type": "string",
+                "description": "Description of the knowledge graph"
+            }
+        }
+    )
+    async def create_knowledge_graph(self, kg_path: str, title: str, description: str = "") -> Dict[str, Any]:
+        """Create a new knowledge graph in the specified workspace."""
+        workspace_name, kg_id = self._parse_kg_path(kg_path)
+        kg_meta = await self._get_kg_meta(workspace_name)
+        
+        if kg_id in kg_meta:
+            return {"success": False, "error": f"Knowledge graph with ID '{kg_id}' already exists"}
+        
+        new_kg = KnowledgeGraph(title=title, description=description)
+        await self._save_kg(kg_path, new_kg)
+        
+        return {
+            "success": True,
+            "knowledge_graph": new_kg.model_dump()
+        }
+    
+    @json_schema(
+        description="List all knowledge graphs in a workspace",
+        params={
+            "workspace": {
+                "type": "string",
+                "description": "Name of the workspace",
+                "required": True
+            }
+        }
+    )
+    async def list_knowledge_graphs(self, workspace: str) -> Dict[str, Any]:
+        """List all knowledge graphs in the specified workspace."""
+        kg_meta = await self._get_kg_meta(workspace)
+        
+        kg_list = []
+        for kg_id, kg_data in kg_meta.items():
+            kg_list.append({
+                "id": kg_id,
+                "title": kg_data.get("title", ""),
+                "description": kg_data.get("description", ""),
+                "created_at": kg_data.get("created_at", ""),
+                "updated_at": kg_data.get("updated_at", "")
+            })
+        
+        return {
+            "success": True,
+            "knowledge_graphs": kg_list
+        }
+    
+    @json_schema(
+        description="Get details of a knowledge graph",
+        params={
+            "kg_path": {
+                "type": "string",
+                "description": "Path to the knowledge graph in the format //workspace/knowledge_graph_id",
+                "required": True
+            }
+        }
+    )
+    async def get_knowledge_graph(self, kg_path: str) -> Dict[str, Any]:
+        """Get details of a knowledge graph."""
+        kg = await self._get_kg(kg_path)
+        
+        if not kg:
+            return {"success": False, "error": f"Knowledge graph not found at path: {kg_path}"}
+        
+        return {
+            "success": True,
+            "knowledge_graph": kg.model_dump()
+        }
+    
+    @json_schema(
+        description="Create new entities in the knowledge graph",
+        params={
+            "kg_path": {
+                "type": "string",
+                "description": "Path to the knowledge graph in the format //workspace/knowledge_graph_id",
+                "required": True
+            },
+            "entities": {
+                "type": "array",
+                "description": "List of entities to create",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "Name of the entity"
+                        },
+                        "entity_type": {
+                            "type": "string",
+                            "description": "Type of the entity"
+                        },
+                        "observations": {
+                            "type": "array",
+                            "description": "List of observations about the entity",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "required": ["name", "entity_type"]
+                },
+                "required": True
+            }
+        }
+    )
+    async def create_entities(self, kg_path: str, entities: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Create new entities in the knowledge graph."""
+        kg = await self._get_kg(kg_path)
+        
+        if not kg:
+            return {"success": False, "error": f"Knowledge graph not found at path: {kg_path}"}
+        
+        created_entities = []
+        for entity_data in entities:
+            name = entity_data.get("name")
+            entity_type = entity_data.get("entity_type")
+            observations = entity_data.get("observations", [])
+            
+            if name in kg.entities:
+                continue  # Skip existing entities
+            
+            entity = Entity(
+                name=name,
+                entity_type=entity_type,
+                observations=observations
+            )
+            
+            kg.entities[name] = entity
+            created_entities.append(entity.model_dump())
+        
+        await self._save_kg(kg_path, kg)
+        
+        return {
+            "success": True,
+            "created_entities": created_entities
+        }
+    
+    @json_schema(
+        description="Create new relations between entities in the knowledge graph",
+        params={
+            "kg_path": {
+                "type": "string",
+                "description": "Path to the knowledge graph in the format //workspace/knowledge_graph_id",
+                "required": True
+            },
+            "relations": {
+                "type": "array",
+                "description": "List of relations to create",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "from_entity": {
+                            "type": "string",
+                            "description": "Name of the source entity"
+                        },
+                        "to_entity": {
+                            "type": "string",
+                            "description": "Name of the target entity"
+                        },
+                        "relation_type": {
+                            "type": "string",
+                            "description": "Type of the relation"
+                        }
+                    },
+                    "required": ["from_entity", "to_entity", "relation_type"]
+                },
+                "required": True
+            }
+        }
+    )
+    async def create_relations(self, kg_path: str, relations: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Create new relations between entities in the knowledge graph."""
+        kg = await self._get_kg(kg_path)
+        
+        if not kg:
+            return {"success": False, "error": f"Knowledge graph not found at path: {kg_path}"}
+        
+        created_relations = []
+        for relation_data in relations:
+            from_entity = relation_data.get("from_entity")
+            to_entity = relation_data.get("to_entity")
+            relation_type = relation_data.get("relation_type")
+            
+            # Verify that both entities exist
+            if from_entity not in kg.entities:
+                return {"success": False, "error": f"Source entity '{from_entity}' not found"}
+            
+            if to_entity not in kg.entities:
+                return {"success": False, "error": f"Target entity '{to_entity}' not found"}
+            
+            # Check if the relation already exists
+            if any(r.from_entity == from_entity and r.to_entity == to_entity and r.relation_type == relation_type 
+                   for r in kg.relations):
+                continue  # Skip existing relations
+            
+            relation = Relation(
+                from_entity=from_entity,
+                to_entity=to_entity,
+                relation_type=relation_type
+            )
+            
+            kg.relations.append(relation)
+            created_relations.append(relation.model_dump())
+        
+        await self._save_kg(kg_path, kg)
+        
+        return {
+            "success": True,
+            "created_relations": created_relations
+        }
+    
+    @json_schema(
+        description="Add observations to existing entities",
+        params={
+            "kg_path": {
+                "type": "string",
+                "description": "Path to the knowledge graph in the format //workspace/knowledge_graph_id",
+                "required": True
+            },
+            "observations": {
+                "type": "array",
+                "description": "List of observations to add",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "entity_name": {
+                            "type": "string",
+                            "description": "Name of the entity to add observations to"
+                        },
+                        "contents": {
+                            "type": "array",
+                            "description": "List of observation contents to add",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "required": ["entity_name", "contents"]
+                },
+                "required": True
+            }
+        }
+    )
+    async def add_observations(self, kg_path: str, observations: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Add observations to existing entities in the knowledge graph."""
+        kg = await self._get_kg(kg_path)
+        
+        if not kg:
+            return {"success": False, "error": f"Knowledge graph not found at path: {kg_path}"}
+        
+        results = []
+        for observation_data in observations:
+            entity_name = observation_data.get("entity_name")
+            contents = observation_data.get("contents", [])
+            
+            if entity_name not in kg.entities:
+                return {"success": False, "error": f"Entity '{entity_name}' not found"}
+            
+            entity = kg.entities[entity_name]
+            added_observations = []
+            
+            for content in contents:
+                if content not in entity.observations:
+                    entity.observations.append(content)
+                    added_observations.append(content)
+            
+            # Update the entity's updated_at timestamp
+            entity.updated_at = datetime.now()
+            
+            results.append({
+                "entity_name": entity_name,
+                "added_observations": added_observations
+            })
+        
+        await self._save_kg(kg_path, kg)
+        
+        return {
+            "success": True,
+            "results": results
+        }
+    
+    @json_schema(
+        description="Delete entities from the knowledge graph",
+        params={
+            "kg_path": {
+                "type": "string",
+                "description": "Path to the knowledge graph in the format //workspace/knowledge_graph_id",
+                "required": True
+            },
+            "entity_names": {
+                "type": "array",
+                "description": "List of entity names to delete",
+                "items": {
+                    "type": "string"
+                },
+                "required": True
+            }
+        }
+    )
+    async def delete_entities(self, kg_path: str, entity_names: List[str]) -> Dict[str, Any]:
+        """Delete entities and their associated relations from the knowledge graph."""
+        kg = await self._get_kg(kg_path)
+        
+        if not kg:
+            return {"success": False, "error": f"Knowledge graph not found at path: {kg_path}"}
+        
+        deleted_entities = []
+        for entity_name in entity_names:
+            if entity_name in kg.entities:
+                deleted_entities.append(entity_name)
+                del kg.entities[entity_name]
+        
+        # Delete any relations involving these entities
+        kg.relations = [r for r in kg.relations 
+                       if r.from_entity not in entity_names and r.to_entity not in entity_names]
+        
+        await self._save_kg(kg_path, kg)
+        
+        return {
+            "success": True,
+            "deleted_entities": deleted_entities
+        }
+    
+    @json_schema(
+        description="Delete observations from entities",
+        params={
+            "kg_path": {
+                "type": "string",
+                "description": "Path to the knowledge graph in the format //workspace/knowledge_graph_id",
+                "required": True
+            },
+            "deletions": {
+                "type": "array",
+                "description": "List of observation deletions",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "entity_name": {
+                            "type": "string",
+                            "description": "Name of the entity containing the observations"
+                        },
+                        "observations": {
+                            "type": "array",
+                            "description": "List of observations to delete",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "required": ["entity_name", "observations"]
+                },
+                "required": True
+            }
+        }
+    )
+    async def delete_observations(self, kg_path: str, deletions: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Delete specific observations from entities in the knowledge graph."""
+        kg = await self._get_kg(kg_path)
+        
+        if not kg:
+            return {"success": False, "error": f"Knowledge graph not found at path: {kg_path}"}
+        
+        for deletion in deletions:
+            entity_name = deletion.get("entity_name")
+            observations = deletion.get("observations", [])
+            
+            if entity_name not in kg.entities:
+                continue
+            
+            entity = kg.entities[entity_name]
+            entity.observations = [o for o in entity.observations if o not in observations]
+            
+            # Update the entity's updated_at timestamp
+            entity.updated_at = datetime.now()
+        
+        await self._save_kg(kg_path, kg)
+        
+        return {
+            "success": True,
+            "message": "Observations deleted successfully"
+        }
+    
+    @json_schema(
+        description="Delete relations from the knowledge graph",
+        params={
+            "kg_path": {
+                "type": "string",
+                "description": "Path to the knowledge graph in the format //workspace/knowledge_graph_id",
+                "required": True
+            },
+            "relations": {
+                "type": "array",
+                "description": "List of relations to delete",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "from_entity": {
+                            "type": "string",
+                            "description": "Name of the source entity"
+                        },
+                        "to_entity": {
+                            "type": "string",
+                            "description": "Name of the target entity"
+                        },
+                        "relation_type": {
+                            "type": "string",
+                            "description": "Type of the relation"
+                        }
+                    },
+                    "required": ["from_entity", "to_entity", "relation_type"]
+                },
+                "required": True
+            }
+        }
+    )
+    async def delete_relations(self, kg_path: str, relations: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Delete specific relations from the knowledge graph."""
+        kg = await self._get_kg(kg_path)
+        
+        if not kg:
+            return {"success": False, "error": f"Knowledge graph not found at path: {kg_path}"}
+        
+        initial_count = len(kg.relations)
+        for relation_data in relations:
+            from_entity = relation_data.get("from_entity")
+            to_entity = relation_data.get("to_entity")
+            relation_type = relation_data.get("relation_type")
+            
+            kg.relations = [r for r in kg.relations 
+                          if not (r.from_entity == from_entity and 
+                                 r.to_entity == to_entity and 
+                                 r.relation_type == relation_type)]
+        
+        deleted_count = initial_count - len(kg.relations)
+        await self._save_kg(kg_path, kg)
+        
+        return {
+            "success": True,
+            "deleted_count": deleted_count
+        }
+    
+    @json_schema(
+        description="Search for nodes in the knowledge graph",
+        params={
+            "kg_path": {
+                "type": "string",
+                "description": "Path to the knowledge graph in the format //workspace/knowledge_graph_id",
+                "required": True
+            },
+            "query": {
+                "type": "string",
+                "description": "Search query to match against entity names, types, and observation content",
+                "required": True
+            }
+        }
+    )
+    async def search_nodes(self, kg_path: str, query: str) -> Dict[str, Any]:
+        """Search for nodes in the knowledge graph based on a query."""
+        kg = await self._get_kg(kg_path)
+        
+        if not kg:
+            return {"success": False, "error": f"Knowledge graph not found at path: {kg_path}"}
+        
+        # Filter entities
+        matching_entities = {}
+        for name, entity in kg.entities.items():
+            if (query.lower() in name.lower() or 
+                query.lower() in entity.entity_type.lower() or 
+                any(query.lower() in obs.lower() for obs in entity.observations)):
+                matching_entities[name] = entity.model_dump()
+        
+        # Filter relations to only include those between matching entities
+        matching_relations = []
+        for relation in kg.relations:
+            if relation.from_entity in matching_entities and relation.to_entity in matching_entities:
+                matching_relations.append(relation.model_dump())
+        
+        return {
+            "success": True,
+            "entities": matching_entities,
+            "relations": matching_relations
+        }
+    
+    @json_schema(
+        description="Get specific nodes in the knowledge graph by their names",
+        params={
+            "kg_path": {
+                "type": "string",
+                "description": "Path to the knowledge graph in the format //workspace/knowledge_graph_id",
+                "required": True
+            },
+            "names": {
+                "type": "array",
+                "description": "List of entity names to retrieve",
+                "items": {
+                    "type": "string"
+                },
+                "required": True
+            }
+        }
+    )
+    async def get_nodes(self, kg_path: str, names: List[str]) -> Dict[str, Any]:
+        """Get specific nodes in the knowledge graph by their names."""
+        kg = await self._get_kg(kg_path)
+        
+        if not kg:
+            return {"success": False, "error": f"Knowledge graph not found at path: {kg_path}"}
+        
+        # Filter entities
+        matching_entities = {}
+        for name in names:
+            if name in kg.entities:
+                matching_entities[name] = kg.entities[name].model_dump()
+        
+        # Filter relations to only include those between matching entities
+        matching_relations = []
+        for relation in kg.relations:
+            if relation.from_entity in matching_entities and relation.to_entity in matching_entities:
+                matching_relations.append(relation.model_dump())
+        
+        return {
+            "success": True,
+            "entities": matching_entities,
+            "relations": matching_relations
+        }
+
+
+Toolset.register(WorkspaceKnowledgeTools, required_tools=['WorkspaceTools'])
