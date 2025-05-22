@@ -111,12 +111,14 @@ class ClaudeChatAgent(BaseAgent):
                 functions.append({"type": "web_search_20250305", "name": "web_search", "max_uses": max_searches})
 
             if self.allow_betas:
-                if max_tokens == self.CLAUDE_MAX_TOKENS:
-                    completion_opts['max_tokens'] = 128000
                 if '-4-' in model_name:
+                    if max_tokens == self.CLAUDE_MAX_TOKENS:
+                        completion_opts['max_tokens'] = 64000
                     completion_opts['betas'] = ['interleaved-thinking-2025-05-14', "output-128k-2025-02-19"]
                 else:
                     completion_opts['betas'] = ["token-efficient-tools-2025-02-19", "output-128k-2025-02-19"]
+                    if max_tokens == self.CLAUDE_MAX_TOKENS:
+                        completion_opts['max_tokens'] = 128000
 
 
         budget_tokens: int = kwargs.get("budget_tokens", self.budget_tokens)

@@ -43,7 +43,7 @@ class BaseWorkspace:
         self.write_status: str = "RO" if self.read_only else "R/W"
         self.max_filename_length: int = -1
         self._metadata: Optional[dict[str, Any]] = None
-        self.logger = logging.getLogger(self.__name__)
+        self.logger = kwargs.get("logger", logging.getLogger(__name__))
 
     def __str__(self) -> str:
         """
