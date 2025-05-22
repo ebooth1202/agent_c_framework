@@ -4,7 +4,7 @@ import json
 import threading
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 from agent_c.toolsets.tool_set import Toolset
 from agent_c.models.persona_file import PersonaFile
@@ -43,6 +43,9 @@ class PersonaOneshotBase(Toolset):
         self.persona_cache: Dict[str, PersonaFile] = {}
         self.workspace_tool: Optional[WorkspaceTools] = None
         self.persona_dir: str = kwargs.get('persona_dir', 'personas')
+
+    async def post_init(self):
+        self.workspace_tool = cast(WorkspaceTools, self.tool_chest.available_tools.get('WorkspaceTools'))
 
     def agent_for_persona(self, persona: PersonaFile):
         if persona.name in self.agent_cache:

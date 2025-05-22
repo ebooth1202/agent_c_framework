@@ -6,10 +6,8 @@ from agent_c import ToolChest, DynamicPersonaSection, PromptBuilder, ClaudeChatA
 from agent_c.models.persona_file import PersonaFile
 from agent_c.toolsets.tool_set import Toolset
 from agent_c.toolsets.json_schema import json_schema
-from agent_c_tools.tools.think import ThinkTools
 from agent_c_tools.tools.persona_oneshot.base import PersonaOneshotBase
 from agent_c_tools.tools.reverse_engineering.prompt import RevEngSection
-from agent_c_tools.tools.workspace.tool import WorkspaceTools
 
 
 class ReverseEngineeringTools(PersonaOneshotBase):
@@ -19,11 +17,8 @@ class ReverseEngineeringTools(PersonaOneshotBase):
     """
 
     def __init__(self, **kwargs: Any):
-        kwargs['persona_oneshot_model_name'] = kwargs.get('rev_eng_model_name', 'claude-3-7-sonnet-latest')
-        kwargs['persona_oneshot_tool_classes'] = [WorkspaceTools, ThinkTools]
-        kwargs['persona_oneshot_essential_toolsets'] = [cls.__name__ for cls in kwargs['persona_oneshot_tool_classes']]
         super().__init__(name='rev_eng', **kwargs)
-        self.section = RevEngSection();
+        self.section = RevEngSection()
 
     async def __try_explain_code(self, file: str) -> str:
         context = await self.workspace_tool.inspect_code(path = file)
