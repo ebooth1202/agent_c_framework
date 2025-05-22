@@ -17,6 +17,9 @@ from .markdown_to_html_report import MarkdownToHtmlReportTools
 from .css_explorer import CssExplorerTools
 from .mariadb import MariaDBTools
 from .math import MathTools
+from .workspace_planning import WorkspacePlanningTools
+from .workspace_knowledge import WorkspaceKnowledgeTools
+from .workspace_sequential_thinking import WorkspaceSequentialThinkingTools
 
 __all__ = [
     # Workspace tools
@@ -55,5 +58,8 @@ __all__ = [
     'MarkdownToHtmlReportTools',
     'CssExplorerTools',
     'MariaDBTools',
-    'MathTools'
+    'MathTools',
+    'WorkspacePlanningTools',
+    'WorkspaceKnowledgeTools',
+    'WorkspaceSequentialThinkingTools'
 ]

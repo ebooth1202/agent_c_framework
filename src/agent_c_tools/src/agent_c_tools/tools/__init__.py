@@ -16,6 +16,7 @@ from . import reverse_engineering  # Reverse Engineering toolset
 from . import math  # Math toolset
 from . import workspace_planning  # Workspace Planning toolset
 from . import workspace_knowledge  # Workspace Knowledge toolset
+from . import workspace_sequential_thinking  # Workspace Sequential Thinking toolset
 __all__ = [
     'workspace',
     'web', 
@@ -32,5 +33,6 @@ __all__ = [
     'reverse_engineering',
     'math',
     'workspace_planning',
-    'workspace_knowledge'
+    'workspace_knowledge',
+    'workspace_sequential_thinking'
 ]
