@@ -1,16 +1,31 @@
 import asyncio
 import logging
+import os
 from debug_tool import ToolDebugger
 
 
 async def run_example():
-    """Simple example of how to use the ToolDebugger"""
+    """Simple example of how to use the ToolDebugger with centralized config loading"""
     # Create the tool tester
+    # The debugger will automatically:
+    # 1. Auto-detect the agent_c base path
+    # 2. Load .local_workspaces.json from agent_c\.local_workspaces.json
+    # 3. Load .env from agent_c\.env
+    
+    # You can also specify a custom agent_c base path:
+    # tester = ToolDebugger(log_level=logging.INFO, init_local_workspaces=False, 
+    #                      agent_c_base_path=r"C:\your\custom\path")
+    
     tester = ToolDebugger(log_level=logging.INFO, init_local_workspaces=False)
+    
+    # Print some info about loaded configuration
+    print(f"\nAgent C base path: {tester.agent_c_base_path}")
+    print(f"Environment variables loaded from .env: {os.path.exists(os.path.join(tester.agent_c_base_path, '.env'))}")
+    print(f"Local workspaces config exists: {os.path.exists(os.path.join(tester.agent_c_base_path, '.local_workspaces.json'))}")
 
     # Setup a weather tool as a simple example
-    # tool_opts is how you pass in required keys to, without loading .env
-    # tool_opts={'FLASHDOCS_API_KEY': api_key}
+    # Since .env is loaded, any API keys in the .env file will be available
+    # tool_opts can override or add additional configuration
     await tester.setup_tool(tool_import_path='agent_c_tools.WeatherTools',
                             tool_opts={})
 

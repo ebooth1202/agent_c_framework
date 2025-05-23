@@ -2,12 +2,21 @@ import asyncio
 import importlib
 import json
 import logging
+import os
 import sys
 import time
+from pathlib import Path
 from typing import Dict, List, Any, Type, Optional, Union
 
 # Import the base ToolChest class
 from agent_c import ToolChest, ToolCache
+
+# Try to import python-dotenv for .env file loading
+try:
+    from dotenv import load_dotenv
+    DOTENV_AVAILABLE = True
+except ImportError:
+    DOTENV_AVAILABLE = False
 
 
 # Add a mock for TokenCounter to fix the error in local_storage.py
@@ -28,18 +37,26 @@ class ToolDebugger:
     Allows dynamically importing and testing any tool with configurable payloads.
     """
 
-    def __init__(self, log_level=logging.INFO, init_local_workspaces: bool = True):
+    def __init__(self, log_level=logging.INFO, init_local_workspaces: bool = True, agent_c_base_path: str = None):
         """
         Initialize the tool tester with optional logging configuration.
 
         Args:
             log_level: Logging level (default: logging.INFO)
             init_local_workspaces: Flag to initialize local workspaces (default: True). Helpful when tools have dependencies on local workspaces. If you set to false and your toolset requires local workspaces, it will likely blow up.
+            agent_c_base_path: Path to agent_c base directory. If None, will try to auto-detect.
         """
         # Configure logging
         logging.basicConfig(level=log_level,
                             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger(__name__)
+
+        # Find the agent_c base directory
+        self.agent_c_base_path = self._find_agent_c_base_path(agent_c_base_path)
+        self.logger.info(f"Using agent_c base path: {self.agent_c_base_path}")
+        
+        # Load .env file if available
+        self._load_env_file()
 
         # Prep for workspaces if needed
         self.init_local_workspaces = init_local_workspaces
@@ -59,6 +76,55 @@ class ToolDebugger:
         # Initialize the tool chest
         self.tool_chest = ToolChest()
         self.logger.info("ToolDebugger initialized")
+
+    def _find_agent_c_base_path(self, provided_path: str = None) -> str:
+        """
+        Find the agent_c base directory path.
+        
+        Args:
+            provided_path: Optional path provided by user
+            
+        Returns:
+            Path to agent_c base directory
+        """
+        if provided_path:
+            if os.path.exists(provided_path):
+                return provided_path
+            else:
+                self.logger.warning(f"Provided path {provided_path} does not exist, trying auto-detection")
+        
+        # Try to auto-detect by looking for common patterns
+        current_dir = Path(__file__).resolve()
+        
+        # Look for agent_c directory by traversing up the directory tree
+        for parent in current_dir.parents:
+            if parent.name == "agent_c":
+                return str(parent)
+            # Also check if this directory contains expected files
+            if (parent / ".local_workspaces.json").exists() or (parent / ".env").exists():
+                return str(parent)
+        
+        # If all else fails, use current directory
+        self.logger.warning("Could not auto-detect agent_c base path, using current directory")
+        return str(Path.cwd())
+    
+    def _load_env_file(self) -> None:
+        """
+        Load .env file from the agent_c base directory.
+        """
+        env_file_path = os.path.join(self.agent_c_base_path, ".env")
+        
+        if not DOTENV_AVAILABLE:
+            if os.path.exists(env_file_path):
+                self.logger.warning(".env file found but python-dotenv not installed. Install with: pip install python-dotenv")
+            return
+        
+        if os.path.exists(env_file_path):
+            self.logger.info(f"Loading .env file from: {env_file_path}")
+            load_dotenv(env_file_path)
+            self.logger.info("Environment variables loaded from .env file")
+        else:
+            self.logger.info(f"No .env file found at: {env_file_path}")
 
 
 
@@ -156,14 +222,22 @@ class ToolDebugger:
         self.workspaces = [local_project]
         self.logger.info(f"Initialized workspaces {local_project.workspace_root}")
 
+        # Load .local_workspaces.json from agent_c base directory
+        workspaces_file_path = os.path.join(self.agent_c_base_path, ".local_workspaces.json")
+        
         try:
-            with open('.local_workspaces.json', 'r') as json_file:
+            self.logger.info(f"Loading local workspaces from: {workspaces_file_path}")
+            with open(workspaces_file_path, 'r') as json_file:
                 local_workspaces = json.load(json_file)
 
             for ws in local_workspaces['local_workspaces']:
                 self.workspaces.append(LocalStorageWorkspace(**ws))
+                
+            self.logger.info(f"Loaded {len(local_workspaces['local_workspaces'])} additional workspaces")
         except FileNotFoundError:
-            pass
+            self.logger.info(f"No .local_workspaces.json file found at: {workspaces_file_path}")
+        except Exception as e:
+            self.logger.error(f"Error loading .local_workspaces.json: {str(e)}")
 
     def print_tool_info(self) -> None:
         """
