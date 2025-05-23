@@ -2,6 +2,8 @@ from .util import Weather
 from agent_c import json_schema, Toolset
 import logging
 
+from ...helpers.validate_kwargs import validate_required_fields
+
 
 # Simple demonstration tool that grabs a weather forecast for a location.
 class WeatherTools(Toolset):
@@ -30,6 +32,11 @@ class WeatherTools(Toolset):
         Returns:
             JSON string with weather data
         """
+        success, message = validate_required_fields(kwargs=kwargs, required_fields=['location_name'])
+
+        if not success:
+            raise ValueError(f"Error: {message}")
+
         location_name = kwargs.get('location_name')
         
         # Use the existing Weather class with the new formatted method
