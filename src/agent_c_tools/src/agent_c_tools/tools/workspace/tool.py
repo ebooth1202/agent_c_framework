@@ -743,7 +743,7 @@ class WorkspaceTools(Toolset):
             return  f"Failed to read metadata value: {str(e)}"
 
     @json_schema(
-        description="Write to the metadata for a workspace using a UNC style path. Nested paths are supported using slash notation ",
+        description="Write to a key in the metadata for a workspace using a UNC style path. Nested paths are supported using slash notation ",
         params={
             "path": {
                 "type": "string",
@@ -751,7 +751,25 @@ class WorkspaceTools(Toolset):
                 "required": True
             },
             "data": {
-                "type": ["object", "array", "string", "number", "boolean", "null"],
+                "oneOf": [
+                    {"type": "object"},
+                    {
+                        "type": "array",
+                        "items": {
+                            "oneOf": [
+                                {"type": "object"},
+                                {"type": "string"},
+                                {"type": "number"},
+                                {"type": "boolean"},
+                                {"type": "null"}
+                            ]
+                        }
+                    },
+                    {"type": "string"},
+                    {"type": "number"},
+                    {"type": "boolean"},
+                    {"type": "null"}
+                ],
                 "description": "The complete metadata to write as a dictionary",
                 "required": True
             }
