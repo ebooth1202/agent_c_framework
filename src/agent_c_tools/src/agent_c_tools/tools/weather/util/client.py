@@ -5,6 +5,9 @@ from urllib.parse import quote_plus
 
 import httpx
 import logging
+
+import yaml
+
 from .constants import _Unit, METRIC, IMPERIAL
 from .enums import Locale
 from .forecast import BaseForecast, HourlyForecast, DailyForecast, Forecast
@@ -55,12 +58,14 @@ class Weather:
                         self.logger.error(f'HTTP error occurred: {e}')
                         raise
                     await asyncio.sleep(1 * (attempt + 1))  # exponential backoff
+                    return f'HTTP error occurred: {e}'
                 except httpx.RequestError as e:
                     self.logger.error(f'Request error occurred: {e}')
                     raise
                 except Exception as e:
                     self.logger.error(f'An error occurred: {e}')
                     raise
+        return f'Failed to fetch data after {max_retries} attempts'
 
     def _format_content(self, content: Union[str, bytes], url: str) -> Forecast:
         try:
@@ -74,3 +79,53 @@ class Weather:
         except Exception as e:
             self.logger.error(f"Error formatting content from {url}: {str(e)}")
             raise
+
+    async def get_formatted_weather_data(self, location: str) -> str:
+        """
+        Get weather data formatted as JSON string for tool consumption.
+        
+        Args:
+            location: The location to get weather for
+            
+        Returns:
+            JSON string with formatted weather data or error message
+        """
+        try:
+            weather = await self.get_forecast(location)
+            
+            # Handle case where get_forecast returns an error string
+            if isinstance(weather, str):
+                self.logger.error(f"Weather API returned error: {weather}")
+                return f"Error getting weather: {weather}"
+            
+            # Process daily forecasts
+            forecasts = []
+            for forecast in weather.daily_forecasts:
+                forecasts.append({
+                    'date': forecast.date.strftime('%Y-%m-%d'),
+                    'high_temperature': forecast.highest_temperature,
+                    'low_temperature': forecast.lowest_temperature
+                })
+            
+            # Build the response structure
+            weather_data = {
+                "currently": {
+                    "current_temperature": weather.temperature,
+                    "sky": weather.kind.emoji,
+                    "feels_like": weather.feels_like,
+                    "humidity": weather.humidity,
+                    "wind_speed": weather.wind_speed,
+                    "wind_direction": (weather.wind_direction.value + weather.wind_direction.emoji),
+                    "visibility": weather.visibility,
+                    "uv_index": weather.ultraviolet.index,
+                    "description": weather.description,
+                    "forecasts": forecasts
+                }
+            }
+            
+            return yaml.dump(weather_data, default_flow_style=False, sort_keys=False, allow_unicode=True)
+            
+        except Exception as e:
+            error_msg = f"Error getting weather: {str(e)}"
+            self.logger.error(error_msg)
+            return error_msg

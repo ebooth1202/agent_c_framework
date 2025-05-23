@@ -2,12 +2,27 @@ import asyncio
 import importlib
 import json
 import logging
+import os
 import sys
 import time
+from pathlib import Path
 from typing import Dict, List, Any, Type, Optional, Union
 
 # Import the base ToolChest class
 from agent_c import ToolChest, ToolCache
+
+# Try to import python-dotenv for .env file loading
+try:
+    from dotenv import load_dotenv
+    DOTENV_AVAILABLE = True
+except ImportError:
+    DOTENV_AVAILABLE = False
+
+try:
+    import yaml
+    YAML_AVAILABLE = True
+except ImportError:
+    YAML_AVAILABLE = False
 
 
 # Add a mock for TokenCounter to fix the error in local_storage.py
@@ -28,18 +43,26 @@ class ToolDebugger:
     Allows dynamically importing and testing any tool with configurable payloads.
     """
 
-    def __init__(self, log_level=logging.INFO, init_local_workspaces: bool = True):
+    def __init__(self, log_level=logging.INFO, init_local_workspaces: bool = True, agent_c_base_path: str = None):
         """
         Initialize the tool tester with optional logging configuration.
 
         Args:
             log_level: Logging level (default: logging.INFO)
             init_local_workspaces: Flag to initialize local workspaces (default: True). Helpful when tools have dependencies on local workspaces. If you set to false and your toolset requires local workspaces, it will likely blow up.
+            agent_c_base_path: Path to agent_c base directory. If None, will try to auto-detect.
         """
         # Configure logging
         logging.basicConfig(level=log_level,
                             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger(__name__)
+
+        # Find the agent_c base directory
+        self.agent_c_base_path = self._find_agent_c_base_path(agent_c_base_path)
+        self.logger.info(f"Using agent_c base path: {self.agent_c_base_path}")
+        
+        # Load .env file if available
+        self._load_env_file()
 
         # Prep for workspaces if needed
         self.init_local_workspaces = init_local_workspaces
@@ -59,6 +82,55 @@ class ToolDebugger:
         # Initialize the tool chest
         self.tool_chest = ToolChest()
         self.logger.info("ToolDebugger initialized")
+
+    def _find_agent_c_base_path(self, provided_path: str = None) -> str:
+        """
+        Find the agent_c base directory path.
+        
+        Args:
+            provided_path: Optional path provided by user
+            
+        Returns:
+            Path to agent_c base directory
+        """
+        if provided_path:
+            if os.path.exists(provided_path):
+                return provided_path
+            else:
+                self.logger.warning(f"Provided path {provided_path} does not exist, trying auto-detection")
+        
+        # Try to auto-detect by looking for common patterns
+        current_dir = Path(__file__).resolve()
+        
+        # Look for agent_c directory by traversing up the directory tree
+        for parent in current_dir.parents:
+            if parent.name == "agent_c":
+                return str(parent)
+            # Also check if this directory contains expected files
+            if (parent / ".local_workspaces.json").exists() or (parent / ".env").exists():
+                return str(parent)
+        
+        # If all else fails, use current directory
+        self.logger.warning("Could not auto-detect agent_c base path, using current directory")
+        return str(Path.cwd())
+    
+    def _load_env_file(self) -> None:
+        """
+        Load .env file from the agent_c base directory.
+        """
+        env_file_path = os.path.join(self.agent_c_base_path, ".env")
+        
+        if not DOTENV_AVAILABLE:
+            if os.path.exists(env_file_path):
+                self.logger.warning(".env file found but python-dotenv not installed. Install with: pip install python-dotenv")
+            return
+        
+        if os.path.exists(env_file_path):
+            self.logger.info(f"Loading .env file from: {env_file_path}")
+            load_dotenv(env_file_path)
+            self.logger.info("Environment variables loaded from .env file")
+        else:
+            self.logger.info(f"No .env file found at: {env_file_path}")
 
 
 
@@ -156,14 +228,22 @@ class ToolDebugger:
         self.workspaces = [local_project]
         self.logger.info(f"Initialized workspaces {local_project.workspace_root}")
 
+        # Load .local_workspaces.json from agent_c base directory
+        workspaces_file_path = os.path.join(self.agent_c_base_path, ".local_workspaces.json")
+        
         try:
-            with open('.local_workspaces.json', 'r') as json_file:
+            self.logger.info(f"Loading local workspaces from: {workspaces_file_path}")
+            with open(workspaces_file_path, 'r') as json_file:
                 local_workspaces = json.load(json_file)
 
             for ws in local_workspaces['local_workspaces']:
                 self.workspaces.append(LocalStorageWorkspace(**ws))
+                
+            self.logger.info(f"Loaded {len(local_workspaces['local_workspaces'])} additional workspaces")
         except FileNotFoundError:
-            pass
+            self.logger.info(f"No .local_workspaces.json file found at: {workspaces_file_path}")
+        except Exception as e:
+            self.logger.error(f"Error loading .local_workspaces.json: {str(e)}")
 
     def print_tool_info(self) -> None:
         """
@@ -203,11 +283,12 @@ class ToolDebugger:
         except Exception as e:
             print(f"  Error accessing map: {e}")
 
-    async def run_tool_test(self, tool_name: str, tool_params: Dict[str, Any]) -> List[Dict[str, Any]]:
+    async def run_tool_test(self, tool_name: str, tool_params: Dict[str, Any], tool_context: Dict[str, Any] = None) -> List[Dict[str, Any]]:
         """
         Run a test for a specific tool with given parameters.
 
         Args:
+            tool_context: Context information passed to tools (optional, defaults to basic context)
             tool_name: Name of the tool to call (e.g., 'flash_docs_outline_to_powerpoint')
             tool_params: Parameters for the tool call
 
@@ -223,12 +304,21 @@ class ToolDebugger:
             "input": tool_params
         }]
 
+        if tool_context is None:
+            tool_context = {
+                "session_id": f"debug_session_{test_id}",
+                "user_id": "debug_user",
+                "workspace_id": "debug_workspace",
+                "debug_mode": True
+            }
+
         try:
             self.logger.info(f"Executing tool call: {tool_name}")
             self.logger.debug(f"Tool parameters: {json.dumps(tool_params, indent=2, default=str)}")
+            self.logger.debug(f"Tool context: {json.dumps(tool_context, indent=2, default=str)}")
 
             # Call the tool
-            results = await self.tool_chest.call_tools(tool_call)
+            results = await self.tool_chest.call_tools(tool_call, tool_context)
 
             return results
 
@@ -267,9 +357,46 @@ class ToolDebugger:
             self.logger.error(f"Error extracting content: {str(e)}")
             return f"Error extracting content: {str(e)}"
 
-    def extract_structured_content(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def extract_structured_content(self, results: List[Dict[str, Any]], format_hint: str = 'auto') -> Dict[str, Any]:
         """
-        Extract content from results and parse it as JSON if possible.
+        Extract content from results and parse it as JSON or YAML.
+
+        Args:
+            results: Results from a tool call
+            format_hint: 'json', 'yaml', or 'auto' to auto-detect format
+
+        Returns:
+            Parsed content as a dictionary, or None if parsing fails
+        """
+        content_str = self.extract_content_from_results(results)
+
+        if not isinstance(content_str, str) or not content_str.strip():
+            return None
+
+        try:
+            if format_hint == 'auto':
+                # Auto-detect format based on content
+                detected_format = self.detect_content_format(results)
+                format_hint = detected_format if detected_format != 'unknown' else 'json'
+
+            if format_hint == 'json':
+                return self._parse_json_content(content_str)
+            elif format_hint == 'yaml':
+                return self._parse_yaml_content(content_str)
+            else:
+                # Try JSON first, then YAML as fallback
+                json_result = self._parse_json_content(content_str)
+                if json_result is not None:
+                    return json_result
+                return self._parse_yaml_content(content_str)
+
+        except Exception as e:
+            self.logger.warning(f"Could not parse content as structured data: {str(e)}")
+            return None
+
+    def extract_json_content(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Extract content from results and parse it as JSON.
 
         Args:
             results: Results from a tool call
@@ -278,15 +405,117 @@ class ToolDebugger:
             Parsed JSON content as a dictionary, or None if parsing fails
         """
         content_str = self.extract_content_from_results(results)
+        return self._parse_json_content(content_str)
+
+    def extract_yaml_content(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Extract content from results and parse it as YAML.
+
+        Args:
+            results: Results from a tool call
+
+        Returns:
+            Parsed YAML content as a dictionary, or None if parsing fails
+        """
+        content_str = self.extract_content_from_results(results)
+        return self._parse_yaml_content(content_str)
+
+    def _parse_json_content(self, content_str: str) -> Dict[str, Any]:
+        """
+        Internal method to parse JSON content.
+
+        Args:
+            content_str: String content to parse
+
+        Returns:
+            Parsed JSON content as a dictionary, or None if parsing fails
+        """
+        try:
+            if isinstance(content_str, str) and content_str.strip():
+                stripped = content_str.strip()
+                # More robust JSON detection
+                if stripped.startswith(('{', '[')):
+                    return json.loads(stripped)
+            return None
+        except json.JSONDecodeError as e:
+            self.logger.debug(f"Could not parse content as JSON: {str(e)}")
+            return None
+
+    def _parse_yaml_content(self, content_str: str) -> Dict[str, Any]:
+        """
+        Internal method to parse YAML content.
+
+        Args:
+            content_str: String content to parse
+
+        Returns:
+            Parsed YAML content as a dictionary, or None if parsing fails
+        """
+        if not YAML_AVAILABLE:
+            self.logger.warning("YAML parsing requested but PyYAML not installed. Install with: pip install PyYAML")
+            return None
 
         try:
-            # Attempt to parse as JSON
-            if isinstance(content_str, str) and content_str.startswith('{'):
-                return json.loads(content_str)
+            if isinstance(content_str, str) and content_str.strip():
+                result = yaml.safe_load(content_str.strip())
+                # yaml.safe_load can return None for empty content, or primitives
+                # We want to return dict/list structures
+                if isinstance(result, (dict, list)):
+                    return result
             return None
-        except json.JSONDecodeError:
-            self.logger.warning(f"Could not parse content as JSON: {content_str}")
+        except yaml.YAMLError as e:
+            self.logger.debug(f"Could not parse content as YAML: {str(e)}")
             return None
+
+    def detect_content_format(self, results: List[Dict[str, Any]]) -> str:
+        """
+        Detect the format of the content in the results.
+
+        Args:
+            results: Results from a tool call
+
+        Returns:
+            'json', 'yaml', or 'unknown'
+        """
+        content_str = self.extract_content_from_results(results)
+
+        if not isinstance(content_str, str) or not content_str.strip():
+            return 'unknown'
+
+        stripped = content_str.strip()
+
+        # Check for JSON first (more definitive indicators)
+        if stripped.startswith(('{', '[')):
+            # Try to parse as JSON to confirm
+            try:
+                json.loads(stripped)
+                return 'json'
+            except json.JSONDecodeError:
+                pass
+
+        # Check for YAML if JSON parsing failed
+        if YAML_AVAILABLE:
+            try:
+                result = yaml.safe_load(stripped)
+                # If it parses as YAML and isn't just a simple string/primitive
+                if isinstance(result, (dict, list)):
+                    return 'yaml'
+            except yaml.YAMLError:
+                pass
+
+        # Additional heuristics for YAML (when parsing fails but structure looks like YAML)
+        yaml_indicators = [
+            ':' in stripped and '\n' in stripped,  # Key-value pairs with newlines
+            stripped.startswith('- '),  # List items
+            '---' in stripped,  # YAML document separator
+            stripped.count('\n') > 0 and ': ' in stripped  # Multi-line with key-value
+        ]
+
+        if any(yaml_indicators):
+            return 'yaml'
+
+        return 'unknown'
+
 
     def get_available_tool_names(self) -> List[str]:
         """

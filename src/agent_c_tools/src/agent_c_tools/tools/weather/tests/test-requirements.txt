@@ -1,0 +1,7 @@
+# Test requirements for weather tool - two-level testing
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+
+# Additional dependencies for integration tests using debug_tool
+# Optional: For .env file loading in debug_tool (recommended)
+python-dotenv>=1.0.0
