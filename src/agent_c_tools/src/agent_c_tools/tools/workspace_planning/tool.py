@@ -218,6 +218,10 @@ class WorkspacePlanningTools(Toolset):
             "context": {
                 "type": "string",
                 "description": "Additional context for the task"
+            },
+            "sequence": {
+                "type": "integer",
+                "description": "Optional sequence number for controlling display order (lower numbers appear first)"
             }
         }
     )
@@ -229,6 +233,7 @@ class WorkspacePlanningTools(Toolset):
         priority = kwargs.get('priority', "medium")
         parent_id = kwargs.get('parent_id')
         context = kwargs.get('context', "")
+        sequence = kwargs.get('sequence')
         
         if not plan_path:
             return "Error: plan_path is required"
@@ -250,7 +255,8 @@ class WorkspacePlanningTools(Toolset):
             description=description,
             priority=priority,
             parent_id=parent_id,
-            context=context
+            context=context,
+            sequence=sequence
         )
         
         # Add to parent's child tasks if applicable
@@ -297,6 +303,10 @@ class WorkspacePlanningTools(Toolset):
             "context": {
                 "type": "string",
                 "description": "New context for the task"
+            },
+            "sequence": {
+                "type": "integer",
+                "description": "New sequence number for controlling display order"
             }
         }
     )
@@ -309,6 +319,7 @@ class WorkspacePlanningTools(Toolset):
         priority = kwargs.get('priority')
         completed = kwargs.get('completed')
         context = kwargs.get('context')
+        sequence = kwargs.get('sequence')
         
         if not plan_path:
             return "Error: plan_path is required"
@@ -336,6 +347,8 @@ class WorkspacePlanningTools(Toolset):
             task.completed = completed
         if context is not None:
             task.context = context
+        if sequence is not None:
+            task.sequence = sequence
         
         # Update the task's updated_at timestamp
         task.updated_at = datetime.now()
@@ -660,9 +673,13 @@ class WorkspacePlanningTools(Toolset):
             # Get root tasks (tasks without parent)
             root_tasks = [task for task in plan.tasks.values() if not task.parent_id]
             
-            # Sort by priority and creation date
+            # Sort by sequence (if set), then priority, then creation date
             priority_order = {"high": 0, "medium": 1, "low": 2}
-            root_tasks.sort(key=lambda t: (priority_order.get(t.priority, 1), t.created_at))
+            root_tasks.sort(key=lambda t: (
+                t.sequence if t.sequence is not None else float('inf'),  # Tasks with sequence come first
+                priority_order.get(t.priority, 1),
+                t.created_at
+            ))
             
             for task in root_tasks:
                 self._add_task_to_markdown(lines, task, plan.tasks, 0)
@@ -721,9 +738,13 @@ class WorkspacePlanningTools(Toolset):
         # Add child tasks
         if task.child_tasks:
             child_tasks = [all_tasks[child_id] for child_id in task.child_tasks if child_id in all_tasks]
-            # Sort child tasks by priority and creation date
+            # Sort child tasks by sequence (if set), then priority, then creation date
             priority_order = {"high": 0, "medium": 1, "low": 2}
-            child_tasks.sort(key=lambda t: (priority_order.get(t.priority, 1), t.created_at))
+            child_tasks.sort(key=lambda t: (
+                t.sequence if t.sequence is not None else float('inf'),  # Tasks with sequence come first
+                priority_order.get(t.priority, 1),
+                t.created_at
+            ))
             
             for child_task in child_tasks:
                 self._add_task_to_markdown(lines, child_task, all_tasks, indent_level + 1)
