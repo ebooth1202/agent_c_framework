@@ -2,16 +2,21 @@ from typing import Any, Optional, cast
 
 from agent_c.prompting.prompt_section import PromptSection, property_bag_item
 
-
-
 class WorkspacePlanSection(PromptSection):
 
     def __init__(self, **data: Any):
         TEMPLATE = (
             "# Workspace Planning Tools (WSP) - Comprehensive Planning Guide\n\n"
             "The Workspace Planning Tools enable strategic project management through structured plans, hierarchical tasks, rich contextual information, and knowledge capture.\n\n"
-            
-            "## Core Concepts\n\n"
+            "\n## User Collaboration and Planning Rules\n"
+            "- When directed to bring yourself up to speed you should:\n"
+            "   - Check the `current_plan` key of the workspace metadata for the current plan ID.\n"
+            "   - Use the Workspace Planning Tools to review the plan status and lessons learned for the current plan\n"
+            "       - Your goal here is to understand the state of things and prepare to handle the next request from the user.\n"
+            "\n## Plan execution Rules\n"
+            "- Unless explicit direction otherwise is given you may only execute a single stpe at a time.\n"
+            "- ALWAYS pause for verification before marking a task as complete.\n"
+            "\n## Core Concepts\n\n"
             "### Plans\n"
             "- **Purpose**: Container for related work with clear objectives and success criteria\n"
             "- **Scope**: Should represent a cohesive project, feature, or major initiative\n"

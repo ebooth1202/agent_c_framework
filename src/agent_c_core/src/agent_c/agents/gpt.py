@@ -275,7 +275,8 @@ class GPTChatAgent(BaseAgent):
                         messages,
                         callback_opts,
                         interaction_id,
-                        client_wants_cancel
+                        client_wants_cancel,
+                        opts['tool_context']
                     )
 
                     # If we completed without tool calls, we're done
