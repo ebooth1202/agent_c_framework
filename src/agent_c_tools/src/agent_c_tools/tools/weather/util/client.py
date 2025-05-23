@@ -5,6 +5,9 @@ from urllib.parse import quote_plus
 
 import httpx
 import logging
+
+import yaml
+
 from .constants import _Unit, METRIC, IMPERIAL
 from .enums import Locale
 from .forecast import BaseForecast, HourlyForecast, DailyForecast, Forecast
@@ -55,12 +58,14 @@ class Weather:
                         self.logger.error(f'HTTP error occurred: {e}')
                         raise
                     await asyncio.sleep(1 * (attempt + 1))  # exponential backoff
+                    return f'HTTP error occurred: {e}'
                 except httpx.RequestError as e:
                     self.logger.error(f'Request error occurred: {e}')
                     raise
                 except Exception as e:
                     self.logger.error(f'An error occurred: {e}')
                     raise
+        return f'Failed to fetch data after {max_retries} attempts'
 
     def _format_content(self, content: Union[str, bytes], url: str) -> Forecast:
         try:
@@ -118,7 +123,7 @@ class Weather:
                 }
             }
             
-            return json.dumps(weather_data)
+            return yaml.dump(weather_data, default_flow_style=False, sort_keys=False, allow_unicode=True)
             
         except Exception as e:
             error_msg = f"Error getting weather: {str(e)}"
