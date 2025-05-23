@@ -129,7 +129,8 @@ async def test_weather_tool():
     # Test the tool
     result = await tester.run_tool_test(
         tool_name='get_current_weather',
-        tool_params={'location_name': 'New York'}
+        tool_params={'location_name': 'New York'},
+        tool_context={'key': 'value'}  # Optional context, can be used for passing additional data
     )
     
     # Process results
