@@ -9,6 +9,8 @@ from datetime import date
 import sys
 import os
 
+import yaml
+
 # Add the parent directory to sys.path to import modules
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -34,7 +36,7 @@ class TestWeatherClientComponent:
         assert not result.startswith("Error getting weather:")
         
         # Parse the JSON and validate structure
-        weather_data = json.loads(result)
+        weather_data = yaml.safe_load(result)
         assert "currently" in weather_data
         
         currently = weather_data["currently"]
@@ -89,7 +91,7 @@ class TestWeatherClientComponent:
         
         # Should return valid JSON
         assert not result.startswith("Error getting weather:")
-        weather_data = json.loads(result)
+        weather_data = yaml.safe_load(result)
         
         # Temperatures should be in Celsius range (roughly)
         temp = weather_data["currently"]["current_temperature"]
@@ -116,7 +118,7 @@ class TestWeatherClientComponent:
             
             # Should get valid results for all major cities
             if not result.startswith("Error getting weather:"):
-                weather_data = json.loads(result)
+                weather_data = yaml.safe_load(result)
                 assert "currently" in weather_data
                 assert isinstance(weather_data["currently"]["current_temperature"], int)
     
@@ -133,7 +135,7 @@ class TestWeatherClientComponent:
         if isinstance(raw_forecast, str) or formatted_result.startswith("Error"):
             pytest.skip("API returned error, skipping consistency test")
         
-        formatted_data = json.loads(formatted_result)
+        formatted_data = yaml.safe_load(formatted_result)
         currently = formatted_data["currently"]
         
         # Compare key values between raw and formatted
@@ -174,7 +176,7 @@ class TestWeatherClientComponent:
             pytest.skip("API returned error, skipping JSON format test")
         
         # Should be valid JSON
-        weather_data = json.loads(result)
+        weather_data = yaml.safe_load(result)
         
         # Test the exact structure we expect
         assert isinstance(weather_data, dict)

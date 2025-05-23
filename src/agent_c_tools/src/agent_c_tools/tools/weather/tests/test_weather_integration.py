@@ -63,7 +63,7 @@ class TestWeatherToolsIntegration:
         assert not content.startswith("Error getting weather:")
         
         # Parse and validate JSON structure
-        structured_content = debugger.extract_structured_content(results)
+        structured_content = debugger.extract_structured_content(results, format_hint='yaml')
         assert structured_content is not None
         assert "currently" in structured_content
         
@@ -137,7 +137,7 @@ class TestWeatherToolsIntegration:
             
             # If we get valid results (not an error), validate structure
             if not content.startswith("Error getting weather:"):
-                structured_content = debugger.extract_structured_content(results)
+                structured_content = debugger.extract_structured_content(results, format_hint='yaml')
                 if structured_content:
                     assert "currently" in structured_content
                     assert isinstance(structured_content["currently"]["current_temperature"], int)
@@ -172,7 +172,7 @@ class TestWeatherToolsIntegration:
             pytest.skip("API returned error, skipping consistency test")
         
         # Validate the response structure matches what we expect
-        structured_content = debugger.extract_structured_content(results)
+        structured_content = debugger.extract_structured_content(results, format_hint='yaml')
         assert structured_content is not None
         
         # Test the exact structure we expect from the tool
