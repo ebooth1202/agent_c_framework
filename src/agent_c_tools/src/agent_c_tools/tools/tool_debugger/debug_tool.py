@@ -277,11 +277,12 @@ class ToolDebugger:
         except Exception as e:
             print(f"  Error accessing map: {e}")
 
-    async def run_tool_test(self, tool_name: str, tool_params: Dict[str, Any]) -> List[Dict[str, Any]]:
+    async def run_tool_test(self, tool_name: str, tool_params: Dict[str, Any], tool_context: Dict[str, Any] = None) -> List[Dict[str, Any]]:
         """
         Run a test for a specific tool with given parameters.
 
         Args:
+            tool_context: Context information passed to tools (optional, defaults to basic context)
             tool_name: Name of the tool to call (e.g., 'flash_docs_outline_to_powerpoint')
             tool_params: Parameters for the tool call
 
@@ -297,12 +298,21 @@ class ToolDebugger:
             "input": tool_params
         }]
 
+        if tool_context is None:
+            tool_context = {
+                "session_id": f"debug_session_{test_id}",
+                "user_id": "debug_user",
+                "workspace_id": "debug_workspace",
+                "debug_mode": True
+            }
+
         try:
             self.logger.info(f"Executing tool call: {tool_name}")
             self.logger.debug(f"Tool parameters: {json.dumps(tool_params, indent=2, default=str)}")
+            self.logger.debug(f"Tool context: {json.dumps(tool_context, indent=2, default=str)}")
 
             # Call the tool
-            results = await self.tool_chest.call_tools(tool_call)
+            results = await self.tool_chest.call_tools(tool_call, tool_context)
 
             return results
 
