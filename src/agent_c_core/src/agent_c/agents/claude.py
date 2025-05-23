@@ -108,11 +108,11 @@ class ClaudeChatAgent(BaseAgent):
 
         if '3-7-sonnet' in model_name or '-4-' in model_name:
             max_searches: int = kwargs.get("max_searches", 5)
-            if max_searches > 0:
-                functions.append({"type": "web_search_20250305", "name": "web_search", "max_uses": max_searches})
+            #if max_searches > 0:
+            #    functions.append({"type": "web_search_20250305", "name": "web_search", "max_uses": max_searches})
 
             if self.allow_betas:
-                functions.append({"type": "code_execution_20250522","name": "code_execution"})
+            #    functions.append({"type": "code_execution_20250522","name": "code_execution"})
                 if '-4-' in model_name:
                     if max_tokens == self.CLAUDE_MAX_TOKENS:
                         if 'sonnet' in model_name:
@@ -120,9 +120,9 @@ class ClaudeChatAgent(BaseAgent):
                         else:
                             completion_opts['max_tokens'] = 32000
 
-                    completion_opts['betas'] = ['interleaved-thinking-2025-05-14', "files-api-2025-04-14", "code-execution-2025-05-22"]
+                    completion_opts['betas'] = ['interleaved-thinking-2025-05-14', "files-api-2025-04-14"] #, "code-execution-2025-05-22"]
                 else:
-                    completion_opts['betas'] = ["token-efficient-tools-2025-02-19", "output-128k-2025-02-19", "files-api-2025-04-14", "code-execution-2025-05-22"]
+                    completion_opts['betas'] = ["token-efficient-tools-2025-02-19", "output-128k-2025-02-19", "files-api-2025-04-14"] # , "code-execution-2025-05-22"]
                     if max_tokens == self.CLAUDE_MAX_TOKENS:
                         completion_opts['max_tokens'] = 128000
 
