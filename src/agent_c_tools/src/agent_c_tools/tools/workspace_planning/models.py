@@ -17,6 +17,7 @@ class TaskModel(BaseModel):
     parent_id: Optional[str] = None
     context: str = ""
     child_tasks: List[str] = Field(default_factory=list)
+    sequence: Optional[int] = None  # For controlling display order
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
     
