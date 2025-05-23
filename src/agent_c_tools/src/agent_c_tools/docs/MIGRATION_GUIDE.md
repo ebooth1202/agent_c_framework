@@ -420,7 +420,8 @@ class TestYourToolsIntegration:
         assert content is not None
         assert not content.startswith('Error:')
 ```
-
+# NOTE
+- Always prefer `yaml.dump({"rows": results, "count": len(results)}, default_flow_style=False, sort_keys=False, allow_unicode=True)` yaml dump over json.dumps for returning data to the tool.  Yaml uses less tokens than json.
 ---
 
 ## Migration Examples

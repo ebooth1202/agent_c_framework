@@ -90,7 +90,7 @@ class Weather:
         try:
             weather = await self.get_forecast(location)
             # ... data processing, formatting, error handling ...
-            return json.dumps(weather_data)
+            return yaml.dump(weather_data, default_flow_style=False, sort_keys=False, allow_unicode=True)
         except Exception as e:
             return f\"Error getting weather: {str(e)}\"
 ```
@@ -202,6 +202,11 @@ class ToolClass(Toolset):
         return await business_logic.get_data_for_tool(kwargs.get('param'))
 ```
 
+### **5. Use YAML dump for return to tool**
+
+```python
+yaml.dump(weather_data, default_flow_style=False, sort_keys=False, allow_unicode=True)
+```
 ---
 
 ## Code Examples
@@ -249,7 +254,7 @@ class DatabaseClient:
     async def execute_query_for_tool(self, query: str) -> str:
         try:
             results = await self.execute(query)
-            return json.dumps({\"rows\": results, \"count\": len(results)})
+            return yaml.dump({"rows": results, "count": len(results)}, default_flow_style=False, sort_keys=False, allow_unicode=True)
         except Exception as e:
             return f\"Error executing query: {str(e)}\"
 ```
@@ -270,6 +275,7 @@ async def tool_method(self, **kwargs) -> str:
     # Single delegation call
     return await business_logic(param1, param2, param3)
 ```
+- Recommend we always return yaml dump for tool consumption `yaml.dump({"rows": results, "count": len(results)}, default_flow_style=False, sort_keys=False, allow_unicode=True)`
 
 ### **2. Configuration Pattern**
 
