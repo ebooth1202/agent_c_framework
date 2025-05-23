@@ -152,7 +152,7 @@ class AgentBridge:
         self.tool_cache = ToolCache(cache_dir=self.tool_cache_dir)
 
         if essential_tools is None:
-            self.essential_toolsets = ['WorkspaceTools', 'ThinkTools', "WorkspacePlanningTools"]
+            self.essential_toolsets = ['WorkspaceTools', 'ThinkTools', 'WorkspacePlanningTools', 'MarkdownToHtmlReportTools']
         else:
             self.essential_toolsets = essential_tools
         self.additional_toolsets = additional_tools or []
