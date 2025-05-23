@@ -232,12 +232,14 @@ class BaseWorkspace:
 
         return self.metadata(key)
 
-    def metadata(self, key: str) -> Any:
+    def metadata(self, key: str, include_hidden: bool = False) -> Any:
         """
         Property to access the metadata of the workspace.
-
+        Args:
+            key: The key to access the metadata.
+            include_hidden: If True, include metadata keys that start with '_'.
         Returns:
-            Optional[dict[str, Any]]: The metadata dictionary or None if not set.
+             Any: The metadata value or and empty dict.
         """
         key_parts = key.removeprefix('meta/').split('/')
         value = self._metadata
@@ -247,6 +249,11 @@ class BaseWorkspace:
                     value = value[part]
                 else:
                     value = {}
+
+        # create a new dictionary without keys that start with '_'
+        if not include_hidden and isinstance(value, dict):
+            return  {k: v for k, v in value.items() if not k.startswith('_')}
+
         return value
 
     async def safe_metadata_write(self, key: str, value: any) -> Any:

@@ -232,8 +232,8 @@ class MCPToolChestServer:
             if not self.tool_chest.active_open_ai_schemas:
                 logger.info("Refreshing OpenAI schemas in the tool chest")
                 # Ensure schemas are regenerated for the tools
-                for toolset in self.tool_chest.active_tools.values():
-                    self.tool_chest._ToolChest__active_open_ai_schemas += toolset.openai_schemas
+                for toolset in self.tool_chest.available_tools.values():
+                    self.tool_chest._active_tool_schemas += toolset.tool_schemas
             return
             
 

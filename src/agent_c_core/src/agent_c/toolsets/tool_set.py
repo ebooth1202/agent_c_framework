@@ -1,13 +1,15 @@
 import os
+import re
 import copy
 import inspect
-import re
+import logging
+
 from typing import Union, List, Dict, Any, Optional
 
+from agent_c.chat.session_manager import ChatSessionManager
 from agent_c.models.events import RenderMediaEvent, MessageEvent, TextDeltaEvent
 from agent_c.prompting.prompt_section import PromptSection
 from agent_c.toolsets.tool_cache import ToolCache
-from agent_c.chat.session_manager import ChatSessionManager
 
 
 class Toolset:
@@ -26,11 +28,11 @@ class Toolset:
         """
         if tool_cls not in cls.tool_registry:
             cls.tool_registry.append(tool_cls)
-            
+
             # Store the required tools mapping if provided
             if required_tools:
                 cls.tool_dependencies[tool_cls.__name__] = required_tools
-    
+
     @classmethod
     def get_required_tools(cls, toolset_name: str) -> List[str]:
         """
@@ -65,43 +67,20 @@ class Toolset:
         """
         # Initialize properties
         self.name: str = kwargs.get("name")
+        self._schemas: list[Dict[str, Any]] = []
+
         if self.name is None:
             raise ValueError("Toolsets must have a name.")
 
+        self.logger = kwargs.get('logger', logging.getLogger(__name__))
+
         # Store tool_chest first since it's critical for dependencies
         self.tool_chest: 'ToolChest' = kwargs.get("tool_chest")
-        if self.tool_chest is None:
-            # This is a critical warning but not necessarily fatal
-            import logging
-            logging.getLogger(__name__).warning(
-                f"Toolset {self.name} initialized without a tool_chest. "
-                f"Dependencies won't work correctly."
-            )
-        
+
         self.session_manager: ChatSessionManager = kwargs.get("session_manager")
         self.use_prefix: bool = kwargs.get("use_prefix", True)
 
-        # Store required tools but don't activate them (will be handled by ToolChest)
-        self.required_tools: List[str] = kwargs.get("required_tools", [])
-        if self.required_tools:
-            import warnings
-            warnings.warn(
-                "Passing required_tools in __init__ is deprecated. Use Toolset.register(cls, required_tools=['tool1', 'tool2']) instead.",
-                DeprecationWarning, stacklevel=2
-            )
-            
-            # Verify dependencies are registered
-            cls_name = self.__class__.__name__
-            if cls_name not in self.tool_dependencies or not self.tool_dependencies.get(cls_name):
-                # Register them at this point too to ensure they're tracked
-                self.tool_dependencies[cls_name] = self.required_tools
-                
-                import logging
-                logging.getLogger(__name__).info(
-                    f"Auto-registered dependencies for {cls_name}: {self.required_tools}"
-                )
-                
-        self.valid: bool = True # post init will deactivate invalid tools.
+        self.valid: bool = True  # post init will deactivate invalid tools.
 
         self.tool_cache: ToolCache = kwargs.get("tool_cache")
         self.section: Union[PromptSection, None] = kwargs.get('section')
@@ -118,23 +97,11 @@ class Toolset:
         if self.need_tool_user and not self.agent_can_use_tools:
             self.tool_valid = False
 
-        self.openai_schemas: List[Dict[str, Any]] = self.__openai_schemas()
-
         # Additional attributes
         self.streaming_callback = kwargs.get('streaming_callback')
         self.output_format: str = kwargs.get('output_format', 'raw')
         self.tool_role: str = kwargs.get('tool_role', 'tool')
 
-    async def post_init(self) -> None:
-        """
-        Post-initialization method for async setup.
-        
-        Note: Required tools are now handled by ToolChest during activation,
-        not in this method anymore.
-        """
-        # The activation of required tools has been moved to ToolChest.activate_toolset
-        # to avoid initialization order problems
-        
     def get_dependency(self, toolset_name: str) -> Optional['Toolset']:
         """
         Safely get a dependency toolset by name.
@@ -153,20 +120,11 @@ class Toolset:
                 pass
         """
         if not self.tool_chest:
-            import logging
-            logging.getLogger(__name__).warning(
-                f"Toolset {self.name} attempted to access dependency {toolset_name} but no tool_chest is available"
-            )
-            return None
-            
-        if not hasattr(self.tool_chest, 'active_tools'):
-            import logging
-            logging.getLogger(__name__).warning(
-                f"Toolset {self.name} attempted to access dependency {toolset_name} but tool_chest has no active_tools"
-            )
-            return None
-            
-        return self.tool_chest.active_tools.get(toolset_name)
+            raise RuntimeError(f"Toolset {self.name} attempted to access dependency {toolset_name} but no tool_chest is available")
+
+
+        return self.tool_chest.available_tools.get(toolset_name)
+
     @property
     def prefix(self) -> str:
         """
@@ -225,7 +183,6 @@ class Toolset:
 
         return formatted
 
-
     async def _raise_render_media(self, **kwargs: Any) -> None:
         """
         Raises a render media event.
@@ -249,11 +206,10 @@ class Toolset:
             agent = self.tool_chest.agent
             if hasattr(agent, 'session_logger') and agent.session_logger:
                 await agent.session_logger.log_render_media(render_media_event)
-        
+
         # Send it to the streaming callback
         if self.streaming_callback:
             await self.streaming_callback(render_media_event)
-
 
     async def _raise_message_event(self, **kwargs: Any) -> None:
         """
@@ -310,28 +266,38 @@ class Toolset:
         """
         return {self.name: self}
 
+    @property
     def tool_schemas(self) -> List[Dict[str, Any]]:
         """
-        Returns the OpenAI schemas for the toolset.
+        Returns the tool schemas for the Toolset.
 
         Returns:
-            List[Dict[str, Any]]: A list of OpenAI schemas for the registered methods in the Toolset.
+            List[Dict[str, Any]]: A list of tool schemas.
         """
-        return self.__openai_schemas()
+        return self._tool_schemas()
 
-    def __openai_schemas(self) -> List[Dict[str, Any]]:
+    def _tool_schemas(self) -> List[Dict[str, Any]]:
         """
-        Generate OpenAI-compatible schemas based on method metadata.
+        Generate OpenAI-compatible JSON schemas based on method metadata.
 
         Returns:
-            List[Dict[str, Any]]: A list of OpenAI schemas for the registered methods in the Toolset.
+            List[Dict[str, Any]]: A list of JSON schemas for the registered methods in the Toolset.
         """
-        openai_schemas = []
-        for name, method in inspect.getmembers(self, predicate=inspect.ismethod):
-            if hasattr(method, 'schema'):
-                schema = copy.deepcopy(method.schema)
-                if self.use_prefix:
-                    schema['function']['name'] = f"{self.prefix}{schema['function']['name']}"
-                openai_schemas.append(schema)
+        if len(self._schemas) > 0:
+            return self._schemas
 
-        return openai_schemas
+        for name in dir(self):
+            if name.startswith('_') or name == 'tool_schemas':
+                continue
+            try:
+                attr = getattr(self, name)
+                if inspect.ismethod(attr) and hasattr(attr, 'schema'):
+                    schema = copy.deepcopy(attr.schema)
+                    if self.use_prefix:
+                        schema['function']['name'] = f"{self.prefix}{schema['function']['name']}"
+                    self._schemas.append(schema)
+            except (AttributeError, RecursionError):
+                # Skip attributes that cause issues
+                continue
+
+        return self._schemas
