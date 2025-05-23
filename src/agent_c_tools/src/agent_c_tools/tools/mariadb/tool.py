@@ -67,7 +67,6 @@ class MariaDBConnector:
         self.config = self.DEFAULT_CONFIG.copy()
         self.config.update(kwargs)
 
-        self.logger = logging.getLogger(__name__)
 
     def _validate_subqueries_and_functions(self, stmt):
         """
@@ -376,7 +375,6 @@ class MariadbTools(Toolset):
         
         # Initialize the database connector
         self.connector: Optional[MariaDBConnector] = None
-        self.logger = logging.getLogger(__name__)
 
         # self.logger.debug(f"MariaDBTools initialized with streaming_callback: {self.streaming_callback is not None}")
         # Initialize connection parameters from environment or config

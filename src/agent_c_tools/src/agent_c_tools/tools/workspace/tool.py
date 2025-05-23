@@ -29,7 +29,7 @@ class WorkspaceTools(Toolset):
         super().__init__(**kwargs, name="workspace")
         self.workspaces: List[BaseWorkspace] = kwargs.get('workspaces', [])
         self._create_section()
-        self.logger = logging.getLogger(__name__)
+
         self.replace_helper = ReplaceStringsHelper()
 
     def add_workspace(self, workspace: BaseWorkspace) -> None:
@@ -770,7 +770,7 @@ class WorkspaceTools(Toolset):
                     {"type": "boolean"},
                     {"type": "null"}
                 ],
-                "description": "The complete metadata to write as a dictionary",
+                "description": "The metadata to write.",
                 "required": True
             }
         }
@@ -783,15 +783,14 @@ class WorkspaceTools(Toolset):
         if error is not None:
             return json.dumps({"error": error})
 
-        # Check if workspace is read-only
         if workspace.read_only:
-            return json.dumps({"error": f"Workspace '{workspace.name}' is read-only"})
+            return f"Workspace '{workspace.name}' is read-only"
 
         try:
             val = await workspace.safe_metadata_write(key, data)
             await workspace.save_metadata()
             return val
         except Exception as e:
-            return json.dumps({"error": f"Failed to write metadata: {str(e)}"})
+            return f"Failed to write metadata to '{key}' in {workspace.name} workspace: {str(e)}"
 
 Toolset.register(WorkspaceTools)
