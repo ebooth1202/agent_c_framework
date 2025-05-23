@@ -18,6 +18,12 @@ try:
 except ImportError:
     DOTENV_AVAILABLE = False
 
+try:
+    import yaml
+    YAML_AVAILABLE = True
+except ImportError:
+    YAML_AVAILABLE = False
+
 
 # Add a mock for TokenCounter to fix the error in local_storage.py
 class MockTokenCounter:
@@ -351,9 +357,46 @@ class ToolDebugger:
             self.logger.error(f"Error extracting content: {str(e)}")
             return f"Error extracting content: {str(e)}"
 
-    def extract_structured_content(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def extract_structured_content(self, results: List[Dict[str, Any]], format_hint: str = 'auto') -> Dict[str, Any]:
         """
-        Extract content from results and parse it as JSON if possible.
+        Extract content from results and parse it as JSON or YAML.
+
+        Args:
+            results: Results from a tool call
+            format_hint: 'json', 'yaml', or 'auto' to auto-detect format
+
+        Returns:
+            Parsed content as a dictionary, or None if parsing fails
+        """
+        content_str = self.extract_content_from_results(results)
+
+        if not isinstance(content_str, str) or not content_str.strip():
+            return None
+
+        try:
+            if format_hint == 'auto':
+                # Auto-detect format based on content
+                detected_format = self.detect_content_format(results)
+                format_hint = detected_format if detected_format != 'unknown' else 'json'
+
+            if format_hint == 'json':
+                return self._parse_json_content(content_str)
+            elif format_hint == 'yaml':
+                return self._parse_yaml_content(content_str)
+            else:
+                # Try JSON first, then YAML as fallback
+                json_result = self._parse_json_content(content_str)
+                if json_result is not None:
+                    return json_result
+                return self._parse_yaml_content(content_str)
+
+        except Exception as e:
+            self.logger.warning(f"Could not parse content as structured data: {str(e)}")
+            return None
+
+    def extract_json_content(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Extract content from results and parse it as JSON.
 
         Args:
             results: Results from a tool call
@@ -362,15 +405,117 @@ class ToolDebugger:
             Parsed JSON content as a dictionary, or None if parsing fails
         """
         content_str = self.extract_content_from_results(results)
+        return self._parse_json_content(content_str)
+
+    def extract_yaml_content(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Extract content from results and parse it as YAML.
+
+        Args:
+            results: Results from a tool call
+
+        Returns:
+            Parsed YAML content as a dictionary, or None if parsing fails
+        """
+        content_str = self.extract_content_from_results(results)
+        return self._parse_yaml_content(content_str)
+
+    def _parse_json_content(self, content_str: str) -> Dict[str, Any]:
+        """
+        Internal method to parse JSON content.
+
+        Args:
+            content_str: String content to parse
+
+        Returns:
+            Parsed JSON content as a dictionary, or None if parsing fails
+        """
+        try:
+            if isinstance(content_str, str) and content_str.strip():
+                stripped = content_str.strip()
+                # More robust JSON detection
+                if stripped.startswith(('{', '[')):
+                    return json.loads(stripped)
+            return None
+        except json.JSONDecodeError as e:
+            self.logger.debug(f"Could not parse content as JSON: {str(e)}")
+            return None
+
+    def _parse_yaml_content(self, content_str: str) -> Dict[str, Any]:
+        """
+        Internal method to parse YAML content.
+
+        Args:
+            content_str: String content to parse
+
+        Returns:
+            Parsed YAML content as a dictionary, or None if parsing fails
+        """
+        if not YAML_AVAILABLE:
+            self.logger.warning("YAML parsing requested but PyYAML not installed. Install with: pip install PyYAML")
+            return None
 
         try:
-            # Attempt to parse as JSON
-            if isinstance(content_str, str) and content_str.startswith('{'):
-                return json.loads(content_str)
+            if isinstance(content_str, str) and content_str.strip():
+                result = yaml.safe_load(content_str.strip())
+                # yaml.safe_load can return None for empty content, or primitives
+                # We want to return dict/list structures
+                if isinstance(result, (dict, list)):
+                    return result
             return None
-        except json.JSONDecodeError:
-            self.logger.warning(f"Could not parse content as JSON: {content_str}")
+        except yaml.YAMLError as e:
+            self.logger.debug(f"Could not parse content as YAML: {str(e)}")
             return None
+
+    def detect_content_format(self, results: List[Dict[str, Any]]) -> str:
+        """
+        Detect the format of the content in the results.
+
+        Args:
+            results: Results from a tool call
+
+        Returns:
+            'json', 'yaml', or 'unknown'
+        """
+        content_str = self.extract_content_from_results(results)
+
+        if not isinstance(content_str, str) or not content_str.strip():
+            return 'unknown'
+
+        stripped = content_str.strip()
+
+        # Check for JSON first (more definitive indicators)
+        if stripped.startswith(('{', '[')):
+            # Try to parse as JSON to confirm
+            try:
+                json.loads(stripped)
+                return 'json'
+            except json.JSONDecodeError:
+                pass
+
+        # Check for YAML if JSON parsing failed
+        if YAML_AVAILABLE:
+            try:
+                result = yaml.safe_load(stripped)
+                # If it parses as YAML and isn't just a simple string/primitive
+                if isinstance(result, (dict, list)):
+                    return 'yaml'
+            except yaml.YAMLError:
+                pass
+
+        # Additional heuristics for YAML (when parsing fails but structure looks like YAML)
+        yaml_indicators = [
+            ':' in stripped and '\n' in stripped,  # Key-value pairs with newlines
+            stripped.startswith('- '),  # List items
+            '---' in stripped,  # YAML document separator
+            stripped.count('\n') > 0 and ': ' in stripped  # Multi-line with key-value
+        ]
+
+        if any(yaml_indicators):
+            return 'yaml'
+
+        return 'unknown'
+
 
     def get_available_tool_names(self) -> List[str]:
         """
