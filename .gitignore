@@ -176,11 +176,6 @@ cython_debug/
 # Node Modules
 src/agent_c_api_ui/agent_c_react_client/node_modules/
 
-# Ignore everything in config
-config/*
-
-# But don't ignore the .gitkeep file
-!config/.gitkeep
 node_modules
 package-lock.json 
 package.json
