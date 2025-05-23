@@ -4,16 +4,14 @@ Loader class for model configuration data.
 This module provides a loader class to handle loading, parsing, and saving
 of model configurations from JSON files.
 """
-
 import json
-import os
 from pathlib import Path
 from typing import Union, Dict, Any, Optional
+from agent_c.config.config_loader import ConfigLoader
+from agent_c.models.model_config.vendors import ModelConfigurationFile
 
-from .vendors import ModelConfigurationFile
 
-
-class ModelConfigurationLoader:
+class ModelConfigurationLoader(ConfigLoader):
     """
     Loader for model configuration files.
     
@@ -22,17 +20,9 @@ class ModelConfigurationLoader:
     """
     
     def __init__(self, config_path: Optional[str] = None):
-        """
-        Initialize the loader.
-        
-        Args:
-            config_path: Optional default path to configuration file
-        """
-        config_path = os.environ.get("AGENT_C_CONFIG_PATH", None) if config_path is None else config_path
-        if config_path is None:
-            raise ValueError("No configuration path provided")
+        super().__init__(config_path)
 
-        self.config_path = Path(config_path).joinpath("model_config.json")
+        self.config_file_path = Path(config_path).joinpath("model_config.json")
         self._cached_config: Optional[ModelConfigurationFile] = None
         self.load_from_json()
     
@@ -51,7 +41,7 @@ class ModelConfigurationLoader:
             json.JSONDecodeError: If the JSON is malformed
             ValidationError: If the JSON doesn't match the expected schema
         """
-        path = Path(json_path) if json_path else self.config_path
+        path = Path(json_path) if json_path else self.config_file_path
         
         if not path:
             raise ValueError("No configuration path provided")
@@ -95,7 +85,7 @@ class ModelConfigurationLoader:
             json_path: Path where to save the JSON file (uses default if None)
             indent: JSON indentation level (default: 2)
         """
-        path = Path(json_path) if json_path else self.config_path
+        path = Path(json_path) if json_path else self.config_file_path
         
         if not path:
             raise ValueError("No save path provided")
@@ -146,7 +136,7 @@ class ModelConfigurationLoader:
         Raises:
             ValueError: If no default path is set
         """
-        if not self.config_path:
+        if not self.config_file_path:
             raise ValueError("No default configuration path set")
         
         return self.load_from_json()
