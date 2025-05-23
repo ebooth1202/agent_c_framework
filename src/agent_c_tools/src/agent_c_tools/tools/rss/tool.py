@@ -16,7 +16,7 @@ class RssTools(Toolset):
         self.feeds: List[RSSToolFeed] = kwargs.get('feeds', default_feeds)
         feed_list: str = "\n".join([str(feed) for feed in self.feeds])
         self.section = RSSSection(feeds=feed_list)
-        self.logger = kwargs.get('logger', logging.getLogger(__name__))
+
 
     async def _fetch_rss_feed(self, feed_url, schema):
         feed = feedparser.parse(feed_url)

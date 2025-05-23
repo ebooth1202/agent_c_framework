@@ -17,9 +17,7 @@ class RandomNumberTools(Toolset):
             **kwargs: Keyword arguments passed to parent Toolset class.
         """
         super().__init__(**kwargs, name='rng')
-        self.logger = logging.getLogger(__name__)
-        # self.logger.debug(
-        #     f"RandomNumberTools initialized with streaming_callback: {self.streaming_callback is not None}")
+
 
     @json_schema(
         description='Generate a random number (inclusive)',

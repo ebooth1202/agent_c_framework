@@ -23,7 +23,7 @@ class ToolChest:
         __available_toolset_classes (list[Type[Toolset]]): A private list to store all available toolset classes.
         __toolsets_awaiting_init (dict[str, Toolset]): A private dictionary to store toolsets created but awaiting post_init.
         __tool_opts (dict): A private dictionary to store the kwargs from the last init_tools call.
-        __active_open_ai_schemas (List[dict]): A private list to store OpenAI schemas for active toolsets.
+        _active_tool_schemas (List[dict]): A private list to store OpenAI schemas for active toolsets.
         _tool_name_to_instance_map (Dict[str, Toolset]): A mapping from tool function names to their toolset instance.
         logger (logging.Logger): An instance of a logger.
         
@@ -68,7 +68,7 @@ class ToolChest:
         
         # Initialize metadata tracking
         self.logger = logging.getLogger(__name__)
-        self.__active_open_ai_schemas: List[dict] = []
+        self._active_tool_schemas: List[dict] = []
         self._tool_name_to_instance_map: Dict[str, Toolset] = {}
         
         # Initialize tool_cache
@@ -88,14 +88,14 @@ class ToolChest:
         Update tool sections, schemas, and maps based on active toolsets.
         """
         # Clear existing metadata
-        self.__active_open_ai_schemas = []
+        self._active_tool_schemas = []
         self._tool_name_to_instance_map = {}
         
         # Update with data from active toolsets
         for toolset in self.__active_toolset_instances.values():
             # Add schemas and update function name mapping
-            for schema in toolset.openai_schemas:
-                self.__active_open_ai_schemas.append(schema)
+            for schema in toolset.tool_schemas:
+                self._active_tool_schemas.append(schema)
                 self._tool_name_to_instance_map[schema['function']['name']] = toolset
 
     async def initialize_toolsets(self, toolset_name_or_names: Union[str, List[str]], tool_opts: Optional[Dict[str, any]] = None) -> bool:
@@ -340,7 +340,7 @@ class ToolChest:
         Returns:
             List[dict]: List of OpenAI schemas for active toolsets.
         """
-        return self.__active_open_ai_schemas
+        return self._active_tool_schemas
 
     @property
     def active_claude_schemas(self) -> List[dict]:
@@ -350,7 +350,7 @@ class ToolChest:
         Returns:
             List[dict]: List of Claude schemas for active toolsets.
         """
-        oai_schemas = self.__active_open_ai_schemas
+        oai_schemas = self._active_tool_schemas
         claude_schemas = []
         for schema in oai_schemas:
             new_schema = copy.deepcopy(schema['function'])
