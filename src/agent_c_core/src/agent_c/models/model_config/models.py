@@ -60,8 +60,9 @@ class ModelConfiguration(BaseModel):
     context_window: int = Field(description="Maximum context window size in tokens")
     capabilities: ModelCapabilities = Field(description="Capabilities supported by the model")
     allowed_inputs: AllowedInputs = Field(description="Input modalities supported by the model")
-    
+
     model_config = ConfigDict(
+        protected_namespaces=(),
         extra="forbid",
         use_enum_values=True
     )

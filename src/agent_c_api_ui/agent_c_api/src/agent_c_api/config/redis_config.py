@@ -25,8 +25,7 @@ class RedisConfig:
                     decode_responses=True,
                     # Connection pooling settings
                     max_connections=20,
-                    retry_on_timeout=True,
-                    retry_on_error=[ConnectionError, TimeoutError],
+                    retry_on_error=[ConnectionError, TimeoutError, RedisError],
                     # Timeout settings
                     socket_connect_timeout=5,
                     socket_timeout=5,
