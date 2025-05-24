@@ -55,11 +55,17 @@ class Settings(BaseSettings):
     REDIS_USERNAME: Optional[str] = None
     REDIS_PASSWORD: Optional[str] = None
     
-    # DEPRECATED: Redis should be externally managed (Docker, systemd, etc.)
-    # These settings are no longer used after Redis refactor
-    REDIS_DATA_DIR: Path = Path("./data/redis")  # DEPRECATED
-    REDIS_STARTUP_TIMEOUT: int = 30  # DEPRECATED  
-    MANAGE_REDIS_LIFECYCLE: bool = True  # DEPRECATED
+    # Connection timeouts and pooling
+    REDIS_CONNECTION_TIMEOUT: int = 5  # Connection timeout in seconds
+    REDIS_SOCKET_TIMEOUT: int = 5      # Socket timeout in seconds
+    REDIS_MAX_CONNECTIONS: int = 50    # Maximum connections in pool
+    
+    # DEPRECATED SETTINGS - No longer used after Redis refactor
+    # Redis should be externally managed (Docker, systemd, cloud service, etc.)
+    # These settings are kept for backward compatibility but are ignored
+    REDIS_DATA_DIR: Path = Path("./data/redis")  # DEPRECATED: Use external Redis
+    REDIS_STARTUP_TIMEOUT: int = 30  # DEPRECATED: No embedded Redis startup
+    MANAGE_REDIS_LIFECYCLE: bool = False  # DEPRECATED: Always False - external Redis only
 
     # Session Configuration
     SESSION_TTL: int = 24 * 60 * 60  # 24 hours

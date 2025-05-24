@@ -109,6 +109,32 @@ _plans:
         Kubernetes-compatible endpoints (/health/ready, /health/live). Always test
         actual operations rather than just connectivity, and provide actionable warnings
         for concerning metrics like high client counts or low hit ratios.'
+    - created_at: '2025-05-24T13:00:31.058919'
+      id: 352a0fe8-ba41-4ea5-8f7d-ce63f53d6d86
+      learned_task_id: 89558569-3b60-43fd-8bc7-e80ac6fd5da1
+      lesson: 'When updating configuration and documentation after a major architecture
+        change, provide comprehensive coverage at multiple levels: enhanced configuration
+        with clear deprecation comments, complete environment examples with all scenarios,
+        step-by-step migration guides with verification checklists, and architectural
+        documentation with deployment patterns. Always include troubleshooting procedures,
+        security best practices, and production-ready examples. Create both high-level
+        overview documentation and detailed technical guides to serve different audiences
+        (developers, operators, architects). The documentation should enable someone
+        to successfully deploy and maintain the system without prior knowledge of
+        the old architecture.'
+    - created_at: '2025-05-24T13:09:19.956001'
+      id: 28fd3134-609a-455d-8c9e-a1fba59b8376
+      learned_task_id: de5ef8c9-6f0c-4dfe-aec9-f2a11bcc1a5f
+      lesson: 'When implementing comprehensive tests for Redis integration, create
+        multiple test categories: unit tests for dependency injection (with proper
+        AsyncMock), repository tests with mocked Redis clients, error scenario tests
+        for graceful degradation, and integration tests for real connectivity. Use
+        FastAPI dependency overrides for mocking, follow pytest_asyncio patterns for
+        async fixtures, and ensure tests are isolated and don''t require external
+        Redis for unit tests. Create proper test infrastructure with conftest.py for
+        common fixtures and a test runner script for comprehensive validation. Test
+        all error scenarios including connection failures, timeouts, authentication
+        errors, and memory issues to ensure production resilience.'
     tasks:
       6ae1797f-107e-427b-888a-536f9d8a8344:
         child_tasks: []
@@ -187,12 +213,63 @@ _plans:
         updated_at: '2025-05-24T12:32:52.379118'
       89558569-3b60-43fd-8bc7-e80ac6fd5da1:
         child_tasks: []
-        completed: false
-        context: Remove or deprecate MANAGE_REDIS_LIFECYCLE and related settings that
-          are no longer needed. Update environment configuration documentation to
-          reflect that Redis should be externally managed. Add configuration examples
-          for different deployment scenarios (development, staging, production). Update
-          API documentation to reflect the new Redis architecture.
+        completed: true
+        context: "✅ COMPLETED: Successfully updated configuration and documentation\
+          \ to reflect the new Redis architecture and external Redis management approach.\n\
+          \n**Configuration Cleanup:**\n\n1. **Enhanced Environment Configuration**\
+          \ (`config/env_config.py`):\n   - ✅ Added new connection pool settings (REDIS_CONNECTION_TIMEOUT,\
+          \ REDIS_SOCKET_TIMEOUT, REDIS_MAX_CONNECTIONS)\n   - ✅ Improved deprecation\
+          \ comments for old settings with clear explanations\n   - ✅ Set MANAGE_REDIS_LIFECYCLE\
+          \ to False by default (external Redis only)\n   - ✅ Clear documentation\
+          \ that Redis should be externally managed\n\n2. **Comprehensive Environment\
+          \ Example** (`.env.example`):\n   - ✅ Complete environment configuration\
+          \ template\n   - ✅ All Redis connection settings with descriptions\n   -\
+          \ ✅ Session management configuration\n   - ✅ Feature flags and development\
+          \ settings\n   - ✅ Environment-specific examples (dev, staging, production)\n\
+          \   - ✅ Clear deprecation notes for old settings\n\n**Documentation Updates:**\n\
+          \n3. **Environment Configuration Guide** (`docs/environment_configuration.md`):\n\
+          \   - ✅ Complete Redis setup instructions for all deployment scenarios\n\
+          \   - ✅ Docker, native installation, and cloud service setup\n   - ✅ Kubernetes\
+          \ deployment examples with health checks\n   - ✅ Security best practices\
+          \ and performance optimization\n   - ✅ Troubleshooting guide with common\
+          \ issues and solutions\n\n4. **Redis Architecture Documentation** (`docs/redis_architecture.md`):\n\
+          \   - ✅ Comprehensive Redis integration architecture\n   - ✅ Dependency\
+          \ injection patterns and component descriptions\n   - ✅ Data storage patterns\
+          \ and error handling strategies\n   - ✅ Performance optimization and security\
+          \ considerations\n   - ✅ Deployment patterns and monitoring/observability\n\
+          \n5. **Configuration Migration Guide** (`docs/configuration_migration_guide.md`):\n\
+          \   - ✅ Step-by-step migration from embedded to external Redis\n   - ✅ Before/after\
+          \ configuration examples\n   - ✅ Multiple Redis deployment options (Docker,\
+          \ native, cloud)\n   - ✅ Verification checklists and troubleshooting procedures\n\
+          \   - ✅ Performance tuning and phased migration timeline\n\n6. **Updated\
+          \ API Documentation** (`docs/API_DOCUMENTATION.md`, `docs/v2_api_documentation.md`):\n\
+          \   - ✅ Added Redis infrastructure requirements\n   - ✅ Health monitoring\
+          \ endpoint documentation\n   - ✅ References to new architecture documentation\n\
+          \   - ✅ Service dependency information\n\n**Key Improvements:**\n\n\U0001F527\
+          \ **Configuration Management:**\n- Clear separation between active and deprecated\
+          \ settings\n- Comprehensive environment variable documentation\n- Production-ready\
+          \ configuration examples\n- Security and performance best practices\n\n\U0001F4DA\
+          \ **Documentation Coverage:**\n- Complete Redis architecture documentation\n\
+          - Step-by-step migration procedures\n- Deployment scenario examples\n- Troubleshooting\
+          \ and support resources\n\n\U0001F680 **Production Readiness:**\n- Kubernetes\
+          \ deployment examples with health checks\n- Cloud service configuration\
+          \ guidance\n- Security best practices and network configuration\n- Performance\
+          \ optimization recommendations\n\n**Files Created:**\n- `docs/environment_configuration.md`\
+          \ - Complete environment setup guide\n- `docs/redis_architecture.md` - Comprehensive\
+          \ Redis architecture documentation\n- `docs/configuration_migration_guide.md`\
+          \ - Migration guide from embedded Redis\n- `.env.example` - Complete environment\
+          \ configuration template\n\n**Files Modified:**\n- `src/agent_c_api/config/env_config.py`\
+          \ - Enhanced configuration with new settings\n- `docs/API_DOCUMENTATION.md`\
+          \ - Added Redis requirements and health monitoring\n- `docs/v2_api_documentation.md`\
+          \ - Added infrastructure requirements and health checks\n\n**Benefits Delivered:**\n\
+          - \U0001F4D6 Complete documentation for Redis architecture and configuration\n\
+          - \U0001F527 Clear migration path from embedded to external Redis\n- \U0001F680\
+          \ Production-ready deployment examples and best practices\n- \U0001F6E0\
+          ️ Comprehensive troubleshooting and support documentation\n- \U0001F4CA\
+          \ Health monitoring and operational visibility guidance\n\n**Ready for Production:**\n\
+          The configuration and documentation are now complete and production-ready,\
+          \ providing clear guidance for deploying, configuring, and maintaining the\
+          \ Redis integration in any environment."
         created_at: '2025-05-23T22:42:05.705448'
         description: Clean up Redis-related configuration settings and update documentation
         id: 89558569-3b60-43fd-8bc7-e80ac6fd5da1
@@ -200,7 +277,7 @@ _plans:
         priority: low
         sequence: 7
         title: 'Phase 7: Update Configuration and Documentation'
-        updated_at: '2025-05-23T22:42:05.705448'
+        updated_at: '2025-05-24T13:00:21.321331'
       cdce9370-2679-44be-9d1c-3b4d84b0b8c5:
         child_tasks: []
         completed: true
@@ -235,12 +312,204 @@ _plans:
         updated_at: '2025-05-24T10:15:58.818750'
       de5ef8c9-6f0c-4dfe-aec9-f2a11bcc1a5f:
         child_tasks: []
-        completed: false
-        context: Add unit tests for Redis dependency injection, SessionRepository
-          with mocked Redis clients, and integration tests that verify Redis connectivity.
-          Include tests for error scenarios like Redis connection failures. Follow
-          the established testing patterns in the codebase and ensure proper mocking
-          of Redis dependencies.
+        completed: true
+        context: '✅ COMPLETED: Successfully implemented comprehensive Redis integration
+          testing for Phase 8.
+
+
+          **Test Coverage Implemented:**
+
+
+          ### 1. Unit Tests for Redis Dependencies (`test_redis_dependencies.py`)
+
+          - ✅ **RedisClientManager** - Context manager class with proper cleanup
+
+          - ✅ **get_redis_client()** - Standard Redis client (fails fast with HTTP
+          503)
+
+          - ✅ **get_redis_client_optional()** - Optional Redis client (graceful degradation)
+
+          - ✅ **get_redis_client_managed()** - Managed Redis client (automatic cleanup)
+
+          - ✅ **Error scenarios** - Connection failures, timeouts, authentication
+          errors
+
+          - ✅ **FastAPI integration patterns** - Dependency injection compliance
+
+
+          ### 2. Repository Dependency Tests (`test_redis_repository_dependencies.py`)
+
+          - ✅ **get_session_repository()** and **get_session_repository_optional()**
+
+          - ✅ **get_user_repository()** and **get_user_repository_optional()**
+
+          - ✅ **Dependency composition** - Proper Redis client injection
+
+          - ✅ **Error handling** - Redis failure propagation and graceful degradation
+
+          - ✅ **FastAPI patterns** - Async function compliance and parameter validation
+
+
+          ### 3. Repository Implementation Tests (`test_redis_repositories.py`)
+
+          - ✅ **SessionRepository** - CRUD operations with mocked Redis
+
+          - ✅ **UserRepository** - User management operations with mocked Redis
+
+          - ✅ **ChatRepository** - Message operations with mocked Redis
+
+          - ✅ **Error handling** - Redis operation failures and exception propagation
+
+          - ✅ **Data serialization** - JSON handling and Redis key formatting
+
+
+          ### 4. Error Scenario Tests (`test_redis_error_scenarios.py`)
+
+          - ✅ **Connection failures** - Connection refused, timeouts, network errors
+
+          - ✅ **Authentication errors** - Redis auth failures
+
+          - ✅ **Memory errors** - Redis out of memory scenarios
+
+          - ✅ **Graceful degradation** - Health endpoints with Redis down
+
+          - ✅ **Recovery scenarios** - Dependencies recovering after failures
+
+          - ✅ **Repository error propagation** - Proper error handling in business
+          logic
+
+
+          ### 5. Integration Tests (`test_redis_integration.py`)
+
+          - ✅ **Redis connectivity** - Real Redis connection validation
+
+          - ✅ **Health check endpoints** - All health monitoring endpoints
+
+          - ✅ **End-to-end operations** - Repository operations through dependency
+          injection
+
+          - ✅ **Monitoring integration** - Actionable health information
+
+          - ✅ **Mocked failure scenarios** - Health endpoints with simulated Redis
+          failures
+
+
+          ### 6. Test Infrastructure
+
+          - ✅ **Test configuration** (`conftest.py`) - Common fixtures and mocks
+
+          - ✅ **Test runner script** - Comprehensive test execution and reporting
+
+          - ✅ **Proper test markers** - Unit, integration, error scenarios, repositories
+
+          - ✅ **Dependency overrides** - FastAPI dependency injection mocking
+
+
+          **Key Testing Features:**
+
+
+          🧪 **Comprehensive Coverage:**
+
+          - All Redis dependency injection functions tested
+
+          - All repository classes tested with mocked Redis
+
+          - Error scenarios and graceful degradation verified
+
+          - Integration tests for real Redis connectivity
+
+          - Health monitoring endpoints validated
+
+
+          🔧 **Proper Mocking Patterns:**
+
+          - AsyncMock for Redis clients following established patterns
+
+          - FastAPI dependency injection overrides
+
+          - Realistic error simulation (connection failures, timeouts, auth errors)
+
+          - Repository mocking with proper specifications
+
+
+          ⚡ **Performance and Reliability:**
+
+          - Tests are isolated and don''t require external Redis for unit tests
+
+          - Integration tests gracefully skip when Redis unavailable
+
+          - Comprehensive error scenario coverage
+
+          - Recovery and resilience testing
+
+
+          🎯 **Production Readiness:**
+
+          - Health endpoint testing for monitoring systems
+
+          - Kubernetes probe endpoint validation
+
+          - Error handling verification for production scenarios
+
+          - End-to-end dependency injection flow testing
+
+
+          **Files Created:**
+
+          - `tests/unit/api/v2/test_redis_dependencies.py` - Redis dependency injection
+          tests
+
+          - `tests/unit/api/v2/test_redis_repository_dependencies.py` - Repository
+          dependency tests
+
+          - `tests/unit/core/test_redis_repositories.py` - Repository implementation
+          tests
+
+          - `tests/unit/api/v2/test_redis_error_scenarios.py` - Error scenario tests
+
+          - `tests/integration/api/v2/test_redis_integration.py` - Integration tests
+
+          - `tests/unit/api/v2/conftest.py` - Test configuration and fixtures
+
+          - `.scratch/test_redis_integration_runner.py` - Test runner script
+
+
+          **Testing Patterns Followed:**
+
+          - ✅ Used pytest_asyncio.fixture for async fixtures
+
+          - ✅ Used AsyncMock and MagicMock for proper mocking
+
+          - ✅ Followed established test client patterns from existing conftest.py
+
+          - ✅ Used proper test markers (unit, integration, api, repositories, error_scenarios)
+
+          - ✅ Ensured test isolation with proper setup/teardown
+
+          - ✅ Implemented FastAPI dependency injection mocking correctly
+
+
+          **Benefits Delivered:**
+
+          - 🧪 Complete test coverage for Redis integration
+
+          - 🔧 Reliable unit tests that don''t require external dependencies
+
+          - ⚡ Integration tests that verify real Redis connectivity
+
+          - 🎯 Error scenario testing for production resilience
+
+          - 📊 Health monitoring validation for operational visibility
+
+          - 🛡️ Graceful degradation testing for system reliability
+
+
+          **Ready for Production:**
+
+          The Redis integration now has comprehensive test coverage ensuring reliability,
+          proper error handling, and graceful degradation. All dependency injection
+          patterns are thoroughly tested, and the health monitoring system is validated
+          for operational use.'
         created_at: '2025-05-23T22:42:11.751486'
         description: Create comprehensive tests for the new Redis integration including
           mocking and integration tests
@@ -249,7 +518,7 @@ _plans:
         priority: medium
         sequence: 8
         title: 'Phase 8: Add Tests for Redis Integration'
-        updated_at: '2025-05-23T22:42:11.751486'
+        updated_at: '2025-05-24T13:09:06.590645'
       e66e4d3d-0b71-4604-b926-db3f4009cb02:
         child_tasks: []
         completed: true
@@ -388,7 +657,7 @@ _plans:
         title: 'Phase 4: Update Services to Use Dependency Injection'
         updated_at: '2025-05-24T12:46:16.804703'
     title: Redis Implementation Refactor
-    updated_at: '2025-05-24T12:52:45.209343'
+    updated_at: '2025-05-24T13:09:19.956001'
 current_plan: redis_refactor_plan
 session_summary:
   completion_status: 50% complete (4/8 phases)
