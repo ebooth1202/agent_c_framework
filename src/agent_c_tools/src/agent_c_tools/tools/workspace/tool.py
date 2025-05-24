@@ -1,8 +1,6 @@
 import json
 import logging
 import re
-from idlelib.window import add_windows_to_menu
-
 import yaml
 
 from ts_tool import api
@@ -602,12 +600,12 @@ class WorkspaceTools(Toolset):
         include_hidden = kwargs.get('include_hidden', False)
         
         if not unc_path:
-            return json.dumps({'error': '`path` cannot be empty'})
+            return f"ERROR: `path` cannot be empty"
             
         workspace_name, workspace, relative_pattern = self._parse_unc_path(unc_path)
         
         if not workspace:
-            return json.dumps({'error': f'Invalid workspace: {workspace_name}'})
+            return f"ERROR:'Invalid workspace: {workspace_name}'"
             
         try:
             # Use the workspace's glob method to find matching files
@@ -662,6 +660,12 @@ class WorkspaceTools(Toolset):
             str: Output of grep command with line numbers.
         """
         unc_paths = kwargs.get('paths', [])
+        if not isinstance(unc_paths, list):
+            if isinstance(unc_paths, str):
+                unc_paths = [unc_paths]
+            else:
+                return f"ERROR `paths` must be a list of UNC-style paths"
+
         pattern = kwargs.get('pattern', '')
         ignore_case = kwargs.get('ignore_case', False)
         recursive = kwargs.get('recursive', False)
@@ -781,7 +785,7 @@ class WorkspaceTools(Toolset):
         error, workspace, key = self._parse_unc_path(path)
 
         if error is not None:
-            return json.dumps({"error": error})
+            return error
 
         if workspace.read_only:
             return f"Workspace '{workspace.name}' is read-only"
@@ -789,7 +793,7 @@ class WorkspaceTools(Toolset):
         try:
             val = await workspace.safe_metadata_write(key, data)
             await workspace.save_metadata()
-            return val
+            return f"Saved metadata to '{key}' in {workspace.name} workspace."
         except Exception as e:
             return f"Failed to write metadata to '{key}' in {workspace.name} workspace: {str(e)}"
 
