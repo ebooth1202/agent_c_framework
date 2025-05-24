@@ -1,4 +1,20 @@
 services:
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --appendfsync everysec
+    networks:
+      - agent-c-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
   api:
     image: ghcr.io/centricconsulting/agent_c_api_dev:latest
     platform: ${DOCKER_PLATFORM:-linux/amd64}  # Default to amd64 but allow override
@@ -22,6 +38,8 @@ services:
       - HOST=0.0.0.0
       - PORT=8000
       - RELOAD=True
+    depends_on:
+      - redis
     networks:
       - agent-c-network
 
@@ -36,9 +54,14 @@ services:
       - VITE_RAG_API_URL=http://localhost:8000/api/v1  # Use localhost for browser access
     depends_on:
       - api
+      - redis
     networks:
       - agent-c-network
 
 networks:
   agent-c-network:
     driver: bridge
+
+volumes:
+  redis_data:
+    driver: local
