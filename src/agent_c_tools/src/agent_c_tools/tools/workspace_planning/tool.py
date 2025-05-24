@@ -734,7 +734,8 @@ class WorkspacePlanningTools(Toolset):
         # Task metadata
         lines.append(f"{indent}  ")
         lines.append(f"{indent}  *Created: {task.created_at} | Updated: {task.updated_at} | Priority: {task.priority.title()}*")
-        
+        lines.append(f"{indent}  ")
+
         # Add child tasks
         if task.child_tasks:
             child_tasks = [all_tasks[child_id] for child_id in task.child_tasks if child_id in all_tasks]
