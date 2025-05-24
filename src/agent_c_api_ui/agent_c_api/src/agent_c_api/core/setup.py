@@ -50,19 +50,21 @@ def create_application(router: APIRouter, **kwargs) -> FastAPI:
         # Import Redis configuration at runtime to avoid circular imports
         from agent_c_api.config.redis_config import RedisConfig
         
-        # Start Redis if configured to manage lifecycle
-        if settings.MANAGE_REDIS_LIFECYCLE:
-            logger.info("Starting Redis server (managed by application)")
-            redis_started = await RedisConfig.start_redis_if_needed()
-            if not redis_started:
-                logger.error("Failed to start Redis server, application may not function correctly")
-                
-        # Check if Redis is available, regardless of whether we're managing it
-        redis_available = await RedisConfig.ping_redis()
-        if not redis_available:
-            logger.warning("Redis server is not available, some features may not work properly")
+        # Validate Redis connection (no longer managing server lifecycle)
+        logger.info("Validating Redis connection...")
+        redis_status = await RedisConfig.validate_connection()
+        
+        if redis_status["connected"]:
+            logger.info(f"✅ Redis connection successful at {redis_status['host']}:{redis_status['port']}")
+            if redis_status["server_info"]:
+                info = redis_status["server_info"]
+                logger.info(f"Redis Server: v{info.get('redis_version', 'unknown')} | "
+                          f"Mode: {info.get('redis_mode', 'unknown')} | "
+                          f"Memory: {info.get('used_memory_human', 'unknown')} | "
+                          f"Clients: {info.get('connected_clients', 'unknown')}")
         else:
-            logger.info("Successfully connected to Redis server")
+            logger.warning(f"⚠️ Redis connection failed: {redis_status['error']}")
+            logger.warning("Some features may not work properly without Redis")
         
         # Shared AgentManager instance.
         lifespan_app.state.agent_manager = UItoAgentBridgeManager()
@@ -73,10 +75,9 @@ def create_application(router: APIRouter, **kwargs) -> FastAPI:
 
         yield
 
-        # Shutdown: Stop Redis if we started it
-        if settings.MANAGE_REDIS_LIFECYCLE:
-            logger.info("Stopping Redis server")
-            await RedisConfig.stop_redis_if_needed()
+        # Shutdown: Close Redis client connections
+        logger.info("Closing Redis connections...")
+        await RedisConfig.close_client()
 
 
     # Set up comprehensive OpenAPI metadata from settings (or fallback defaults)
