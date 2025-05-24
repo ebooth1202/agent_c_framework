@@ -12,9 +12,11 @@ from agent_c_api.api.dependencies import (
     get_redis_client,
     get_redis_client_optional,
     get_redis_client_managed,
-    get_session_repository,
-    get_session_repository_optional,
     RedisClientManager
+)
+from agent_c_api.core.repositories.dependencies import (
+    get_session_repository,
+    get_session_repository_optional
 )
 from agent_c_api.config.redis_config import RedisConfig
 

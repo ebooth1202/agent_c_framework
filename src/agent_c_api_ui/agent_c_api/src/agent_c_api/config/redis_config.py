@@ -89,7 +89,7 @@ class RedisConfig:
         """Close Redis client connection properly."""
         if cls._redis_client is not None:
             try:
-                await cls._redis_client.close()
+                await cls._redis_client.aclose()
                 logger.info("Redis client connection closed")
             except Exception as e:
                 logger.error(f"Error closing Redis client: {e}")

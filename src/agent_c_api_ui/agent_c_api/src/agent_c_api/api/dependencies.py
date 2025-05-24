@@ -4,9 +4,12 @@ from pydantic import create_model
 import logging
 import re
 from collections import defaultdict
+from contextlib import asynccontextmanager
 
 from agent_c_api.config.config_loader import get_allowed_params
 from agent_c_api.core.util.logging_utils import LoggingManager
+from agent_c_api.config.redis_config import RedisConfig
+from redis import asyncio as aioredis
 
 logging_manager = LoggingManager(__name__)
 logger = logging_manager.get_logger()
@@ -382,3 +385,123 @@ async def get_dynamic_form_params(request: Request, agent_manager=Depends(get_ag
         "model_name": model_name,
         "backend": backend
     }
+
+# ============================================================================
+# Redis Dependency Injection
+# ============================================================================
+
+class RedisClientManager:
+    """
+    Context manager for Redis clients that ensures proper cleanup.
+    
+    This manager provides automatic connection cleanup and error handling
+    for Redis operations that need guaranteed resource cleanup.
+    """
+    
+    def __init__(self, redis_client: aioredis.Redis):
+        """
+        Initialize the Redis client manager.
+        
+        Args:
+            redis_client: Redis client instance to manage
+        """
+        self.redis_client = redis_client
+        
+    async def __aenter__(self) -> aioredis.Redis:
+        """
+        Enter the async context manager.
+        
+        Returns:
+            The managed Redis client
+        """
+        return self.redis_client
+        
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """
+        Exit the async context manager and cleanup resources.
+        
+        Args:
+            exc_type: Exception type if an exception occurred
+            exc_val: Exception value if an exception occurred  
+            exc_tb: Exception traceback if an exception occurred
+        """
+        try:
+            if self.redis_client:
+                await self.redis_client.aclose()
+        except Exception as e:
+            logger.warning(f"Error closing Redis client in manager: {e}")
+
+
+async def get_redis_client() -> aioredis.Redis:
+    """
+    FastAPI dependency that provides a Redis client.
+    
+    This dependency fails fast if Redis is not available, making it suitable
+    for endpoints that require Redis to function properly.
+    
+    Returns:
+        Redis client instance
+        
+    Raises:
+        HTTPException: If Redis connection fails (503 Service Unavailable)
+    """
+    try:
+        redis_client = await RedisConfig.get_redis_client()
+        return redis_client
+    except Exception as e:
+        logger.error(f"Failed to get Redis client: {e}")
+        raise HTTPException(
+            status_code=503,
+            detail="Redis service is currently unavailable. Please try again later."
+        )
+
+
+async def get_redis_client_optional() -> Optional[aioredis.Redis]:
+    """
+    FastAPI dependency that provides an optional Redis client.
+    
+    This dependency provides graceful degradation when Redis is not available,
+    returning None instead of raising an exception. Suitable for endpoints
+    that can function without Redis but provide enhanced features when available.
+    
+    Returns:
+        Redis client instance if available, None otherwise
+    """
+    try:
+        redis_client = await RedisConfig.get_redis_client()
+        return redis_client
+    except Exception as e:
+        logger.warning(f"Redis client not available: {e}")
+        return None
+
+
+async def get_redis_client_managed() -> RedisClientManager:
+    """
+    FastAPI dependency that provides a managed Redis client.
+    
+    This dependency provides a Redis client wrapped in a context manager
+    that ensures proper cleanup of connections. Use this for operations
+    that need guaranteed resource cleanup.
+    
+    Returns:
+        RedisClientManager instance
+        
+    Raises:
+        HTTPException: If Redis connection fails (503 Service Unavailable)
+    """
+    try:
+        redis_client = await RedisConfig.get_redis_client()
+        return RedisClientManager(redis_client)
+    except Exception as e:
+        logger.error(f"Failed to get managed Redis client: {e}")
+        raise HTTPException(
+            status_code=503,
+            detail="Redis service is currently unavailable. Please try again later."
+        )
+
+
+# ============================================================================
+# Repository Dependencies
+# ============================================================================
+# Note: Repository dependencies are defined in their respective modules
+# to avoid circular imports. See core/repositories/ for implementations.
