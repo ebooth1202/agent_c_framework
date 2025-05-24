@@ -9,25 +9,28 @@ from fastapi_cache.decorator import cache
 
 from agent_c.models.events.chat import MessageEvent, InteractionEvent
 from agent_c.models.events.tool_calls import ToolCallEvent
-from agent_c_api.api.dependencies import get_agent_manager
-from agent_c_api.config.redis_config import RedisConfig
+from agent_c_api.api.dependencies import get_agent_manager, get_redis_client
 from agent_c_api.core.repositories.chat_repository import ChatRepository
 from agent_c_api.core.services.chat_service import ChatService as CoreChatService
 
 from fastapi import Request
 
 
-def get_chat_service(request: Request):
+async def get_chat_service(
+    request: Request,
+    redis_client = Depends(get_redis_client)
+):
     """Dependency to get the chat service
 
     Args:
         request: The FastAPI request object
+        redis_client: Redis client dependency
         
     Returns:
         ChatService: Initialized chat service
     """
     agent_manager = get_agent_manager(request)
-    return ChatService(agent_manager=agent_manager)
+    return ChatService(agent_manager=agent_manager, redis_client=redis_client)
 
 from agent_c_api.api.v2.models.chat_models import (
     ChatMessage,
@@ -45,8 +48,15 @@ logger = structlog.get_logger(__name__)
 class ChatService:
     """Service for handling chat operations with sessions and persistence"""
 
-    def __init__(self, agent_manager: Any = Depends(get_agent_manager)):  # Use Any instead of UItoAgentBridgeManager type
+    def __init__(self, agent_manager: Any, redis_client: Any):
+        """Initialize the chat service
+        
+        Args:
+            agent_manager: The agent manager instance
+            redis_client: Redis client instance
+        """  # Use Any instead of UItoAgentBridgeManager type
         self.agent_manager = agent_manager
+        self.redis_client = redis_client
         self.logger = structlog.get_logger(__name__)
 
     async def send_message(
@@ -155,7 +165,7 @@ class ChatService:
 
     # ----- Chat persistence methods (added from v2/chat/services.py) -----
     
-    async def _get_core_service(self, session_id: str) -> CoreChatService:
+    def _get_core_service(self, session_id: str) -> CoreChatService:
         """Get the core chat service with dependencies
         
         Args:
@@ -164,8 +174,7 @@ class ChatService:
         Returns:
             Initialized core chat service
         """
-        redis_client = await RedisConfig.get_redis_client()
-        chat_repository = ChatRepository(redis_client, session_id)
+        chat_repository = ChatRepository(self.redis_client, session_id)
         return CoreChatService(chat_repository)
     
     async def add_message(self, session_id: str, message: Union[MessageEvent, Dict[str, Any]]) -> None:
@@ -175,7 +184,7 @@ class ChatService:
             session_id: The session ID
             message: The message to add
         """
-        core_service = await self._get_core_service(session_id)
+        core_service = self._get_core_service(session_id)
         await core_service.add_message(message)
     
     async def get_messages(self, session_id: str, start: str = "-", end: str = "+", count: int = 100) -> List[Dict[str, Any]]:
@@ -190,7 +199,7 @@ class ChatService:
         Returns:
             List of messages
         """
-        core_service = await self._get_core_service(session_id)
+        core_service = self._get_core_service(session_id)
         return await core_service.get_messages(start, end, count)
     
     async def get_session_meta(self, session_id: str) -> Dict[str, Any]:
@@ -202,7 +211,7 @@ class ChatService:
         Returns:
             Session metadata
         """
-        core_service = await self._get_core_service(session_id)
+        core_service = self._get_core_service(session_id)
         return await core_service.get_session_meta()
     
     async def set_session_meta(self, session_id: str, key: str, value: Any) -> None:
@@ -213,7 +222,7 @@ class ChatService:
             key: Metadata key
             value: Metadata value
         """
-        core_service = await self._get_core_service(session_id)
+        core_service = self._get_core_service(session_id)
         await core_service.set_session_meta(key, value)
     
     async def get_managed_meta(self, session_id: str) -> Dict[str, Any]:
@@ -225,7 +234,7 @@ class ChatService:
         Returns:
             Managed session metadata
         """
-        core_service = await self._get_core_service(session_id)
+        core_service = self._get_core_service(session_id)
         return await core_service.get_managed_meta()
     
     async def set_managed_meta(self, session_id: str, key: str, value: Any) -> None:
@@ -236,7 +245,7 @@ class ChatService:
             key: Metadata key
             value: Metadata value
         """
-        core_service = await self._get_core_service(session_id)
+        core_service = self._get_core_service(session_id)
         await core_service.set_managed_meta(key, value)
     
     async def add_tool_call(self, session_id: str, tool_call: Union[ToolCallEvent, Dict[str, Any]]) -> None:
@@ -246,7 +255,7 @@ class ChatService:
             session_id: The session ID
             tool_call: The tool call to add
         """
-        core_service = await self._get_core_service(session_id)
+        core_service = self._get_core_service(session_id)
         await core_service.add_tool_call(tool_call)
     
     async def get_tool_calls(self, session_id: str, start: str = "-", end: str = "+", count: int = 100) -> List[Dict[str, Any]]:
@@ -261,7 +270,7 @@ class ChatService:
         Returns:
             List of tool calls
         """
-        core_service = await self._get_core_service(session_id)
+        core_service = self._get_core_service(session_id)
         return await core_service.get_tool_calls(start, end, count)
     
     async def add_interaction(self, session_id: str, 
@@ -279,7 +288,7 @@ class ChatService:
         Returns:
             The interaction ID
         """
-        core_service = await self._get_core_service(session_id)
+        core_service = self._get_core_service(session_id)
         return await core_service.add_interaction(messages, tool_calls, interaction_id)
     
     async def get_interactions(self, session_id: str) -> List[str]:
@@ -291,7 +300,7 @@ class ChatService:
         Returns:
             List of interaction IDs
         """
-        core_service = await self._get_core_service(session_id)
+        core_service = self._get_core_service(session_id)
         return await core_service.get_interactions()
     
     async def get_interaction(self, session_id: str, interaction_id: str) -> Dict[str, Any]:
@@ -304,7 +313,7 @@ class ChatService:
         Returns:
             Interaction details including messages and tool calls
         """
-        core_service = await self._get_core_service(session_id)
+        core_service = self._get_core_service(session_id)
         return await core_service.get_interaction(interaction_id)
 
 
