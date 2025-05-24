@@ -2,8 +2,18 @@
  * API Services Index
  * 
  * This file exports all API services for easy import throughout the application.
+ * 
+ * The services are organized into logical groups:
+ * - Core API utilities and base functionality
+ * - Session management and configuration
+ * - Chat and messaging functionality
+ * - Configuration and system information
+ * - History and replay functionality
+ * 
+ * All services support both v2 API endpoints and v1 backward compatibility.
  */
 
+// Import all service modules
 import apiService from './api';
 import sessionService from './session-api';
 import modelService from './model-api';
@@ -13,7 +23,11 @@ import chatService from './chat-api';
 import configService from './config-api';
 import historyService from './history-api';
 
-// Export individual services
+// =============================================================================
+// SERVICE EXPORTS - Organized by functional groups
+// =============================================================================
+
+// Export individual services for direct access
 export const api = apiService;
 export const session = sessionService;
 export const model = modelService;
@@ -23,97 +37,168 @@ export const chat = chatService;
 export const config = configService;
 export const history = historyService;
 
-// Export individual functions from each service
+// =============================================================================
+// CORE API UTILITIES
+// =============================================================================
+
 export {
-  // Core API utilities
+  // Core API utilities and configuration
   processApiError,
   showErrorToast,
   API_CONFIG,
+  extractResponseData,
 } from './api';
 
-// Export all service methods from session-api
+// =============================================================================
+// SESSION MANAGEMENT (v2 API with v1 compatibility)
+// =============================================================================
+
 export {
+  // v2 Session Management
   initialize,
   createSession,
   getSession,
+  verifySession,
+  listSessions,
   updateSession,
   deleteSession,
-  getSessionTemplates,
+  deleteAllSessions,
+  
+  // v2 Agent Configuration
+  getAgentConfig,
+  updateAgentConfig,
+  
+  // v2 Session Tools
+  getSessionTools,
+  updateSessionTools,
+  
+  // v2 Messaging
   sendMessage,
   getMessages,
-  getSessionUIState,
-  updateSessionUIState,
   stopGeneration,
-  exportSession,
+  
+  // v1 Compatibility Methods
+  updateSettings,    // Maps to updateAgentConfig
+  updateTools,       // Maps to updateSessionTools
+  getAgentTools,     // Maps to getSessionTools
 } from './session-api';
 
-// Export all service methods from model-api
+// =============================================================================
+// CHAT AND MESSAGING (v2 API with v1 compatibility)
+// =============================================================================
+
 export {
+  // v2 Chat Methods
+  sendStreamingMessage,
+  
+  // v2 File Management
+  uploadFile,
+  downloadFile,
+  getFileMetadata,
+  listFiles,
+  deleteFile,
+  
+  // v2 Chat History
+  getChatHistory,
+  streamChatHistory,
+  
+  // v1 Compatibility Methods
+  sendChatMessage,      // Maps to sendStreamingMessage
+  uploadAttachment,     // Maps to uploadFile
+  downloadAttachment,   // Maps to downloadFile
+  
+  // Shared Methods
+  cancelChat,
+} from './chat-api';
+
+// =============================================================================
+// CONFIGURATION AND SYSTEM (v2 API)
+// =============================================================================
+
+export {
+  // System Configuration
+  getSystemConfig,
+  
+  // Model Information
   getModels,
   getModelDetails,
   getModelParameters,
+  
+  // Persona Information
+  getPersonas,
+  getPersonaDetails,
+  
+  // Tool Information
+  getTools,
+  getToolDetails,
+} from './config-api';
+
+// =============================================================================
+// HISTORY AND REPLAY (v2 API)
+// =============================================================================
+
+export {
+  // History Management
+  listHistories,
+  getHistoryDetails,
+  deleteHistory,
+  
+  // Event Management
+  getEvents,
+  streamEvents,
+  
+  // Replay Control
+  getReplayStatus,
+  controlReplay,
+} from './history-api';
+
+// =============================================================================
+// LEGACY v1 SERVICE EXPORTS (for backward compatibility)
+// =============================================================================
+
+// Model API (v1 compatibility)
+export {
+  getModels as getModelsLegacy,
+  getModelDetails as getModelDetailsLegacy,
+  getModelParameters as getModelParametersLegacy,
   setSessionModel,
   updateModelParameters,
   getDefaultParameters,
 } from './model-api';
 
-// Export all service methods from tools-api
+// Tools API (v1 compatibility)
 export {
-  getTools,
-  getToolDetails,
+  getTools as getToolsLegacy,
+  getToolDetails as getToolDetailsLegacy,
   executeTool,
-  getSessionTools,
-  updateSessionTools,
+  getSessionTools as getSessionToolsLegacy,
+  updateSessionTools as updateSessionToolsLegacy,
   getToolCategories,
 } from './tools-api';
 
-// Export all service methods from persona-api
+// Persona API (v1 compatibility)
 export {
-  getPersonas,
-  getPersonaDetails,
+  getPersonas as getPersonasLegacy,
+  getPersonaDetails as getPersonaDetailsLegacy,
   setSessionPersona,
   getSessionPersona,
   getPersonaCategories,
 } from './persona-api';
 
-// Export all service methods from chat-api
-export {
-  sendStreamingMessage,
-  uploadAttachment,
-  downloadAttachment,
-  deleteMessage,
-  editMessage,
-  regenerateResponse,
-} from './chat-api';
+// =============================================================================
+// DEFAULT EXPORT - All services combined
+// =============================================================================
 
-// Export all service methods from config-api
-export {
-  getSystemConfig,
-  getModelDetails as getConfigModelDetails,
-  getPersonaDetails as getConfigPersonaDetails,
-  getToolDetails as getConfigToolDetails,
-  getModelParameters as getConfigModelParameters,
-} from './config-api';
-
-// Export all service methods from history-api
-export {
-  listHistories,
-  getHistoryDetails,
-  deleteHistory,
-  getEvents,
-  streamEvents,
-  getReplayStatus,
-  controlReplay,
-} from './history-api';
-
-// Default export combining all services
 export default {
+  // Core services
   api: apiService,
   session: sessionService,
-  model: modelService,
-  tools: toolsService,
-  persona: personaService,
   chat: chatService,
   config: configService,
   history: historyService,
+  
+  // Legacy services (for backward compatibility)
+  model: modelService,
+  tools: toolsService,
+  persona: personaService,
 };

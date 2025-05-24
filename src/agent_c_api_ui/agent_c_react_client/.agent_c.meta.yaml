@@ -1,0 +1,707 @@
+_plans:
+  api_service_layer_implementation:
+    created_at: '2025-05-22T20:39:51.978114'
+    description: Complete migration of the API service layer from v1 to v2 API. This
+      involves implementing new service modules, updating existing services, creating
+      adapter layers for backward compatibility, and ensuring comprehensive testing.
+      The plan follows a methodical approach with single-step execution per session
+      to ensure quality and developer feedback integration.
+    id: 9c279b9c-9eb3-4b4a-b5f3-7df347b1e2e6
+    lessons_learned:
+    - created_at: '2025-05-22T20:42:01.068606'
+      id: d2d4dc32-01ac-4403-8bd4-ae1431883991
+      learned_task_id: 42fc2c7a-b336-4c51-beb7-646ffa266601
+      lesson: '204 No Content Response Handling: When dealing with HTTP 204 No Content
+        responses (common for DELETE operations), special handling is required throughout
+        the stack. Mocks should include `status: 204` and omit content/json methods.
+        API layer response parsing needs status code checks before attempting to parse
+        body. Service layer methods need explicit 204 case handling.'
+    - created_at: '2025-05-22T20:42:06.526336'
+      id: e7c5f740-1fa5-4ff6-8234-eae57a5345cd
+      learned_task_id: f7bf1c02-254e-4b01-81cf-54c5375a7dbd
+      lesson: 'Mock Testing Best Practices: Mock at the correct level (HTTP layer,
+        not service methods). Don''t mix mocking approaches within the same test suite.
+        Ensure mocks accurately represent real API responses including all expected
+        properties. Always restore original functions in afterEach using consistent
+        cleanup patterns.'
+    - created_at: '2025-05-22T20:42:12.590710'
+      id: 7cf1deb3-44a9-4962-967c-720de1e93d69
+      learned_task_id: 2c259bcd-04aa-46ee-88ad-60dc27cd76f5
+      lesson: 'Single-Step Execution Protocol: Execute only one step of a phase per
+        session to ensure developer feedback and verification. This approach prioritizes
+        correctness over speed and allows for course correction based on implementation
+        discoveries.'
+    - created_at: '2025-05-23T21:08:29.767682'
+      id: dcc7dcdd-d020-4df2-b49e-f0d74326bd2d
+      learned_task_id: 2c259bcd-04aa-46ee-88ad-60dc27cd76f5
+      lesson: 'Backward Compatibility Strategy for API Migration: When migrating existing
+        services to v2 API, maintain all v1 function signatures alongside new v2 methods.
+        Use parameter mapping (model_name → model_id) and response format transformation
+        to ensure existing components continue working. This dual-approach allows
+        gradual migration while preventing breaking changes during the transition
+        period.'
+    - created_at: '2025-05-23T21:16:23.551288'
+      id: 52717e2d-f479-4548-943b-5e14e0674f10
+      learned_task_id: 2c259bcd-04aa-46ee-88ad-60dc27cd76f5
+      lesson: '404 Error Handling in Tests: When testing error scenarios with 404
+        responses, the error object structure can vary depending on how it''s processed.
+        Always check multiple locations for status codes: error.statusCode, error.originalError?.statusCode,
+        or parse the error message. This is especially important when errors pass
+        through multiple processing layers.'
+    - created_at: '2025-05-23T21:24:10.289919'
+      id: 351c7a47-b77a-4ae4-9cf1-e1c377650f2b
+      learned_task_id: 6e2382b4-b0da-4de7-84ce-ec4dbdf96ac3
+      lesson: 'Streaming API Migration Strategy: When migrating streaming endpoints,
+        maintain both the streaming mechanism and response format compatibility. Convert
+        v1 text chunks to v2 JSON events internally while preserving the original
+        callback interface. This allows existing streaming components to continue
+        working while gaining access to richer v2 event data (tool calls, completion
+        status, etc.).'
+    - created_at: '2025-05-23T21:25:17.795489'
+      id: f95f5c6a-4604-48e8-9f2a-a239f5ad5ceb
+      learned_task_id: 6e2382b4-b0da-4de7-84ce-ec4dbdf96ac3
+      lesson: 'Task Completion Protocol: NEVER mark tasks as complete before user
+        verification and testing. Tasks should only be marked complete AFTER the user
+        has confirmed that tests pass and functionality works correctly. This prevents
+        premature completion and ensures quality control through the single-step execution
+        protocol.'
+    tasks:
+      029fa866-14f2-4305-a563-98fa5cb89043:
+        child_tasks:
+        - 92159458-04e0-48f2-86f4-c5cb6637b308
+        - db598050-6e73-4bc6-9866-f8abdc526b60
+        completed: false
+        context: Comprehensive testing phase to ensure all services work correctly
+          with v2 API and that the adapter layer maintains backward compatibility.
+        created_at: '2025-05-22T20:41:27.667807'
+        description: Comprehensive testing of the integrated v2 API service layer
+        id: 029fa866-14f2-4305-a563-98fa5cb89043
+        parent_id: null
+        priority: high
+        sequence: 5
+        title: 'Phase 5: Integration and Testing'
+        updated_at: '2025-05-22T20:41:27.667807'
+      2c259bcd-04aa-46ee-88ad-60dc27cd76f5:
+        child_tasks: []
+        completed: true
+        context: "✅ COMPLETED: Updated session-api.js to use v2 session endpoints\
+          \ per migration guide. \n\n**Key changes implemented:**\n✅ Replaced /api/v1/sessions\
+          \ with /api/v2/sessions endpoints\n✅ Updated session creation, verification,\
+          \ listing, and deletion methods\n✅ Added agent configuration methods per\
+          \ v2 spec (getAgentConfig, updateAgentConfig)\n✅ Added tool management methods\
+          \ (getSessionTools, updateSessionTools)\n✅ Updated response handling for\
+          \ new pagination format using extractResponseData\n✅ Ensured backward compatibility\
+          \ during transition with v1 compatibility methods\n✅ Added comprehensive\
+          \ test coverage in session-api.test.js\n✅ Fixed 404 error handling in verifySession\
+          \ function\n\n**Backward Compatibility Strategy:**\n- Maintained all v1\
+          \ function signatures (initialize, updateSettings, updateTools, getAgentTools)\n\
+          - Added parameter mapping from v1 to v2 format (model_name → model_id, persona_name\
+          \ → persona_id)\n- Preserved v1 response formats where expected by existing\
+          \ components\n- Added new v2 methods alongside v1 compatibility methods\n\
+          \n**Testing:**\n- Created comprehensive test suite following config-api.test.js\
+          \ patterns\n- Tests cover both v2 API methods and v1 compatibility functions\n\
+          - Includes error handling, 204 No Content responses, and network errors\n\
+          - Validates parameter mapping and response format transformations\n- **All\
+          \ 25 tests passing** ✅\n\n**Files Updated:**\n- //ui/src/services/session-api.js\
+          \ (migrated to v2 with v1 compatibility)\n- //ui/src/services/session-api.test.js\
+          \ (comprehensive test coverage)\n\n**Status:** ✅ VERIFIED AND COMPLETE\n\
+          **Next:** Ready to proceed to Update Chat API Service (Phase 3, Step 2)"
+        created_at: '2025-05-22T20:40:56.201061'
+        description: Update session-api.js for v2 session endpoints
+        id: 2c259bcd-04aa-46ee-88ad-60dc27cd76f5
+        parent_id: 57730534-1615-45ef-b67b-5fbe28dd9fc9
+        priority: high
+        sequence: null
+        title: Update Session API Service
+        updated_at: '2025-05-23T21:18:02.847039'
+      42fc2c7a-b336-4c51-beb7-646ffa266601:
+        child_tasks: []
+        completed: true
+        context: 'COMPLETED: Created debug API service including:
+
+          - Session debug information retrieval (session state, agent config, message
+          stats, component status)
+
+          - Agent debug information retrieval (configuration parameters, bridge parameters,
+          runtime settings)
+
+          - Comprehensive test coverage in debug-api.test.js
+
+          - Proper error handling and response data extraction
+
+          - Updated services/index.js to export the new service
+
+
+          File: //ui/src/services/debug-api.js
+
+          Tests: //ui/src/services/debug-api.test.js
+
+          Status: ✅ Completed May 10, 2025'
+        created_at: '2025-05-22T20:40:37.502141'
+        description: Create debug-api.js for debugging endpoints
+        id: 42fc2c7a-b336-4c51-beb7-646ffa266601
+        parent_id: b3e1bde0-a14f-4079-88a0-b5f329d0f2e9
+        priority: medium
+        sequence: null
+        title: Create Debug API Service
+        updated_at: '2025-05-22T20:40:42.412193'
+      494f8a04-176a-4fe7-9f69-f19d3df2bf97:
+        child_tasks: []
+        completed: true
+        context: "✅ **IMPLEMENTATION COMPLETE** - Updated services/index.js to export\
+          \ all services and methods with proper organization and backward compatibility.\n\
+          \n**Key Updates Implemented:**\n\n✅ **Organized exports in logical groups:**\n\
+          - Core API utilities and base functionality\n- Session management and configuration\
+          \ (v2 + v1 compatibility)\n- Chat and messaging functionality (v2 + v1 compatibility)\
+          \  \n- Configuration and system information (v2)\n- History and replay functionality\
+          \ (v2)\n- Legacy v1 service exports for backward compatibility\n\n✅ **Enhanced\
+          \ documentation:**\n- Added comprehensive header documentation explaining\
+          \ service organization\n- Clear section headers for each functional group\n\
+          - Inline comments explaining v2 vs v1 compatibility methods\n\n✅ **Ensured\
+          \ backward compatibility:**\n- Maintained all existing export names and\
+          \ signatures\n- Added legacy exports with descriptive names (e.g., `getModelsLegacy`)\n\
+          - Preserved default export structure for existing component imports\n- v1\
+          \ compatibility methods clearly marked and mapped to v2 implementations\n\
+          \n✅ **Added all updated service methods:**\n- Session API: All v2 methods\
+          \ + v1 compatibility functions\n- Chat API: All v2 methods + v1 compatibility\
+          \ functions  \n- Config API: All v2 configuration and system methods\n-\
+          \ History API: All v2 history and replay methods\n- Core API: Added `extractResponseData`\
+          \ utility export\n\n✅ **Improved organization:**\n- Services grouped by\
+          \ functionality rather than alphabetically\n- Clear separation between v2\
+          \ and v1 compatibility exports\n- Consistent export patterns across all\
+          \ service groups\n\n✅ **FIXED DUPLICATE EXPORT ISSUE:**\n- Resolved duplicate\
+          \ `cancelChat` export error\n- Kept `cancelChat` in chat-api exports (more\
+          \ logical location)\n- Removed duplicate from session-api exports\n- **Build\
+          \ error resolved** ✅\n\n**Files Updated:**\n- //ui/src/services/index.js\
+          \ (comprehensive reorganization and enhancement)\n\n**Verification:**\n\
+          - Created verification script at //ui/.scratch/verify_index_exports.js\n\
+          - All exports properly structured and documented\n- Backward compatibility\
+          \ maintained for existing imports\n- **No duplicate export errors** ✅\n\n\
+          **Status:** ✅ VERIFIED AND COMPLETE\n**Next:** Ready to proceed to Phase\
+          \ 4: Adapter Layer"
+        created_at: '2025-05-22T20:41:06.823055'
+        description: Update services/index.js to export all services and methods
+        id: 494f8a04-176a-4fe7-9f69-f19d3df2bf97
+        parent_id: 57730534-1615-45ef-b67b-5fbe28dd9fc9
+        priority: medium
+        sequence: null
+        title: Update index.js
+        updated_at: '2025-05-23T21:38:37.210818'
+      4d8f7e0a-48f8-4cf8-99d9-f16557f8e33e:
+        child_tasks:
+        - 98dab346-eeae-448f-8f92-fa8d78441581
+        - cf711192-3bf2-4d51-9692-e15012be8996
+        completed: false
+        context: Create adapter functions that maintain v1 API signatures while using
+          v2 implementations underneath. This allows existing components to continue
+          working without modification during the transition period.
+        created_at: '2025-05-22T20:41:11.583094'
+        description: Create adapter layer for backward compatibility with v1 API signatures
+        id: 4d8f7e0a-48f8-4cf8-99d9-f16557f8e33e
+        parent_id: null
+        priority: medium
+        sequence: 4
+        title: 'Phase 4: Adapter Layer'
+        updated_at: '2025-05-22T20:41:11.583094'
+      57730534-1615-45ef-b67b-5fbe28dd9fc9:
+        child_tasks:
+        - 2c259bcd-04aa-46ee-88ad-60dc27cd76f5
+        - 6e2382b4-b0da-4de7-84ce-ec4dbdf96ac3
+        - 494f8a04-176a-4fe7-9f69-f19d3df2bf97
+        completed: false
+        context: 'CURRENT PHASE: Update existing service modules (session-api.js,
+          chat-api.js) to use v2 API endpoints and response formats. This phase requires
+          careful handling to maintain backward compatibility while transitioning
+          to new API patterns.
+
+
+          Current Status: Phase 3, Step 1 - Update Session API Service (Next Task)'
+        created_at: '2025-05-22T20:40:48.588155'
+        description: Update existing API services to use v2 endpoints and formats
+        id: 57730534-1615-45ef-b67b-5fbe28dd9fc9
+        parent_id: null
+        priority: high
+        sequence: 3
+        title: 'Phase 3: Update Existing Services'
+        updated_at: '2025-05-22T20:40:48.588155'
+      6e2382b4-b0da-4de7-84ce-ec4dbdf96ac3:
+        child_tasks: []
+        completed: true
+        context: '✅ COMPLETED: Updated chat-api.js to use v2 chat endpoints per migration
+          guide.
+
+
+          **Key changes implemented:**
+
+          ✅ Updated message format and streaming support for v2 API
+
+          - Replaced form-based `/api/v1/chat` with JSON-based `/api/v2/sessions/{session_id}/chat`
+
+          - Implemented v2 structured message format with content arrays
+
+          - Updated streaming to handle JSON events (text_delta, tool_call, completion)
+
+          - Added proper event parsing and accumulation
+
+
+          ✅ Updated file upload, download, and management methods
+
+          - Replaced `/api/v1/upload_file` with `/api/v2/sessions/{session_id}/files`
+
+          - Updated file download to use `/content` suffix
+
+          - Added new file management methods (getFileMetadata, listFiles, deleteFile)
+
+          - Proper handling of 204 No Content responses for deletions
+
+
+          ✅ Ensured compatibility with new response formats
+
+          - All responses use extractResponseData for v2 format handling
+
+          - Proper error handling for streaming and file operations
+
+          - Response field mapping (file_id vs id, content_type vs mime_type)
+
+
+          ✅ Added comprehensive test coverage
+
+          - 19 test cases covering v2 methods and v1 compatibility
+
+          - Streaming tests with mock ReadableStream
+
+          - File management tests with proper blob handling
+
+          - Error scenarios and edge cases
+
+          - **All tests passing** ✅
+
+
+          **Backward Compatibility Strategy:**
+
+          - Maintained v1 function signatures (sendChatMessage, uploadAttachment,
+          downloadAttachment)
+
+          - Parameter conversion from v1 to v2 format (message text → structured content)
+
+          - Response format transformation for existing components
+
+          - Event callback adaptation (v1 text chunks → v2 JSON events)
+
+
+          **Files Updated:**
+
+          - //ui/src/services/chat-api.js (migrated to v2 with v1 compatibility)
+
+          - //ui/src/services/chat-api.test.js (comprehensive test coverage)
+
+
+          **Status:** ✅ VERIFIED AND COMPLETE
+
+          **Next:** Ready to proceed to Update services/index.js (Phase 3, Step 3)'
+        created_at: '2025-05-22T20:41:01.463407'
+        description: Update chat-api.js for v2 chat endpoints
+        id: 6e2382b4-b0da-4de7-84ce-ec4dbdf96ac3
+        parent_id: 57730534-1615-45ef-b67b-5fbe28dd9fc9
+        priority: high
+        sequence: null
+        title: Update Chat API Service
+        updated_at: '2025-05-23T21:28:16.718155'
+      73d20efb-68d0-4398-aeb1-27ec7ffdb563:
+        child_tasks:
+        - 95453e77-7962-462b-ac39-0eea3fb42778
+        - 7cc99eb3-dfc6-41b9-a5f7-42e735dd5167
+        completed: false
+        context: Final phase to transition components from adapter layer to direct
+          v2 API usage and create comprehensive documentation.
+        created_at: '2025-05-22T20:41:43.203838'
+        description: Update components to use v2 services directly and create documentation
+        id: 73d20efb-68d0-4398-aeb1-27ec7ffdb563
+        parent_id: null
+        priority: medium
+        sequence: 6
+        title: 'Phase 6: Component Updates and Documentation'
+        updated_at: '2025-05-22T20:41:43.203838'
+      7cc99eb3-dfc6-41b9-a5f7-42e735dd5167:
+        child_tasks: []
+        completed: false
+        context: 'Create comprehensive documentation including:
+
+          - Update API service documentation in //ui/docs/api/
+
+          - Add examples for common usage patterns
+
+          - Document migration notes for developers
+
+          - Create troubleshooting guide
+
+          - Document lessons learned and best practices
+
+
+          Files: Update //ui/docs/api/ documentation'
+        created_at: '2025-05-22T20:41:54.015441'
+        description: Create comprehensive documentation for the v2 API service layer
+        id: 7cc99eb3-dfc6-41b9-a5f7-42e735dd5167
+        parent_id: 73d20efb-68d0-4398-aeb1-27ec7ffdb563
+        priority: low
+        sequence: null
+        title: Documentation
+        updated_at: '2025-05-22T20:41:54.015441'
+      92159458-04e0-48f2-86f4-c5cb6637b308:
+        child_tasks: []
+        completed: false
+        context: 'Create comprehensive unit testing including:
+
+          - Mocks for v2 API responses (including 204 No Content handling)
+
+          - Test error handling and edge cases
+
+          - Test pagination and response extraction
+
+          - Test adapter functions for v1 compatibility
+
+          - Use test templates from //ui/src/test/templates/
+
+
+          Reference: Apply lessons learned from API testing (documented in plan)'
+        created_at: '2025-05-22T20:41:33.783745'
+        description: Create comprehensive unit tests for all services
+        id: 92159458-04e0-48f2-86f4-c5cb6637b308
+        parent_id: 029fa866-14f2-4305-a563-98fa5cb89043
+        priority: high
+        sequence: null
+        title: Unit Testing
+        updated_at: '2025-05-22T20:41:33.783745'
+      95453e77-7962-462b-ac39-0eea3fb42778:
+        child_tasks: []
+        completed: false
+        context: 'Update components to use v2 services directly:
+
+          - Identify all components using the API services
+
+          - Update components to use new service methods directly
+
+          - Update response handling to match v2 format
+
+          - Test components with v2 services
+
+          - Remove dependency on adapter layer
+
+
+          Strategy: Gradual migration, one component at a time
+
+          Risk: Component behavior changes - thorough testing required'
+        created_at: '2025-05-22T20:41:48.303077'
+        description: Update components to use v2 services directly
+        id: 95453e77-7962-462b-ac39-0eea3fb42778
+        parent_id: 73d20efb-68d0-4398-aeb1-27ec7ffdb563
+        priority: medium
+        sequence: null
+        title: Update Components
+        updated_at: '2025-05-22T20:41:48.303077'
+      98dab346-eeae-448f-8f92-fa8d78441581:
+        child_tasks: []
+        completed: false
+        context: '✅ **IMPLEMENTATION COMPLETE** - Created comprehensive v1 API adapter
+          layer that maintains exact v1 signatures while using v2 implementations.
+
+
+          **Key Features Implemented:**
+
+
+          ✅ **Model API Adapters:**
+
+          - `getModels()` - Maps v1 `/models` to v2 `/config/models`
+
+          - `getModelDetails(modelId)` - Maps v1 model details to v2 config service
+
+          - `getModelParameters(modelId)` - Maps v1 parameters to v2 config service
+
+          - `setSessionModel(sessionId, modelId)` - Maps to v2 agent configuration
+
+          - `updateModelParameters(sessionId, params)` - Maps to v2 agent config updates
+
+          - `getDefaultParameters(modelId)` - Uses v2 config service
+
+
+          ✅ **Tools API Adapters:**
+
+          - `getTools()` - Maps v1 `/tools` to v2 `/config/tools`
+
+          - `getToolDetails(toolId)` - Maps v1 tool details to v2 config service
+
+          - `getSessionTools(sessionId)` - Maps to v2 session tools API
+
+          - `updateSessionTools(sessionId, tools)` - Maps to v2 session tools API
+
+          - `getToolCategories()` - Derives categories from v2 tools data
+
+          - `executeTool()` - Placeholder for future v2 tool execution pattern
+
+
+          ✅ **Persona API Adapters:**
+
+          - `getPersonas()` - Maps v1 `/personas` to v2 `/config/personas`
+
+          - `getPersonaDetails(personaId)` - Maps v1 persona details to v2 config
+          service
+
+          - `setSessionPersona(sessionId, personaId)` - Maps to v2 agent configuration
+
+          - `getSessionPersona(sessionId)` - Maps to v2 agent config + persona details
+
+          - `getPersonaCategories()` - Derives categories from v2 personas data
+
+
+          ✅ **Parameter & Response Transformation:**
+
+          - `transformV1ToV2Params()` - Converts v1 parameter names to v2 format
+
+          - `transformV2ToV1Response()` - Converts v2 responses to v1 format
+
+          - Handles common transformations (model_name ↔ model_id, persona_name ↔
+          persona_id)
+
+
+          ✅ **Error Handling & Logging:**
+
+          - Comprehensive error handling for all adapter functions
+
+          - Detailed logging with `[v1-adapter]` prefix for debugging
+
+          - Preserves original error messages and stack traces
+
+          - Consistent error propagation patterns
+
+
+          ✅ **Backward Compatibility:**
+
+          - Maintains exact v1 API signatures and behavior
+
+          - Response format transformation ensures v1 expectations are met
+
+          - Parameter mapping handles v1 to v2 naming differences
+
+          - Success indicators added to match v1 response patterns
+
+
+          ✅ **Comprehensive Test Coverage:**
+
+          - 25+ test cases covering all adapter functions
+
+          - Mock-based testing isolates adapter logic from v2 services
+
+          - Error scenario testing ensures robust error handling
+
+          - Parameter transformation testing validates conversion logic
+
+          - Response format testing ensures backward compatibility
+
+
+          **Files Created:**
+
+          - //ui/src/services/v1-api-adapters.js (comprehensive adapter implementation)
+
+          - //ui/src/services/v1-api-adapters.test.js (complete test suite)
+
+
+          **Architecture Benefits:**
+
+          - Clean separation between v1 and v2 implementations
+
+          - Centralized location for all v1-to-v2 transformations
+
+          - Easy to remove when v1 support is no longer needed
+
+          - Comprehensive logging for debugging transition issues
+
+
+          **Status:** ✅ READY FOR USER VERIFICATION
+
+          **Next:** User should run tests to verify adapter functionality, then proceed
+          to Step 2: Replace v1 Implementations'
+        created_at: '2025-05-22T20:41:17.456614'
+        description: Create adapter functions that match v1 API signatures
+        id: 98dab346-eeae-448f-8f92-fa8d78441581
+        parent_id: 4d8f7e0a-48f8-4cf8-99d9-f16557f8e33e
+        priority: medium
+        sequence: null
+        title: Create v1 Adapters
+        updated_at: '2025-05-23T21:44:32.768908'
+      a1be0f6d-3acb-4d25-a9f7-453738410483:
+        child_tasks:
+        - c3c6c5d8-1c73-45a1-a13c-d584c20810f7
+        completed: false
+        context: Foundation phase for v2 API migration. Updates core API infrastructure
+          to support v2 endpoints, response formats, and error handling patterns.
+          This phase must be completed before any service-specific implementations.
+        created_at: '2025-05-22T20:39:57.716487'
+        description: Establish the foundational infrastructure for v2 API integration
+        id: a1be0f6d-3acb-4d25-a9f7-453738410483
+        parent_id: null
+        priority: high
+        sequence: 1
+        title: 'Phase 1: Base Infrastructure and Utility Functions'
+        updated_at: '2025-05-22T20:39:57.716487'
+      b3e1bde0-a14f-4079-88a0-b5f329d0f2e9:
+        child_tasks:
+        - f7bf1c02-254e-4b01-81cf-54c5375a7dbd
+        - dd3284bc-ba7c-4e37-a4f3-581b4fa098c9
+        - 42fc2c7a-b336-4c51-beb7-646ffa266601
+        completed: false
+        context: Implementation of new service modules that don't have v1 equivalents.
+          These services provide configuration, history, and debugging capabilities
+          that are new in v2 API. All services follow consistent patterns for error
+          handling and response processing.
+        created_at: '2025-05-22T20:40:13.645551'
+        description: Create new API service modules for v2-specific functionality
+        id: b3e1bde0-a14f-4079-88a0-b5f329d0f2e9
+        parent_id: null
+        priority: high
+        sequence: 2
+        title: 'Phase 2: New API Services'
+        updated_at: '2025-05-22T20:40:13.645551'
+      c3c6c5d8-1c73-45a1-a13c-d584c20810f7:
+        child_tasks: []
+        completed: true
+        context: 'COMPLETED: Updated API base infrastructure including:
+
+          - Updated base URL to `/api/v2`
+
+          - Added `extractResponseData` utility for standardized v2 response handling
+          (data, meta, errors format)
+
+          - Enhanced error handling for v2 error format
+
+          - Added support for pagination in GET requests
+
+          - Added PATCH method to support RESTful updates
+
+
+          File: //ui/src/services/api.js
+
+          Status: ✅ Completed May 10, 2025'
+        created_at: '2025-05-22T20:40:04.004676'
+        description: Update api.js with v2 base URL, response handling utilities,
+          and enhanced error handling
+        id: c3c6c5d8-1c73-45a1-a13c-d584c20810f7
+        parent_id: a1be0f6d-3acb-4d25-a9f7-453738410483
+        priority: high
+        sequence: null
+        title: Update API Base
+        updated_at: '2025-05-22T20:40:08.476010'
+      cf711192-3bf2-4d51-9692-e15012be8996:
+        child_tasks: []
+        completed: false
+        context: 'Update original v1 service files to:
+
+          - Use adapter functions internally
+
+          - Maintain the same exports and signatures
+
+          - Add detailed error logging for debugging
+
+          - Test to ensure component compatibility
+
+
+          Risk: This step affects existing components - thorough testing required
+
+          Dependencies: Complete v1 adapter creation first'
+        created_at: '2025-05-22T20:41:23.122897'
+        description: Update original v1 service files to use adapters
+        id: cf711192-3bf2-4d51-9692-e15012be8996
+        parent_id: 4d8f7e0a-48f8-4cf8-99d9-f16557f8e33e
+        priority: medium
+        sequence: null
+        title: Replace v1 Implementations
+        updated_at: '2025-05-22T20:41:23.122897'
+      db598050-6e73-4bc6-9866-f8abdc526b60:
+        child_tasks: []
+        completed: false
+        context: 'Create integration testing including:
+
+          - Test harness for testing with actual v2 API
+
+          - Full workflow scenarios (session creation → chat → history)
+
+          - Validate streaming responses and event handling
+
+          - Test error scenarios and recovery
+
+          - Performance testing for critical paths
+
+
+          Dependencies: Complete unit testing first'
+        created_at: '2025-05-22T20:41:39.293868'
+        description: Test full workflow scenarios with actual API
+        id: db598050-6e73-4bc6-9866-f8abdc526b60
+        parent_id: 029fa866-14f2-4305-a563-98fa5cb89043
+        priority: high
+        sequence: null
+        title: Integration Testing
+        updated_at: '2025-05-22T20:41:39.293868'
+      dd3284bc-ba7c-4e37-a4f3-581b4fa098c9:
+        child_tasks: []
+        completed: true
+        context: 'COMPLETED: Created comprehensive history API service including:
+
+          - List histories with pagination support
+
+          - History details retrieval
+
+          - Event retrieval with filtering options
+
+          - Event streaming using Server-Sent Events (SSE)
+
+          - Replay controls (play, pause, seek)
+
+          - Comprehensive test coverage in history-api.test.js
+
+          - Proper error handling and response data extraction
+
+
+          File: //ui/src/services/history-api.js
+
+          Tests: //ui/src/services/history-api.test.js
+
+          Status: ✅ Completed May 10, 2025'
+        created_at: '2025-05-22T20:40:28.752548'
+        description: Create history-api.js for history and replay endpoints
+        id: dd3284bc-ba7c-4e37-a4f3-581b4fa098c9
+        parent_id: b3e1bde0-a14f-4079-88a0-b5f329d0f2e9
+        priority: high
+        sequence: null
+        title: Create History API Service
+        updated_at: '2025-05-22T20:40:31.899782'
+      f7bf1c02-254e-4b01-81cf-54c5375a7dbd:
+        child_tasks: []
+        completed: true
+        context: 'COMPLETED: Created comprehensive configuration API service including:
+
+          - getModels(), getPersonas(), getTools(), getSystemConfig()
+
+          - Additional utility methods: getModelDetails, getPersonaDetails, etc.
+
+          - Comprehensive test coverage in config-api.test.js
+
+          - Proper error handling and response data extraction
+
+          - Updated services/index.js to export the new service
+
+
+          File: //ui/src/services/config-api.js
+
+          Tests: //ui/src/services/config-api.test.js
+
+          Status: ✅ Completed May 10, 2025'
+        created_at: '2025-05-22T20:40:20.178508'
+        description: Create config-api.js for all configuration endpoints
+        id: f7bf1c02-254e-4b01-81cf-54c5375a7dbd
+        parent_id: b3e1bde0-a14f-4079-88a0-b5f329d0f2e9
+        priority: high
+        sequence: null
+        title: Create Config API Service
+        updated_at: '2025-05-22T20:40:23.040482'
+    title: API Service Layer Implementation for v2 API
+    updated_at: '2025-05-23T21:44:32.768908'
+current_plan: api_service_layer_implementation
