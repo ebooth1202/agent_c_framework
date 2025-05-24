@@ -40,13 +40,29 @@ _plans:
         pattern where each layer depends on the layer below it. Remove all manual
         Redis client creation and replace with proper dependency injection. Update
         both the service classes and their dependency functions to use the new pattern.'
+    - created_at: '2025-05-24T10:11:25.576465'
+      id: 14f46537-357d-4714-b0e1-8e7b01aae294
+      learned_task_id: 6ae1797f-107e-427b-888a-536f9d8a8344
+      lesson: When removing deprecated FastAPI event handlers, ensure you also remove
+        any functions they call (like init_redis/close_redis) and clean up related
+        imports. The main.py should focus only on application setup, not resource
+        lifecycle management. Clean up extra blank lines to maintain code quality.
     tasks:
       6ae1797f-107e-427b-888a-536f9d8a8344:
         child_tasks: []
-        completed: false
-        context: Remove the deprecated @app.on_event handlers from main.py and eliminate
-          the global redis_client variable. Focus on cleaning up deprecated FastAPI
-          event handlers and global state anti-patterns.
+        completed: true
+        context: "✅ COMPLETED: Successfully removed all deprecated FastAPI event handlers\
+          \ and Redis-related code from main.py:\n\n**Removed:**\n1. `from redis import\
+          \ asyncio as aioredis` import (no longer needed)\n2. Global `redis_client\
+          \ = None` variable\n3. `async def init_redis()` function (19 lines)\n4.\
+          \ `async def close_redis()` function (6 lines) \n5. `@app.on_event(\"startup\"\
+          )` and `@app.on_event(\"shutdown\")` deprecated event handlers\n6. Cleaned\
+          \ up extra blank lines\n\n**Result:**\n- No more deprecation warnings from\
+          \ FastAPI event handlers\n- Eliminated global state anti-pattern\n- main.py\
+          \ now focuses only on application setup and running\n- Redis lifecycle management\
+          \ is properly handled in setup.py via lifespan handlers\n\nThe application\
+          \ will now rely entirely on the proper lifespan management in setup.py,\
+          \ which is the modern FastAPI approach."
         created_at: '2025-05-23T22:41:28.403395'
         description: Remove the deprecated @app.on_event handlers from main.py and
           eliminate the global redis_client variable
@@ -55,7 +71,7 @@ _plans:
         priority: high
         sequence: 1
         title: 'Phase 1: Remove Deprecated Event Handlers'
-        updated_at: '2025-05-24T10:08:49.154806'
+        updated_at: '2025-05-24T10:11:20.132452'
       80d192f9-1fa4-4921-b52c-02fac72942da:
         child_tasks: []
         completed: false
@@ -168,7 +184,7 @@ _plans:
         title: 'Phase 4: Update Services to Use Dependency Injection'
         updated_at: '2025-05-24T10:09:06.268388'
     title: Redis Implementation Refactor
-    updated_at: '2025-05-24T10:09:06.268388'
+    updated_at: '2025-05-24T10:11:25.576465'
 current_plan: redis_refactor_plan
 session_summary:
   completion_status: 50% complete (4/8 phases)
