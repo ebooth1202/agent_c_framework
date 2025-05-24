@@ -1,0 +1,311 @@
+_plans:
+  redis_refactor_plan:
+    created_at: '2025-05-23T22:41:22.404438'
+    description: Comprehensive refactor of the Redis implementation to fix multiple
+      critical issues including deprecated FastAPI event handlers, embedded Redis
+      server startup, global state anti-patterns, missing dependency injection, and
+      poor production readiness. This plan will modernize the Redis integration to
+      follow FastAPI best practices and production standards.
+    id: c95c1501-dad8-4998-931d-e10cc97d50bd
+    lessons_learned:
+    - created_at: '2025-05-23T22:52:20.353376'
+      id: 1dbc485d-075a-4707-96e4-a04df7459f07
+      learned_task_id: 6ae1797f-107e-427b-888a-536f9d8a8344
+      lesson: When removing deprecated FastAPI event handlers, ensure you also remove
+        any functions they call (like init_redis/close_redis) and clean up related
+        imports. The main.py should focus only on application setup, not resource
+        lifecycle management.
+    - created_at: '2025-05-23T22:54:42.364881'
+      id: b5836ba6-2156-4b42-aa61-bbb74780bf03
+      learned_task_id: cdce9370-2679-44be-9d1c-3b4d84b0b8c5
+      lesson: When refactoring Redis configuration, focus on connection management
+        only. Remove all subprocess logic for starting/stopping Redis servers - this
+        should be handled by external infrastructure. Add proper connection pooling,
+        timeouts, and comprehensive error handling. Use detailed validation methods
+        to provide clear startup diagnostics.
+    - created_at: '2025-05-23T23:09:09.900477'
+      id: 594eb0b4-274c-45c5-a9f8-94769cbccf78
+      learned_task_id: 80d192f9-1fa4-4921-b52c-02fac72942da
+      lesson: 'When implementing FastAPI dependency injection for Redis, provide multiple
+        dependency variants: standard (fails fast), optional (graceful degradation),
+        and managed (automatic cleanup). Include repository-level dependencies for
+        higher-level abstractions. Always add comprehensive error handling with appropriate
+        HTTP status codes and create test endpoints to verify dependency injection
+        works correctly.'
+    - created_at: '2025-05-24T08:22:25.570416'
+      id: 4fda51e4-65b3-4abe-ba93-12e1a77fa066
+      learned_task_id: f9c8c756-67c2-4358-b008-f64b4eda0011
+      lesson: 'When updating services to use dependency injection, work from the bottom
+        up: repositories first, then services, then endpoints. Create a consistent
+        pattern where each layer depends on the layer below it. Remove all manual
+        Redis client creation and replace with proper dependency injection. Update
+        both the service classes and their dependency functions to use the new pattern.'
+    tasks:
+      6ae1797f-107e-427b-888a-536f9d8a8344:
+        child_tasks: []
+        completed: true
+        context: "✅ COMPLETED: Successfully removed all deprecated FastAPI event handlers\
+          \ and Redis-related code from main.py:\n\n**Removed:**\n1. `from redis import\
+          \ asyncio as aioredis` import (no longer needed)\n2. Global `redis_client\
+          \ = None` variable\n3. `async def init_redis()` function (19 lines)\n4.\
+          \ `async def close_redis()` function (6 lines) \n5. `@app.on_event(\"startup\"\
+          )` and `@app.on_event(\"shutdown\")` deprecated event handlers\n6. Cleaned\
+          \ up extra blank lines\n\n**Result:**\n- No more deprecation warnings from\
+          \ FastAPI event handlers\n- Eliminated global state anti-pattern\n- main.py\
+          \ now focuses only on application setup and running\n- Redis lifecycle management\
+          \ is properly handled in setup.py via lifespan handlers\n\nThe application\
+          \ will now rely entirely on the proper lifespan management in setup.py,\
+          \ which is the modern FastAPI approach."
+        created_at: '2025-05-23T22:41:28.403395'
+        description: Remove the deprecated @app.on_event handlers from main.py and
+          eliminate the global redis_client variable
+        id: 6ae1797f-107e-427b-888a-536f9d8a8344
+        parent_id: null
+        priority: high
+        sequence: 1
+        title: 'Phase 1: Remove Deprecated Event Handlers'
+        updated_at: '2025-05-23T22:52:14.779729'
+      80d192f9-1fa4-4921-b52c-02fac72942da:
+        child_tasks: []
+        completed: true
+        context: "✅ COMPLETED: Successfully implemented comprehensive FastAPI dependency\
+          \ injection for Redis clients:\n\n**Redis Client Dependencies Added:**\n\
+          1. **`get_redis_client()`** - Standard Redis client dependency with error\
+          \ handling\n2. **`get_redis_client_optional()`** - Optional Redis client\
+          \ (returns None if unavailable)\n3. **`get_redis_client_managed()`** - Managed\
+          \ Redis client with automatic cleanup\n4. **`RedisClientManager`** - Context\
+          \ manager class for guaranteed connection cleanup\n\n**Repository Dependencies\
+          \ Added:**\n1. **`get_session_repository()`** - SessionRepository with Redis\
+          \ client injection\n2. **`get_session_repository_optional()`** - Optional\
+          \ SessionRepository for graceful degradation\n\n**Key Features:**\n- **Proper\
+          \ Error Handling**: HTTP 503 for connection failures, HTTP 500 for internal\
+          \ errors\n- **Connection Pooling**: Leverages RedisConfig connection pooling\n\
+          - **Graceful Degradation**: Optional dependencies for non-critical Redis\
+          \ usage\n- **Automatic Cleanup**: Managed clients ensure proper connection\
+          \ cleanup\n- **Type Safety**: Full type hints for all dependencies\n- **Comprehensive\
+          \ Logging**: Detailed error and warning logging\n\n**Testing Infrastructure:**\n\
+          - Created `/api/v2/debug/redis_test.py` with comprehensive test endpoints\n\
+          - Test endpoints for all dependency types and usage patterns\n- Status,\
+          \ ping, set/get operations, and repository testing\n\n**Usage Patterns:**\n\
+          ```python\n# Standard usage (fails if Redis unavailable)\nasync def endpoint(redis:\
+          \ aioredis.Redis = Depends(get_redis_client)):\n\n# Optional usage (graceful\
+          \ degradation)\nasync def endpoint(redis: Optional[aioredis.Redis] = Depends(get_redis_client_optional)):\n\
+          \n# Managed usage (automatic cleanup)\nasync def endpoint(redis_manager:\
+          \ RedisClientManager = Depends(get_redis_client_managed)):\n    async with\
+          \ redis_manager as redis:\n        # Use redis client\n\n# Repository injection\n\
+          async def endpoint(session_repo = Depends(get_session_repository)):\n```"
+        created_at: '2025-05-23T22:41:39.099342'
+        description: Create proper FastAPI dependency injection for Redis clients
+          with connection pooling
+        id: 80d192f9-1fa4-4921-b52c-02fac72942da
+        parent_id: null
+        priority: high
+        sequence: 3
+        title: 'Phase 3: Implement Redis Dependency Injection'
+        updated_at: '2025-05-23T23:09:02.715848'
+      89558569-3b60-43fd-8bc7-e80ac6fd5da1:
+        child_tasks: []
+        completed: false
+        context: Remove or deprecate MANAGE_REDIS_LIFECYCLE and related settings that
+          are no longer needed. Update environment configuration documentation to
+          reflect that Redis should be externally managed. Add configuration examples
+          for different deployment scenarios (development, staging, production). Update
+          API documentation to reflect the new Redis architecture.
+        created_at: '2025-05-23T22:42:05.705448'
+        description: Clean up Redis-related configuration settings and update documentation
+        id: 89558569-3b60-43fd-8bc7-e80ac6fd5da1
+        parent_id: null
+        priority: low
+        sequence: 7
+        title: 'Phase 7: Update Configuration and Documentation'
+        updated_at: '2025-05-23T22:42:05.705448'
+      cdce9370-2679-44be-9d1c-3b4d84b0b8c5:
+        child_tasks: []
+        completed: true
+        context: '✅ COMPLETED: Successfully refactored RedisConfig class to remove
+          Redis server startup logic and focus only on connection management:
+
+
+          **RedisConfig Refactoring:**
+
+          1. **Removed** all subprocess-based Redis server startup/shutdown logic
+
+          2. **Removed** `start_redis_if_needed()`, `stop_redis_if_needed()`, `_wait_for_redis_ready()`,
+          `_is_redis_server_available()` methods
+
+          3. **Enhanced** `get_redis_client()` with connection pooling, timeouts,
+          and proper error handling
+
+          4. **Added** `validate_connection()` method for detailed Redis status information
+
+          5. **Added** `close_client()` method for proper connection cleanup
+
+          6. **Improved** error handling and logging throughout
+
+
+          **Environment Configuration:**
+
+          - **Deprecated** REDIS_DATA_DIR, REDIS_STARTUP_TIMEOUT, MANAGE_REDIS_LIFECYCLE
+          settings
+
+          - **Added** deprecation comments explaining Redis should be externally managed
+
+
+          **Application Lifespan (setup.py):**
+
+          - **Replaced** Redis server startup logic with connection validation
+
+          - **Enhanced** startup logging with Redis server information
+
+          - **Removed** Redis shutdown logic (no longer needed)
+
+          - **Added** detailed Redis status reporting on startup
+
+
+          **Key Improvements:**
+
+          - Production-ready: No more embedded Redis server
+
+          - Better connection pooling and timeout handling
+
+          - Comprehensive error handling and status reporting
+
+          - Clear separation of concerns: connection management only'
+        created_at: '2025-05-23T22:41:33.855764'
+        description: Refactor RedisConfig class to remove Redis server startup logic
+          and focus only on connection management
+        id: cdce9370-2679-44be-9d1c-3b4d84b0b8c5
+        parent_id: null
+        priority: high
+        sequence: 2
+        title: 'Phase 2: Fix RedisConfig to Only Connect (Not Start)'
+        updated_at: '2025-05-23T22:54:35.131323'
+      de5ef8c9-6f0c-4dfe-aec9-f2a11bcc1a5f:
+        child_tasks: []
+        completed: false
+        context: Add unit tests for Redis dependency injection, SessionRepository
+          with mocked Redis clients, and integration tests that verify Redis connectivity.
+          Include tests for error scenarios like Redis connection failures. Follow
+          the established testing patterns in the codebase and ensure proper mocking
+          of Redis dependencies.
+        created_at: '2025-05-23T22:42:11.751486'
+        description: Create comprehensive tests for the new Redis integration including
+          mocking and integration tests
+        id: de5ef8c9-6f0c-4dfe-aec9-f2a11bcc1a5f
+        parent_id: null
+        priority: medium
+        sequence: 8
+        title: 'Phase 8: Add Tests for Redis Integration'
+        updated_at: '2025-05-23T22:42:11.751486'
+      e66e4d3d-0b71-4604-b926-db3f4009cb02:
+        child_tasks: []
+        completed: false
+        context: Add proper health check endpoints that verify Redis connectivity.
+          Include connection pool metrics and Redis server status monitoring. This
+          will help with debugging connection issues and monitoring Redis performance
+          in production environments.
+        created_at: '2025-05-23T22:41:59.870884'
+        description: Implement Redis health checks and connection monitoring for better
+          operational visibility
+        id: e66e4d3d-0b71-4604-b926-db3f4009cb02
+        parent_id: null
+        priority: low
+        sequence: 6
+        title: 'Phase 6: Add Redis Health Checks and Monitoring'
+        updated_at: '2025-05-23T22:41:59.870884'
+      f926eaa7-319a-4e8d-83fd-0173f230f19f:
+        child_tasks: []
+        completed: false
+        context: The setup.py lifespan handler currently calls RedisConfig.start_redis_if_needed()
+          which includes the problematic server startup logic. After refactoring RedisConfig,
+          need to update the lifespan handler to only handle connection validation
+          and cleanup. Should also add proper error handling for Redis connection
+          failures.
+        created_at: '2025-05-23T22:41:53.407484'
+        description: Clean up the lifespan management in setup.py to use the refactored
+          Redis connection logic
+        id: f926eaa7-319a-4e8d-83fd-0173f230f19f
+        parent_id: null
+        priority: medium
+        sequence: 5
+        title: 'Phase 5: Update Application Lifespan Management'
+        updated_at: '2025-05-23T22:41:53.407484'
+      f9c8c756-67c2-4358-b008-f64b4eda0011:
+        child_tasks: []
+        completed: true
+        context: "✅ COMPLETED: Successfully updated all services to use proper FastAPI\
+          \ dependency injection for Redis clients:\n\n**Services Updated:**\n\n1.\
+          \ **SessionService (v2/sessions/services.py)**:\n   - ✅ Updated `get_session_service()`\
+          \ dependency to use `get_session_repository` \n   - ✅ Removed manual Redis\
+          \ client creation via `RedisConfig.get_redis_client()`\n   - ✅ Now properly\
+          \ injects SessionRepository with Redis client\n\n2. **UserService (v2/users/services.py)**:\n\
+          \   - ✅ Completely refactored to use dependency injection\n   - ✅ Removed\
+          \ `_get_core_service()` method that manually created Redis clients\n   -\
+          \ ✅ Added `get_v2_user_service()` dependency function\n   - ✅ Updated constructor\
+          \ to accept injected CoreUserService\n\n3. **UserRouter (v2/users/router.py)**:\n\
+          \   - ✅ Updated all endpoints to use `get_v2_user_service` dependency\n\
+          \   - ✅ Removed old manual `get_user_service()` dependency function\n\n\
+          **New Dependencies Added:**\n\n1. **Repository Dependencies**:\n   - ✅ `get_user_repository()`\
+          \ - UserRepository with Redis client\n   - ✅ `get_user_repository_optional()`\
+          \ - Optional UserRepository\n   - ✅ `get_chat_repository()` - ChatRepository\
+          \ with Redis client (requires session_id)\n\n2. **Service Dependencies**:\n\
+          \   - ✅ `get_user_service()` - Core UserService with injected repository\n\
+          \   - ✅ `get_user_service_optional()` - Optional UserService\n   - ✅ `get_chat_service()`\
+          \ - ChatService with injected repository\n\n**Key Improvements:**\n- **Eliminated\
+          \ Manual Redis Client Creation**: All services now use dependency injection\n\
+          - **Proper Error Handling**: Redis connection failures are handled at dependency\
+          \ level\n- **Testability**: Services can now be easily mocked for testing\n\
+          - **Consistency**: All Redis-based services follow the same dependency injection\
+          \ pattern\n- **Resource Management**: Redis connections are properly managed\
+          \ by the dependency system\n\n**Pattern Established:**\n```python\n# Repository\
+          \ level\nasync def get_X_repository(redis_client = Depends(get_redis_client)):\n\
+          \    return XRepository(redis_client)\n\n# Service level  \nasync def get_X_service(repository\
+          \ = Depends(get_X_repository)):\n    return XService(repository)\n\n# Endpoint\
+          \ usage\nasync def endpoint(service = Depends(get_X_service)):\n    return\
+          \ await service.do_something()\n```"
+        created_at: '2025-05-23T22:41:47.788204'
+        description: Refactor SessionRepository and related services to use proper
+          dependency injection for Redis clients
+        id: f9c8c756-67c2-4358-b008-f64b4eda0011
+        parent_id: null
+        priority: medium
+        sequence: 4
+        title: 'Phase 4: Update Services to Use Dependency Injection'
+        updated_at: '2025-05-24T08:22:13.292125'
+    title: Redis Implementation Refactor
+    updated_at: '2025-05-24T08:22:25.570416'
+current_plan: redis_refactor_plan
+session_summary:
+  completion_status: 50% complete (4/8 phases)
+  critical_issues_resolved:
+  - Deprecated FastAPI event handlers removed
+  - Embedded Redis server startup eliminated
+  - Global state anti-patterns removed
+  - Manual Redis client creation eliminated
+  files_created:
+  - src/agent_c_api/api/v2/debug/redis_test.py
+  - .scratch/redis_refactor_plan_report.md
+  - .scratch/redis_refactor_status.md
+  files_modified:
+  - src/agent_c_api/main.py
+  - src/agent_c_api/config/redis_config.py
+  - src/agent_c_api/config/env_config.py
+  - src/agent_c_api/core/setup.py
+  - src/agent_c_api/api/dependencies.py
+  - src/agent_c_api/api/v2/sessions/services.py
+  - src/agent_c_api/api/v2/users/services.py
+  - src/agent_c_api/api/v2/users/router.py
+  major_accomplishments:
+  - Eliminated embedded Redis server startup (production critical fix)
+  - Implemented comprehensive FastAPI dependency injection for Redis
+  - Refactored all services to use proper dependency injection
+  - Established production-ready Redis connection management
+  next_phase: 'Phase 5: Update Application Lifespan Management'
+  phases_completed:
+  - 'Phase 1: Remove Deprecated Event Handlers'
+  - 'Phase 2: Fix RedisConfig to Only Connect (Not Start)'
+  - 'Phase 3: Implement Redis Dependency Injection'
+  - 'Phase 4: Update Services to Use Dependency Injection'
+  production_readiness: Core Redis infrastructure is now production-ready
+  session_focus: Redis Implementation Refactor - Phases 1-4
+  testing_infrastructure: Redis test endpoints created at /api/v2/debug/redis_test.py
