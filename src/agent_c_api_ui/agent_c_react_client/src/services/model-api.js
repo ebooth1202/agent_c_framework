@@ -5,9 +5,19 @@
  * - Retrieving available models
  * - Getting model parameters and configurations
  * - Updating model settings
+ * 
+ * NOTE: This service now uses v2 API through adapter functions while
+ * maintaining v1 API signatures for backward compatibility.
  */
 
-import api from './api';
+import {
+  getModels as getModelsAdapter,
+  getModelDetails as getModelDetailsAdapter,
+  getModelParameters as getModelParametersAdapter,
+  setSessionModel as setSessionModelAdapter,
+  updateModelParameters as updateModelParametersAdapter,
+  getDefaultParameters as getDefaultParametersAdapter
+} from './v1-api-adapters';
 
 /**
  * Get list of available models
@@ -15,9 +25,11 @@ import api from './api';
  */
 export async function getModels() {
   try {
-    return await api.get('/models');
+    console.log('[model-api] getModels() - using v2 adapter');
+    return await getModelsAdapter();
   } catch (error) {
-    throw api.processApiError(error, 'Failed to retrieve available models');
+    console.error('[model-api] getModels() failed:', error);
+    throw error;
   }
 }
 
@@ -28,9 +40,11 @@ export async function getModels() {
  */
 export async function getModelDetails(modelId) {
   try {
-    return await api.get(`/models/${modelId}`);
+    console.log('[model-api] getModelDetails() - using v2 adapter for model:', modelId);
+    return await getModelDetailsAdapter(modelId);
   } catch (error) {
-    throw api.processApiError(error, 'Failed to retrieve model details');
+    console.error('[model-api] getModelDetails() failed for model:', modelId, error);
+    throw error;
   }
 }
 
@@ -41,9 +55,11 @@ export async function getModelDetails(modelId) {
  */
 export async function getModelParameters(modelId) {
   try {
-    return await api.get(`/models/${modelId}/parameters`);
+    console.log('[model-api] getModelParameters() - using v2 adapter for model:', modelId);
+    return await getModelParametersAdapter(modelId);
   } catch (error) {
-    throw api.processApiError(error, 'Failed to retrieve model parameters');
+    console.error('[model-api] getModelParameters() failed for model:', modelId, error);
+    throw error;
   }
 }
 
@@ -56,12 +72,11 @@ export async function getModelParameters(modelId) {
  */
 export async function setSessionModel(sessionId, modelId, parameters = {}) {
   try {
-    return await api.put(`/session/${sessionId}/model`, {
-      model_id: modelId,
-      parameters
-    });
+    console.log('[model-api] setSessionModel() - using v2 adapter for session:', sessionId, 'model:', modelId);
+    return await setSessionModelAdapter(sessionId, modelId, parameters);
   } catch (error) {
-    throw api.processApiError(error, 'Failed to set session model');
+    console.error('[model-api] setSessionModel() failed for session:', sessionId, 'model:', modelId, error);
+    throw error;
   }
 }
 
@@ -73,9 +88,11 @@ export async function setSessionModel(sessionId, modelId, parameters = {}) {
  */
 export async function updateModelParameters(sessionId, parameters) {
   try {
-    return await api.put(`/session/${sessionId}/parameters`, parameters);
+    console.log('[model-api] updateModelParameters() - using v2 adapter for session:', sessionId);
+    return await updateModelParametersAdapter(sessionId, parameters);
   } catch (error) {
-    throw api.processApiError(error, 'Failed to update model parameters');
+    console.error('[model-api] updateModelParameters() failed for session:', sessionId, error);
+    throw error;
   }
 }
 
@@ -86,9 +103,11 @@ export async function updateModelParameters(sessionId, parameters) {
  */
 export async function getDefaultParameters(modelId) {
   try {
-    return await api.get(`/models/${modelId}/default-parameters`);
+    console.log('[model-api] getDefaultParameters() - using v2 adapter for model:', modelId);
+    return await getDefaultParametersAdapter(modelId);
   } catch (error) {
-    throw api.processApiError(error, 'Failed to retrieve default parameters');
+    console.error('[model-api] getDefaultParameters() failed for model:', modelId, error);
+    throw error;
   }
 }
 

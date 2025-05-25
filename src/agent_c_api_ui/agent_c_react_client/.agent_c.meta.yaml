@@ -65,6 +65,16 @@ _plans:
         has confirmed that tests pass and functionality works correctly. This prevents
         premature completion and ensures quality control through the single-step execution
         protocol.'
+    - created_at: '2025-05-24T19:24:33.156373'
+      id: cf11b435-a9f0-409e-9fa3-487b8f6102a3
+      learned_task_id: cf711192-3bf2-4d51-9692-e15012be8996
+      lesson: 'Environment Variable Override Issue: When migrating API base URLs,
+        environment variables can override code-level configuration. The VITE_API_URL
+        environment variable was still set to /api/v1, causing all requests to go
+        to v1 endpoints despite code being updated for v2. Always check and update
+        environment configuration files (.env, .env.example) when changing API base
+        URLs. This is why user verification at each step is critical - it catches
+        configuration issues that tests might not reveal.'
     tasks:
       029fa866-14f2-4305-a563-98fa5cb89043:
         child_tasks:
@@ -401,7 +411,7 @@ _plans:
         updated_at: '2025-05-22T20:41:48.303077'
       98dab346-eeae-448f-8f92-fa8d78441581:
         child_tasks: []
-        completed: false
+        completed: true
         context: '✅ **IMPLEMENTATION COMPLETE** - Created comprehensive v1 API adapter
           layer that maintains exact v1 signatures while using v2 implementations.
 
@@ -527,7 +537,7 @@ _plans:
         priority: medium
         sequence: null
         title: Create v1 Adapters
-        updated_at: '2025-05-23T21:44:32.768908'
+        updated_at: '2025-05-24T19:12:06.653128'
       a1be0f6d-3acb-4d25-a9f7-453738410483:
         child_tasks:
         - c3c6c5d8-1c73-45a1-a13c-d584c20810f7
@@ -593,20 +603,38 @@ _plans:
       cf711192-3bf2-4d51-9692-e15012be8996:
         child_tasks: []
         completed: false
-        context: 'Update original v1 service files to:
-
-          - Use adapter functions internally
-
-          - Maintain the same exports and signatures
-
-          - Add detailed error logging for debugging
-
-          - Test to ensure component compatibility
-
-
-          Risk: This step affects existing components - thorough testing required
-
-          Dependencies: Complete v1 adapter creation first'
+        context: "✅ **IMPLEMENTATION COMPLETE** - Updated all v1 service files to\
+          \ use adapter functions internally while maintaining exact same exports\
+          \ and signatures.\n\n**Key Updates Implemented:**\n\n✅ **model-api.js:**\n\
+          - Replaced direct v1 API calls with v1 adapter function calls\n- Added detailed\
+          \ logging with `[model-api]` prefix for debugging\n- Maintained all original\
+          \ function signatures and exports\n- Functions: getModels, getModelDetails,\
+          \ getModelParameters, setSessionModel, updateModelParameters, getDefaultParameters\n\
+          \n✅ **persona-api.js:**\n- Replaced direct v1 API calls with v1 adapter\
+          \ function calls  \n- Added detailed logging with `[persona-api]` prefix\
+          \ for debugging\n- Maintained all original function signatures and exports\n\
+          - Functions: getPersonas, getPersonaDetails, setSessionPersona, getSessionPersona,\
+          \ getPersonaCategories\n\n✅ **tools-api.js:**\n- Replaced direct v1 API\
+          \ calls with v1 adapter function calls\n- Added detailed logging with `[tools-api]`\
+          \ prefix for debugging  \n- Maintained all original function signatures\
+          \ and exports\n- Functions: getTools, getToolDetails, executeTool, getSessionTools,\
+          \ updateSessionTools, getToolCategories\n\n**Backward Compatibility Strategy:**\n\
+          - All original exports and function signatures preserved exactly\n- Components\
+          \ using these services will continue working without modification\n- Internal\
+          \ implementation now uses v2 API through adapter layer\n- Detailed error\
+          \ logging for debugging transition issues\n\n**Error Handling:**\n- Preserved\
+          \ original error propagation patterns\n- Added comprehensive logging for\
+          \ debugging\n- Errors from adapters are passed through unchanged to maintain\
+          \ compatibility\n\n**Architecture Benefits:**\n- Clean separation between\
+          \ v1 interface and v2 implementation\n- Centralized v1-to-v2 transformation\
+          \ logic in adapter layer\n- Easy to monitor usage through detailed logging\n\
+          - Gradual migration path for components\n\n**Files Updated:**\n- //ui/src/services/model-api.js\
+          \ (now uses v1 adapters internally)\n- //ui/src/services/persona-api.js\
+          \ (now uses v1 adapters internally)  \n- //ui/src/services/tools-api.js\
+          \ (now uses v1 adapters internally)\n\n**Status:** ✅ READY FOR USER VERIFICATION\n\
+          **Next:** User should test existing components to ensure they continue working\
+          \ correctly with the adapter layer, then proceed to Phase 5: Integration\
+          \ and Testing"
         created_at: '2025-05-22T20:41:23.122897'
         description: Update original v1 service files to use adapters
         id: cf711192-3bf2-4d51-9692-e15012be8996
@@ -614,7 +642,7 @@ _plans:
         priority: medium
         sequence: null
         title: Replace v1 Implementations
-        updated_at: '2025-05-22T20:41:23.122897'
+        updated_at: '2025-05-24T19:14:03.095899'
       db598050-6e73-4bc6-9866-f8abdc526b60:
         child_tasks: []
         completed: false
@@ -703,5 +731,5 @@ _plans:
         title: Create Config API Service
         updated_at: '2025-05-22T20:40:23.040482'
     title: API Service Layer Implementation for v2 API
-    updated_at: '2025-05-23T21:44:32.768908'
+    updated_at: '2025-05-24T19:24:33.156373'
 current_plan: api_service_layer_implementation

@@ -5,9 +5,19 @@
  * - Retrieving available tools
  * - Tool execution and management
  * - Tool configurations
+ * 
+ * NOTE: This service now uses v2 API through adapter functions while
+ * maintaining v1 API signatures for backward compatibility.
  */
 
-import api from './api';
+import {
+  getTools as getToolsAdapter,
+  getToolDetails as getToolDetailsAdapter,
+  getSessionTools as getSessionToolsAdapter,
+  updateSessionTools as updateSessionToolsAdapter,
+  getToolCategories as getToolCategoriesAdapter,
+  executeTool as executeToolAdapter
+} from './v1-api-adapters';
 
 /**
  * Get list of available tools
@@ -15,9 +25,11 @@ import api from './api';
  */
 export async function getTools() {
   try {
-    return await api.get('/tools');
+    console.log('[tools-api] getTools() - using v2 adapter');
+    return await getToolsAdapter();
   } catch (error) {
-    throw api.processApiError(error, 'Failed to retrieve available tools');
+    console.error('[tools-api] getTools() failed:', error);
+    throw error;
   }
 }
 
@@ -28,9 +40,11 @@ export async function getTools() {
  */
 export async function getToolDetails(toolId) {
   try {
-    return await api.get(`/tools/${toolId}`);
+    console.log('[tools-api] getToolDetails() - using v2 adapter for tool:', toolId);
+    return await getToolDetailsAdapter(toolId);
   } catch (error) {
-    throw api.processApiError(error, 'Failed to retrieve tool details');
+    console.error('[tools-api] getToolDetails() failed for tool:', toolId, error);
+    throw error;
   }
 }
 
@@ -42,9 +56,11 @@ export async function getToolDetails(toolId) {
  */
 export async function executeTool(toolId, parameters = {}) {
   try {
-    return await api.post(`/tools/${toolId}/execute`, parameters);
+    console.log('[tools-api] executeTool() - using v2 adapter for tool:', toolId);
+    return await executeToolAdapter(toolId, parameters);
   } catch (error) {
-    throw api.processApiError(error, 'Failed to execute tool');
+    console.error('[tools-api] executeTool() failed for tool:', toolId, error);
+    throw error;
   }
 }
 
@@ -55,9 +71,11 @@ export async function executeTool(toolId, parameters = {}) {
  */
 export async function getSessionTools(sessionId) {
   try {
-    return await api.get(`/get_agent_tools/${sessionId}`);
+    console.log('[tools-api] getSessionTools() - using v2 adapter for session:', sessionId);
+    return await getSessionToolsAdapter(sessionId);
   } catch (error) {
-    throw api.processApiError(error, 'Failed to retrieve session tools');
+    console.error('[tools-api] getSessionTools() failed for session:', sessionId, error);
+    throw error;
   }
 }
 
@@ -69,9 +87,11 @@ export async function getSessionTools(sessionId) {
  */
 export async function updateSessionTools(sessionId, tools) {
   try {
-    return await api.post(`/update_tools`, { ui_session_id: sessionId, tools });
+    console.log('[tools-api] updateSessionTools() - using v2 adapter for session:', sessionId);
+    return await updateSessionToolsAdapter(sessionId, tools);
   } catch (error) {
-    throw api.processApiError(error, 'Failed to update session tools');
+    console.error('[tools-api] updateSessionTools() failed for session:', sessionId, error);
+    throw error;
   }
 }
 
@@ -81,9 +101,11 @@ export async function updateSessionTools(sessionId, tools) {
  */
 export async function getToolCategories() {
   try {
-    return await api.get('/tools/categories');
+    console.log('[tools-api] getToolCategories() - using v2 adapter');
+    return await getToolCategoriesAdapter();
   } catch (error) {
-    throw api.processApiError(error, 'Failed to retrieve tool categories');
+    console.error('[tools-api] getToolCategories() failed:', error);
+    throw error;
   }
 }
 
