@@ -32,13 +32,46 @@ Usage:
 
 from .factory import StructuredLoggerFactory, get_logger
 from .context import LoggingContext, get_current_context, clear_context
+from .compatibility import (
+    StructuredLoggingAdapter,
+    StructuredLoggingMonkeyPatch,
+    enable_structured_logging_globally,
+    disable_structured_logging_globally,
+    enable_structured_logging_for_module,
+    get_migration_status,
+    get_compatible_logger,
+)
+from .formatters import (
+    StructuredConsoleFormatter,
+    StructuredJSONFormatter,
+    CompatibilityFormatter,
+    get_console_formatter,
+    get_json_formatter,
+    get_compatibility_formatter,
+)
 
 __all__ = [
+    # Core components
     "StructuredLoggerFactory",
     "get_logger", 
     "LoggingContext",
     "get_current_context",
     "clear_context",
+    # Compatibility layer
+    "StructuredLoggingAdapter",
+    "StructuredLoggingMonkeyPatch",
+    "enable_structured_logging_globally",
+    "disable_structured_logging_globally",
+    "enable_structured_logging_for_module",
+    "get_migration_status",
+    "get_compatible_logger",
+    # Formatters
+    "StructuredConsoleFormatter",
+    "StructuredJSONFormatter",
+    "CompatibilityFormatter",
+    "get_console_formatter",
+    "get_json_formatter",
+    "get_compatibility_formatter",
 ]
 
 # Version info

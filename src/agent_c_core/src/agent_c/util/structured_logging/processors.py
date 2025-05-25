@@ -251,4 +251,36 @@ def get_default_processors() -> List:
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
         structlog.processors.UnicodeDecoder(),
+        
+        # Final renderer for stdlib compatibility
+        structlog.processors.JSONRenderer(),
+    ]
+
+
+def get_simple_processors() -> List:
+    """
+    Get a simplified processor chain for testing and basic usage.
+    
+    This processor chain avoids stdlib-specific processors that might
+    cause issues with different logger types.
+    
+    Returns:
+        List: List of processors in execution order
+    """
+    return [
+        # Basic structlog processors that work with stdlib
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.PositionalArgumentsFormatter(),
+        
+        # Framework-specific processors
+        add_framework_context,
+        add_correlation_id,
+        add_timing_info,
+        enrich_errors,
+        add_agent_context,
+        filter_sensitive_data,
+        
+        # Basic final processing
+        structlog.processors.format_exc_info,
+        structlog.processors.UnicodeDecoder(),
     ]

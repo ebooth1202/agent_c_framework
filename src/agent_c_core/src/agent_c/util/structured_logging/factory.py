@@ -64,18 +64,50 @@ class StructuredLoggerFactory:
     
     def _configure_structlog(self) -> None:
         """Configure structlog with appropriate processors and formatters."""
-        # Import processors here to avoid circular imports
-        from .processors import get_default_processors
-        from .formatters import get_console_formatter, get_json_formatter
-        
         # Determine if we're in development or production
         is_development = self._is_development_environment()
         
+        # Import processors here to avoid circular imports
+        from .processors import (
+            add_framework_context,
+            add_correlation_id,
+            add_timing_info,
+            enrich_errors,
+            add_agent_context,
+            filter_sensitive_data
+        )
+        
+        # Build processor chain
+        processors = [
+            # Essential structlog processors for stdlib compatibility
+            structlog.stdlib.filter_by_level,
+            structlog.stdlib.add_log_level,
+            structlog.stdlib.PositionalArgumentsFormatter(),
+            
+            # Our custom processors
+            add_framework_context,
+            add_correlation_id,
+            add_timing_info,
+            enrich_errors,
+            add_agent_context,
+            filter_sensitive_data,
+            
+            # Final processing
+            structlog.processors.format_exc_info,
+            structlog.processors.UnicodeDecoder(),
+        ]
+        
+        # Add appropriate final renderer
+        if is_development:
+            processors.append(structlog.dev.ConsoleRenderer())
+        else:
+            processors.append(structlog.processors.JSONRenderer())
+        
         # Configure structlog
         structlog.configure(
-            processors=get_default_processors(),
-            wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),
-            logger_factory=structlog.WriteLoggerFactory(),
+            processors=processors,
+            wrapper_class=structlog.stdlib.BoundLogger,
+            logger_factory=structlog.stdlib.LoggerFactory(),
             cache_logger_on_first_use=True,
         )
         
@@ -84,14 +116,8 @@ class StructuredLoggerFactory:
         
         if not root_logger.handlers:
             handler = logging.StreamHandler()
-            
-            if is_development:
-                # Use enhanced colored formatter for development
-                handler.setFormatter(get_console_formatter())
-            else:
-                # Use JSON formatter for production
-                handler.setFormatter(get_json_formatter())
-            
+            # Use simple formatter since structlog handles the formatting
+            handler.setFormatter(logging.Formatter('%(message)s'))
             root_logger.addHandler(handler)
             root_logger.setLevel(logging.INFO)
     

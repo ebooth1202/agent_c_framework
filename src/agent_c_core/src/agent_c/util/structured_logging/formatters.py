@@ -23,6 +23,17 @@ class StructuredConsoleFormatter(ColoredFormatter):
     structured context in a readable format.
     """
     
+    def __init__(self, fmt: str = None):
+        """
+        Initialize the structured console formatter.
+        
+        Args:
+            fmt: Format string for log messages. If None, uses a default format.
+        """
+        if fmt is None:
+            fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        super().__init__(fmt)
+    
     def format(self, record: logging.LogRecord) -> str:
         """
         Format log record with colors and structured data.
@@ -88,7 +99,15 @@ class StructuredJSONFormatter(logging.Formatter):
         
         # Add exception information if present
         if record.exc_info:
-            log_data['exception'] = self.formatException(record.exc_info)
+            if record.exc_info is True:
+                # When exc_info is True, we need to get the current exception info
+                import sys
+                exc_info = sys.exc_info()
+                if exc_info[0] is not None:
+                    log_data['exception'] = self.formatException(exc_info)
+            else:
+                # exc_info is a tuple (type, value, traceback)
+                log_data['exception'] = self.formatException(record.exc_info)
         
         # Add stack info if present
         if record.stack_info:

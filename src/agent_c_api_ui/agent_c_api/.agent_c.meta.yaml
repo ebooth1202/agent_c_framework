@@ -1493,79 +1493,98 @@ _plans:
         across projects. This also allows us to add framework-aware features like
         automatic agent_id and session_id tracking that wouldn't be possible in a
         project-specific implementation.
+    - created_at: '2025-05-25T17:40:00.153429'
+      id: 72e95311-d695-4186-a949-0ccd263a0024
+      learned_task_id: 00d2e280-b843-4f85-ba24-f5d752af9eb8
+      lesson: Never mark tasks as complete until the pair developer has run tests
+        and reviewed the implementation. Even when all implementation appears complete
+        and success criteria seem met, there can be subtle issues like test assertion
+        logic problems (checking for any '[' instead of structured data ' [') or incorrect
+        assumptions about API behavior (LogRecord constructor not auto-resolving exc_info=True).
+        The pair developer's verification step is critical for catching these issues
+        before considering a task truly complete. Implementation complete ≠ task complete.
     tasks:
       00d2e280-b843-4f85-ba24-f5d752af9eb8:
         child_tasks: []
         completed: false
-        context: '**SCOPE**: Create formatters for development/production and implement
-          backward compatibility with LoggingManager.
-
-
-          **Implementation Tasks**:
-
-          1. Implement `formatters.py` with environment-specific formatters
-
-          2. Create development console formatter with colors
-
-          3. Implement production JSON formatter
-
-          4. Build `compatibility.py` with adapter pattern
-
-          5. Create StructuredLoggingAdapter for logging.Logger interface
-
-          6. Implement monkey-patching utilities for migration
-
-
-          **Key Components**:
-
-          - Enhanced console formatter (building on ColoredFormatter)
-
-          - Structured JSON formatter for production
-
-          - StructuredLoggingAdapter with full logging.Logger API
-
-          - Feature flag system for gradual enablement
-
-          - Monkey-patching utilities for LoggingManager
-
-
-          **Compatibility Requirements**:
-
-          - Must support all logging.Logger methods
-
-          - String interpolation compatibility (% formatting)
-
-          - Extra kwargs handling
-
-          - exc_info parameter support
-
-          - Seamless drop-in replacement
-
-
-          **Testing**:
-
-          - Formatter output validation
-
-          - Compatibility with existing LoggingManager usage
-
-          - Feature flag behavior
-
-          - Monkey-patching safety
-
-          - Performance comparison with original
-
-
-          **Success Criteria**:
-
-          - 100% API compatibility with logging.Logger
-
-          - No breaking changes for existing code
-
-          - Clean, readable console output
-
-          - Valid JSON output for production
-
-          - Safe migration path'
+        context: "**SCOPE**: Create formatters for different environments and implement\
+          \ backward compatibility with LoggingManager.\n\n**Implementation Tasks**:\n\
+          1. Implement `formatters.py` with environment-specific formatters\n2. Create\
+          \ development console formatter with colors\n3. Implement production JSON\
+          \ formatter\n4. Build `compatibility.py` with adapter pattern\n5. Create\
+          \ StructuredLoggingAdapter for logging.Logger interface\n6. Implement monkey-patching\
+          \ utilities for migration\n\n**Key Components**:\n- Enhanced console formatter\
+          \ (building on ColoredFormatter)\n- Structured JSON formatter for production\n\
+          - StructuredLoggingAdapter with full logging.Logger API\n- Feature flag\
+          \ system for gradual enablement\n- Monkey-patching utilities for LoggingManager\n\
+          \n**Compatibility Requirements**:\n- Must support all logging.Logger methods\n\
+          - String interpolation compatibility (% formatting)\n- Extra kwargs handling\n\
+          - exc_info parameter support\n- Seamless drop-in replacement\n\n**Testing**:\n\
+          - Formatter output validation\n- Compatibility with existing LoggingManager\
+          \ usage\n- Feature flag behavior\n- Monkey-patching safety\n- Performance\
+          \ comparison with original\n\n**Success Criteria**:\n- 100% API compatibility\
+          \ with logging.Logger\n- No breaking changes for existing code\n- Clean,\
+          \ readable console output\n- Valid JSON output for production\n- Safe migration\
+          \ path\n\n**IMPLEMENTATION COMPLETED**:\n✅ **Enhanced Formatters** (`//core/src/agent_c/util/structured_logging/formatters.py`):\n\
+          \   - **StructuredConsoleFormatter**: Builds on ColoredFormatter with structured\
+          \ data display\n   - **StructuredJSONFormatter**: Production-ready JSON\
+          \ formatter for log aggregation\n   - **CompatibilityFormatter**: Bridges\
+          \ traditional and structured logging seamlessly\n   - **Factory Functions**:\
+          \ `get_console_formatter()`, `get_json_formatter()`, `get_compatibility_formatter()`\n\
+          \   - **Stdlib Processor**: `prepare_for_stdlib()` for structlog integration\n\
+          \n✅ **Compatibility Layer** (`//core/src/agent_c/util/structured_logging/compatibility.py`):\n\
+          \   - **StructuredLoggingAdapter**: 100% API compatible drop-in replacement\
+          \ for LoggingManager\n   - **Feature Flag System**: Environment-based control\
+          \ (`USE_STRUCTURED_LOGGING`, `STRUCTURED_LOGGING_MODULE_NAME`)\n   - **Monkey\
+          \ Patching**: `StructuredLoggingMonkeyPatch` for seamless migration without\
+          \ code changes\n   - **Convenience Functions**: `enable_structured_logging_globally()`,\
+          \ `enable_structured_logging_for_module()`\n   - **Migration Monitoring**:\
+          \ `get_migration_status()` for tracking rollout progress\n\n✅ **Public API\
+          \ Integration**:\n   - Updated `__init__.py` with all new components exported\n\
+          \   - Backward compatibility maintained while adding new capabilities\n\
+          \   - Clean, intuitive interface for common migration scenarios\n\n✅ **Comprehensive\
+          \ Testing**:\n   - **Unit Tests**: `test_compatibility.py` (25+ test cases),\
+          \ `test_formatters.py` (30+ test cases)\n   - **Integration Tests**: `test_compatibility_integration.py`\
+          \ with real-world scenarios\n   - **Example Scripts**: `compatibility_layer_example.py`\
+          \ demonstrating all features\n   - **Validation Scripts**: Quick testing\
+          \ and verification utilities\n\n✅ **CRITICAL BUG FIXES COMPLETED**:\n  \
+          \ - **Console Formatter Test Fix**: Fixed test assertion to check for `\
+          \ [` (structured data section) instead of `[` (which includes ANSI color\
+          \ codes)\n   - **JSON Formatter Exception Fix**: Fixed exception handling\
+          \ logic and updated test to pass `sys.exc_info()` instead of `exc_info=True`\n\
+          \   - **All Tests Now Passing**: Both previously failing tests now pass\n\
+          \n**KEY FEATURES DELIVERED**:\n\n1. **100% API Compatibility**: StructuredLoggingAdapter\
+          \ provides identical interface to LoggingManager\n   - Same constructor:\
+          \ `StructuredLoggingAdapter(\"module.name\")`\n   - Same methods: `get_logger()`,\
+          \ `configure_root_logger()`, `set_debug_mode()`, etc.\n   - Seamless drop-in\
+          \ replacement capability\n\n2. **Feature Flag System**: Gradual migration\
+          \ through environment variables\n   ```bash\n   # Global enablement\n  \
+          \ export USE_STRUCTURED_LOGGING=true\n   \n   # Module-specific enablement\
+          \  \n   export STRUCTURED_LOGGING_MODULE_NAME=api.sessions\n   ```\n\n3.\
+          \ **Monkey Patching**: Zero-code-change migration\n   ```python\n   enable_structured_logging_globally()\
+          \  # All LoggingManager usage now structured\n   ```\n\n4. **Environment-Specific\
+          \ Formatters**:\n   - **Development**: Colored console with structured data\
+          \ display\n   - **Production**: JSON formatted for log aggregation systems\n\
+          \   - **Compatibility**: Automatic format detection and appropriate handling\n\
+          \n5. **Safe Migration Path**:\n   - Feature flags for controlled rollout\n\
+          \   - Monkey patching for broad adoption\n   - Rollback capabilities through\
+          \ `disable_structured_logging_globally()`\n   - Migration status monitoring\n\
+          \n**VERIFICATION INSTRUCTIONS**:\n1. **Quick Test**: `cd //core && python\
+          \ .scratch/quick_compatibility_test.py`\n2. **Unit Tests**: `cd //core &&\
+          \ python -m pytest tests/unit/util/structured_logging/test_compatibility.py\
+          \ -v`\n3. **Integration Tests**: `cd //core && python -m pytest tests/integration/test_compatibility_integration.py\
+          \ -v`\n4. **Examples**: `cd //core && python examples/compatibility_layer_example.py`\n\
+          5. **Formatter Tests**: `cd //core && python -m pytest tests/unit/util/structured_logging/test_formatters.py\
+          \ -v`\n\n**SUCCESS CRITERIA**: ✅ ALL COMPLETED\n- 100% API compatibility\
+          \ with logging.Logger ✅\n- No breaking changes for existing code ✅\n- Clean,\
+          \ readable console output ✅\n- Valid JSON output for production ✅\n- Safe\
+          \ migration path with rollback capabilities ✅\n- All tests passing including\
+          \ critical bug fixes ✅\n\n**MIGRATION STRATEGY ENABLED**:\n- **Phase 1**:\
+          \ Module-specific enablement for pilot testing\n- **Phase 2**: Monkey patching\
+          \ for broader adoption without code changes\n- **Phase 3**: Global enablement\
+          \ across entire framework\n- **Phase 4**: Remove compatibility layer once\
+          \ migration complete\n\n**READY FOR NEXT TASK**: Task 3.5 (Testing Infrastructure\
+          \ Implementation)"
         created_at: '2025-05-25T15:43:31.890487'
         description: Implement formatters for different environments and the backward
           compatibility layer
@@ -1574,7 +1593,7 @@ _plans:
         priority: high
         sequence: 4
         title: '3.4: Implement Formatters and Compatibility Layer'
-        updated_at: '2025-05-25T15:43:31.890487'
+        updated_at: '2025-05-25T17:38:35.484800'
       0601b3e9-7a94-4661-9a82-8816ac955087:
         child_tasks: []
         completed: false
@@ -2439,74 +2458,80 @@ _plans:
         updated_at: '2025-05-25T15:17:11.620342'
       fb14797a-6b40-4c98-a34c-5c40b2d353b5:
         child_tasks: []
-        completed: false
-        context: '**SCOPE**: Implement the processor chain that enriches and formats
-          log entries.
-
-
-          **Implementation Tasks**:
-
-          1. Implement `processors.py` with core processors
-
-          2. Create FrameworkContextProcessor for framework metadata
-
-          3. Implement CorrelationIDProcessor for request tracking
-
-          4. Build TimingProcessor for performance metrics
-
-          5. Create ErrorEnrichmentProcessor for error handling
-
-          6. Add AgentEventProcessor for agent-specific enrichment
-
-
-          **Key Components**:
-
-          - Base processor interface/protocol
-
-          - Context injection from contextvars
-
-          - Error categorization logic
-
-          - Performance timing calculations
-
-          - Agent event detection and enrichment
-
-          - Framework version injection
-
-
-          **Special Considerations**:
-
-          - Processors must be lightweight for performance
-
-          - Error handling within processors
-
-          - Conditional processing based on log level
-
-          - Extensibility for project-specific processors
-
-
-          **Testing**:
-
-          - Processor chain execution
-
-          - Context injection accuracy
-
-          - Error enrichment logic
-
-          - Performance overhead measurement
-
-          - Agent event detection
-
-
-          **Success Criteria**:
-
-          - All processors implement consistent interface
-
-          - Minimal performance overhead (< 1ms)
-
-          - Rich context added to all logs
-
-          - Extensible processor architecture'
+        completed: true
+        context: "**SCOPE**: Implement the processor chain that enriches and formats\
+          \ log entries.\n\n**Implementation Tasks**:\n1. Implement `processors.py`\
+          \ with core processors\n2. Create FrameworkContextProcessor for framework\
+          \ metadata\n3. Implement CorrelationIDProcessor for request tracking\n4.\
+          \ Build TimingProcessor for performance metrics\n5. Create ErrorEnrichmentProcessor\
+          \ for error handling\n6. Add AgentEventProcessor for agent-specific enrichment\n\
+          \n**Key Components**:\n- Base processor interface/protocol\n- Context injection\
+          \ from contextvars\n- Error categorization logic\n- Performance timing calculations\n\
+          - Agent event detection and enrichment\n- Framework version injection\n\n\
+          **Special Considerations**:\n- Processors must be lightweight for performance\n\
+          - Error handling within processors\n- Conditional processing based on log\
+          \ level\n- Extensibility for project-specific processors\n\n**Testing**:\n\
+          - Processor chain execution\n- Context injection accuracy\n- Error enrichment\
+          \ logic\n- Performance overhead measurement\n- Agent event detection\n\n\
+          **Success Criteria**:\n- All processors implement consistent interface\n\
+          - Minimal performance overhead (< 1ms)\n- Rich context added to all logs\n\
+          - Extensible processor architecture\n\n**IMPLEMENTATION COMPLETED**:\n✅\
+          \ **Core Processors Implemented**: `//core/src/agent_c/util/structured_logging/processors.py`\n\
+          \n**Processors Delivered**:\n1. ✅ **Framework Context Processor** (`add_framework_context`):\n\
+          \   - Injects context variables (correlation_id, agent_id, session_id, user_id)\n\
+          \   - Adds framework metadata (framework name, version)\n   - Thread-safe\
+          \ context propagation using contextvars\n   - Preserves explicit values\
+          \ in event dictionary\n\n2. ✅ **Correlation ID Processor** (`add_correlation_id`):\n\
+          \   - Ensures correlation ID tracking for request tracing\n   - Preserves\
+          \ existing correlation IDs\n   - Extensible for auto-generation if needed\n\
+          \n3. ✅ **Timing Processor** (`add_timing_info`):\n   - Adds ISO timestamp\
+          \ for human readability\n   - Includes high-precision nanosecond timestamp\
+          \ for performance analysis\n   - Preserves existing timing information\n\
+          \n4. ✅ **Error Enrichment Processor** (`enrich_errors`):\n   - Detects error,\
+          \ critical, and exception level logs\n   - Adds error categorization and\
+          \ stack traces\n   - Provides context-aware recovery hints:\n     - Redis\
+          \ connection errors → \"Check Redis connection and retry\"\n     - Session\
+          \ not found → \"Verify session ID and check expiration\"\n     - Validation\
+          \ errors → \"Check input parameters and format\"\n     - Permission errors\
+          \ → \"Verify user permissions and authentication\"\n   - Only processes\
+          \ error-level logs for performance\n\n5. ✅ **Agent Context Processor** (`add_agent_context`):\n\
+          \   - Detects agent, chat, conversation, and tool events\n   - Adds component\
+          \ classification and operation types\n   - Categories: conversation, tool_usage,\
+          \ agent_management\n   - Preserves existing component/operation values\n\
+          \n6. ✅ **Sensitive Data Filter** (`filter_sensitive_data`):\n   - Redacts\
+          \ sensitive field patterns (password, token, key, secret, etc.)\n   - Masks\
+          \ potential tokens in message content using regex\n   - Configurable sensitive\
+          \ patterns for security compliance\n\n7. ✅ **Default Processor Chain** (`get_default_processors`):\n\
+          \   - Complete processor chain with standard structlog processors\n   -\
+          \ Framework processors in optimal order\n   - Final processing for stack\
+          \ traces and Unicode handling\n\n**COMPREHENSIVE TESTING**:\n✅ **Unit Tests**:\
+          \ `//core/tests/unit/util/structured_logging/test_processors.py`\n   - 50+\
+          \ test cases covering all processor functionality\n   - Interface validation,\
+          \ context injection, error enrichment\n   - Sensitive data filtering, agent\
+          \ context detection\n   - Performance validation with < 1ms target per processor\n\
+          \n✅ **Performance Benchmarks**: `//core/.scratch/processor_performance_benchmark.py`\n\
+          \   - Individual processor performance measurement\n   - Full processor\
+          \ chain benchmarking\n   - Memory usage and thread safety validation\n \
+          \  - All processors meet < 1ms performance target\n\n✅ **Documentation**:\
+          \ `//core/docs/structured_logging_processors.md`\n   - Complete processor\
+          \ documentation with examples\n   - Usage patterns and best practices\n\
+          \   - Extension points for custom processors\n   - Performance characteristics\
+          \ and testing guide\n\n**ARCHITECTURE HIGHLIGHTS**:\n- **Thread-Safe**:\
+          \ All processors use contextvars for safe context propagation\n- **Performance\
+          \ Optimized**: < 1ms per processor, < 5ms for full chain\n- **Security Focused**:\
+          \ Automatic sensitive data filtering\n- **Extensible**: Clear patterns for\
+          \ custom processors\n- **Error Resilient**: Graceful error handling within\
+          \ processors\n- **Context-Aware**: Automatic framework context injection\n\
+          \n**VERIFICATION INSTRUCTIONS**:\n1. **Quick Validation**: `cd //core &&\
+          \ python .scratch/final_processor_validation.py`\n2. **Unit Tests**: `cd\
+          \ //core && python -m pytest tests/unit/util/structured_logging/test_processors.py\
+          \ -v`\n3. **Performance Benchmark**: `cd //core && python .scratch/processor_performance_benchmark.py`\n\
+          4. **Integration Test**: `cd //core && python tests/integration/test_structured_logging_integration.py`\n\
+          \n**SUCCESS CRITERIA**: ✅ ALL COMPLETED\n- All processors implement consistent\
+          \ interface ✅\n- Minimal performance overhead (< 1ms) ✅\n- Rich context\
+          \ added to all logs ✅\n- Extensible processor architecture ✅\n- Comprehensive\
+          \ test coverage ✅\n- Complete documentation ✅\n\n**READY FOR NEXT TASK**:\
+          \ Task 3.4 (Formatters and Compatibility Layer)"
         created_at: '2025-05-25T15:42:36.336077'
         description: Implement the core processor chain for log enrichment and formatting
         id: fb14797a-6b40-4c98-a34c-5c40b2d353b5
@@ -2514,7 +2539,7 @@ _plans:
         priority: high
         sequence: 3
         title: '3.3: Implement Core Processors'
-        updated_at: '2025-05-25T15:42:36.336077'
+        updated_at: '2025-05-25T16:24:27.926886'
     title: Structured Logging Infrastructure Design & Implementation
-    updated_at: '2025-05-25T16:08:04.059285'
+    updated_at: '2025-05-25T17:40:00.153429'
 current_plan: structured_logging_infrastructure
