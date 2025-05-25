@@ -1,10 +1,11 @@
 from datetime import datetime
 import json
+import re
 from typing import Dict, List, Any, Optional, Union
-from uuid import UUID
 
 from redis import asyncio as aioredis
 import structlog
+from agent_c.util import MnemonicSlugs
 
 from agent_c_api.api.v2.models.session_models import (
     SessionCreate,
@@ -15,7 +16,11 @@ from agent_c_api.api.v2.models.session_models import (
 )
 
 class SessionRepository:
-    """Repository for managing sessions in Redis"""
+    """Repository for managing sessions in Redis
+    
+    Uses MnemonicSlugs for session ID generation (e.g., 'tiger-castle').
+    GUID format session IDs are not supported and will be rejected.
+    """
     
     def __init__(self, redis_client: aioredis.Redis):
         """Initialize the session repository
@@ -26,6 +31,22 @@ class SessionRepository:
         self.redis = redis_client
         self.logger = structlog.get_logger(__name__)
         self.session_ttl = 24 * 60 * 60  # 24 hours default TTL
+    
+    def _validate_session_id(self, session_id: str) -> None:
+        """Validate session ID format - MnemonicSlugs only
+        
+        Args:
+            session_id: Session ID to validate
+            
+        Raises:
+            ValueError: If session ID format is invalid
+        """
+        if not session_id or not isinstance(session_id, str):
+            raise ValueError("Session ID must be a non-empty string")
+        
+        # Check for mnemonic slug format (word-word pattern)
+        if not re.match(r'^[a-z]+-[a-z]+$', session_id):
+            raise ValueError(f"Invalid session ID format: {session_id}. Must be MnemonicSlug format (e.g., 'tiger-castle')")
     
     async def _serialize_value(self, value: Any) -> str:
         """Serialize a value for Redis storage
@@ -84,6 +105,9 @@ class SessionRepository:
     async def create_session(self, session_data: SessionCreate) -> SessionDetail:
         """Create a new session
         
+        Generates MnemonicSlug format session ID if not provided (e.g., 'tiger-castle').
+        GUID format session IDs are rejected.
+        
         Args:
             session_data: Session creation parameters
             
@@ -91,11 +115,15 @@ class SessionRepository:
             Created session details
             
         Raises:
+            ValueError: If session ID format is invalid
             Exception: If session creation fails
         """
         try:
             # Generate session ID if not provided
-            session_id = str(UUID(session_data.id)) if session_data.id else str(UUID())
+            session_id = session_data.id or MnemonicSlugs.generate_slug(2)
+            
+            # Validate session ID format
+            self._validate_session_id(session_id)
             
             # Get current timestamp
             timestamp = datetime.now().isoformat()
@@ -156,6 +184,9 @@ class SessionRepository:
             Session details if found, None otherwise
         """
         try:
+            # Validate session ID format
+            self._validate_session_id(session_id)
+            
             # Check if session exists
             if not await self.redis.exists(f"session:{session_id}:data"):
                 return None
@@ -212,6 +243,9 @@ class SessionRepository:
             Updated session details if successful, None otherwise
         """
         try:
+            # Validate session ID format
+            self._validate_session_id(session_id)
+            
             # Check if session exists
             if not await self.redis.exists(f"session:{session_id}:data"):
                 return None
@@ -263,6 +297,9 @@ class SessionRepository:
             True if successful, False otherwise
         """
         try:
+            # Validate session ID format
+            self._validate_session_id(session_id)
+            
             # Create Redis pipeline
             pipe = self.redis.pipeline()
             

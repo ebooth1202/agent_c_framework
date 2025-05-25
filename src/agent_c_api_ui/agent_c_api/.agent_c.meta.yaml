@@ -658,7 +658,594 @@ _plans:
         updated_at: '2025-05-24T12:46:16.804703'
     title: Redis Implementation Refactor
     updated_at: '2025-05-24T13:09:19.956001'
-current_plan: redis_refactor_plan
+  session_repository_remediation:
+    created_at: '2025-05-24T19:59:38.354388'
+    description: Comprehensive plan to fix critical issues in the session repository
+      implementation, including GUID usage violations, performance optimizations,
+      and code quality improvements. This plan addresses the fallout from the Indian
+      team's Redis implementation that violates framework ID generation standards.
+    id: dc33e3e0-4bb5-4498-82c8-465f2d059dcb
+    lessons_learned:
+    - created_at: '2025-05-24T20:01:59.055031'
+      id: 98db13d9-9713-46e0-a06c-d60b58b8fb1d
+      learned_task_id: 63ddf067-027f-481d-b486-9e829dc23810
+      lesson: 'GUID Usage Violation: The Indian team implemented session ID generation
+        using Python''s UUID() instead of the required MnemonicSlugs system. This
+        violates framework standards and creates non-human-readable IDs. Always verify
+        that ID generation follows the established MnemonicSlugs patterns before code
+        review approval.'
+    - created_at: '2025-05-24T20:02:04.000930'
+      id: b54f752d-b3b3-4e18-a324-c67a861fbffd
+      learned_task_id: ee09fabc-64ae-4fb3-8785-bdceb591d5cc
+      lesson: 'Redis Key Structure Inefficiency: Splitting session data across multiple
+        Redis keys (session:id:data, session:id:meta) creates unnecessary complexity
+        and non-atomic operations. A single hash per session is more efficient and
+        provides better consistency guarantees.'
+    - created_at: '2025-05-24T20:02:09.244489'
+      id: f5f585f3-1eda-47e8-9838-27a9fce83b7e
+      learned_task_id: c6fc8f79-170f-4efa-8194-6e196fc5f9af
+      lesson: 'Pagination Anti-Pattern: Loading all sessions into memory before applying
+        pagination (using smembers() then slicing) is an O(n) operation that doesn''t
+        scale. Use Redis SSCAN for efficient cursor-based pagination instead.'
+    - created_at: '2025-05-24T20:02:15.213973'
+      id: 706c4d4f-02a1-49c6-b52b-16a01509f408
+      learned_task_id: 4fd9af74-b270-4d13-8a9d-808cc6d6e5d3
+      lesson: 'Overly Complex Serialization: Manual JSON serialization with async
+        methods is unnecessary when Pydantic provides built-in model_dump_json() and
+        model_validate() methods. Always leverage framework capabilities before implementing
+        custom solutions.'
+    - created_at: '2025-05-24T20:17:44.304855'
+      id: f511325e-0e08-4525-a2ec-8ccb5da99b73
+      learned_task_id: 63ddf067-027f-481d-b486-9e829dc23810
+      lesson: 'Breaking Change Decision: When fixing fundamental violations like GUID
+        usage, it''s often better to make a clean break rather than maintaining backward
+        compatibility. This reduces code complexity and ensures proper standards adherence
+        from the start.'
+    tasks:
+      17ed6330-3f75-4ef4-b053-5f0f5c256afc:
+        child_tasks: []
+        completed: false
+        context: "Subtask: Create custom exception hierarchy for better error handling\n\
+          \nCurrent Problem: Generic exception catching provides poor error context\
+          \ and makes debugging difficult.\n\nException Classes to Create:\n```python\n\
+          class SessionRepositoryError(Exception):\n    \"\"\"Base exception for session\
+          \ repository operations\"\"\"\n\nclass SessionNotFoundError(SessionRepositoryError):\n\
+          \    \"\"\"Session does not exist\"\"\"\n\nclass InvalidSessionIdError(SessionRepositoryError):\n\
+          \    \"\"\"Session ID format is invalid\"\"\"\n\nclass SessionCreationError(SessionRepositoryError):\n\
+          \    \"\"\"Failed to create session\"\"\"\n\nclass RedisConnectionError(SessionRepositoryError):\n\
+          \    \"\"\"Redis connection or operation failed\"\"\"\n\nclass SessionSerializationError(SessionRepositoryError):\n\
+          \    \"\"\"Failed to serialize/deserialize session data\"\"\"\n```\n\nImplementation:\n\
+          1. Create exceptions module: core/repositories/exceptions.py\n2. Add proper\
+          \ error context and logging\n3. Update all repository methods to use specific\
+          \ exceptions\n4. Add error recovery mechanisms where appropriate\n\nBenefits:\
+          \ Better error diagnostics, specific error handling in calling code, improved\
+          \ debugging experience."
+        created_at: '2025-05-24T20:01:16.799887'
+        description: Define specific exception classes for different session repository
+          error scenarios
+        id: 17ed6330-3f75-4ef4-b053-5f0f5c256afc
+        parent_id: 77856db4-e73b-4a31-9ff4-c7ef11161c9a
+        priority: medium
+        sequence: 1
+        title: 'Phase 3.1: Create Custom Exception Classes'
+        updated_at: '2025-05-24T20:01:16.799887'
+      1a3a1ce8-f752-42af-b15e-924a25051dc3:
+        child_tasks: []
+        completed: false
+        context: "Subtask: Add comprehensive validation throughout the repository\n\
+          \nValidation Requirements:\n1. Session ID format validation (mnemonic slug\
+          \ pattern only)\n2. Session data integrity validation\n3. Business rule\
+          \ validation (TTL limits, etc.)\n4. Input sanitization for Redis operations\n\
+          \nValidation Methods to Add:\n```python\ndef _validate_session_id(self,\
+          \ session_id: str) -> None:\n    \"\"\"Validate session ID format - MnemonicSlugs\
+          \ only\"\"\"\n    if not session_id or not isinstance(session_id, str):\n\
+          \        raise InvalidSessionIdError(\"Session ID must be a non-empty string\"\
+          )\n    \n    # Check for mnemonic slug format (word-word pattern)\n    if\
+          \ not re.match(r'^[a-z]+-[a-z]+$', session_id):\n        raise InvalidSessionIdError(f\"\
+          Invalid session ID format: {session_id}. Must be MnemonicSlug format (e.g.,\
+          \ 'tiger-castle')\")\n\ndef _validate_session_data(self, session_data: SessionCreate)\
+          \ -> None:\n    \"\"\"Validate session creation data\"\"\"\n    # Validate\
+          \ model_id exists\n    # Validate persona_id format\n    # Validate parameter\
+          \ ranges (temperature, etc.)\n    # Validate tools list\n```\n\nImplementation:\
+          \ Add validation calls at the beginning of all public methods, with clear\
+          \ error messages for validation failures. Reject any GUID format IDs immediately."
+        created_at: '2025-05-24T20:01:37.075744'
+        description: Implement proper validation for session IDs, data integrity,
+          and business rules
+        id: 1a3a1ce8-f752-42af-b15e-924a25051dc3
+        parent_id: 77856db4-e73b-4a31-9ff4-c7ef11161c9a
+        priority: medium
+        sequence: 3
+        title: 'Phase 3.3: Add Comprehensive Input Validation'
+        updated_at: '2025-05-24T20:17:29.327201'
+      20a8717e-d50c-4f08-bedf-cfc907c868af:
+        child_tasks: []
+        completed: false
+        context: "Subtask: Import and implement MnemonicSlugs for session ID generation\n\
+          \nSteps:\n1. Add import: `from agent_c.util import MnemonicSlugs`\n2. Replace\
+          \ UUID generation in create_session() method:\n   ```python\n   # OLD: session_id\
+          \ = str(UUID(session_data.id)) if session_data.id else str(UUID())\n   #\
+          \ NEW: session_id = session_data.id or MnemonicSlugs.generate_slug(2)\n\
+          \   ```\n3. Add session ID validation helper method for MnemonicSlugs format\
+          \ only\n4. Update type hints and documentation\n5. Remove UUID import as\
+          \ it's no longer needed\n\nFiles to modify:\n- agent_c_api/core/repositories/session_repository.py\n\
+          \nTesting: Create unit test to verify new session IDs follow mnemonic slug\
+          \ format (e.g., \"word-word\" pattern). No GUID compatibility testing needed."
+        created_at: '2025-05-24T19:59:59.588354'
+        description: Import MnemonicSlugs utility and implement session ID generation
+          fix
+        id: 20a8717e-d50c-4f08-bedf-cfc907c868af
+        parent_id: 63ddf067-027f-481d-b486-9e829dc23810
+        priority: high
+        sequence: 1
+        title: 'Phase 1.1: Add MnemonicSlugs Import and Basic Fix'
+        updated_at: '2025-05-24T20:16:57.310111'
+      422a7f0b-65a8-427c-baed-2dbf5dcaf276:
+        child_tasks: []
+        completed: false
+        context: 'MONITORING: Add comprehensive testing and monitoring to ensure the
+          remediation improvements work as expected.
+
+
+          Performance Testing Requirements:
+
+          1. Load testing with high session creation rates
+
+          2. Memory usage testing with large session counts
+
+          3. Redis operation performance benchmarks
+
+          4. Cleanup operation efficiency testing
+
+
+          Monitoring Implementation:
+
+          1. Add performance metrics collection
+
+          2. Create Redis operation timing logs
+
+          3. Add session lifecycle tracking
+
+          4. Implement health checks for Redis connectivity
+
+
+          Observability Features:
+
+          1. Structured logging with correlation IDs
+
+          2. Performance dashboards
+
+          3. Error rate monitoring
+
+          4. Session usage analytics
+
+
+          Success Metrics:
+
+          - Session creation time < 10ms (95th percentile)
+
+          - List operations scale linearly with pagination
+
+          - Cleanup operations complete in < 1 second for 1000+ sessions
+
+          - Memory usage remains constant regardless of session count
+
+
+          Dependencies: Requires all previous phases to be completed for accurate
+          performance testing.'
+        created_at: '2025-05-24T20:01:45.621890'
+        description: Add performance testing, monitoring, and observability to the
+          session repository
+        id: 422a7f0b-65a8-427c-baed-2dbf5dcaf276
+        parent_id: null
+        priority: low
+        sequence: 4
+        title: 'Phase 4: Performance Testing and Monitoring'
+        updated_at: '2025-05-24T20:01:45.621890'
+      4fd9af74-b270-4d13-8a9d-808cc6d6e5d3:
+        child_tasks: []
+        completed: false
+        context: "Subtask: Simplify serialization using Pydantic built-in methods\n\
+          \nCurrent Problems:\n1. Unnecessary async methods for simple operations\n\
+          2. Manual JSON handling when Pydantic provides better methods\n3. No type\
+          \ validation during deserialization\n4. Unused parameters (default_type)\n\
+          \nSimplified Implementation:\n```python\ndef _serialize_value(self, value:\
+          \ Any) -> str:\n    \"\"\"Use Pydantic's built-in serialization\"\"\"\n\
+          \    if isinstance(value, str):\n        return value\n    if hasattr(value,\
+          \ 'model_dump_json'):\n        return value.model_dump_json()\n    return\
+          \ json.dumps(value, default=str)\n\ndef _deserialize_value(self, value:\
+          \ Optional[str], target_type: type = None) -> Any:\n    \"\"\"Deserialize\
+          \ with optional type validation\"\"\"\n    if value is None:\n        return\
+          \ None\n    if isinstance(value, bytes):\n        value = value.decode('utf-8')\n\
+          \    \n    try:\n        data = json.loads(value)\n        if target_type\
+          \ and hasattr(target_type, 'model_validate'):\n            return target_type.model_validate(data)\n\
+          \        return data\n    except json.JSONDecodeError:\n        return value\n\
+          ```\n\nBenefits: Simpler code, better type safety, leverages Pydantic's\
+          \ validation capabilities."
+        created_at: '2025-05-24T20:01:26.386932'
+        description: Replace complex manual JSON handling with Pydantic built-in serialization
+          methods
+        id: 4fd9af74-b270-4d13-8a9d-808cc6d6e5d3
+        parent_id: 77856db4-e73b-4a31-9ff4-c7ef11161c9a
+        priority: medium
+        sequence: 2
+        title: 'Phase 3.2: Simplify Serialization Methods'
+        updated_at: '2025-05-24T20:01:26.386932'
+      63488e63-7398-4ca1-b101-f7ec0fe3fa58:
+        child_tasks: []
+        completed: false
+        context: 'DOCUMENTATION: Create comprehensive documentation for the remediated
+          session repository.
+
+
+          Documentation Requirements:
+
+          1. Updated API documentation reflecting MnemonicSlugs usage only
+
+          2. Breaking change notice for GUID session invalidation
+
+          3. Performance optimization guide
+
+          4. Error handling best practices
+
+          5. Redis configuration requirements
+
+
+          Breaking Change Documentation:
+
+          1. Clear notice that all existing GUID sessions will be invalidated
+
+          2. Instructions for users to create new sessions
+
+          3. Timeline for the breaking change deployment
+
+          4. FAQ for common migration questions
+
+
+          Developer Documentation:
+
+          1. Updated session repository architecture
+
+          2. Redis key structure documentation
+
+          3. Error handling patterns
+
+          4. Performance considerations
+
+          5. Monitoring and troubleshooting guide
+
+
+          Training Materials:
+
+          1. Code review checklist for session-related changes
+
+          2. Best practices for Redis operations
+
+          3. ID generation standards enforcement (MnemonicSlugs only)
+
+          4. Common pitfalls and how to avoid them
+
+
+          Deliverables: Complete documentation package that clearly communicates the
+          breaking change and new MnemonicSlugs-only approach.'
+        created_at: '2025-05-24T20:01:53.218385'
+        description: Create comprehensive documentation and migration guide for the
+          session repository changes
+        id: 63488e63-7398-4ca1-b101-f7ec0fe3fa58
+        parent_id: null
+        priority: low
+        sequence: 5
+        title: 'Phase 5: Documentation and Migration Guide'
+        updated_at: '2025-05-24T20:17:38.051022'
+      63ddf067-027f-481d-b486-9e829dc23810:
+        child_tasks:
+        - 20a8717e-d50c-4f08-bedf-cfc907c868af
+        - ba41eb78-c1d2-4c93-89b5-f9f45057765e
+        - 64ff353e-258f-4b76-a995-11ed23e9cdcf
+        completed: false
+        context: 'CRITICAL BREAKING CHANGE: The session repository is using Python''s
+          UUID() to generate GUIDs instead of MnemonicSlugs, violating Agent C framework
+          standards.
+
+
+          Current Problem (Line 90):
+
+          ```python
+
+          session_id = str(UUID(session_data.id)) if session_data.id else str(UUID())
+
+          ```
+
+
+          Required Fix:
+
+          1. Import MnemonicSlugs from agent_c.util
+
+          2. Replace UUID generation with MnemonicSlugs.generate_slug(2)
+
+          3. Add validation for MnemonicSlugs format only
+
+          4. Update documentation to reflect proper usage
+
+
+          Impact: This is a breaking change that will invalidate all existing sessions
+          with GUID format. All sessions will be recreated with proper mnemonic slug
+          format like "tiger-castle". Existing GUID sessions will be considered invalid
+          and users will need to create new sessions.
+
+
+          Dependencies: Requires agent_c.util.MnemonicSlugs to be available in the
+          API project.
+
+
+          Testing: Must verify that session creation, retrieval, and updates work
+          with the new slug format only. No backward compatibility needed.'
+        created_at: '2025-05-24T19:59:51.722733'
+        description: Fix the critical GUID usage violation in session repository that
+          breaks framework ID generation standards
+        id: 63ddf067-027f-481d-b486-9e829dc23810
+        parent_id: null
+        priority: high
+        sequence: 1
+        title: 'Phase 1: Critical GUID Usage Fix'
+        updated_at: '2025-05-24T20:16:49.237995'
+      64ff353e-258f-4b76-a995-11ed23e9cdcf:
+        child_tasks: []
+        completed: false
+        context: 'Subtask: Test coverage for MnemonicSlug implementation (no backward
+          compatibility)
+
+
+          Test Requirements:
+
+          1. Test new session creation uses mnemonic slugs
+
+          2. Test session ID validation accepts only MnemonicSlug format
+
+          3. Test error handling for invalid session ID formats (including GUIDs)
+
+          4. Test that GUID format session IDs are rejected
+
+          5. Test edge cases like malformed session IDs
+
+
+          Test Files to Create/Update:
+
+          - tests/unit/core/test_session_repository.py
+
+          - tests/integration/test_session_creation.py
+
+
+          Mock Strategy:
+
+          - Mock Redis client properly using FastAPI dependency injection patterns
+
+          - Create test fixtures for MnemonicSlug format sessions only
+
+          - Test that GUID format IDs are properly rejected
+
+          - Test edge cases like empty strings, special characters
+
+
+          Success Criteria: All tests pass, only MnemonicSlug formats are accepted,
+          GUID formats are properly rejected with clear error messages.'
+        created_at: '2025-05-24T20:00:19.784776'
+        description: Create comprehensive tests for the GUID to MnemonicSlug migration
+        id: 64ff353e-258f-4b76-a995-11ed23e9cdcf
+        parent_id: 63ddf067-027f-481d-b486-9e829dc23810
+        priority: high
+        sequence: 3
+        title: 'Phase 1.3: Update Tests for GUID to Slug Migration'
+        updated_at: '2025-05-24T20:17:18.753639'
+      6c2115c9-4bf5-4fa5-be60-3f582a28eb47:
+        child_tasks: []
+        completed: false
+        context: "Subtask: Optimize session cleanup operations\n\nCurrent Problem:\n\
+          ```python\n# O(n) operation checking every session\nfor session_id in session_ids:\n\
+          \    if not await self.redis.exists(f\"session:{session_id}:data\"):\n \
+          \       await self.delete_session(session_id)\n```\n\nNew Approach:\n1.\
+          \ Use Redis keyspace notifications for expiration events\n2. Implement background\
+          \ cleanup task\n3. Use Redis TTL for automatic cleanup\n4. Add manual cleanup\
+          \ for orphaned entries in active_sessions set\n\nImplementation:\n1. Configure\
+          \ Redis for keyspace notifications\n2. Create cleanup service that listens\
+          \ to expiration events\n3. Implement batch cleanup operations\n4. Add monitoring\
+          \ for cleanup efficiency\n\nBenefits:\n- Near real-time cleanup\n- No periodic\
+          \ O(n) operations\n- Automatic handling of expired sessions\n- Better resource\
+          \ utilization\n\nRisk: Requires Redis configuration changes for keyspace\
+          \ notifications."
+        created_at: '2025-05-24T20:00:58.785837'
+        description: Replace O(n) cleanup with efficient Redis expiration handling
+        id: 6c2115c9-4bf5-4fa5-be60-3f582a28eb47
+        parent_id: ee09fabc-64ae-4fb3-8785-bdceb591d5cc
+        priority: medium
+        sequence: 3
+        title: 'Phase 2.3: Optimize Cleanup Operations'
+        updated_at: '2025-05-24T20:00:58.785837'
+      76eb9bb5-feb4-40a3-9a52-e03bdcadc701:
+        child_tasks: []
+        completed: false
+        context: "Subtask: Redesign Redis key structure for efficiency\n\nCurrent\
+          \ Structure:\n```\nsession:{session_id}:data -> hash\nsession:{session_id}:meta\
+          \ -> hash  \nactive_sessions -> set\n```\n\nNew Structure:\n```\nsession:{session_id}\
+          \ -> hash (all data + metadata)\nsessions:active -> set\nsessions:by_user:{user_id}\
+          \ -> set (future enhancement)\n```\n\nImplementation:\n1. Combine data and\
+          \ metadata into single hash\n2. Add created_at, updated_at, last_activity\
+          \ as hash fields\n3. Use JSON serialization for complex fields (tools, etc.)\n\
+          4. Maintain active_sessions set for efficient listing\n\nBenefits:\n- Atomic\
+          \ operations on session data\n- Single TTL operation per session\n- Reduced\
+          \ Redis memory overhead\n- Simpler key management\n\nMigration Strategy:\
+          \ Implement new structure alongside old, migrate gradually, remove old structure\
+          \ after verification."
+        created_at: '2025-05-24T20:00:37.965326'
+        description: Consolidate session data into single Redis hash per session
+        id: 76eb9bb5-feb4-40a3-9a52-e03bdcadc701
+        parent_id: ee09fabc-64ae-4fb3-8785-bdceb591d5cc
+        priority: medium
+        sequence: 1
+        title: 'Phase 2.1: Redesign Redis Key Structure'
+        updated_at: '2025-05-24T20:00:37.965326'
+      77856db4-e73b-4a31-9ff4-c7ef11161c9a:
+        child_tasks:
+        - 17ed6330-3f75-4ef4-b053-5f0f5c256afc
+        - 4fd9af74-b270-4d13-8a9d-808cc6d6e5d3
+        - 1a3a1ce8-f752-42af-b15e-924a25051dc3
+        completed: false
+        context: 'QUALITY IMPROVEMENT: Current implementation has poor error handling
+          and overly complex serialization.
+
+
+          Issues to Address:
+
+          1. Generic exception handling without specific error types
+
+          2. Limited error context in logs
+
+          3. No validation of session ID format
+
+          4. Overly complex manual JSON serialization
+
+          5. Missing type validation during deserialization
+
+
+          Improvements:
+
+          1. Create custom exception classes for different error scenarios
+
+          2. Add comprehensive input validation
+
+          3. Simplify serialization using Pydantic built-in methods
+
+          4. Add structured logging with proper context
+
+          5. Implement proper error recovery mechanisms
+
+
+          Code Quality Goals:
+
+          - Reduce method complexity (current methods are too long)
+
+          - Add proper type hints throughout
+
+          - Improve documentation and docstrings
+
+          - Follow Python best practices and PEP standards'
+        created_at: '2025-05-24T20:01:08.477989'
+        description: Improve error handling, validation, and code quality throughout
+          the session repository
+        id: 77856db4-e73b-4a31-9ff4-c7ef11161c9a
+        parent_id: null
+        priority: medium
+        sequence: 3
+        title: 'Phase 3: Code Quality and Error Handling'
+        updated_at: '2025-05-24T20:01:08.477989'
+      ba41eb78-c1d2-4c93-89b5-f9f45057765e:
+        child_tasks: []
+        completed: true
+        context: 'TASK REMOVED: Decision made to not maintain backward compatibility
+          for existing GUID-based sessions. All existing sessions will be invalidated
+          and users will need to create new sessions with proper MnemonicSlugs format.
+
+
+          This simplifies the implementation significantly by:
+
+          1. Removing complex format detection logic
+
+          2. Eliminating dual-format support code
+
+          3. Reducing testing complexity
+
+          4. Ensuring clean implementation from the start
+
+
+          Impact: All existing sessions will become invalid immediately after deployment.
+          Users will need to create new sessions, but this ensures clean adherence
+          to framework standards.'
+        created_at: '2025-05-24T20:00:08.282815'
+        description: This task has been removed from the plan - no backward compatibility
+          needed
+        id: ba41eb78-c1d2-4c93-89b5-f9f45057765e
+        parent_id: 63ddf067-027f-481d-b486-9e829dc23810
+        priority: high
+        sequence: 2
+        title: 'REMOVED: Backward Compatibility for Existing GUIDs'
+        updated_at: '2025-05-24T20:17:09.047235'
+      c6fc8f79-170f-4efa-8194-6e196fc5f9af:
+        child_tasks: []
+        completed: false
+        context: "Subtask: Optimize session listing with proper pagination\n\nCurrent\
+          \ Problem:\n```python\n# Loads ALL sessions into memory then applies pagination\n\
+          session_ids = await self.redis.smembers(\"active_sessions\")\npaginated_ids\
+          \ = session_ids[offset:offset + limit]\n```\n\nNew Implementation:\n1. Use\
+          \ Redis SSCAN for efficient set pagination\n2. Implement cursor-based pagination\
+          \ instead of offset-based\n3. Add sorting options (by creation date, last\
+          \ activity)\n4. Cache frequently accessed session lists\n\nImplementation\
+          \ Details:\n```python\nasync def list_sessions(self, cursor: str = \"0\"\
+          , limit: int = 10, \n                       sort_by: str = \"last_activity\"\
+          ) -> SessionListResponse:\n    # Use SSCAN for efficient pagination\n  \
+          \  # Implement sorting using Redis SORT command\n    # Return cursor for\
+          \ next page\n```\n\nPerformance Impact: O(1) pagination instead of O(n),\
+          \ significantly better performance with large session counts."
+        created_at: '2025-05-24T20:00:50.838805'
+        description: Replace inefficient list_sessions implementation with proper
+          Redis-based pagination
+        id: c6fc8f79-170f-4efa-8194-6e196fc5f9af
+        parent_id: ee09fabc-64ae-4fb3-8785-bdceb591d5cc
+        priority: medium
+        sequence: 2
+        title: 'Phase 2.2: Implement Efficient Pagination'
+        updated_at: '2025-05-24T20:00:50.838805'
+      ee09fabc-64ae-4fb3-8785-bdceb591d5cc:
+        child_tasks:
+        - 76eb9bb5-feb4-40a3-9a52-e03bdcadc701
+        - c6fc8f79-170f-4efa-8194-6e196fc5f9af
+        - 6c2115c9-4bf5-4fa5-be60-3f582a28eb47
+        completed: false
+        context: 'OPTIMIZATION: Current Redis implementation splits session data across
+          multiple keys and has inefficient operations.
+
+
+          Current Problems:
+
+          1. Multiple keys per session (session:id:data, session:id:meta)
+
+          2. Manual TTL management across multiple keys
+
+          3. Non-atomic operations
+
+          4. Inefficient cleanup and listing operations
+
+
+          Proposed Improvements:
+
+          1. Consolidate to single hash per session: `session:{session_id}`
+
+          2. Use Redis pipeline operations for atomicity
+
+          3. Implement efficient pagination using Redis SCAN
+
+          4. Add proper TTL management with single operation
+
+          5. Optimize cleanup using Redis expiration events
+
+
+          Performance Impact: Should reduce Redis operations by ~50% and improve consistency
+          through atomic operations.
+
+
+          Dependencies: Requires Phase 1 completion to ensure session ID format is
+          standardized.'
+        created_at: '2025-05-24T20:00:28.749889'
+        description: Optimize Redis key structure and operations for better performance
+          and atomicity
+        id: ee09fabc-64ae-4fb3-8785-bdceb591d5cc
+        parent_id: null
+        priority: medium
+        sequence: 2
+        title: 'Phase 2: Redis Operations Optimization'
+        updated_at: '2025-05-24T20:00:28.749889'
+    title: Session Repository Remediation Plan
+    updated_at: '2025-05-24T20:17:44.304855'
+current_plan: session_repository_remediation
 session_summary:
   completion_status: 50% complete (4/8 phases)
   critical_issues_resolved:

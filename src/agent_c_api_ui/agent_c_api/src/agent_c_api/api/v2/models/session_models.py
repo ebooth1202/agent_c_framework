@@ -14,12 +14,14 @@ class SessionCreate(BaseModel):
     It specifies the LLM model, persona, and other configuration options that determine
     the agent's behavior.
     """
+    id: Optional[str] = Field(None, description="Unique identifier for the session in MnemonicSlugs format")
     model_id: str = Field(..., description="ID of the LLM model to use")
     persona_id: str = Field(default="default", description="ID of the persona to use")
     name: Optional[str] = Field(None, description="Optional session name")
     custom_prompt: Optional[str] = Field(None, description="Custom prompt overriding the persona")
     temperature: Optional[float] = Field(None, ge=0.0, le=1.0, description="Temperature parameter for the model (0.0 to 1.0)")
-    reasoning_effort: Optional[int] = Field(None, ge=0, le=10, description="Reasoning effort parameter for OpenAI models (0 to 10)")
+    reasoning_effort: Optional[str] = Field(None, description="Reasoning effort parameter for OpenAI models (0 to 10)")
+    extending_thinking: Optional[bool] = Field(False, description="Whether to enable extended reasoning for OpenAI models")
     budget_tokens: Optional[int] = Field(None, ge=0, description="Budget tokens parameter for Claude models")
     max_tokens: Optional[int] = Field(None, ge=0, description="Maximum tokens for model output")
     tools: Optional[List[str]] = Field(default_factory=list, description="List of tool IDs to enable")
@@ -92,7 +94,7 @@ class SessionDetail(SessionSummary):
     tools: List[str] = Field(default_factory=list, description="List of enabled tool IDs for this session")
     tool_ids: List[str] = Field(..., description="Enabled tool IDs (alternative format)")
     temperature: Optional[float] = Field(None, ge=0.0, le=1.0, description="Temperature parameter controlling randomness (0.0 to 1.0)")
-    reasoning_effort: Optional[int] = Field(None, ge=0, le=10, description="Reasoning effort parameter for OpenAI models (0 to 10)")
+    reasoning_effort: Optional[str] = Field(None, description="Reasoning effort parameter for OpenAI models (0 to 10)")
     budget_tokens: Optional[int] = Field(None, ge=0, description="Budget tokens parameter for Claude models")
     max_tokens: Optional[int] = Field(None, ge=0, description="Maximum tokens limit for model output")
     custom_prompt: Optional[str] = Field(None, description="Custom prompt template being used, if any")
