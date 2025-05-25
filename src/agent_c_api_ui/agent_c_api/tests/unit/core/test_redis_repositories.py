@@ -22,12 +22,19 @@ from agent_c_api.core.repositories.chat_repository import ChatRepository
 @pytest.mark.core
 @pytest.mark.repositories
 class TestSessionRepository:
-    """Test SessionRepository with mocked Redis client."""
+    """Test SessionRepository with mocked Redis client and MnemonicSlugs implementation."""
     
     @pytest_asyncio.fixture
     async def mock_redis_client(self):
         """Create a mock Redis client for testing."""
         client = AsyncMock(spec=aioredis.Redis)
+        # Mock pipeline
+        pipeline_mock = AsyncMock()
+        pipeline_mock.execute = AsyncMock(return_value=[True, True, 1])
+        pipeline_mock.hset = AsyncMock()
+        pipeline_mock.sadd = AsyncMock()
+        pipeline_mock.expire = AsyncMock()
+        client.pipeline.return_value = pipeline_mock
         return client
     
     @pytest_asyncio.fixture
@@ -36,175 +43,250 @@ class TestSessionRepository:
         return SessionRepository(mock_redis_client)
     
     @pytest_asyncio.fixture
-    def sample_session_data(self):
-        """Sample session data for testing."""
-        return {
-            "id": "test-session-123",
-            "model_id": "gpt-4",
-            "persona_id": "programmer",
-            "created_at": "2025-05-24T13:00:00Z",
-            "last_activity": "2025-05-24T13:30:00Z",
-            "agent_internal_id": "agent-456",
-            "tools": ["search", "calculator"],
-            "temperature": 0.7,
-            "reasoning_effort": 30,
-            "budget_tokens": None,
-            "max_tokens": 2000,
-            "custom_prompt": None
-        }
+    def valid_session_create(self):
+        """Valid session creation data with MnemonicSlug ID."""
+        from agent_c_api.api.v2.models.session_models import SessionCreate
+        return SessionCreate(
+            id="tiger-castle",
+            model_id="gpt-4",
+            persona_id="programmer",
+            temperature=0.7,
+            reasoning_effort=30,
+            budget_tokens=None,
+            max_tokens=2000,
+            tools=["search", "calculator"],
+            custom_prompt=None
+        )
+    
+    @pytest_asyncio.fixture
+    def session_create_without_id(self):
+        """Session creation data without ID (should generate MnemonicSlug)."""
+        from agent_c_api.api.v2.models.session_models import SessionCreate
+        return SessionCreate(
+            model_id="gpt-4",
+            persona_id="programmer",
+            temperature=0.7
+        )
     
     async def test_session_repository_init(self, mock_redis_client):
         """Test SessionRepository initialization."""
         repo = SessionRepository(mock_redis_client)
-        assert repo.redis_client == mock_redis_client
+        assert repo.redis == mock_redis_client
+        assert repo.session_ttl == 24 * 60 * 60  # 24 hours
     
-    async def test_create_session(self, session_repository, mock_redis_client, sample_session_data):
-        """Test creating a session."""
-        session_id = sample_session_data["id"]
+    @patch('agent_c.util.MnemonicSlugs.generate_slug')
+    async def test_create_session_with_mnemonic_slug(self, mock_generate_slug, session_repository, mock_redis_client, session_create_without_id):
+        """Test creating a session generates MnemonicSlug when no ID provided."""
+        # Mock MnemonicSlugs.generate_slug to return a known value
+        mock_generate_slug.return_value = "generated-slug"
         
-        # Mock Redis set operation
-        mock_redis_client.set.return_value = True
+        # Mock Redis operations for get_session call at end of create_session
+        mock_redis_client.exists.return_value = True
+        mock_redis_client.hgetall.side_effect = [
+            {b"model_id": b"gpt-4", b"persona_id": b"programmer"},  # data
+            {b"created_at": b"2025-05-24T13:00:00", b"is_active": b"true"}  # meta
+        ]
         
-        result = await session_repository.create_session(session_id, sample_session_data)
+        result = await session_repository.create_session(session_create_without_id)
         
-        # Verify Redis was called correctly
-        mock_redis_client.set.assert_called_once()
-        call_args = mock_redis_client.set.call_args
+        # Verify MnemonicSlugs.generate_slug was called with 2 words
+        mock_generate_slug.assert_called_once_with(2)
         
-        # Check the key format
-        key = call_args[0][0]
-        assert session_id in key
-        
-        # Check the data was JSON serialized
-        stored_data = call_args[0][1]
-        parsed_data = json.loads(stored_data)
-        assert parsed_data == sample_session_data
-        
-        assert result is True
+        # Verify the session was created with the generated slug
+        assert result is not None
+        assert result.id == "generated-slug"
     
-    async def test_get_session_exists(self, session_repository, mock_redis_client, sample_session_data):
-        """Test getting an existing session."""
-        session_id = sample_session_data["id"]
+    async def test_create_session_with_provided_valid_id(self, session_repository, mock_redis_client, valid_session_create):
+        """Test creating a session with provided valid MnemonicSlug ID."""
+        # Mock Redis operations
+        mock_redis_client.exists.return_value = True
+        mock_redis_client.hgetall.side_effect = [
+            {b"model_id": b"gpt-4", b"persona_id": b"programmer"},  # data
+            {b"created_at": b"2025-05-24T13:00:00", b"is_active": b"true"}  # meta
+        ]
         
-        # Mock Redis get operation
-        mock_redis_client.get.return_value = json.dumps(sample_session_data)
+        result = await session_repository.create_session(valid_session_create)
+        
+        # Verify the session was created (no exception raised for valid ID)
+        assert result is not None
+        assert result.id == "tiger-castle"
+    
+    async def test_create_session_rejects_guid_format(self, session_repository, mock_redis_client):
+        """Test creating a session rejects GUID format ID."""
+        from agent_c_api.api.v2.models.session_models import SessionCreate
+        
+        session_data = SessionCreate(
+            id="550e8400-e29b-41d4-a716-446655440000",  # GUID format
+            model_id="gpt-4"
+        )
+        
+        with pytest.raises(ValueError) as exc_info:
+            await session_repository.create_session(session_data)
+        
+        assert "Invalid session ID format" in str(exc_info.value)
+        assert "MnemonicSlug format" in str(exc_info.value)
+    
+    async def test_get_session_exists(self, session_repository, mock_redis_client):
+        """Test getting an existing session with valid MnemonicSlug ID."""
+        session_id = "tiger-castle"
+        
+        # Mock Redis operations
+        mock_redis_client.exists.return_value = True
+        mock_redis_client.hgetall.side_effect = [
+            {b"model_id": b"gpt-4", b"persona_id": b"programmer"},  # data
+            {b"created_at": b"2025-05-24T13:00:00", b"is_active": b"true"}  # meta
+        ]
         
         result = await session_repository.get_session(session_id)
         
         # Verify Redis was called correctly
-        mock_redis_client.get.assert_called_once()
-        call_args = mock_redis_client.get.call_args
-        key = call_args[0][0]
-        assert session_id in key
+        mock_redis_client.exists.assert_called_once()
         
         # Verify returned data
-        assert result == sample_session_data
+        assert result is not None
+        assert result.id == session_id
+        assert result.model_id == "gpt-4"
     
     async def test_get_session_not_exists(self, session_repository, mock_redis_client):
         """Test getting a non-existent session."""
-        session_id = "non-existent-session"
+        session_id = "apple-banana"
         
-        # Mock Redis get operation returning None
-        mock_redis_client.get.return_value = None
+        # Mock Redis exists operation returning False
+        mock_redis_client.exists.return_value = False
         
         result = await session_repository.get_session(session_id)
         
         # Verify Redis was called correctly
-        mock_redis_client.get.assert_called_once()
+        mock_redis_client.exists.assert_called_once()
         
         # Verify None is returned
         assert result is None
     
-    async def test_update_session(self, session_repository, mock_redis_client, sample_session_data):
-        """Test updating a session."""
-        session_id = sample_session_data["id"]
-        updated_data = {**sample_session_data, "temperature": 0.9}
+    async def test_get_session_rejects_guid_format(self, session_repository, mock_redis_client):
+        """Test get_session rejects GUID format session IDs."""
+        # Test with GUID format - should be rejected
+        with pytest.raises(ValueError) as exc_info:
+            await session_repository.get_session("550e8400-e29b-41d4-a716-446655440000")
         
-        # Mock Redis set operation
-        mock_redis_client.set.return_value = True
+        assert "Invalid session ID format" in str(exc_info.value)
+        assert "MnemonicSlug format" in str(exc_info.value)
+    
+    async def test_update_session(self, session_repository, mock_redis_client):
+        """Test updating a session with valid MnemonicSlug ID."""
+        from agent_c_api.api.v2.models.session_models import SessionUpdate
         
-        result = await session_repository.update_session(session_id, updated_data)
+        session_id = "tiger-castle"
+        update_data = SessionUpdate(temperature=0.9)
         
-        # Verify Redis was called correctly
-        mock_redis_client.set.assert_called_once()
-        call_args = mock_redis_client.set.call_args
+        # Mock Redis operations
+        mock_redis_client.exists.return_value = True
+        mock_redis_client.hgetall.side_effect = [
+            {b"model_id": b"gpt-4", b"persona_id": b"programmer"},  # data for get_session
+            {b"created_at": b"2025-05-24T13:00:00", b"is_active": b"true"}  # meta for get_session
+        ]
         
-        # Check the key format
-        key = call_args[0][0]
-        assert session_id in key
+        result = await session_repository.update_session(session_id, update_data)
         
-        # Check the updated data was stored
-        stored_data = call_args[0][1]
-        parsed_data = json.loads(stored_data)
-        assert parsed_data["temperature"] == 0.9
+        # Verify the session was updated
+        assert result is not None
+        assert result.id == session_id
+    
+    async def test_update_session_rejects_guid_format(self, session_repository, mock_redis_client):
+        """Test update_session rejects GUID format session IDs."""
+        from agent_c_api.api.v2.models.session_models import SessionUpdate
         
-        assert result is True
+        update_data = SessionUpdate(temperature=0.8)
+        
+        # Test with GUID format - should be rejected
+        with pytest.raises(ValueError) as exc_info:
+            await session_repository.update_session("550e8400-e29b-41d4-a716-446655440000", update_data)
+        
+        assert "Invalid session ID format" in str(exc_info.value)
     
     async def test_delete_session(self, session_repository, mock_redis_client):
-        """Test deleting a session."""
-        session_id = "test-session-123"
+        """Test deleting a session with valid MnemonicSlug ID."""
+        session_id = "tiger-castle"
         
-        # Mock Redis delete operation
-        mock_redis_client.delete.return_value = 1  # 1 key deleted
+        # Mock Redis pipeline operations
+        pipeline_mock = mock_redis_client.pipeline.return_value
+        pipeline_mock.execute.return_value = [1, 1, 1]  # Successful deletions
         
         result = await session_repository.delete_session(session_id)
         
-        # Verify Redis was called correctly
-        mock_redis_client.delete.assert_called_once()
-        call_args = mock_redis_client.delete.call_args
-        key = call_args[0][0]
-        assert session_id in key
+        # Verify Redis pipeline was used
+        mock_redis_client.pipeline.assert_called_once()
+        pipeline_mock.delete.assert_called()
+        pipeline_mock.srem.assert_called()
+        pipeline_mock.execute.assert_called_once()
         
         assert result is True
     
-    async def test_delete_session_not_exists(self, session_repository, mock_redis_client):
-        """Test deleting a non-existent session."""
-        session_id = "non-existent-session"
+    async def test_delete_session_rejects_guid_format(self, session_repository, mock_redis_client):
+        """Test delete_session rejects GUID format session IDs."""
+        # Test with GUID format - should be rejected
+        with pytest.raises(ValueError) as exc_info:
+            await session_repository.delete_session("550e8400-e29b-41d4-a716-446655440000")
         
-        # Mock Redis delete operation returning 0 (no keys deleted)
-        mock_redis_client.delete.return_value = 0
-        
-        result = await session_repository.delete_session(session_id)
-        
-        # Verify Redis was called correctly
-        mock_redis_client.delete.assert_called_once()
-        
-        assert result is False
+        assert "Invalid session ID format" in str(exc_info.value)
     
     async def test_list_sessions(self, session_repository, mock_redis_client):
-        """Test listing sessions."""
-        # Mock Redis keys operation
-        mock_redis_client.keys.return_value = [
-            b"session:test-session-1",
-            b"session:test-session-2"
+        """Test listing sessions with MnemonicSlug IDs."""
+        # Mock Redis smembers operation for active_sessions set
+        mock_redis_client.smembers.return_value = {
+            b"tiger-castle",
+            b"apple-banana"
+        }
+        
+        # Mock Redis hgetall operations for each session
+        mock_redis_client.hgetall.side_effect = [
+            # Session 1 data
+            {b"model_id": b"gpt-4", b"persona_id": b"programmer"},
+            # Session 1 meta
+            {b"created_at": b"2025-05-24T13:00:00", b"is_active": b"true"},
+            # Session 2 data
+            {b"model_id": b"claude-3", b"persona_id": b"default"},
+            # Session 2 meta
+            {b"created_at": b"2025-05-24T14:00:00", b"is_active": b"true"}
         ]
         
-        # Mock Redis mget operation
-        session_data_1 = {"id": "test-session-1", "model_id": "gpt-4"}
-        session_data_2 = {"id": "test-session-2", "model_id": "claude-3"}
-        
-        mock_redis_client.mget.return_value = [
-            json.dumps(session_data_1),
-            json.dumps(session_data_2)
-        ]
-        
-        result = await session_repository.list_sessions()
+        result = await session_repository.list_sessions(limit=10, offset=0)
         
         # Verify Redis operations
-        mock_redis_client.keys.assert_called_once()
-        mock_redis_client.mget.assert_called_once()
+        mock_redis_client.smembers.assert_called_once_with("active_sessions")
         
         # Verify results
-        assert len(result) == 2
-        assert result[0] == session_data_1
-        assert result[1] == session_data_2
+        assert result is not None
+        assert len(result.items) == 2
+        assert result.total == 2
+    
+    async def test_session_id_validation_comprehensive(self, session_repository):
+        """Test comprehensive session ID validation."""
+        # Valid MnemonicSlug formats
+        valid_ids = ["tiger-castle", "apple-banana", "hello-world"]
+        for session_id in valid_ids:
+            session_repository._validate_session_id(session_id)  # Should not raise
+        
+        # Invalid formats
+        invalid_ids = [
+            "550e8400-e29b-41d4-a716-446655440000",  # GUID
+            "single",  # Single word
+            "too-many-words-here",  # Too many words
+            "UPPER-CASE",  # Uppercase
+            "tiger_castle",  # Underscore
+            "",  # Empty
+            None  # None
+        ]
+        
+        for session_id in invalid_ids:
+            with pytest.raises(ValueError):
+                session_repository._validate_session_id(session_id)
     
     async def test_session_repository_redis_error_handling(self, session_repository, mock_redis_client):
         """Test SessionRepository handles Redis errors gracefully."""
-        session_id = "test-session-123"
+        session_id = "tiger-castle"
         
         # Mock Redis operation to raise an exception
-        mock_redis_client.get.side_effect = Exception("Redis connection error")
+        mock_redis_client.exists.side_effect = Exception("Redis connection error")
         
         # Repository should handle the error appropriately
         with pytest.raises(Exception) as exc_info:

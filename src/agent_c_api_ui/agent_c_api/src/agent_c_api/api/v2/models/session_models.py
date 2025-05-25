@@ -164,13 +164,17 @@ class SessionListResponse(BaseModel):
     """Paginated response for session listing
     
     This model provides a paginated list of sessions with metadata about
-    the pagination parameters. It allows clients to navigate through
-    large lists of sessions.
+    the pagination parameters. Supports both offset-based and cursor-based pagination.
     """
     items: List[SessionSummary] = Field(..., description="List of sessions in the current page")
-    total: int = Field(..., description="Total number of sessions across all pages")
+    total: Optional[int] = Field(None, description="Total number of sessions (may be None for cursor-based pagination)")
     limit: int = Field(..., description="Maximum number of sessions per page")
-    offset: int = Field(..., description="Current offset in the full result set")
+    offset: Optional[int] = Field(None, description="Current offset in the full result set (offset-based pagination)")
+    cursor: Optional[str] = Field(None, description="Current cursor position (cursor-based pagination)")
+    next_cursor: Optional[str] = Field(None, description="Cursor for the next page (None if no more pages)")
+    has_more: bool = Field(False, description="Whether there are more pages available")
+    sort_by: Optional[str] = Field(None, description="Field used for sorting")
+    sort_order: Optional[str] = Field(None, description="Sort order (asc/desc)")
     
     model_config = ConfigDict(
         json_schema_extra={
@@ -187,7 +191,7 @@ class SessionListResponse(BaseModel):
                         "is_active": True
                     },
                     {
-                        "id": "550e8400-e29b-41d4-a716-446655440001",
+                        "id": "apple-moon",
                         "model_id": "claude-3-opus",
                         "persona_id": "researcher",
                         "name": "Data Analysis",
@@ -199,7 +203,12 @@ class SessionListResponse(BaseModel):
                 ],
                 "total": 42,
                 "limit": 10,
-                "offset": 0
+                "offset": 0,
+                "cursor": null,
+                "next_cursor": null,
+                "has_more": false,
+                "sort_by": "last_activity",
+                "sort_order": "desc"
             }
         }
     )

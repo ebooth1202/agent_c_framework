@@ -176,7 +176,7 @@ class ClaudeChatAgent(BaseAgent):
                     )
                     if state['complete'] and state['stop_reason'] != 'tool_use':
                         return result
-
+                    delay = 1
                     messages = result
                 except (APITimeoutError, RateLimitError) as e:
                     # Exponential backoff handled in a helper method
