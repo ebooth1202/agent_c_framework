@@ -1,13 +1,15 @@
 import os
 import glob
-import json
 import threading
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional, cast
+from cachetools import TTLCache
+from typing import Any, Dict, List, Optional, cast, Tuple
 
+from agent_c.util.slugs import MnemonicSlugs
 from agent_c.toolsets.tool_set import Toolset
 from agent_c.models.persona_file import PersonaFile
+from agent_c_tools.tools.agent_assist.expiring_session_cache import AsyncExpiringCache
 from agent_c_tools.tools.think.prompt import ThinkSection
 from agent_c.prompting.prompt_builder import PromptBuilder
 from agent_c_tools.tools.workspace.tool import WorkspaceTools
@@ -17,11 +19,7 @@ from agent_c.prompting.basic_sections.persona import DynamicPersonaSection
 
 
 
-class PersonaOneshotBase(Toolset):
-    """
-    CssExplorerTools provides methods for working with CSS files in workspaces.
-    It enables efficient navigation and manipulation of large CSS files with component-based structure.
-    """
+class AgentAssistToolBase(Toolset):
     __vendor_agent_map = {
         "azure_openai": AzureGPTChatAgent,
         "openai": GPTChatAgent,
@@ -31,8 +29,10 @@ class PersonaOneshotBase(Toolset):
 
     def __init__(self, **kwargs: Any):
         if not 'name' in kwargs:
-            kwargs['name'] = 'persona_oneshot'
+            kwargs['name'] = 'aa'
         super().__init__( **kwargs)
+
+        self.session_cache = AsyncExpiringCache(default_ttl=kwargs.get('agent_session_ttl', 300))
         self.model_configs: Dict[str, Any] = self._load_model_config(kwargs.get('model_configs'))
         self.agent_cache: Dict[str, BaseAgent] = {}
         self._model_name = kwargs.get('persona_oneshot_model_name', 'claude-3-7-sonnet-latest')
@@ -67,9 +67,9 @@ class PersonaOneshotBase(Toolset):
 
         return agent_cls(model_name=model_config["id"], client=client,prompt_builder=PromptBuilder(sections=agent_sections))
 
-    async def __chat_params(self, persona: PersonaFile, agent: BaseAgent, session_id: Optional[str]) -> Dict[str, Any]:
+    async def __chat_params(self, persona: PersonaFile, agent: BaseAgent, user_session_id: Optional[str] = None, **opts) -> Dict[str, Any]:
         tool_params = {}
-        prompt_metadata = await self.__build_prompt_metadata(persona, session_id)
+        prompt_metadata = await self.__build_prompt_metadata(persona, user_session_id, **opts)
         chat_params = {"prompt_metadata": prompt_metadata, "output_format": 'raw',
                        "client_wants_cancel": self.client_wants_cancel, "tool_chest": self.tool_chest}
 
@@ -84,23 +84,76 @@ class PersonaOneshotBase(Toolset):
         return chat_params | tool_params | agent_params
 
     @staticmethod
-    async def __build_prompt_metadata(persona: PersonaFile, session_id: Optional[str] = None) -> Dict[str, Any]:
+    async def __build_prompt_metadata(persona: PersonaFile, user_session_id: Optional[str] = None, **opts) -> Dict[str, Any]:
         persona_props = persona.prompt_metadata if persona.prompt_metadata else {}
 
-        return {"session_id": session_id, "persona_prompt": persona.persona, "persona": persona.model_dump(exclude_none=True, exclude={'prompt_metadata'}),
-                "timestamp": datetime.now().isoformat()} | persona_props
+        return {"session_id": user_session_id, "persona_prompt": persona.persona, "persona": persona.model_dump(exclude_none=True, exclude={'prompt_metadata'}),
+                "timestamp": datetime.now().isoformat()} | persona_props | opts
 
-    async def persona_oneshot(self, user_message: str, persona: PersonaFile, session_id: Optional[str] = None) -> str:
+    async def persona_oneshot(self, user_message: str, persona: PersonaFile, user_session_id: Optional[str] = None) -> str:
         agent = self.agent_for_persona(persona)
-        chat_params = await self.__chat_params(persona, agent, session_id)
+        chat_params = await self.__chat_params(persona, agent, user_session_id)
         result: str = await agent.one_shot(user_message=user_message, **chat_params)
         return result
 
-    async def parallel_persona_oneshots(self, user_messages: List[str], persona: PersonaFile, session_id: Optional[str] = None) -> List[str]:
+    async def parallel_persona_oneshots(self, user_messages: List[str], persona: PersonaFile, user_session_id: Optional[str] = None) -> List[str]:
         agent = self.agent_for_persona(persona)
-        chat_params = await self.__chat_params(persona, agent, session_id)
+        chat_params = await self.__chat_params(persona, agent, user_session_id)
         result: List[str] = await agent.parallel_one_shots(inputs=user_messages, **chat_params)
         return result
+
+    async def persona_chat(self,
+                           user_message: str,
+                           persona: PersonaFile,
+                           user_session_id: Optional[str] = None,
+                           agent_session_id: Optional[str] = None,
+                           tool_context: Optional[Dict[str, Any]] = None,
+                           **additional_metadata) -> Tuple[str, List[Dict[str, Any]]]:
+        """
+        Chat with a persona, maintaining conversation history.
+        """
+        agent = self.agent_for_persona(persona)
+
+        if agent_session_id is None:
+            agent_session_id = MnemonicSlugs.generate_id_slug(2)
+
+        session = self.session_cache.get(agent_session_id)
+        if session is None:
+            metadata = { 'persona_name': persona.name }
+            session = { 'user_session_id': user_session_id,  'messages': [], 'metadata': metadata, 'created_at': datetime.now()}
+
+        chat_params = await self.__chat_params(persona, agent, user_session_id, parent_tool_context=tool_context, agent_session_id=agent_session_id, **additional_metadata)
+        chat_params['messages'] = session['messages']
+        messages = await agent.chat(user_message=user_message, **chat_params)
+
+        session['messages'] = messages
+        await self.session_cache.set(agent_session_id, session)
+
+        return agent_session_id, messages
+
+    def get_session_info(self, agent_session_id: str) -> Optional[Dict[str, Any]]:
+        return self.session_cache.get(agent_session_id)
+
+    def list_active_sessions(self, user_session_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """List all active sessions."""
+        active_ids = self.session_cache.list_active()
+        sessions = []
+
+        for agent_session_id in active_ids:
+            session = self.session_cache.get(agent_session_id)
+            if session:  # Just in case it expired between list and get
+                if session['user_session_id'] == user_session_id or user_session_id is None:
+                    sessions.append({
+                        'agent_session_id': agent_session_id,
+                        'user_session_id': session['user_session_id'],
+                        'created_at': session.get('created_at'),
+                        'last_activity': session.get('last_activity', session.get('created_at')),
+                        'message_count': len(session.get('messages', [])),
+                        'persona_name': session.get('metadata', {}).get('persona_name')
+                    })
+
+        return sessions
+
 
     @staticmethod
     def _load_model_config(data: dict[str, Any]) -> Dict[str, Any]:
@@ -138,7 +191,7 @@ class PersonaOneshotBase(Toolset):
         if persona_path.endswith('yaml'):
             persona = PersonaFile.from_yaml(file_contents)
         else:
-            persona = PersonaFile(persona=file_contents, model_id=self._model_name, uid=str(persona_path), agent_description='Legacy persona')
+            persona = PersonaFile(name=persona_name, persona=file_contents, model_id=self._model_name, uid=str(persona_path), agent_description='Legacy persona')
 
         return persona
 
