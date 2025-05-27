@@ -1,4 +1,5 @@
 import copy
+import logging
 import os
 import glob
 import yaml
@@ -46,12 +47,12 @@ class AgentConfigLoader(ConfigLoader):
             target_version: If set, migrate to this specific version instead of latest
         """
         super().__init__(config_path)
-
+        self.logger = logging.getLogger(__name__)
         if model_configs is None:
-            model_configs = ModelConfigurationLoader(config_path).load_from_json()
+            model_configs = ModelConfigurationLoader(self.config_path).load_from_json()
 
         self.model_configs = model_configs
-        self.agent_config_folder = Path(config_path).joinpath("personas")
+        self.agent_config_folder = Path(self.config_path).joinpath("agents")
         self._agent_config_cache: Dict[str, AgentConfiguration] = {}
         self._default_model = default_model
         self._auto_migrate = auto_migrate
@@ -65,12 +66,12 @@ class AgentConfigLoader(ConfigLoader):
         for file_path in glob.glob(os.path.join(self.agent_config_folder, "**/*.yaml"), recursive=True):
             self.load_agent_config_file(file_path)
 
-    def _load_agent(self, agent_config_name: str) -> AgentConfiguration:
+    def _load_agent(self, agent_config_name: str) -> Optional[AgentConfiguration]:
         """Load an agent configuration from disk."""
         agent_config_path = os.path.join(self.agent_config_folder, f"{agent_config_name}.yaml")
         return self.load_agent_config_file(agent_config_path)
 
-    def load_agent_config_file(self, agent_config_path) -> AgentConfiguration:
+    def load_agent_config_file(self, agent_config_path) -> Optional[AgentConfiguration]:
         if os.path.exists(agent_config_path):
             with open(agent_config_path, 'r') as file:
                 file_contents = file.read()
@@ -88,14 +89,23 @@ class AgentConfigLoader(ConfigLoader):
         if 'uid' not in data:
             data['uid'] = str(uuid.uuid5(uuid.NAMESPACE_DNS, file_contents))
 
+        # Transform agent_params to match completion parameter models
+        self._transform_agent_params(data)
+
         # Load appropriate version based on version field
         version = data.get('version', 1)
-        if version == 1:
-            config = AgentConfigurationV1(**data)
-        elif version == 2:
-            config = AgentConfigurationV2(**data)
-        else:
-            raise ValueError(f"Unsupported agent configuration version: {version}")
+        if version > 2:
+            self.logger.warning(f"Unsupported agent configuration version {version} in {agent_config_path}.")
+            return None
+
+        try:
+            if version == 1:
+                config = AgentConfigurationV1(**data)
+            else:
+                config = AgentConfigurationV2(**data)
+        except Exception as e:
+            self.logger.error(f"Failed to load agent configuration from {agent_config_path}: {e}", exc_info=True)
+            return None
 
         # Track original version
         original_version = self._get_version(config)
@@ -115,6 +125,35 @@ class AgentConfigLoader(ConfigLoader):
 
         self._agent_config_cache[config.name] = config
         return config
+
+    def _transform_agent_params(self, data: dict) -> None:
+        """Transform agent_params to match completion parameter model expectations."""
+        if 'agent_params' not in data or data['agent_params'] is None:
+            return
+            
+        agent_params = data['agent_params']
+        model_id = data.get('model_id', '')
+        
+        # Add model_name from top-level model_id if not present
+        if 'model_name' not in agent_params:
+            agent_params['model_name'] = model_id
+            
+        # Determine and add type field if not present
+        if 'type' not in agent_params:
+            # Infer type based on model_id and available fields
+            if 'claude' in model_id.lower():
+                if 'budget_tokens' in agent_params or 'max_searches' in agent_params:
+                    agent_params['type'] = 'claude_reasoning'
+                else:
+                    agent_params['type'] = 'claude_non_reasoning'
+            elif 'gpt' in model_id.lower() or 'o1' in model_id.lower():
+                if 'reasoning_effort' in agent_params:
+                    agent_params['type'] = 'g_p_t_reasoning'
+                else:
+                    agent_params['type'] = 'g_p_t_non_reasoning'
+            else:
+                # Default fallback - assume Claude non-reasoning
+                agent_params['type'] = 'claude_non_reasoning'
 
     def _get_version(self, config: AgentConfiguration) -> int:
         """Get version from a configuration object."""
@@ -145,6 +184,7 @@ class AgentConfigLoader(ConfigLoader):
                 agent_params=config.agent_params,
                 prompt_metadata=config.prompt_metadata,
                 persona=config.persona,
+                uid=config.uid,
                 category=["outdated"],
             )
 
@@ -157,6 +197,8 @@ class AgentConfigLoader(ConfigLoader):
         else:
             try:
                 agent_config = self._load_agent(agent_name)
+                if agent_config is None:
+                    raise Exception(f"Agent {agent_name} configuration could not be loaded.")
                 self._agent_config_cache[agent_name] = agent_config
             except FileNotFoundError:
                 raise Exception(f"Agent {agent_name} not found.")

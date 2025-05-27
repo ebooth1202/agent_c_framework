@@ -43,7 +43,7 @@ class AgentAssistToolBase(Toolset):
 
         self.persona_cache: Dict[str, AgentConfiguration] = {}
         self.workspace_tool: Optional[WorkspaceTools] = None
-        self.persona_dir: str = kwargs.get('persona_dir', 'personas')
+
 
     async def post_init(self):
         self.workspace_tool = cast(WorkspaceTools, self.tool_chest.available_tools.get('WorkspaceTools'))

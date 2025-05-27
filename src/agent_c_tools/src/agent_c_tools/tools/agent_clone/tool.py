@@ -9,7 +9,7 @@ from agent_c_tools.tools.agent_assist.base import AgentAssistToolBase
 from .prompt import AgentCloneSection
 
 class AgentCloneTools(AgentAssistToolBase):
-    def __init__(self, **kwargs: Any):
+    def __init__(self, **kwargs):
         if not 'name' in kwargs:
             kwargs['name'] = 'act'
 
