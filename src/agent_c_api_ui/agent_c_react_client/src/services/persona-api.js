@@ -5,18 +5,9 @@
  * - Retrieving available personas
  * - Getting persona details
  * - Managing persona settings for sessions
- * 
- * NOTE: This service now uses v2 API through adapter functions while
- * maintaining v1 API signatures for backward compatibility.
  */
 
-import {
-  getPersonas as getPersonasAdapter,
-  getPersonaDetails as getPersonaDetailsAdapter,
-  setSessionPersona as setSessionPersonaAdapter,
-  getSessionPersona as getSessionPersonaAdapter,
-  getPersonaCategories as getPersonaCategoriesAdapter
-} from './v1-api-adapters';
+import api from './api';
 
 /**
  * Get list of available personas
@@ -24,11 +15,9 @@ import {
  */
 export async function getPersonas() {
   try {
-    console.log('[persona-api] getPersonas() - using v2 adapter');
-    return await getPersonasAdapter();
+    return await api.get('/personas');
   } catch (error) {
-    console.error('[persona-api] getPersonas() failed:', error);
-    throw error;
+    throw api.processApiError(error, 'Failed to retrieve available personas');
   }
 }
 
@@ -39,11 +28,9 @@ export async function getPersonas() {
  */
 export async function getPersonaDetails(personaId) {
   try {
-    console.log('[persona-api] getPersonaDetails() - using v2 adapter for persona:', personaId);
-    return await getPersonaDetailsAdapter(personaId);
+    return await api.get(`/personas/${personaId}`);
   } catch (error) {
-    console.error('[persona-api] getPersonaDetails() failed for persona:', personaId, error);
-    throw error;
+    throw api.processApiError(error, 'Failed to retrieve persona details');
   }
 }
 
@@ -55,11 +42,11 @@ export async function getPersonaDetails(personaId) {
  */
 export async function setSessionPersona(sessionId, personaId) {
   try {
-    console.log('[persona-api] setSessionPersona() - using v2 adapter for session:', sessionId, 'persona:', personaId);
-    return await setSessionPersonaAdapter(sessionId, personaId);
+    return await api.put(`/session/${sessionId}/persona`, {
+      persona_id: personaId
+    });
   } catch (error) {
-    console.error('[persona-api] setSessionPersona() failed for session:', sessionId, 'persona:', personaId, error);
-    throw error;
+    throw api.processApiError(error, 'Failed to set session persona');
   }
 }
 
@@ -70,11 +57,9 @@ export async function setSessionPersona(sessionId, personaId) {
  */
 export async function getSessionPersona(sessionId) {
   try {
-    console.log('[persona-api] getSessionPersona() - using v2 adapter for session:', sessionId);
-    return await getSessionPersonaAdapter(sessionId);
+    return await api.get(`/session/${sessionId}/persona`);
   } catch (error) {
-    console.error('[persona-api] getSessionPersona() failed for session:', sessionId, error);
-    throw error;
+    throw api.processApiError(error, 'Failed to retrieve session persona');
   }
 }
 
@@ -84,11 +69,9 @@ export async function getSessionPersona(sessionId) {
  */
 export async function getPersonaCategories() {
   try {
-    console.log('[persona-api] getPersonaCategories() - using v2 adapter');
-    return await getPersonaCategoriesAdapter();
+    return await api.get('/personas/categories');
   } catch (error) {
-    console.error('[persona-api] getPersonaCategories() failed:', error);
-    throw error;
+    throw api.processApiError(error, 'Failed to retrieve persona categories');
   }
 }
 

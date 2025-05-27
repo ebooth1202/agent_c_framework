@@ -5,19 +5,9 @@
  * - Retrieving available models
  * - Getting model parameters and configurations
  * - Updating model settings
- * 
- * NOTE: This service now uses v2 API through adapter functions while
- * maintaining v1 API signatures for backward compatibility.
  */
 
-import {
-  getModels as getModelsAdapter,
-  getModelDetails as getModelDetailsAdapter,
-  getModelParameters as getModelParametersAdapter,
-  setSessionModel as setSessionModelAdapter,
-  updateModelParameters as updateModelParametersAdapter,
-  getDefaultParameters as getDefaultParametersAdapter
-} from './v1-api-adapters';
+import api from './api';
 
 /**
  * Get list of available models
@@ -25,11 +15,9 @@ import {
  */
 export async function getModels() {
   try {
-    console.log('[model-api] getModels() - using v2 adapter');
-    return await getModelsAdapter();
+    return await api.get('/models');
   } catch (error) {
-    console.error('[model-api] getModels() failed:', error);
-    throw error;
+    throw api.processApiError(error, 'Failed to retrieve available models');
   }
 }
 
@@ -40,11 +28,9 @@ export async function getModels() {
  */
 export async function getModelDetails(modelId) {
   try {
-    console.log('[model-api] getModelDetails() - using v2 adapter for model:', modelId);
-    return await getModelDetailsAdapter(modelId);
+    return await api.get(`/models/${modelId}`);
   } catch (error) {
-    console.error('[model-api] getModelDetails() failed for model:', modelId, error);
-    throw error;
+    throw api.processApiError(error, 'Failed to retrieve model details');
   }
 }
 
@@ -55,11 +41,9 @@ export async function getModelDetails(modelId) {
  */
 export async function getModelParameters(modelId) {
   try {
-    console.log('[model-api] getModelParameters() - using v2 adapter for model:', modelId);
-    return await getModelParametersAdapter(modelId);
+    return await api.get(`/models/${modelId}/parameters`);
   } catch (error) {
-    console.error('[model-api] getModelParameters() failed for model:', modelId, error);
-    throw error;
+    throw api.processApiError(error, 'Failed to retrieve model parameters');
   }
 }
 
@@ -72,11 +56,12 @@ export async function getModelParameters(modelId) {
  */
 export async function setSessionModel(sessionId, modelId, parameters = {}) {
   try {
-    console.log('[model-api] setSessionModel() - using v2 adapter for session:', sessionId, 'model:', modelId);
-    return await setSessionModelAdapter(sessionId, modelId, parameters);
+    return await api.put(`/session/${sessionId}/model`, {
+      model_id: modelId,
+      parameters
+    });
   } catch (error) {
-    console.error('[model-api] setSessionModel() failed for session:', sessionId, 'model:', modelId, error);
-    throw error;
+    throw api.processApiError(error, 'Failed to set session model');
   }
 }
 
@@ -88,11 +73,9 @@ export async function setSessionModel(sessionId, modelId, parameters = {}) {
  */
 export async function updateModelParameters(sessionId, parameters) {
   try {
-    console.log('[model-api] updateModelParameters() - using v2 adapter for session:', sessionId);
-    return await updateModelParametersAdapter(sessionId, parameters);
+    return await api.put(`/session/${sessionId}/parameters`, parameters);
   } catch (error) {
-    console.error('[model-api] updateModelParameters() failed for session:', sessionId, error);
-    throw error;
+    throw api.processApiError(error, 'Failed to update model parameters');
   }
 }
 
@@ -103,11 +86,9 @@ export async function updateModelParameters(sessionId, parameters) {
  */
 export async function getDefaultParameters(modelId) {
   try {
-    console.log('[model-api] getDefaultParameters() - using v2 adapter for model:', modelId);
-    return await getDefaultParametersAdapter(modelId);
+    return await api.get(`/models/${modelId}/default-parameters`);
   } catch (error) {
-    console.error('[model-api] getDefaultParameters() failed for model:', modelId, error);
-    throw error;
+    throw api.processApiError(error, 'Failed to retrieve default parameters');
   }
 }
 
