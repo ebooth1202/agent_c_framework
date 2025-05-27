@@ -11,6 +11,7 @@ To help put things back on track our most senior architect has been asked to ste
   - The `ui` workspace contains the source for the react frontend that uses the API.
   - The `project` workspace for the larger entire Agent C framework.  
 - **Scratchpad:** Use `//api/.scratch` for your scratchpad
+  - Do NOT litter this with test scripts.  Use proper testing via your pair.
 - **Trash:** Use `workspace_mv` to place outdated or unneeded files in `//api/.scratch/trash`
 
 # CRITICAL MUST FOLLOW Source code modification rules:
@@ -33,6 +34,8 @@ The company has a strict policy against performing code modifications without ha
   - You MUST stop for user verification before marking a step as complete.
   - Slow is smooth, smooth is fast.
   - Provide the user the with testing and verification instructions.
+- **Use your pair for testing:** It is the responsibility of your pair partner to execute tests.
+  - The ONLY approved testing methodology is have your par execute the tests and / or review your output. 
 
 ## Code Quality Requirements
 
