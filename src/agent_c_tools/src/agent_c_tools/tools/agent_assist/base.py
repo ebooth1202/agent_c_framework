@@ -3,9 +3,10 @@ import glob
 import threading
 
 from datetime import datetime
-from cachetools import TTLCache
 from typing import Any, Dict, List, Optional, cast, Tuple
 
+from agent_c.config.model_config_loader import ModelConfigurationLoader, ModelConfigurationFile
+from agent_c.config.agent_config_loader import AgentConfigLoader, CurrentAgentConfiguration
 from agent_c.util.slugs import MnemonicSlugs
 from agent_c.toolsets.tool_set import Toolset
 from agent_c.models.agent_config import AgentConfiguration
@@ -31,12 +32,12 @@ class AgentAssistToolBase(Toolset):
         if not 'name' in kwargs:
             kwargs['name'] = 'aa'
         super().__init__( **kwargs)
+        self.agent_loader = AgentConfigLoader()
 
         self.session_cache = AsyncExpiringCache(default_ttl=kwargs.get('agent_session_ttl', 300))
         self.model_configs: Dict[str, Any] = self._load_model_config(kwargs.get('model_configs'))
         self.agent_cache: Dict[str, BaseAgent] = {}
-        self._model_name = kwargs.get('persona_oneshot_model_name', 'claude-3-7-sonnet-latest')
-        self._personas_list: Optional[List[str]] = None
+        self._model_name = kwargs.get('agent_assist_model_name', 'claude-3-7-sonnet-latest')
 
         self.client_wants_cancel: threading.Event = threading.Event()
 
@@ -167,63 +168,9 @@ class AgentAssistToolBase(Toolset):
 
         return result
 
-    def _load_persona(self, persona_name: str = None) -> AgentConfiguration:
-        """
-        Load the persona prompt from a file based on the given persona name.
-
-        Returns:
-            str: Loaded persona prompt text.
-
-        Raises:
-            Exception: If the persona file cannot be loaded.
-        """
-        file_contents: Optional[str] = None
-        persona_path = os.path.join(self.persona_dir, f"{persona_name}.yaml")
-        if not os.path.exists(persona_path):
-            persona_path = os.path.join(self.persona_dir, f"{persona_name}.md")
-
-        if os.path.exists(persona_path):
-            with open(persona_path, 'r') as file:
-                file_contents = file.read()
-        else:
-            raise FileNotFoundError(f"Persona file {persona_path} not found.")
-
-        if persona_path.endswith('yaml'):
-            persona = AgentConfiguration.from_yaml(file_contents)
-        else:
-            persona = AgentConfiguration(name=persona_name, persona=file_contents, model_id=self._model_name, uid=str(persona_path), agent_description='Legacy persona')
-
-        return persona
 
     @property
     def personas_list(self) -> List[str]:
-        """
-        Get a list of available personas.
+        return self.agent_loader.agent_names
 
-        Returns:
-            List[str]: List of persona names.
-        """
-        if self._personas_list is None:
-            self._personas_list = self._load_personas_list()
-
-        return self._personas_list
-
-    def _load_personas_list(self) -> List[str]:
-        new_style = [os.path.relpath(file_path, self.persona_dir).removesuffix('.yaml')
-                     for file_path in glob.glob(os.path.join(self.persona_dir, "**/*.yaml"), recursive=True)]
-        old_style = [os.path.relpath(file_path, self.persona_dir).removesuffix('.md')
-                     for file_path in glob.glob(os.path.join(self.persona_dir, "**/*.md"), recursive=True)]
-        return new_style + old_style
-
-    def _fetch_persona(self, persona: str = None) -> AgentConfiguration:
-        if persona in self.persona_cache:
-            persona_prompt = self.persona_cache[persona]
-        else:
-            try:
-                persona_prompt = self._load_persona(persona)
-                self.persona_cache[persona] = persona_prompt
-            except FileNotFoundError:
-                raise Exception(f"Persona {persona} not found.")
-
-        return persona_prompt
 

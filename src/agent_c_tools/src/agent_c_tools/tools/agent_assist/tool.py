@@ -34,7 +34,7 @@ class AgentAssistTools(AgentAssistToolBase):
     async def oneshot(self, **kwargs) -> str:
         request: str = kwargs.get('request')
         try:
-            persona = self._load_persona(kwargs.get('persona_id'))
+            persona = self.agent_loader.catalog[kwargs.get('persona_id')]
         except FileNotFoundError:
             return f"Error: Persona {kwargs.get('persona_id')} not found in {self.persona_dir}."
 
@@ -66,7 +66,7 @@ class AgentAssistTools(AgentAssistToolBase):
         agent_session_id: Optional[str] = kwargs.get('session_id', None)
 
         try:
-            persona = self._load_persona(kwargs.get('persona_id'))
+            persona = self.agent_loader.catalog[kwargs.get('persona_id')]
         except FileNotFoundError:
             return f"Error: Persona {kwargs.get('persona_id')} not found in {self.persona_dir}."
 
@@ -86,7 +86,7 @@ class AgentAssistTools(AgentAssistToolBase):
     )
     async def load_persona(self, **kwargs) -> str:
         try:
-            return self._load_persona(kwargs.get('persona_id')).to_yaml()
+            return self.agent_loader.catalog[kwargs.get('persona_id')].to_yaml()
         except FileNotFoundError:
             return f"Error: Persona {kwargs.get('persona_id')} not found in {self.persona_dir}."
 

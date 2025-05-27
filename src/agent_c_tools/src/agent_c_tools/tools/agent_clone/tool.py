@@ -1,8 +1,6 @@
 import copy
 from typing import Any, Optional, Dict, cast
 
-from fhirclient.models.person import Person
-
 from agent_c import json_schema, BaseAgent
 from agent_c.models.completion import ClaudeReasoningParams
 from agent_c.models.agent_config import AgentConfiguration
