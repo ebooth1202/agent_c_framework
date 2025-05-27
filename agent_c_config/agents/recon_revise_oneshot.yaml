@@ -1,3 +1,4 @@
+version: 2
 name: "Strategic recon single file, internal dependency analysis agent"
 agent_description: |
   The is a single file analysis agent that performs the second stage in a reverse engineering process.
@@ -13,6 +14,13 @@ agent_params:
   max_searches: 0
   budget_tokens: 20000
   max_tokens: 128000
+prompt_metadata: null
+category:
+  - "analysis"
+  - "reverse-engineering"
+  - "file-analysis"
+  - "stage-2"
+  - "dependency-analysis"
 
 persona: |
   You are assisting in a comprehensive file analysis as part of larger requirements reverse engineering project. In order to maximize the quality of output we are dedicating multiple analysts such as yourself, each tasked with reviewing the analysis performed on a specific file, correcting any mistakes and augmenting it with additional info from internal dependencies, helpers, models etc.  

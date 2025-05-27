@@ -43,30 +43,30 @@ class AgentAssistToolBase(Toolset):
 
         self.persona_cache: Dict[str, AgentConfiguration] = {}
         self.workspace_tool: Optional[WorkspaceTools] = None
-        self.persona_dir: str = kwargs.get('persona_dir', 'personas')
+
 
     async def post_init(self):
         self.workspace_tool = cast(WorkspaceTools, self.tool_chest.available_tools.get('WorkspaceTools'))
 
-    def agent_for_persona(self, persona: AgentConfiguration):
-        if persona.name in self.agent_cache:
-            return self.agent_cache[persona.model_id]
+    def runtime_for_agent(self, agent_config: AgentConfiguration):
+        if agent_config.name in self.agent_cache:
+            return self.agent_cache[agent_config.model_id]
         else:
-            self.agent_cache[persona.name] = self._agent_for_persona(persona)
-            return self.agent_cache[persona.name]
+            self.agent_cache[agent_config.name] = self._runtime_for_agent(agent_config)
+            return self.agent_cache[agent_config.name]
 
-    def _agent_for_persona(self, persona: AgentConfiguration) -> BaseAgent:
-        model_config = self.model_configs[persona.model_id]
-        agent_cls = self.__vendor_agent_map[model_config["vendor"]]
+    def _runtime_for_agent(self, agent_config: AgentConfiguration) -> BaseAgent:
+        model_config = self.model_configs[agent_config.model_id]
+        runtime_cls = self.__vendor_agent_map[model_config["vendor"]]
 
-        auth_info = persona.agent_params.auth.model_dump() if persona.agent_params.auth is not None else  {}
-        client = agent_cls.client(**auth_info)
-        if "ThinkTools" in persona.tools:
+        auth_info = agent_config.agent_params.auth.model_dump() if agent_config.agent_params.auth is not None else  {}
+        client = runtime_cls.client(**auth_info)
+        if "ThinkTools" in agent_config.tools:
             agent_sections = [ThinkSection(), DynamicPersonaSection()]
         else:
             agent_sections = [DynamicPersonaSection()]
 
-        return agent_cls(model_name=model_config["id"], client=client,prompt_builder=PromptBuilder(sections=agent_sections))
+        return runtime_cls(model_name=model_config["id"], client=client,prompt_builder=PromptBuilder(sections=agent_sections))
 
     async def __chat_params(self, persona: AgentConfiguration, agent: BaseAgent, user_session_id: Optional[str] = None, **opts) -> Dict[str, Any]:
         tool_params = {}
@@ -91,29 +91,29 @@ class AgentAssistToolBase(Toolset):
         return {"session_id": user_session_id, "persona_prompt": persona.persona, "persona": persona.model_dump(exclude_none=True, exclude={'prompt_metadata'}),
                 "timestamp": datetime.now().isoformat()} | persona_props | opts
 
-    async def persona_oneshot(self, user_message: str, persona: AgentConfiguration, user_session_id: Optional[str] = None) -> str:
-        agent = self.agent_for_persona(persona)
+    async def agent_oneshot(self, user_message: str, persona: AgentConfiguration, user_session_id: Optional[str] = None) -> str:
+        agent = self.runtime_for_agent(persona)
         chat_params = await self.__chat_params(persona, agent, user_session_id)
         result: str = await agent.one_shot(user_message=user_message, **chat_params)
         return result
 
-    async def parallel_persona_oneshots(self, user_messages: List[str], persona: AgentConfiguration, user_session_id: Optional[str] = None) -> List[str]:
-        agent = self.agent_for_persona(persona)
+    async def parallel_agent_oneshots(self, user_messages: List[str], persona: AgentConfiguration, user_session_id: Optional[str] = None) -> List[str]:
+        agent = self.runtime_for_agent(persona)
         chat_params = await self.__chat_params(persona, agent, user_session_id)
         result: List[str] = await agent.parallel_one_shots(inputs=user_messages, **chat_params)
         return result
 
-    async def persona_chat(self,
-                           user_message: str,
-                           persona: AgentConfiguration,
-                           user_session_id: Optional[str] = None,
-                           agent_session_id: Optional[str] = None,
-                           tool_context: Optional[Dict[str, Any]] = None,
-                           **additional_metadata) -> Tuple[str, List[Dict[str, Any]]]:
+    async def agent_chat(self,
+                         user_message: str,
+                         persona: AgentConfiguration,
+                         user_session_id: Optional[str] = None,
+                         agent_session_id: Optional[str] = None,
+                         tool_context: Optional[Dict[str, Any]] = None,
+                         **additional_metadata) -> Tuple[str, List[Dict[str, Any]]]:
         """
         Chat with a persona, maintaining conversation history.
         """
-        agent = self.agent_for_persona(persona)
+        agent = self.runtime_for_agent(persona)
 
         if agent_session_id is None:
             agent_session_id = MnemonicSlugs.generate_id_slug(2)

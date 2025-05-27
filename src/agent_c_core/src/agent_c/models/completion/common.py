@@ -13,14 +13,7 @@ ApiAuthInfo: TypeAlias = (SimpleAuthInfo | AzureAuthInfo | BedrockAuthInfo)
 
 
 class CommonCompletionParams(BaseModel):
-    type: str = Field(..., description="The type of the completion params.")
-    model: str = Field(..., description="The name of the model to use for the interaction")
+    model_name: str = Field(..., description="The name of the model to use for the interaction")
     max_tokens: Optional[int] = Field(None, description="The maximum number of tokens to generate, defaults to backend defaults")
     user_name: Optional[str] = Field(None, description="The name of the user interacting with the agent")
     auth: Optional[ApiAuthInfo] = Field(None, description="The vendor API key or whatnot to use for the agent")
-
-    def __init__(self, **data: Any) -> None:
-        if 'type' not in data:
-            data['type'] = to_snake_case(self.__class__.__name__.removesuffix('CompletionParams'))
-
-        super().__init__(**data)

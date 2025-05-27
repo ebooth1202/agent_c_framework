@@ -15,6 +15,7 @@ class AgentConfigurationV1(BaseModel):
     agent_params: Optional[CompletionParams] = Field(None, description="Parameters for the interaction with the agent")
     prompt_metadata: Optional[dict[str, Any]] = Field(None, description="Metadata for the prompt, such as versioning or author information")
     persona: str = Field(..., description="Persona prompt of the persona defining the agent's behavior")
+    uid: Optional[str] = Field(None, description="Unique identifier for the configuration")
 
 
 class AgentConfigurationV2(BaseModel):
@@ -27,6 +28,7 @@ class AgentConfigurationV2(BaseModel):
     agent_params: Optional[CompletionParams] = Field(None, description="Parameters for the interaction with the agent")
     prompt_metadata: Optional[dict[str, Any]] = Field(None, description="Metadata for the prompt")
     persona: str = Field(..., description="Persona prompt of the persona defining the agent's behavior")
+    uid: Optional[str] = Field(None, description="Unique identifier for the configuration")
 
     category: List[str] = Field(default_factory=list, description="A list of categories this agent belongs to from most to least general" )
 

@@ -210,7 +210,7 @@ class ToolChest:
                     
                     self.logger.info(f"Created toolset instance {name}")
                 except Exception as e:
-                    self.logger.warning(f"Error creating toolset {name}: {str(e)}")
+                    self.logger.exception(f"Error creating toolset {name}: {str(e)}", stacklevel=2)
                     success = False
             
             activation_stack.remove(name)

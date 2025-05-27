@@ -24,9 +24,9 @@ class AgentAssistTools(AgentAssistToolBase):
                 'description': 'A question, or request for the agent.',
                 'required': True
             },
-            'persona_id': {
+            'agent_id': {
                 'type': 'string',
-                'description': 'The ID of the persona to use. This is a string that will be used to load the agent from the persona directory.',
+                'description': 'The ID of the agent to make a request of.',
                 'required': True
             },
         }
@@ -34,11 +34,11 @@ class AgentAssistTools(AgentAssistToolBase):
     async def oneshot(self, **kwargs) -> str:
         request: str = kwargs.get('request')
         try:
-            persona = self.agent_loader.catalog[kwargs.get('persona_id')]
+            agent = self.agent_loader.catalog[kwargs.get('agent_id')]
         except FileNotFoundError:
-            return f"Error: Persona {kwargs.get('persona_id')} not found in {self.persona_dir}."
+            return f"Error: Agent {kwargs.get('agent_id')} not found in catalog."
 
-        return await self.persona_oneshot(request, persona)
+        return await self.agent_oneshot(request, agent)
 
     @json_schema(
         'Begin or resume a chat session with an agent assistant. The return value will be the final output from the agent along with the agent session ID.',
@@ -48,9 +48,9 @@ class AgentAssistTools(AgentAssistToolBase):
                 'description': 'The message .',
                 'required': True
             },
-            'persona_id': {
+            'agent_id': {
                 'type': 'string',
-                'description': 'The ID of the persona to use. This is a string that will be used to load the agent from the persona directory.',
+                'description': 'The ID of the agent to chat with.',
                 'required': True
             },
             'session_id': {
@@ -66,29 +66,29 @@ class AgentAssistTools(AgentAssistToolBase):
         agent_session_id: Optional[str] = kwargs.get('session_id', None)
 
         try:
-            persona = self.agent_loader.catalog[kwargs.get('persona_id')]
+            agent = self.agent_loader.catalog[kwargs.get('agent_id')]
         except FileNotFoundError:
-            return f"Error: Persona {kwargs.get('persona_id')} not found in {self.persona_dir}."
+            return f"Error: Persona {kwargs.get('agent_id')} not found in catalog."
 
-        agent_session_id, messages = await self.persona_chat(message, persona, tool_context['session_id'],  agent_session_id, tool_context)
+        agent_session_id, messages = await self.agent_chat(message, agent, tool_context['session_id'], agent_session_id, tool_context)
 
         return f"Agent Session ID: {agent_session_id}"
 
     @json_schema(
-        'Load an agent persona as a YAML string for you to review',
+        'Load an agent agent as a YAML string for you to review',
         {
-            'persona_id': {
+            'agent_id': {
                 'type': 'string',
-                'description': 'The ID of the persona to use. This is a string that will be used to load the agent from the persona directory.',
+                'description': 'The ID of the agent to load.',
                 'required': True
             },
         }
     )
     async def load_persona(self, **kwargs) -> str:
         try:
-            return self.agent_loader.catalog[kwargs.get('persona_id')].to_yaml()
+            return self.agent_loader.catalog[kwargs.get('agent_id')].to_yaml()
         except FileNotFoundError:
-            return f"Error: Persona {kwargs.get('persona_id')} not found in {self.persona_dir}."
+            return f"Error: Agent {kwargs.get('agent_id')} not found in catalog."
 
 # Register the toolset
 Toolset.register(AgentAssistTools, required_tools=['WorkspaceTools'])

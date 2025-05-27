@@ -15,7 +15,7 @@ class ConfigLoader:
             self.config_path = self._locate_config_path()
 
     @staticmethod
-    def _locate_config_path(self):
+    def _locate_config_path():
         current_dir = os.getcwd()
         while True:
             if os.path.exists(os.path.join(current_dir, "agent_c_config")):
