@@ -78,8 +78,8 @@ class AgentAssistToolBase(Toolset):
             tool_params = self.tool_chest.get_inference_data(persona.tools, agent.tool_format)
 
         agent_params = persona.agent_params.model_dump(exclude_none=True)
-        if "model" not in agent_params:
-            agent_params["model"] = persona.model_id
+        if "model_name" not in agent_params:
+            agent_params["model_name"] = persona.model_id
 
         return chat_params | tool_params | agent_params
 

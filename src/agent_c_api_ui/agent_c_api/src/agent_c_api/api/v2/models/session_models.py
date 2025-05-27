@@ -204,9 +204,9 @@ class SessionListResponse(BaseModel):
                 "total": 42,
                 "limit": 10,
                 "offset": 0,
-                "cursor": null,
-                "next_cursor": null,
-                "has_more": false,
+                "cursor": None,
+                "next_cursor": None,
+                "has_more": None,
                 "sort_by": "last_activity",
                 "sort_order": "desc"
             }
