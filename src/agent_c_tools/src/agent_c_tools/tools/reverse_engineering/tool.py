@@ -73,7 +73,7 @@ class ReverseEngineeringTools(AgentAssistToolBase):
         ws = self.workspace_tool.find_workspace_by_name(workspace)
         persona_data['persona'] = persona_data['persona'].replace('[workspace]', workspace).replace('[workspace_tree]', await ws.tree(7,3))
         new_persona = AgentConfiguration.model_validate(persona_data)
-        return await self.persona_oneshot(query, new_persona)
+        return await self.agent_oneshot(query, new_persona)
 
 
     async def _pass_one(self, workspace, files: list[str], batch_size: int = 2) -> list[str]:
@@ -90,13 +90,13 @@ class ReverseEngineeringTools(AgentAssistToolBase):
                 paths = ",".join([f"//{workspace.name}/{file}" for file in batch])
                 await self._raise_text_delta_event(content=f"\nProcessing files (pass 1): {paths}... ")
                 true_batch = [await self.__try_explain_code(f"//{workspace.name}/{file}") for file in batch]
-                results = await self.parallel_persona_oneshots(user_messages=true_batch, persona="recon_oneshot")
+                results = await self.parallel_agent_oneshots(user_messages=true_batch, persona="recon_oneshot")
                 await self._raise_text_delta_event(content=f"\nfinished processing files (pass 1): {paths}")
                 pass_one_results.extend(results)
         else:
             for file in files:
                 await self._raise_text_delta_event(content=f"\nProcessing file (pass 1): {file}... ")
-                result = await self.persona_oneshot(user_message=await self.__try_explain_code(f"//{workspace.name}/{file}"), persona="recon_oneshot")
+                result = await self.agent_oneshot(user_message=await self.__try_explain_code(f"//{workspace.name}/{file}"), persona="recon_oneshot")
                 await self._raise_text_delta_event(content=f"\nDone processing file (pass 1): {file}")
                 pass_one_results.append(result)
 
@@ -111,8 +111,8 @@ class ReverseEngineeringTools(AgentAssistToolBase):
 
         for file in files:
             await self._raise_text_delta_event(content=f"\nProcessing file (pass 1): {file}... ")
-            result = await self.persona_oneshot(user_message=f"//{workspace.name}/{file}",
-                                                persona="recon_revise_oneshot")
+            result = await self.agent_oneshot(user_message=f"//{workspace.name}/{file}",
+                                              persona="recon_revise_oneshot")
             pass_two_results.append(result)
 
         self.agent.streaming_callback = orig_callback
