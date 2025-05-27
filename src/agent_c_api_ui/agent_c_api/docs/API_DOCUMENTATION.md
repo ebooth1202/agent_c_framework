@@ -2,9 +2,32 @@
 
 This document provides comprehensive documentation for the Agent C API.
 
-## Base URL
+## API Versions
 
-All endpoints are prefixed with `/api/v1`.
+### V1 API (Current)
+All V1 endpoints are prefixed with `/api/v1`. This is the current stable API.
+
+### V2 API (New Architecture)
+The V2 API (`/api/v2`) introduces a modernized architecture with:
+- **Redis-based session management** with external Redis dependency
+- **Enhanced health monitoring** with Kubernetes-compatible endpoints
+- **Improved dependency injection** patterns
+- **Better error handling** and graceful degradation
+
+For V2 API documentation, see:
+- [V2 API Documentation](v2_api_documentation.md)
+- [Redis Architecture](redis_architecture.md)
+- [Environment Configuration](environment_configuration.md)
+
+## Infrastructure Requirements
+
+### Redis Database
+The API requires an external Redis server for session management and caching:
+- **Redis 6.x or 7.x** recommended
+- **External management** required (Docker, cloud service, etc.)
+- **No embedded Redis** - must be provided as separate service
+
+See [Environment Configuration](environment_configuration.md) for Redis setup instructions.
 
 ## Overview
 
@@ -17,6 +40,18 @@ The Agent C API provides endpoints for managing:
 - File Operations
 - Personas
 - Interactions and Events
+
+## Health Monitoring
+
+The API provides comprehensive health monitoring endpoints:
+
+### V2 Health Endpoints
+- `GET /api/v2/health` - Main application health check
+- `GET /api/v2/health/ready` - Kubernetes readiness probe
+- `GET /api/v2/health/live` - Kubernetes liveness probe
+- `GET /api/v2/debug/health/redis` - Detailed Redis diagnostics
+
+See [Redis Architecture](redis_architecture.md) for detailed health monitoring information.
 
 ## Authentication
 

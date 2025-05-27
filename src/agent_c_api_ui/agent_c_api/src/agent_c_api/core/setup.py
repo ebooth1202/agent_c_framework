@@ -49,34 +49,83 @@ def create_application(router: APIRouter, **kwargs) -> FastAPI:
     async def lifespan(lifespan_app: FastAPI):
         # Import Redis configuration at runtime to avoid circular imports
         from agent_c_api.config.redis_config import RedisConfig
+        from agent_c_api.config.env_config import settings
         
-        # Start Redis if configured to manage lifecycle
-        if settings.MANAGE_REDIS_LIFECYCLE:
-            logger.info("Starting Redis server (managed by application)")
-            redis_started = await RedisConfig.start_redis_if_needed()
-            if not redis_started:
-                logger.error("Failed to start Redis server, application may not function correctly")
-                
-        # Check if Redis is available, regardless of whether we're managing it
-        redis_available = await RedisConfig.ping_redis()
-        if not redis_available:
-            logger.warning("Redis server is not available, some features may not work properly")
+        # Validate Redis connection (no longer managing server lifecycle)
+        logger.info("🔍 Validating Redis connection and configuration...")
+        redis_status = await RedisConfig.validate_connection()
+        
+        # Store Redis status in app state for health checks
+        lifespan_app.state.redis_status = redis_status
+        
+        if redis_status["connected"]:
+            logger.info(f"✅ Redis connection successful at {redis_status['host']}:{redis_status['port']} (DB: {redis_status['db']})")
+            
+            # Log detailed server information
+            if redis_status["server_info"]:
+                info = redis_status["server_info"]
+                logger.info(f"📊 Redis Server Details:")
+                logger.info(f"   Version: {info.get('redis_version', 'unknown')}")
+                logger.info(f"   Mode: {info.get('redis_mode', 'unknown')}")
+                logger.info(f"   Memory Usage: {info.get('used_memory_human', 'unknown')}")
+                logger.info(f"   Connected Clients: {info.get('connected_clients', 'unknown')}")
+                logger.info(f"   Uptime: {info.get('uptime_in_seconds', 'unknown')} seconds")
+            
+            # Log connection pool configuration
+            logger.info(f"🔧 Redis Connection Config:")
+            logger.info(f"   Host: {settings.REDIS_HOST}")
+            logger.info(f"   Port: {settings.REDIS_PORT}")
+            logger.info(f"   Database: {settings.REDIS_DB}")
+            logger.info(f"   Connection Timeout: {getattr(settings, 'REDIS_CONNECT_TIMEOUT', 10)}s")
+            logger.info(f"   Socket Timeout: {getattr(settings, 'REDIS_SOCKET_TIMEOUT', 10)}s")
+            
+            # All Redis-dependent features will be available
+            logger.info("🚀 All Redis-dependent features are available:")
+            logger.info("   - Session management and persistence")
+            logger.info("   - User data storage")
+            logger.info("   - Chat history caching")
+            logger.info("   - Real-time session state")
+            
         else:
-            logger.info("Successfully connected to Redis server")
+            logger.warning(f"⚠️ Redis connection failed: {redis_status['error']}")
+            logger.warning(f"🔧 Connection attempted to: {redis_status['host']}:{redis_status['port']} (DB: {redis_status['db']})")
+            logger.warning("")
+            logger.warning("🚨 IMPACT: The following features will be affected:")
+            logger.warning("   - Session persistence (sessions will be memory-only)")
+            logger.warning("   - User data storage (limited functionality)")
+            logger.warning("   - Chat history (no persistence between restarts)")
+            logger.warning("   - Real-time session state (degraded performance)")
+            logger.warning("")
+            logger.warning("💡 To resolve: Ensure Redis server is running and accessible")
+            logger.warning(f"   Command: redis-server --port {redis_status['port']}")
+            logger.warning(f"   Or check connection settings in environment configuration")
         
         # Shared AgentManager instance.
+        logger.info("🤖 Initializing Agent Manager...")
         lifespan_app.state.agent_manager = UItoAgentBridgeManager()
+        logger.info("✅ Agent Manager initialized successfully")
         
         # Initialize FastAPICache with InMemoryBackend
+        logger.info("💾 Initializing FastAPI Cache...")
         FastAPICache.init(InMemoryBackend(), prefix="agent_c_api_cache")
-        logger.info("FastAPICache initialized with InMemoryBackend")
+        logger.info("✅ FastAPICache initialized with InMemoryBackend")
+        
+        # Log startup completion
+        logger.info("🎉 Application startup completed successfully")
+        logger.info(f"📍 Redis Status: {'Connected' if redis_status['connected'] else 'Disconnected'}")
 
         yield
 
-        # Shutdown: Stop Redis if we started it
-        if settings.MANAGE_REDIS_LIFECYCLE:
-            logger.info("Stopping Redis server")
-            await RedisConfig.stop_redis_if_needed()
+        # Shutdown: Close Redis client connections
+        logger.info("🔄 Application shutdown initiated...")
+        logger.info("🔌 Closing Redis connections...")
+        try:
+            await RedisConfig.close_client()
+            logger.info("✅ Redis connections closed successfully")
+        except Exception as e:
+            logger.error(f"❌ Error during Redis cleanup: {e}")
+        
+        logger.info("👋 Application shutdown completed")
 
 
     # Set up comprehensive OpenAPI metadata from settings (or fallback defaults)

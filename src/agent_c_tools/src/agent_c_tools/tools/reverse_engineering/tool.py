@@ -3,13 +3,13 @@ import itertools
 from typing import Any
 
 from agent_c.toolsets.tool_set import Toolset
-from agent_c.models.persona_file import PersonaFile
+from agent_c.models.agent_config import AgentConfiguration
 from agent_c.toolsets.json_schema import json_schema
-from agent_c_tools.tools.persona_oneshot.base import PersonaOneshotBase
+from agent_c_tools.tools.agent_assist.base import AgentAssistToolBase
 from agent_c_tools.tools.reverse_engineering.prompt import RevEngSection
 
 
-class ReverseEngineeringTools(PersonaOneshotBase):
+class ReverseEngineeringTools(AgentAssistToolBase):
     """
     CssExplorerTools provides methods for working with CSS files in workspaces.
     It enables efficient navigation and manipulation of large CSS files with component-based structure.
@@ -72,7 +72,7 @@ class ReverseEngineeringTools(PersonaOneshotBase):
         persona_data = self._load_persona("recon_answers_oneshot").model_dump()
         ws = self.workspace_tool.find_workspace_by_name(workspace)
         persona_data['persona'] = persona_data['persona'].replace('[workspace]', workspace).replace('[workspace_tree]', await ws.tree(7,3))
-        new_persona = PersonaFile.model_validate(persona_data)
+        new_persona = AgentConfiguration.model_validate(persona_data)
         return await self.persona_oneshot(query, new_persona)
 
 

@@ -99,6 +99,7 @@ class ClaudeChatAgent(BaseAgent):
             kwargs['tool_sections'] = inference_data['sections']
 
         messages = await self._construct_message_array(**kwargs)
+        kwargs['prompt_metadata']['model_id'] = model_name
         (tool_context, prompt_context) = await self._render_contexts(**kwargs)
         sys_prompt: str = prompt_context["system_prompt"]
 
@@ -176,7 +177,7 @@ class ClaudeChatAgent(BaseAgent):
                     )
                     if state['complete'] and state['stop_reason'] != 'tool_use':
                         return result
-
+                    delay = 1
                     messages = result
                 except (APITimeoutError, RateLimitError) as e:
                     # Exponential backoff handled in a helper method

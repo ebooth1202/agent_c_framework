@@ -57,7 +57,7 @@ class ToolChest:
         
         # Get available toolset classes (support both new and old parameter names)
         self.__available_toolset_classes = kwargs.get('available_toolset_classes', 
-                                                    kwargs.get('tool_classes', Toolset.tool_registry))
+                                                      kwargs.get('tool_classes', Toolset.tool_registry))
         
         # Get essential toolset names
         self.__essential_toolsets = kwargs.get('essential_toolsets', [])

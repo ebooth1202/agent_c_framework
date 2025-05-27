@@ -10,6 +10,7 @@ class ThinkSection(PromptSection):
                     "You MUST use the `think` tool to reflect "
                     "on new information and record your thoughts in the following situations:\n"
                     "- Reading through unfamiliar code\n"
+                    "- Reading plans from the planning tool\n"
                     "- Planning a complex refactoring or enhancement\n"
                     "- Analyzing potential bugs and their root causes\n"
                     "- After reading scratchpad content.\n"

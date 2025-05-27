@@ -6,8 +6,7 @@ import structlog
 
 from agent_c_api.api.dependencies import get_agent_manager
 from agent_c_api.core.agent_manager import UItoAgentBridgeManager
-from agent_c_api.config.redis_config import RedisConfig
-from agent_c_api.core.repositories.session_repository import SessionRepository as SessionRepositoryClass
+from agent_c_api.core.repositories import get_session_repository, SessionRepository
 
 from agent_c_api.api.v2.models.session_models import (
     SessionCreate, 
@@ -21,18 +20,20 @@ from agent_c_api.api.v2.models.session_models import (
 )
 
 # Session service dependency
-async def get_session_service(request: Request):
+async def get_session_service(
+    request: Request,
+    session_repository: SessionRepository = Depends(get_session_repository)
+):
     """Dependency to get the session service
     
     Args:
         request: The FastAPI request object
+        session_repository: SessionRepository dependency
         
     Returns:
         SessionService: Initialized session service
     """
     agent_manager = get_agent_manager(request)
-    redis_client = await RedisConfig.get_redis_client()
-    session_repository = SessionRepositoryClass(redis_client)
     return SessionService(agent_manager=agent_manager, session_repository=session_repository)
 
 class SessionService:

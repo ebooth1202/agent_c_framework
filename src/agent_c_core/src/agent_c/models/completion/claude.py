@@ -21,6 +21,6 @@ class ClaudeReasoningParams(CommonCompletionParams):
 
     def __init__(self, **data: Any) -> None:
         if 'model_name' not in data:
-            data['model_name'] = os.environ.get("CLAUDE_REASONING_INTERACTION_MODEL", "claude-3-7-sonnet-latest")
+            data['model_name'] = os.environ.get("CLAUDE_REASONING_INTERACTION_MODEL", "claude-4-sonnet-latest")
 
         super().__init__(**data)

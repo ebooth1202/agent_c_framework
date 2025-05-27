@@ -11,6 +11,43 @@ The Agent C API v2 provides a clean, RESTful interface for interacting with Agen
 3. **Versioned Interface** - Clear API versioning with `/api/v{version}` prefix
 4. **Comprehensive Documentation** - Complete OpenAPI/Swagger specifications
 5. **Async/Streaming Support** - Real-time event delivery for chat interactions
+6. **External Dependencies** - Redis-based architecture with external service management
+7. **Health Monitoring** - Comprehensive health checks and operational visibility
+
+### Infrastructure Requirements
+
+#### Redis Database
+The V2 API requires an external Redis server for session management and data persistence:
+
+- **Redis 6.x or 7.x** recommended for optimal performance
+- **External Management** - Redis must be provided as a separate service
+- **No Embedded Redis** - The API no longer starts or manages Redis servers
+- **Production Ready** - Designed for containerized and cloud deployments
+
+**Quick Redis Setup:**
+```bash
+# Docker (Development)
+docker run -d --name redis -p 6379:6379 redis:7-alpine
+
+# Environment Configuration
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_DB=0
+```
+
+For detailed Redis setup and configuration, see:
+- [Redis Architecture Documentation](redis_architecture.md)
+- [Environment Configuration Guide](environment_configuration.md)
+
+#### Health Monitoring
+The V2 API provides comprehensive health monitoring:
+
+- `GET /api/v2/health` - Main application health check
+- `GET /api/v2/health/ready` - Kubernetes readiness probe  
+- `GET /api/v2/health/live` - Kubernetes liveness probe
+- `GET /api/v2/debug/health/redis` - Detailed Redis diagnostics
+
+These endpoints provide operational visibility and support for monitoring systems and container orchestration platforms.
 
 ## Base URL
 
@@ -18,6 +55,36 @@ All API URLs referenced in the documentation are relative to the base URL:
 
 ```
 https://your-agent-c-instance.com/api/v2/
+```
+
+## Service Dependencies
+
+### Redis Connectivity
+Before using the API, ensure Redis connectivity:
+
+```bash
+# Test Redis connection
+curl http://your-agent-c-instance.com/api/v2/health
+
+# Detailed Redis diagnostics
+curl http://your-agent-c-instance.com/api/v2/debug/health/redis
+```
+
+**Expected Health Response:**
+```json
+{
+  "status": "healthy",
+  "timestamp": 1234567890.123,
+  "version": "2.0",
+  "services": {
+    "redis": {
+      "status": "healthy",
+      "connected": true,
+      "host": "localhost",
+      "port": 6379
+    }
+  }
+}
 ```
 
 ## Authentication

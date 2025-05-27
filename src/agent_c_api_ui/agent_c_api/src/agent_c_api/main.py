@@ -1,7 +1,6 @@
 import time
 import uvicorn
 import logging
-from redis import asyncio as aioredis
 from dotenv import load_dotenv
 from fastapi.logger import logger as fastapi_logger
 from agent_c_api.core.util.logging_utils import LoggingManager
@@ -45,53 +44,12 @@ for sub_logger in sub_loggers:
 logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
 logging.getLogger("uvicorn.error").setLevel(logging.ERROR)
 
-# Redis connection instance
-redis_client = None
-
-async def init_redis() -> None:
-    """Initialize Redis connection."""
-    global redis_client
-    logger.info("Initializing Redis connection...")
-
-    try:
-        redis_client = await aioredis.Redis(
-            host=settings.REDIS_HOST,
-            port=settings.REDIS_PORT,
-            db=settings.REDIS_DB,
-            username=settings.REDIS_USERNAME,
-            password=settings.REDIS_PASSWORD,
-            encoding="utf8",
-            decode_responses=True
-        )
-        await redis_client.ping()
-        logger.info("Redis connection established successfully")
-    except Exception as e:
-        logger.error(f"Failed to initialize Redis: {str(e)}")
-        raise
-
-async def close_redis() -> None:
-    """Close Redis connection."""
-    global redis_client
-    if redis_client:
-        logger.info("Closing Redis connection...")
-        await redis_client.close()
-        logger.info("Redis connection closed")
-
 # Create and configure the FastAPI application
 logger.info("Creating API application")
 _timing["app_creation_start"] = time.time()
 
 # Create the application with our router
 app = create_application(router=router, settings=settings)
-
-# Add startup and shutdown events for Redis
-@app.on_event("startup")
-async def startup_event():
-    await init_redis()
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    await close_redis()
 
 _timing["app_creation_end"] = time.time()
 logger.info(f"Registered {len(app.routes)} routes")
