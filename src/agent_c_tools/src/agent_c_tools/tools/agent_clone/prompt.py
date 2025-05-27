@@ -21,7 +21,7 @@ class AgentCloneSection(PromptSection):
         super().__init__(template=TEMPLATE, required=True, name="Agent Clone Toolset", render_section_header=True, **data)
 
     @property_bag_item
-    async def aa_sessions(self, prompt_context: Dict[str, Any]) -> str:
+    async def clone_sessions(self, prompt_context: Dict[str, Any]) -> str:
         session_id = prompt_context.get('user_session_id', prompt_context.get('session_id', None))
         agent_sessions: List[Dict[str, Any]] = self.tool.list_active_sessions(session_id)
         if len(agent_sessions):

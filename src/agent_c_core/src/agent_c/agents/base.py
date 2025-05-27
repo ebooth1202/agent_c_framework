@@ -60,8 +60,9 @@ class BaseAgent:
         self.max_delay: int = kwargs.get("max_delay", 120)
         self.concurrency_limit: int = kwargs.get("concurrency_limit", 3)
         self.semaphore: Semaphore = asyncio.Semaphore(self.concurrency_limit)
-        self.tool_chest: ToolChest = kwargs.get("tool_chest")
-        self.tool_chest.agent = self
+        self.tool_chest: Optional[ToolChest] = kwargs.get("tool_chest", None)
+        if self.tool_chest is not None:
+            self.tool_chest.agent = self
         self.prompt: Optional[str] = kwargs.get("prompt", None)
         self.prompt_builder: Optional[PromptBuilder] = kwargs.get("prompt_builder", None)
         self.schemas: Union[None, List[Dict[str, Any]]] = None
@@ -128,7 +129,7 @@ class BaseAgent:
     async def one_shot(self, **kwargs) -> str:
         """For text in, text out processing. without chat"""
         messages = await self.chat(**kwargs)
-        return messages[-1]["content"][0]["text"]
+        return messages[-1]["content"][-1]["text"]
 
     async def parallel_one_shots(self, inputs: List[str], **kwargs):
         """Run multiple one-shot tasks in parallel"""
@@ -200,7 +201,7 @@ class BaseAgent:
             try:
                 await self.streaming_callback(event)
             except Exception as e:
-                logging.exception(
+                self.logger.exception(
                     f"Streaming callback error for event: {e}. Event Type Found: {event.type if hasattr(event, 'type') else None}")
                 # Log this callback error to session log
                 if hasattr(self, 'session_logger') and self.session_logger:

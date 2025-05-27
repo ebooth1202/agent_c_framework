@@ -3,7 +3,7 @@ from typing import Any, Optional, Dict, cast, List
 
 from agent_c import json_schema, BaseAgent
 from agent_c.models.completion import ClaudeReasoningParams
-from agent_c.models.agent_config import AgentConfiguration
+from agent_c.models.agent_config import AgentConfiguration, AgentConfigurationV2
 from agent_c.toolsets.tool_set import Toolset
 from agent_c_tools.tools.agent_assist.base import AgentAssistToolBase
 from .prompt import AgentCloneSection
@@ -50,18 +50,16 @@ class AgentCloneTools(AgentAssistToolBase):
         request: str = kwargs.get('request')
         process_context: Optional[str] = kwargs.get('process_context')
         tool_context: Dict[str, Any] = kwargs.get('tool_context')
-        clone_persona: str = tool_context['custom_persona']
+        clone_persona: str = tool_context['persona_prompt']
 
         if process_context:
             enhanced_persona = f"{self.clone_preamble}\n\n# Clone Process Context and Instructions\n\n{process_context}\n\n# Base Agent Persona\n\n{clone_persona}"
         else:
             enhanced_persona = f"{self.clone_preamble}\n\n# Base Agent Persona\n\n{clone_persona}"
         
-        tools = copy.deepcopy(self.tool_chest.active_tools().keys())
-        if 'AgentCloneTools' in tools:
-            tools.remove('AgentCloneTools')
+        tools = [tool for tool in self.tool_chest.active_tools.keys() if tool != 'AgentCloneTools']
 
-        agent = AgentConfiguration(name="Agent Clone", model_id=tool_context['model_id'], agent_description="A clone of the user agent",
+        agent = AgentConfigurationV2(name="Agent Clone", model_id=tool_context['model_id'], agent_description="A clone of the user agent",
                                      agent_params=ClaudeReasoningParams(model_name=tool_context['model_id'], budget_tokens=20000),
                                      persona=enhanced_persona, tools=tools)
         return await self.agent_oneshot(request, agent)
@@ -91,18 +89,15 @@ class AgentCloneTools(AgentAssistToolBase):
         process_context: Optional[str] = kwargs.get('process_context')
         tool_context: Dict[str, Any] = kwargs.get('tool_context')
         agent_session_id: Optional[str] = kwargs.get('agent_session_id', None)
-        clone_persona: str = tool_context['custom_persona']
+        clone_persona: str = tool_context['persona_prompt']
 
         if process_context:
             enhanced_persona = f"{self.clone_preamble}\n\n# Clone Process Context and Instructions\n\n{process_context}\n\n# Base Agent Persona\n\n{clone_persona}"
         else:
             enhanced_persona = f"{self.clone_preamble}\n\n# Base Agent Persona\n\n{clone_persona}"
         
-        tools: List[str] = copy.deepcopy(self.tool_chest.active_tools().keys())
-        if 'AgentCloneTools' in tools:
-            tools.remove('AgentCloneTools')
-
-        agent = AgentConfiguration(name="Agent Clone", model_id=tool_context['model_id'], agent_description="A clone of the user agent",
+        tools: List[str] = [tool for tool in self.tool_chest.active_tools.keys() if tool != 'AgentCloneTools']
+        agent = AgentConfigurationV2(name="Agent Clone", model_id=tool_context['model_id'], agent_description="A clone of the user agent",
                                      agent_params=ClaudeReasoningParams(model_name=tool_context['model_id'], budget_tokens=20000),
                                      persona=enhanced_persona, tools=tools)
 
