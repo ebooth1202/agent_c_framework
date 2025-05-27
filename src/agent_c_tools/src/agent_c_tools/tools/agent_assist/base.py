@@ -36,7 +36,7 @@ class AgentAssistToolBase(Toolset):
 
         self.session_cache = AsyncExpiringCache(default_ttl=kwargs.get('agent_session_ttl', 300))
         self.model_configs: Dict[str, Any] = self._load_model_config(kwargs.get('model_configs'))
-        self.agent_cache: Dict[str, BaseAgent] = {}
+        self.runtime_cache: Dict[str, BaseAgent] = {}
         self._model_name = kwargs.get('agent_assist_model_name', 'claude-3-7-sonnet-latest')
 
         self.client_wants_cancel: threading.Event = threading.Event()
@@ -49,11 +49,11 @@ class AgentAssistToolBase(Toolset):
         self.workspace_tool = cast(WorkspaceTools, self.tool_chest.available_tools.get('WorkspaceTools'))
 
     def runtime_for_agent(self, agent_config: AgentConfiguration):
-        if agent_config.name in self.agent_cache:
-            return self.agent_cache[agent_config.model_id]
+        if agent_config.name in self.runtime_cache:
+            return self.runtime_cache[agent_config.name]
         else:
-            self.agent_cache[agent_config.name] = self._runtime_for_agent(agent_config)
-            return self.agent_cache[agent_config.name]
+            self.runtime_cache[agent_config.name] = self._runtime_for_agent(agent_config)
+            return self.runtime_cache[agent_config.name]
 
     def _runtime_for_agent(self, agent_config: AgentConfiguration) -> BaseAgent:
         model_config = self.model_configs[agent_config.model_id]
@@ -72,10 +72,11 @@ class AgentAssistToolBase(Toolset):
         tool_params = {}
         prompt_metadata = await self.__build_prompt_metadata(persona, user_session_id, **opts)
         chat_params = {"prompt_metadata": prompt_metadata, "output_format": 'raw',
+                       "streaming_callback": self.streaming_callback,
                        "client_wants_cancel": self.client_wants_cancel, "tool_chest": self.tool_chest}
 
         if len(persona.tools):
-            self.tool_chest.initialize_toolsets(persona.tools)
+            await self.tool_chest.initialize_toolsets(persona.tools)
             tool_params = self.tool_chest.get_inference_data(persona.tools, agent.tool_format)
 
         agent_params = persona.agent_params.model_dump(exclude_none=True)
