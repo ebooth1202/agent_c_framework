@@ -273,7 +273,8 @@ class AgentBridge:
             'tool_cache': self.tool_cache,
             'session_manager': self.session_manager,
             'workspaces': self.workspaces,
-            'streaming_callback': self.consolidated_streaming_callback
+            'streaming_callback': self.consolidated_streaming_callback,
+            'model_configs': MODELS_CONFIG
         }
         # Reinitialize just the tool chest
         await self.tool_chest.set_active_toolsets(self.additional_toolsets, tool_opts=tool_opts)
