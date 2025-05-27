@@ -241,14 +241,14 @@ class BaseWorkspace:
         Returns:
              Any: The metadata value or and empty dict.
         """
-        key_parts = key.removeprefix('meta/').split('/')
+        key_parts = key.removeprefix('/').removeprefix('meta/').split('/')
         value = self._metadata
         if len(key_parts):
             for part in key_parts:
                 if isinstance(value, dict) and part in value:
                     value = value[part]
                 else:
-                    value = {}
+                    value = None
 
         # create a new dictionary without keys that start with '_'
         if not include_hidden and isinstance(value, dict):
