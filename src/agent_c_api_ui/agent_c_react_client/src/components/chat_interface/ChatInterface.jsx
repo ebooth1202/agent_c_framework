@@ -16,7 +16,7 @@ import { processMessageStream } from './utils/MessageStreamProcessor';
 import { cn } from "@/lib/utils";
 
 // Import our refactored components
-import MessagesList from './MessagesList';
+import VirtualizedMessagesList from './VirtualizedMessagesList';
 import StatusBar from './StatusBar';
 import CollapsibleOptions from './CollapsibleOptions';
 import ChatInputArea from './ChatInputArea';
@@ -739,17 +739,13 @@ const ChatInterfaceInner = ({
       <Card className="chat-interface-card">
         {/* Messages list with ScrollArea for better scrolling experience */}
         <CardContent className="chat-interface-messages flex-grow p-0 overflow-hidden">
-          <ScrollArea className="h-full w-full" type="auto">
-            <div className="p-2">
-              <MessagesList 
-                messages={messages}
-                expandedToolCallMessages={expandedToolCallMessages}
-                toggleToolCallExpansion={toggleToolCallExpansion}
-                toolSelectionInProgress={toolSelectionState.inProgress}
-                toolSelectionName={toolSelectionState.toolName}
-              />
-            </div>
-          </ScrollArea>
+          <VirtualizedMessagesList 
+            messages={messages}
+            expandedToolCallMessages={expandedToolCallMessages}
+            toggleToolCallExpansion={toggleToolCallExpansion}
+            toolSelectionInProgress={toolSelectionState.inProgress}
+            toolSelectionName={toolSelectionState.toolName}
+          />
         </CardContent>
         
         {/* Options Panel - conditionally rendered between messages and input */}
