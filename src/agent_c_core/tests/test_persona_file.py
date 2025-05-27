@@ -1,13 +1,13 @@
 import unittest
 
-from agent_c.models.persona_file import PersonaFile
+from agent_c.models.agent_config import AgentConfiguration
 
 
 class TestPersonaFile(unittest.TestCase):
     def test_to_yaml(self):
-        """Test exporting PersonaFile to YAML."""
-        # Create a sample PersonaFile instance
-        persona_file = PersonaFile(
+        """Test exporting AgentConfiguration to YAML."""
+        # Create a sample AgentConfiguration instance
+        persona_file = AgentConfiguration(
             persona="You are a helpful assistant.",
             model_id="claude-3-sonnet",
             tools=["ThinkTools", "WorkspaceTools"],
@@ -31,7 +31,7 @@ class TestPersonaFile(unittest.TestCase):
         self.assertIn("- WorkspaceTools", yaml_str)
 
     def test_from_yaml(self):
-        """Test creating PersonaFile from a YAML string."""
+        """Test creating AgentConfiguration from a YAML string."""
         # Create a YAML string
         yaml_str = """
         persona: You are a helpful assistant.
@@ -44,8 +44,8 @@ class TestPersonaFile(unittest.TestCase):
         max_tokens: 64000
         """
         
-        # Create PersonaFile from YAML
-        persona_file = PersonaFile.from_yaml(yaml_str)
+        # Create AgentConfiguration from YAML
+        persona_file = AgentConfiguration.from_yaml(yaml_str)
         
         # Validate the parsed object
         self.assertEqual(persona_file.persona, "You are a helpful assistant.")
@@ -57,8 +57,8 @@ class TestPersonaFile(unittest.TestCase):
 
     def test_round_trip(self):
         """Test round-trip conversion (to YAML and back)."""
-        # Create original PersonaFile
-        original = PersonaFile(
+        # Create original AgentConfiguration
+        original = AgentConfiguration(
             persona="You are a coding assistant.",
             model_id="gpt-4",
             tools=["ThinkTools"],
@@ -69,7 +69,7 @@ class TestPersonaFile(unittest.TestCase):
         
         # Convert to YAML and back
         yaml_str = original.to_yaml()
-        roundtrip = PersonaFile.from_yaml(yaml_str)
+        roundtrip = AgentConfiguration.from_yaml(yaml_str)
         
         # Verify all fields match
         self.assertEqual(original.persona, roundtrip.persona)
@@ -88,8 +88,8 @@ class TestPersonaFile(unittest.TestCase):
         model_id: gpt-3.5-turbo
         """
         
-        # Create PersonaFile from minimal YAML
-        persona_file = PersonaFile.from_yaml(yaml_str)
+        # Create AgentConfiguration from minimal YAML
+        persona_file = AgentConfiguration.from_yaml(yaml_str)
         
         # Validate required fields
         self.assertEqual(persona_file.persona, "You are a minimal assistant.")

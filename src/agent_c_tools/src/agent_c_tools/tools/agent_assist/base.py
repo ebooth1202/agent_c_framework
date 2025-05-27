@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, cast, Tuple
 
 from agent_c.util.slugs import MnemonicSlugs
 from agent_c.toolsets.tool_set import Toolset
-from agent_c.models.persona_file import PersonaFile
+from agent_c.models.agent_config import AgentConfiguration
 from agent_c_tools.tools.agent_assist.expiring_session_cache import AsyncExpiringCache
 from agent_c_tools.tools.think.prompt import ThinkSection
 from agent_c.prompting.prompt_builder import PromptBuilder
@@ -40,21 +40,21 @@ class AgentAssistToolBase(Toolset):
 
         self.client_wants_cancel: threading.Event = threading.Event()
 
-        self.persona_cache: Dict[str, PersonaFile] = {}
+        self.persona_cache: Dict[str, AgentConfiguration] = {}
         self.workspace_tool: Optional[WorkspaceTools] = None
         self.persona_dir: str = kwargs.get('persona_dir', 'personas')
 
     async def post_init(self):
         self.workspace_tool = cast(WorkspaceTools, self.tool_chest.available_tools.get('WorkspaceTools'))
 
-    def agent_for_persona(self, persona: PersonaFile):
+    def agent_for_persona(self, persona: AgentConfiguration):
         if persona.name in self.agent_cache:
             return self.agent_cache[persona.model_id]
         else:
             self.agent_cache[persona.name] = self._agent_for_persona(persona)
             return self.agent_cache[persona.name]
 
-    def _agent_for_persona(self, persona: PersonaFile) -> BaseAgent:
+    def _agent_for_persona(self, persona: AgentConfiguration) -> BaseAgent:
         model_config = self.model_configs[persona.model_id]
         agent_cls = self.__vendor_agent_map[model_config["vendor"]]
 
@@ -67,7 +67,7 @@ class AgentAssistToolBase(Toolset):
 
         return agent_cls(model_name=model_config["id"], client=client,prompt_builder=PromptBuilder(sections=agent_sections))
 
-    async def __chat_params(self, persona: PersonaFile, agent: BaseAgent, user_session_id: Optional[str] = None, **opts) -> Dict[str, Any]:
+    async def __chat_params(self, persona: AgentConfiguration, agent: BaseAgent, user_session_id: Optional[str] = None, **opts) -> Dict[str, Any]:
         tool_params = {}
         prompt_metadata = await self.__build_prompt_metadata(persona, user_session_id, **opts)
         chat_params = {"prompt_metadata": prompt_metadata, "output_format": 'raw',
@@ -84,19 +84,19 @@ class AgentAssistToolBase(Toolset):
         return chat_params | tool_params | agent_params
 
     @staticmethod
-    async def __build_prompt_metadata(persona: PersonaFile, user_session_id: Optional[str] = None, **opts) -> Dict[str, Any]:
+    async def __build_prompt_metadata(persona: AgentConfiguration, user_session_id: Optional[str] = None, **opts) -> Dict[str, Any]:
         persona_props = persona.prompt_metadata if persona.prompt_metadata else {}
 
         return {"session_id": user_session_id, "persona_prompt": persona.persona, "persona": persona.model_dump(exclude_none=True, exclude={'prompt_metadata'}),
                 "timestamp": datetime.now().isoformat()} | persona_props | opts
 
-    async def persona_oneshot(self, user_message: str, persona: PersonaFile, user_session_id: Optional[str] = None) -> str:
+    async def persona_oneshot(self, user_message: str, persona: AgentConfiguration, user_session_id: Optional[str] = None) -> str:
         agent = self.agent_for_persona(persona)
         chat_params = await self.__chat_params(persona, agent, user_session_id)
         result: str = await agent.one_shot(user_message=user_message, **chat_params)
         return result
 
-    async def parallel_persona_oneshots(self, user_messages: List[str], persona: PersonaFile, user_session_id: Optional[str] = None) -> List[str]:
+    async def parallel_persona_oneshots(self, user_messages: List[str], persona: AgentConfiguration, user_session_id: Optional[str] = None) -> List[str]:
         agent = self.agent_for_persona(persona)
         chat_params = await self.__chat_params(persona, agent, user_session_id)
         result: List[str] = await agent.parallel_one_shots(inputs=user_messages, **chat_params)
@@ -104,7 +104,7 @@ class AgentAssistToolBase(Toolset):
 
     async def persona_chat(self,
                            user_message: str,
-                           persona: PersonaFile,
+                           persona: AgentConfiguration,
                            user_session_id: Optional[str] = None,
                            agent_session_id: Optional[str] = None,
                            tool_context: Optional[Dict[str, Any]] = None,
@@ -167,7 +167,7 @@ class AgentAssistToolBase(Toolset):
 
         return result
 
-    def _load_persona(self, persona_name: str = None) -> PersonaFile:
+    def _load_persona(self, persona_name: str = None) -> AgentConfiguration:
         """
         Load the persona prompt from a file based on the given persona name.
 
@@ -189,9 +189,9 @@ class AgentAssistToolBase(Toolset):
             raise FileNotFoundError(f"Persona file {persona_path} not found.")
 
         if persona_path.endswith('yaml'):
-            persona = PersonaFile.from_yaml(file_contents)
+            persona = AgentConfiguration.from_yaml(file_contents)
         else:
-            persona = PersonaFile(name=persona_name, persona=file_contents, model_id=self._model_name, uid=str(persona_path), agent_description='Legacy persona')
+            persona = AgentConfiguration(name=persona_name, persona=file_contents, model_id=self._model_name, uid=str(persona_path), agent_description='Legacy persona')
 
         return persona
 
@@ -215,7 +215,7 @@ class AgentAssistToolBase(Toolset):
                      for file_path in glob.glob(os.path.join(self.persona_dir, "**/*.md"), recursive=True)]
         return new_style + old_style
 
-    def _fetch_persona(self, persona: str = None) -> PersonaFile:
+    def _fetch_persona(self, persona: str = None) -> AgentConfiguration:
         if persona in self.persona_cache:
             persona_prompt = self.persona_cache[persona]
         else:

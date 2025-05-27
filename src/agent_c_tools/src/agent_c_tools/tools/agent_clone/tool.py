@@ -1,10 +1,11 @@
+import copy
 from typing import Any, Optional, Dict, cast
 
 from fhirclient.models.person import Person
 
 from agent_c import json_schema, BaseAgent
 from agent_c.models.completion import ClaudeReasoningParams
-from agent_c.models.persona_file import PersonaFile
+from agent_c.models.agent_config import AgentConfiguration
 from agent_c.toolsets.tool_set import Toolset
 from agent_c_tools.tools.agent_assist.base import AgentAssistToolBase
 from .prompt import AgentCloneSection
@@ -59,9 +60,11 @@ class AgentCloneTools(AgentAssistToolBase):
         tool_context: Dict[str, Any] = kwargs.get('tool_context')
         agent_session_id: Optional[str] = kwargs.get('agent_session_id', None)
         clone_persona: str = tool_context['custom_persona']
-        persona = PersonaFile(name="Agent Clone", model_id=tool_context['model_id'], agent_description="A clone of the user agent",
-                              agent_params=ClaudeReasoningParams(model_name=tool_context['model_id'], budget_tokens=20000),
-                              persona=clone_persona)
+        tools = copy.deepcopy(self.tool_chest.active_tools().keys())
+
+        persona = AgentConfiguration(name="Agent Clone", model_id=tool_context['model_id'], agent_description="A clone of the user agent",
+                                     agent_params=ClaudeReasoningParams(model_name=tool_context['model_id'], budget_tokens=20000),
+                                     persona=clone_persona)
 
         agent_session_id, messages = await self.persona_chat(message, persona, tool_context['session_id'],  agent_session_id, tool_context)
 
@@ -83,5 +86,5 @@ class AgentCloneTools(AgentAssistToolBase):
         except FileNotFoundError:
             return f"Error: Persona {kwargs.get('persona_id')} not found in {self.persona_dir}."
 
-# Register the toolset
-Toolset.register(AgentAssistTools, required_tools=['WorkspaceTools'])
+
+Toolset.register(AgentCloneTools, required_tools=['WorkspaceTools'])

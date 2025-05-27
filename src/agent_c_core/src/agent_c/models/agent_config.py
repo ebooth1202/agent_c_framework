@@ -6,7 +6,7 @@ from agent_c.models.base import BaseModel
 from agent_c.models.completion import CompletionParams
 
 
-class PersonaFile(BaseModel):
+class AgentConfiguration(BaseModel):
     name: str = Field(..., description="Name of the persona file")
     model_id: str = Field(..., description="ID of the LLM model being used by the agent")
     agent_description: Optional[str] = Field(None, description="A description of the agent's purpose and capabilities")
@@ -18,23 +18,7 @@ class PersonaFile(BaseModel):
     persona_file_version: Optional[int] = Field(1, description="Version of the persona file format")
 
     model_config = ConfigDict(
-        protected_namespaces=(),
-        json_schema_extra={
-            "example": {
-                "name": "Example Coding Assistant",
-                "model_id": "claude-3-7-sonnet-latest",
-                "agent_description": "This is just an example",
-                "persona": "You are a helpful coding assistant.",
-                 # Using ClaudeReasoningParams fields
-                 "agent_params": {
-                    "type": "claude_reasoning",
-                    "budget_tokens": 20000,
-                    "max_searches": 3,
-                    "auth": { "api_key": "your_api_key" }
-                },
-                "tools": ["ThinkTools", "WorkspaceTools", "CssExplorerTools", "XmlExplorerTools"]
-            }
-        }
+        protected_namespaces=()
     )
 
     # YAML serialization methods
@@ -45,17 +29,17 @@ class PersonaFile(BaseModel):
             str: The model serialized as a YAML string.
         """
         data = self.model_dump(exclude_none=True, exclude={'uid'})
-        return yaml.dump(data, default_flow_style=False, sort_keys=False)
+        return yaml.dump(data, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
     @classmethod
-    def from_yaml(cls, yaml_str: str) -> 'PersonaFile':
+    def from_yaml(cls, yaml_str: str) -> 'AgentConfiguration':
         """Create a PersonaFile instance from a YAML string.
 
         Args:
             yaml_str (str): YAML string representing a PersonaFile.
 
         Returns:
-            PersonaFile: An instance created from the YAML string.
+            AgentConfiguration: An instance created from the YAML string.
         """
         data = yaml.safe_load(yaml_str)
         if 'uid' not in data:
