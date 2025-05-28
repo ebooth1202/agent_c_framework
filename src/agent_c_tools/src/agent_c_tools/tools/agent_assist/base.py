@@ -70,10 +70,12 @@ class AgentAssistToolBase(Toolset):
 
     async def __chat_params(self, persona: AgentConfiguration, agent: BaseAgent, user_session_id: Optional[str] = None, **opts) -> Dict[str, Any]:
         tool_params = {}
+        streaming_callback = opts['parent_tool_context']['streaming_callback'] if 'parent_tool_context' in opts else None
         prompt_metadata = await self.__build_prompt_metadata(persona, user_session_id, **opts)
         chat_params = {"prompt_metadata": prompt_metadata, "output_format": 'raw',
-                       "streaming_callback": self.streaming_callback,
-                       "client_wants_cancel": self.client_wants_cancel, "tool_chest": self.tool_chest}
+                       "streaming_callback": streaming_callback,
+                       "client_wants_cancel": self.client_wants_cancel, "tool_chest": self.tool_chest,
+                       "session_id": user_session_id}
 
         if len(persona.tools):
             await self.tool_chest.initialize_toolsets(persona.tools)
@@ -92,15 +94,17 @@ class AgentAssistToolBase(Toolset):
         return {"session_id": user_session_id, "persona_prompt": persona.persona, "persona": persona.model_dump(exclude_none=True, exclude={'prompt_metadata'}),
                 "timestamp": datetime.now().isoformat()} | persona_props | opts
 
-    async def agent_oneshot(self, user_message: str, persona: AgentConfiguration, user_session_id: Optional[str] = None) -> str:
+    async def agent_oneshot(self, user_message: str, persona: AgentConfiguration, user_session_id: Optional[str] = None,
+                            tool_context: Optional[Dict[str, Any]] = None, **additional_metadata) -> str:
         agent = self.runtime_for_agent(persona)
-        chat_params = await self.__chat_params(persona, agent, user_session_id)
+        chat_params = await self.__chat_params(persona, agent, user_session_id, parent_tool_context=tool_context, **additional_metadata)
         result: str = await agent.one_shot(user_message=user_message, **chat_params)
         return result
 
-    async def parallel_agent_oneshots(self, user_messages: List[str], persona: AgentConfiguration, user_session_id: Optional[str] = None) -> List[str]:
+    async def parallel_agent_oneshots(self, user_messages: List[str], persona: AgentConfiguration, user_session_id: Optional[str] = None,
+                                      tool_context: Optional[Dict[str, Any]] = None, **additional_metadata) -> str:
         agent = self.runtime_for_agent(persona)
-        chat_params = await self.__chat_params(persona, agent, user_session_id)
+        chat_params = await self.__chat_params(persona, agent, user_session_id, parent_tool_context=tool_context, **additional_metadata)
         result: List[str] = await agent.parallel_one_shots(inputs=user_messages, **chat_params)
         return result
 
