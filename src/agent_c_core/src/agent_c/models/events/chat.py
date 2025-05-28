@@ -42,7 +42,7 @@ class SystemMessageEvent(SessionEvent):
     Sent to notify the UI to display an entire message.
     """
     def __init__(self, **data):
-        super().__init__(type = "message", **data)
+        super().__init__(type = "system_message", **data)
 
     content: str = Field(..., description="The content of the message")
     format: str = Field("markdown", description="The format of the content, default is markdown")

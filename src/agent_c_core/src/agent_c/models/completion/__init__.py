@@ -1,4 +1,5 @@
-from typing import TypeAlias
+from typing import Annotated, Union
+from pydantic import Field
 
 from agent_c.models.completion.common import CommonCompletionParams
 from agent_c.models.completion.claude import (
@@ -10,9 +11,12 @@ from agent_c.models.completion.gpt import (
     GPTReasoningCompletionParams,
 )
 
-CompletionParams: TypeAlias = (
-    ClaudeNonReasoningParams
-    | ClaudeReasoningParams
-    | GPTNonReasoningCompletionParams
-    | GPTReasoningCompletionParams
-)
+CompletionParams = Annotated[
+    Union[
+        ClaudeNonReasoningParams,
+        ClaudeReasoningParams,
+        GPTNonReasoningCompletionParams,
+        GPTReasoningCompletionParams,
+    ],
+    Field(discriminator='type')
+]

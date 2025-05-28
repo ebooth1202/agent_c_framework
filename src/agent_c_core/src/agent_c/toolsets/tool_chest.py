@@ -210,7 +210,7 @@ class ToolChest:
                     
                     self.logger.info(f"Created toolset instance {name}")
                 except Exception as e:
-                    self.logger.warning(f"Error creating toolset {name}: {str(e)}")
+                    self.logger.exception(f"Error creating toolset {name}: {str(e)}", stacklevel=2)
                     success = False
             
             activation_stack.remove(name)
@@ -552,7 +552,7 @@ class ToolChest:
         # Collect OpenAI-format schemas from the specified toolsets
         openai_schemas = []
         for toolset in valid_toolsets:
-            openai_schemas.extend(toolset.tool_schemas())
+            openai_schemas.extend(toolset.tool_schemas)
         
         # Convert to requested format
         if tool_format.lower() == "claude":

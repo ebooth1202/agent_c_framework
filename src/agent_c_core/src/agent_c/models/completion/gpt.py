@@ -1,6 +1,6 @@
 import os
 from pydantic import Field
-from typing import Any, Dict, List, Union, Optional
+from typing import Any, Dict, List, Union, Optional, Literal
 from agent_c.models.completion.common import CommonCompletionParams
 
 
@@ -8,6 +8,7 @@ class GPTNonReasoningCompletionParams(CommonCompletionParams):
     """
     Vendor specific parameters for interacting with the GPT agent.
     """
+    type: Literal['g_p_t_non_reasoning'] = Field('g_p_t_non_reasoning', description="The type of the completion params.")
     tool_choice: Optional[Union[str, dict]] = Field(None, description="The tool choice to use for the interaction, See OpenAI API docs for details")
     voice:  Optional[str] = None
     presence_penalty: Optional[float] = Field(0, description="Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far, increasing the model's likelihood to talk about new topics.")
@@ -23,6 +24,7 @@ class GPTNonReasoningCompletionParams(CommonCompletionParams):
         super().__init__(**data)
 
 class GPTReasoningCompletionParams(CommonCompletionParams):
+    type: Literal['g_p_t_reasoning'] = Field('g_p_t_reasoning', description="The type of the completion params.")
     tool_choice: Optional[Union[str, dict]] = Field(None, description="The tool choice to use for the interaction, See OpenAI API docs for details")
     voice:  Optional[str] = None
     presence_penalty: Optional[float] = Field(0, description="Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far, increasing the model's likelihood to talk about new topics.")

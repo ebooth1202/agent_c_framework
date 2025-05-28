@@ -22,7 +22,7 @@ class ModelConfigurationLoader(ConfigLoader):
     def __init__(self, config_path: Optional[str] = None):
         super().__init__(config_path)
 
-        self.config_file_path = Path(config_path).joinpath("model_config.json")
+        self.config_file_path = Path(config_path).joinpath("model_configs.json")
         self._cached_config: Optional[ModelConfigurationFile] = None
         self.load_from_json()
     

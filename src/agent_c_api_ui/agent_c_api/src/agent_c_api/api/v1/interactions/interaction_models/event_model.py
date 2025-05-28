@@ -8,17 +8,34 @@ class ReplayControlRequest(BaseModel):
     position: Optional[str] = None  # timestamp to seek to
 
 class EventType(str, Enum):
-    SYSTEM_PROMPT = "system_prompt"
-    COMPLETION_OPTIONS = "completion_options"
+    # Core chat events
     INTERACTION = "interaction"
     COMPLETION = "completion"
-    THOUGHT_DELTA = "thought_delta"
-    TEXT_DELTA = "text_delta"
-    TOOL_SELECT_DELTA = "tool_select_delta"
-    TOOL_CALL = "tool_call"
+    MESSAGE = "message"
+    SYSTEM_MESSAGE = "system_message"
     HISTORY = "history"
-    USER_REQUEST = "user_request"
-    RENDER_MEDIA = "render_media" # used by tool calls to emit events.
+    
+    # Text streaming events
+    TEXT_DELTA = "text_delta"
+    THOUGHT_DELTA = "thought_delta"
+    
+    # Tool events
+    TOOL_CALL = "tool_call"
+    TOOL_SELECT_DELTA = "tool_select_delta"
+    
+    # Media events
+    RENDER_MEDIA = "render_media"
+    
+    # Audio events
+    AUDIO_DELTA = "audio_delta"
+    AUDIO_INPUT_BEGIN = "audio_input_begin"
+    AUDIO_INPUT_DELTA = "audio_input_delta"
+    AUDIO_INPUT_END = "audio_input_end"
+    
+    # Legacy/deprecated events (keeping for backward compatibility)
+    SYSTEM_PROMPT = "system_prompt"  # deprecated: use SYSTEM_MESSAGE
+    COMPLETION_OPTIONS = "completion_options"  # deprecated: not used in core
+    USER_REQUEST = "user_request"  # deprecated: not used in core
 
 class Event(BaseModel):
     # whenever you do a model_dump here, ensure you do mode='json', so that datetime objects are serialized

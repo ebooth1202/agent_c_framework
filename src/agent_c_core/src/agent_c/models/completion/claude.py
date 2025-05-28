@@ -1,12 +1,13 @@
 import os
 from pydantic import Field
-from typing import Any, Optional
+from typing import Any, Optional, Literal
 from agent_c.models.completion.common import CommonCompletionParams
 
 class ClaudeNonReasoningParams(CommonCompletionParams):
     """
     Vendor specific parameters for interacting with the Claude agent.
     """
+    type: Literal['claude_non_reasoning'] = Field('claude_non_reasoning', description="The type of the completion params.")
     temperature: Optional[float] = Field(None, description="The temperature to use for the interaction, do not combine with top_p")
 
     def __init__(self, **data: Any) -> None:
@@ -16,6 +17,7 @@ class ClaudeNonReasoningParams(CommonCompletionParams):
         super().__init__(**data)
 
 class ClaudeReasoningParams(CommonCompletionParams):
+    type: Literal['claude_reasoning'] = Field('claude_reasoning', description="The type of the completion params.")
     budget_tokens: Optional[int] = Field(None, description="The budget tokens to use for the interaction, must be higher than max tokens")
     max_searches: Optional[int] = Field(None, description="The maximum number of web searches for the claude models to perform")
 

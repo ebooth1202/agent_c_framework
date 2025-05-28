@@ -738,13 +738,15 @@ class WorkspaceTools(Toolset):
             return json.dumps({"error": error})
 
         try:
-            value = workspace.metadata(key)
+            value = await workspace.safe_metadata(key)
+            if value is None:
+                self.logger.warning(f"Key '{key}' not found in metadata for workspace '{workspace.name}'")
             if isinstance(value, dict) or isinstance(value, list):
                 return yaml.dump(value, Dumper=yaml.Dumper, default_flow_style=False)
 
             return str(value)
         except Exception as e:
-            return  f"Failed to read metadata value: {str(e)}"
+            return  f"Failed to read metadata {key} error: {str(e)}"
 
     @json_schema(
         description="Write to a key in the metadata for a workspace using a UNC style path. Nested paths are supported using slash notation ",
