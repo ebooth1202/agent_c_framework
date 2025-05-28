@@ -794,7 +794,6 @@ class WorkspaceTools(Toolset):
 
         try:
             val = await workspace.safe_metadata_write(key, data)
-            await workspace.save_metadata()
             return f"Saved metadata to '{key}' in {workspace.name} workspace."
         except Exception as e:
             return f"Failed to write metadata to '{key}' in {workspace.name} workspace: {str(e)}"
