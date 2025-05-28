@@ -1,6 +1,6 @@
 import copy
 from typing import Any, Optional, Dict, cast, List
-
+from agent_c.util.slugs import MnemonicSlugs
 from agent_c import json_schema, BaseAgent
 from agent_c.models.completion import ClaudeReasoningParams
 from agent_c.models.agent_config import AgentConfiguration, AgentConfigurationV2
@@ -58,11 +58,11 @@ class AgentCloneTools(AgentAssistToolBase):
             enhanced_persona = f"{self.clone_preamble}\n\n# Base Agent Persona\n\n{clone_persona}"
         
         tools = [tool for tool in self.tool_chest.active_tools.keys() if tool != 'AgentCloneTools']
-
-        agent = AgentConfigurationV2(name="Agent Clone", model_id=tool_context['model_id'], agent_description="A clone of the user agent",
-                                     agent_params=ClaudeReasoningParams(model_name=tool_context['model_id'], budget_tokens=20000),
+        slug = MnemonicSlugs.generate_id_slug(2)
+        agent = AgentConfigurationV2(name=f"Agent Clone - {slug}", model_id=tool_context['colling_model_name'], agent_description="A clone of the user agent",
+                                     agent_params=ClaudeReasoningParams(model_name=tool_context['colling_model_name'], budget_tokens=20000),
                                      persona=enhanced_persona, tools=tools)
-        return await self.agent_oneshot(request, agent)
+        return await self.agent_oneshot(request, agent, tool_context['session_id'], tool_context)
 
     @json_schema(
         'Begin or resume a chat session with a clone of yourself. The return value will be the final output from the agent along with the agent session ID.',
@@ -97,8 +97,9 @@ class AgentCloneTools(AgentAssistToolBase):
             enhanced_persona = f"{self.clone_preamble}\n\n# Base Agent Persona\n\n{clone_persona}"
         
         tools: List[str] = [tool for tool in self.tool_chest.active_tools.keys() if tool != 'AgentCloneTools']
-        agent = AgentConfigurationV2(name="Agent Clone", model_id=tool_context['model_id'], agent_description="A clone of the user agent",
-                                     agent_params=ClaudeReasoningParams(model_name=tool_context['model_id'], budget_tokens=20000),
+        slug = MnemonicSlugs.generate_id_slug(2)
+        agent = AgentConfigurationV2(name=f"Agent Clone - {slug}", model_id=tool_context['colling_model_name'], agent_description="A clone of the user agent",
+                                     agent_params=ClaudeReasoningParams(model_name=tool_context['colling_model_name'], budget_tokens=20000),
                                      persona=enhanced_persona, tools=tools)
 
         agent_session_id, messages = await self.agent_chat(message, agent, tool_context['session_id'], agent_session_id, tool_context)

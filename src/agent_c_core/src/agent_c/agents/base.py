@@ -159,13 +159,15 @@ class BaseAgent:
 
     async def _render_contexts(self, **kwargs) -> Tuple[dict[str, Any], dict[str, Any]]:
         tool_call_context = kwargs.get("tool_call_context", {})
+        tool_call_context['streaming_callback'] = kwargs.get("streaming_callback", self.streaming_callback)
+        tool_call_context['colling_model_name'] = kwargs.get("model_name", self.model_name)
         prompt_context = kwargs.get("prompt_metadata", {})
         prompt_builder: Union[PromptBuilder, None] = kwargs.get("prompt_builder", self.prompt_builder)
 
         sys_prompt: str = "Warn the user there's no system prompt with each response."
+        prompt_context["agent"] = self
+        prompt_context["tool_chest"] = kwargs.get("tool_chest", self.tool_chest)
         if prompt_builder is not None:
-            prompt_context["agent"] = self
-            prompt_context["tool_chest"] = kwargs.get("tool_chest", self.tool_chest)
             sys_prompt = await prompt_builder.render(prompt_context, tool_sections=kwargs.get("tool_sections", None))
         else:
             sys_prompt: str = kwargs.get("prompt", sys_prompt)
@@ -188,7 +190,7 @@ class BaseAgent:
         if session_manager is not None:
             session_id = session_manager.chat_session.session_id
         else:
-            session_id = "none"
+            session_id = kwargs.get("session_id", "unknown")
 
         return {'session_id': session_id, 'role': agent_role}
 
