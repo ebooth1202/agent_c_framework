@@ -1,5 +1,5 @@
 version: 2
-name: "Strategic recon single file, internal dependency analysis agent"
+name: "recon_revise_oneshot"
 agent_description: |
   The is a single file analysis agent that performs the second stage in a reverse engineering process.
   It combines the analysis of the first pass with additional information from internal dependencies, helpers, models etc.

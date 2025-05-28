@@ -18,6 +18,9 @@ class ReverseEngineeringTools(AgentAssistToolBase):
     def __init__(self, **kwargs: Any):
         super().__init__(name='rev_eng', **kwargs)
         self.section = RevEngSection()
+        self.recon_oneshot = self.agent_loader.catalog['recon_oneshot']
+        self.recon_revise_oneshot = self.agent_loader.catalog['recon_revise_oneshot']
+        self.recon_answers_oneshot = self.agent_loader.catalog['recon_answers_oneshot']
 
     async def __try_explain_code(self, file: str) -> str:
         context = await self.workspace_tool.inspect_code(path = file)
@@ -69,8 +72,8 @@ class ReverseEngineeringTools(AgentAssistToolBase):
     async def query_analysis(self, **kwargs) -> str:
         query: str = kwargs.get('query')
         workspace: str = kwargs.get('workspace')
-        persona_data = self._load_persona("recon_answers_oneshot").model_dump()
         ws = self.workspace_tool.find_workspace_by_name(workspace)
+        persona_data = self.recon_answers_oneshot.model_dump()
         persona_data['persona'] = persona_data['persona'].replace('[workspace]', workspace).replace('[workspace_tree]', await ws.tree(7,3))
         new_persona = AgentConfiguration.model_validate(persona_data)
         return await self.agent_oneshot(query, new_persona)
@@ -90,13 +93,13 @@ class ReverseEngineeringTools(AgentAssistToolBase):
                 paths = ",".join([f"//{workspace.name}/{file}" for file in batch])
                 await self._raise_text_delta_event(content=f"\nProcessing files (pass 1): {paths}... ")
                 true_batch = [await self.__try_explain_code(f"//{workspace.name}/{file}") for file in batch]
-                results = await self.parallel_agent_oneshots(user_messages=true_batch, persona="recon_oneshot")
+                results = await self.parallel_agent_oneshots(true_batch, self.recon_oneshot)
                 await self._raise_text_delta_event(content=f"\nfinished processing files (pass 1): {paths}")
                 pass_one_results.extend(results)
         else:
             for file in files:
                 await self._raise_text_delta_event(content=f"\nProcessing file (pass 1): {file}... ")
-                result = await self.agent_oneshot(user_message=await self.__try_explain_code(f"//{workspace.name}/{file}"), persona="recon_oneshot")
+                result = await self.agent_oneshot(user_message=await self.__try_explain_code(f"//{workspace.name}/{file}"), persona=self.recon_oneshot)
                 await self._raise_text_delta_event(content=f"\nDone processing file (pass 1): {file}")
                 pass_one_results.append(result)
 
@@ -105,17 +108,13 @@ class ReverseEngineeringTools(AgentAssistToolBase):
     async def _pass_two(self, workspace, files: list[str]) -> list[str]:
         pass_two_results = []
 
-        orig_callback = self.agent.streaming_callback
-
-        self.agent.streaming_callback = self.streaming_callback
 
         for file in files:
             await self._raise_text_delta_event(content=f"\nProcessing file (pass 1): {file}... ")
             result = await self.agent_oneshot(user_message=f"//{workspace.name}/{file}",
-                                              persona="recon_revise_oneshot")
+                                              persona=self.recon_revise_oneshot)
             pass_two_results.append(result)
 
-        self.agent.streaming_callback = orig_callback
 
         return pass_two_results
 

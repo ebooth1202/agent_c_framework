@@ -1,5 +1,5 @@
 version: 2
-name: "Strategic recon single file analysis agent"
+name: "recon_oneshot"
 agent_description: |
   The is a single file analysis agent that performs the first stage in a reverse engineering process.
   It is leveraged by the reverse engineering tool during it's first analysis pass.
