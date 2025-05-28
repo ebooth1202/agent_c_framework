@@ -106,6 +106,67 @@ LOG_LEVEL=INFO
 }
 ```
 
+### Calling tool methods
+When calling tool methods, it matters if the tool is set up with `use_prefix=False`.  The default is `use_prefix=True`, 
+which means the tool name will be prefixed with the `tool_name=value` with a `_` separator. 
+If you want to call a tool without the prefix, set `use_prefix=False` in the `setup_tool` method.
+
+#### Example call for Tool without prefix
+- Tool `__init__` method must have `use_prefix=False`
+```python
+import asyncio
+import logging
+from debug_tool import ToolDebugger
+
+async def test_weather_tool():
+    # Create debugger with auto-loading
+    tester = ToolDebugger(log_level=logging.INFO, init_local_workspaces=False)
+    
+    # Print configuration info
+    print(f"Agent C base path: {tester.agent_c_base_path}")
+    
+    # Setup tool (API keys loaded from .env automatically)
+    await tester.setup_tool(
+        tool_import_path='agent_c_tools.WeatherTools', # use_prefix=False for this tool
+        tool_opts={}  # Can still override or add additional config
+    )
+    
+    # Test the tool
+    result = await tester.run_tool_test(
+        tool_name='get_current_weather', # Just call the method name without prefix
+        tool_params={'location_name': 'New York'},
+        tool_context={'key': 'value'}  # Optional context, can be used for passing additional data
+    )
+```
+
+#### Example call for Tool with prefix
+- Tool `__init__` method must have `use_prefix=True` or the argument is not passed (default) 
+```python
+import asyncio
+import logging
+from debug_tool import ToolDebugger
+
+async def test_weather_tool():
+    # Create debugger with auto-loading
+    tester = ToolDebugger(log_level=logging.INFO, init_local_workspaces=False)
+    
+    # Print configuration info
+    print(f"Agent C base path: {tester.agent_c_base_path}")
+    
+    # Setup tool (API keys loaded from .env automatically)
+    await tester.setup_tool(
+        tool_import_path='agent_c_tools.WorkspacePlanningTools', # use_prefix is not set nor passed for this tool. This tool has `tool_name=wsp` in its `__init__` method.
+        tool_opts={}  # Can still override or add additional config
+    )
+    
+    # Test the tool
+    result = await tester.run_tool_test(
+        tool_name='wsp_create_plan', # Just call the method name without prefix
+        tool_params={'location_name': 'New York'},
+        tool_context={'key': 'value'}  # Optional context, can be used for passing additional data
+    )
+```
+
 ## Example Usage
 
 ```python
@@ -140,6 +201,8 @@ async def test_weather_tool():
 if __name__ == "__main__":
     asyncio.run(test_weather_tool())
 ```
+
+
 
 ## Troubleshooting
 
