@@ -434,9 +434,9 @@ const ChatInterfaceInner = ({
   /**
    * Opens the file picker
    */
-  const openFilePicker = () => {
+  const openFilePicker = useCallback(() => {
     FileUploadManager.openFilePicker(fileInputRef);
-  };
+  }, []);
   
   /**
    * Cancels the current streaming response by sending a request to the cancel endpoint
@@ -469,7 +469,7 @@ const ChatInterfaceInner = ({
    * Sends a message to the chat backend and processes the response stream
    * @returns {Promise<void>}
    */
-  const handleSendMessage = async () => {
+  const handleSendMessage = useCallback(async () => {
     // Don't send if empty or already streaming
     if ((!inputText.trim() && selectedFiles.length === 0) || isStreaming) return;
     
@@ -712,23 +712,23 @@ const ChatInterfaceInner = ({
       setIsStreaming(false);
       setSelectedFiles([]);
     }
-  };
+  }, [inputText, selectedFiles, isStreaming, sessionId, customPrompt, modelName, modelParameters, handleToolStart, handleToolEnd, updateToolSelectionState, toolSelectionState]);
   
   /**
    * Handles keyboard shortcuts for sending messages
    * @param {KeyboardEvent} e - Keyboard event
    */
-  const handleKeyPress = (e) => {
+  const handleKeyPress = useCallback((e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
-  };
+  }, [handleSendMessage]);
   
   // Toggle options panel visibility
-  const toggleOptionsPanel = () => {
+  const toggleOptionsPanel = useCallback(() => {
     setIsOptionsOpen(!isOptionsOpen);
-  };
+  }, [isOptionsOpen, setIsOptionsOpen]);
   
   return (
     <DragDropArea 

@@ -46,6 +46,9 @@
   inset: 0; /* inset-0 */
   border-radius: 9999px; /* rounded-full */
   opacity: 0.75; /* opacity-75 */
+  /* GPU acceleration for better performance */
+  will-change: transform, opacity;
+  transform: translateZ(0); /* Force GPU layer */
   animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite; /* animate-ping */
 }
 
@@ -72,6 +75,9 @@
   inset: calc(-1 * 0.25rem); /* -inset-1, 0.25rem = 4px */
   border-radius: 9999px; /* rounded-full */
   opacity: 0.5; /* opacity-50 */
+  /* GPU acceleration for better performance */
+  will-change: transform, opacity;
+  transform: translateZ(0); /* Force GPU layer */
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; /* animate-pulse */
 }
 
@@ -92,10 +98,10 @@
   background-color: hsl(var(--destructive) / 0.3);
 }
 
-/* Define the ping animation if not already provided by Tailwind */
+/* Define the ping animation with GPU acceleration */
 @keyframes ping {
   75%, 100% {
-    transform: scale(2);
+    transform: scale3d(2, 2, 1); /* Use 3D transform for GPU acceleration */
     opacity: 0;
   }
 }

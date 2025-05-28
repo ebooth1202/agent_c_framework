@@ -253,4 +253,4 @@ ChatInputArea.propTypes = {
 
 // Default props are now handled via parameter destructuring with default values
 
-export default ChatInputArea;
+export default React.memo(ChatInputArea);
