@@ -1,11 +1,8 @@
+import asyncio
 import logging
 from typing import Optional, List, Any
-from io import StringIO
 
 import yaml
-from sympy.physics.units import current
-from unidiff import PatchSet
-from tempfile import NamedTemporaryFile
 
 from yaml import FullLoader
 
@@ -43,6 +40,7 @@ class BaseWorkspace:
         self.write_status: str = "RO" if self.read_only else "R/W"
         self.max_filename_length: int = -1
         self._metadata: Optional[dict[str, Any]] = None
+        self._metadata_lock: asyncio.Lock = asyncio.Lock()
         self.logger = kwargs.get("logger", logging.getLogger(__name__))
 
     def __str__(self) -> str:
@@ -227,10 +225,11 @@ class BaseWorkspace:
         raise NotImplementedError("glob method must be implemented")
 
     async def safe_metadata(self, key: str) -> Any:
-        if self._metadata is None:
-            await self.load_metadata()
+        async with self._metadata_lock:
+            if self._metadata is None:
+                await self.load_metadata()
 
-        return self.metadata(key)
+            return self.metadata(key)
 
     def metadata(self, key: str, include_hidden: bool = False) -> Any:
         """
@@ -256,11 +255,30 @@ class BaseWorkspace:
 
         return value
 
-    async def safe_metadata_write(self, key: str, value: any) -> Any:
-        if self._metadata is None:
-            await self.load_metadata()
+    async def safe_metadata_write(self, key: str, value: any, auto_save: bool = True) -> Any:
+        """Write metadata with thread safety. By default, automatically saves to disk."""
+        async with self._metadata_lock:
+            if self._metadata is None:
+                await self.load_metadata()
 
-        return self.metadata_write(key, value)
+            result = self.metadata_write(key, value)
+            
+            if auto_save:
+                await self._save_metadata_internal()
+            
+            return result
+    
+    async def _save_metadata_internal(self, meta_file_path: Optional[str] = None):
+        """Internal save method that assumes the lock is already held."""
+        try:
+            if meta_file_path is None:
+                meta_file_path = self.meta_file_path
+
+            yaml_content = yaml.dump(self._metadata, default_flow_style=False, allow_unicode=True)
+            await self.write(meta_file_path, "write", yaml_content)
+        except Exception as e:
+            self.logger.exception(f"Failed to save metadata to //{self.name}/{meta_file_path}: {e}", exc_info=True)
+            raise e
 
     def metadata_write(self, key: str, value: Any) -> Any:
         """
@@ -284,17 +302,12 @@ class BaseWorkspace:
         return value
 
     async def save_metadata(self, meta_file_path: Optional[str] = None):
-        try:
-            if meta_file_path is None:
-                meta_file_path = self.meta_file_path
-
-            yaml_content = yaml.dump(self._metadata, default_flow_style=False, allow_unicode=True)
-            await self.write(meta_file_path, "write", yaml_content)
-        except Exception as e:
-            self.logger.exception(f"Failed to save metadata to //{self.name}/{meta_file_path}: {e}", exc_info=True)
-            raise e
+        """Save metadata to file with thread safety."""
+        async with self._metadata_lock:
+            await self._save_metadata_internal(meta_file_path)
 
     async def load_metadata(self, meta_file_path: Optional[str] = None):
+        """Load metadata from file. Note: When called from safe_metadata/safe_metadata_write, the lock is already held."""
         try:
             if meta_file_path is None:
                 meta_file_path = self.meta_file_path
