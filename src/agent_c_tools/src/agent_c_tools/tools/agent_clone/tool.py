@@ -4,12 +4,14 @@ from typing import Any, Optional, Dict, cast, List
 import yaml
 
 from agent_c.util.slugs import MnemonicSlugs
-from agent_c import json_schema, BaseAgent
+from agent_c import json_schema, BaseAgent, DynamicPersonaSection
 from agent_c.models.completion import ClaudeReasoningParams
 from agent_c.models.agent_config import AgentConfiguration, AgentConfigurationV2
 from agent_c.toolsets.tool_set import Toolset
 from agent_c_tools.tools.agent_assist.base import AgentAssistToolBase
-from .prompt import AgentCloneSection
+from .prompt import AgentCloneSection, CloneBehaviorSection
+from ..think.prompt import ThinkSection
+
 
 class AgentCloneTools(AgentAssistToolBase):
     def __init__(self, **kwargs):
@@ -18,19 +20,7 @@ class AgentCloneTools(AgentAssistToolBase):
 
         super().__init__(**kwargs)
         self.section = AgentCloneSection(tool=self)
-        self.clone_preamble = """# Clone Operating Context
-
-        You are an agent clone created to handle a specific delegated task. Important operating guidelines:
-
-        - You are operating as a specialized clone with focused responsibilities
-        - Your role is to complete the specific task assigned by your parent agent
-        - Limit your actions and responses to the directives and scope provided
-        - Only your final response will be relayed back to the parent agent
-        - Focus on delivering complete, actionable results within your assigned scope
-        - Do not attempt to expand beyond your delegated responsibilities
-        - Provide thorough, high-quality output that addresses the specific request
-        """
-
+        self._sections = [CloneBehaviorSection(), ThinkSection(), DynamicPersonaSection()]
 
     @json_schema(
         ('Make a request of clone of yourself and receive a response. '
@@ -56,9 +46,9 @@ class AgentCloneTools(AgentAssistToolBase):
         clone_persona: str = tool_context['persona_prompt']
 
         if process_context:
-            enhanced_persona = f"{self.clone_preamble}\n\n# Clone Process Context and Instructions\n\n{process_context}\n\n# Base Agent Persona\n\n{clone_persona}"
+            enhanced_persona = f"# Clone Process Context and Instructions\n\n{process_context}\n\n# Base Agent Persona\n\n{clone_persona}"
         else:
-            enhanced_persona = f"{self.clone_preamble}\n\n# Base Agent Persona\n\n{clone_persona}"
+            enhanced_persona =clone_persona
 
         active_tools_names: List[str] = list(self.tool_chest.active_tools.keys())
 
@@ -97,9 +87,9 @@ class AgentCloneTools(AgentAssistToolBase):
         clone_persona: str = tool_context['persona_prompt']
 
         if process_context:
-            enhanced_persona = f"{self.clone_preamble}\n\n# Clone Process Context and Instructions\n\n{process_context}\n\n# Base Agent Persona\n\n{clone_persona}"
+            enhanced_persona = f"# Clone Process Context and Instructions\n\n{process_context}\n\n# Base Agent Persona\n\n{clone_persona}"
         else:
-            enhanced_persona = f"{self.clone_preamble}\n\n# Base Agent Persona\n\n{clone_persona}"
+            enhanced_persona = clone_persona
 
         active_tools_names: List[str] = list(self.tool_chest.active_tools.keys())
 
