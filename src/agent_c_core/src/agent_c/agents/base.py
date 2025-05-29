@@ -20,7 +20,6 @@ from agent_c.prompting import PromptBuilder
 from agent_c.toolsets import ToolChest, Toolset
 from agent_c.util import MnemonicSlugs
 from agent_c.util.token_counter import TokenCounter
-from agent_c.util.session_logger import SessionLogger
 
 
 class BaseAgent:
@@ -52,8 +51,6 @@ class BaseAgent:
             A semaphore to limit the number of concurrent operations.
         max_delay: int, default is 10
             Maximum delay for exponential backoff.
-        session_logger: Optional[SessionLogger], default is None
-            A logger to record events for session replay
         """
         self.model_name: str = kwargs.get("model_name")
         self.temperature: float = kwargs.get("temperature", 0.5)
@@ -66,18 +63,27 @@ class BaseAgent:
         self.prompt: Optional[str] = kwargs.get("prompt", None)
         self.prompt_builder: Optional[PromptBuilder] = kwargs.get("prompt_builder", None)
         self.schemas: Union[None, List[Dict[str, Any]]] = None
-        self.streaming_callback: Optional[Callable[[ChatEvent], Awaitable[None]]] = kwargs.get("streaming_callback", None)
+        self.streaming_callback: Optional[Callable[[ChatEvent], Awaitable[None]]] = kwargs.get("streaming_callback",
+                                                                                               None)
         self.mitigate_image_prompt_injection: bool = kwargs.get("mitigate_image_prompt_injection", False)
         self.can_use_tools: bool = False
         self.supports_multimodal: bool = False
         self.token_counter: TokenCounter = kwargs.get("token_counter", TokenCounter())
-        self.root_message_role: str =  kwargs.get( "root_message_role", os.environ.get("ROOT_MESSAGE_ROLE", "system"))
-        self.session_logger: Optional[SessionLogger] = kwargs.get("session_logger", None)
+        self.root_message_role: str = kwargs.get("root_message_role", os.environ.get("ROOT_MESSAGE_ROLE", "system"))
         self.logger = kwargs.get("logger", logging.getLogger(__name__))
+
+        # Handle deprecated session_logger parameter
+        if "session_logger" in kwargs:
+            import warnings
+            warnings.warn(
+                "The 'session_logger' parameter is deprecated. Use 'streaming_callback' with "
+                "EventSessionLogger instead. See migration guide for details.",
+                DeprecationWarning,
+                stacklevel=2
+            )
+
         if TokenCounter.counter() is None:
             TokenCounter.set_counter(self.token_counter)
-
-        self.initialize_session_logger(**kwargs)
 
     @classmethod
     def client(cls, **opts):
@@ -86,42 +92,6 @@ class BaseAgent:
     @property
     def tool_format(self) -> str:
         raise NotImplementedError
-
-    def initialize_session_logger(self, **kwargs):
-        # For smart logging
-        session_manager = kwargs.get("session_manager")
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        random_id = str(uuid.uuid4())
-        session_id = "unknown" # start as unknown and update if we have it.
-        if session_manager and hasattr(session_manager, "chat_session"):
-            if hasattr(session_manager.chat_session, "session_id"):
-                session_id = session_manager.chat_session.session_id
-
-        if self.session_logger is None:
-            # Get log directory from environment variable or use a default
-            base_log_dir = os.environ.get("AGENT_LOG_DIR", "logs/sessions")
-            if session_id == "unknown":
-                log_dir_path = Path(base_log_dir) / f"{session_id}_{random_id}"
-            else:
-                log_dir_path = Path(base_log_dir) / session_id
-
-            # Create log path
-            log_file_path = log_dir_path / f"{timestamp}.jsonl"
-
-            # Configure auto-logging behavior from environment variables
-            # include_system_prompt = os.environ.get("AGENT_LOG_INCLUDE_PROMPT", "true").lower() == "true"
-            # log_file_path = os.environ.get("AGENT_LOG_FILE", log_file_path)
-            include_prompt = True
-
-            # Create and assign the session logger
-            self.session_logger = SessionLogger(
-                log_file_path=log_file_path,
-                include_system_prompt=include_prompt
-            )
-
-            logging.info(f"Auto-initialized SessionLogger that will write to {log_file_path} when needed")
-        else:
-            logging.info(f"SessionLogger already initialized")
 
     def count_tokens(self, text: str) -> int:
         return self.token_counter.count_tokens(text)
@@ -176,9 +146,7 @@ class BaseAgent:
         else:
             sys_prompt: str = kwargs.get("prompt", sys_prompt)
 
-        # Log the system prompt if a logger is attached
-        if hasattr(self, 'session_logger') and self.session_logger:
-            await self.session_logger.log_system_prompt(sys_prompt)
+        # System prompt logging is now handled by EventSessionLogger via streaming_callback
 
         prompt_context['system_prompt'] = sys_prompt
 
@@ -200,31 +168,28 @@ class BaseAgent:
 
     async def _raise_event(self, event):
         """
-        Raise a chat event to the event stream and log it if a logger is attached.
+        Raise a chat event to the event stream.
+
+        Events are sent to the streaming_callback if configured. For event logging,
+        use EventSessionLogger as your streaming_callback.
         """
-        # First, call the original streaming callback if it exists
         if self.streaming_callback:
             try:
                 await self.streaming_callback(event)
             except Exception as e:
                 self.logger.exception(
-                    f"Streaming callback error for event: {e}. Event Type Found: {event.type if hasattr(event, 'type') else None}")
-                # Log this callback error to session log
-                if hasattr(self, 'session_logger') and self.session_logger:
-                    await self._log_internal_error("streaming_callback_error", str(e), event)
-
-        # Then, log the event if we have a logger
-        if hasattr(self, 'session_logger') and self.session_logger:
-            try:
-                await self.session_logger.log_event(event)
-            except Exception as e:
-                error_msg = f"Session logger error for event type: {e}. Event Type Found: {event.type if hasattr(event, 'type') else None}"
-                logging.exception(error_msg)
-                pass
+                    f"Streaming callback error for event: {e}. Event Type: {getattr(event, 'type', 'unknown')}")
+                # Log internal error as system event
+                await self._raise_system_event(
+                    f"Streaming callback error: {str(e)}",
+                    severity="error",
+                    error_type="streaming_callback_error",
+                    original_event_type=getattr(event, 'type', 'unknown')
+                )
 
     async def _log_internal_error(self, error_type, error_message, related_event=None):
         """
-        Log internal errors to the session log to ensure failures are captured.
+        Log internal errors as system events.
 
         Args:
             error_type: Type/category of the error
@@ -232,36 +197,18 @@ class BaseAgent:
             related_event: The event that was being processed when the error occurred
         """
         try:
-            # Create a simplified error event
-            error_data = {
-                'type': 'internal_error',
-                'error_type': error_type,
-                'error_message': error_message,
-                'timestamp': datetime.datetime.now().isoformat()
-            }
-
-            # Include the related event if provided (with sensitive data removed)
-            if related_event:
-                if hasattr(related_event, 'model_dump'):
-                    event_data = related_event.model_dump()
-                else:
-                    event_data = {"event_type": str(type(related_event))}
-                error_data['related_event_type'] = getattr(related_event, 'type', str(type(related_event)))
-
-            # Try to write directly to the log file without using the normal logger methods
-            if hasattr(self, 'session_logger') and self.session_logger:
-                log_path = self.session_logger.log_file_path
-                if log_path:
-                    # Ensure the directory exists
-                    log_path.parent.mkdir(parents=True, exist_ok=True)
-
-                    # Write the error directly to the log file
-                    with open(log_path, 'a', encoding='utf-8') as f:
-                        f.write(json.dumps(error_data) + '\n')
+            # Create system event for internal error
+            await self._raise_system_event(
+                f"Internal error ({error_type}): {error_message}",
+                severity="error",
+                error_type=error_type,
+                error_message=str(error_message),
+                related_event_type=getattr(related_event, 'type', None) if related_event else None
+            )
         except Exception as e:
-            # Last resort - log to the Python logger
-            logging.critical(
-                f"Failed to log internal error to session: {e}. Original error: {error_type}: {error_message}")
+            # Fallback to standard logging if event raising fails
+            self.logger.exception(f"Failed to log internal error as event: {e}")
+            self.logger.error(f"Original error - {error_type}: {error_message}")
 
     async def _raise_system_event(self, content: str, severity: str = "error", **data):
         """
@@ -355,8 +302,6 @@ class BaseAgent:
         sess_mgr: Optional[ChatSessionManager] = kwargs.get("session_manager", None)
         messages: Optional[List[Dict[str, Any]]] = kwargs.get("messages", None)
 
-        self._update_session_logger(sess_mgr)
-
         if messages is None and sess_mgr is not None:
            kwargs['messages'] = copy.deepcopy(sess_mgr.active_memory.messages)
 
@@ -378,98 +323,9 @@ class BaseAgent:
             elif user_message:
                 await self._save_user_message_to_session(sess_mgr, user_message)
 
-        if hasattr(self, 'session_logger') and self.session_logger:
-            await self.session_logger.log_user_request(
-                user_message=user_message,
-                audio_clips=audio_clips,
-                images=images,
-                files=files
-            )
+        # User request logging is now handled by EventSessionLogger via streaming_callback
 
         return await self.__construct_message_array(**kwargs)
-
-    def _update_session_logger(self, sess_mgr: ChatSessionManager):
-        """
-        Updates the session logger path if the session ID is known and
-        it's currently using a temporary unknown ID.
-
-        Returns True if update was successful, False otherwise.
-        """
-        if not self.session_logger or not sess_mgr or not hasattr(sess_mgr, "chat_session"):
-            return False
-
-        try:
-            current_path = self.session_logger.log_file_path
-            current_path_str = str(current_path)
-
-            # If the current path contains "unknown" as the session ID
-            if "unknown" in current_path_str and hasattr(sess_mgr.chat_session, "session_id"):
-                session_id = sess_mgr.chat_session.session_id
-                if "unknown" not in session_id:
-                    # Create new path with actual session ID
-                    base_log_dir = os.environ.get("AGENT_LOG_DIR", "logs/sessions")
-                    timestamp = current_path.name  # Keep the same filename
-
-                    new_dir = Path(base_log_dir) / session_id
-
-                    # Create the directory with verification
-                    try:
-                        new_dir.mkdir(parents=True, exist_ok=True)
-                        if not new_dir.exists():
-                            logging.error(f"Failed to create new session log directory: {new_dir}")
-                            return False
-                    except Exception as e:
-                        logging.exception(f"Error creating new session log directory: {e}")
-                        return False
-
-                    new_path = new_dir / timestamp
-
-                    # If old log file exists, move its contents
-                    if current_path.exists():
-                        try:
-                            # Read existing content
-                            with open(current_path, 'r', encoding='utf-8') as old_file:
-                                content = old_file.read()
-
-                            # Write to new location
-                            with open(new_path, 'w', encoding='utf-8') as new_file:
-                                new_file.write(content)
-
-                            # Verify the new file exists and has content
-                            if not new_path.exists() or new_path.stat().st_size == 0:
-                                logging.error(f"Failed to write to new log file: {new_path}")
-                                return False
-
-                            # Update the logger's path
-                            self.session_logger.log_file_path = new_path
-
-                            # Reset directory created flag to force directory check on next write
-                            self.session_logger.directory_created = False
-
-                            # Try to remove the old file
-                            current_path.unlink(missing_ok=True)
-
-                            # Try to remove empty parent directories
-                            try:
-                                current_path.parent.rmdir()
-                            except:
-                                pass  # Directory not empty, which is fine
-
-                            logging.info(f"Updated SessionLogger path to {new_path}")
-                            return True
-                        except Exception as e:
-                            logging.exception(f"Error updating session log path: {e}")
-                            return False
-                    else:
-                        # Old file doesn't exist, just update the path
-                        self.session_logger.log_file_path = new_path
-                        self.session_logger.directory_created = False
-                        logging.info(f"Updated SessionLogger path to {new_path} (no existing log to migrate)")
-                        return True
-            return True  # No update needed
-        except Exception as e:
-            logging.exception(f"Unexpected error in _update_session_logger: {e}")
-            return False
 
 
     async def _generate_multi_modal_user_message(self, user_input: str,  images: List[ImageInput], audio: List[AudioInput], files: List[FileInput]) -> Union[List[dict[str, Any]], None]:
