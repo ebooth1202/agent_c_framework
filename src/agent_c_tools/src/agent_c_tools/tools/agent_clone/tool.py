@@ -1,5 +1,8 @@
 import copy
 from typing import Any, Optional, Dict, cast, List
+
+import yaml
+
 from agent_c.util.slugs import MnemonicSlugs
 from agent_c import json_schema, BaseAgent
 from agent_c.models.completion import ClaudeReasoningParams
@@ -104,7 +107,7 @@ class AgentCloneTools(AgentAssistToolBase):
 
         agent_session_id, messages = await self.agent_chat(message, agent, tool_context['session_id'], agent_session_id, tool_context)
 
-        return f"Agent Session ID: {agent_session_id}"
+        return f"Agent Session ID: {agent_session_id}\n{yaml.dump(messages[-1], allow_unicode=True)}"
 
 
 Toolset.register(AgentCloneTools, required_tools=['WorkspaceTools'])
