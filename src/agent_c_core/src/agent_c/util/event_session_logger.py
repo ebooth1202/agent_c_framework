@@ -22,12 +22,6 @@ from .transport_exceptions import (
 from .transports import TransportInterface
 
 
-
-
-
-
-
-
 class EventSessionLogger:
     """
     Gateway pattern implementation for event-driven session logging.
@@ -220,7 +214,7 @@ class EventSessionLogger:
     
     async def _log_locally(self, event: Any) -> bool:
         """
-        Log event to local file system.
+        Log event to local file system with error recovery.
         
         Args:
             event: Event to log
@@ -229,7 +223,7 @@ class EventSessionLogger:
             bool: True if logging succeeded
             
         Raises:
-            LocalLoggingError: If local logging fails
+            LocalLoggingError: If local logging fails after recovery attempt
         """
         if not self.enable_local_logging:
             return True
@@ -255,14 +249,58 @@ class EventSessionLogger:
             # Get log file path (create new file for each session)
             log_file = self.get_log_file_path(session_id)
             
-            # Write to file (JSON Lines format)
-            with open(log_file, 'a', encoding='utf-8') as f:
-                f.write(json.dumps(log_entry, default=str) + '\n')
-            
-            return True
+            # Attempt to write to file with error recovery
+            return self._write_log_entry_with_recovery(log_entry, log_file, session_dir)
             
         except Exception as e:
             raise LocalLoggingError(f"Local logging failed: {e}")
+    
+    def _write_log_entry_with_recovery(self, log_entry: Dict[str, Any], log_file: Path, session_dir: Path) -> bool:
+        """
+        Write log entry with directory recovery if needed.
+        
+        Args:
+            log_entry: Log entry to write
+            log_file: Path to log file
+            session_dir: Session directory path
+            
+        Returns:
+            bool: True if write succeeded
+            
+        Raises:
+            LocalLoggingError: If write fails after recovery attempt
+        """
+        try:
+            # First attempt: write to file
+            with open(log_file, 'a', encoding='utf-8') as f:
+                f.write(json.dumps(log_entry, default=str) + '\n')
+            return True
+            
+        except (FileNotFoundError, OSError) as e:
+            # Directory might have been moved/deleted - attempt recovery
+            try:
+                # Remove stale cache entry
+                session_dir_str = str(session_dir)
+                if session_dir_str in self._directory_cache:
+                    self._directory_cache.remove(session_dir_str)
+                
+                # Attempt to recreate directory
+                if not self._ensure_directory_exists(session_dir):
+                    raise LocalLoggingError(f"Failed to recreate session directory after recovery: {session_dir}")
+                
+                # Retry file write once
+                with open(log_file, 'a', encoding='utf-8') as f:
+                    f.write(json.dumps(log_entry, default=str) + '\n')
+                
+                # Log successful recovery
+                self._logger.info(f"Successfully recovered from missing directory: {session_dir}")
+                return True
+                
+            except Exception as recovery_error:
+                # Recovery failed - log but don't raise (let downstream continue)
+                error_msg = f"File write failed and recovery unsuccessful. Original error: {e}, Recovery error: {recovery_error}"
+                self._logger.error(error_msg)
+                raise LocalLoggingError(error_msg)
     
     async def _retry_operation(self, operation: Callable, operation_name: str) -> bool:
         """
@@ -332,7 +370,7 @@ class EventSessionLogger:
         Main gateway method - processes events through the logging pipeline.
         
         Always logs locally first, then forwards to downstream if configured.
-        Error isolation ensures local logging success doesn't depend on transport.
+        Error isolation ensures downstream forwarding happens regardless of local logging failures.
         
         Args:
             event: Event object (SessionEvent, SemiSessionEvent, or any serializable object)
@@ -341,26 +379,27 @@ class EventSessionLogger:
             bool: True if local logging succeeded (transport failures don't affect return value)
             
         Raises:
-            EventSessionLoggerError: Only for critical local logging failures
+            EventSessionLoggerError: Only for critical system failures (e.g., closed logger)
         """
         if self._closed:
             raise EventSessionLoggerError("EventSessionLogger is closed")
         
         local_success = False
         
-        # PHASE 1: Local logging (never fails due to transport issues)
+        # PHASE 1: Local logging (errors are handled but don't prevent downstream)
         try:
             local_success = await self._log_locally(event)
         except Exception as e:
+            # Log the error but don't let it prevent downstream forwarding
             self.error_handler(e, "local_logging")
-            raise LocalLoggingError(f"Local logging failed: {e}")
+            local_success = False
         
-        # PHASE 2: Downstream forwarding (isolated from local logging)
+        # PHASE 2: Downstream forwarding (ALWAYS attempted regardless of local logging)
         if self.downstream_callback or self.downstream_transport:
             try:
                 await self._forward_downstream(event)
             except Exception as e:
-                # Transport errors are logged but don't affect local logging success
+                # Transport errors are logged but don't affect return value
                 self.error_handler(e, "downstream_forwarding")
         
         return local_success
