@@ -368,6 +368,33 @@ class LocalStorageWorkspace(BaseWorkspace):
             self.logger.exception(f"Failed to {operation}.")
             return self._error_response(error_msg)
 
+    async def walk(self, start_path: str, extensions: List[str] = None) -> Tuple[Optional[str], List[str]]:
+        """
+        Walk through the workspace starting from the given path and return a list of files.
+
+        Args:
+            start_path (str): The starting path to walk from, relative to the workspace root.
+            extensions (List[str]): Optional list of file extensions to filter by.
+
+        Returns:
+            List[str]: A list of relative file paths found in the workspace.
+        """
+        valid, error_msg, full_path = self._validate_path(start_path, "start path")
+        if not valid:
+            return error_msg, []
+
+        if not full_path.is_dir():
+            return f'The path {start_path} is not a directory.', []
+
+        files = []
+        for root, _, filenames in os.walk(full_path):
+            for filename in filenames:
+                if extensions is None or any(filename.endswith(ext) for ext in extensions):
+                    relative_path = os.path.relpath(os.path.join(root, filename), self.workspace_root)
+                    files.append(relative_path.replace("\\", "/"))
+
+        return None, files
+
     async def glob(self, pattern: str, recursive: bool = False, include_hidden: bool = False) -> List[str]:
         """
         Find paths matching the specified pattern in the workspace.
