@@ -129,7 +129,11 @@ class BaseAgent:
     async def one_shot(self, **kwargs) -> str:
         """For text in, text out processing. without chat"""
         messages = await self.chat(**kwargs)
-        return messages[-1]["content"][-1]["text"]
+        if len(messages) > 0:
+            return messages[-1]["content"][-1]["text"]
+
+        return "Unknown error, no messages returned."
+
 
     async def parallel_one_shots(self, inputs: List[str], **kwargs):
         """Run multiple one-shot tasks in parallel"""

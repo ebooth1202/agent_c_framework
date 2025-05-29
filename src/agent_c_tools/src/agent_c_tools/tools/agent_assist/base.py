@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional, cast, Tuple
 from agent_c import PromptSection
 from agent_c.config.model_config_loader import ModelConfigurationLoader, ModelConfigurationFile
 from agent_c.config.agent_config_loader import AgentConfigLoader, CurrentAgentConfiguration
+from agent_c.models.events import SessionEvent
 from agent_c.util.slugs import MnemonicSlugs
 from agent_c.toolsets.tool_set import Toolset
 from agent_c.models.agent_config import AgentConfiguration
@@ -46,6 +47,13 @@ class AgentAssistToolBase(Toolset):
 
         self.persona_cache: Dict[str, AgentConfiguration] = {}
         self.workspace_tool: Optional[WorkspaceTools] = None
+
+    async def _streaming_callback(self, event: SessionEvent):
+        """
+        Callback for streaming events.
+        """
+        if event.type in ['text_delta', 'thought_delta', 'tool_call', 'render_media']:
+            await self.streaming_callback(event)
 
 
     async def post_init(self):
