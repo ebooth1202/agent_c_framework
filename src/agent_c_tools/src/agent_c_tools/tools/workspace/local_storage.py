@@ -2,6 +2,7 @@ import asyncio
 import os
 import json
 import base64
+import re
 import shutil
 import logging
 import functools
@@ -370,52 +371,91 @@ class LocalStorageWorkspace(BaseWorkspace):
     async def glob(self, pattern: str, recursive: bool = False, include_hidden: bool = False) -> List[str]:
         """
         Find paths matching the specified pattern in the workspace.
-        
+
         Args:
             pattern (str): The glob pattern to match against paths in the workspace.
             recursive (bool): Whether to search recursively, matching ** patterns.
             include_hidden (bool): Whether to include hidden files in ** pattern matching.
-            
+
         Returns:
             List[str]: A list of relative paths that match the pattern.
         """
         norm_pattern = self._normalize_input_path(pattern)
-        
-        # We need to validate that the pattern is within the workspace
-        # First, extract the non-wildcard prefix to check if it's within the workspace
-        # This is a simple heuristic that should work for most cases
-        non_wildcard_prefix = norm_pattern.split('*')[0].split('?')[0]
-        
-        if not self._is_path_within_workspace(non_wildcard_prefix):
+
+        # Extract the non-wildcard prefix more carefully
+        # We need to find the directory path that contains no wildcards
+        wildcard_match = re.search(r'[*?\[\]]', norm_pattern)
+
+        if wildcard_match:
+            # Find the position of the first wildcard
+            wildcard_pos = wildcard_match.start()
+
+            # Find the last directory separator before the first wildcard
+            # This ensures we get the complete directory path without wildcards
+            prefix_part = norm_pattern[:wildcard_pos]
+            last_sep_pos = max(
+                prefix_part.rfind('/'),
+                prefix_part.rfind('\\')
+            )
+
+            if last_sep_pos >= 0:
+                # Include the separator in the prefix
+                non_wildcard_prefix = norm_pattern[:last_sep_pos + 1]
+            else:
+                # No directory separator found before wildcard
+                # The wildcard is in the current directory
+                non_wildcard_prefix = ""
+        else:
+            # No wildcards found, the entire pattern is the prefix
+            non_wildcard_prefix = norm_pattern
+
+        # Debug logging (you can remove these later)
+        self.logger.debug(f"Original pattern: '{pattern}'")
+        self.logger.debug(f"Normalized pattern: '{norm_pattern}'")
+        self.logger.debug(f"Non-wildcard prefix: '{non_wildcard_prefix}'")
+
+        # Validate that the prefix is within the workspace
+        if non_wildcard_prefix and not self._is_path_within_workspace(non_wildcard_prefix):
             self.logger.error(f'The pattern {pattern} is not within the workspace.')
             return []
-        
+
         # Construct the full pattern with workspace root
         full_pattern = str(self.workspace_root / norm_pattern)
-        
+        self.logger.debug(f"Full glob pattern: '{full_pattern}'")
+
         try:
             # Use glob.glob with parameters matching Python's standard glob
             matching_paths = glob.glob(
-                full_pattern, 
+                full_pattern,
                 recursive=recursive,
                 include_hidden=include_hidden
             )
-            
+
+            self.logger.debug(f"Raw glob results: {len(matching_paths)} matches")
+
             # Convert absolute paths back to workspace-relative paths
             relative_paths = []
             workspace_root_str = str(self.workspace_root)
+
             for path in matching_paths:
                 # Normalize the path to handle different separators
                 normalized_path = os.path.normpath(path)
+
                 # Remove the workspace root prefix and convert to workspace-relative path
                 if normalized_path.startswith(workspace_root_str):
-                    rel_path = os.path.normpath(normalized_path[len(workspace_root_str):].lstrip(os.sep))
-                    relative_paths.append(rel_path.replace("\\", "/"))
-            
+                    # Calculate the relative path
+                    rel_path = os.path.relpath(normalized_path, workspace_root_str)
+                    # Convert to forward slashes for consistency
+                    rel_path = rel_path.replace("\\", "/")
+                    relative_paths.append(rel_path)
+
+            self.logger.debug(f"Final relative paths: {relative_paths}")
             return relative_paths
+
         except Exception as e:
-            self.logger.exception(f"Error during glob operation: {e}")
+            self.logger.exception(f"Error during glob operation with pattern '{pattern}': {e}")
             return []
+
     
     async def grep(self,
             pattern: str,
