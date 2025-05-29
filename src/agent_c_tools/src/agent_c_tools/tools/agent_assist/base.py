@@ -70,7 +70,10 @@ class AgentAssistToolBase(Toolset):
 
     async def __chat_params(self, persona: AgentConfiguration, agent: BaseAgent, user_session_id: Optional[str] = None, **opts) -> Dict[str, Any]:
         tool_params = {}
-        streaming_callback = opts['parent_tool_context']['streaming_callback'] if 'parent_tool_context' in opts else None
+        if opts:
+            streaming_callback = opts['parent_tool_context'].get('streaming_callback', None) if 'parent_tool_context' in opts else None
+        else:
+            streaming_callback = None
         prompt_metadata = await self.__build_prompt_metadata(persona, user_session_id, **opts)
         chat_params = {"prompt_metadata": prompt_metadata, "output_format": 'raw',
                        "streaming_callback": streaming_callback,
@@ -80,6 +83,7 @@ class AgentAssistToolBase(Toolset):
         if len(persona.tools):
             await self.tool_chest.initialize_toolsets(persona.tools)
             tool_params = self.tool_chest.get_inference_data(persona.tools, agent.tool_format)
+            tool_params["toolsets"] = persona.tools
 
         agent_params = persona.agent_params.model_dump(exclude_none=True)
         if "model_name" not in agent_params:

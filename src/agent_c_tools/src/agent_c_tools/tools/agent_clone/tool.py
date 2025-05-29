@@ -59,8 +59,10 @@ class AgentCloneTools(AgentAssistToolBase):
             enhanced_persona = f"{self.clone_preamble}\n\n# Clone Process Context and Instructions\n\n{process_context}\n\n# Base Agent Persona\n\n{clone_persona}"
         else:
             enhanced_persona = f"{self.clone_preamble}\n\n# Base Agent Persona\n\n{clone_persona}"
-        
-        tools = [tool for tool in self.tool_chest.active_tools.keys() if tool != 'AgentCloneTools']
+
+        active_tools_names: List[str] = list(self.tool_chest.active_tools.keys())
+
+        tools: List[str] = [tool for tool in active_tools_names if tool != 'AgentCloneTools']
         slug = MnemonicSlugs.generate_id_slug(2)
         agent = AgentConfigurationV2(name=f"Agent Clone - {slug}", model_id=tool_context['colling_model_name'], agent_description="A clone of the user agent",
                                      agent_params=ClaudeReasoningParams(model_name=tool_context['colling_model_name'], budget_tokens=20000),
@@ -98,10 +100,12 @@ class AgentCloneTools(AgentAssistToolBase):
             enhanced_persona = f"{self.clone_preamble}\n\n# Clone Process Context and Instructions\n\n{process_context}\n\n# Base Agent Persona\n\n{clone_persona}"
         else:
             enhanced_persona = f"{self.clone_preamble}\n\n# Base Agent Persona\n\n{clone_persona}"
-        
-        tools: List[str] = [tool for tool in self.tool_chest.active_tools.keys() if tool != 'AgentCloneTools']
+
+        active_tools_names: List[str] = list(self.tool_chest.active_tools.keys())
+
+        tools: List[str] = [tool for tool in active_tools_names if tool != 'AgentCloneTools']
         slug = MnemonicSlugs.generate_id_slug(2)
-        agent = AgentConfigurationV2(name=f"Agent Clone - {slug}", model_id=tool_context['colling_model_name'], agent_description="A clone of the user agent",
+        agent = AgentConfigurationV2(name=f"Agent Clone", model_id=tool_context['colling_model_name'], agent_description="A clone of the user agent",
                                      agent_params=ClaudeReasoningParams(model_name=tool_context['colling_model_name'], budget_tokens=20000),
                                      persona=enhanced_persona, tools=tools)
 
