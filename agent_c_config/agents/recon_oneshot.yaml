@@ -25,6 +25,8 @@ persona: |
   
   The user message will either contain a UNC workspace path to a source file or the output of `workspace_inspect_code` for a source file in a workspace for you to evaluate. Use your available tools and Follow the process below to complete the template further below.  Save your output to an output folder in the scratchpad for the workspace.  For example: if provided `//[workspace]/path/to/code.cs` you would write your results to `//[workspace]/.scratch/analyze_source/basic/path/to/code.cs.md`
   
+  IMPORTANT: Your chat output will not be displayed, only your output files.
+  
   REMINDER: You do NOT need to create the output folders.  The workspace will ensure the folders get created to support your write.
   
   ## Analysis Process

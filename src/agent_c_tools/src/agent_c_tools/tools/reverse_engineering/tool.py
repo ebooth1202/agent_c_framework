@@ -16,13 +16,28 @@ class ReverseEngineeringTools(AgentAssistToolBase):
 
     def __init__(self, **kwargs: Any):
         super().__init__(name='rev_eng', **kwargs)
+        self.default_extensions = ['.js', '.ts', '.py', '.java', '.c', '.cpp', '.h', '.hpp', '.go',
+                                   '.rs', '.rb', '.vb', '.cs', '.php', '.swift', '.kt', '.scala',
+                                   '.css', '.scss', '.less', '.asp', '.aspx', '.html', '.htm']
+        self.explainable_extensions = ['.js', '.cs', '.py']
         self.section = RevEngSection()
         self.recon_oneshot = self.agent_loader.catalog['recon_oneshot']
         self.recon_revise_oneshot = self.agent_loader.catalog['recon_revise_oneshot']
         self.recon_answers_oneshot = self.agent_loader.catalog['recon_answers_oneshot']
 
+    def is_explainable(self, file: str) -> bool:
+        """
+        Check if the file is explainable based on its extension.
+        :param file: The file path to check.
+        :return: True if the file is explainable, False otherwise.
+        """
+        return any(file.endswith(ext) for ext in self.explainable_extensions)
+
     async def __try_explain_code(self, file: str) -> str:
         try:
+            if not self.is_explainable(file):
+                return file
+
             context = await self.workspace_tool.inspect_code(path=file)
             if context.startswith("{"):
                 return file
@@ -58,6 +73,44 @@ class ReverseEngineeringTools(AgentAssistToolBase):
 
         return f"Processed {len(files)} files. See //{workspace.name}/.scratch/analyze_source/ for results."
 
+    @json_schema(
+        'Perform an in depth analysis of all code in a source tree.  Output will be saved to the scratchpad of the workspace containing the code.',
+        {
+            'start_path': {
+                'type': 'string',
+                'description': 'A path to a folder, in workspace UNC format, to start the analysis from. Equivalent to `os.walk` in Python. e.g. //workspace/src',
+                'required': True
+            },
+            'extensions': {
+                'type': 'array',
+                'description': 'A list of file extensions to include in the analysis. e.g. [".js", ".ts", ".py"]',
+                'items': {
+                    'type': 'string'
+                },
+                'required': False,
+                'default': ['.js', '.ts', '.py', '.java', '.c', '.cpp', '.h', '.hpp', '.go',
+                            '.rs', '.rb', '.vb', '.cs', '.php', '.swift', '.kt', '.scala',
+                            '.css', '.scss', '.less', '.asp', '.aspx', '.html', '.htm']
+            },
+        }
+    )
+    async def analyze_tree(self, **kwargs) -> str:
+        start_path: str = kwargs.get('start_path')
+        batch_size: int = kwargs.get('batch_size', 2)
+        extensions: list[str] = kwargs.get('extensions', self.default_extensions)
+        tool_context: Dict[str, Any] = kwargs.get('tool_context')
+        error, workspace, relative_path = self.workspace_tool.validate_and_get_workspace_path(start_path)
+        if error is not None:
+            return f"Error: {error}"
+
+        error, files = await workspace.walk(relative_path, extensions)
+        if error is not None:
+            return f"Error: {error}"
+
+        await self._pass_one(workspace, files, batch_size, tool_context)
+        await self._pass_two(workspace, files, tool_context)
+
+        return f"Processed {len(files)} files. See //{workspace.name}/.scratch/analyze_source/ for results."
 
     @json_schema(
         'Make a request of and expert on the analysis of the codebase in a given workspace. The expert will be able to ',

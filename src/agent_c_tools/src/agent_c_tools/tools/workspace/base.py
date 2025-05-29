@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Tuple
 
 import yaml
 
@@ -65,6 +65,9 @@ class BaseWorkspace:
         raise NotImplementedError
 
     async def tree(self, relative_path: str, folder_depth: int, file_depth: int) -> str:
+        raise NotImplementedError
+
+    async def walk(self, start_path: str, extensions: List[str] = None) -> Tuple[Optional[str], List[str]]:
         raise NotImplementedError
 
     async def read_bytes_internal(self, file_path: str) -> bytes:

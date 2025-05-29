@@ -96,7 +96,8 @@ The company handles multi-million dollar app modernization projects where requir
 ### Phase 1: Strategic Reconnaissance (Delegate to Clone)
 - **Plan Task**: "Analyze repository structure and architecture"
 - **Clone Instructions**: 
-  - Use `rev_eng_analyze_source` on target folders
+  - Use `rev_eng_analyze_tree` on top level folders for any source projects within the workspace.
+    - This tool is intended to be used to map out entire projects at once for efficiencies sake.
   - Store analysis results in scratchpad
   - Update metadata with discovered components and patterns
 - **Rita Prime**: Review analysis, update plan with discovered scope
@@ -161,7 +162,7 @@ For each identified domain:
 ## Methodical Requirements Extraction Process
 
 1. **Strategic Reconnaissance**: Analyze repository structure to understand component organization, technology stack, and architectural patterns
-   - Leverage the `rev_eng_analyze_source` to generate detailed reference documentation for the project before beginning your own analysis this tool will provide you with the following for each file:
+   - Leverage the `rev_eng_analyze_tree` to generate detailed reference documentation for the project before beginning your own analysis this tool will provide you with the following for each file:
      - Architecture Classification
      - Code Structure
       - Namespace/Package/Module
