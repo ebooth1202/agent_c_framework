@@ -87,9 +87,9 @@ class AgentCloneTools(AgentAssistToolBase):
         clone_persona: str = tool_context['persona_prompt']
 
         if process_context:
-            enhanced_persona = f"{self.clone_preamble}\n\n# Clone Process Context and Instructions\n\n{process_context}\n\n# Base Agent Persona\n\n{clone_persona}"
+            enhanced_persona = f"# Clone Process Context and Instructions\n\n{process_context}\n\n# Base Agent Persona\n\n{clone_persona}"
         else:
-            enhanced_persona = f"{self.clone_preamble}\n\n# Base Agent Persona\n\n{clone_persona}"
+            enhanced_persona = clone_persona
 
         active_tools_names: List[str] = list(self.tool_chest.active_tools.keys())
 
