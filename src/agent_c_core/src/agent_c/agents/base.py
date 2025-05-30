@@ -96,13 +96,17 @@ class BaseAgent:
     def count_tokens(self, text: str) -> int:
         return self.token_counter.count_tokens(text)
 
-    async def one_shot(self, **kwargs) -> str:
+    async def one_shot(self, **kwargs) -> Optional[List[dict[str, Any]]]:
         """For text in, text out processing. without chat"""
         messages = await self.chat(**kwargs)
         if len(messages) > 0:
-            return yaml.dump(messages[-1])
+            return messages
 
-        return "Unknown issue no messages returned please try again later"
+        return None
+
+    async def chat_sync(self, **kwargs) -> List[dict[str, Any]]:
+        """For chat interactions, synchronous version"""
+        raise NotImplementedError
 
 
     async def parallel_one_shots(self, inputs: List[str], **kwargs):
