@@ -7,6 +7,7 @@ from pydantic import Field, ConfigDict
 from observable import Observable
 
 from agent_c.models.base import BaseModel
+from agent_c.util.logging_utils import LoggingManager
 
 
 def ObservableField(
@@ -53,6 +54,8 @@ class ObservableModel(BaseModel):
         super().__init__(**data)
         self._batch_active: bool = False
         self._observable: Observable = Observable()
+        logging_manager = LoggingManager(__name__)
+        self._logger = logging_manager.get_logger()
 
     def __is_observable_field(self, field_name: str) -> bool:
         """
@@ -113,13 +116,13 @@ class ObservableModel(BaseModel):
             return
 
         if self.model_fields[name].json_schema_extra.get('observable', False):
-            logging.debug(f"Notifying that {name} changed")
+            self._logger.debug(f"Notifying that {name} changed")
             self._observable.trigger(f"{name}_changed", self)
 
-            logging.debug("Notifying that model changed")
+            self._logger.debug("Notifying that model changed")
             self._observable.trigger("model_changed", self)
 
-            logging.debug(f"Notifications for {name} complete")
+            self._logger.debug(f"Notifications for {name} complete")
 
     def trigger_model_changed(self) -> None:
         """

@@ -1,5 +1,7 @@
 from typing import Any, Optional, Dict
 
+import yaml
+
 from agent_c import json_schema
 from agent_c.toolsets.tool_set import Toolset
 from .base import AgentAssistToolBase
@@ -33,12 +35,17 @@ class AgentAssistTools(AgentAssistToolBase):
     )
     async def oneshot(self, **kwargs) -> str:
         request: str = kwargs.get('request')
+        tool_context: Dict[str, Any] = kwargs.get('tool_context')
         try:
             agent = self.agent_loader.catalog[kwargs.get('agent_id')]
         except FileNotFoundError:
             return f"Error: Agent {kwargs.get('agent_id')} not found in catalog."
 
-        return await self.agent_oneshot(request, agent)
+        messages = await self.agent_oneshot(request, agent, tool_context['session_id'], tool_context)
+        last_message = messages[-1] if messages else None
+
+        return yaml.dump(last_message, allow_unicode=True) if last_message else "No response from agent."
+
 
     @json_schema(
         'Begin or resume a chat session with an agent assistant. The return value will be the final output from the agent along with the agent session ID.',
@@ -68,11 +75,15 @@ class AgentAssistTools(AgentAssistToolBase):
         try:
             agent = self.agent_loader.catalog[kwargs.get('agent_id')]
         except FileNotFoundError:
-            return f"Error: Persona {kwargs.get('agent_id')} not found in catalog."
+            return f"Error: Agent {kwargs.get('agent_id')} not found in catalog."
 
         agent_session_id, messages = await self.agent_chat(message, agent, tool_context['session_id'], agent_session_id, tool_context)
 
-        return f"Agent Session ID: {agent_session_id}"
+        if messages is not None and len(messages) > 0:
+            last_message = messages[-1]
+            return f"Agent Session ID: {agent_session_id}\n{yaml.dump(last_message, allow_unicode=True)}"
+
+        return f"No messages returned from agent session {agent_session_id}."
 
     @json_schema(
         'Load an agent agent as a YAML string for you to review',
@@ -84,7 +95,7 @@ class AgentAssistTools(AgentAssistToolBase):
             },
         }
     )
-    async def load_persona(self, **kwargs) -> str:
+    async def load_agent(self, **kwargs) -> str:
         try:
             return self.agent_loader.catalog[kwargs.get('agent_id')].to_yaml()
         except FileNotFoundError:

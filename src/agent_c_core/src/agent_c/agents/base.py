@@ -1,24 +1,22 @@
-import copy
-import json
 import os
+import copy
+import yaml
 import asyncio
-import logging
-import uuid
 
 from asyncio import Semaphore
-from datetime import datetime
-from pathlib import Path
+
 from typing import Any, Dict, List, Union, Optional, Callable, Awaitable, Tuple
 
+
 from agent_c.chat import ChatSessionManager
-from agent_c.models import ChatEvent, ImageInput, MemoryMessage
+from agent_c.models import ChatEvent, ImageInput
 from agent_c.models.events.chat import ThoughtDeltaEvent
-from agent_c.models.input import FileInput
-from agent_c.models.input.audio_input import AudioInput
-from agent_c.models.events import MessageEvent, ToolCallEvent, InteractionEvent, TextDeltaEvent, HistoryEvent, CompletionEvent, ToolCallDeltaEvent, SystemMessageEvent
-from agent_c.prompting import PromptBuilder
-from agent_c.toolsets import ToolChest, Toolset
-from agent_c.util import MnemonicSlugs
+from agent_c.models.input import FileInput, AudioInput
+from agent_c.models.events import ToolCallEvent, InteractionEvent, TextDeltaEvent, HistoryEvent, CompletionEvent, ToolCallDeltaEvent, SystemMessageEvent
+from agent_c.prompting.prompt_builder import PromptBuilder
+from agent_c.toolsets.tool_chest import ToolChest
+from agent_c.util.slugs import MnemonicSlugs
+from agent_c.util.logging_utils import LoggingManager
 from agent_c.util.token_counter import TokenCounter
 
 
@@ -70,7 +68,9 @@ class BaseAgent:
         self.supports_multimodal: bool = False
         self.token_counter: TokenCounter = kwargs.get("token_counter", TokenCounter())
         self.root_message_role: str = kwargs.get("root_message_role", os.environ.get("ROOT_MESSAGE_ROLE", "system"))
-        self.logger = kwargs.get("logger", logging.getLogger(__name__))
+
+        logging_manager = LoggingManager(self.__class__.__name__)
+        self.logger = logging_manager.get_logger()
 
         # Handle deprecated session_logger parameter
         if "session_logger" in kwargs:
@@ -96,18 +96,22 @@ class BaseAgent:
     def count_tokens(self, text: str) -> int:
         return self.token_counter.count_tokens(text)
 
-    async def one_shot(self, **kwargs) -> str:
+    async def one_shot(self, **kwargs) -> Optional[List[dict[str, Any]]]:
         """For text in, text out processing. without chat"""
         messages = await self.chat(**kwargs)
         if len(messages) > 0:
-            return messages[-1]["content"][-1]["text"]
+            return messages
 
-        return "Unknown error, no messages returned."
+        return None
+
+    async def chat_sync(self, **kwargs) -> List[dict[str, Any]]:
+        """For chat interactions, synchronous version"""
+        raise NotImplementedError
 
 
     async def parallel_one_shots(self, inputs: List[str], **kwargs):
         """Run multiple one-shot tasks in parallel"""
-        tasks = [self.one_shot(user_message=input, **kwargs) for input in inputs]
+        tasks = [self.one_shot(user_message=oneshot_input, **kwargs) for oneshot_input in inputs]
         return await asyncio.gather(*tasks)
 
     async def chat(self, **kwargs) -> List[dict[str, Any]]:
@@ -155,7 +159,7 @@ class BaseAgent:
     @staticmethod
     def _callback_opts(**kwargs) -> Dict[str, str]:
         """
-        Returns a dictionary of options for the callback method to be used by default..
+        Returns a dictionary of options for the callback method to be used by default.
         """
         agent_role: str = kwargs.get("agent_role", 'assistant')
         session_manager: Union[ChatSessionManager, None] = kwargs.get("session_manager", None)

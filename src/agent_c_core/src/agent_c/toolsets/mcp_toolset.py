@@ -12,6 +12,7 @@ from typing import Any, Callable, Dict, List, Optional, Type, Union
 
 from agent_c.toolsets.tool_set import Toolset
 from agent_c.toolsets.mcp_server import MCPServer
+from agent_c.util.logging_utils import LoggingManager
 
 
 class MCPToolset(Toolset):
@@ -32,7 +33,9 @@ class MCPToolset(Toolset):
         super().__init__(name=name, use_prefix=False, **kwargs)
         self.openai_schemas = []
         self.server = server
-        self.logger = logging.getLogger(f"agent_c.mcp_toolset.{server.server_id}")
+        logging_manager = LoggingManager(f"agent_c.mcp_toolset.{server.server_id}")
+        self.logger = logging_manager.get_logger()
+
         
         # Create dynamic methods for MCP tools
         self._create_tool_methods()

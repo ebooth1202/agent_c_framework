@@ -11,6 +11,7 @@ from typing import Union, Optional
 from pathlib import Path
 from pydantic import Field
 from agent_c.models.input.file_input import FileInput
+from agent_c.util.logging_utils import LoggingManager
 
 
 class AudioInput(FileInput):
@@ -31,6 +32,10 @@ class AudioInput(FileInput):
             data['content_type'] = 'audio/' + data.get('format', 'wav')
 
         super().__init__(**data)
+
+        logging_manager = LoggingManager(__name__)
+        self._logger = logging_manager.get_logger()
+
 
     def as_nd_array(self) -> np.ndarray:
         """
@@ -70,7 +75,9 @@ class AudioInput(FileInput):
 
             return cls.from_bytes(buffer.getvalue(), 'wav', **data)
         except Exception as e:
-            logging.error(f"Error converting audio to WAV: {str(e)}")
+            logging_manager = LoggingManager(__name__)
+            logger = logging_manager.get_logger()
+            logger.error(f"Error converting audio to WAV: {str(e)}")
             raise
         finally:
             buffer.close()
@@ -120,7 +127,9 @@ class AudioInput(FileInput):
             with path.open('rb') as f:
                 content = base64.b64encode(f.read()).decode('utf-8')
         except IOError as e:
-            logging.error(f"Error reading audio file {file_path}: {str(e)}")
+            logging_manager = LoggingManager(__name__)
+            logger = logging_manager.get_logger()
+            logger.error(f"Error reading audio file {file_path}: {str(e)}")
             raise
 
 

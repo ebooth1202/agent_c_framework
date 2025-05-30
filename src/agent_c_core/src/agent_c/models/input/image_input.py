@@ -5,6 +5,7 @@ import tempfile
 from typing import Any
 
 from agent_c.models.input.file_input import FileInput
+from agent_c.util.logging_utils import LoggingManager
 
 
 class ImageInput(FileInput):
@@ -32,8 +33,6 @@ class ImageInput(FileInput):
                 pil_image.save(temp_file, format="PNG")
                 temp_file_path = temp_file.name
 
-            logging.debug(f"Saved PIL image to temporary file: {temp_file_path}")
-
             with open(temp_file_path, 'rb') as file:
                 image_bytes: bytes = file.read()
 
@@ -42,7 +41,9 @@ class ImageInput(FileInput):
             return cls(content_type="image/png", content=base64_encoded_str, file_name=f"{filename}.png", **data)
 
         except Exception as e:
-            logging.error(f"Failed to convert PIL image to base64: {e}")
+            logging_manager = LoggingManager(__name__)
+            logger = logging_manager.get_logger()
+            logger.error(f"Failed to convert PIL image to base64: {e}")
             raise
         finally:
             if os.path.exists(temp_file_path):

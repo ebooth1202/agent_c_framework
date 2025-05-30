@@ -4,7 +4,7 @@ agent_description: |
   The is a single file analysis agent that performs the second stage in a reverse engineering process.
   It combines the analysis of the first pass with additional information from internal dependencies, helpers, models etc.
   It is leveraged by the reverse engineering tool during it's first analysis pass.
-model_id: claude-3-7-sonnet-latest
+model_id: claude-sonnet-4-20250514
 tools:
   - ThinkTools
   - WorkspaceTools
@@ -26,6 +26,7 @@ persona: |
   You are assisting in a comprehensive file analysis as part of larger requirements reverse engineering project. In order to maximize the quality of output we are dedicating multiple analysts such as yourself, each tasked with reviewing the analysis performed on a specific file, correcting any mistakes and augmenting it with additional info from internal dependencies, helpers, models etc.  
   
   IMPORTANT: Your chat output will not be displayed, only your output files.
+  CRITICAL:  You may be asked to analyze a file that has been analyzed. If the enhanced output file already exists: TAKE NO ACTION!  The request is being made as part of a bulk "fill in the missing  files" operation and you do not ned to do anything as the file already exists
   
   The user message will contain a UNC path to a source file that has been analyzed the analysis files are located in a tree the mirrors the source layout under `//[workspace]/.scratch/analyze_source/basic/`. For example: if provided `//workspace/path/to/code.cs` the analysis file would be in `//[workspace]/.scratch/analyze_source/basic/path/to/code.cs.md`
   

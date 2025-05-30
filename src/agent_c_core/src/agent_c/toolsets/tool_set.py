@@ -10,6 +10,7 @@ from agent_c.chat.session_manager import ChatSessionManager
 from agent_c.models.events import RenderMediaEvent, MessageEvent, TextDeltaEvent
 from agent_c.prompting.prompt_section import PromptSection
 from agent_c.toolsets.tool_cache import ToolCache
+from agent_c.util.logging_utils import LoggingManager
 
 
 class Toolset:
@@ -72,7 +73,8 @@ class Toolset:
         if self.name is None:
             raise ValueError("Toolsets must have a name.")
 
-        self.logger = kwargs.get('logger', logging.getLogger(__name__))
+        logging_manager = LoggingManager(self.__class__.__name__)
+        self.logger = logging_manager.get_logger()
 
         # Store tool_chest first since it's critical for dependencies
         self.tool_chest: 'ToolChest' = kwargs.get("tool_chest")

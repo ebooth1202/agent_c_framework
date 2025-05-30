@@ -14,6 +14,7 @@ from typing import Any, Optional, Dict, List, Callable, Union
 from dataclasses import dataclass
 from enum import Enum
 
+from .logging_utils import LoggingManager
 from .transport_exceptions import TransportError, TransportConnectionError, TransportTimeoutError
 
 
@@ -68,7 +69,9 @@ class TransportInterface(ABC):
         self.name = name or self.__class__.__name__
         self.state = TransportState.DISCONNECTED
         self.metrics = TransportMetrics()
-        self._logger = logging.getLogger(f"{__name__}.{self.name}")
+        logging_manager = LoggingManager(f"{__name__}.{self.name}")
+        self._logger = logging_manager.get_logger()
+
     
     @abstractmethod
     async def send(self, event: Any, metadata: Optional[Dict[str, Any]] = None) -> bool:
@@ -203,7 +206,8 @@ class LoggingTransport(TransportInterface):
     
     def __init__(self, logger_name: str = "event_transport", log_level: int = logging.INFO):
         super().__init__("LoggingTransport")
-        self.transport_logger = logging.getLogger(logger_name)
+        logging_manager = LoggingManager(logger_name)
+        self.transport_logger = logging_manager.get_logger()
         self.log_level = log_level
         self.state = TransportState.CONNECTED  # Always "connected"
     
