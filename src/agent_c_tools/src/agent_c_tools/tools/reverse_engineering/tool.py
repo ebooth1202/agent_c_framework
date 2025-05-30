@@ -135,7 +135,7 @@ class ReverseEngineeringTools(AgentAssistToolBase):
         tool_context: Dict[str, Any] = kwargs.get('tool_context')
         workspace = self.workspace_tool.find_workspace_by_name(workspace_name)
         agent_config = self.recon_answers_oneshot.model_dump()
-        agent_config['persona'] = agent_config['persona'].replace('[workspace]', workspace_name).replace('[workspace_tree]', await workspace.tree(7, 3))
+        agent_config['persona'] = agent_config['persona'].replace('[workspace]', workspace_name).replace('[workspace_tree]', await workspace.tree('.scratch/analyze_source/enhanced', 10, 5))
         agent = AgentConfiguration.model_validate(agent_config)
 
         messages = await self.agent_oneshot(request, agent, tool_context['session_id'], tool_context)
