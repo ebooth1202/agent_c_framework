@@ -840,6 +840,8 @@ class AgentBridge:
             "tool_call_delta": self._handle_tool_call_delta,
             "tool_select_delta": self._handle_tool_select_delta,
             "message": self._handle_message,
+            "system_message": self._handle_system_message,
+
         }
 
         handler = handlers.get(event.type)
