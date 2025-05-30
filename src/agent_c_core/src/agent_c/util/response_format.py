@@ -1,7 +1,10 @@
 import logging
 from typing import List, Any, Dict
 
-logger = logging.getLogger(__name__)
+from agent_c.util.logging_utils import LoggingManager
+
+logging_manager = LoggingManager(__name__)
+logger = logging_manager.get_logger()
 
 
 ### THESE METHODS ARE SIMPLY FOR EASIER DEBUGGING VISUALIZATION ###

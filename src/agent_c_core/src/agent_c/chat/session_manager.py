@@ -1,9 +1,10 @@
 import json
-import logging
-
 import yaml
-from typing import Union, Optional, Dict
+
+from typing import Optional, Dict
+
 from agent_c.models.chat_history import ChatSession, MemoryMessage, ChatUser
+from agent_c.util.logging_utils import LoggingManager
 
 
 class ChatSessionManager:
@@ -22,6 +23,8 @@ class ChatSessionManager:
         self.is_new_session: bool = True
         self.user: Optional[ChatUser] = None
         self.chat_session: Optional[ChatSession] = None
+        logging_manager = LoggingManager(__name__)
+        self.logger = logging_manager.get_logger()
 
     @property
     def active_memory(self):
@@ -138,7 +141,7 @@ class ChatSessionManager:
         try:
             return json.loads(json_str)
         except Exception as e:
-            logging.exception(f"Failed to decode metameta for {prefix}")
+            self.logger.exception(f"Failed to decode metameta for {prefix}")
             return {}
 
     def set_user_meta_meta(self, prefix: str, metameta: Dict) -> None:
@@ -155,7 +158,7 @@ class ChatSessionManager:
         try:
             json_str = json.dumps(metameta)
         except Exception as e:
-            logging.exception(f"Failed to encode metameta for {prefix}")
+            self.logger.exception(f"Failed to encode metameta for {prefix}")
             raise
 
         if not self.user.metadata.get('metameta'):
@@ -180,7 +183,7 @@ class ChatSessionManager:
         try:
             return json.loads(json_str)
         except Exception:
-            logging.exception(f"Failed to decode session metameta for {prefix}")
+            self.logger.exception(f"Failed to decode session metameta for {prefix}")
             return {}
 
     def set_session_meta_meta(self, prefix: str, metameta: Dict) -> None:
@@ -197,7 +200,7 @@ class ChatSessionManager:
         try:
             json_str = json.dumps(metameta)
         except Exception as e:
-            logging.exception(f"Failed to encode session metameta for {prefix}")
+            self.logger.exception(f"Failed to encode session metameta for {prefix}")
             raise
 
         if not self.chat_session.metadata.get('metameta'):
@@ -205,8 +208,8 @@ class ChatSessionManager:
         else:
             self.chat_session.metadata['metameta'][prefix] = json_str
 
-    @staticmethod
-    def dict_to_yaml(data_dict: Dict) -> str:
+
+    def dict_to_yaml(self, data_dict: Dict) -> str:
         """
         Converts a dictionary into YAML format.
 
@@ -222,7 +225,7 @@ class ChatSessionManager:
         try:
             return yaml.dump(data_dict)
         except yaml.YAMLError as exc:
-            logging.error(f"Error serializing to YAML: {exc}")
+            self.logger.error(f"Error serializing to YAML: {exc}")
             return ""
 
     def filtered_session_meta_string(self, prefix: str) -> str:

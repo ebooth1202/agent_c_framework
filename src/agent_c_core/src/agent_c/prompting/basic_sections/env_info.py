@@ -108,7 +108,7 @@ class EnvironmentInfoSection(PromptSection):
                 formatted_timestamp = local_time_with_tz.strftime('%A %B %-d, %Y %-I:%M%p (%Z %z)')
             return formatted_timestamp
         except Exception:
-            logging.error("An error occurred when formatting the timestamp.", exc_info=True)
+            self._logger.error("An error occurred when formatting the timestamp.", exc_info=True)
             return 'Warn the user that there was an error formatting the timestamp.'
 
     @property_bag_item

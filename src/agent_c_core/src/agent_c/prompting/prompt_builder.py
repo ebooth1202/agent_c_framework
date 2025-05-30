@@ -2,6 +2,7 @@ import re
 import logging
 from typing import List, Dict, Any, Set, Optional
 from agent_c.prompting.prompt_section import PromptSection
+from agent_c.util.logging_utils import LoggingManager
 
 
 class PromptBuilder:
@@ -21,6 +22,8 @@ class PromptBuilder:
         """
         self.sections: List[PromptSection] = sections
         self.tool_sections: List[PromptSection] = tool_sections or []
+        logging_manager = LoggingManager(self.__class__.__name__)
+        self.logger = logging_manager.get_logger()
 
     @staticmethod
     def _get_template_variables(template: str) -> Set[str]:
@@ -77,14 +80,14 @@ class PromptBuilder:
                 except KeyError as e:
                     missing_key = str(e).strip("'")
                     template_vars = self._get_template_variables(section.template)
-                    logging.error(
+                    self.logger.error(
                         f"Error rendering section '{section.name}': Missing key '{missing_key}'. "
                         f"Template variables: {template_vars}. Data provided: {data.keys()}"
                     )
                     if section.required:
                         raise
                 except Exception as e:
-                    logging.exception(f"Error rendering section '{section.name}': {e}")
+                    self.logger.exception(f"Error rendering section '{section.name}': {e}")
                     if section.required:
                         raise
 

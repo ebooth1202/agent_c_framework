@@ -6,6 +6,8 @@ from string import Template
 from typing import Callable, Any, Dict
 from pydantic import BaseModel, ConfigDict
 
+from agent_c.util.logging_utils import LoggingManager
+
 
 def property_bag_item(func: Callable) -> Callable:
     """
@@ -43,6 +45,17 @@ class PromptSection(BaseModel):
     render_section_header: bool = True
     required: bool = False
 
+    def __init__(self, **data: Any):
+        """
+        Initialize the PromptSection with the provided data.
+
+        Args:
+            **data: Arbitrary keyword arguments to initialize the section.
+        """
+        super().__init__(**data)
+        logging_manager = LoggingManager(self.__class__.__name__)
+        self._logger = logging_manager.get_logger()
+
     async def get_dynamic_properties(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Retrieves the dynamic properties of the PromptSection.
@@ -70,9 +83,9 @@ class PromptSection(BaseModel):
                     elif param_count == 1:
                         dynamic_props[attr_name] = await attr(data)
                     else:
-                        logging.exception(f"Dynamic property '{attr_name}' has too many parameters: {param_count}")
+                        self._logger.exception(f"Dynamic property '{attr_name}' has too many parameters: {param_count}")
                 except Exception as e:
-                    logging.exception(f"Error getting dynamic property '{attr_name}': {e}")
+                    self._logger.exception(f"Error getting dynamic property '{attr_name}': {e}")
         return dynamic_props
 
     async def render(self, data: Dict[str, Any]) -> str:

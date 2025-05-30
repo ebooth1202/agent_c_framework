@@ -64,11 +64,6 @@ class ClaudeChatAgent(BaseAgent):
         self.can_use_tools = True
         self.allow_betas = kwargs.get("allow_betas", True)
 
-        # Initialize logger
-        logging_manager = LoggingManager(__name__)
-        self.logger = logging_manager.get_logger()
-
-
         # JO: I need these as class level variables to adjust outside a chat call.
         self.max_tokens = kwargs.get("max_tokens", self.CLAUDE_MAX_TOKENS)
         self.budget_tokens = kwargs.get("budget_tokens", 0)
@@ -175,7 +170,9 @@ class ClaudeChatAgent(BaseAgent):
                         client_wants_cancel,
                         opts["tool_context"]
                     )
+
                     if state['complete'] and state['stop_reason'] != 'tool_use':
+                        self.logger.info(f"Interaction {interaction_id} stopped with reason: {state['stop_reason']}")
                         return result
                     delay = 1
                     messages = result
@@ -188,6 +185,7 @@ class ClaudeChatAgent(BaseAgent):
                         self.logger.warning(f"Claude API is overloaded. Retrying... Delay is {delay} seconds")
                         delay = await self._handle_retryable_error(e, delay, callback_opts)
                     else:
+                        self.logger.exception(f"Uncoverable error during Claude chat: {e}", exc_info=True)
                         await self._raise_system_event(f"Exception calling `client.messages.stream`.\n\n{e}\n", **callback_opts)
                         await self._raise_completion_end(opts["completion_opts"], stop_reason="exception", **callback_opts)
                         return []
@@ -532,7 +530,7 @@ class ClaudeChatAgent(BaseAgent):
         # Add images first
         for image in images:
             if image.content is None and image.url is not None:
-                logging.warning(
+                self.logger.warning(
                     f"ImageInput has no content and Claude doesn't support image URLs. Skipping image {image.url}")
                 continue
 
@@ -542,7 +540,7 @@ class ClaudeChatAgent(BaseAgent):
         # Process file content
         file_content_blocks = []
         if files:
-            logging.info(f"Processing {len(files)} file inputs in Claude _generate_multi_modal_user_message")
+            self.logger.info(f"Processing {len(files)} file inputs in Claude _generate_multi_modal_user_message")
 
             for idx, file in enumerate(files):
                 extracted_text = None
@@ -551,7 +549,7 @@ class ClaudeChatAgent(BaseAgent):
                         file_upload = await self.client.beta.files.upload(file=(file.file_name, base64.b64decode(file.content), file.content_type))
                         contents.append({"type": "document", "source": {"type": "file","file_id": file_upload.id}})
                     except Exception as e:
-                        logging.exception(f"Error uploading file {file.file_name}: {e}", exc_info=True)
+                        self.logger.exception(f"Error uploading file {file.file_name}: {e}", exc_info=True)
                         continue
                 elif "pdf" in file.content_type.lower() or ".pdf" in str(file.file_name).lower():
                     pdf_source = {"type": "base64", "media_type": file.content_type, "data": file.content}
@@ -560,7 +558,7 @@ class ClaudeChatAgent(BaseAgent):
                     # Check if get_text_content method exists and call it
                     if hasattr(file, 'get_text_content') and callable(file.get_text_content):
                         extracted_text = file.get_text_content()
-                        logging.info(
+                        self.logger.info(
                             f"Claude: File {idx} ({file.file_name}): get_text_content() returned {len(extracted_text) if extracted_text else 0} chars")
 
                     if extracted_text:
@@ -568,12 +566,12 @@ class ClaudeChatAgent(BaseAgent):
                         content_block = f"Content from file {file_name}:\n\n{extracted_text}"
 
                         file_content_blocks.append(content_block)
-                        logging.info(f"Claude: File {idx} ({file.file_name}): Added extracted text to message")
+                        self.logger.info(f"Claude: File {idx} ({file.file_name}): Added extracted text to message")
                     else:
                         # Fall back to mentioning the file without content
                         file_name = file.file_name or "unknown file"
                         file_content_blocks.append(f"[File attached: {file_name} (content could not be extracted)]")
-                        logging.warning(
+                        self.logger.warning(
                             f"Claude: File {idx} ({file.file_name}): No text content available, adding file name only")
 
         # Prepare the main text content with file content
@@ -589,7 +587,7 @@ class ClaudeChatAgent(BaseAgent):
 
         # For audio clips, since Claude doesn't support audio directly, just log a warning
         if audio and len(audio) > 0:
-            logging.warning(
+            self.logger.warning(
                 f"Claude does not directly support audio input. Mentioned {len(audio)} audio clips in text.")
 
         return [{"role": "user", "content": contents}]
