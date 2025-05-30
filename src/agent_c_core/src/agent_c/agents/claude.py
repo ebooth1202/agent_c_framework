@@ -8,6 +8,7 @@ from typing import Any, List, Union, Dict, Tuple
 
 
 from anthropic import AsyncAnthropic, APITimeoutError, Anthropic, RateLimitError, AsyncAnthropicBedrock
+from httpcore import RemoteProtocolError
 
 from agent_c.agents.base import BaseAgent
 from agent_c.chat.session_manager import ChatSessionManager
@@ -177,17 +178,26 @@ class ClaudeChatAgent(BaseAgent):
                         return result
                     delay = 1
                     messages = result
-                except (APITimeoutError, RateLimitError) as e:
-                    # Exponential backoff handled in a helper method
+                except RateLimitError:
                     delay = await self._handle_retryable_error(e, delay, callback_opts)
-                    self.logger.warning(f"Timeout / Ratelimit. Retrying...Delay is {delay} seconds")
+                    self.logger.warning(f"Ratelimit. Retrying...Delay is {delay} seconds")
+                    await self._raise_system_event(f"Claude API is overloaded, retrying... Delay is {delay} seconds \n", severity="warning", **callback_opts)
+                except APITimeoutError:
+                    delay = await self._handle_retryable_error(RemoteProtocolError, delay, callback_opts)
+                    self.logger.warning(f"API Timeout. Retrying...Delay is {delay} seconds")
+                    await self._raise_system_event(f"Claude API is overloaded, retrying... Delay is {delay} seconds \n", severity="warning", **callback_opts)
+                except RemoteProtocolError:
+                    delay = await self._handle_retryable_error(RemoteProtocolError, delay, callback_opts)
+                    self.logger.warning(f"Remote protocol error encountered, retrying...Delay is {delay} seconds")
+                    await self._raise_system_event(f"Claude API is overloaded, retrying... Delay is {delay} seconds \n", severity="warning", **callback_opts)
                 except Exception as e:
                     if "overloaded" in str(e).lower():
-                        self.logger.warning(f"Claude API is overloaded. Retrying... Delay is {delay} seconds")
+                        self.logger.warning(f"Claude API is overloaded, retrying... Delay is {delay} seconds")
+                        await self._raise_system_event(f"Claude API is overloaded, retrying... Delay is {delay} seconds \n", severity="warning", **callback_opts)
                         delay = await self._handle_retryable_error(e, delay, callback_opts)
                     else:
                         self.logger.exception(f"Uncoverable error during Claude chat: {e}", exc_info=True)
-                        await self._raise_system_event(f"Exception calling `client.messages.stream`.\n\n{e}\n", **callback_opts)
+                        await self._raise_system_event(f"Exception calling `client.messages.stream`.\n\n{e}\n",  **callback_opts)
                         await self._raise_completion_end(opts["completion_opts"], stop_reason="exception", **callback_opts)
                         return []
 
