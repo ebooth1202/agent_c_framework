@@ -27,6 +27,8 @@ from agent_c.toolsets.mcp_tool_chest import MCPToolChest, MCPServer
 from agent_c_tools.tools.think.prompt import ThinkSection
 from agent_c.chat import ChatSessionManager
 
+from agent_c.util.event_session_logger_factory import create_with_callback
+
 #from agent_c_tools.tools.user_preferences import AssistantPersonalityPreference, AddressMeAsPreference, UserPreference
 from agent_c.prompting import PromptBuilder, CoreInstructionSection
 from agent_c_tools.tools.workspace.local_storage import LocalProjectWorkspace
@@ -86,6 +88,13 @@ class AgentBridge:
         # Debugging and Logging Setup
         logging_manager = LoggingManager(__name__)
         self.logger = logging_manager.get_logger()
+
+        # Set up streaming_callback with logging
+        self.streaming_callback_with_logging = create_with_callback(
+            log_base_dir=os.getenv('AGENT_LOG_DIR', './logs/sessions'),
+            callback=self.consolidated_streaming_callback,  # Forward to UI processing
+            include_system_prompt=True
+        )
 
         self.debug_event = None
 
@@ -273,7 +282,7 @@ class AgentBridge:
             'tool_cache': self.tool_cache,
             'session_manager': self.session_manager,
             'workspaces': self.workspaces,
-            'streaming_callback': self.consolidated_streaming_callback,
+            'streaming_callback': self.streaming_callback_with_logging,
             'model_configs': MODELS_CONFIG
         }
         # Reinitialize just the tool chest
@@ -325,7 +334,7 @@ class AgentBridge:
                 'tool_cache': self.tool_cache,
                 'session_manager': self.session_manager,
                 'workspaces': self.workspaces,
-                'streaming_callback': self.consolidated_streaming_callback,
+                'streaming_callback': self.streaming_callback_with_logging,
                 'model_configs': MODELS_CONFIG
             }
 
@@ -411,7 +420,7 @@ class AgentBridge:
             "prompt_builder": prompt_builder,
             "model_name": self.model_name,
             "tool_chest": self.tool_chest,
-            "streaming_callback": self.consolidated_streaming_callback,
+            "streaming_callback": self.streaming_callback_with_logging,
             "output_format": self.agent_output_format
         }
 
@@ -897,7 +906,7 @@ class AgentBridge:
 
             # Set the agent’s streaming callback to our consolidated version.
             original_callback = self.agent.streaming_callback
-            self.agent.streaming_callback = self.consolidated_streaming_callback
+            self.agent.streaming_callback = self.streaming_callback_with_logging
 
             prompt_metadata = await self.__build_prompt_metadata()
 

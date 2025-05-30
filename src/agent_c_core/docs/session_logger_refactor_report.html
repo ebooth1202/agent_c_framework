@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Viewer</title>
+    <!-- Google Fonts for Roboto -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <!-- Highlight.js for syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <!-- Load additional languages -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/csharp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/java.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/typescript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/json.min.js"></script>
+
+    <!-- Marked.js for markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@4.0.0/marked.min.js"></script>
+
+    <!-- Mermaid for diagrams -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+
+    <style>
+        :root {
+            /* Brand Colors */
+            --gold: #fdb825;
+            --indigo: #2c1a5d;
+            --peacock: #1f5d82;
+            --gulfstream: #6ca7d0;
+            --slate: #232d3d;
+            --glacier: #67686a;
+            --shamrock: #2fb677;
+            --cerulean: #2d84bb;
+            --midnight: #404041;
+            --light-gray: #ebebeb;
+
+            /* Functional Colors */
+            --primary-color: var(--indigo);
+            --secondary-color: var(--gold);
+            --sidebar-width: 300px;
+            --sidebar-min-width: 100px;
+            --sidebar-max-width: 600px;
+            --sidebar-bg: var(--light-gray);
+            --border-color: #e1e4e8;
+            --code-bg: #f8f9fa;
+            --text-color: var(--slate);
+            --heading-color: var(--indigo);
+            --link-color: var(--peacock);
+            --folder-icon-color: var(--gulfstream);
+            --file-icon-color: var(--glacier);
+            --toggle-btn-color: var(--glacier);
+            --toggle-btn-hover-color: var(--midnight);
+            --resize-handle-width: 8px;
+            --fullscreen-bg: rgba(0, 0, 0, 0.8);
+            --z-index-fullscreen: 1000;
+            --z-index-drag-handle: 10;
+            --z-index-back-to-top: 100;
+            --toc-bg-color: #f8f9fa;
+            --toc-border-color: var(--indigo);
+            --code-border-color: var(--gold);
+            --mermaid-bg-color: #f8f9fa;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --section-spacing: 40px;
+        }
+
+        body {
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #sidebar {
+            width: var(--sidebar-width);
+            min-width: var(--sidebar-min-width);
+            max-width: var(--sidebar-max-width);
+            height: 100%;
+            overflow-y: auto;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            padding: 20px 0;
+            box-sizing: border-box;
+            transition: transform 0.3s ease;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        #sidebar-resize-handle {
+            position: absolute;
+            top: 0;
+            right: -5px;
+            width: var(--resize-handle-width);
+            height: 100%;
+            cursor: col-resize;
+            z-index: var(--z-index-drag-handle);
+        }
+
+        #content {
+            flex-grow: 1;
+            height: 100%;
+            overflow-y: auto;
+            padding: 20px 40px;
+            box-sizing: border-box;
+            position: relative;
+            scroll-behavior: smooth;
+        }
+
+        #sidebar-toggle {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background-color: var(--sidebar-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            padding: 5px 8px;
+            cursor: pointer;
+            color: var(--toggle-btn-color);
+            font-weight: bold;
+            font-size: 14px;
+            z-index: 5;
+            transition: color 0.3s ease;
+        }
+
+        #sidebar-toggle:hover {
+            color: var(--toggle-btn-hover-color);
+        }
+
+        .tree-view {
+            list-style-type: none;
+            padding-left: 15px;
+            margin: 0;
+        }
+
+        .tree-view li {
+            margin: 5px 0;
+            position: relative;
+        }
+
+        .folder {
+            cursor: pointer;
+            user-select: none;
+            padding: 5px 8px;
+            border-radius: 3px;
+            transition: background-color 0.2s, transform 0.1s;
+            display: flex;
+            align-items: center;
+        }
+
+        .folder:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+            transform: translateX(2px);
+        }
+
+        .folder:before {
+            content: '📁';
+            margin-right: 8px;
+            color: var(--folder-icon-color);
+        }
+
+        .folder.open:before {
+            content: '📂';
+        }
+
+        .file {
+            padding: 5px 8px;
+            cursor: pointer;
+            user-select: none;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .file:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+            transform: translateX(2px);
+        }
+
+        .file:before {
+            content: '📄';
+            margin-right: 8px;
+            color: var(--file-icon-color);
+        }
+
+        .file.active {
+            background-color: rgba(44, 26, 93, 0.1);
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Back to top button */
+        #back-to-top {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: var(--primary-color);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s;
+            z-index: var(--z-index-back-to-top);
+            box-shadow: 0 2px 5px var(--shadow-color);
+        }
+
+        #back-to-top.visible {
+            opacity: 0.7;
+        }
+
+        #back-to-top:hover {
+            opacity: 1;
+            transform: translateY(-3px);
+        }
+
+        /* Markdown content styling */
+        #markdown-content h1 {
+            padding-bottom: 0.3em;
+            font-size: 2em;
+            border-bottom: 1px solid var(--border-color);
+            margin-top: var(--section-spacing);
+            margin-bottom: 24px;
+            font-weight: 600;
+            line-height: 1.25;
+            color: var(--heading-color);
+        }
+
+        #markdown-content h2 {
+            padding-bottom: 0.3em;
+            font-size: 1.5em;
+            border-bottom: 1px solid var(--border-color);
+            margin-top: var(--section-spacing);
+            margin-bottom: 20px;
+            font-weight: 600;
+            line-height: 1.25;
+            color: var(--heading-color);
+        }
+
+        #markdown-content h3 {
+            font-size: 1.25em;
+            margin-top: 32px;
+            margin-bottom: 16px;
+            font-weight: 600;
+            line-height: 1.25;
+            color: var(--heading-color);
+        }
+
+        #markdown-content a {
+            color: var(--link-color);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        #markdown-content a:hover {
+            text-decoration: underline;
+            color: var(--indigo);
+        }
+
+        #markdown-content code {
+            font-family: SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+            padding: 0.2em 0.4em;
+            margin: 0;
+            font-size: 85%;
+            background-color: var(--code-bg);
+            border-radius: 3px;
+        }
+
+        /* Styled code blocks with yellow left border */
+        #markdown-content pre {
+            background-color: var(--code-bg);
+            border-radius: 8px;
+            padding: 16px 16px 16px 20px;
+            overflow: auto;
+            margin-top: 0;
+            margin-bottom: 24px;
+            position: relative;
+            border-left: 4px solid var(--code-border-color);
+            box-shadow: 0 2px 8px var(--shadow-color);
+        }
+
+        #markdown-content pre code {
+            padding: 0;
+            margin: 0;
+            background-color: transparent;
+            font-size: 85%;
+            line-height: 1.5;
+            display: block;
+            overflow-x: auto;
+        }
+
+        /* Table of Contents styling */
+        #markdown-content > ul:first-of-type,
+        #markdown-content > ol:first-of-type {
+            background-color: var(--toc-bg-color);
+            border-radius: 8px;
+            padding: 20px 20px 20px 40px;
+            margin-bottom: 32px;
+            border-left: 4px solid var(--toc-border-color);
+            box-shadow: 0 2px 8px var(--shadow-color);
+        }
+
+        #markdown-content > ul:first-of-type li,
+        #markdown-content > ol:first-of-type li {
+            margin: 8px 0;
+        }
+
+        #markdown-content > ul:first-of-type a,
+        #markdown-content > ol:first-of-type a {
+            display: inline-block;
+            transition: transform 0.2s, color 0.2s;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+
+        #markdown-content > ul:first-of-type a:hover,
+        #markdown-content > ol:first-of-type a:hover {
+            transform: translateX(3px);
+            background-color: rgba(44, 26, 93, 0.05);
+        }
+
+        /* Active TOC link */
+        #markdown-content > ul:first-of-type a.active,
+        #markdown-content > ol:first-of-type a.active {
+            font-weight: 500;
+            background-color: rgba(44, 26, 93, 0.1);
+            color: var(--primary-color);
+        }
+
+        #markdown-content blockquote {
+            padding: 0 1em;
+            color: #6a737d;
+            border-left: 0.25em solid #dfe2e5;
+            margin: 0 0 24px 0;
+        }
+
+        #markdown-content table {
+            display: block;
+            width: 100%;
+            overflow: auto;
+            border-spacing: 0;
+            border-collapse: collapse;
+            margin-top: 0;
+            margin-bottom: 24px;
+        }
+
+        #markdown-content table tr {
+            background-color: #fff;
+            border-top: 1px solid #c6cbd1;
+        }
+
+        #markdown-content table tr:nth-child(2n) {
+            background-color: #f6f8fa;
+        }
+
+        #markdown-content table th, #markdown-content table td {
+            padding: 8px 13px;
+            border: 1px solid #dfe2e5;
+        }
+
+        #markdown-content table th {
+            font-weight: 600;
+        }
+
+        /* Method signature specific styling */
+        #markdown-content pre code.hljs {
+            padding: 16px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', 'Andale Mono', 'Ubuntu Mono', monospace;
+        }
+
+        /* Copy button for code blocks */
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: absolute;
+            top: 0;
+            right: 0;
+            padding: 4px 10px;
+            font-size: 12px;
+            background-color: var(--code-bg);
+            border-bottom-left-radius: 6px;
+            z-index: 1;
+        }
+
+        .code-language {
+            font-family: 'Roboto', sans-serif;
+            color: var(--glacier);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .copy-btn {
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 2px 6px;
+            margin-left: 10px;
+            color: var(--glacier);
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+
+        .copy-btn:hover {
+            color: var(--primary-color);
+        }
+
+        /* C# specific styles */
+        #markdown-content .hljs-keyword {
+            color: #0000ff;
+            font-weight: bold;
+        }
+
+        #markdown-content .hljs-type,
+        #markdown-content .hljs-class {
+            color: #267f99;
+        }
+
+        #markdown-content .hljs-string {
+            color: #a31515;
+        }
+
+        #markdown-content .hljs-function {
+            color: #795e26;
+        }
+
+        /* Method documentation styling */
+        #markdown-content .method-description {
+            margin-bottom: 32px;
+            padding-left: 16px;
+            border-left: 4px solid #e1e4e8;
+        }
+
+        /* Full screen overlay for images and diagrams */
+        .fullscreen-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--fullscreen-bg);
+            z-index: var(--z-index-fullscreen);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .fullscreen-content {
+            max-width: 95%;
+            max-height: 90%;
+            overflow: auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .fullscreen-content img {
+            max-width: 100%;
+            max-height: 85vh;
+            object-fit: contain;
+        }
+
+        .fullscreen-content .mermaid {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+        }
+
+        .fullscreen-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-size: 30px;
+            cursor: pointer;
+            background: rgba(0, 0, 0, 0.5);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            line-height: 1;
+            transition: background-color 0.2s;
+        }
+
+        .fullscreen-close:hover {
+            background: rgba(0, 0, 0, 0.7);
+        }
+
+        .fullscreen-trigger {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: rgba(0, 0, 0, 0.2);
+            color: white;
+            padding: 5px;
+            border-radius: 3px;
+            cursor: pointer;
+            display: none;
+            font-size: 16px;
+            z-index: 10;
+            transition: background-color 0.2s;
+        }
+
+        .fullscreen-trigger:hover {
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+
+        /* Mermaid diagram styling */
+        #markdown-content .mermaid-wrapper {
+            position: relative;
+            margin-bottom: 32px;
+            background-color: var(--mermaid-bg-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px var(--shadow-color);
+        }
+
+        #markdown-content .mermaid {
+            background-color: var(--mermaid-bg-color);
+            border-radius: 6px;
+        }
+
+        #markdown-content .mermaid-wrapper:hover .fullscreen-trigger,
+        #markdown-content p:has(img):hover .fullscreen-trigger {
+            display: block;
+        }
+
+        #markdown-content p:has(img) {
+            position: relative;
+            display: inline-block;
+        }
+
+        /* Responsive layout */
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+
+            #sidebar {
+                width: 100% !important; /* Override any inline styles */
+                height: auto;
+                max-height: 30vh;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+
+            #sidebar-resize-handle {
+                display: none;
+            }
+
+            #content {
+                height: auto;
+                max-height: 70vh;
+            }
+
+            .fullscreen-content {
+                max-width: 100%;
+                max-height: 80vh;
+            }
+
+            #back-to-top {
+                bottom: 10px;
+                right: 10px;
+                width: 35px;
+                height: 35px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div id="sidebar">
+    <button id="sidebar-toggle" title="Toggle Sidebar">.</button> <!--Hide button, disabling for now-->
+    <div id="sidebar-resize-handle" title="Drag to resize"></div>
+    <h3 style="margin: 0 16px 16px 16px;">SessionLogger Refactor Documentation</h3>
+    <div>
+        <svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
+            <!-- Orange concentric arcs (target/bullseye) -->
+            <path d="M250 150 A100 100 0 0 0 150 250 A100 100 0 0 0 250 350" stroke="#FF6A00" stroke-width="30"
+                  fill="none"/>
+            <path d="M250 180 A70 70 0 0 0 180 250 A70 70 0 0 0 250 320" stroke="#FF6A00" stroke-width="20"
+                  fill="none"/>
+
+            <!-- Purple center circle -->
+            <circle cx="250" cy="250" r="40" fill="#4B0082"/>
+
+            <!-- Connecting lines and nodes -->
+            <line x1="290" y1="250" x2="350" y2="250" stroke="#4B0082" stroke-width="10"/>
+            <circle cx="350" cy="250" r="15" fill="#4B0082"/>
+
+            <line x1="277" y1="213" x2="327" y2="163" stroke="#4B0082" stroke-width="10"/>
+            <circle cx="327" cy="163" r="15" fill="#4B0082"/>
+
+            <line x1="277" y1="287" x2="327" y2="337" stroke="#4B0082" stroke-width="10"/>
+            <circle cx="327" cy="337" r="15" fill="#4B0082"/>
+
+            <line x1="250" y1="290" x2="250" y2="350" stroke="#4B0082" stroke-width="10"/>
+            <circle cx="250" cy="350" r="15" fill="#4B0082"/>
+
+            <!-- Text: "AGENT C" -->
+            <text x="250" y="420" font-family="Arial, sans-serif" font-weight="bold" font-size="60" fill="#4B0082"
+                  text-anchor="middle">AGENT C
+            </text>
+
+            <!-- Text: "CENTRIC CONSULTING" -->
+            <text x="250" y="460" font-family="Arial, sans-serif" font-weight="bold" font-size="24" fill="#4B0082"
+                  text-anchor="middle">CENTRIC CONSULTING
+            </text>
+        </svg>
+    </div>
+    <ul id="tree-view" class="tree-view"></ul>
+</div>
+<div id="content">
+    <div id="markdown-content"></div>
+    <div id="back-to-top" title="Back to top">↑</div>
+</div>
+
+<script>
+    // File structure will be injected here by the generator script
+    const fileStructure = [{"name": "current_sessionlogger_analysis.md", "type": "file", "path": "current_sessionlogger_analysis.md", "content": "# Current SessionLogger Implementation Analysis\n\n## Overview\nThis document provides a comprehensive analysis of the current SessionLogger implementation, its integration points, and usage patterns to inform the man-in-the-middle refactor.\n\n## SessionLogger Class Structure\n\n### Location\n- **File:** `src/agent_c/util/session_logger.py`\n- **Class:** `SessionLogger`\n- **Dependencies:** `json`, `logging`, `datetime`, `pathlib`, `typing`, `RenderMediaEvent`\n\n### Constructor Parameters\n```python\ndef __init__(self, log_file_path: Union[str, Path], include_system_prompt: bool = True)\n```\n- `log_file_path`: Path to the log file (converted to pathlib.Path)\n- `include_system_prompt`: Boolean flag to control system prompt logging\n\n### Instance Attributes\n- `self.log_file_path`: pathlib.Path object for log file\n- `self.include_system_prompt`: Boolean flag for prompt inclusion\n- `self.directory_created`: Caching flag for directory creation optimization\n\n### Methods Analysis\n\n#### 1. `_ensure_directory_exists()`\n- **Purpose:** Creates log directory with caching optimization\n- **Behavior:** \n  - Uses `directory_created` flag to avoid repeated filesystem checks\n  - Creates parent directories with `mkdir(parents=True, exist_ok=True)`\n  - Includes error handling and logging\n  - Returns boolean success indicator\n\n#### 2. `log_event(event: Any) -> bool`\n- **Purpose:** Core logging method for any event type\n- **Event Handling:**\n  - Pydantic models: Uses `event.model_dump()`\n  - String events: Attempts JSON parsing, falls back to raw string\n  - Other objects: Uses as-is\n- **Log Format:**\n  - JSON Lines format (one JSON object per line)\n  - Each entry: `{\"timestamp\": \"ISO_FORMAT\", \"event\": event_data}`\n  - Uses `stringify_unserializable` for fallback serialization\n- **Error Handling:** Try/catch with logging, returns boolean success\n\n#### 3. `log_system_prompt(prompt: str)`\n- **Purpose:** Logs system prompts if enabled\n- **Format:** `{\"type\": \"system_prompt\", \"content\": prompt}`\n- **Conditional:** Only logs if `include_system_prompt` is True\n\n#### 4. `log_user_request(...)`\n- **Purpose:** Logs user requests with multimedia metadata\n- **Parameters:** `user_message`, `audio_clips`, `images`, `files`\n- **Behavior:** \n  - Logs text message content\n  - Logs metadata only for multimedia (not full content)\n  - Structured format: `{\"type\": \"user_request\", \"data\": {...}}`\n\n#### 5. `log_render_media(render_media_event: RenderMediaEvent)`\n- **Purpose:** Logs render media events with metadata\n- **Behavior:** Extracts metadata from RenderMediaEvent, avoids full content logging\n\n## BaseAgent Integration Points\n\n### 1. Constructor Integration\n- **Parameter:** `session_logger: Optional[SessionLogger] = None`\n- **Initialization:** `self.session_logger = kwargs.get(\"session_logger\", None)`\n- **Auto-initialization:** Calls `initialize_session_logger(**kwargs)` at end of constructor\n\n### 2. `initialize_session_logger(**kwargs)`\n- **Location:** Lines 89-123 in `base.py`\n- **Behavior:**\n  - Only creates SessionLogger if `self.session_logger is None`\n  - Extracts session_id from session_manager if available, defaults to \"unknown\"\n  - Uses environment variables for configuration:\n    - `AGENT_LOG_DIR` (default: \"logs/sessions\")\n  - **File Organization:**\n    - Directory: `{base_log_dir}/{session_id}` or `{base_log_dir}/unknown_{uuid}`\n    - Filename: `{timestamp}.jsonl` (format: `%Y%m%d_%H%M%S`)\n  - Creates SessionLogger with auto-generated path\n\n### 3. `_raise_event(event)`\n- **Location:** Lines 196-218 in `base.py`\n- **Dual Operation:**\n  1. First calls `streaming_callback(event)` if exists\n  2. Then calls `session_logger.log_event(event)` if exists\n- **Error Handling:** \n  - Streaming callback errors are logged and also sent to session logger\n  - Session logger errors are logged but don't affect streaming callback\n\n### 4. `_update_session_logger(sess_mgr: ChatSessionManager)`\n- **Location:** Lines 386-467 in `base.py`\n- **Purpose:** Updates log path when session ID becomes known\n- **Complex Logic:**\n  - Detects if current path contains \"unknown\" session ID\n  - Creates new directory with actual session ID\n  - Migrates existing log content to new location\n  - Cleans up old files and directories\n  - Updates SessionLogger's internal path\n\n## Current Usage Patterns\n\n### 1. Codebase Usage\n- **Primary Usage:** Only in BaseAgent class\n- **Import:** `from agent_c.util.session_logger import SessionLogger`\n- **Instantiation:** Automatic via `initialize_session_logger()`\n- **No Direct Usage:** No other classes directly use SessionLogger\n\n### 2. Configuration Patterns\n- **Environment Variables:**\n  - `AGENT_LOG_DIR`: Base directory for logs (default: \"logs/sessions\")\n  - Commented out: `AGENT_LOG_INCLUDE_PROMPT`, `AGENT_LOG_FILE`\n- **Auto-Configuration:** SessionLogger is auto-created with sensible defaults\n- **Session ID Handling:** Complex logic to handle unknown \u2192 known session ID transitions\n\n### 3. File Organization\n```\nlogs/sessions/\n\u251c\u2500\u2500 session_id_1/\n\u2502   \u2514\u2500\u2500 20250529_114500.jsonl\n\u251c\u2500\u2500 session_id_2/\n\u2502   \u2514\u2500\u2500 20250529_120000.jsonl\n\u2514\u2500\u2500 unknown_uuid-4567/\n    \u2514\u2500\u2500 20250529_130000.jsonl\n```\n\n## Current Problems Identified\n\n### 1. **Tight Coupling**\n- SessionLogger is embedded directly in BaseAgent\n- Agent manages SessionLogger lifecycle and configuration\n- Complex session ID update logic in agent\n\n### 2. **Invasive Design**\n- Agent extracts session information from session_manager\n- Agent handles SessionLogger errors and path updates\n- Violates single responsibility principle\n\n### 3. **Complex State Management**\n- Unknown \u2192 known session ID transitions require complex migration logic\n- Directory caching optimization in SessionLogger\n- Path updates require file content migration\n\n### 4. **Limited Extensibility**\n- Hard-coded file organization and naming\n- No abstraction for different storage backends\n- No support for transport layers or queues\n\n### 5. **Error Handling Coupling**\n- Streaming callback errors are logged to SessionLogger\n- Creates circular dependency in error handling\n- Mixed concerns between event streaming and logging\n\n## Configuration Analysis\n\n### Environment Variables\n- `AGENT_LOG_DIR`: Base directory (default: \"logs/sessions\")\n- **Missing:** No environment variables for:\n  - Log format configuration\n  - Include/exclude specific event types\n  - Log rotation or cleanup\n  - Transport layer configuration\n\n### Hardcoded Behavior\n- JSON Lines format is hardcoded\n- File naming pattern is hardcoded (`%Y%m%d_%H%M%S.jsonl`)\n- Directory structure is hardcoded\n- No configuration for log retention or rotation\n\n## Testing Status\n- **No Tests Found:** No unit tests for SessionLogger in the test suite\n- **No Integration Tests:** No tests for BaseAgent SessionLogger integration\n- **No Performance Tests:** No benchmarks for logging performance\n\n## Migration Implications\n\n### 1. **Session ID Handling**\n- Current complex session ID migration logic can be eliminated\n- Events already contain session_id, no need to extract from agents\n- Simpler file organization based on session_id from events\n\n### 2. **Configuration Migration**\n- Environment variable `AGENT_LOG_DIR` should be preserved\n- File naming and organization patterns should be maintained for compatibility\n- New configuration options needed for transport layers\n\n### 3. **Error Handling Simplification**\n- Remove circular dependency between streaming callback and session logging\n- Isolate logging errors from transport errors\n- Simplify error handling in BaseAgent\n\n### 4. **Backward Compatibility**\n- File format (JSON Lines) should be preserved\n- Directory structure should be maintained\n- Environment variable support should continue\n\n## Recommendations for Gateway Implementation\n\n### 1. **Preserve Current Behavior**\n- Maintain JSON Lines format and file organization\n- Support `AGENT_LOG_DIR` environment variable\n- Keep session-based directory structure\n\n### 2. **Simplify Session Handling**\n- Extract session_id directly from events (no agent involvement)\n- Eliminate complex session ID migration logic\n- Use event session_id for immediate file organization\n\n### 3. **Improve Configuration**\n- Add configuration for log formats and retention\n- Support transport layer configuration\n- Maintain backward compatibility with current environment variables\n\n### 4. **Add Testing**\n- Comprehensive unit tests for gateway pattern\n- Integration tests with event system\n- Performance benchmarks vs current implementation\n\n---\n**Analysis Complete**  \n**Next Step:** Validate event model completeness (Task 1.2)"}, {"name": "event_model_completeness_report.md", "type": "file", "path": "event_model_completeness_report.md", "content": "# Event Model Completeness Validation Report\n\n## Executive Summary\n\n\u2705 **VALIDATION SUCCESSFUL** - All event models are complete and ready for the EventSessionLogger gateway pattern.\n\n**Key Results:**\n- **12 event types tested** (9 SessionEvents + 3 SemiSessionEvents)\n- **100% serialization success** - All events fully serializable to JSON\n- **100% required field coverage** - All events contain session_id, role, and type\n- **Zero missing session information** - Events are self-contained and routable\n\n## Detailed Analysis\n\n### SessionEvent-Based Events (9 tested)\n\nAll SessionEvent-based events inherit from `SessionEvent` which provides:\n- `session_id: str` - Required field for routing and file organization\n- `role: str` - Required field for context and logging\n- `type: str` - Auto-generated from class name for event identification\n\n**Validated Events:**\n1. \u2705 **InteractionEvent** - session_id, role, type present (120 bytes serialized)\n2. \u2705 **CompletionEvent** - session_id, role, type present (234 bytes serialized)\n3. \u2705 **MessageEvent** - session_id, role, type present (137 bytes serialized)\n4. \u2705 **SystemMessageEvent** - session_id, role, type present (157 bytes serialized)\n5. \u2705 **TextDeltaEvent** - session_id, role, type present (119 bytes serialized)\n6. \u2705 **HistoryEvent** - session_id, role, type present (120 bytes serialized)\n7. \u2705 **RenderMediaEvent** - session_id, role, type present (260 bytes serialized)\n8. \u2705 **ToolCallEvent** - session_id, role, type present (203 bytes serialized)\n9. \u2705 **ToolCallDeltaEvent** - session_id, role, type present (150 bytes serialized)\n\n### SemiSessionEvent-Based Events (3 tested)\n\nSemiSessionEvent-based events inherit from `SemiSessionEvent` which provides:\n- `session_id: Optional[str]` - Can be filled by event consumers\n- `role: Optional[str]` - Can be filled by event consumers  \n- `type: str` - Auto-generated from class name\n\n**Validated Events:**\n1. \u2705 **AudioInputBeginEvent** - session_id, role, type present (175 bytes serialized)\n2. \u2705 **AudioInputDeltaEvent** - session_id, role, type present (130 bytes serialized)\n3. \u2705 **AudioInputEndEvent** - session_id, role, type present (96 bytes serialized)\n\n**Note:** SemiSessionEvents are designed to have session_id/role filled by consumers, but our test confirmed they can contain this information when provided.\n\n## Gateway Pattern Readiness Assessment\n\n### \u2705 Session ID Routing\n- **All events contain session_id** when properly populated\n- **No agent-specific extraction needed** - session_id is directly available\n- **File organization ready** - can use `event.session_id` for directory structure\n\n### \u2705 Event Type Identification  \n- **All events have type field** - auto-generated from class names\n- **Consistent naming pattern** - snake_case conversion from class names\n- **No type conflicts** - each event type has unique identifier\n\n### \u2705 Serialization for Transport\n- **100% JSON serializable** - all events pass serialization tests\n- **No circular references** - clean object graphs\n- **Reasonable payload sizes** - 96-260 bytes per event\n- **Transport layer ready** - can be sent over queues, message buses, etc.\n\n### \u2705 Self-Contained Events\n- **No agent context required** - events contain all necessary information\n- **Role information present** - for context and filtering\n- **Timestamp handling** - BaseModel provides Pydantic serialization support\n- **Metadata complete** - all events include required routing information\n\n## Comparison with Current SessionLogger Usage\n\n### Current Pattern (Agent-Embedded)\n```python\n# Agent extracts session information\nsession_id = self.session_manager.session_id if self.session_manager else \"unknown\"\n# Agent manages SessionLogger lifecycle\nself.session_logger.log_event(event)\n```\n\n### New Gateway Pattern (Event-Driven)\n```python\n# EventSessionLogger extracts from event directly\nsession_id = event.session_id  # Always available\n# Gateway handles routing and logging\nawait event_session_logger(event)\n```\n\n**Benefits:**\n- \u2705 **Eliminates agent coupling** - no session extraction logic in agents\n- \u2705 **Simplifies error handling** - no circular dependencies\n- \u2705 **Enables transport decoupling** - events can be routed anywhere\n- \u2705 **Improves testability** - events are self-contained test units\n\n## Recommendations\n\n### 1. Event Model is Ready \u2705\n- **No changes needed** to existing event models\n- **All required information present** for gateway pattern\n- **Serialization works perfectly** for transport layers\n\n### 2. Gateway Implementation Considerations\n- **Use `event.session_id`** for file organization (no agent extraction)\n- **Use `event.type`** for event filtering and routing\n- **Use `event.role`** for context and logging organization\n- **Preserve JSON Lines format** for backward compatibility\n\n### 3. SemiSessionEvent Handling\n- **Design is correct** - allows flexibility for events generated outside session context\n- **Gateway should handle** both populated and unpopulated session_id/role\n- **Fallback strategy needed** for events without session information\n\n### 4. Transport Layer Design\n- **Events are transport-ready** - fully serializable\n- **Payload sizes reasonable** - no performance concerns\n- **Routing information complete** - session_id enables proper distribution\n\n## Migration Path Validation\n\n### From Current SessionLogger\n```python\n# OLD: Agent manages SessionLogger\nself.session_logger.log_event(event)\n\n# NEW: Agent uses streaming_callback (gateway)\nself.streaming_callback(event)  # EventSessionLogger receives this\n```\n\n### Event Information Mapping\n- \u2705 **Session ID**: `event.session_id` (was: extracted from agent.session_manager)\n- \u2705 **Event Type**: `event.type` (was: hardcoded or inferred)\n- \u2705 **Role Context**: `event.role` (was: extracted from agent context)\n- \u2705 **Timestamp**: Pydantic serialization (was: added by SessionLogger)\n- \u2705 **Event Data**: `event.model_dump()` (was: various serialization methods)\n\n## Conclusion\n\n**\u2705 VALIDATION COMPLETE** - The event model is fully ready for the EventSessionLogger gateway pattern.\n\n**Key Achievements:**\n- All events contain required routing information (session_id, role, type)\n- 100% serialization compatibility for transport layers\n- No agent-specific information extraction required\n- Clean migration path from current SessionLogger approach\n- Self-contained events enable proper decoupling\n\n**Next Steps:**\n- \u2705 Task 1.2 Complete - Event model validation successful\n- \u23ed\ufe0f Ready for Task 1.3 - Design EventSessionLogger API\n- \ud83c\udfaf Gateway implementation can proceed with confidence\n\n---\n**Analysis Date:** 2025-05-29  \n**Validation Status:** \u2705 PASSED  \n**Events Tested:** 12/12 successful  \n**Serialization:** 100% success rate  \n**Required Fields:** 100% coverage"}, {"name": "event_session_logger_api_design.md", "type": "file", "path": "event_session_logger_api_design.md", "content": "# EventSessionLogger API Design Specification\n\n## Overview\n\nThe EventSessionLogger implements a **gateway pattern** that acts as a bridge between agent events and transport layers. It provides local logging with optional downstream forwarding, enabling future decoupling to queues, message buses, or other transport mechanisms.\n\n## Core Design Principles\n\n1. **Gateway Pattern**: Acts as man-in-the-middle between agents and transport\n2. **Error Isolation**: Local logging never fails due to transport issues\n3. **Dual Interface**: Supports both callback and transport downstream patterns\n4. **Backward Compatibility**: Maintains current SessionLogger behavior and configuration\n5. **Future Ready**: Designed for easy transport layer swapping\n\n## EventSessionLogger Class API\n\n### Constructor\n\n```python\nclass EventSessionLogger:\n    def __init__(\n        self,\n        log_base_dir: Union[str, Path] = None,\n        downstream_callback: Optional[Callable[[Any], Awaitable[None]]] = None,\n        downstream_transport: Optional['TransportInterface'] = None,\n        include_system_prompt: bool = True,\n        log_format: str = \"jsonl\",\n        file_naming_pattern: str = \"%Y%m%d_%H%M%S\",\n        error_handler: Optional[Callable[[Exception, str], None]] = None,\n        max_retry_attempts: int = 3,\n        retry_delay_seconds: float = 1.0,\n        enable_local_logging: bool = True,\n        session_directory_pattern: str = \"{session_id}\",\n        unknown_session_pattern: str = \"unknown_{uuid}\",\n        **kwargs\n    ) -> None:\n```\n\n**Parameters:**\n- `log_base_dir`: Base directory for logs (default: from AGENT_LOG_DIR env var or \"logs/sessions\")\n- `downstream_callback`: Optional callback for current transition pattern\n- `downstream_transport`: Optional transport interface for future decoupling\n- `include_system_prompt`: Whether to log system prompts (backward compatibility)\n- `log_format`: Log format (\"jsonl\", \"json\", \"custom\")\n- `file_naming_pattern`: strftime pattern for log files\n- `error_handler`: Custom error handling callback\n- `max_retry_attempts`: Maximum retries for downstream operations\n- `retry_delay_seconds`: Delay between retry attempts\n- `enable_local_logging`: Whether to perform local logging (always True by default)\n- `session_directory_pattern`: Pattern for session directories\n- `unknown_session_pattern`: Pattern for unknown session directories\n\n### Core Gateway Method\n\n```python\nasync def __call__(self, event: Any) -> bool:\n    \"\"\"\n    Main gateway method - processes events through the logging pipeline.\n    \n    Always logs locally first, then forwards to downstream if configured.\n    Error isolation ensures local logging success doesn't depend on transport.\n    \n    Args:\n        event: Event object (SessionEvent, SemiSessionEvent, or any serializable object)\n        \n    Returns:\n        bool: True if local logging succeeded (transport failures don't affect return value)\n        \n    Raises:\n        EventSessionLoggerError: Only for critical local logging failures\n    \"\"\"\n```\n\n### Configuration Methods\n\n```python\ndef configure_from_env(self) -> None:\n    \"\"\"Load configuration from environment variables\"\"\"\n\ndef update_downstream_callback(self, callback: Optional[Callable]) -> None:\n    \"\"\"Update downstream callback (for runtime reconfiguration)\"\"\"\n\ndef update_downstream_transport(self, transport: Optional['TransportInterface']) -> None:\n    \"\"\"Update downstream transport (for runtime reconfiguration)\"\"\"\n\ndef get_log_file_path(self, session_id: str) -> Path:\n    \"\"\"Get the current log file path for a session\"\"\"\n\ndef get_session_directory(self, session_id: str) -> Path:\n    \"\"\"Get the session directory path\"\"\"\n```\n\n### Resource Management\n\n```python\nasync def close(self) -> None:\n    \"\"\"Clean shutdown - close transport connections and flush logs\"\"\"\n\nasync def __aenter__(self) -> 'EventSessionLogger':\n    \"\"\"Async context manager entry\"\"\"\n\nasync def __aexit__(self, exc_type, exc_val, exc_tb) -> None:\n    \"\"\"Async context manager exit with cleanup\"\"\"\n```\n\n## TransportInterface Abstract Class\n\n```python\nfrom abc import ABC, abstractmethod\nfrom typing import Any, Optional, Dict\n\nclass TransportInterface(ABC):\n    \"\"\"\n    Abstract interface for transport layers in the EventSessionLogger gateway pattern.\n    \n    Implementations can include:\n    - Queue-based transports (RabbitMQ, Redis, AWS SQS)\n    - Message bus transports (Kafka, Azure Service Bus)\n    - HTTP-based transports (webhooks, REST APIs)\n    - Custom application-specific transports\n    \"\"\"\n    \n    @abstractmethod\n    async def send(self, event: Any, metadata: Optional[Dict[str, Any]] = None) -> bool:\n        \"\"\"\n        Send an event through the transport layer.\n        \n        Args:\n            event: Serialized event data\n            metadata: Optional routing/transport metadata\n            \n        Returns:\n            bool: True if send succeeded, False otherwise\n            \n        Raises:\n            TransportError: For transport-specific failures\n        \"\"\"\n        pass\n    \n    @abstractmethod\n    async def close(self) -> None:\n        \"\"\"Clean shutdown of transport connections\"\"\"\n        pass\n    \n    @abstractmethod\n    async def health_check(self) -> bool:\n        \"\"\"Check if transport is healthy and ready\"\"\"\n        pass\n    \n    @property\n    @abstractmethod\n    def is_connected(self) -> bool:\n        \"\"\"Check if transport is currently connected\"\"\"\n        pass\n```\n\n## Error Handling Strategy\n\n### Exception Hierarchy\n\n```python\nclass EventSessionLoggerError(Exception):\n    \"\"\"Base exception for EventSessionLogger\"\"\"\n    pass\n\nclass LocalLoggingError(EventSessionLoggerError):\n    \"\"\"Raised when local logging fails\"\"\"\n    pass\n\nclass TransportError(EventSessionLoggerError):\n    \"\"\"Base exception for transport-related errors\"\"\"\n    pass\n\nclass TransportConnectionError(TransportError):\n    \"\"\"Raised when transport connection fails\"\"\"\n    pass\n\nclass TransportTimeoutError(TransportError):\n    \"\"\"Raised when transport operations timeout\"\"\"\n    pass\n\nclass SerializationError(EventSessionLoggerError):\n    \"\"\"Raised when event serialization fails\"\"\"\n    pass\n```\n\n### Error Isolation Pattern\n\n```python\nasync def __call__(self, event: Any) -> bool:\n    \"\"\"Gateway method with error isolation\"\"\"\n    local_success = False\n    transport_success = False\n    \n    # PHASE 1: Local logging (never fails due to transport issues)\n    try:\n        local_success = await self._log_locally(event)\n    except Exception as e:\n        self._handle_local_error(e, event)\n        raise LocalLoggingError(f\"Local logging failed: {e}\")\n    \n    # PHASE 2: Downstream forwarding (isolated from local logging)\n    if self.downstream_callback or self.downstream_transport:\n        try:\n            transport_success = await self._forward_downstream(event)\n        except Exception as e:\n            # Transport errors are logged but don't affect local logging success\n            self._handle_transport_error(e, event)\n    \n    return local_success  # Success based only on local logging\n```\n\n### Graceful Degradation\n\n```python\nasync def _forward_downstream(self, event: Any) -> bool:\n    \"\"\"Forward to downstream with graceful degradation\"\"\"\n    \n    # Try callback first (current transition pattern)\n    if self.downstream_callback:\n        try:\n            await self._retry_operation(\n                lambda: self.downstream_callback(event),\n                \"downstream_callback\"\n            )\n            return True\n        except Exception as e:\n            self._log_transport_error(\"callback\", e, event)\n    \n    # Try transport second (future pattern)\n    if self.downstream_transport:\n        try:\n            await self._retry_operation(\n                lambda: self.downstream_transport.send(event),\n                \"downstream_transport\"\n            )\n            return True\n        except Exception as e:\n            self._log_transport_error(\"transport\", e, event)\n    \n    return False\n```\n\n## Configuration System\n\n### Environment Variables\n\n```python\n# Supported environment variables (backward compatible)\nAGENT_LOG_DIR = \"logs/sessions\"           # Base log directory\nAGENT_LOG_FORMAT = \"jsonl\"                # Log format\nAGENT_LOG_INCLUDE_PROMPT = \"true\"         # Include system prompts\nAGENT_LOG_MAX_RETRIES = \"3\"               # Max retry attempts\nAGENT_LOG_RETRY_DELAY = \"1.0\"             # Retry delay seconds\nAGENT_LOG_FILE_PATTERN = \"%Y%m%d_%H%M%S\"  # File naming pattern\nAGENT_LOG_ENABLE_LOCAL = \"true\"           # Enable local logging\nAGENT_LOG_SESSION_PATTERN = \"{session_id}\" # Session directory pattern\n```\n\n### Configuration Loading\n\n```python\ndef _load_configuration(self) -> Dict[str, Any]:\n    \"\"\"Load configuration from environment variables with defaults\"\"\"\n    return {\n        'log_base_dir': os.getenv('AGENT_LOG_DIR', 'logs/sessions'),\n        'log_format': os.getenv('AGENT_LOG_FORMAT', 'jsonl'),\n        'include_system_prompt': os.getenv('AGENT_LOG_INCLUDE_PROMPT', 'true').lower() == 'true',\n        'max_retry_attempts': int(os.getenv('AGENT_LOG_MAX_RETRIES', '3')),\n        'retry_delay_seconds': float(os.getenv('AGENT_LOG_RETRY_DELAY', '1.0')),\n        'file_naming_pattern': os.getenv('AGENT_LOG_FILE_PATTERN', '%Y%m%d_%H%M%S'),\n        'enable_local_logging': os.getenv('AGENT_LOG_ENABLE_LOCAL', 'true').lower() == 'true',\n        'session_directory_pattern': os.getenv('AGENT_LOG_SESSION_PATTERN', '{session_id}'),\n        'unknown_session_pattern': os.getenv('AGENT_LOG_UNKNOWN_PATTERN', 'unknown_{uuid}')\n    }\n```\n\n## Factory Functions\n\n### Basic Factory Functions\n\n```python\ndef create_session_logger(\n    log_base_dir: Optional[str] = None,\n    downstream_callback: Optional[Callable] = None,\n    **kwargs\n) -> EventSessionLogger:\n    \"\"\"\n    Create EventSessionLogger with basic configuration.\n    \n    Args:\n        log_base_dir: Base directory for logs\n        downstream_callback: Optional callback for transition\n        **kwargs: Additional configuration options\n        \n    Returns:\n        Configured EventSessionLogger instance\n    \"\"\"\n    config = _load_default_config()\n    if log_base_dir:\n        config['log_base_dir'] = log_base_dir\n    if downstream_callback:\n        config['downstream_callback'] = downstream_callback\n    config.update(kwargs)\n    \n    return EventSessionLogger(**config)\n\ndef create_logging_only(\n    log_base_dir: Optional[str] = None,\n    **kwargs\n) -> EventSessionLogger:\n    \"\"\"\n    Create EventSessionLogger for local logging only (no downstream).\n    \n    Useful for:\n    - Development and testing\n    - Simple logging scenarios\n    - Migration testing\n    \"\"\"\n    return create_session_logger(\n        log_base_dir=log_base_dir,\n        downstream_callback=None,\n        downstream_transport=None,\n        **kwargs\n    )\n\ndef create_with_callback(\n    callback: Callable,\n    log_base_dir: Optional[str] = None,\n    **kwargs\n) -> EventSessionLogger:\n    \"\"\"\n    Create EventSessionLogger with downstream callback (transition pattern).\n    \n    Args:\n        callback: Downstream callback function\n        log_base_dir: Base directory for logs\n        **kwargs: Additional configuration options\n    \"\"\"\n    return create_session_logger(\n        log_base_dir=log_base_dir,\n        downstream_callback=callback,\n        **kwargs\n    )\n\ndef create_with_transport(\n    transport: TransportInterface,\n    log_base_dir: Optional[str] = None,\n    **kwargs\n) -> EventSessionLogger:\n    \"\"\"\n    Create EventSessionLogger with transport layer (future pattern).\n    \n    Args:\n        transport: Transport interface implementation\n        log_base_dir: Base directory for logs\n        **kwargs: Additional configuration options\n    \"\"\"\n    return create_session_logger(\n        log_base_dir=log_base_dir,\n        downstream_transport=transport,\n        **kwargs\n    )\n```\n\n### Environment-Based Factory\n\n```python\ndef create_from_environment(**overrides) -> EventSessionLogger:\n    \"\"\"\n    Create EventSessionLogger from environment variables.\n    \n    Args:\n        **overrides: Override specific configuration values\n        \n    Returns:\n        EventSessionLogger configured from environment\n    \"\"\"\n    config = _load_configuration()\n    config.update(overrides)\n    return EventSessionLogger(**config)\n```\n\n### Migration Utilities\n\n```python\ndef migrate_from_session_logger(\n    old_session_logger: 'SessionLogger',\n    downstream_callback: Optional[Callable] = None\n) -> EventSessionLogger:\n    \"\"\"\n    Create EventSessionLogger with configuration migrated from old SessionLogger.\n    \n    Args:\n        old_session_logger: Existing SessionLogger instance\n        downstream_callback: Optional downstream callback\n        \n    Returns:\n        EventSessionLogger with migrated configuration\n    \"\"\"\n    # Extract configuration from old SessionLogger\n    log_base_dir = str(old_session_logger.log_file_path.parent.parent)\n    include_system_prompt = old_session_logger.include_system_prompt\n    \n    return create_session_logger(\n        log_base_dir=log_base_dir,\n        include_system_prompt=include_system_prompt,\n        downstream_callback=downstream_callback\n    )\n\ndef create_backward_compatible(**kwargs) -> EventSessionLogger:\n    \"\"\"\n    Create EventSessionLogger with maximum backward compatibility.\n    \n    Maintains all current SessionLogger behavior while adding gateway capabilities.\n    \"\"\"\n    return create_session_logger(\n        log_format=\"jsonl\",  # Match current format\n        file_naming_pattern=\"%Y%m%d_%H%M%S\",  # Match current naming\n        include_system_prompt=True,  # Match current default\n        enable_local_logging=True,  # Always enable\n        **kwargs\n    )\n```\n\n## Example Transport Implementations\n\n### CallbackTransport (Transition Helper)\n\n```python\nclass CallbackTransport(TransportInterface):\n    \"\"\"Transport wrapper for callback functions (transition helper)\"\"\"\n    \n    def __init__(self, callback: Callable[[Any], Awaitable[None]]):\n        self.callback = callback\n        self._connected = True\n    \n    async def send(self, event: Any, metadata: Optional[Dict[str, Any]] = None) -> bool:\n        try:\n            await self.callback(event)\n            return True\n        except Exception:\n            return False\n    \n    async def close(self) -> None:\n        self._connected = False\n    \n    async def health_check(self) -> bool:\n        return self._connected\n    \n    @property\n    def is_connected(self) -> bool:\n        return self._connected\n```\n\n### LoggingTransport (Development/Testing)\n\n```python\nclass LoggingTransport(TransportInterface):\n    \"\"\"Transport that logs events to standard logging (for development/testing)\"\"\"\n    \n    def __init__(self, logger_name: str = \"event_transport\"):\n        self.logger = logging.getLogger(logger_name)\n        self._connected = True\n    \n    async def send(self, event: Any, metadata: Optional[Dict[str, Any]] = None) -> bool:\n        try:\n            event_data = event.model_dump() if hasattr(event, 'model_dump') else str(event)\n            self.logger.info(f\"Transport event: {event_data}\")\n            return True\n        except Exception as e:\n            self.logger.error(f\"Transport error: {e}\")\n            return False\n    \n    async def close(self) -> None:\n        self._connected = False\n    \n    async def health_check(self) -> bool:\n        return self._connected\n    \n    @property\n    def is_connected(self) -> bool:\n        return self._connected\n```\n\n### NullTransport (Testing)\n\n```python\nclass NullTransport(TransportInterface):\n    \"\"\"No-op transport for testing\"\"\"\n    \n    def __init__(self):\n        self._connected = True\n    \n    async def send(self, event: Any, metadata: Optional[Dict[str, Any]] = None) -> bool:\n        return True  # Always succeeds\n    \n    async def close(self) -> None:\n        self._connected = False\n    \n    async def health_check(self) -> bool:\n        return self._connected\n    \n    @property\n    def is_connected(self) -> bool:\n        return self._connected\n```\n\n## Usage Examples\n\n### Basic Gateway Usage\n\n```python\n# Simple local logging only\nlogger = create_logging_only(log_base_dir=\"./logs\")\nawait logger(event)\n\n# With downstream callback (transition pattern)\nasync def my_callback(event):\n    print(f\"Received event: {event.type}\")\n\nlogger = create_with_callback(my_callback, log_base_dir=\"./logs\")\nawait logger(event)\n\n# With transport (future pattern)\ntransport = MyQueueTransport(connection_string=\"...\")\nlogger = create_with_transport(transport, log_base_dir=\"./logs\")\nawait logger(event)\n```\n\n### Environment-Based Configuration\n\n```python\n# Set environment variables\nos.environ['AGENT_LOG_DIR'] = '/var/log/agent'\nos.environ['AGENT_LOG_MAX_RETRIES'] = '5'\n\n# Create from environment\nlogger = create_from_environment()\nawait logger(event)\n```\n\n### Migration from Old SessionLogger\n\n```python\n# Old pattern\nold_logger = SessionLogger(\"/path/to/logs/session.jsonl\")\nold_logger.log_event(event)\n\n# New pattern (backward compatible)\nnew_logger = create_backward_compatible(\n    log_base_dir=\"/path/to/logs\",\n    downstream_callback=my_app_callback\n)\nawait new_logger(event)\n```\n\n### Async Context Manager\n\n```python\nasync with create_session_logger(downstream_callback=callback) as logger:\n    await logger(event1)\n    await logger(event2)\n    # Automatic cleanup on exit\n```\n\n## Performance Considerations\n\n### Memory Efficiency\n- **Streaming processing** - events are processed one at a time\n- **No event buffering** - immediate processing reduces memory usage\n- **Lazy file creation** - log files created only when needed\n- **Resource cleanup** - proper async context manager support\n\n### Error Recovery\n- **Retry mechanisms** - configurable retry attempts with exponential backoff\n- **Circuit breaker pattern** - disable failing transports temporarily\n- **Health checks** - monitor transport health and recover automatically\n- **Graceful degradation** - continue local logging even if transport fails\n\n### Monitoring and Observability\n- **Error metrics** - track local vs transport error rates\n- **Performance metrics** - measure gateway overhead vs direct logging\n- **Health metrics** - monitor transport connection status\n- **Custom error handlers** - integrate with monitoring systems\n\n## Migration Compatibility\n\n### Backward Compatibility Guarantees\n- \u2705 **File format** - maintains JSON Lines format\n- \u2705 **Directory structure** - preserves session-based organization\n- \u2705 **Environment variables** - supports existing AGENT_LOG_DIR\n- \u2705 **File naming** - maintains timestamp-based naming pattern\n- \u2705 **Configuration** - supports all current SessionLogger options\n\n### Breaking Changes (None)\n- **No API changes** for existing SessionLogger users\n- **No file format changes** - existing logs remain readable\n- **No configuration changes** - existing environment variables work\n- **No behavior changes** - logging behavior is preserved\n\n---\n\n## API Design Summary\n\n**\u2705 Complete EventSessionLogger API specification**\n- Gateway pattern with dual interface support (callback + transport)\n- Comprehensive error isolation and handling\n- Full backward compatibility with current SessionLogger\n- Environment-based configuration with migration support\n- Factory functions for common usage patterns\n- Abstract transport interface for future extensibility\n- Example transport implementations for development/testing\n\n**\u2705 Ready for implementation** - All API components defined with clear interfaces, error handling, and usage patterns.\n\n**Next Phase:** Implementation of the EventSessionLogger gateway pattern based on this specification."}, {"name": "event_session_logger_api_reference.md", "type": "file", "path": "event_session_logger_api_reference.md", "content": "# EventSessionLogger API Reference\n\n## Overview\n\nThe EventSessionLogger is the core component of the event-driven logging system, implementing a gateway pattern that bridges agent events with transport layers. It provides local logging with optional downstream forwarding, error isolation, and support for future transport integration.\n\n## Class: EventSessionLogger\n\n```python\nclass EventSessionLogger:\n    \"\"\"\n    Gateway pattern implementation for event-driven session logging.\n    \n    Acts as a bridge between agent events and transport layers, providing:\n    - Local logging with session-based file organization\n    - Optional downstream forwarding (callback or transport)\n    - Error isolation between logging and transport concerns\n    - Backward compatibility with current SessionLogger behavior\n    \"\"\"\n```\n\n### Constructor\n\n```python\ndef __init__(\n    self,\n    log_base_dir: Union[str, Path] = None,\n    downstream_callback: Optional[Callable[[Any], Awaitable[None]]] = None,\n    downstream_transport: Optional[TransportInterface] = None,\n    include_system_prompt: bool = True,\n    log_format: str = \"jsonl\",\n    file_naming_pattern: str = \"%Y%m%d_%H%M%S\",\n    error_handler: Optional[Callable[[Exception, str], None]] = None,\n    max_retry_attempts: int = 3,\n    retry_delay_seconds: float = 1.0,\n    enable_local_logging: bool = True,\n    session_directory_pattern: str = \"{session_id}\",\n    unknown_session_pattern: str = \"unknown_{uuid}\",\n    **kwargs\n) -> None\n```\n\n#### Parameters\n\n| Parameter | Type | Default | Description |\n|-----------|------|---------|-------------|\n| `log_base_dir` | `Union[str, Path]` | `None` | Base directory for logs. If None, uses `AGENT_LOG_DIR` environment variable or `./logs` |\n| `downstream_callback` | `Optional[Callable]` | `None` | Optional async callback for current transition pattern |\n| `downstream_transport` | `Optional[TransportInterface]` | `None` | Optional transport interface for future decoupling |\n| `include_system_prompt` | `bool` | `True` | Whether to log system prompts (backward compatibility) |\n| `log_format` | `str` | `\"jsonl\"` | Log format: \"jsonl\", \"json\", or \"custom\" |\n| `file_naming_pattern` | `str` | `\"%Y%m%d_%H%M%S\"` | strftime pattern for log file names |\n| `error_handler` | `Optional[Callable]` | `None` | Custom error handling callback |\n| `max_retry_attempts` | `int` | `3` | Maximum retries for downstream operations |\n| `retry_delay_seconds` | `float` | `1.0` | Delay between retry attempts |\n| `enable_local_logging` | `bool` | `True` | Whether to perform local file logging |\n| `session_directory_pattern` | `str` | `\"{session_id}\"` | Pattern for session directories |\n| `unknown_session_pattern` | `str` | `\"unknown_{uuid}\"` | Pattern for unknown session directories |\n\n#### Example\n\n```python\n# Basic usage\nlogger = EventSessionLogger(log_base_dir=\"./logs\")\n\n# With callback\nasync def my_callback(event):\n    print(f\"Event: {type(event).__name__}\")\n\nlogger = EventSessionLogger(\n    log_base_dir=\"./logs\",\n    downstream_callback=my_callback,\n    max_retry_attempts=5,\n    retry_delay_seconds=2.0\n)\n\n# With transport\nfrom agent_c.util.transports import CallbackTransport\n\ntransport = CallbackTransport(my_callback)\nlogger = EventSessionLogger(\n    log_base_dir=\"./logs\",\n    downstream_transport=transport\n)\n```\n\n### Methods\n\n#### `__call__(event: Any) -> bool`\n\nMain gateway method that processes events through the logging pipeline.\n\n```python\nasync def __call__(self, event: Any) -> bool:\n    \"\"\"\n    Process event through the gateway.\n    \n    Always logs locally first, then forwards to downstream if configured.\n    Error isolation ensures local logging success doesn't depend on transport.\n    \n    Args:\n        event: Event object (SessionEvent, SemiSessionEvent, or any serializable object)\n        \n    Returns:\n        bool: True if local logging succeeded (transport failures don't affect return value)\n        \n    Raises:\n        EventSessionLoggerError: Only for critical local logging failures\n    \"\"\"\n```\n\n**Usage:**\n```python\nfrom agent_c.models.events.chat import InteractionEvent\n\nevent = InteractionEvent(\n    session_id=\"session_123\",\n    role=\"user\",\n    interaction_id=\"interaction_1\",\n    event_type=\"interaction_start\"\n)\n\nsuccess = await logger(event)\nprint(f\"Event processed: {success}\")\n```\n\n#### `get_session_directory(session_id: str) -> Path`\n\nGet the directory path for a specific session.\n\n```python\ndef get_session_directory(self, session_id: str) -> Path:\n    \"\"\"\n    Get the session directory path.\n    \n    Args:\n        session_id: Session identifier\n        \n    Returns:\n        Path: Directory path for the session\n    \"\"\"\n```\n\n**Usage:**\n```python\nsession_dir = logger.get_session_directory(\"session_123\")\nprint(f\"Session logs stored in: {session_dir}\")\n```\n\n#### `get_log_file_path(session_id: str) -> Path`\n\nGet the current log file path for a session.\n\n```python\ndef get_log_file_path(self, session_id: str) -> Path:\n    \"\"\"\n    Get the current log file path for a session.\n    \n    Args:\n        session_id: Session identifier\n        \n    Returns:\n        Path: Current log file path for the session\n    \"\"\"\n```\n\n**Usage:**\n```python\nlog_file = logger.get_log_file_path(\"session_123\")\nprint(f\"Current log file: {log_file}\")\n```\n\n#### `configure_from_env() -> None`\n\nLoad configuration from environment variables.\n\n```python\ndef configure_from_env(self) -> None:\n    \"\"\"\n    Load configuration from environment variables.\n    \n    Supported environment variables:\n    - AGENT_LOG_DIR: Base directory for logs\n    - AGENT_LOG_FORMAT: Log format (jsonl, json, custom)\n    - AGENT_INCLUDE_SYSTEM_PROMPT: Include system prompts (true/false)\n    - AGENT_MAX_RETRY_ATTEMPTS: Maximum retry attempts\n    - AGENT_RETRY_DELAY_SECONDS: Retry delay in seconds\n    - AGENT_ENABLE_LOCAL_LOGGING: Enable local logging (true/false)\n    \"\"\"\n```\n\n**Usage:**\n```python\nimport os\n\nos.environ['AGENT_LOG_DIR'] = './custom_logs'\nos.environ['AGENT_MAX_RETRY_ATTEMPTS'] = '5'\n\nlogger = EventSessionLogger()\nlogger.configure_from_env()\n```\n\n#### `update_downstream_callback(callback: Optional[Callable]) -> None`\n\nUpdate the downstream callback at runtime.\n\n```python\ndef update_downstream_callback(self, callback: Optional[Callable]) -> None:\n    \"\"\"\n    Update downstream callback for runtime reconfiguration.\n    \n    Args:\n        callback: New callback function or None to remove\n    \"\"\"\n```\n\n**Usage:**\n```python\nasync def new_callback(event):\n    print(f\"New callback: {event}\")\n\nlogger.update_downstream_callback(new_callback)\n```\n\n#### `update_downstream_transport(transport: Optional[TransportInterface]) -> None`\n\nUpdate the downstream transport at runtime.\n\n```python\ndef update_downstream_transport(self, transport: Optional[TransportInterface]) -> None:\n    \"\"\"\n    Update downstream transport for runtime reconfiguration.\n    \n    Args:\n        transport: New transport interface or None to remove\n    \"\"\"\n```\n\n**Usage:**\n```python\nfrom agent_c.util.transports import HTTPTransport\n\nnew_transport = HTTPTransport(\"https://new.endpoint.com\")\nlogger.update_downstream_transport(new_transport)\n```\n\n#### `close() -> None`\n\nClean shutdown - close transport connections and flush logs.\n\n```python\ndef close(self) -> None:\n    \"\"\"\n    Clean shutdown - close transport connections and flush logs.\n    \n    Should be called when shutting down to ensure proper resource cleanup.\n    \"\"\"\n```\n\n**Usage:**\n```python\n# Cleanup when done\nawait logger.close()\n\n# Or use as async context manager\nasync with EventSessionLogger(log_base_dir=\"./logs\") as logger:\n    # Use logger\n    await logger(event)\n# Automatically closed\n```\n\n### Async Context Manager Support\n\nEventSessionLogger supports async context manager protocol for automatic resource management.\n\n```python\nasync def __aenter__(self) -> 'EventSessionLogger':\n    \"\"\"Async context manager entry\"\"\"\n    return self\n\nasync def __aexit__(self, exc_type, exc_val, exc_tb) -> None:\n    \"\"\"Async context manager exit with cleanup\"\"\"\n    await self.close()\n```\n\n**Usage:**\n```python\nasync with EventSessionLogger(log_base_dir=\"./logs\") as logger:\n    await logger(event1)\n    await logger(event2)\n    # Automatically cleaned up\n```\n\n### Properties\n\n#### `log_base_dir: Path`\n\nBase directory for all log files (read-only).\n\n```python\nprint(f\"Logs stored in: {logger.log_base_dir}\")\n```\n\n#### `enable_local_logging: bool`\n\nWhether local file logging is enabled (read-only).\n\n```python\nif logger.enable_local_logging:\n    print(\"Local logging is enabled\")\n```\n\n#### `downstream_callback: Optional[Callable]`\n\nCurrent downstream callback function (read-only).\n\n```python\nif logger.downstream_callback:\n    print(\"Downstream callback is configured\")\n```\n\n#### `downstream_transport: Optional[TransportInterface]`\n\nCurrent downstream transport interface (read-only).\n\n```python\nif logger.downstream_transport:\n    print(\"Downstream transport is configured\")\n```\n\n#### `include_system_prompt: bool`\n\nWhether system prompts are included in logs (read-only).\n\n```python\nif logger.include_system_prompt:\n    print(\"System prompts will be logged\")\n```\n\n#### `max_retry_attempts: int`\n\nMaximum retry attempts for downstream operations (read-only).\n\n```python\nprint(f\"Max retries: {logger.max_retry_attempts}\")\n```\n\n#### `retry_delay_seconds: float`\n\nDelay between retry attempts in seconds (read-only).\n\n```python\nprint(f\"Retry delay: {logger.retry_delay_seconds}s\")\n```\n\n## Error Handling\n\n### Exception Types\n\n```python\nfrom agent_c.util.transport_exceptions import (\n    EventSessionLoggerError,\n    LocalLoggingError,\n    SerializationError,\n    TransportError\n)\n```\n\n#### `EventSessionLoggerError`\n\nBase exception for EventSessionLogger errors.\n\n```python\nclass EventSessionLoggerError(Exception):\n    \"\"\"Base exception for EventSessionLogger errors\"\"\"\n    pass\n```\n\n#### `LocalLoggingError`\n\nRaised when local file logging fails.\n\n```python\nclass LocalLoggingError(EventSessionLoggerError):\n    \"\"\"Raised when local logging operations fail\"\"\"\n    pass\n```\n\n#### `SerializationError`\n\nRaised when event serialization fails.\n\n```python\nclass SerializationError(EventSessionLoggerError):\n    \"\"\"Raised when event serialization fails\"\"\"\n    pass\n```\n\n### Error Isolation\n\nThe EventSessionLogger implements error isolation between local logging and transport operations:\n\n```python\ntry:\n    success = await logger(event)\n    # success is True if local logging succeeded\n    # Transport failures don't affect the return value\nexcept EventSessionLoggerError as e:\n    # Only critical local logging failures raise exceptions\n    print(f\"Critical logging error: {e}\")\n```\n\n### Custom Error Handling\n\n```python\ndef custom_error_handler(error: Exception, context: str) -> None:\n    \"\"\"Custom error handler for transport failures\"\"\"\n    print(f\"Error in {context}: {error}\")\n    # Log to monitoring system, send alerts, etc.\n\nlogger = EventSessionLogger(\n    log_base_dir=\"./logs\",\n    error_handler=custom_error_handler\n)\n```\n\n## Configuration\n\n### Environment Variables\n\n| Variable | Type | Default | Description |\n|----------|------|---------|-------------|\n| `AGENT_LOG_DIR` | `str` | `\"./logs\"` | Base directory for logs |\n| `AGENT_LOG_FORMAT` | `str` | `\"jsonl\"` | Log format (jsonl, json, custom) |\n| `AGENT_INCLUDE_SYSTEM_PROMPT` | `bool` | `true` | Include system prompts in logs |\n| `AGENT_MAX_RETRY_ATTEMPTS` | `int` | `3` | Maximum retry attempts |\n| `AGENT_RETRY_DELAY_SECONDS` | `float` | `1.0` | Retry delay in seconds |\n| `AGENT_ENABLE_LOCAL_LOGGING` | `bool` | `true` | Enable local file logging |\n\n### Configuration Loading\n\n```python\n# Automatic environment loading\nlogger = EventSessionLogger()  # Uses environment variables\n\n# Manual configuration\nlogger = EventSessionLogger(\n    log_base_dir=\"./custom_logs\",\n    max_retry_attempts=5,\n    retry_delay_seconds=2.0\n)\n\n# Runtime reconfiguration\nlogger.configure_from_env()\n```\n\n## Usage Patterns\n\n### 1. Basic Gateway Pattern\n\n```python\n# Create logger\nlogger = EventSessionLogger(log_base_dir=\"./logs\")\n\n# Use with agent\nagent = ClaudeChatAgent(streaming_callback=logger)\n\n# Events automatically flow through gateway\nresponse = await agent.chat(user_input=\"Hello\")\n```\n\n### 2. Transition Pattern (Current Callbacks)\n\n```python\nasync def existing_callback(event):\n    # Your existing event processing logic\n    pass\n\n# Bridge to existing callback\nlogger = EventSessionLogger(\n    log_base_dir=\"./logs\",\n    downstream_callback=existing_callback\n)\n\nagent = ClaudeChatAgent(streaming_callback=logger)\n```\n\n### 3. Future Transport Pattern\n\n```python\nfrom agent_c.util.transports import HTTPTransport\n\n# Future transport integration\ntransport = HTTPTransport(\"https://events.api.com\")\nlogger = EventSessionLogger(\n    log_base_dir=\"./logs\",\n    downstream_transport=transport\n)\n\nagent = ClaudeChatAgent(streaming_callback=logger)\n```\n\n### 4. Development Pattern\n\n```python\n# Simple development setup\nlogger = EventSessionLogger(\n    log_base_dir=\"./dev_logs\",\n    enable_local_logging=True\n    # No downstream - just local logging\n)\n```\n\n### 5. Production Pattern\n\n```python\n# Production setup with monitoring\nasync def monitoring_callback(event):\n    # Send to monitoring system\n    pass\n\nlogger = EventSessionLogger(\n    log_base_dir=\"/var/log/agent\",\n    downstream_callback=monitoring_callback,\n    max_retry_attempts=5,\n    retry_delay_seconds=2.0,\n    error_handler=production_error_handler\n)\n```\n\n## Performance Characteristics\n\n### Throughput\n\n- **Local logging**: >1000 events/second\n- **Gateway overhead**: <5% compared to direct file writing\n- **Memory usage**: Minimal (streaming processing, no buffering)\n- **Concurrent sessions**: Scales linearly with available I/O\n\n### Optimization Tips\n\n1. **Use appropriate log formats**: JSONL is fastest for high volume\n2. **Configure retry settings**: Lower retries for better throughput\n3. **Use transport batching**: For high-volume downstream delivery\n4. **Monitor disk I/O**: Ensure adequate storage performance\n5. **Use SSD storage**: For better I/O performance\n\n### Benchmarking\n\n```python\nimport time\nimport asyncio\n\nasync def benchmark_logger():\n    logger = EventSessionLogger(log_base_dir=\"./benchmark_logs\")\n    \n    num_events = 1000\n    start_time = time.time()\n    \n    for i in range(num_events):\n        event = InteractionEvent(\n            session_id=f\"session_{i % 10}\",\n            role=\"user\",\n            interaction_id=f\"interaction_{i}\",\n            event_type=\"benchmark\"\n        )\n        await logger(event)\n    \n    end_time = time.time()\n    duration = end_time - start_time\n    \n    print(f\"Processed {num_events} events in {duration:.2f}s\")\n    print(f\"Rate: {num_events/duration:.1f} events/second\")\n\n# Run benchmark\nasyncio.run(benchmark_logger())\n```\n\n## Integration Examples\n\n### With Different Agent Types\n\n```python\n# Claude agent\nclaude_logger = EventSessionLogger(log_base_dir=\"./claude_logs\")\nclaude_agent = ClaudeChatAgent(streaming_callback=claude_logger)\n\n# GPT agent\ngpt_logger = EventSessionLogger(log_base_dir=\"./gpt_logs\")\ngpt_agent = GPTChatAgent(streaming_callback=gpt_logger)\n\n# Shared logger for multiple agents\nshared_logger = EventSessionLogger(log_base_dir=\"./shared_logs\")\nclaude_agent = ClaudeChatAgent(streaming_callback=shared_logger)\ngpt_agent = GPTChatAgent(streaming_callback=shared_logger)\n```\n\n### With Session Managers\n\n```python\nfrom agent_c.chat.session_manager import ChatSessionManager\n\n# Create session manager and logger\nsession_manager = ChatSessionManager()\nlogger = EventSessionLogger(log_base_dir=\"./session_logs\")\n\n# Use together\nagent = ClaudeChatAgent(\n    streaming_callback=logger,\n    session_manager=session_manager\n)\n```\n\n### With Custom Event Types\n\n```python\nfrom agent_c.models.events.base import SessionEvent\n\nclass CustomEvent(SessionEvent):\n    event_type: str = \"custom\"\n    custom_data: str\n\n# Logger handles any event type\ncustom_event = CustomEvent(\n    session_id=\"custom_session\",\n    role=\"system\",\n    custom_data=\"Custom event data\"\n)\n\nsuccess = await logger(custom_event)\n```\n\n## Migration from SessionLogger\n\n### Automatic Migration\n\n```python\nfrom agent_c.util.session_logger_migration import migrate_agent_initialization\nfrom agent_c.util.session_logger import SessionLogger\n\n# Old pattern\nold_logger = SessionLogger(log_file_path=\"./logs/session.log\")\n\n# Automatic migration\nagent, new_logger = migrate_agent_initialization(\n    ClaudeChatAgent,\n    session_logger=old_logger  # Automatically converted\n)\n```\n\n### Manual Migration\n\n```python\n# OLD PATTERN\nfrom agent_c.util.session_logger import SessionLogger\n\nsession_logger = SessionLogger(log_file_path=\"./logs/session.log\")\nagent = ClaudeChatAgent(session_logger=session_logger)\n\n# NEW PATTERN\nfrom agent_c.util.event_session_logger import EventSessionLogger\n\nlogger = EventSessionLogger(log_base_dir=\"./logs\")\nagent = ClaudeChatAgent(streaming_callback=logger)\n```\n\n## Best Practices\n\n### 1. Resource Management\n\n```python\n# Always use async context manager for automatic cleanup\nasync with EventSessionLogger(log_base_dir=\"./logs\") as logger:\n    # Use logger\n    pass\n\n# Or manually close\nlogger = EventSessionLogger(log_base_dir=\"./logs\")\ntry:\n    # Use logger\n    pass\nfinally:\n    await logger.close()\n```\n\n### 2. Error Handling\n\n```python\n# Handle critical errors\ntry:\n    success = await logger(event)\nexcept EventSessionLoggerError as e:\n    # Critical error - local logging failed\n    handle_critical_error(e)\n\n# Transport errors are handled internally and don't raise exceptions\n```\n\n### 3. Configuration\n\n```python\n# Use environment variables for deployment flexibility\nimport os\n\nos.environ['AGENT_LOG_DIR'] = '/var/log/agent'\nos.environ['AGENT_MAX_RETRY_ATTEMPTS'] = '5'\n\nlogger = EventSessionLogger()  # Uses environment config\n```\n\n### 4. Performance\n\n```python\n# For high-volume scenarios\nlogger = EventSessionLogger(\n    log_base_dir=\"./logs\",\n    max_retry_attempts=1,        # Reduce retries\n    retry_delay_seconds=0.1,     # Faster retries\n    log_format=\"jsonl\"           # Fastest format\n)\n```\n\n### 5. Monitoring\n\n```python\n# Add monitoring callback\nasync def monitor_events(event):\n    # Send metrics to monitoring system\n    metrics.increment('events.processed')\n    metrics.histogram('events.size', len(str(event)))\n\nlogger = EventSessionLogger(\n    log_base_dir=\"./logs\",\n    downstream_callback=monitor_events\n)\n```"}, {"name": "implementation_roadmap.md", "type": "file", "path": "implementation_roadmap.md", "content": "# SessionLogger Man-in-the-Middle Implementation Roadmap\n\n## Overview\nThis roadmap outlines the complete implementation plan for migrating SessionLogger from an invasive, agent-embedded design to a clean man-in-the-middle gateway pattern that supports future transport layer decoupling.\n\n## Strategic Goals\n1. **Stateless Agents**: Remove all SessionLogger management from agents\n2. **Gateway Pattern**: SessionLogger becomes a bridge between agents and transport layers\n3. **Future-Ready**: Easy migration from callbacks to queues/message buses\n4. **Error Isolation**: Logging and transport failures are independent\n5. **Backward Compatibility**: Smooth transition for existing users\n\n## Implementation Phases\n\n### Phase 1: Analysis and Design Validation (3 subtasks)\n**Duration:** 1-2 sessions  \n**Goal:** Understand current state and finalize design\n\n#### 1.1: Analyze Current SessionLogger Implementation\n- **Objective:** Deep dive into current code and usage patterns\n- **Key Activities:**\n  - Review SessionLogger class methods and file organization\n  - Map BaseAgent integration points (initialize_session_logger, _raise_event)\n  - Search codebase for all SessionLogger usage patterns\n  - Document current configuration and environment variables\n- **Deliverables:** Current implementation analysis, integration points inventory\n\n#### 1.2: Validate Event Model Completeness  \n- **Objective:** Ensure events contain all necessary information for gateway\n- **Key Activities:**\n  - Verify all events inherit from SessionEvent with session_id\n  - Test event serialization for transport compatibility\n  - Identify any missing information currently extracted from agents\n  - Validate events are self-contained and routable\n- **Deliverables:** Event model completeness report, gap analysis\n\n#### 1.3: Design EventSessionLogger API\n- **Objective:** Create detailed API specification for gateway pattern\n- **Key Activities:**\n  - Design EventSessionLogger constructor and methods\n  - Define TransportInterface abstraction\n  - Specify error isolation mechanisms\n  - Create configuration and factory function specs\n- **Deliverables:** Complete API specification, error handling strategy\n\n### Phase 2: Implement EventSessionLogger (3 subtasks)\n**Duration:** 2-3 sessions  \n**Goal:** Build the core gateway implementation\n\n#### 2.1: Implement Core EventSessionLogger\n- **Objective:** Build main gateway class with dual interface support\n- **Key Activities:**\n  - Async __call__ method for event processing (always log locally first)\n  - Support both downstream_callback and downstream_transport\n  - Session-based file organization and JSON Lines logging\n  - Error isolation between logging and transport\n- **Deliverables:** Core EventSessionLogger implementation\n\n#### 2.2: Implement TransportInterface Abstraction\n- **Objective:** Create abstract transport layer for future decoupling\n- **Key Activities:**\n  - TransportInterface ABC with send() and close() methods\n  - Example implementations (CallbackTransport, LoggingTransport, NullTransport)\n  - Error handling and resource management patterns\n  - Documentation for transport development\n- **Deliverables:** Transport interface and example implementations\n\n#### 2.3: Create Factory Functions and Utilities\n- **Objective:** Provide convenient interfaces for common patterns\n- **Key Activities:**\n  - Factory functions for common gateway setups\n  - Migration utilities from old SessionLogger\n  - Configuration helpers and environment variable support\n  - Common pattern implementations (dev vs prod)\n- **Deliverables:** Factory functions, migration utilities\n\n### Phase 3: Create Comprehensive Tests\n**Duration:** 1-2 sessions  \n**Goal:** Ensure gateway pattern works correctly\n\n- **Unit Tests:** EventSessionLogger functionality, error isolation\n- **Integration Tests:** Compatibility with agents and event system\n- **Performance Tests:** Gateway overhead, high-volume processing\n- **Error Isolation Tests:** Transport failures don't affect logging\n\n### Phase 4: Update BaseAgent and Remove Old Logic (3 subtasks)\n**Duration:** 2-3 sessions  \n**Goal:** Clean up agents to use gateway pattern\n\n#### 4.1: Remove SessionLogger from BaseAgent\n- **Objective:** Clean up BaseAgent to remove embedded SessionLogger\n- **Key Activities:**\n  - Remove session_logger parameter and initialize_session_logger method\n  - Simplify _raise_event to only handle streaming_callback\n  - Update documentation and type hints\n  - Ensure no breaking changes to public APIs\n- **Deliverables:** Updated BaseAgent without SessionLogger integration\n\n#### 4.2: Update Agent Subclasses\n- **Objective:** Update ClaudeChatAgent, GPTAgent, etc.\n- **Key Activities:**\n  - Remove SessionLogger dependencies from all subclasses\n  - Ensure streaming_callback is consistently used\n  - Verify all functionality is preserved\n  - Test performance is maintained\n- **Deliverables:** Updated agent subclasses\n\n#### 4.3: Create Migration Helpers\n- **Objective:** Ease transition for existing users\n- **Key Activities:**\n  - Migration utilities and backward compatibility helpers\n  - Deprecation warnings with helpful guidance\n  - Migration documentation and examples\n  - FAQ for common migration questions\n- **Deliverables:** Migration tools and documentation\n\n### Phase 5: Create Usage Examples and Documentation\n**Duration:** 1-2 sessions  \n**Goal:** Comprehensive documentation for gateway pattern\n\n- **Basic Gateway Usage:** Simple logging, configuration options\n- **Transport Integration:** Current callbacks, future transports, queue examples\n- **Migration Guide:** Step-by-step transition from old SessionLogger\n- **Advanced Scenarios:** High-volume processing, error recovery\n\n### Phase 6: Deprecate Old SessionLogger\n**Duration:** 1 session  \n**Goal:** Mark old implementation as deprecated\n\n- **Deprecation Warnings:** Clear warnings with migration guidance\n- **Timeline Planning:** Define removal schedule (2-3 releases)\n- **Code Updates:** Update all internal usage to new system\n- **Communication:** User notification strategy\n\n## Key Architecture Decisions\n\n### 1. Gateway Pattern Flow\n```\nAgent Events \u2192 EventSessionLogger \u2192 Local Log + Transport Layer\n```\n\n### 2. Error Isolation Strategy\n- Local logging always succeeds regardless of transport failures\n- Transport failures don't affect local logging\n- Each concern can be managed independently\n\n### 3. Migration Path\n```\nCurrent:    Agent \u2192 App Callback\nTransition: Agent \u2192 EventSessionLogger \u2192 App Callback  \nFuture:     Agent \u2192 EventSessionLogger \u2192 Transport \u2192 Distributed System\n```\n\n### 4. Transport Interface Design\n```python\nclass TransportInterface(ABC):\n    async def send(self, event: BaseEvent) -> None: ...\n    async def close(self) -> None: ...\n```\n\n## Success Metrics\n\n### Technical Success\n- [ ] Agents are stateless (no SessionLogger management)\n- [ ] Gateway provides clean separation between agents and transport\n- [ ] Error isolation works correctly\n- [ ] Performance meets or exceeds current implementation\n- [ ] Easy integration with future transport layers\n\n### User Experience Success\n- [ ] No breaking changes to existing APIs\n- [ ] Clear migration path with helpful guidance\n- [ ] Comprehensive documentation and examples\n- [ ] Smooth transition experience\n\n### Future Readiness Success\n- [ ] Easy swap from callbacks to queues/message buses\n- [ ] Independent scaling of logging vs transport\n- [ ] Clean abstraction for new transport types\n- [ ] Prepared for distributed system architecture\n\n## Risk Mitigation\n\n### Technical Risks\n- **Performance Impact:** Thorough benchmarking against current implementation\n- **Gateway Bottleneck:** Lightweight design with minimal overhead\n- **Error Handling:** Comprehensive error isolation testing\n\n### Migration Risks\n- **Breaking Changes:** Maintain backward compatibility during transition\n- **User Confusion:** Clear documentation and migration guides\n- **Adoption Resistance:** Demonstrate clear benefits and easy migration\n\n### Future Risks\n- **Transport Evolution:** Abstract interface supports multiple transport types\n- **Scaling Challenges:** Independent scaling of logging and transport\n- **Maintenance Burden:** Clean separation of concerns reduces complexity\n\n## Timeline Estimate\n- **Total Duration:** 8-12 sessions\n- **Critical Path:** Phase 1 \u2192 Phase 2 \u2192 Phase 3 \u2192 Phase 4\n- **Parallel Work:** Documentation can be developed alongside implementation\n- **Milestone Reviews:** After each phase completion\n\n## Next Steps\n1. **Begin Phase 1.1:** Analyze current SessionLogger implementation\n2. **Set up tracking:** Use workspace planning tools to track progress\n3. **Regular reviews:** Check progress after each subtask completion\n4. **User feedback:** Gather input during transition period\n\n---\n**Document Version:** 1.0  \n**Last Updated:** Implementation planning complete  \n**Next Review:** After Phase 1 completion"}, {"name": "phase1_design_summary.md", "type": "file", "path": "phase1_design_summary.md", "content": "# Phase 1: Analysis and Design Validation - Complete Summary\n\n## Overview\n\nPhase 1 has been successfully completed with comprehensive analysis and design validation for the SessionLogger refactor. All three subtasks have been completed with excellent results.\n\n## Completed Tasks\n\n### \u2705 Task 1.1: Analyze Current SessionLogger Implementation\n**Status:** Complete  \n**Key Findings:**\n- Current SessionLogger is tightly coupled to BaseAgent\n- Complex session ID migration logic (unknown \u2192 known)\n- JSON Lines format with session-based directory organization\n- Environment variable support (AGENT_LOG_DIR)\n- Invasive design with agent managing SessionLogger lifecycle\n\n**Deliverable:** `current_sessionlogger_analysis.md`\n\n### \u2705 Task 1.2: Validate Event Model Completeness  \n**Status:** Complete  \n**Key Findings:**\n- **12 event types validated** (9 SessionEvents + 3 SemiSessionEvents)\n- **100% success rate** - All events contain required session_id, role, type\n- **100% serializable** - All events ready for transport layers\n- **Self-contained** - No agent-specific data extraction needed\n- **Gateway-ready** - Events contain all routing information\n\n**Deliverable:** `event_model_completeness_report.md`\n\n### \u2705 Task 1.3: Design EventSessionLogger API\n**Status:** Complete  \n**Key Deliverables:**\n- Complete EventSessionLogger API with gateway pattern\n- TransportInterface abstraction for future decoupling\n- Comprehensive error handling with isolation\n- Factory functions for common usage patterns\n- Migration utilities for backward compatibility\n- Example transport implementations\n\n**Deliverable:** `event_session_logger_api_design.md`\n\n## Key Design Decisions Validated\n\n### 1. Gateway Pattern Architecture \u2705\n```\nAgent Events \u2192 EventSessionLogger Gateway \u2192 Local Logging + Transport\n```\n- **Man-in-the-middle design** confirmed as optimal approach\n- **Error isolation** between logging and transport layers\n- **Dual interface support** (callback + transport) for smooth migration\n\n### 2. Event-Driven Approach \u2705\n- **Events are self-contained** - no agent data extraction needed\n- **Session routing ready** - session_id available in all events\n- **Transport ready** - 100% serializable for queues/message buses\n\n### 3. Backward Compatibility \u2705\n- **File format preserved** - JSON Lines format maintained\n- **Directory structure preserved** - session-based organization\n- **Environment variables preserved** - AGENT_LOG_DIR support\n- **Configuration preserved** - all current options supported\n\n### 4. Future Decoupling Strategy \u2705\n- **Transport interface abstraction** enables easy swapping\n- **Queue/message bus ready** - events can be routed anywhere\n- **Independent scaling** - logging and transport can scale separately\n\n## Architecture Validation\n\n### Current State (Problematic)\n```python\n# Agent manages SessionLogger lifecycle\nagent = BaseAgent(session_logger=SessionLogger(...))\nagent.initialize_session_logger()  # Complex setup\nagent._raise_event(event)  # Calls both streaming_callback AND session_logger\n```\n\n### Target State (Clean Gateway)\n```python\n# EventSessionLogger as gateway\nevent_logger = EventSessionLogger(\n    log_base_dir=\"./logs\",\n    downstream_callback=app_callback  # Bridge to current system\n)\n\n# Agent only uses streaming_callback\nagent = BaseAgent(streaming_callback=event_logger)\nagent._raise_event(event)  # Only calls streaming_callback (which is our gateway)\n```\n\n### Future State (Transport Decoupled)\n```python\n# Easy transport swap\nmessage_bus = MessageBusTransport(connection=\"...\")\nevent_logger = EventSessionLogger(\n    log_base_dir=\"./logs\", \n    downstream_transport=message_bus  # Clean transport interface\n)\n```\n\n## Risk Mitigation Validated\n\n### \u2705 Breaking Changes Risk - MITIGATED\n- **No API changes** for existing users\n- **Backward compatible configuration** \n- **Migration utilities** for smooth transition\n\n### \u2705 Performance Risk - MITIGATED\n- **Lightweight gateway design** - minimal overhead\n- **Streaming processing** - no buffering or batching\n- **Error isolation** - transport failures don't affect logging\n\n### \u2705 Complexity Risk - MITIGATED\n- **Factory functions** simplify common usage patterns\n- **Environment-based configuration** maintains current simplicity\n- **Clear migration path** with examples and utilities\n\n### \u2705 Transport Coupling Risk - MITIGATED\n- **Abstract transport interface** enables easy swapping\n- **Dual interface support** allows gradual migration\n- **Error isolation** prevents transport issues from affecting logging\n\n## Implementation Readiness Assessment\n\n### \u2705 Requirements Complete\n- [x] Current implementation fully analyzed\n- [x] Event models validated for gateway pattern\n- [x] Complete API specification designed\n- [x] Error handling strategy defined\n- [x] Migration path validated\n- [x] Backward compatibility ensured\n\n### \u2705 Design Validated\n- [x] Gateway pattern confirmed as optimal approach\n- [x] Event-driven architecture validated\n- [x] Transport abstraction designed\n- [x] Configuration system specified\n- [x] Factory functions designed\n\n### \u2705 Risk Assessment Complete\n- [x] Breaking changes risk mitigated\n- [x] Performance impact minimized\n- [x] Migration complexity addressed\n- [x] Transport coupling eliminated\n\n## Lessons Learned\n\n1. **Event Model Excellence**: The existing event models are perfectly designed for the gateway pattern - no changes needed.\n\n2. **SemiSessionEvent Flexibility**: SemiSessionEvents provide the right balance of flexibility for events generated outside session context.\n\n3. **Gateway Pattern Benefits**: The man-in-the-middle approach provides clean separation and future-proofing without breaking existing functionality.\n\n4. **Backward Compatibility**: Maintaining current file formats and configuration makes migration seamless.\n\n## Success Criteria Met\n\n- \u2705 **Agents will be stateless** - no SessionLogger management needed\n- \u2705 **Event-driven logging** - through streaming callbacks only\n- \u2705 **Gateway pattern** - clean separation between agents and transport\n- \u2705 **Transport ready** - easy integration with queues/message buses\n- \u2705 **No breaking changes** - existing APIs preserved\n- \u2705 **Error isolation** - logging and transport failures isolated\n- \u2705 **Performance maintained** - lightweight gateway design\n- \u2705 **Migration path clear** - utilities and examples provided\n\n## Next Steps\n\n**Phase 1 Complete** \u2705 - Ready to proceed to **Phase 2: Implement EventSessionLogger**\n\n**Phase 2 Focus:**\n- Implement core EventSessionLogger gateway class\n- Implement TransportInterface abstraction  \n- Create factory functions and utilities\n- Comprehensive testing of gateway pattern\n\n**Implementation Priority:**\n1. **Task 2.1**: Implement Core EventSessionLogger (gateway functionality)\n2. **Task 2.2**: Implement TransportInterface Abstraction (future decoupling)\n3. **Task 2.3**: Create Factory Functions and Utilities (ease of use)\n\n---\n\n**Phase 1 Status:** \u2705 **COMPLETE**  \n**Analysis Quality:** Comprehensive and thorough  \n**Design Quality:** Production-ready with full specifications  \n**Risk Mitigation:** All major risks addressed  \n**Implementation Readiness:** 100% ready to proceed"}, {"name": "session_logger_migration_guide.md", "type": "file", "path": "session_logger_migration_guide.md", "content": "# SessionLogger Migration Guide\n\n## Overview\n\nThe SessionLogger has been refactored from an embedded pattern to an event-driven gateway pattern. This migration guide provides step-by-step instructions for updating your code to use the new EventSessionLogger system.\n\n## Why Migrate?\n\nThe new EventSessionLogger provides:\n\n- **Better Separation of Concerns**: Agents focus on LLM interactions, logging is handled separately\n- **Future-Proof Architecture**: Ready for transport layer integration (queues, message buses)\n- **Error Isolation**: Logging failures don't affect agent operations\n- **Enhanced Performance**: Gateway pattern with optimized event handling\n- **Flexible Configuration**: Environment-based configuration and factory patterns\n\n## Migration Timeline\n\n- **Deprecated in**: Version 2.0.0\n- **Will be removed in**: Version 3.0.0\n- **Recommended Action**: Migrate now to avoid breaking changes\n\n## Quick Migration Examples\n\n### Basic File Logging\n\n**OLD PATTERN (Deprecated):**\n```python\nfrom agent_c.util.session_logger import SessionLogger\nfrom agent_c.agents.claude import ClaudeChatAgent\n\n# Old embedded pattern\nsession_logger = SessionLogger(log_file_path=\"./logs/session.log\")\nagent = ClaudeChatAgent(session_logger=session_logger)\n```\n\n**NEW PATTERN (Recommended):**\n```python\nfrom agent_c.util.event_session_logger_factory import create_session_logger\nfrom agent_c.agents.claude import ClaudeChatAgent\n\n# New gateway pattern\nlogger = create_session_logger(log_base_dir=\"./logs\")\nagent = ClaudeChatAgent(streaming_callback=logger)\n```\n\n### With Callback Function\n\n**OLD PATTERN:**\n```python\ndef my_callback(event):\n    print(f\"Event: {event}\")\n\nsession_logger = SessionLogger(log_file_path=\"./logs/session.log\")\n# Callback handling was mixed with agent logic\n```\n\n**NEW PATTERN:**\n```python\nfrom agent_c.util.event_session_logger_factory import create_with_callback\n\nasync def my_callback(event):\n    print(f\"Event: {event}\")\n\n# Clean separation: logger handles both file logging and callback\nlogger = create_with_callback(\n    callback=my_callback,\n    log_base_dir=\"./logs\"\n)\nagent = ClaudeChatAgent(streaming_callback=logger)\n```\n\n### Environment-Based Configuration\n\n**NEW PATTERN:**\n```python\nimport os\nfrom agent_c.util.event_session_logger_factory import create_from_environment\n\n# Set environment variables\nos.environ['AGENT_LOG_DIR'] = './logs'\nos.environ['AGENT_LOG_FORMAT'] = 'jsonl'\n\n# Create logger from environment\nlogger = create_from_environment()\nagent = ClaudeChatAgent(streaming_callback=logger)\n```\n\n## Automatic Migration Helpers\n\n### Using Migration Utilities\n\n```python\nfrom agent_c.util.session_logger_migration import (\n    migrate_agent_initialization,\n    migrate_simple_logging,\n    quick_migrate_agent\n)\n\n# Option 1: Automatic migration from old SessionLogger\nold_session_logger = SessionLogger(log_file_path=\"./logs/session.log\")\nagent, logger = migrate_agent_initialization(\n    ClaudeChatAgent,\n    session_logger=old_session_logger  # Automatically converted\n)\n\n# Option 2: Quick migration for simple cases\nagent, logger = quick_migrate_agent(ClaudeChatAgent, log_dir=\"./logs\")\n\n# Option 3: Migrate just the logging part\nlogger = migrate_simple_logging(\"./logs/session.log\")\nagent = ClaudeChatAgent(streaming_callback=logger)\n```\n\n### Migration with Validation\n\n```python\nfrom agent_c.util.session_logger_migration import validate_migration_config\n\n# Check your configuration\nconfig = {\n    'log_base_dir': './logs',\n    'include_system_prompt': True\n}\n\nissues = validate_migration_config(**config)\nif issues:\n    for issue in issues:\n        print(f\"\u26a0\ufe0f  {issue}\")\nelse:\n    print(\"\u2705 Configuration is valid\")\n```\n\n## Advanced Migration Patterns\n\n### Multiple Transport Targets\n\n**NEW CAPABILITY:**\n```python\nfrom agent_c.util.event_session_logger_factory import create_multi_transport_logger\nfrom agent_c.util.transports import CallbackTransport, LoggingTransport\n\n# Create multiple transports\ncallback_transport = CallbackTransport(my_callback)\nlogging_transport = LoggingTransport()\n\n# Logger that sends to multiple destinations\nlogger = create_multi_transport_logger(\n    log_base_dir=\"./logs\",\n    transports=[callback_transport, logging_transport]\n)\n\nagent = ClaudeChatAgent(streaming_callback=logger)\n```\n\n### Development vs Production\n\n```python\nfrom agent_c.util.event_session_logger_factory import (\n    create_development_logger,\n    create_production_logger\n)\n\n# Development setup\nif os.environ.get('ENV') == 'development':\n    logger = create_development_logger(\n        log_base_dir=\"./logs\",\n        enable_debug=True\n    )\nelse:\n    # Production setup with retry and monitoring\n    logger = create_production_logger(\n        log_base_dir=\"/var/log/agent\",\n        transport_type=TransportType.QUEUE,\n        transport_config={'queue_url': 'redis://localhost:6379'},\n        enable_retry=True\n    )\n\nagent = ClaudeChatAgent(streaming_callback=logger)\n```\n\n## Configuration Migration\n\n### Environment Variables\n\nThe new system supports comprehensive environment-based configuration:\n\n```bash\n# Basic configuration\nexport AGENT_LOG_DIR=\"./logs\"\nexport AGENT_LOG_FORMAT=\"jsonl\"\nexport AGENT_INCLUDE_SYSTEM_PROMPT=\"true\"\n\n# Advanced configuration\nexport AGENT_MAX_RETRY_ATTEMPTS=\"3\"\nexport AGENT_RETRY_DELAY_SECONDS=\"1.0\"\nexport AGENT_ENABLE_LOCAL_LOGGING=\"true\"\n```\n\n### Configuration File Migration\n\n**OLD:** SessionLogger with hardcoded paths\n```python\nsession_logger = SessionLogger(\n    log_file_path=\"./logs/session.log\",\n    include_system_prompt=True\n)\n```\n\n**NEW:** EventSessionLogger with flexible configuration\n```python\nfrom agent_c.util.event_session_logger_factory import LoggerConfiguration, create_logger_from_config\n\nconfig = LoggerConfiguration(\n    log_base_dir=\"./logs\",\n    include_system_prompt=True,\n    log_format=\"jsonl\",\n    enable_retry=True,\n    max_retry_attempts=3\n)\n\nlogger = create_logger_from_config(config)\n```\n\n## Testing Your Migration\n\n### Validation Steps\n\n1. **Check for Deprecation Warnings:**\n```python\nimport warnings\nwarnings.filterwarnings('error', category=SessionLoggerDeprecationWarning)\n\n# Your code here - will raise exception if deprecated patterns detected\n```\n\n2. **Verify Event Flow:**\n```python\n# Test that events are properly logged\nlogger = create_session_logger(log_base_dir=\"./test_logs\")\nagent = ClaudeChatAgent(streaming_callback=logger)\n\n# Check log files are created and contain events\n```\n\n3. **Performance Testing:**\n```python\nfrom agent_c.util.event_session_logger_factory import create_testing_logger\n\n# Use testing logger for unit tests\nlogger = create_testing_logger(transport_type=TransportType.NULL)\nagent = ClaudeChatAgent(streaming_callback=logger)\n```\n\n### Migration Checklist\n\n- [ ] Replace `SessionLogger` imports with `event_session_logger_factory`\n- [ ] Update agent initialization to use `streaming_callback`\n- [ ] Remove `session_logger` parameters from agent constructors\n- [ ] Remove calls to `agent.initialize_session_logger()`\n- [ ] Update log file paths to use directories instead of files\n- [ ] Test that events are properly logged\n- [ ] Verify callback functions work with new pattern\n- [ ] Update environment variable configuration\n- [ ] Run tests to ensure no functionality is lost\n- [ ] Check for and resolve deprecation warnings\n\n## Common Migration Issues\n\n### Issue 1: Log File vs Directory\n\n**Problem:** Old SessionLogger used file paths, new system uses directories\n```python\n# OLD - file path\nSessionLogger(log_file_path=\"./logs/session.log\")\n\n# NEW - directory path\ncreate_session_logger(log_base_dir=\"./logs\")\n```\n\n**Solution:** The new system automatically creates session-specific files within the directory.\n\n### Issue 2: Callback Function Signatures\n\n**Problem:** Callback functions need to be async\n```python\n# OLD - sync callback\ndef my_callback(event):\n    process_event(event)\n\n# NEW - async callback\nasync def my_callback(event):\n    await process_event(event)\n```\n\n### Issue 3: Agent Initialization Order\n\n**Problem:** SessionLogger was passed to agent constructor\n```python\n# OLD\nagent = ClaudeChatAgent(session_logger=logger)\n\n# NEW\nlogger = create_session_logger()\nagent = ClaudeChatAgent(streaming_callback=logger)\n```\n\n## Getting Help\n\n### Built-in Migration Help\n\n```python\nfrom agent_c.util.session_logger_migration import print_migration_guide\n\n# Print comprehensive migration guide\nprint_migration_guide()\n```\n\n### Debugging Migration Issues\n\n```python\nfrom agent_c.util.session_logger_migration import MigrationHelper\n\n# Enable detailed deprecation warnings\nMigrationHelper.warn_deprecated_usage(\n    old_pattern=\"Your old pattern\",\n    new_pattern=\"Recommended new pattern\",\n    context=\"Where you found this\"\n)\n```\n\n### Validation and Configuration Help\n\n```python\nfrom agent_c.util.event_session_logger_factory import (\n    validate_logger_config,\n    print_logger_info\n)\n\n# Validate your configuration\nconfig = LoggerConfiguration(log_base_dir=\"./logs\")\nif validate_logger_config(config):\n    logger = create_logger_from_config(config)\n    print_logger_info(logger)\n```\n\n## Future-Proofing\n\nThe new EventSessionLogger is designed for future transport integration:\n\n```python\n# Current transition pattern\nlogger = create_with_callback(callback=my_callback, log_base_dir=\"./logs\")\n\n# Future transport pattern (when available)\nlogger = create_with_transport(transport=message_bus, log_base_dir=\"./logs\")\n```\n\nThis migration prepares your code for:\n- Message queue integration (RabbitMQ, Redis, etc.)\n- Cloud logging services\n- Real-time event streaming\n- Distributed logging architectures\n\n## Summary\n\nThe migration from SessionLogger to EventSessionLogger provides:\n\n1. **Immediate Benefits:** Better architecture, error isolation, enhanced performance\n2. **Future Benefits:** Transport layer integration, cloud-native logging, scalability\n3. **Migration Support:** Comprehensive utilities, validation, and documentation\n4. **Backward Compatibility:** Smooth transition with deprecation warnings\n\nStart your migration today to take advantage of the improved architecture and prepare for future enhancements!"}, {"name": "session_logger_redesign.md", "type": "file", "path": "session_logger_redesign.md", "content": "# SessionLogger Redesign: Event-Driven Architecture\n\n## Current Problems\n\nThe current SessionLogger implementation has several fundamental issues:\n\n1. **Tight Coupling**: SessionLogger is embedded directly in BaseAgent, making agents stateful\n2. **Invasive Design**: Agents manage SessionLogger instances and extract session information\n3. **Wrong Abstraction**: SessionLogger tries to pull data from agents instead of consuming events\n4. **Not Pipe-Ready**: Design doesn't support easy replacement with queues/message buses\n5. **Violates Event-Driven Principles**: Bypasses the streaming callback mechanism\n\n## Design Principles\n\n### 1. Stateless Agents\n- Agents should only provide defaults and handle LLM interactions\n- No session state management or logging concerns in agents\n- Session IDs come from the chat payload, not agent state\n\n### 2. Event-Driven Logging\n- SessionLogger should be a callback that receives events\n- All necessary information (including session IDs) is in the events\n- No direct coupling between agents and loggers\n\n### 3. Man-in-the-Middle Gateway Pattern\n- SessionLogger acts as a bridge between agent events and transport layers\n- Always logs locally, then forwards to downstream transport\n- Creates clean separation point for future transport layer replacement\n- Enables independent scaling and management of logging vs transport\n\n### 4. Session Information from Events\n- All events inherit from SessionEvent and contain session_id\n- No need to extract session information from agents\n- Events are self-contained and routable\n\n### 5. Future Transport Preparation\n- Design supports easy swap from callbacks to queues/message buses\n- Transport interface abstraction for clean decoupling\n- Backward compatible transition path\n\n## Proposed Architecture\n\n### 1. Event-Based SessionLogger (Gateway Pattern)\n\n```python\nclass EventSessionLogger:\n    \"\"\"\n    Event-driven session logger that acts as a gateway between agent events and transport layers.\n    Always logs locally, then forwards to downstream callback/transport for decoupled architecture.\n    \n    This is the primary and recommended pattern for all use cases.\n    \"\"\"\n    \n    def __init__(self, \n                 log_base_dir: Union[str, Path] = None,\n                 downstream_callback: Optional[Callable] = None,\n                 downstream_transport: Optional[TransportInterface] = None,\n                 include_system_prompt: bool = True):\n        \"\"\"\n        Args:\n            log_base_dir: Base directory for log files (defaults to env var or \"logs/sessions\")\n            downstream_callback: Current callback to forward events to (transition period)\n            downstream_transport: Future transport interface (queue, message bus, etc.)\n            include_system_prompt: Whether to log system prompts\n        \"\"\"\n        \n    async def __call__(self, event: BaseEvent) -> None:\n        \"\"\"\n        Main callback method that receives events from agents.\n        Always logs locally first, then forwards to downstream callback/transport.\n        Provides error isolation between logging and transport.\n        \"\"\"\n        \n    def _get_log_path(self, session_id: str) -> Path:\n        \"\"\"Get the log file path for a given session ID.\"\"\"\n        \n    async def _log_event(self, event: BaseEvent) -> None:\n        \"\"\"Log a single event to the appropriate session log file.\"\"\"\n        \n    async def _forward_event(self, event: BaseEvent) -> None:\n        \"\"\"Forward event to downstream callback or transport.\"\"\"\n```\n\n### 2. Transport Interface Abstraction\n\n```python\nclass TransportInterface(ABC):\n    \"\"\"\n    Abstract interface for future transport layers (queues, message buses, etc.).\n    Enables clean decoupling and easy transport replacement.\n    \"\"\"\n    \n    @abstractmethod\n    async def send(self, event: BaseEvent) -> None:\n        \"\"\"Send event to transport layer.\"\"\"\n        pass\n        \n    @abstractmethod\n    async def close(self) -> None:\n        \"\"\"Clean up transport resources.\"\"\"\n        pass\n\n# Example future implementations:\nclass RabbitMQTransport(TransportInterface):\n    async def send(self, event: BaseEvent) -> None:\n        # Send to RabbitMQ\n        pass\n        \nclass RedisTransport(TransportInterface):\n    async def send(self, event: BaseEvent) -> None:\n        # Send to Redis queue\n        pass\n```\n\n### 3. Factory Functions\n\n```python\ndef create_session_logger(log_base_dir: str = None, \n                         downstream_callback: Callable = None,\n                         downstream_transport: TransportInterface = None) -> EventSessionLogger:\n    \"\"\"\n    Factory function to create a SessionLogger with the man-in-the-middle pattern.\n    \"\"\"\n    return EventSessionLogger(log_base_dir, downstream_callback, downstream_transport)\n```\n\n## Usage Patterns\n\n### Primary Pattern: Man-in-the-Middle Gateway (Only Recommended Pattern)\n```python\n# SessionLogger acts as bridge between agents and transport layer\ndef app_callback(event):\n    # Current application logic\n    pass\n\n# Man-in-the-middle: logs and forwards\nlogger = EventSessionLogger(\n    log_base_dir=\"./logs\",\n    downstream_callback=app_callback  # Current: callback, Future: transport\n)\nagent = ClaudeChatAgent(streaming_callback=logger)\n```\n\n### Future Transport Layer Integration\n```python\n# Future: Replace callback with transport interface\nlogger = EventSessionLogger(\n    log_base_dir=\"./logs\",\n    downstream_transport=message_bus_interface  # Queue, message bus, etc.\n)\nagent = ClaudeChatAgent(streaming_callback=logger)\n```\n\n### Simple Logging Only\n```python\n# For cases where you only need logging\nlogger = EventSessionLogger(log_base_dir=\"./logs\")\nagent = ClaudeChatAgent(streaming_callback=logger)\n```\n\n### Migration Path\n```python\n# Current: Direct coupling\nagent = ClaudeChatAgent(streaming_callback=app_callback)\n\n# Transition: Add logging layer\nlogger = EventSessionLogger(\"./logs\", downstream_callback=app_callback)\nagent = ClaudeChatAgent(streaming_callback=logger)\n\n# Future: Replace with transport\nlogger = EventSessionLogger(\"./logs\", downstream_transport=transport)\nagent = ClaudeChatAgent(streaming_callback=logger)\n```\n\n### Future Queue Integration (Through Gateway)\n```python\n# Future: Queue integration through SessionLogger gateway\nrabbitmq_transport = RabbitMQTransport(connection_string=\"...\")\nlogger = EventSessionLogger(\n    log_base_dir=\"./logs\",\n    downstream_transport=rabbitmq_transport\n)\nagent = ClaudeChatAgent(streaming_callback=logger)\n\n# Events flow: Agent \u2192 SessionLogger \u2192 Local Log + RabbitMQ\n```\n\n## Implementation Plan\n\n### Phase 1: Create New Event-Driven SessionLogger Gateway\n1. Implement `EventSessionLogger` class as gateway/bridge\n2. Implement `TransportInterface` abstraction\n3. Create factory functions for gateway pattern\n4. Add comprehensive tests\n\n### Phase 2: Update Agent Classes\n1. Remove `session_logger` parameter from BaseAgent.__init__\n2. Remove `initialize_session_logger` method\n3. Remove SessionLogger logic from `_raise_event`\n4. Update all agent subclasses\n\n### Phase 3: Update Documentation and Examples\n1. Update usage examples to use gateway pattern\n2. Document transport interface patterns\n3. Provide migration guide from old to new approach\n\n### Phase 4: Deprecation and Cleanup\n1. Mark old SessionLogger as deprecated\n2. Remove old SessionLogger after transition period\n3. Clean up any remaining references\n\n## Benefits\n\n1. **Decoupled Design**: Agents are stateless and focused on LLM interactions\n2. **Gateway Pattern**: Clean separation point between agents and transport layers\n3. **Transport-Ready**: Easy to replace downstream transport without affecting agents or logging\n4. **Event-Driven**: Properly leverages the existing event system\n5. **Error Isolation**: Logging failures don't affect transport, and vice versa\n6. **Future-Proof**: Supports evolution from callbacks to queues/message buses\n7. **Independent Scaling**: Logging and transport can be managed separately\n\n## Migration Strategy\n\nThe new design is backward compatible during transition:\n- Old agents continue to work with existing SessionLogger\n- New event-driven approach can be adopted incrementally\n- Both patterns can coexist during migration period\n- Clear migration path with minimal breaking changes"}, {"name": "session_logger_refactor_tracker.md", "type": "file", "path": "session_logger_refactor_tracker.md", "content": "# SessionLogger Refactor Progress Tracker\n\n## Plan Overview\n**Plan ID:** session_logger_refactor  \n**Title:** SessionLogger Refactor: Event-Driven Architecture  \n**Status:** Planning Complete - Ready for Execution\n\n## Current Status\n- **Phase:** Phase 4 In Progress - Cleaning up BaseAgent\n- **Next Action:** Complete SessionLogger removal from BaseAgent\n- **Overall Progress:** 75% (Phases 1-3 Complete, Phase 4 In Progress)\n\n## Task Status\n\n### \u2705 Planning Phase (Complete)\n- [x] Problem analysis completed\n- [x] Design document created (`session_logger_redesign.md`)\n- [x] Implementation plan created with 6 phases\n- [x] All tasks defined with detailed context\n- [x] Detailed subtasks created for implementation\n\n### \u2705 Phase 1: Analysis and Design Validation (COMPLETE)\n**Task ID:** 1f57f6e2-c8d8-485d-90c2-0f52c4f81ba7  \n**Status:** Complete  \n**Priority:** High  \n**Subtasks:**\n- [x] 1.1: Analyze Current SessionLogger Implementation \u2705\n- [x] 1.2: Validate Event Model Completeness \u2705\n- [x] 1.3: Design EventSessionLogger API \u2705\n\n### \u2705 Phase 2: Implement EventSessionLogger (COMPLETE)\n**Task ID:** 84a5ab24-5578-43ae-baaa-e66302cac4be  \n**Status:** Complete  \n**Dependencies:** \u2705 Analysis and design validation complete\n**Subtasks:**\n- [x] 2.1: Implement Core EventSessionLogger \u2705\n- [x] 2.2: Implement TransportInterface Abstraction \u2705\n- [x] 2.3: Create Factory Functions and Utilities \u2705\n\n### \u2705 Phase 3: Create Comprehensive Tests (COMPLETE)\n**Task ID:** 32f3eaf5-0524-484d-b2dd-a636fdecd7f7  \n**Status:** Complete  \n**Dependencies:** \u2705 EventSessionLogger implementation\n**Focus:** Gateway pattern testing, error isolation, performance\n\n### \u2705 Phase 4: Update BaseAgent and Remove Old Logic (COMPLETE)\n**Task ID:** b6b521d4-1384-4036-b80e-d33b5bd170b3  \n**Status:** Complete  \n**Dependencies:** \u2705 Tests and validation complete\n**Subtasks:**\n- [x] 4.1: Remove SessionLogger from BaseAgent \u2705\n- [x] 4.2: Update Agent Subclasses \u2705 (No changes needed - already clean)\n- [x] 4.3: Create Migration Helpers \u2705\n\n### \u2705 Phase 5: Create Usage Examples and Documentation (COMPLETE)\n**Task ID:** c48c0e9d-fd27-4b76-ac9c-c513b76d601b  \n**Status:** Complete  \n**Dependencies:** \u2705 Updated agent implementation\n**Focus:** Gateway pattern examples, transport integration, migration guide\n\n### \u23f3 Phase 6: Deprecate Old SessionLogger (Waiting)\n**Task ID:** 1dd4b86b-af42-4f56-a7e5-74b8890e83f5  \n**Status:** Waiting for Phase 5  \n**Dependencies:** Complete new implementation and documentation\n\n## Key Design Decisions Made\n\n1. **Event-Driven Architecture:** SessionLogger will be a callback that receives events, not embedded in agents\n2. **Man-in-the-Middle Pattern:** SessionLogger acts as bridge between agents and transport layers (PRIMARY PATTERN)\n3. **Future Transport Preparation:** Design supports easy swap from callbacks to queues/message buses\n4. **Session Information from Events:** All necessary data is already in SessionEvent models\n5. **Backward Compatibility:** Old and new systems can coexist during migration\n6. **Decoupling Strategy:** Prepares for future where logging and transport are independently managed\n\n## Risk Mitigation\n\n- **Breaking Changes:** Maintaining backward compatibility during transition\n- **Performance Impact:** Thorough performance testing planned\n- **Migration Complexity:** Detailed migration guide and examples planned\n- **Error Handling:** Proper error isolation between logging and transport layers\n- **Transport Failures:** Local logging continues even if downstream transport fails\n- **Gateway Bottleneck:** Design ensures SessionLogger gateway is lightweight and performant\n\n## Success Criteria\n\n- [ ] Agents are stateless (no SessionLogger management)\n- [ ] Event-driven logging works through streaming callbacks\n- [ ] Gateway pattern provides clean separation between agents and transport\n- [ ] Easy integration with queues/message buses through transport interface\n- [ ] No breaking changes to existing APIs\n- [ ] Error isolation between logging and transport concerns\n- [ ] Performance meets or exceeds current implementation\n- [ ] Comprehensive documentation and examples\n\n## Notes\n\n- Design document available at `.scratch/session_logger_redesign.md`\n- All events inherit from SessionEvent and contain session_id\n- Current implementation is in `src/agent_c/util/session_logger.py`\n- BaseAgent integration is in `src/agent_c/agents/base.py` (lines 89-123, 195-218)\n\n---\n**Last Updated:** Phase 1 Complete - 2025-05-29  \n**Next Review:** After Phase 2 implementation"}, {"name": "transport_interface_documentation.md", "type": "file", "path": "transport_interface_documentation.md", "content": "# Transport Interface Documentation\n\n## Overview\n\nThe Transport Interface provides a clean abstraction layer for EventSessionLogger to send events to various downstream systems. This enables the gateway pattern to support multiple transport types while maintaining consistent error handling and resource management.\n\n## Architecture\n\n```\n\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510    \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510    \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502                     \u2502    \u2502                      \u2502    \u2502                     \u2502\n\u2502  EventSessionLogger \u2502\u2500\u2500\u2500\u25b6\u2502  TransportInterface  \u2502\u2500\u2500\u2500\u25b6\u2502  Downstream System  \u2502\n\u2502     (Gateway)       \u2502    \u2502    (Abstraction)     \u2502    \u2502  (Queue/Bus/etc.)   \u2502\n\u2502                     \u2502    \u2502                      \u2502    \u2502                     \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518    \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518    \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n```\n\n## TransportInterface ABC\n\n### Core Interface\n\n```python\nfrom abc import ABC, abstractmethod\nfrom typing import Any, Dict, Optional\n\nclass TransportInterface(ABC):\n    \"\"\"\n    Abstract base class for transport implementations.\n    \n    Provides consistent interface for sending events to downstream systems\n    like message queues, databases, monitoring systems, etc.\n    \"\"\"\n    \n    @abstractmethod\n    async def send(self, event: Any, metadata: Optional[Dict[str, Any]] = None) -> bool:\n        \"\"\"\n        Send event to downstream system.\n        \n        Args:\n            event: Event object to send\n            metadata: Optional metadata (session_id, timestamp, etc.)\n            \n        Returns:\n            bool: True if send succeeded, False otherwise\n            \n        Raises:\n            TransportError: For transport-specific errors\n        \"\"\"\n        pass\n    \n    async def connect(self) -> None:\n        \"\"\"Optional: Establish connection to downstream system\"\"\"\n        pass\n    \n    async def disconnect(self) -> None:\n        \"\"\"Optional: Close connection to downstream system\"\"\"\n        pass\n    \n    async def close(self) -> None:\n        \"\"\"Clean shutdown - close connections and resources\"\"\"\n        await self.disconnect()\n    \n    # Context manager support\n    async def __aenter__(self) -> 'TransportInterface':\n        await self.connect()\n        return self\n    \n    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:\n        await self.close()\n```\n\n## Built-in Transport Implementations\n\n### 1. CallbackTransport\n\nWraps callback functions for backward compatibility and transition scenarios.\n\n```python\nfrom agent_c.util.transports import CallbackTransport\n\nasync def my_callback(event):\n    print(f\"Received: {type(event).__name__}\")\n    # Process event...\n\ntransport = CallbackTransport(my_callback)\n\n# Usage with EventSessionLogger\nlogger = create_with_transport(\n    transport=transport,\n    log_base_dir=\"./logs\"\n)\n```\n\n**Features:**\n- Wraps async or sync callback functions\n- Automatic async/sync detection and handling\n- Error isolation and retry support\n- Backward compatibility with existing callback patterns\n\n### 2. LoggingTransport\n\nSends events to Python logging system for debugging and development.\n\n```python\nfrom agent_c.util.transports import LoggingTransport\nimport logging\n\n# Configure logging\nlogging.basicConfig(level=logging.INFO)\n\ntransport = LoggingTransport(\n    logger_name=\"event_transport\",\n    log_level=logging.INFO,\n    include_metadata=True\n)\n\n# Usage\nlogger = create_with_transport(\n    transport=transport,\n    log_base_dir=\"./logs\"\n)\n```\n\n**Features:**\n- Integration with Python logging system\n- Configurable log levels and formatting\n- Metadata inclusion options\n- Useful for debugging and development\n\n### 3. NullTransport\n\nNo-op transport for testing and scenarios where downstream delivery isn't needed.\n\n```python\nfrom agent_c.util.transports import NullTransport\n\ntransport = NullTransport()\n\n# Usage for testing\nlogger = create_with_transport(\n    transport=transport,\n    log_base_dir=\"./test_logs\"\n)\n```\n\n**Features:**\n- No-op implementation (does nothing)\n- Always returns success\n- Useful for testing and development\n- Zero overhead\n\n### 4. RetryTransport\n\nWraps other transports with retry logic and error handling.\n\n```python\nfrom agent_c.util.transports import RetryTransport, CallbackTransport\n\n# Base transport that might fail\nbase_transport = CallbackTransport(unreliable_callback)\n\n# Wrap with retry logic\ntransport = RetryTransport(\n    base_transport=base_transport,\n    max_attempts=3,\n    delay_seconds=1.0,\n    backoff_multiplier=2.0,\n    max_delay_seconds=30.0\n)\n\n# Usage\nlogger = create_with_transport(\n    transport=transport,\n    log_base_dir=\"./logs\"\n)\n```\n\n**Features:**\n- Exponential backoff retry logic\n- Configurable retry attempts and delays\n- Error tracking and metrics\n- Wraps any TransportInterface implementation\n\n## Custom Transport Development\n\n### Basic Custom Transport\n\n```python\nfrom agent_c.util.transports import TransportInterface, TransportError\nimport aiohttp\nimport json\n\nclass HTTPTransport(TransportInterface):\n    \"\"\"Send events to HTTP endpoint\"\"\"\n    \n    def __init__(self, endpoint_url: str, headers: Dict[str, str] = None):\n        self.endpoint_url = endpoint_url\n        self.headers = headers or {}\n        self.session = None\n    \n    async def connect(self) -> None:\n        \"\"\"Establish HTTP session\"\"\"\n        self.session = aiohttp.ClientSession(headers=self.headers)\n    \n    async def send(self, event: Any, metadata: Dict[str, Any] = None) -> bool:\n        \"\"\"Send event via HTTP POST\"\"\"\n        if not self.session:\n            await self.connect()\n        \n        try:\n            # Serialize event\n            payload = {\n                'event': event.dict() if hasattr(event, 'dict') else str(event),\n                'metadata': metadata or {},\n                'timestamp': time.time()\n            }\n            \n            # Send to endpoint\n            async with self.session.post(\n                self.endpoint_url,\n                json=payload,\n                timeout=aiohttp.ClientTimeout(total=10)\n            ) as response:\n                if response.status == 200:\n                    return True\n                else:\n                    raise TransportError(f\"HTTP {response.status}: {await response.text()}\")\n                    \n        except Exception as e:\n            raise TransportError(f\"HTTP transport failed: {e}\")\n    \n    async def disconnect(self) -> None:\n        \"\"\"Close HTTP session\"\"\"\n        if self.session:\n            await self.session.close()\n            self.session = None\n    \n    async def close(self) -> None:\n        \"\"\"Clean shutdown\"\"\"\n        await self.disconnect()\n\n# Usage\ntransport = HTTPTransport(\n    endpoint_url=\"https://api.example.com/events\",\n    headers={\"Authorization\": \"Bearer token123\"}\n)\n\nlogger = create_with_transport(\n    transport=transport,\n    log_base_dir=\"./logs\"\n)\n```\n\n### Advanced Custom Transport with Connection Pooling\n\n```python\nimport asyncio\nfrom typing import List\nimport redis.asyncio as redis\n\nclass RedisStreamTransport(TransportInterface):\n    \"\"\"Send events to Redis Streams\"\"\"\n    \n    def __init__(self, redis_url: str, stream_name: str = \"agent_events\"):\n        self.redis_url = redis_url\n        self.stream_name = stream_name\n        self.redis_client = None\n        self.connection_pool = None\n    \n    async def connect(self) -> None:\n        \"\"\"Establish Redis connection with pooling\"\"\"\n        self.connection_pool = redis.ConnectionPool.from_url(\n            self.redis_url,\n            max_connections=10,\n            retry_on_timeout=True\n        )\n        self.redis_client = redis.Redis(connection_pool=self.connection_pool)\n        \n        # Test connection\n        await self.redis_client.ping()\n    \n    async def send(self, event: Any, metadata: Dict[str, Any] = None) -> bool:\n        \"\"\"Send event to Redis Stream\"\"\"\n        if not self.redis_client:\n            await self.connect()\n        \n        try:\n            # Prepare stream data\n            stream_data = {\n                'event_type': type(event).__name__,\n                'session_id': getattr(event, 'session_id', 'unknown'),\n                'event_data': json.dumps(event.dict() if hasattr(event, 'dict') else str(event)),\n                'metadata': json.dumps(metadata or {}),\n                'timestamp': str(time.time())\n            }\n            \n            # Add to stream\n            message_id = await self.redis_client.xadd(\n                self.stream_name,\n                stream_data,\n                maxlen=10000  # Keep last 10k events\n            )\n            \n            return message_id is not None\n            \n        except Exception as e:\n            raise TransportError(f\"Redis transport failed: {e}\")\n    \n    async def disconnect(self) -> None:\n        \"\"\"Close Redis connections\"\"\"\n        if self.redis_client:\n            await self.redis_client.close()\n            self.redis_client = None\n        \n        if self.connection_pool:\n            await self.connection_pool.disconnect()\n            self.connection_pool = None\n    \n    async def close(self) -> None:\n        \"\"\"Clean shutdown\"\"\"\n        await self.disconnect()\n\n# Usage\ntransport = RedisStreamTransport(\n    redis_url=\"redis://localhost:6379\",\n    stream_name=\"agent_events\"\n)\n\n# Use with retry wrapper for production\nretry_transport = RetryTransport(\n    base_transport=transport,\n    max_attempts=3,\n    delay_seconds=1.0\n)\n\nlogger = create_with_transport(\n    transport=retry_transport,\n    log_base_dir=\"./logs\"\n)\n```\n\n## Transport Integration Patterns\n\n### 1. Single Transport Pattern\n\n```python\n# Simple single transport\ntransport = CallbackTransport(my_callback)\nlogger = create_with_transport(transport=transport, log_base_dir=\"./logs\")\n```\n\n### 2. Multi-Transport Pattern\n\n```python\n# Multiple transports for different purposes\ntransports = [\n    CallbackTransport(monitoring_callback),    # Real-time monitoring\n    HTTPTransport(\"https://api.logs.com\"),     # Cloud logging\n    RedisStreamTransport(\"redis://localhost\")  # Event streaming\n]\n\nlogger = create_multi_transport_logger(\n    log_base_dir=\"./logs\",\n    transports=transports\n)\n```\n\n### 3. Fallback Transport Pattern\n\n```python\n# Primary transport with fallback\nclass FallbackTransport(TransportInterface):\n    def __init__(self, primary: TransportInterface, fallback: TransportInterface):\n        self.primary = primary\n        self.fallback = fallback\n    \n    async def send(self, event: Any, metadata: Dict[str, Any] = None) -> bool:\n        try:\n            return await self.primary.send(event, metadata)\n        except TransportError:\n            # Fallback to secondary transport\n            return await self.fallback.send(event, metadata)\n\n# Usage\nprimary = HTTPTransport(\"https://primary.api.com\")\nfallback = RedisStreamTransport(\"redis://localhost\")\ntransport = FallbackTransport(primary, fallback)\n\nlogger = create_with_transport(transport=transport, log_base_dir=\"./logs\")\n```\n\n### 4. Load Balancing Transport Pattern\n\n```python\nimport random\n\nclass LoadBalancingTransport(TransportInterface):\n    def __init__(self, transports: List[TransportInterface]):\n        self.transports = transports\n        self.current_index = 0\n    \n    async def send(self, event: Any, metadata: Dict[str, Any] = None) -> bool:\n        # Round-robin load balancing\n        transport = self.transports[self.current_index]\n        self.current_index = (self.current_index + 1) % len(self.transports)\n        \n        return await transport.send(event, metadata)\n\n# Usage\ntransports = [\n    HTTPTransport(\"https://endpoint1.com\"),\n    HTTPTransport(\"https://endpoint2.com\"),\n    HTTPTransport(\"https://endpoint3.com\")\n]\n\ntransport = LoadBalancingTransport(transports)\nlogger = create_with_transport(transport=transport, log_base_dir=\"./logs\")\n```\n\n## Error Handling and Resilience\n\n### Transport Exceptions\n\n```python\nfrom agent_c.util.transport_exceptions import (\n    TransportError,\n    ConnectionError,\n    TimeoutError,\n    SerializationError\n)\n\nclass RobustTransport(TransportInterface):\n    async def send(self, event: Any, metadata: Dict[str, Any] = None) -> bool:\n        try:\n            # Attempt to send\n            return await self._do_send(event, metadata)\n            \n        except ConnectionError as e:\n            # Handle connection issues\n            await self._handle_connection_error(e)\n            raise\n            \n        except TimeoutError as e:\n            # Handle timeouts\n            await self._handle_timeout_error(e)\n            raise\n            \n        except SerializationError as e:\n            # Handle serialization issues\n            await self._handle_serialization_error(e)\n            raise\n            \n        except Exception as e:\n            # Handle unexpected errors\n            raise TransportError(f\"Unexpected transport error: {e}\")\n```\n\n### Circuit Breaker Pattern\n\n```python\nimport time\nfrom enum import Enum\n\nclass CircuitState(Enum):\n    CLOSED = \"closed\"      # Normal operation\n    OPEN = \"open\"          # Failing, reject requests\n    HALF_OPEN = \"half_open\" # Testing if service recovered\n\nclass CircuitBreakerTransport(TransportInterface):\n    def __init__(self, base_transport: TransportInterface, \n                 failure_threshold: int = 5, \n                 timeout_seconds: int = 60):\n        self.base_transport = base_transport\n        self.failure_threshold = failure_threshold\n        self.timeout_seconds = timeout_seconds\n        \n        self.state = CircuitState.CLOSED\n        self.failure_count = 0\n        self.last_failure_time = None\n    \n    async def send(self, event: Any, metadata: Dict[str, Any] = None) -> bool:\n        if self.state == CircuitState.OPEN:\n            if self._should_attempt_reset():\n                self.state = CircuitState.HALF_OPEN\n            else:\n                raise TransportError(\"Circuit breaker is OPEN\")\n        \n        try:\n            result = await self.base_transport.send(event, metadata)\n            self._on_success()\n            return result\n            \n        except Exception as e:\n            self._on_failure()\n            raise\n    \n    def _should_attempt_reset(self) -> bool:\n        return (time.time() - self.last_failure_time) > self.timeout_seconds\n    \n    def _on_success(self):\n        self.failure_count = 0\n        self.state = CircuitState.CLOSED\n    \n    def _on_failure(self):\n        self.failure_count += 1\n        self.last_failure_time = time.time()\n        \n        if self.failure_count >= self.failure_threshold:\n            self.state = CircuitState.OPEN\n\n# Usage\nbase_transport = HTTPTransport(\"https://unreliable.api.com\")\ntransport = CircuitBreakerTransport(base_transport)\n\nlogger = create_with_transport(transport=transport, log_base_dir=\"./logs\")\n```\n\n## Performance Considerations\n\n### Connection Pooling\n\n```python\nclass PooledHTTPTransport(TransportInterface):\n    def __init__(self, endpoint_url: str, pool_size: int = 10):\n        self.endpoint_url = endpoint_url\n        self.pool_size = pool_size\n        self.session = None\n    \n    async def connect(self) -> None:\n        connector = aiohttp.TCPConnector(\n            limit=self.pool_size,\n            limit_per_host=self.pool_size,\n            keepalive_timeout=30,\n            enable_cleanup_closed=True\n        )\n        \n        self.session = aiohttp.ClientSession(\n            connector=connector,\n            timeout=aiohttp.ClientTimeout(total=10)\n        )\n```\n\n### Batching\n\n```python\nclass BatchingTransport(TransportInterface):\n    def __init__(self, base_transport: TransportInterface, \n                 batch_size: int = 10, \n                 flush_interval: float = 5.0):\n        self.base_transport = base_transport\n        self.batch_size = batch_size\n        self.flush_interval = flush_interval\n        \n        self.batch = []\n        self.last_flush = time.time()\n        self.lock = asyncio.Lock()\n    \n    async def send(self, event: Any, metadata: Dict[str, Any] = None) -> bool:\n        async with self.lock:\n            self.batch.append((event, metadata))\n            \n            should_flush = (\n                len(self.batch) >= self.batch_size or\n                (time.time() - self.last_flush) >= self.flush_interval\n            )\n            \n            if should_flush:\n                await self._flush_batch()\n        \n        return True\n    \n    async def _flush_batch(self):\n        if not self.batch:\n            return\n        \n        batch_to_send = self.batch.copy()\n        self.batch.clear()\n        self.last_flush = time.time()\n        \n        # Send batch to base transport\n        for event, metadata in batch_to_send:\n            await self.base_transport.send(event, metadata)\n```\n\n## Testing Transport Implementations\n\n### Mock Transport for Testing\n\n```python\nclass MockTransport(TransportInterface):\n    def __init__(self):\n        self.sent_events = []\n        self.should_fail = False\n        self.call_count = 0\n    \n    async def send(self, event: Any, metadata: Dict[str, Any] = None) -> bool:\n        self.call_count += 1\n        \n        if self.should_fail:\n            raise TransportError(\"Mock transport failure\")\n        \n        self.sent_events.append({\n            'event': event,\n            'metadata': metadata,\n            'timestamp': time.time()\n        })\n        \n        return True\n    \n    def reset(self):\n        self.sent_events.clear()\n        self.call_count = 0\n        self.should_fail = False\n\n# Usage in tests\ndef test_event_transport():\n    transport = MockTransport()\n    logger = create_with_transport(transport=transport, log_base_dir=\"./test_logs\")\n    \n    # Test normal operation\n    event = TestEvent(session_id=\"test\")\n    success = await logger(event)\n    \n    assert success\n    assert len(transport.sent_events) == 1\n    assert transport.sent_events[0]['event'] == event\n    \n    # Test failure handling\n    transport.should_fail = True\n    success = await logger(event)  # Should still succeed (local logging)\n    assert success  # Local logging always succeeds\n```\n\n## Best Practices\n\n### 1. Resource Management\n\n- Always implement proper `connect()` and `close()` methods\n- Use connection pooling for HTTP/database transports\n- Implement async context manager support\n- Clean up resources in `close()` method\n\n### 2. Error Handling\n\n- Use specific exception types from `transport_exceptions`\n- Implement retry logic for transient failures\n- Use circuit breaker pattern for unreliable services\n- Log errors with sufficient context\n\n### 3. Performance\n\n- Use connection pooling for network transports\n- Implement batching for high-volume scenarios\n- Consider async/await patterns throughout\n- Monitor and measure transport performance\n\n### 4. Testing\n\n- Create mock implementations for testing\n- Test both success and failure scenarios\n- Verify resource cleanup\n- Test concurrent usage patterns\n\n### 5. Configuration\n\n- Make transports configurable via environment variables\n- Support different configurations for dev/staging/production\n- Provide sensible defaults\n- Document configuration options\n\n## Future Transport Examples\n\nThe transport interface is designed to support future integrations:\n\n### Message Queue Integration\n\n```python\n# RabbitMQ\ntransport = RabbitMQTransport(\n    connection_url=\"amqp://localhost\",\n    exchange=\"agent_events\",\n    routing_key=\"session.events\"\n)\n\n# Apache Kafka\ntransport = KafkaTransport(\n    bootstrap_servers=[\"localhost:9092\"],\n    topic=\"agent-events\"\n)\n\n# AWS SQS\ntransport = SQSTransport(\n    queue_url=\"https://sqs.region.amazonaws.com/account/queue\",\n    region=\"us-east-1\"\n)\n```\n\n### Database Integration\n\n```python\n# PostgreSQL\ntransport = PostgreSQLTransport(\n    connection_string=\"postgresql://user:pass@localhost/db\",\n    table_name=\"agent_events\"\n)\n\n# MongoDB\ntransport = MongoTransport(\n    connection_string=\"mongodb://localhost:27017\",\n    database=\"agent_logs\",\n    collection=\"events\"\n)\n```\n\n### Cloud Services\n\n```python\n# AWS CloudWatch\ntransport = CloudWatchTransport(\n    log_group=\"/agent-c/events\",\n    region=\"us-east-1\"\n)\n\n# Google Cloud Logging\ntransport = GCPLoggingTransport(\n    project_id=\"my-project\",\n    log_name=\"agent-events\"\n)\n```\n\nThe transport interface provides a flexible foundation for integrating with any downstream system while maintaining consistent error handling, resource management, and performance characteristics."}];
+
+    // DOM elements
+    const treeView = document.getElementById('tree-view');
+    const markdownContent = document.getElementById('markdown-content');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const sidebarResizeHandle = document.getElementById('sidebar-resize-handle');
+    const content = document.getElementById('content');
+    const backToTopButton = document.getElementById('back-to-top');
+
+    // Get saved sidebar width from localStorage or use default
+    const savedSidebarWidth = localStorage.getItem('sidebarWidth');
+    if (savedSidebarWidth) {
+        sidebar.style.width = savedSidebarWidth + 'px';
+    }
+
+    // Toggle sidebar
+    let sidebarHidden = false;
+    sidebarToggle.addEventListener('click', () => {
+        sidebarHidden = !sidebarHidden;
+
+        if (sidebarHidden) {
+            const currentWidth = sidebar.offsetWidth;
+            localStorage.setItem('lastSidebarWidth', currentWidth);
+            sidebar.style.width = '0';
+            sidebarToggle.textContent = 'Show';
+            sidebarToggle.style.right = '10px';
+            sidebarToggle.style.position = 'fixed';
+            sidebarResizeHandle.style.display = 'none';
+        } else {
+            const lastWidth = localStorage.getItem('lastSidebarWidth') || 300;
+            sidebar.style.width = lastWidth + 'px';
+            sidebarToggle.textContent = 'Hide';
+            sidebarToggle.style.right = '10px';
+            sidebarToggle.style.position = 'absolute';
+            sidebarResizeHandle.style.display = 'block';
+        }
+    });
+
+    // Implement sidebar resize functionality
+    let isResizing = false;
+
+    sidebarResizeHandle.addEventListener('mousedown', function (e) {
+        isResizing = true;
+        document.body.style.cursor = 'col-resize';
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', stopResize);
+        // Prevent selection during resize
+        e.preventDefault();
+    });
+
+    function handleMouseMove(e) {
+        if (!isResizing) return;
+
+        let newWidth = e.clientX;
+
+        // Apply constraints
+        if (newWidth < parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-min-width'))) {
+            newWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-min-width'));
+        }
+
+        if (newWidth > parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-max-width'))) {
+            newWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-max-width'));
+        }
+
+        sidebar.style.width = newWidth + 'px';
+        localStorage.setItem('sidebarWidth', newWidth);
+    }
+
+    function stopResize() {
+        isResizing = false;
+        document.body.style.cursor = '';
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', stopResize);
+    }
+
+    // Back to top button functionality
+    content.addEventListener('scroll', function () {
+        if (content.scrollTop > 300) {
+            backToTopButton.classList.add('visible');
+        } else {
+            backToTopButton.classList.remove('visible');
+        }
+    });
+
+    backToTopButton.addEventListener('click', function () {
+        content.scrollTo({top: 0, behavior: 'smooth'});
+    });
+
+    // Configure marked for proper rendering
+    marked.setOptions({
+        highlight: function (code, lang) {
+            if (lang && hljs.getLanguage(lang)) {
+                try {
+                    return hljs.highlight(code, {language: lang}).value;
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+            return hljs.highlightAuto(code).value;
+        },
+        langPrefix: 'hljs language-',
+        headerIds: true,
+        mangle: false,
+        pedantic: false,
+        gfm: true,
+        breaks: false,
+        sanitize: false,
+        smartLists: true,
+        smartypants: false,
+        xhtml: false
+    });
+
+    // Custom renderer to handle mermaid diagrams and add code block headers
+    const renderer = new marked.Renderer();
+    const originalCodeRenderer = renderer.code.bind(renderer);
+    const originalImageRenderer = renderer.image.bind(renderer);
+
+    renderer.code = function (code, language, escaped) {
+        if (language === 'mermaid') {
+            return `<div class="mermaid-wrapper">
+                            <div class="fullscreen-trigger" onclick="openFullscreen(this.nextElementSibling)">⛶</div>
+                            <div class="mermaid">${code}</div>
+                        </div>`;
+        }
+
+        // For standard code blocks, add a header with language and copy button
+        const langDisplay = language || 'text';
+        const renderedCode = originalCodeRenderer(code, language, escaped);
+
+        return `<div style="position: relative;">
+                      <div class="code-header">
+                        <span class="code-language">${langDisplay}</span>
+                        <button class="copy-btn" onclick="copyCode(this)" title="Copy code">Copy</button>
+                      </div>
+                      ${renderedCode}
+                    </div>`;
+    };
+
+    renderer.image = function (href, title, text) {
+        const img = originalImageRenderer(href, title, text);
+        return `<span style="position: relative; display: inline-block;">
+                        <span class="fullscreen-trigger" onclick="openFullscreen(this.nextElementSibling)">⛶</span>
+                        ${img}
+                    </span>`;
+    };
+
+    marked.use({renderer});
+
+    // Function to copy code to clipboard
+    window.copyCode = function (button) {
+        const codeBlock = button.parentElement.nextElementSibling.querySelector('code');
+        const textToCopy = codeBlock.textContent;
+
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            // Show success feedback
+            const originalText = button.textContent;
+            button.textContent = 'Copied!';
+            button.style.color = '#2fb677';
+
+            // Reset after 2 seconds
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.style.color = '';
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy:', err);
+            button.textContent = 'Failed!';
+            button.style.color = 'red';
+
+            setTimeout(() => {
+                button.textContent = 'Copy';
+                button.style.color = '';
+            }, 2000);
+        });
+    };
+
+    // Function to open fullscreen view
+    window.openFullscreen = function (element) {
+        // Create overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'fullscreen-overlay';
+
+        // Create content container
+        const content = document.createElement('div');
+        content.className = 'fullscreen-content';
+
+        // Create close button
+        const closeBtn = document.createElement('div');
+        closeBtn.className = 'fullscreen-close';
+        closeBtn.innerHTML = '×';
+        closeBtn.onclick = function () {
+            document.body.removeChild(overlay);
+        };
+
+        // Clone the element to show in fullscreen
+        const clone = element.cloneNode(true);
+
+        // Handle different element types
+        if (element.tagName === 'IMG') {
+            // For images, create a new img element
+            const img = document.createElement('img');
+            img.src = element.src;
+            img.alt = element.alt;
+            content.appendChild(img);
+        } else if (element.classList.contains('mermaid')) {
+            // For mermaid diagrams
+            clone.removeAttribute('style'); // Remove any inline styles
+            content.appendChild(clone);
+
+            // Re-render the mermaid diagram
+            setTimeout(() => {
+                mermaid.init(undefined, [clone]);
+            }, 100);
+        }
+
+        // Add elements to the DOM
+        overlay.appendChild(closeBtn);
+        overlay.appendChild(content);
+        document.body.appendChild(overlay);
+
+        // Close on escape key
+        document.addEventListener('keydown', function escHandler(e) {
+            if (e.key === 'Escape') {
+                document.body.removeChild(overlay);
+                document.removeEventListener('keydown', escHandler);
+            }
+        });
+
+        // Close on click outside the content
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay) {
+                document.body.removeChild(overlay);
+            }
+        });
+    };
+
+    // Function to create the tree view
+    function createTreeView(structure, parent) {
+        // Helper function to format display names
+        function formatDisplayName(filename) {
+            // Remove leading numbers and dots (e.g., "01.")
+            let displayName = filename.replace(/^\d+\./, '');
+
+            // Remove file extensions (.md or .markdown)
+            displayName = displayName.replace(/\.(md|markdown)$/i, '');
+
+            // Replace underscores with spaces
+            displayName = displayName.replace(/_/g, ' ');
+
+            // Title case (capitalize first letter of each word)
+            displayName = displayName.split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+
+            return displayName;
+        }
+
+        structure.forEach(item => {
+            const li = document.createElement('li');
+
+            if (item.type === 'folder') {
+                // Create folder
+                const folderElement = document.createElement('div');
+                folderElement.classList.add('folder');
+                folderElement.textContent = formatDisplayName(item.name); // Format folder name
+                li.appendChild(folderElement);
+
+                // Create child list for this folder
+                const ul = document.createElement('ul');
+                ul.classList.add('tree-view', 'hidden');
+                li.appendChild(ul);
+
+                // Toggle visibility on click
+                folderElement.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    folderElement.classList.toggle('open');
+                    ul.classList.toggle('hidden');
+                });
+
+                // If there are children, create their views
+                if (item.children && item.children.length > 0) {
+                    createTreeView(item.children, ul);
+
+                    // Auto-expand folders with only one sub-folder
+                    if (item.children.length === 1 && item.children[0].type === 'folder') {
+                        folderElement.classList.add('open');
+                        ul.classList.remove('hidden');
+                    }
+                }
+            } else {
+                // Create file
+                // Only show markdown files
+                if (item.name.toLowerCase().endsWith('.md') || item.name.toLowerCase().endsWith('.markdown')) {
+                    const fileElement = document.createElement('div');
+                    fileElement.classList.add('file');
+                    fileElement.textContent = formatDisplayName(item.name); // Format file name
+                    fileElement.dataset.path = item.path;
+                    fileElement.dataset.content = item.content;
+                    li.appendChild(fileElement);
+
+                    // Handle file click to display content
+                    fileElement.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        // Remove active from all files
+                        document.querySelectorAll('.file.active').forEach(el => {
+                            el.classList.remove('active');
+                        });
+                        // Add active to this file
+                        fileElement.classList.add('active');
+
+                        // Render markdown content
+                        renderMarkdown(fileElement.dataset.content);
+
+                        // Update browser history to allow back/forward navigation
+                        updateHistory(item.path);
+
+                        // On mobile, collapse sidebar after selection
+                        if (window.innerWidth <= 768) {
+                            sidebarHidden = true;
+                            sidebar.style.maxHeight = '40px';
+                            sidebar.style.overflow = 'hidden';
+                        }
+                    });
+                } else {
+                    // Skip non-markdown files
+                    return;
+                }
+            }
+
+            parent.appendChild(li);
+        });
+    }
+
+    // Function to render markdown
+    function renderMarkdown(content) {
+        markdownContent.innerHTML = marked.parse(content);
+
+        ensureHeadingIds();
+
+        // Initialize mermaid diagrams
+        if (window.mermaid) {
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: 'default',
+                securityLevel: 'loose',
+                logLevel: 5
+            });
+
+            try {
+                mermaid.init(undefined, document.querySelectorAll('.mermaid'));
+            } catch (error) {
+                console.error('Mermaid initialization failed:', error);
+            }
+        }
+
+        // Highlight all code blocks
+        document.querySelectorAll('pre code').forEach((block) => {
+            hljs.highlightElement(block);
+        });
+
+        // Process links in the rendered content
+        document.querySelectorAll('#markdown-content a').forEach(link => {
+            // For external links, add target="_blank"
+            if (link.hostname !== window.location.hostname) {
+                link.setAttribute('target', '_blank');
+                link.setAttribute('rel', 'noopener noreferrer');
+            }
+
+            // For internal anchor links (that weren't processed by the Python script)
+            // These could be generated by the markdown renderer from headings
+            if (link.hash && link.href.startsWith(window.location.href.split('#')[0])) {
+                link.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const anchorId = link.hash.substring(1);
+                    scrollToAnchor(anchorId);
+                });
+            }
+        });
+
+        // Handle JavaScript links
+        handleJavascriptLinks();
+
+        // Handle Table of Contents links
+        addTableOfContentsInteractivity();
+
+        // Scroll to hash if present
+        if (window.location.hash) {
+            const element = document.getElementById(window.location.hash.substring(1));
+            if (element) {
+                element.scrollIntoView({behavior: 'smooth'});
+            }
+        }
+    }
+
+    // Add interactivity to the Table of Contents
+    function addTableOfContentsInteractivity() {
+        // Find the first list in the markdown content (likely the TOC)
+        const tocList = markdownContent.querySelector('ul:first-of-type, ol:first-of-type');
+        if (!tocList) return;
+
+        // Get all the links in the TOC
+        const tocLinks = tocList.querySelectorAll('a');
+        if (tocLinks.length === 0) return;
+
+        // Get all headings from the content for intersection observation
+        const headings = markdownContent.querySelectorAll('h1, h2, h3, h4, h5, h6');
+        const headingIds = Array.from(headings).map(h => h.id);
+
+        // Update active link in TOC
+        function updateActiveTocLink() {
+            // Reset all links
+            tocLinks.forEach(link => link.classList.remove('active'));
+
+            // Find visible headings
+            const visibleHeadings = [];
+            headings.forEach(heading => {
+                const rect = heading.getBoundingClientRect();
+                if (rect.top > 0 && rect.top < window.innerHeight * 0.5) {
+                    visibleHeadings.push(heading);
+                }
+            });
+
+            // If we have visible headings, highlight the corresponding TOC link
+            if (visibleHeadings.length > 0) {
+                const activeHeading = visibleHeadings[0];
+                const activeId = activeHeading.id;
+
+                // Find and activate the corresponding link
+                tocLinks.forEach(link => {
+                    if (link.getAttribute('href') === `#${activeId}`) {
+                        link.classList.add('active');
+                    }
+                });
+            } else if (content.scrollTop < 200) {
+                // If we're at the top of the page, activate the first link
+                tocLinks[0].classList.add('active');
+            }
+        }
+
+        // Listen for scroll events to update the active link
+        content.addEventListener('scroll', updateActiveTocLink);
+
+        // Initialize active link
+        updateActiveTocLink();
+
+        // Make TOC links scroll smoothly
+        tocLinks.forEach(link => {
+            link.addEventListener('click', function (e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href').substring(1);
+                scrollToAnchor(targetId);
+            });
+        });
+    }
+
+    // Function to update browser history
+    function updateHistory(filePath) {
+        const url = new URL(window.location);
+        url.searchParams.set('file', filePath);
+        window.history.pushState({filePath: filePath}, '', url);
+    }
+
+    // Function to open a markdown file by path
+    function openMarkdownFile(filePath, anchor = '') {
+        // Check if this is a directory path (no file extension or ends with /)
+        if (filePath.endsWith('/') || !filePath.includes('.')) {
+            // Try to find the first markdown file in this directory
+            const directoryPath = filePath.endsWith('/') ? filePath : filePath + '/';
+
+            // Look through all file elements to find one in this directory
+            const fileElements = document.querySelectorAll('.file[data-path]');
+            for (const element of fileElements) {
+                if (element.dataset.path.startsWith(directoryPath)) {
+                    // Found a file in this directory, open it
+                    return openMarkdownFile(element.dataset.path, anchor);
+                }
+            }
+        }
+
+        const fileElement = document.querySelector(`[data-path="${filePath}"]`);
+        if (fileElement) {
+            // Set active class
+            document.querySelectorAll('.file.active').forEach(el => {
+                el.classList.remove('active');
+            });
+            fileElement.classList.add('active');
+
+            // Render content
+            renderMarkdown(fileElement.dataset.content);
+
+            // Update history
+            updateHistory(filePath);
+
+            // Expand parent folders
+            let parent = fileElement.parentElement;
+            while (parent) {
+                if (parent.tagName === 'UL' && parent.classList.contains('tree-view')) {
+                    parent.classList.remove('hidden');
+                    const folderDiv = parent.previousElementSibling;
+                    if (folderDiv && folderDiv.classList.contains('folder')) {
+                        folderDiv.classList.add('open');
+                    }
+                }
+                parent = parent.parentElement;
+            }
+
+            // Scroll to anchor if provided
+            if (anchor) {
+                const element = document.getElementById(anchor.substring(1));
+                if (element) {
+                    setTimeout(() => {
+                        element.scrollIntoView({behavior: 'smooth'});
+                    }, 100);
+                }
+            }
+
+            return true;
+        }
+        return false;
+    }
+
+    // Function to find file in structure by path
+    function findFileInStructure(structure, path) {
+        for (const item of structure) {
+            if (item.type === 'file' && item.path === path) {
+                return item;
+            } else if (item.type === 'folder' && item.children) {
+                const found = findFileInStructure(item.children, path);
+                if (found) return found;
+            }
+        }
+        return null;
+    }
+
+    // Function to find and display first markdown file
+    function findAndDisplayFirstMarkdownFile(structure) {
+        const findFirstMdFile = (items) => {
+            for (const item of items) {
+                if (item.type === 'file' && (item.name.toLowerCase().endsWith('.md') || item.name.toLowerCase().endsWith('.markdown'))) {
+                    return item;
+                } else if (item.type === 'folder' && item.children && item.children.length > 0) {
+                    const found = findFirstMdFile(item.children);
+                    if (found) return found;
+                }
+            }
+            return null;
+        };
+
+        // Check URL parameters first
+        const urlParams = new URLSearchParams(window.location.search);
+        const fileParam = urlParams.get('file');
+
+        if (fileParam) {
+            const fileItem = findFileInStructure(structure, fileParam);
+            if (fileItem) {
+                setTimeout(() => {
+                    openMarkdownFile(fileItem.path);
+                }, 100);
+                return;
+            }
+        }
+
+        // If no file in URL or not found, display first file
+        const firstMdFile = findFirstMdFile(structure);
+        if (firstMdFile) {
+            setTimeout(() => {
+                openMarkdownFile(firstMdFile.path);
+            }, 100);
+        } else {
+            markdownContent.innerHTML = '<h1>No markdown files found</h1>';
+        }
+    }
+
+    // Handle browser back/forward navigation
+    window.addEventListener('popstate', (event) => {
+        if (event.state && event.state.filePath) {
+            openMarkdownFile(event.state.filePath);
+        } else {
+            // If no state, open first file
+            findAndDisplayFirstMarkdownFile(fileStructure);
+        }
+    });
+
+    // Initialize the viewer
+    function initializeViewer() {
+        // Create the tree view
+        createTreeView(fileStructure, treeView);
+
+        // Auto-open the first markdown file
+        findAndDisplayFirstMarkdownFile(fileStructure);
+    }
+
+    // Function to scroll to an anchor within the current document
+    function scrollToAnchor(anchorId) {
+        console.log("Attempting to scroll to:", anchorId);
+        // Try to decode the anchor ID in case it's URL-encoded
+        try {
+            anchorId = decodeURIComponent(anchorId);
+        } catch (e) {
+            // If decoding fails, continue with the original value
+            console.warn("Failed to decode anchorId", e);
+        }
+
+        const element = document.getElementById(anchorId);
+        if (element) {
+            element.scrollIntoView({behavior: 'smooth'});
+            // Highlight the element briefly
+            const originalBackgroundColor = element.style.backgroundColor;
+            element.style.backgroundColor = 'rgba(253, 184, 37, 0.2)';
+            setTimeout(() => {
+                element.style.backgroundColor = originalBackgroundColor;
+            }, 1500);
+        } else {
+            console.warn(`Anchor with id '${anchorId}' not found. Trying fallback methods...`);
+
+            // Try case-insensitive search
+            const allElements = document.querySelectorAll('[id]');
+            let found = false;
+
+            allElements.forEach(el => {
+                if (el.id.toLowerCase() === anchorId.toLowerCase()) {
+                    console.log("Found element with case-insensitive match:", el.id);
+                    el.scrollIntoView({behavior: 'smooth'});
+                    found = true;
+
+                    // Highlight the element
+                    const originalBackgroundColor = el.style.backgroundColor;
+                    el.style.backgroundColor = 'rgba(253, 184, 37, 0.2)';
+                    setTimeout(() => {
+                        el.style.backgroundColor = originalBackgroundColor;
+                    }, 1500);
+                }
+            });
+
+            if (!found) {
+                // Log available IDs for debugging
+                console.log("Available IDs:");
+                allElements.forEach(el => console.log(el.id));
+            }
+        }
+    }
+    function handleJavascriptLinks() {
+    // Handle javascript: protocol links specially
+    document.querySelectorAll('a[href^="javascript:void(scrollToAnchor"]').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            // Extract the anchor ID from the href attribute
+            const hrefAttr = this.getAttribute('href');
+            const match = hrefAttr.match(/scrollToAnchor\(%22(.+?)%22\)/);
+
+            if (match && match[1]) {
+                const anchorId = match[1];
+                console.log("Extracted anchor ID:", anchorId);
+                scrollToAnchor(anchorId);
+            }
+        });
+    });
+}
+function ensureHeadingIds() {
+    // Ensure all headings have IDs based on their text content
+    document.querySelectorAll('#markdown-content h1, #markdown-content h2, #markdown-content h3, #markdown-content h4, #markdown-content h5, #markdown-content h6').forEach(heading => {
+        if (!heading.id) {
+            // Generate an ID from the heading text
+            let id = heading.textContent.trim().toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/(^-|-$)/g, '');
+
+            heading.id = id;
+            console.log("Added ID to heading:", id);
+        }
+    });
+}
+
+    // Make functions globally available
+    window.openMarkdownFile = openMarkdownFile;
+    window.scrollToAnchor = scrollToAnchor;
+
+    // Start the application
+    window.addEventListener('DOMContentLoaded', function() {
+    // This ensures the handler is ready as soon as possible
+    handleJavascriptLinks();
+});
+    window.addEventListener('DOMContentLoaded', initializeViewer);
+</script>
+</body>
+</html>
