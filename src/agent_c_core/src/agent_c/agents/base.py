@@ -10,6 +10,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Union, Optional, Callable, Awaitable, Tuple
 
+import yaml
+
 from agent_c.chat import ChatSessionManager
 from agent_c.models import ChatEvent, ImageInput, MemoryMessage
 from agent_c.models.events.chat import ThoughtDeltaEvent
@@ -130,9 +132,9 @@ class BaseAgent:
         """For text in, text out processing. without chat"""
         messages = await self.chat(**kwargs)
         if len(messages) > 0:
-            return messages[-1]["content"][-1]["text"]
+            return yaml.dump(messages[-1])
 
-        return "Unknown error, no messages returned."
+        return "Unknown issue no messages returned please try again later"
 
 
     async def parallel_one_shots(self, inputs: List[str], **kwargs):

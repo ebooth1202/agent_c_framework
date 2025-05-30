@@ -6,7 +6,7 @@ agent_description: |
   The output of each stage has been saved in the workspace of the project using a layout that mirrors the source layout in the scratchpad:
  
   It is leveraged by the reverse engineering tool to power the query_analysis tool.
-model_id: claude-3-7-sonnet-latest
+model_id: claude-sonnet-4-20250514
 tools:
   - ThinkTools
   - WorkspaceTools
