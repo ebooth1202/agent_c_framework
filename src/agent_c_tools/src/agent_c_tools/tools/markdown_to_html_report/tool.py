@@ -1,4 +1,5 @@
 import json
+import json
 import logging
 import re
 
@@ -239,6 +240,200 @@ class MarkdownToHtmlReportTools(Toolset):
                 "success": False,
                 "error": f"Error generating markdown viewer: {str(e)}"
             })
+
+    @json_schema(
+        description="Generate an interactive HTML viewer with custom file hierarchy structure",
+        params={
+            "workspace": {
+                "type": "string",
+                "description": "The workspace containing the markdown files",
+                "required": True
+            },
+            "output_filename": {
+                "type": "string",
+                "description": "The name of the output HTML file to generate (can be a simple filename or full UNC path)",
+                "required": True
+            },
+            "custom_structure": {
+                "type": "string",
+                "description": "JSON string defining custom hierarchy. Example: '{\"items\": [{\"type\": \"folder\", \"name\": \"Getting Started\", \"children\": [{\"type\": \"file\", \"name\": \"Introduction\", \"path\": \"intro.md\"}]}, {\"type\": \"file\", \"name\": \"API Reference\", \"path\": \"api.md\"}]}'",
+                "required": True
+            },
+            "title": {
+                "type": "string",
+                "description": "Optional title for the HTML viewer (displayed in the sidebar)",
+                "required": False
+            }
+        }
+    )
+    async def generate_custom_md_viewer(self, **kwargs) -> str:
+        """Generate an interactive HTML viewer with custom file hierarchy structure.
+
+        Args:
+            kwargs:
+                workspace: The workspace containing the markdown files
+                output_filename: The name of the output HTML file to generate
+                custom_structure: JSON string defining the custom hierarchy structure
+                title: Optional title for the HTML viewer
+                file_path: Optional base path for resolving relative file paths in custom structure
+
+        Returns:
+            A dictionary with success status and information about the operation
+        """
+        validation_error = self.validation_helper.validate_required_fields(
+            kwargs, ["workspace", "output_filename", "custom_structure"])
+
+        # Validate required fields
+        if validation_error:
+            return json.dumps({"success": False, "error": validation_error})
+
+        workspace = kwargs.get('workspace')
+        output_filename = kwargs.get('output_filename')
+        custom_structure_json = kwargs.get('custom_structure')
+        title = kwargs.get('title', 'Custom Markdown Viewer')
+
+        try:
+            # Parse the custom structure JSON
+            try:
+                custom_structure = json.loads(custom_structure_json)
+            except json.JSONDecodeError as e:
+                return json.dumps({
+                    "success": False,
+                    "error": f"Invalid JSON in custom_structure: {str(e)}"
+                })
+
+            # Create base path for file resolution
+            base_path = f"//{workspace}"
+
+            # Initialize the file collector
+            file_collector = MarkdownFileCollector(self.workspace_tool)
+
+            # Validate the custom structure and collect files
+            logger.debug("Validating custom structure and collecting markdown files...")
+            try:
+                # Use enhanced validation from MarkdownFileCollector
+                is_valid, error_msg = await file_collector.validate_custom_structure(custom_structure, base_path)
+                if not is_valid:
+                    return json.dumps({
+                        "success": False,
+                        "error": f"Invalid custom structure: {error_msg}"
+                    })
+
+                # Build the structure using enhanced MarkdownFileCollector
+                structure = await file_collector.build_custom_structure(custom_structure, base_path)
+                
+                if not structure:
+                    return json.dumps({
+                        "success": False,
+                        "error": "No valid markdown files found in the custom structure"
+                    })
+
+            except ValueError as e:
+                return json.dumps({
+                    "success": False,
+                    "error": str(e)
+                })
+
+            # Count files in the structure
+            file_count = self._count_files_in_structure(structure)
+            logger.debug(f"Found {file_count} markdown files. Preparing HTML template...")
+
+            # Create UNC output filename
+            output_filename = ensure_file_extension(output_filename, 'html')
+            if not output_filename.startswith('//'):
+                output_path_full = create_unc_path(workspace, output_filename)
+            else:
+                output_path_full = output_filename
+
+            # Get the HTML template
+            html_template = await self.template_manager.get_html_template()
+
+            # Customize title
+            html_template = html_template.replace(
+                "<h3 style=\"margin: 0 16px 16px 16px;\">Agent C Output Viewer</h3>",
+                f"<h3 style=\"margin: 0 16px 16px 16px;\">{title}</h3>")
+
+            # Replace placeholder with the processed structure
+            json_structure = json.dumps(structure, ensure_ascii=False)
+            html_content = html_template.replace('$FILE_STRUCTURE', json_structure)
+
+            # Write the generated HTML to the workspace
+            logger.debug("Writing HTML viewer to output location...")
+            write_result = await self.workspace_tool.write(
+                path=output_path_full,
+                data=html_content,
+                mode="write"
+            )
+
+            write_data = json.loads(write_result)
+            if 'error' in write_data:
+                return json.dumps({
+                    "success": False,
+                    "error": f"Failed to write HTML file: {write_data['error']}"
+                })
+
+            message = f"Successfully generated custom HTML viewer at {output_filename}."
+            logger.debug(message)
+
+            # Get file system path and raise a media event
+            file_system_path = os_file_system_path(self.workspace_tool, output_path_full)
+
+            # Create output info dictionary
+            output_info = {
+                "output_filename": output_filename,
+                "output_path": output_path_full,
+                "file_system_path": file_system_path,
+                "file_count": file_count,
+                "custom_structure": True
+            }
+
+            # Generate and raise HTML content for the result
+            try:
+                html_content = await self.media_helper.create_result_html(output_info)
+                await self._raise_render_media(
+                    sent_by_class=self.__class__.__name__,
+                    sent_by_function='generate_custom_md_viewer',
+                    content_type="text/html",
+                    content=html_content
+                )
+            except Exception as e:
+                logger.error(f"Failed to raise media event: {str(e)}")
+
+            return json.dumps({
+                "success": True,
+                "message": message,
+                "output_file": output_filename,
+                "output_path": output_path_full,
+                "workspace": workspace,
+                "file_count": file_count,
+                "structure_type": "custom"
+            })
+
+        except Exception as e:
+            logger.exception("Error generating custom markdown viewer")
+            return json.dumps({
+                "success": False,
+                "error": f"Error generating custom markdown viewer: {str(e)}"
+            })
+
+    def _count_files_in_structure(self, structure):
+        """Count the number of files in a processed structure.
+        
+        Args:
+            structure: The processed structure from MarkdownFileCollector
+            
+        Returns:
+            Number of files found
+        """
+        file_count = 0
+        
+        for item in structure:
+            if item.get('type') == 'file':
+                file_count += 1
+            elif item.get('type') == 'folder' and 'children' in item:
+                file_count += self._count_files_in_structure(item['children'])
+                
+        return file_count
 
 
     @json_schema(
