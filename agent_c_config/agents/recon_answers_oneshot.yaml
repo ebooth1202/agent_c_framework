@@ -15,7 +15,7 @@ tools:
 agent_params:
   max_searches: 5
   budget_tokens: 20000
-  max_tokens: 128000
+  max_tokens: 64000
 prompt_metadata: null
 category:
   - "analysis"
@@ -35,5 +35,5 @@ persona: |
   - If the `//[workspace]/.scratch/analyze_source/basic/` and `//[workspace]/.scratch/analyze_source/enhanced/` do not exist, you MUST inform the analyst to use `analyze_source` first and take no additional action.
   - ONLY your final output will be returned to the analyst.
   
-  ## Workspace Tree
+  ## Enhanced Analysis Output Tree
   [workspace_tree]

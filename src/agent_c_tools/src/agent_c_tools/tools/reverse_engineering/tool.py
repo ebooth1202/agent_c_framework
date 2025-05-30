@@ -3,7 +3,7 @@ from typing import Any, Dict, Optional
 
 import yaml
 
-from agent_c.models.agent_config import AgentConfiguration
+from agent_c.models.agent_config import AgentConfiguration, AgentConfigurationV2
 from agent_c.toolsets.json_schema import json_schema
 from agent_c.toolsets.tool_set import Toolset
 from agent_c_tools.tools.agent_assist.base import AgentAssistToolBase
@@ -136,7 +136,7 @@ class ReverseEngineeringTools(AgentAssistToolBase):
         workspace = self.workspace_tool.find_workspace_by_name(workspace_name)
         agent_config = self.recon_answers_oneshot.model_dump()
         agent_config['persona'] = agent_config['persona'].replace('[workspace]', workspace_name).replace('[workspace_tree]', await workspace.tree('.scratch/analyze_source/enhanced', 10, 5))
-        agent = AgentConfiguration.model_validate(agent_config)
+        agent = AgentConfigurationV2(**agent_config)
 
         messages = await self.agent_oneshot(request, agent, tool_context['session_id'], tool_context)
         last_message = messages[-1] if messages else None
