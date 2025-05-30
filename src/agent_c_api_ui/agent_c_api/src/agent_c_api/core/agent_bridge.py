@@ -947,7 +947,8 @@ class AgentBridge:
                 try:
                     try:
                         timeout = getattr(settings, "CALLBACK_TIMEOUT")  # Get timeout from settings with fallback
-                        content = await asyncio.wait_for(queue.get(), timeout=timeout)
+                        #content = await asyncio.wait_for(queue.get(), timeout=timeout)
+                        content = await queue.get()
                         if content is None:
                             self.logger.info("Received stream termination signal")
                             break
