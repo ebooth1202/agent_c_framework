@@ -5,6 +5,8 @@ import threading
 from datetime import datetime
 from typing import Any, Dict, List, Optional, cast, Tuple
 
+import yaml
+
 from agent_c import PromptSection
 from agent_c.config.model_config_loader import ModelConfigurationLoader, ModelConfigurationFile
 from agent_c.config.agent_config_loader import AgentConfigLoader, CurrentAgentConfiguration
@@ -112,23 +114,24 @@ class AgentAssistToolBase(Toolset):
                 "timestamp": datetime.now().isoformat()} | persona_props | opts
 
     async def agent_oneshot(self, user_message: str, persona: AgentConfiguration, user_session_id: Optional[str] = None,
-                            tool_context: Optional[Dict[str, Any]] = None, **additional_metadata) -> str:
+                            tool_context: Optional[Dict[str, Any]] = None, **additional_metadata) -> Optional[List[Dict[str, Any]]]:
 
         try:
             self.logger.info(f"Running one-shot with persona: {persona.name}, user session: {user_session_id}")
             agent = self.runtime_for_agent(persona)
             chat_params = await self.__chat_params(persona, agent, user_session_id, parent_tool_context=tool_context, **additional_metadata)
-            result: str = await agent.one_shot(user_message=user_message, **chat_params)
-            return result
+            messages = await agent.one_shot(user_message=user_message, **chat_params)
+            return messages
         except Exception as e:
             self.logger.exception(f"Error during one-shot with persona {persona.name}: {e}", exc_info=True)
-            return f"Error: {str(e)}"
+            return None
 
     async def parallel_agent_oneshots(self, user_messages: List[str], persona: AgentConfiguration, user_session_id: Optional[str] = None,
                                       tool_context: Optional[Dict[str, Any]] = None, **additional_metadata) -> List[str]:
         self.logger.info(f"Running parallel one-shots with persona: {persona.name}, user session: {user_session_id}")
         agent = self.runtime_for_agent(persona)
         chat_params = await self.__chat_params(persona, agent, user_session_id, parent_tool_context=tool_context, **additional_metadata)
+        #chat_params['allow_server_tools'] = True
         result: List[str] = await agent.parallel_one_shots(inputs=user_messages, **chat_params)
         return result
 
@@ -156,15 +159,17 @@ class AgentAssistToolBase(Toolset):
         try:
             chat_params = await self.__chat_params(persona, agent, user_session_id, parent_tool_context=tool_context, agent_session_id=agent_session_id, **additional_metadata)
             chat_params['messages'] = session['messages']
+            #chat_params['allow_server_tools'] = True  # Allow server tools to be used in the chat
+            # Use non-streaming chat to avoid flooding the event stream
             messages = await agent.chat(user_message=user_message, **chat_params)
-
-            session['messages'] = messages
-            await self.session_cache.set(agent_session_id, session)
+            if messages is not None:
+                session['messages'] = messages
+                await self.session_cache.set(agent_session_id, session)
         except Exception as e:
             self.logger.exception(f"Error during chat with persona {persona.name}: {e}", exc_info=True)
             return agent_session_id, [{'role': 'error', 'content': str(e)}]
 
-        if len(messages) == 0:
+        if messages is None or len(messages) == 0:
             self.logger.error(f"No messages returned from chat with persona {persona.name}.")
             return agent_session_id, [{'role': 'error', 'content': "No response from agent."}]
 

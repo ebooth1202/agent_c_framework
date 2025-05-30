@@ -57,7 +57,14 @@ class AgentCloneTools(AgentAssistToolBase):
         agent = AgentConfigurationV2(name=f"Agent Clone - {slug}", model_id=tool_context['colling_model_name'], agent_description="A clone of the user agent",
                                      agent_params=ClaudeReasoningParams(model_name=tool_context['colling_model_name'], budget_tokens=20000),
                                      persona=enhanced_persona, tools=tools)
-        return await self.agent_oneshot(request, agent, tool_context['session_id'], tool_context)
+        messages =  await self.agent_oneshot(request, agent, tool_context['session_id'], tool_context)
+        last_message = messages[-1] if messages else None
+        if last_message is not None:
+            content = last_message.get('content', None)
+            if content is not None:
+                return  yaml.dump(content[-1], allow_unicode=True).replace("\\n", "\n")
+
+        return "No response from agent. Tell the user to check the server error logs for more information."
 
     @json_schema(
         'Begin or resume a chat session with a clone of yourself. The return value will be the final output from the agent along with the agent session ID.',
@@ -101,7 +108,13 @@ class AgentCloneTools(AgentAssistToolBase):
 
         agent_session_id, messages = await self.agent_chat(message, agent, tool_context['session_id'], agent_session_id, tool_context)
 
-        return f"Agent Session ID: {agent_session_id}\n{yaml.dump(messages[-1], allow_unicode=True)}"
+        last_message = messages[-1] if messages else None
+        if last_message is not None:
+            content = last_message.get('content', None)
+            if content is not None:
+                return yaml.dump(content[-1], allow_unicode=True).replace("\\n", "\n")
+
+        return "No response from agent. Tell the user to check the server error logs for more information."
 
 
 Toolset.register(AgentCloneTools, required_tools=['WorkspaceTools'])
