@@ -1,6 +1,8 @@
 import itertools
 from typing import Any, Dict, Optional
 
+import yaml
+
 from agent_c.models.agent_config import AgentConfiguration
 from agent_c.toolsets.json_schema import json_schema
 from agent_c.toolsets.tool_set import Toolset
@@ -113,9 +115,9 @@ class ReverseEngineeringTools(AgentAssistToolBase):
         return f"Processed {len(files)} files. See //{workspace.name}/.scratch/analyze_source/ for results."
 
     @json_schema(
-        'Make a request of and expert on the analysis of the codebase in a given workspace. The expert will be able to ',
+        'Make a request of an expert on the analysis of the codebase in a given workspace. The expert will be able to examine any of the output of `analyze_source` in the workspace as well as the code itself to save you precious context window space.',
         {
-            'query': {
+            'request': {
                 'type': 'string',
                 'description': 'A question, or request for information about the codebase and/or the analysis done on it.',
                 'required': True
@@ -128,17 +130,18 @@ class ReverseEngineeringTools(AgentAssistToolBase):
         }
     )
     async def query_analysis(self, **kwargs) -> str:
-        query: str = kwargs.get('query')
-        workspace: str = kwargs.get('workspace')
+        request: str = kwargs.get('request')
+        workspace_name: str = kwargs.get('workspace')
         tool_context: Dict[str, Any] = kwargs.get('tool_context')
-        ws = self.workspace_tool.find_workspace_by_name(workspace)
-        persona_data = self.recon_answers_oneshot.model_dump()
-        persona_data['persona'] = persona_data['persona'].replace('[workspace]', workspace).replace('[workspace_tree]', await ws.tree(7, 3))
-        new_persona = AgentConfiguration.model_validate(persona_data)
-        return await self.agent_oneshot(query,
-                                        persona=new_persona,
-                                        user_session_id=tool_context['session_id'],
-                                        tool_context=tool_context)
+        workspace = self.workspace_tool.find_workspace_by_name(workspace_name)
+        agent_config = self.recon_answers_oneshot.model_dump()
+        agent_config['persona'] = agent_config['persona'].replace('[workspace]', workspace_name).replace('[workspace_tree]', await workspace.tree(7, 3))
+        agent = AgentConfiguration.model_validate(agent_config)
+
+        messages = await self.agent_oneshot(request, agent, tool_context['session_id'], tool_context)
+        last_message = messages[-1] if messages else None
+
+        return yaml.dump(last_message, allow_unicode=True) if last_message else "No response from agent."
 
 
     async def _pass_one(self, workspace, files: list[str], batch_size: int = 2, tool_context: Optional[Dict[str, any]] = None) -> list[str]:
