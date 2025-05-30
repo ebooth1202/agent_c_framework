@@ -7,7 +7,8 @@
  * Process a single line from the message stream and call appropriate handlers
  * @param {string} line - Raw line from the message stream
  * @param {Object} handlers - Object containing handler functions for different event types
- * @param {Function} [handlers.onMessage] - Handles system/error messages
+ * @param {Function} [handlers.onMessage] - Handles system/error messages (legacy)
+ * @param {Function} [handlers.onSystemMessage] - Handles system messages with severity levels
  * @param {Function} [handlers.onToolSelect] - Handles tool selection events
  * @param {Function} [handlers.onToolCalls] - Handles tool call events
  * @param {Function} [handlers.onContent] - Handles assistant content
@@ -44,6 +45,18 @@ export const processStreamLine = (line, handlers) => {
           handlers.onMessage({
             content: parsed.data,
             critical: parsed.critical || false
+          });
+        }
+        return true;
+        
+      case "system_message":
+        // Handle system messages with severity levels
+        if (handlers.onSystemMessage) {
+          handlers.onSystemMessage({
+            content: parsed.data,
+            role: parsed.role,
+            format: parsed.format,
+            severity: parsed.severity || 'info'
           });
         }
         return true;

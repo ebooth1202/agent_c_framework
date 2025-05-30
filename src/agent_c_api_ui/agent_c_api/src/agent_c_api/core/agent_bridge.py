@@ -555,7 +555,7 @@ class AgentBridge:
 
     async def _handle_message(self, event):
         """
-        Handle message events (such as errors) from the model
+        Handle message events from the model
 
         This is particularly important for handling Anthropic API errors
         """
@@ -568,6 +568,16 @@ class AgentBridge:
             "critical": True
         }) + "\n"
         return payload
+
+    @staticmethod
+    async def _handle_system_message(event):
+        return json.dumps({
+            "type": "message",
+            "data": event.content,
+            "role": event.role,
+            "format": event.format,
+            "severity": event.severity
+        }) + "\n"
 
     async def _handle_tool_select_delta(self, event):
         """Handle tool selection events from the agent"""
