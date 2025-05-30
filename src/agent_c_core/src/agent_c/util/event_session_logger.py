@@ -15,6 +15,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Optional, Dict, Union, Awaitable
 from agent_c.models.events.session_event import SessionEvent, SemiSessionEvent
+from .logging_utils import LoggingManager
 from .transport_exceptions import (
     EventSessionLoggerError, LocalLoggingError, TransportError, 
     TransportConnectionError, TransportTimeoutError, SerializationError
@@ -85,7 +86,8 @@ class EventSessionLogger:
         
         # Internal state
         self._directory_cache = set()  # Cache for created directories
-        self._logger = logging.getLogger(__name__)
+        logging_manager = LoggingManager(__name__)
+        self.logger = logging_manager.get_logger()
         self._closed = False
         
         # Ensure base directory exists

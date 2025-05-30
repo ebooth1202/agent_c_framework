@@ -6,6 +6,7 @@ from pydantic import Field
 from typing import Optional, Union
 
 from agent_c.models.input.base import BaseInput
+from agent_c.util.logging_utils import LoggingManager
 
 
 class FileInput(BaseInput):
@@ -66,7 +67,9 @@ class FileInput(BaseInput):
             with path.open('rb') as f:
                 content: str = base64.b64encode(f.read()).decode('utf-8')
         except IOError as e:
-            logging.error(f"Error reading input file {file_path}: {str(e)}")
+            logging_manager = LoggingManager(__name__)
+            logger = logging_manager.get_logger()
+            logger.error(f"Error reading input file {file_path}: {str(e)}")
             raise
 
         return cls(content_type=mime_type, content=content, file_name=path.name)

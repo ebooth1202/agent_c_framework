@@ -16,6 +16,7 @@ from agent_c.models.agent_config import (
     AgentConfiguration,  # Union type
     CurrentAgentConfiguration  # Latest version alias
 )
+from agent_c.util.logging_utils import LoggingManager
 
 # Type variable for configuration versions
 T = TypeVar('T', bound=AgentConfiguration)
@@ -47,7 +48,9 @@ class AgentConfigLoader(ConfigLoader):
             target_version: If set, migrate to this specific version instead of latest
         """
         super().__init__(config_path)
-        self.logger = logging.getLogger(__name__)
+        logging_manager = LoggingManager(__name__)
+        self.logger = logging_manager.get_logger()
+
         if model_configs is None:
             model_configs = ModelConfigurationLoader(self.config_path).load_from_json()
 

@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from .event_session_logger import EventSessionLogger
+from .logging_utils import LoggingManager
 from .transports import (
     TransportInterface, CallbackTransport, LoggingTransport, NullTransport,
     FileTransport, HTTPTransport, QueueTransport, RetryTransport
@@ -442,8 +443,10 @@ def create_logger_from_config(config: LoggerConfiguration) -> EventSessionLogger
     error_handler = None
     if config.debug_mode:
         def debug_error_handler(error: Exception, context: str) -> None:
-            logger = logging.getLogger("EventSessionLogger.Debug")
+            logging_manager = LoggingManager("EventSessionLogger.Debug")
+            logger = logging_manager.get_logger()
             logger.error(f"Error in {context}: {error}", exc_info=True)
+
         error_handler = debug_error_handler
     
     # Create EventSessionLogger

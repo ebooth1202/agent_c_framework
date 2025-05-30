@@ -10,6 +10,7 @@ from pyarrow.ipc import new_stream
 from agent_c.prompting.basic_sections.tool_guidelines import EndToolGuideLinesSection, BeginToolGuideLinesSection
 from agent_c.prompting.prompt_section import PromptSection
 from agent_c.toolsets.tool_set import Toolset
+from agent_c.util.logging_utils import LoggingManager
 
 
 class ToolChest:
@@ -67,7 +68,8 @@ class ToolChest:
         self.__tool_opts = {}
         
         # Initialize metadata tracking
-        self.logger = logging.getLogger(__name__)
+        logging_manager = LoggingManager(__name__)
+        self.logger = logging_manager.get_logger()
         self._active_tool_schemas: List[dict] = []
         self._tool_name_to_instance_map: Dict[str, Toolset] = {}
         
@@ -520,7 +522,7 @@ class ToolChest:
         try:
             return await src_obj.call(function_id, function_args)
         except Exception as e:
-            logging.exception(f"Failed calling {function_id} on {src_obj.name}. {e}", stacklevel=3)
+            self.logger.exception(f"Failed calling {function_id} on {src_obj.name}. {e}", stacklevel=3)
             return f"Important! Tell the user an error occurred calling {function_id} on {src_obj.name}. {e}"
 
     def get_inference_data(self, toolset_names: List[str], tool_format: str = "claude") -> Dict[str, Any]:
@@ -544,7 +546,7 @@ class ToolChest:
             if name in self.__toolset_instances:
                 valid_toolsets.append(self.__toolset_instances[name])
             else:
-                logging.warning(f"Requested toolset '{name}' not found in available toolsets")
+                self.logger.warning(f"Requested toolset '{name}' not found in available toolsets")
         
         if not valid_toolsets:
             return {"tools": [], "sections": []}
