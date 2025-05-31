@@ -464,6 +464,11 @@ class WorkspaceTools(Toolset):
                 'type': 'boolean',
                 'description': 'Whether to include line numbers in the output',
                 'required': False
+            },
+            'encoding': {
+                'type': 'string',
+                'description': 'The encoding to use for reading the file, default is "utf-8"',
+                'required': False
             }
         }
     )
@@ -482,6 +487,7 @@ class WorkspaceTools(Toolset):
         unc_path = kwargs.get('path', '')
         start_line = kwargs.get('start_line')
         end_line = kwargs.get('end_line')
+        encoding = kwargs.get('encoding', 'utf-8')
         include_line_numbers = kwargs.get('include_line_numbers', False)
 
         error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
@@ -496,7 +502,7 @@ class WorkspaceTools(Toolset):
                 return json.dumps({'error': 'Invalid end_line value'})
 
             try:
-                file_content = await workspace.read_internal(relative_path)
+                file_content = await workspace.read_internal(relative_path, encoding)
             except Exception as e:
                 return json.dumps({'error': f'Error reading file: {str(e)}'})
 

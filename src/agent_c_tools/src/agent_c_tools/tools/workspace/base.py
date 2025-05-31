@@ -145,7 +145,7 @@ class BaseWorkspace:
         """
         raise NotImplementedError
 
-    async def read_internal(self, file_path: str) -> str:
+    async def read_internal(self, file_path: str, encoding: Optional[str] = "utf-8") -> str:
         """
         Abstract method to read text from a path within the workspace.
         Used internally for reading files, raises exceptions instead of returning error json.
