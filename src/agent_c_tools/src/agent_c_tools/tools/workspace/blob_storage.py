@@ -330,7 +330,7 @@ class BlobStorageWorkspace(BaseWorkspace):
 
         return result.getvalue()
 
-    async def read(self, path: str) -> str:
+    async def read(self, path: str, encoding: Optional[str] = "utf-8") -> str:
         """
         Read text from a path within the workspace.
 

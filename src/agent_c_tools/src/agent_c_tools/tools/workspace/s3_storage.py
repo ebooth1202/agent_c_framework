@@ -5,6 +5,8 @@ import base64
 import json
 import os
 import inspect
+from typing import Optional
+
 from aiobotocore.session import get_session
 from botocore.exceptions import NoCredentialsError, ClientError
 from agent_c_tools.tools.workspace.base import BaseWorkspace
@@ -272,7 +274,7 @@ class S3StorageWorkspace(BaseWorkspace):
         content = await self.read_bytes_internal(path)
         return content.decode('utf-8')
         
-    async def read(self, path: str) -> str:
+    async def read(self, path: str, encoding: Optional[str] = "utf-8") -> str:
         """
         Read text from a path within the S3 bucket with error handling.
 

@@ -196,6 +196,11 @@ class WorkspaceTools(Toolset):
                 'type': 'string',
                 'description': 'UNC-style path (//WORKSPACE/path) to the file to read',
                 'required': True
+            },
+            'encoding': {
+                'type': 'string',
+                'description': 'The encoding to use for reading the file, default is "utf-8"',
+                'required': False
             }
         }
     )
@@ -210,12 +215,12 @@ class WorkspaceTools(Toolset):
             str: JSON string with the file content or an error message.
         """
         unc_path = kwargs.get('path', '')
-
+        encoding = kwargs.get('encoding', 'utf-8')
         error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
         if error:
             return json.dumps({'error': error})
 
-        return await workspace.read(relative_path)
+        return await workspace.read(relative_path, encoding)
 
     @json_schema(
         'Writes or appends text data to a file using UNC-style path',
