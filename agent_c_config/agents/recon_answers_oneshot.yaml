@@ -1,5 +1,6 @@
 version: 2
-name: "recon_answers_oneshot"
+name: "Rita's Recon Answers Agent"
+key: "recon_answers_oneshot"
 agent_description: |
   This agent assists in a large requirements reverse engineering project. 
   Multiple analysts have reviewed the source code in the workspace in two stages.  
