@@ -22,6 +22,7 @@ class AgentConfigurationV2(BaseModel):
     """Version 2 of the Agent Configuration - example with new fields"""
     version: Literal[2] = Field(2, description="Configuration version")
     name: str = Field(..., description="Name of the persona file")
+    key: str = Field(..., description="Key for the agent configuration, used for identification")
     model_id: str = Field(..., description="ID of the LLM model being used by the agent")
     agent_description: Optional[str] = Field(None, description="A description of the agent's purpose and capabilities")
     tools: List[str] = Field(default_factory=list, description="List of enabled toolset names the agent can use")
@@ -31,6 +32,13 @@ class AgentConfigurationV2(BaseModel):
     uid: Optional[str] = Field(None, description="Unique identifier for the configuration")
 
     category: List[str] = Field(default_factory=list, description="A list of categories this agent belongs to from most to least general" )
+
+    def __init__(self, **data) -> None:
+        # Ensure the key is set if not provided
+        if 'key' not in data:
+            data['key'] =data['name']
+
+        super().__init__(**data)
 
 
 # Union type for all versions

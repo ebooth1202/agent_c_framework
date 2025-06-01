@@ -74,6 +74,26 @@ class AgentConfigLoader(ConfigLoader):
         agent_config_path = os.path.join(self.agent_config_folder, f"{agent_config_name}.yaml")
         return self.load_agent_config_file(agent_config_path)
 
+    def add_agent_config(self, agent_config: AgentConfiguration) -> None:
+        """
+        Add a new agent configuration to the loader.
+
+        Args:
+            agent_config: The AgentConfiguration object to add.
+        """
+        self._save_agent_config(agent_config)
+        self._agent_config_cache[agent_config.name] = agent_config
+
+    def _save_agent_config(self, agent_config: AgentConfiguration) -> None:
+
+        # Determine file path
+        agent_config_path = os.path.join(self.agent_config_folder, f"{agent_config.key}.yaml")
+
+        # Save YAML content
+        with open(agent_config_path, 'w') as file:
+            yaml_content = agent_config.to_yaml()
+            file.write(yaml_content)
+
     def load_agent_config_file(self, agent_config_path) -> Optional[AgentConfiguration]:
         if os.path.exists(agent_config_path):
             with open(agent_config_path, 'r') as file:
