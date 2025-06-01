@@ -1,18 +1,17 @@
-from typing import Any, Dict, List, Optional, Union, cast
-from datetime import datetime
-import json
-from typing import Any, Dict, List, Optional, cast
-
 import yaml
 
+from datetime import datetime
+from typing import Any, Dict, List, Optional, cast
+
 from agent_c.toolsets.tool_set import Toolset
+from agent_c.util.uncish_path import UNCishPath
 from agent_c.toolsets.json_schema import json_schema
-from agent_c_tools.tools.workspace_planning.prompt import WorkspacePlanSection
-from agent_c_tools.tools.workspace_planning.models import PlanModel, TaskModel, LessonLearnedModel, PriorityType
-from agent_c_tools.tools.workspace_planning.html_converter import PlanHTMLConverter
 from agent_c_tools.tools.workspace.tool import WorkspaceTools
-from agent_c_tools.helpers.path_helper import create_unc_path, ensure_file_extension, os_file_system_path
 from agent_c_tools.helpers.validate_kwargs import validate_required_fields
+from agent_c_tools.tools.workspace_planning.prompt import WorkspacePlanSection
+from agent_c_tools.tools.workspace_planning.html_converter import PlanHTMLConverter
+from agent_c_tools.helpers.path_helper import ensure_file_extension, os_file_system_path
+from agent_c_tools.tools.workspace_planning.models import PlanModel, TaskModel, LessonLearnedModel, PriorityType
 
 
 class WorkspacePlanningTools(Toolset):
@@ -26,21 +25,11 @@ class WorkspacePlanningTools(Toolset):
         self.workspace_tool: Optional[WorkspaceTools] = None
 
     async def post_init(self):
+        """Post-initialization to set up required tools.
+          This method is called by the toolchest after the main init is finished
+          to allow for async calls in tools that need them.
+        """
         self.workspace_tool = cast(WorkspaceTools, self.tool_chest.available_tools.get('WorkspaceTools'))
-
-    def _parse_plan_path(self, plan_path: str) -> tuple[str, str]:
-        """Parse a plan path into workspace name and plan ID."""
-        if not plan_path.startswith("//"):
-            raise ValueError(f"Invalid plan path format: {plan_path}. Must start with //")
-
-        parts = plan_path.split("/")
-        if len(parts) < 3:
-            raise ValueError(f"Invalid plan path format: {plan_path}. Format should be //workspace/plan_id")
-
-        workspace_name = parts[2]
-        plan_id = "/".join(parts[3:]) if len(parts) > 3 else "default"
-
-        return workspace_name, plan_id
 
     @staticmethod
     def _format_response(success: bool, **additional_data) -> str:
@@ -77,13 +66,17 @@ class WorkspacePlanningTools(Toolset):
 
     async def _get_plan(self, plan_path: str) -> Optional[PlanModel]:
         """Get a plan by its path."""
-        workspace_name, plan_id = self._parse_plan_path(plan_path)
-        plans_meta = await self._get_plans_meta(workspace_name)
+        try:
+            path = UNCishPath(plan_path)
+            plan_id = path.path
+        except ValueError:
+            return None
+
+        plans_meta = await self._get_plans_meta(path.source)
 
         if plan_id not in plans_meta:
             return None
 
-        # Convert the JSON dict back to a PlanModel
         try:
             return PlanModel.model_validate(plans_meta[plan_id])
         except Exception as e:
@@ -92,15 +85,17 @@ class WorkspacePlanningTools(Toolset):
 
     async def _save_plan(self, plan_path: str, plan: PlanModel) -> None:
         """Save a plan to its path."""
-        workspace_name, plan_id = self._parse_plan_path(plan_path)
-        plans_meta = await self._get_plans_meta(workspace_name)
+        path = UNCishPath(plan_path)
+        plan_id = path.path
+
+        plans_meta = await self._get_plans_meta(path.source)
 
         # Update the plan's updated_at timestamp
         plan.updated_at = datetime.now()
 
         # Convert the PlanModel to a dict for storage
         plans_meta[plan_id] = plan.model_dump()
-        await self._save_plans_meta(workspace_name, plans_meta)
+        await self._save_plans_meta(path.source, plans_meta)
 
     @json_schema(
         description="Create a new plan in a workspace",
@@ -132,8 +127,13 @@ class WorkspacePlanningTools(Toolset):
         if not title:
             return "Error: title is required"
 
-        workspace_name, plan_id = self._parse_plan_path(plan_path)
-        plans_meta = await self._get_plans_meta(workspace_name)
+        try:
+            path = UNCishPath(plan_path)
+            plan_id = path.path
+        except ValueError:
+            return f"Error: Invalid plan path format: {plan_path}. Must start with //"
+
+        plans_meta = await self._get_plans_meta(path.source)
 
         if plan_id in plans_meta:
             return f"Plan with ID '{plan_id}' already exists"
@@ -629,19 +629,24 @@ class WorkspacePlanningTools(Toolset):
         try:
             # Parse the plan path to get workspace name and plan ID
             # then load the plan
-            workspace_name, plan_id = self._parse_plan_path(plan_path)
+            try:
+                path = UNCishPath(plan_path)
+                plan_id = path.path
+            except ValueError:
+                return f"Error: Invalid plan path format: {plan_path}. Must start with //"
+
             plan = await self._get_plan(plan_path)
 
             if not plan:
                 return f"Plan not found at path: {plan_path}"
 
             if not output_path:
-                output_path = f"//{workspace_name}/.scratch/{plan_id}_report.{report_format}"
+                output_path = f"//{path.source}/.scratch/{plan_id}_report.{report_format}"
                 output_path = ensure_file_extension(output_path, report_format)
 
             if report_format == 'md':
                 # Generate the markdown report
-                report_content = self._generate_plan_markdown(plan, workspace_name, plan_id)
+                report_content = self._generate_plan_markdown(plan, path.source, plan_id)
             elif report_format == 'html':
                 yaml_data = {
                     '_plans': {
