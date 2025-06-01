@@ -40,7 +40,8 @@ class AgentCloneTools(AgentAssistToolBase):
         }
     )
     async def oneshot(self, **kwargs) -> str:
-        request: str = kwargs.get('request')
+        request: str = ("# Agent Clone Tool Notice\nThe following request is from your prime agent. "
+                        f"Your prime is delegating a task for YOU (the clone) to perform.\n\n---\n\n{kwargs.get('request')}")
         process_context: Optional[str] = kwargs.get('process_context')
         tool_context: Dict[str, Any] = kwargs.get('tool_context')
         clone_persona: str = tool_context['persona_prompt']
@@ -87,7 +88,8 @@ class AgentCloneTools(AgentAssistToolBase):
         }
     )
     async def chat(self, **kwargs) -> str:
-        message: str = kwargs.get('message')
+        message: str =  ("# Agent Clone Tool Notice\nThe following message is from your prime agent. "
+                         f"Your prime is delegating a task for YOU (the clone) to perform.\n\n---\n\n{kwargs.get('message')}")
         process_context: Optional[str] = kwargs.get('process_context')
         tool_context: Dict[str, Any] = kwargs.get('tool_context')
         agent_session_id: Optional[str] = kwargs.get('agent_session_id', None)

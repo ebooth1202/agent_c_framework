@@ -46,7 +46,7 @@ class SystemMessageEvent(SessionEvent):
 
     content: str = Field(..., description="The content of the message")
     format: str = Field("markdown", description="The format of the content, default is markdown")
-    severity: str = Field("error", description="The content of the message")
+    severity: str = Field("error", description="The severity of the message, default is error, can be 'info', 'warning', or 'error'")
 
 
 class TextDeltaEvent(SessionEvent):

@@ -12,36 +12,44 @@ import CopyButton from './CopyButton';
  * 
  * @param {Object} props - Component props
  * @param {string} props.content - The message content
- * @param {boolean} [props.isError=false] - Whether this is an error message
+ * @param {boolean} [props.isError=false] - Whether this is an error message (legacy)
  * @param {boolean} [props.isCritical=false] - Whether this is a critical error
+ * @param {string} [props.severity] - Message severity: 'info', 'warning', or 'error'
  * @param {string} [props.className] - Optional additional class names
  */
-const SystemMessage = ({ content, isError = false, isCritical = false, className = '' }) => {
-  // Use Alert for error messages, Card for regular messages
-  const MessageComponent = isError ? Alert : Card;
-  const ContentComponent = isError ? AlertDescription : CardContent;
-  const IconComponent = isError ? AlertTriangleIcon : InfoIcon;
+const SystemMessage = ({ content, isError = false, isCritical = false, severity, className = '' }) => {
+  // Determine message type based on severity or legacy isError prop
+  const effectiveSeverity = severity || (isError ? 'error' : 'info');
+  const isErrorMessage = effectiveSeverity === 'error';
+  const isWarningMessage = effectiveSeverity === 'warning';
+  
+  // Use Alert for error/warning messages, Card for info messages
+  const MessageComponent = (isErrorMessage || isWarningMessage) ? Alert : Card;
+  const ContentComponent = (isErrorMessage || isWarningMessage) ? AlertDescription : CardContent;
+  const IconComponent = isErrorMessage ? AlertTriangleIcon : InfoIcon;
   
   return (
     <div 
       className={cn("flex justify-start gap-2 group system-message-container system-message-animation", className)}
       role="log"
-      aria-label={isError ? "Error message" : "System message"}
+      aria-label={isErrorMessage ? "Error message" : isWarningMessage ? "Warning message" : "System message"}
     >
       <MessageComponent
         className={cn(
-          isError 
+          isErrorMessage 
             ? "max-w-[80%] rounded-2xl shadow-sm border-destructive/50 bg-destructive/10 text-destructive dark:bg-destructive/20" 
+            : isWarningMessage
+            ? "max-w-[80%] rounded-2xl shadow-sm border-yellow-500/50 bg-yellow-50 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200"
             : "system-message-normal"
         )}
-        variant={isError ? "destructive" : "default"}
+        variant={isErrorMessage ? "destructive" : "default"}
       >
         <ContentComponent className="flex justify-between items-start gap-4 p-4">
           <div className="flex items-start gap-2">
             <IconComponent 
               className={cn(
                 "h-4 w-4 mt-1 flex-shrink-0", 
-                isError ? "text-destructive" : "text-muted-foreground"
+                isErrorMessage ? "text-destructive" : isWarningMessage ? "text-yellow-600 dark:text-yellow-400" : "text-muted-foreground"
               )}
               aria-hidden="true"
             />
@@ -50,7 +58,7 @@ const SystemMessage = ({ content, isError = false, isCritical = false, className
               role="textbox"
               aria-readonly="true"
             >
-              {isError ? "Error: " : ""}{content}
+              {isErrorMessage ? "Error: " : isWarningMessage ? "Warning: " : ""}{content}
               {isCritical && (
                 <div 
                   className="mt-1 text-xs font-medium text-destructive"
@@ -65,7 +73,7 @@ const SystemMessage = ({ content, isError = false, isCritical = false, className
             content={content}
             tooltipText="Copy message"
             position="left"
-            variant={isError ? "destructive" : "secondary"}
+            variant={isErrorMessage ? "destructive" : "secondary"}
             size="xs"
             className="mt-1 flex-shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
             aria-label="Copy message to clipboard"
@@ -80,6 +88,7 @@ SystemMessage.propTypes = {
   content: PropTypes.string.isRequired,
   isError: PropTypes.bool,
   isCritical: PropTypes.bool,
+  severity: PropTypes.oneOf(['info', 'warning', 'error']),
   className: PropTypes.string
 };
 

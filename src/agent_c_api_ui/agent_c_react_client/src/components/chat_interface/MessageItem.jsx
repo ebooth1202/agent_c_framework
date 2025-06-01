@@ -225,7 +225,8 @@ if (message.role === 'system' && message.type === 'system_prompt') {
         <SystemMessage 
           content={message.content} 
           isError={message.type === 'error'} 
-          isCritical={message.critical} 
+          isCritical={message.critical}
+          severity={message.severity}
         />
       </div>
     );

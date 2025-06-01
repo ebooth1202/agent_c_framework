@@ -181,7 +181,7 @@ class LocalStorageWorkspace(BaseWorkspace):
             self.logger.exception("Failed to list directory contents.")
             return self._error_response(error_msg)
 
-    async def read(self, file_path: str) -> str:
+    async def read(self, file_path: str, encoding: Optional[str] = "utf-8") -> str:
         try:
             contents = await self.read_internal(file_path)
             if len(contents):
@@ -195,7 +195,7 @@ class LocalStorageWorkspace(BaseWorkspace):
         except Exception as e:
             return self._error_response(str(e))
 
-    async def read_internal(self, file_path: str) -> str:
+    async def read_internal(self, file_path: str, encoding: Optional[str] = "utf-8") -> str:
         valid, error_msg, full_path = self._validate_path(file_path)
         if not valid:
             raise ValueError(error_msg)
@@ -205,7 +205,7 @@ class LocalStorageWorkspace(BaseWorkspace):
                 raise FileNotFoundError(f'The path {file_path} does not exist.')
 
             if full_path.is_file():
-                with open(full_path, 'r', encoding='utf-8', errors='replace') as file:
+                with open(full_path, 'r', encoding=encoding, errors='replace') as file:
                     return file.read()
             else:
                 return self._error_response(f'The path {file_path} is not a file.')

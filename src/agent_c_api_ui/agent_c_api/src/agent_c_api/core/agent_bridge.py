@@ -555,7 +555,7 @@ class AgentBridge:
 
     async def _handle_message(self, event):
         """
-        Handle message events (such as errors) from the model
+        Handle message events from the model
 
         This is particularly important for handling Anthropic API errors
         """
@@ -568,6 +568,16 @@ class AgentBridge:
             "critical": True
         }) + "\n"
         return payload
+
+    @staticmethod
+    async def _handle_system_message(event):
+        return json.dumps({
+            "type": "message",
+            "data": event.content,
+            "role": event.role,
+            "format": event.format,
+            "severity": event.severity
+        }) + "\n"
 
     async def _handle_tool_select_delta(self, event):
         """Handle tool selection events from the agent"""
@@ -830,6 +840,8 @@ class AgentBridge:
             "tool_call_delta": self._handle_tool_call_delta,
             "tool_select_delta": self._handle_tool_select_delta,
             "message": self._handle_message,
+            "system_message": self._handle_system_message,
+
         }
 
         handler = handlers.get(event.type)
@@ -947,7 +959,8 @@ class AgentBridge:
                 try:
                     try:
                         timeout = getattr(settings, "CALLBACK_TIMEOUT")  # Get timeout from settings with fallback
-                        content = await asyncio.wait_for(queue.get(), timeout=timeout)
+                        #content = await asyncio.wait_for(queue.get(), timeout=timeout)
+                        content = await queue.get()
                         if content is None:
                             self.logger.info("Received stream termination signal")
                             break

@@ -539,6 +539,28 @@ const ChatInterfaceInner = ({
           setIsStreaming(false);
         },
         
+        onSystemMessage: ({ content, role, format, severity }) => {
+          // Handle system messages with different severity levels
+          const messageType = severity === 'error' ? 'error' : 'content';
+          const messageContent = severity === 'error' ? `Error: ${content}` : content;
+          
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "system",
+              type: messageType,
+              content: messageContent,
+              severity: severity,
+              format: format
+            },
+          ]);
+          
+          // Only stop streaming for error-level messages
+          if (severity === 'error') {
+            setIsStreaming(false);
+          }
+        },
+        
         onToolSelect: (selectionState) => {
           updateToolSelectionState(selectionState);
         },

@@ -6,7 +6,7 @@ agent_description: |
   The output of each stage has been saved in the workspace of the project using a layout that mirrors the source layout in the scratchpad:
  
   It is leveraged by the reverse engineering tool to power the query_analysis tool.
-model_id: claude-sonnet-4-20250514
+model_id: "claude-sonnet-4-20250514"
 tools:
   - ThinkTools
   - WorkspaceTools
@@ -15,7 +15,7 @@ tools:
 agent_params:
   max_searches: 5
   budget_tokens: 20000
-  max_tokens: 128000
+  max_tokens: 64000
 prompt_metadata: null
 category:
   - "analysis"
@@ -35,5 +35,5 @@ persona: |
   - If the `//[workspace]/.scratch/analyze_source/basic/` and `//[workspace]/.scratch/analyze_source/enhanced/` do not exist, you MUST inform the analyst to use `analyze_source` first and take no additional action.
   - ONLY your final output will be returned to the analyst.
   
-  ## Workspace Tree
+  ## Enhanced Analysis Output Tree
   [workspace_tree]
