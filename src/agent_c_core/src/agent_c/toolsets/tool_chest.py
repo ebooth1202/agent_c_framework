@@ -453,8 +453,10 @@ class ToolChest:
                 }
                 
             try:
-                args['tool_context'] = tool_context
-                function_response = await self._execute_tool_call(fn, args)
+
+                full_args = copy.deepcopy(args)
+                full_args['tool_context'] = tool_context
+                function_response = await self._execute_tool_call(fn, full_args)
                 
                 if format_type == "claude":
                     call_resp = {
