@@ -1,7 +1,8 @@
-import copy
+import markdown
 from typing import Any, Optional, Dict, cast, List
 
 import yaml
+from markdownify import markdownify
 
 from agent_c.util.slugs import MnemonicSlugs
 from agent_c import json_schema, BaseAgent, DynamicPersonaSection
@@ -58,12 +59,27 @@ class AgentCloneTools(AgentAssistToolBase):
         agent = AgentConfigurationV2(name=f"Agent Clone - {slug}", model_id=tool_context['colling_model_name'], agent_description="A clone of the user agent",
                                      agent_params=ClaudeReasoningParams(model_name=tool_context['colling_model_name'], budget_tokens=20000),
                                      persona=enhanced_persona, tools=tools)
+
+        await self._raise_render_media(
+            sent_by_class=self.__class__.__name__,
+            sent_by_function='oneshot',
+            content_type="text/html",
+            content=markdown.markdown(f"**Prime** agent requesting assistance from clone:\n\n{request}")
+        )
+
         messages =  await self.agent_oneshot(request, agent, tool_context['session_id'], tool_context)
         last_message = messages[-1] if messages else None
         if last_message is not None:
             content = last_message.get('content', None)
             if content is not None:
-                return  yaml.dump(content[-1], allow_unicode=True).replace("\\n", "\n")
+                agent_response = yaml.dump(content[-1], allow_unicode=True).replace("\\n", "\n")
+                await self._raise_render_media(
+                    sent_by_class=self.__class__.__name__,
+                    sent_by_function='oneshot',
+                    content_type="text/html",
+                    content=markdown.markdown(f"**{agent.name}** Response:\n\n{agent_response}")
+                )
+                return agent_response
 
         return "No response from agent. Tell the user to check the server error logs for more information."
 
@@ -107,6 +123,13 @@ class AgentCloneTools(AgentAssistToolBase):
         agent = AgentConfigurationV2(name=f"Agent Clone", model_id=tool_context['colling_model_name'], agent_description="A clone of the user agent",
                                      agent_params=ClaudeReasoningParams(model_name=tool_context['colling_model_name'], budget_tokens=20000),
                                      persona=enhanced_persona, tools=tools)
+        content = markdownify(message, heading_style='ATX', escape_asterisks=False, escape_underscores=False)
+        await self._raise_render_media(
+            sent_by_class=self.__class__.__name__,
+            sent_by_function='chat',
+            content_type="text/html",
+            content= markdown.markdown(f"**Prime** agent requesting assistance from clone.\n\n{content}")
+        )
 
         agent_session_id, messages = await self.agent_chat(message, agent, tool_context['session_id'], agent_session_id, tool_context)
 
@@ -114,7 +137,15 @@ class AgentCloneTools(AgentAssistToolBase):
         if last_message is not None:
             content = last_message.get('content', None)
             if content is not None:
-                return yaml.dump(content[-1], allow_unicode=True).replace("\\n", "\n")
+                agent_response = yaml.dump(content[-1], allow_unicode=True).replace("\\n", "\n")
+                await self._raise_render_media(
+                    sent_by_class=self.__class__.__name__,
+                    sent_by_function='chat',
+                    content_type="text/html",
+                    content=markdown.markdown(f"**'{agent.name}'** Response:\n\n {agent_response}")
+                )
+
+                return f"Agent Session ID: {agent_session_id}\n{agent_response}"
 
         return "No response from agent. Tell the user to check the server error logs for more information."
 
