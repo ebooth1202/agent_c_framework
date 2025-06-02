@@ -64,7 +64,7 @@ class AgentCloneTools(AgentAssistToolBase):
             sent_by_class=self.__class__.__name__,
             sent_by_function='oneshot',
             content_type="text/html",
-            content=markdown.markdown(f"**Prime** agent requesting assistance from clone:\n\n{request}")
+            content=markdown.markdown(f"**Prime** agent requesting assistance from clone:\n\n{request}\n\n## Clone context:\n{process_context}")
         )
 
         messages =  await self.agent_oneshot(request, agent, tool_context['session_id'], tool_context)
@@ -77,7 +77,7 @@ class AgentCloneTools(AgentAssistToolBase):
                     sent_by_class=self.__class__.__name__,
                     sent_by_function='oneshot',
                     content_type="text/html",
-                    content=markdown.markdown(f"**{agent.name}** Response:\n\n{agent_response}")
+                    content=markdown.markdown(f"**{agent.name}** Response:\n\n{agent_response.replace('text: "', "text: \"\n\n")}")
                 )
                 return agent_response
 
@@ -128,7 +128,7 @@ class AgentCloneTools(AgentAssistToolBase):
             sent_by_class=self.__class__.__name__,
             sent_by_function='chat',
             content_type="text/html",
-            content= markdown.markdown(f"**Prime** agent requesting assistance from clone.\n\n{content}")
+            content= markdown.markdown(f"**Prime** agent requesting assistance from clone.\n\n{content}\n\n## Clone context:\n{process_context}")
         )
 
         agent_session_id, messages = await self.agent_chat(message, agent, tool_context['session_id'], agent_session_id, tool_context)
@@ -142,7 +142,7 @@ class AgentCloneTools(AgentAssistToolBase):
                     sent_by_class=self.__class__.__name__,
                     sent_by_function='chat',
                     content_type="text/html",
-                    content=markdown.markdown(f"**'{agent.name}'** Response:\n\n {agent_response}")
+                    content=markdown.markdown(f"**'{agent.name}'** Response:\n\n{agent_response.replace('text: "', "text: \"\n\n")}")
                 )
 
                 return f"Agent Session ID: {agent_session_id}\n{agent_response}"

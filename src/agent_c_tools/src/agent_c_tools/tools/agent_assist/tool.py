@@ -58,7 +58,7 @@ class AgentAssistTools(AgentAssistToolBase):
             sent_by_class=self.__class__.__name__,
             sent_by_function='oneshot',
             content_type="text/html",
-            content=markdown.markdown(f"**{agent.name}** response:\n\n{agent_response}"))
+            content=markdown.markdown(f"**{agent.name}** response:\n\n{agent_response.replace('text: "', "text: \"\n\n")}"))
 
         return agent_response
 
@@ -93,12 +93,11 @@ class AgentAssistTools(AgentAssistToolBase):
         except FileNotFoundError:
             return f"Error: Agent {kwargs.get('agent_id')} not found in catalog."
 
-        content = markdownify(message, heading_style='ATX', escape_asterisks=False, escape_underscores=False)
         await self._raise_render_media(
             sent_by_class=self.__class__.__name__,
             sent_by_function='chat',
             content_type="text/html",
-            content=markdown.markdown(f"**Domo agent** requesting assistance from '*{agent.name}*': \n\n{content}")
+            content=markdown.markdown(f"**Domo agent** requesting assistance from '*{agent.name}*': \n\n{message.replace('text: "', "text: \"\n\n")}")
         )
 
         agent_session_id, messages = await self.agent_chat(message, agent, tool_context['session_id'], agent_session_id, tool_context)
