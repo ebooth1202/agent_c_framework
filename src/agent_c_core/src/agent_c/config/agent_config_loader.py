@@ -1,5 +1,3 @@
-import copy
-import logging
 import os
 import glob
 import yaml
@@ -146,7 +144,7 @@ class AgentConfigLoader(ConfigLoader):
                 'file_path': agent_config_path
             }
 
-        self._agent_config_cache[config.name] = config
+        self._agent_config_cache[config.key] = config
         return config
 
     def _transform_agent_params(self, data: dict) -> None:

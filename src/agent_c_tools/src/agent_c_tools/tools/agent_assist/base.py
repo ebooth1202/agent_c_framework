@@ -41,10 +41,12 @@ class AgentAssistToolBase(Toolset):
             kwargs['name'] = 'aa'
         super().__init__( **kwargs)
         self.agent_loader = AgentConfigLoader()
+        self.model_config_loader = ModelConfigurationLoader()
+
         self.sections: Optional[List[PromptSection]] = None
 
         self.session_cache = AsyncExpiringCache(default_ttl=kwargs.get('agent_session_ttl', 300))
-        self.model_configs: Dict[str, Any] = self._load_model_config(kwargs.get('model_configs'))
+        self.model_configs: Dict[str, Any] = self.model_config_loader.flattened_config()
         self.runtime_cache: Dict[str, BaseAgent] = {}
         self._model_name = kwargs.get('agent_assist_model_name', 'claude-3-7-sonnet-latest')
 
@@ -82,26 +84,17 @@ class AgentAssistToolBase(Toolset):
             event.session_id = parent_session_id
             await parent_streaming_callback(event)
 
-        # self.logger.info(event.type)
-        # if event.type == 'history_delta':
-        #     await self._handle_history_delta(agent, event)
-        # elif event.type == 'complete_thought':
-        #     await self._handle_complete_thought(agent, event)
-        # elif event.type == "tool_call":
-        #     if parent_streaming_callback is not None:
-        #         await parent_streaming_callback(event)
-
     async def post_init(self):
         self.workspace_tool = cast(WorkspaceTools, self.tool_chest.available_tools.get('WorkspaceTools'))
 
-    def runtime_for_agent(self, agent_config: AgentConfiguration):
+    async def runtime_for_agent(self, agent_config: AgentConfiguration):
         if agent_config.name in self.runtime_cache:
             return self.runtime_cache[agent_config.name]
         else:
-            self.runtime_cache[agent_config.name] = self._runtime_for_agent(agent_config)
+            self.runtime_cache[agent_config.name] = await self._runtime_for_agent(agent_config)
             return self.runtime_cache[agent_config.name]
 
-    def _runtime_for_agent(self, agent_config: AgentConfiguration) -> BaseAgent:
+    async def _runtime_for_agent(self, agent_config: AgentConfiguration) -> BaseAgent:
         model_config = self.model_configs[agent_config.model_id]
         runtime_cls = self.__vendor_agent_map[model_config["vendor"]]
 
@@ -113,6 +106,8 @@ class AgentAssistToolBase(Toolset):
             agent_sections = [ThinkSection(), DynamicPersonaSection()]
         else:
             agent_sections = [DynamicPersonaSection()]
+
+        await self.tool_chest.activate_toolset(agent_config.tools)
 
         return runtime_cls(model_name=model_config["id"], client=client,prompt_builder=PromptBuilder(sections=agent_sections))
 
@@ -162,7 +157,7 @@ class AgentAssistToolBase(Toolset):
 
         try:
             self.logger.info(f"Running one-shot with persona: {agent.key}, user session: {user_session_id}")
-            agent_runtime = self.runtime_for_agent(agent)
+            agent_runtime = await self.runtime_for_agent(agent)
 
             chat_params = await self.__chat_params(agent, agent_runtime, user_session_id,
                                                    parent_tool_context=parent_tool_context,
@@ -176,15 +171,23 @@ class AgentAssistToolBase(Toolset):
     async def parallel_agent_oneshots(self, user_messages: List[str], persona: AgentConfiguration, user_session_id: Optional[str] = None,
                                       tool_context: Optional[Dict[str, Any]] = None, **additional_metadata) -> List[str]:
         self.logger.info(f"Running parallel one-shots with persona: {persona.name}, user session: {user_session_id}")
-        agent = self.runtime_for_agent(persona)
+        agent = await self.runtime_for_agent(persona)
         chat_params = await self.__chat_params(persona, agent, user_session_id, parent_tool_context=tool_context, **additional_metadata)
         #chat_params['allow_server_tools'] = True
         result: List[str] = await agent.parallel_one_shots(inputs=user_messages, **chat_params)
         return result
 
+    async def _new_agent_session(self, agent: AgentConfiguration, user_session_id: str, agent_session_id: str) -> Dict[str, Any]:
+        metadata = {'persona_name': agent.name}
+        session = {'user_session_id': user_session_id, 'messages': [], 'metadata': metadata,
+                   'created_at': datetime.now(), 'agent_key': agent.key, 'session_id': agent_session_id}
+
+        await self.session_cache.set(agent_session_id, session)
+        return  session
+
     async def agent_chat(self,
                          user_message: str,
-                         persona: AgentConfiguration,
+                         agent: AgentConfiguration,
                          user_session_id: Optional[str] = None,
                          agent_session_id: Optional[str] = None,
                          tool_context: Optional[Dict[str, Any]] = None,
@@ -192,32 +195,30 @@ class AgentAssistToolBase(Toolset):
         """
         Chat with a persona, maintaining conversation history.
         """
-        self.logger.info(f"Running chat with persona: {persona.name}, user session: {user_session_id}")
-        agent = self.runtime_for_agent(persona)
+        self.logger.info(f"Running chat with persona: {agent.name}, user session: {user_session_id}")
+        agent_runtime = await self.runtime_for_agent(agent)
 
         if agent_session_id is None:
             agent_session_id = MnemonicSlugs.generate_id_slug(2)
 
         session = self.session_cache.get(agent_session_id)
         if session is None:
-            metadata = { 'persona_name': persona.name }
-            session = { 'user_session_id': user_session_id,  'messages': [], 'metadata': metadata, 'created_at': datetime.now()}
-
+            session = await self._new_agent_session(agent, user_session_id, agent_session_id=agent_session_id)
         try:
-            chat_params = await self.__chat_params(persona, agent, user_session_id, parent_tool_context=tool_context, agent_session_id=agent_session_id, **additional_metadata)
+            chat_params = await self.__chat_params(agent, agent_runtime, user_session_id, parent_tool_context=tool_context, agent_session_id=agent_session_id, **additional_metadata)
             chat_params['messages'] = session['messages']
             #chat_params['allow_server_tools'] = True  # Allow server tools to be used in the chat
             # Use non-streaming chat to avoid flooding the event stream
-            messages = await agent.chat(user_message=user_message, **chat_params)
+            messages = await agent_runtime.chat(user_message=user_message, **chat_params)
             if messages is not None:
                 session['messages'] = messages
                 await self.session_cache.set(agent_session_id, session)
         except Exception as e:
-            self.logger.exception(f"Error during chat with persona {persona.name}: {e}", exc_info=True)
+            self.logger.exception(f"Error during chat with persona {agent.name}: {e}", exc_info=True)
             return agent_session_id, [{'role': 'error', 'content': str(e)}]
 
         if messages is None or len(messages) == 0:
-            self.logger.error(f"No messages returned from chat with persona {persona.name}.")
+            self.logger.error(f"No messages returned from chat with persona {agent.name}.")
             return agent_session_id, [{'role': 'error', 'content': "No response from agent."}]
 
         return agent_session_id, messages
@@ -240,27 +241,9 @@ class AgentAssistToolBase(Toolset):
                         'created_at': session.get('created_at'),
                         'last_activity': session.get('last_activity', session.get('created_at')),
                         'message_count': len(session.get('messages', [])),
-                        'persona_name': session.get('metadata', {}).get('persona_name')
+                        'agent_key': session.get('agent_key'),
+                        'metadata': session.get('metadata', {}),
                     })
 
         return sessions
-
-
-    @staticmethod
-    def _load_model_config(data: dict[str, Any]) -> Dict[str, Any]:
-        result: Dict[str, Any] = {}
-        for vendor_info in data["vendors"]:
-            vendor_name = vendor_info["vendor"]
-            for model in vendor_info["models"]:
-                model_with_vendor = model.copy()
-                model_with_vendor["vendor"] = vendor_name
-                result[model["id"]] = model_with_vendor
-
-        return result
-
-
-    @property
-    def personas_list(self) -> List[str]:
-        return self.agent_loader.agent_names
-
 
