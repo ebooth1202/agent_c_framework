@@ -3,14 +3,17 @@ import glob
 import threading
 
 from datetime import datetime
+from functools import partial
 from typing import Any, Dict, List, Optional, cast, Tuple
 
+import markdown
 import yaml
 
 from agent_c import PromptSection
 from agent_c.config.model_config_loader import ModelConfigurationLoader, ModelConfigurationFile
 from agent_c.config.agent_config_loader import AgentConfigLoader, CurrentAgentConfiguration
 from agent_c.models.events import SessionEvent
+from agent_c.models.events.chat import HistoryDeltaEvent, CompleteThoughtEvent
 from agent_c.util.slugs import MnemonicSlugs
 from agent_c.toolsets.tool_set import Toolset
 from agent_c.models.agent_config import AgentConfiguration
@@ -50,13 +53,43 @@ class AgentAssistToolBase(Toolset):
         self.persona_cache: Dict[str, AgentConfiguration] = {}
         self.workspace_tool: Optional[WorkspaceTools] = None
 
-    async def _streaming_callback(self, event: SessionEvent):
-        """
-        Callback for streaming events.
-        """
-        if event.type in ['text_delta', 'thought_delta', 'tool_call', 'render_media']:
-            await self.streaming_callback(event)
 
+    async def _emit_content_from_agent(self, agent: AgentConfiguration, content: str, name: Optional[str] = None):
+        if name is None:
+            name = agent.name
+        await self._raise_render_media(
+            sent_by_class=self.__class__.__name__,
+            sent_by_function=name,
+            content_type="text/html",
+            content=markdown.markdown(content))
+
+    async def _handle_history_delta(self, agent, event: HistoryDeltaEvent):
+        content = []
+        for message in event.messages:
+            contents = message.get('content', [])
+            for resp in contents:
+                if 'text' in resp:
+                    content.append(resp['text'])
+
+        if len(content):
+            await self._emit_content_from_agent(agent, "\n\n".join(content))
+
+    async def _handle_complete_thought(self, agent: AgentConfiguration, event: CompleteThoughtEvent):
+        await self._emit_content_from_agent(agent, event.content, name=f"{agent.name} (thinking)")
+
+    async def _streaming_callback_for_subagent(self, agent: AgentConfiguration, parent_streaming_callback, parent_session_id, event: SessionEvent):
+        if event.type not in [ 'completion', 'interaction', 'history'] and parent_streaming_callback is not None:
+            event.session_id = parent_session_id
+            await parent_streaming_callback(event)
+
+        # self.logger.info(event.type)
+        # if event.type == 'history_delta':
+        #     await self._handle_history_delta(agent, event)
+        # elif event.type == 'complete_thought':
+        #     await self._handle_complete_thought(agent, event)
+        # elif event.type == "tool_call":
+        #     if parent_streaming_callback is not None:
+        #         await parent_streaming_callback(event)
 
     async def post_init(self):
         self.workspace_tool = cast(WorkspaceTools, self.tool_chest.available_tools.get('WorkspaceTools'))
@@ -83,47 +116,61 @@ class AgentAssistToolBase(Toolset):
 
         return runtime_cls(model_name=model_config["id"], client=client,prompt_builder=PromptBuilder(sections=agent_sections))
 
-    async def __chat_params(self, persona: AgentConfiguration, agent: BaseAgent, user_session_id: Optional[str] = None, **opts) -> Dict[str, Any]:
+    async def __chat_params(self, agent: AgentConfiguration, agent_runtime: BaseAgent, user_session_id: Optional[str] = None, **opts) -> Dict[str, Any]:
         tool_params = {}
+        client_wants_cancel = self.client_wants_cancel
+        parent_streaming_callback = self.streaming_callback
+
         if opts:
-            streaming_callback = opts['parent_tool_context'].get('streaming_callback', None) if 'parent_tool_context' in opts else None
-        else:
-            streaming_callback = None
-        prompt_metadata = await self.__build_prompt_metadata(persona, user_session_id, **opts)
+            parent_tool_context = opts.get('parent_tool_context', None)
+            if parent_tool_context is not None:
+                client_wants_cancel = opts['parent_tool_context'].get('client_wants_cancel', self.client_wants_cancel)
+                parent_streaming_callback = opts['parent_tool_context'].get('streaming_callback', self.streaming_callback)
+
+            tool_context = opts.get("tool_call_context", {})
+            tool_context['active_agent'] = agent
+            opts['tool_call_context'] = tool_context
+
+
+        prompt_metadata = await self.__build_prompt_metadata(agent, user_session_id, **opts)
         chat_params = {"prompt_metadata": prompt_metadata, "output_format": 'raw',
-                       "streaming_callback": streaming_callback,
-                       "client_wants_cancel": self.client_wants_cancel, "tool_chest": self.tool_chest,
-                       "session_id": user_session_id}
+                       "streaming_callback": partial(self._streaming_callback_for_subagent, agent, parent_streaming_callback, user_session_id),
+                       "client_wants_cancel": client_wants_cancel, "tool_chest": self.tool_chest
+                       }
 
-        if len(persona.tools):
-            await self.tool_chest.initialize_toolsets(persona.tools)
-            tool_params = self.tool_chest.get_inference_data(persona.tools, agent.tool_format)
-            tool_params["toolsets"] = persona.tools
+        if len(agent.tools):
+            await self.tool_chest.initialize_toolsets(agent.tools)
+            tool_params = self.tool_chest.get_inference_data(agent.tools, agent_runtime.tool_format)
+            tool_params["toolsets"] = agent.tools
 
-        agent_params = persona.agent_params.model_dump(exclude_none=True)
+        agent_params = agent.agent_params.model_dump(exclude_none=True)
         if "model_name" not in agent_params:
-            agent_params["model_name"] = persona.model_id
+            agent_params["model_name"] = agent.model_id
 
         return chat_params | tool_params | agent_params
 
     @staticmethod
-    async def __build_prompt_metadata(persona: AgentConfiguration, user_session_id: Optional[str] = None, **opts) -> Dict[str, Any]:
-        persona_props = persona.prompt_metadata if persona.prompt_metadata else {}
+    async def __build_prompt_metadata(agent: AgentConfiguration, user_session_id: Optional[str] = None, **opts) -> Dict[str, Any]:
+        agent_props = agent.prompt_metadata if agent.prompt_metadata else {}
 
-        return {"session_id": user_session_id, "persona_prompt": persona.persona, "persona": persona.model_dump(exclude_none=True, exclude={'prompt_metadata'}),
-                "timestamp": datetime.now().isoformat()} | persona_props | opts
+        return {"session_id": user_session_id, "persona_prompt": agent.persona, "persona": agent.model_dump(exclude_none=True, exclude={'prompt_metadata'}),
+                "agent": agent,
+                "timestamp": datetime.now().isoformat()} | agent_props | opts
 
-    async def agent_oneshot(self, user_message: str, persona: AgentConfiguration, user_session_id: Optional[str] = None,
-                            tool_context: Optional[Dict[str, Any]] = None, **additional_metadata) -> Optional[List[Dict[str, Any]]]:
+    async def agent_oneshot(self, user_message: str, agent: AgentConfiguration, user_session_id: Optional[str] = None,
+                            parent_tool_context: Optional[Dict[str, Any]] = None, **additional_metadata) -> Optional[List[Dict[str, Any]]]:
 
         try:
-            self.logger.info(f"Running one-shot with persona: {persona.name}, user session: {user_session_id}")
-            agent = self.runtime_for_agent(persona)
-            chat_params = await self.__chat_params(persona, agent, user_session_id, parent_tool_context=tool_context, **additional_metadata)
-            messages = await agent.one_shot(user_message=user_message, **chat_params)
+            self.logger.info(f"Running one-shot with persona: {agent.key}, user session: {user_session_id}")
+            agent_runtime = self.runtime_for_agent(agent)
+
+            chat_params = await self.__chat_params(agent, agent_runtime, user_session_id,
+                                                   parent_tool_context=parent_tool_context,
+                                                   **additional_metadata)
+            messages = await agent_runtime.one_shot(user_message=user_message, **chat_params)
             return messages
         except Exception as e:
-            self.logger.exception(f"Error during one-shot with persona {persona.name}: {e}", exc_info=True)
+            self.logger.exception(f"Error during one-shot with persona {agent.name}: {e}", exc_info=True)
             return None
 
     async def parallel_agent_oneshots(self, user_messages: List[str], persona: AgentConfiguration, user_session_id: Optional[str] = None,
