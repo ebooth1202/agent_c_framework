@@ -6,6 +6,8 @@ from typing import Dict, Optional, List, Any, AsyncGenerator
 import traceback
 
 from agent_c import BaseAgent
+from agent_c.config.agent_config_loader import AgentConfigLoader
+from agent_c.util import MnemonicSlugs
 from agent_c_api.core.agent_bridge import AgentBridge
 from agent_c_api.core.util.logging_utils import LoggingManager
 
@@ -35,6 +37,8 @@ class UItoAgentBridgeManager:
         self.ui_sessions: Dict[str, Dict[str, Any]] = {}
         self._locks: Dict[str, asyncio.Lock] = {}
         self._cancel_events: Dict[str, threading.Event] = {}
+        self.agent_config_loader: AgentConfigLoader = AgentConfigLoader()
+
 
 
     def get_session_data(self, ui_session_id: str) -> Dict[str, Any]:
@@ -73,9 +77,10 @@ class UItoAgentBridgeManager:
         Raises:
             Exception: If agent initialization fails
         """
+        agent_key: str = persona_name
 
         # If updating existing session, use that ID, otherwise generate new one - this will transfer chat history
-        ui_session_id = existing_ui_session_id if existing_ui_session_id else str(uuid.uuid4())
+        ui_session_id = existing_ui_session_id if existing_ui_session_id else MnemonicSlugs.generate_slug(3)
 
         # Extract custom_prompt explicitly to avoid it being lost or overridden
         custom_prompt = kwargs.pop('custom_prompt', None)
@@ -87,17 +92,17 @@ class UItoAgentBridgeManager:
         async with self._locks[ui_session_id]:
             # Get existing session data if updating
             existing_session = self.ui_sessions.get(ui_session_id, {})
-            existing_agent: BaseAgent | None = existing_session.get("agent", None)
+            existing_agent_bridge: AgentBridge | None = existing_session.get("agent_bridge", None)
 
             # IMPORTANT FIX: If we're changing models and no custom_prompt was passed with the model change,
             # but the existing agent has one, we need to preserve it
-            if existing_agent and custom_prompt is None and existing_agent.custom_prompt:
+            if existing_agent_bridge and custom_prompt is None and existing_agent_bridge.custom_prompt:
                 # this should work even if custom_prompt==existing_agent.custom_prompt - will be same value
-                custom_prompt = existing_agent.custom_prompt
+                custom_prompt = existing_agent_bridge.custom_prompt
                 self.logger.info(f"Preserving existing custom_prompt: {custom_prompt[:10]}...")
 
             # Initialize agent bridge for this session - this creates a session manager that will persist history
-            agent = AgentBridge(
+            agent_bridge = AgentBridge(
                 user_id=ui_session_id,
                 backend=backend,
                 model_name=llm_model,
@@ -109,11 +114,11 @@ class UItoAgentBridgeManager:
             )
 
             # If updating existing session, transfer necessary session manager to preserve chat history
-            if existing_agent:
-                agent.session_manager = existing_agent.session_manager
+            if existing_agent_bridge:
+                agent_bridge.session_manager = existing_agent_bridge.session_manager
 
             # Now initialize the agent. This fully initializes the agent and its tools as well - with a passed in session manager
-            await agent.initialize()
+            await agent_bridge.initialize()
 
             # Create a cancellation event for this session
             cancel_event = threading.Event()
@@ -121,15 +126,15 @@ class UItoAgentBridgeManager:
             
             # Update sessions dictionary
             self.ui_sessions[ui_session_id] = {
-                "agent": agent,
+                "agent_bridge": agent_bridge,
                 "llm_model": llm_model,
-                "created_at": agent._current_timestamp(),
+                "created_at": agent_bridge._current_timestamp(),
                 "agent_name": f"Agent_{ui_session_id}",
-                "agent_c_session_id": agent.session_id,
+                "agent_c_session_id": agent_bridge.session_id,
                 "cancel_event": cancel_event
             }
 
-            self.logger.info(f"Session {ui_session_id} created with agent: {agent}")
+            self.logger.info(f"Session {ui_session_id} created with agent: {agent_bridge}")
             return ui_session_id
 
     async def cleanup_session(self, ui_session_id: str):

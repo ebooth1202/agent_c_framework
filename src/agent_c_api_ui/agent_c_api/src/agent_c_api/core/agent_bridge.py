@@ -8,6 +8,8 @@ from typing import Union, List, Dict, Any, AsyncGenerator, Optional
 from datetime import datetime, timezone
 
 from agent_c import BaseAgent
+from agent_c.config.agent_config_loader import AgentConfigLoader
+from agent_c.models.agent_config import AgentConfigurationV2, AgentConfiguration
 from agent_c_api.config.env_config import settings, Settings
 
 from agent_c.models.input.image_input import ImageInput
@@ -15,7 +17,7 @@ from agent_c.models.input.audio_input import AudioInput
 from agent_c.models.input.file_input import FileInput
 from agent_c.prompting.basic_sections.persona import DynamicPersonaSection
 from agent_c.agents import GPTChatAgent
-from agent_c.agents.claude import ClaudeChatAgent
+from agent_c.agents.claude import ClaudeChatAgent, ClaudeBedrockChatAgent
 from agent_c.models.events import SessionEvent
 from agent_c.models.input import AudioInput
 from agent_c_api.core.file_handler import FileHandler
@@ -56,6 +58,7 @@ class AgentBridge:
     def __init__(self, user_id: str = 'default', session_manager: Union[ChatSessionManager, None] = None,
                  backend: str = 'openai', model_name: str = 'gpt-4o', persona_name: str = 'default',
                  custom_prompt: str = None,
+                 agent_key: str = None,
                  essential_tools: List[str] = None,
                  additional_tools: List[str] = None,
                  file_handler: Optional[FileHandler] = None,
@@ -85,6 +88,8 @@ class AgentBridge:
         # Agent events setup, must come first
         self.__init_events()
 
+        self.agent_config: Optional[AgentConfiguration] = None
+
         # Debugging and Logging Setup
         logging_manager = LoggingManager(__name__)
         self.logger = logging_manager.get_logger()
@@ -106,7 +111,8 @@ class AgentBridge:
         # - Model Name: The model name used for the agent, defaults to 'gpt-4o'
         self.backend = backend
         self.model_name = model_name
-        self.agent: Optional[BaseAgent] = None
+        self.agent_key = agent_key
+        self.agent_runtime: Optional[BaseAgent] = None
         self.agent_output_format = kwargs.get('output_format', 'raw')
 
         # Non-Reasoning Models Parameters
@@ -289,7 +295,7 @@ class AgentBridge:
         }
         # Reinitialize just the tool chest
         await self.tool_chest.set_active_toolsets(self.additional_toolsets, tool_opts=tool_opts)
-        self.agent.prompt_builder.tool_sections = self.tool_chest.active_tool_sections
+        self.agent_runtime.prompt_builder.tool_sections = self.tool_chest.active_tool_sections
 
         self.logger.info(f"Tools updated successfully. Current Active tools: {list(self.tool_chest.active_tools.keys())}")
 
@@ -443,7 +449,16 @@ class AgentBridge:
             agent_params["budget_tokens"] = budget_tokens
             self.logger.debug(f"Setting agent budget_tokens to {budget_tokens}")
 
-            self.agent = ClaudeChatAgent(**agent_params)
+            self.agent_runtime = ClaudeChatAgent(**agent_params)
+        elif self.backend == 'bedrock':
+            # Add Claude-specific parameters
+            # Because claude.py only includes completion params for budget_tokens > 0
+            # we can set it to 0 and it won't affect 3.5 or 3.7 models.
+            budget_tokens = self.budget_tokens if self.budget_tokens is not None else 0
+            agent_params["budget_tokens"] = budget_tokens
+            self.logger.debug(f"Setting agent budget_tokens to {budget_tokens}")
+
+            self.agent_runtime =  ClaudeBedrockChatAgent(**agent_params)
         else:
             # Add OpenAI-specific parameters
             # Only pass reasoning_effort if it's set and we're using a reasoning model
@@ -452,7 +467,7 @@ class AgentBridge:
                     for reasoning_model in ["o1", "o1-mini", "o3", "o3-mini"]):
                         agent_params["reasoning_effort"] = self.reasoning_effort
 
-            self.agent = GPTChatAgent(**agent_params)
+            self.agent_runtime = GPTChatAgent(**agent_params)
 
         self.logger.info(f"Agent initialized using the following parameters: {agent_params}")
 
@@ -953,7 +968,7 @@ class AgentBridge:
 
             # Start the chat task
             chat_task = asyncio.create_task(
-                self.agent.chat(**chat_params)
+                self.agent_runtime.chat(**chat_params)
             )
 
             while True:
