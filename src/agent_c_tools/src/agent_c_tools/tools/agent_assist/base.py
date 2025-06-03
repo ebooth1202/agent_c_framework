@@ -77,8 +77,9 @@ class AgentAssistToolBase(Toolset):
     async def _handle_complete_thought(self, agent: AgentConfiguration, event: CompleteThoughtEvent):
         await self._emit_content_from_agent(agent, event.content, name=f"{agent.name} (thinking)")
 
-    async def _streaming_callback_for_subagent(self, agent: AgentConfiguration, parent_streaming_callback, event: SessionEvent):
+    async def _streaming_callback_for_subagent(self, agent: AgentConfiguration, parent_streaming_callback, parent_session_id, event: SessionEvent):
         if event.type not in [ 'completion', 'interaction', 'history'] and parent_streaming_callback is not None:
+            event.session_id = parent_session_id
             await parent_streaming_callback(event)
 
         # self.logger.info(event.type)
@@ -133,7 +134,7 @@ class AgentAssistToolBase(Toolset):
 
         prompt_metadata = await self.__build_prompt_metadata(agent, user_session_id, **opts)
         chat_params = {"prompt_metadata": prompt_metadata, "output_format": 'raw',
-                       "streaming_callback": partial(self._streaming_callback_for_subagent, agent, parent_streaming_callback),
+                       "streaming_callback": partial(self._streaming_callback_for_subagent, agent, parent_streaming_callback, user_session_id),
                        "client_wants_cancel": client_wants_cancel, "tool_chest": self.tool_chest
                        }
 

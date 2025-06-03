@@ -52,19 +52,21 @@ class AgentAssistTools(AgentAssistToolBase):
         )
 
         messages = await self.agent_oneshot(request, agent, tool_context['session_id'], tool_context)
-        last_message = messages[-1] if messages else None
-        content = last_message.get('content', {})
-        if 'text' in content:
-            response_text = content['text']
-        else:
-            response_text = last_message
+        await self._raise_render_media(
+            sent_by_class=self.__class__.__name__,
+            sent_by_function='chat',
+            content_type="text/html",
+            content=markdown.markdown(f"Interaction complete for Agent Assist oneshot with {agent.name}. Control returned to requesting agent.")
+        )
 
-        agent_response = yaml.dump(last_message, allow_unicode=True) if last_message else "No response from agent."
-        # await self._raise_render_media(
-        #     sent_by_class=self.__class__.__name__,
-        #     sent_by_function='oneshot',
-        #     content_type="text/html",
-        #     content=markdown.markdown(f"**{agent.name}** response:\n\n{response_text}"))
+        last_message = messages[-1] if messages else None
+
+        if last_message is not None:
+            yaml_response = yaml.dump(last_message, allow_unicode=True)
+            agent_response = f"**IMPORTANT**: The following response is also displayed in the UI for the user, you do not need to relay it.\n\nAgent Response:\n{yaml_response}"
+        else:
+            agent_response = "No response received from the agent."
+
 
         return agent_response
 
@@ -107,11 +109,17 @@ class AgentAssistTools(AgentAssistToolBase):
         )
 
         agent_session_id, messages = await self.agent_chat(message, agent, tool_context['session_id'], agent_session_id, tool_context)
-
+        await self._raise_render_media(
+            sent_by_class=self.__class__.__name__,
+            sent_by_function='chat',
+            content_type="text/html",
+            content=markdown.markdown(f"Interaction complete for Agent Assist Session ID: {agent_session_id} with {agent.name}. Control returned to requesting agent.")
+        )
         if messages is not None and len(messages) > 0:
             last_message = messages[-1]
             agent_response = yaml.dump(last_message, allow_unicode=True)
-            return f"Agent Session ID: {agent_session_id}\n{agent_response}"
+
+            return f"**IMPORTANT**: The following response is also displayed in the UI for the user, you do not need to relay it.\n\nAgent Session ID: {agent_session_id}\n{agent_response}"
 
         return f"No messages returned from agent session {agent_session_id}."
 

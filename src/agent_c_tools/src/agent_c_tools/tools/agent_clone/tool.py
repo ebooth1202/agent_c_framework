@@ -68,24 +68,20 @@ class AgentCloneTools(AgentAssistToolBase):
         )
 
         messages =  await self.agent_oneshot(request, agent, tool_context['session_id'], tool_context)
+        await self._raise_render_media(
+            sent_by_class=self.__class__.__name__,
+            sent_by_function='chat',
+            content_type="text/html",
+            content=markdown.markdown(f"Interaction complete for Agent Clone oneshot. Control returned to prime agent.")
+        )
         last_message = messages[-1] if messages else None
         if last_message is not None:
             content = last_message.get('content', None)
 
             if content is not None:
                 agent_response = yaml.dump(content[-1], allow_unicode=True).replace("\\n", "\n")
-                if 'text' in content:
-                    response_text = content['text']
-                else:
-                    response_text = agent_response
 
-                # await self._raise_render_media(
-                #     sent_by_class=self.__class__.__name__,
-                #     sent_by_function='oneshot',
-                #     content_type="text/html",
-                #     content=markdown.markdown(f"**{agent.name}** Response:\n\n{response_text}")
-                # )
-                return agent_response
+                return f"**IMPORTANT**: The following response is also displayed in the UI for the user, you do not need to relay it.\n---\n\n{agent_response}"
 
         return "No response from agent. Tell the user to check the server error logs for more information."
 
@@ -139,25 +135,18 @@ class AgentCloneTools(AgentAssistToolBase):
         )
 
         agent_session_id, messages = await self.agent_chat(message, agent, tool_context['session_id'], agent_session_id, tool_context)
-
+        await self._raise_render_media(
+            sent_by_class=self.__class__.__name__,
+            sent_by_function='chat',
+            content_type="text/html",
+            content=markdown.markdown(f"Interaction complete for Agent Clone Session ID: {agent_session_id}. Control returned to prime agent.")
+        )
         last_message = messages[-1] if messages else None
         if last_message is not None:
             content = last_message.get('content', None)
             if content is not None:
                 agent_response = yaml.dump(content[-1], allow_unicode=True).replace("\\n", "\n")
-                if 'text' in content:
-                    response_text = content['text']
-                else:
-                    response_text = agent_response
-
-                # await self._raise_render_media(
-                #     sent_by_class=self.__class__.__name__,
-                #     sent_by_function='chat',
-                #     content_type="text/html",
-                #     content=markdown.markdown(f"**'{agent.name}'** Response:\n\n{response_text}")
-                # )
-
-                return f"Agent Session ID: {agent_session_id}\n{agent_response}"
+                return f"**IMPORTANT**: The following response is also displayed in the UI for the user, you do not need to relay it.\n\nAgent Session ID: {agent_session_id}\n{agent_response}"
 
         return "No response from agent. Tell the user to check the server error logs for more information."
 
