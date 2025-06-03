@@ -291,6 +291,8 @@ class ClaudeChatAgent(BaseAgent):
                                           messages, callback_opts)
         elif event_type == "content_block_start":
             await self._handle_content_block_start(event, state, callback_opts)
+        elif event_type == "content_block_stop":
+            await self._handle_content_block_end(event, state, callback_opts)
         elif event_type == "input_json":
             self._handle_input_json(event, state)
         elif event_type == "text":
@@ -367,18 +369,21 @@ class ClaudeChatAgent(BaseAgent):
         """Process the thought buffer, handling escape sequences."""
         processed = self.process_escapes(state['think_escape_buffer'])
         state['think_escape_buffer'] = ""  # Clear the buffer after processing
+        complete: bool = False
 
         # Check if we've hit the end of the JSON
         if processed.endswith('"}'):
             state['think_tool_state'] = ThinkToolState.INACTIVE
             # Remove closing quote and brace
             processed = processed[:-2]
+            complete = True
 
         await self._raise_thought_delta(processed, **callback_opts)
+        if complete:
+            await self._raise_complete_thought(processed, **callback_opts)
 
 
-    async def _handle_message_stop(self, event, state, tool_chest, session_manager,
-                                  messages, callback_opts):
+    async def _handle_message_stop(self, event, state, tool_chest, session_manager, messages, callback_opts):
         """Handle the message_stop event."""
         state['output_tokens'] = event.message.usage.output_tokens
         state['complete'] = True
@@ -397,11 +402,15 @@ class ClaudeChatAgent(BaseAgent):
         #await self._save_interaction_to_session(session_manager, assistant_content)
 
         # Update messages
-        messages.append({'role': 'assistant', 'content': state['model_outputs']})
+        msg = {'role': 'assistant', 'content': state['model_outputs']}
+        messages.append(msg)
+        await self._raise_history_delta([msg], **callback_opts)
         if session_manager is not None:
             session_manager.active_memory.messages = messages
 
-
+    async def _handle_content_block_end(self, event, state, callback_opts):
+        if state['current_block_type'] == "thinking":
+            await self._raise_complete_thought(state['current_thought']['thinking'], **callback_opts)
 
     async def _handle_content_block_start(self, event, state, callback_opts):
         """Handle the content_block_start event."""

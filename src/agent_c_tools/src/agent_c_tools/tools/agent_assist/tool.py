@@ -53,12 +53,18 @@ class AgentAssistTools(AgentAssistToolBase):
 
         messages = await self.agent_oneshot(request, agent, tool_context['session_id'], tool_context)
         last_message = messages[-1] if messages else None
+        content = last_message.get('content', {})
+        if 'text' in content:
+            response_text = content['text']
+        else:
+            response_text = last_message
+
         agent_response = yaml.dump(last_message, allow_unicode=True) if last_message else "No response from agent."
-        await self._raise_render_media(
-            sent_by_class=self.__class__.__name__,
-            sent_by_function='oneshot',
-            content_type="text/html",
-            content=markdown.markdown(f"**{agent.name}** response:\n\n{agent_response.replace('text: "', "text: \"\n\n")}"))
+        # await self._raise_render_media(
+        #     sent_by_class=self.__class__.__name__,
+        #     sent_by_function='oneshot',
+        #     content_type="text/html",
+        #     content=markdown.markdown(f"**{agent.name}** response:\n\n{response_text}"))
 
         return agent_response
 
@@ -97,7 +103,7 @@ class AgentAssistTools(AgentAssistToolBase):
             sent_by_class=self.__class__.__name__,
             sent_by_function='chat',
             content_type="text/html",
-            content=markdown.markdown(f"**Domo agent** requesting assistance from '*{agent.name}*': \n\n{message.replace('text: "', "text: \"\n\n")}")
+            content=markdown.markdown(f"**Domo agent** requesting assistance from '*{agent.name}*': \n\n{message}")
         )
 
         agent_session_id, messages = await self.agent_chat(message, agent, tool_context['session_id'], agent_session_id, tool_context)
@@ -105,13 +111,6 @@ class AgentAssistTools(AgentAssistToolBase):
         if messages is not None and len(messages) > 0:
             last_message = messages[-1]
             agent_response = yaml.dump(last_message, allow_unicode=True)
-            content = markdownify(agent_response, heading_style='ATX', escape_asterisks=False, escape_underscores=False)
-            await self._raise_render_media(
-                sent_by_class=self.__class__.__name__,
-                sent_by_function='oneshot',
-                content_type="text/html",
-                content=markdown.markdown(f"**{agent.name}** Response:\n\n{content}")
-            )
             return f"Agent Session ID: {agent_session_id}\n{agent_response}"
 
         return f"No messages returned from agent session {agent_session_id}."

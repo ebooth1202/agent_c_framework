@@ -71,6 +71,11 @@ class ThoughtDeltaEvent(TextDeltaEvent):
         super().__init__(type = "thought_delta", **data)
         self.role = self.role + " (thought)"
 
+class CompleteThoughtEvent(TextDeltaEvent):
+    def __init__(self, **data):
+        super().__init__(type = "complete_thought", **data)
+        self.role = self.role + " (thought)"
+
 class ReceivedAudioDeltaEvent(SessionEvent):
     """
     Sent to notify the UI that a chunk of audio has been received from the competion API.
@@ -93,3 +98,12 @@ class HistoryEvent(SessionEvent):
         super().__init__(type = "history", **data)
 
     messages: List[dict] = Field(..., description="The list of messages in the current chat history")
+
+class HistoryDeltaEvent(SessionEvent):
+    """
+    Sent to notify the UI that messages have been added to the history.
+    """
+    def __init__(self, **data):
+        super().__init__(type = "history_delta", **data)
+
+    messages: List[dict] = Field(..., description="The list of messages that have been added to the history")

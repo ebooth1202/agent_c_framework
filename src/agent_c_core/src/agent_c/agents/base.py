@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Union, Optional, Callable, Awaitable, Tuple
 
 from agent_c.chat import ChatSessionManager
 from agent_c.models import ChatEvent, ImageInput
-from agent_c.models.events.chat import ThoughtDeltaEvent
+from agent_c.models.events.chat import ThoughtDeltaEvent, HistoryDeltaEvent, CompleteThoughtEvent
 from agent_c.models.input import FileInput, AudioInput
 from agent_c.models.events import ToolCallEvent, InteractionEvent, TextDeltaEvent, HistoryEvent, CompletionEvent, ToolCallDeltaEvent, SystemMessageEvent
 from agent_c.prompting.prompt_builder import PromptBuilder
@@ -138,7 +138,7 @@ class BaseAgent:
     async def _render_contexts(self, **kwargs) -> Tuple[dict[str, Any], dict[str, Any]]:
         tool_call_context = kwargs.get("tool_call_context", {})
         tool_call_context['streaming_callback'] = kwargs.get("streaming_callback", self.streaming_callback)
-        tool_call_context['colling_model_name'] = kwargs.get("model_name", self.model_name)
+        tool_call_context['calling_model_name'] = kwargs.get("model_name", self.model_name)
         prompt_context = kwargs.get("prompt_metadata", {})
         prompt_builder: Union[PromptBuilder, None] = kwargs.get("prompt_builder", self.prompt_builder)
 
@@ -221,6 +221,14 @@ class BaseAgent:
         await self._raise_event(SystemMessageEvent(role="system", severity=severity, content=content,
                                                    session_id=data.get("session_id", "none")))
 
+    async def _raise_history_delta(self, messages, **data):
+        """
+        Raise a system event to the event stream.
+        """
+        data['role'] = data.get('role', 'assistant')
+        data['session_id'] = data.get("session_id", "none")
+        await self._raise_event(HistoryDeltaEvent(messages=messages, **data))
+
     async def _raise_completion_start(self, comp_options, **data):
         """
         Raise a completion start event to the event stream.
@@ -269,6 +277,10 @@ class BaseAgent:
 
     async def _raise_thought_delta(self, content: str, **data):
         await self._raise_event(ThoughtDeltaEvent(content=content, **data))
+
+    async def _raise_complete_thought(self, content: str, **data):
+        data['role'] = data.get('role', 'assistant')
+        await self._raise_event(CompleteThoughtEvent(content=content,  **data))
 
     async def _raise_history_event(self, messages: List[dict[str, Any]], **data):
         await self._raise_event(HistoryEvent(messages=messages, **data))

@@ -56,8 +56,8 @@ class AgentCloneTools(AgentAssistToolBase):
 
         tools: List[str] = [tool for tool in active_tools_names if tool != 'AgentCloneTools']
         slug = MnemonicSlugs.generate_id_slug(2)
-        agent = AgentConfigurationV2(name=f"Agent Clone - {slug}", model_id=tool_context['colling_model_name'], agent_description="A clone of the user agent",
-                                     agent_params=ClaudeReasoningParams(model_name=tool_context['colling_model_name'], budget_tokens=20000),
+        agent = AgentConfigurationV2(name=f"Agent Clone - {slug}", model_id=tool_context['calling_model_name'], agent_description="A clone of the user agent",
+                                     agent_params=ClaudeReasoningParams(model_name=tool_context['calling_model_name'], budget_tokens=20000),
                                      persona=enhanced_persona, tools=tools)
 
         await self._raise_render_media(
@@ -71,14 +71,20 @@ class AgentCloneTools(AgentAssistToolBase):
         last_message = messages[-1] if messages else None
         if last_message is not None:
             content = last_message.get('content', None)
+
             if content is not None:
                 agent_response = yaml.dump(content[-1], allow_unicode=True).replace("\\n", "\n")
-                await self._raise_render_media(
-                    sent_by_class=self.__class__.__name__,
-                    sent_by_function='oneshot',
-                    content_type="text/html",
-                    content=markdown.markdown(f"**{agent.name}** Response:\n\n{agent_response.replace('text: "', "text: \"\n\n")}")
-                )
+                if 'text' in content:
+                    response_text = content['text']
+                else:
+                    response_text = agent_response
+
+                # await self._raise_render_media(
+                #     sent_by_class=self.__class__.__name__,
+                #     sent_by_function='oneshot',
+                #     content_type="text/html",
+                #     content=markdown.markdown(f"**{agent.name}** Response:\n\n{response_text}")
+                # )
                 return agent_response
 
         return "No response from agent. Tell the user to check the server error logs for more information."
@@ -120,8 +126,8 @@ class AgentCloneTools(AgentAssistToolBase):
 
         tools: List[str] = [tool for tool in active_tools_names if tool != 'AgentCloneTools']
         slug = MnemonicSlugs.generate_id_slug(2)
-        agent = AgentConfigurationV2(name=f"Agent Clone", model_id=tool_context['colling_model_name'], agent_description="A clone of the user agent",
-                                     agent_params=ClaudeReasoningParams(model_name=tool_context['colling_model_name'], budget_tokens=20000),
+        agent = AgentConfigurationV2(name=f"Agent Clone", model_id=tool_context['calling_model_name'], agent_description="A clone of the user agent",
+                                     agent_params=ClaudeReasoningParams(model_name=tool_context['calling_model_name'], budget_tokens=20000),
                                      persona=enhanced_persona, tools=tools)
         content = markdownify(message, heading_style='ATX', escape_asterisks=False, escape_underscores=False)
         await self._raise_render_media(
@@ -138,12 +144,17 @@ class AgentCloneTools(AgentAssistToolBase):
             content = last_message.get('content', None)
             if content is not None:
                 agent_response = yaml.dump(content[-1], allow_unicode=True).replace("\\n", "\n")
-                await self._raise_render_media(
-                    sent_by_class=self.__class__.__name__,
-                    sent_by_function='chat',
-                    content_type="text/html",
-                    content=markdown.markdown(f"**'{agent.name}'** Response:\n\n{agent_response.replace('text: "', "text: \"\n\n")}")
-                )
+                if 'text' in content:
+                    response_text = content['text']
+                else:
+                    response_text = agent_response
+
+                # await self._raise_render_media(
+                #     sent_by_class=self.__class__.__name__,
+                #     sent_by_function='chat',
+                #     content_type="text/html",
+                #     content=markdown.markdown(f"**'{agent.name}'** Response:\n\n{response_text}")
+                # )
 
                 return f"Agent Session ID: {agent_session_id}\n{agent_response}"
 
