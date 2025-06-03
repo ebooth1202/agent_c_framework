@@ -123,9 +123,19 @@ class AgentCloneTools(AgentAssistToolBase):
 
         tools: List[str] = [tool for tool in active_tools_names if tool != 'AgentCloneTools']
         slug = MnemonicSlugs.generate_id_slug(2)
-        agent = AgentConfigurationV2(name=f"Agent Clone - {slug}", model_id=tool_context['calling_model_name'], agent_description="A clone of the user agent",
-                                     agent_params=ClaudeReasoningParams(model_name=tool_context['calling_model_name'], budget_tokens=20000),
-                                     persona=enhanced_persona, tools=tools)
+
+        if agent_session_id is None:
+            agent_session_id = MnemonicSlugs.generate_id_slug(2)
+
+        agent_key = f"clone_{agent_session_id}"
+        agent = self.agent_loader.catalog.get(agent_key, None)
+        if self.agent_loader.catalog.get(agent_key, None) is None:
+            agent = AgentConfigurationV2(name=f"Agent Clone - {agent_session_id}", model_id=tool_context['calling_model_name'], agent_description="A clone of the user agent",
+                                         agent_params=ClaudeReasoningParams(model_name=tool_context['calling_model_name'], budget_tokens=20000),
+                                         persona=enhanced_persona, tools=tools, key=agent_key)
+            self.agent_loader.catalog[agent_key] = agent
+
+
 
         await self._raise_render_media(
             sent_by_class=self.__class__.__name__,

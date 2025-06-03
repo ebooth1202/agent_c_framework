@@ -161,7 +161,9 @@ class AgentBridge:
         self.tool_cache = ToolCache(cache_dir=self.tool_cache_dir)
 
         if essential_tools is None:
-            self.essential_toolsets = ['WorkspaceTools', 'ThinkTools', 'WorkspacePlanningTools', 'MarkdownToHtmlReportTools']
+            self.essential_toolsets = ['WorkspaceTools', 'ThinkTools',
+                                       'WorkspacePlanningTools', 'MarkdownToHtmlReportTools',
+                                       'AgentAssistTools']
         else:
             self.essential_toolsets = essential_tools
         self.additional_toolsets = additional_tools or []
@@ -579,6 +581,10 @@ class AgentBridge:
             "severity": event.severity
         }) + "\n"
 
+    @staticmethod
+    async def _ignore_event(_: SessionEvent):
+        return None
+
     async def _handle_tool_select_delta(self, event):
         """Handle tool selection events from the agent"""
         # self.logger.debug(f"tool SELECT delta event. {event.model_dump()}")
@@ -841,7 +847,8 @@ class AgentBridge:
             "tool_select_delta": self._handle_tool_select_delta,
             "message": self._handle_message,
             "system_message": self._handle_system_message,
-
+            "history_delta": self._ignore_event,
+            "complete_thought": self._ignore_event,
         }
 
         handler = handlers.get(event.type)
@@ -851,13 +858,10 @@ class AgentBridge:
                 if payload is not None and hasattr(self, "_stream_queue"):
                     await self._stream_queue.put(payload)
 
-                    # If this is the end-of-stream event, push finaly payload and then a termination marker.
+                    # If this is the end-of-stream event, push final payload and then a termination marker.
                     if event.type == "interaction" and not event.started:
                         await self._stream_queue.put(payload)
                         await self._stream_queue.put(None)
-
-                else:
-                    self.logger.debug(f"Payload is None: {payload is None}, hasattr(self, '_stream_queue'): {hasattr(self, "_stream_queue")}")
 
 
             except Exception as e:

@@ -29,9 +29,9 @@ class AgentAssistTools(AgentAssistToolBase):
                 'description': 'A question, or request for the agent.',
                 'required': True
             },
-            'agent_id': {
+            'agent_key': {
                 'type': 'string',
-                'description': 'The ID of the agent to make a request of.',
+                'description': 'The ID key of the agent to make a request of.',
                 'required': True
             },
         }
@@ -40,9 +40,9 @@ class AgentAssistTools(AgentAssistToolBase):
         request: str = kwargs.get('request')
         tool_context: Dict[str, Any] = kwargs.get('tool_context')
         try:
-            agent = self.agent_loader.catalog[kwargs.get('agent_id')]
+            agent = self.agent_loader.catalog[kwargs.get('agent_key')]
         except FileNotFoundError:
-            return f"Error: Agent {kwargs.get('agent_id')} not found in catalog."
+            return f"Error: Agent {kwargs.get('agent_key')} not found in catalog."
 
         await self._raise_render_media(
             sent_by_class=self.__class__.__name__,
@@ -79,9 +79,9 @@ class AgentAssistTools(AgentAssistToolBase):
                 'description': 'The message .',
                 'required': True
             },
-            'agent_id': {
+            'agent_key': {
                 'type': 'string',
-                'description': 'The ID of the agent to chat with.',
+                'description': 'The ID key of the agent to chat with.',
                 'required': True
             },
             'session_id': {
@@ -97,9 +97,9 @@ class AgentAssistTools(AgentAssistToolBase):
         agent_session_id: Optional[str] = kwargs.get('session_id', None)
 
         try:
-            agent = self.agent_loader.catalog[kwargs.get('agent_id')]
+            agent = self.agent_loader.catalog[kwargs.get('agent_key')]
         except FileNotFoundError:
-            return f"Error: Agent {kwargs.get('agent_id')} not found in catalog."
+            return f"Error: Agent {kwargs.get('agent_key')} not found in catalog."
 
         await self._raise_render_media(
             sent_by_class=self.__class__.__name__,
@@ -135,8 +135,8 @@ class AgentAssistTools(AgentAssistToolBase):
     )
     async def load_agent(self, **kwargs) -> str:
         try:
-            return self.agent_loader.catalog[kwargs.get('agent_id')].to_yaml()
-        except FileNotFoundError:
+            return yaml.dump(self.agent_loader.catalog[kwargs.get('agent_id')].model_dump(), allow_unicode=True)
+        except Exception:
             return f"Error: Agent {kwargs.get('agent_id')} not found in catalog."
 
 # Register the toolset
