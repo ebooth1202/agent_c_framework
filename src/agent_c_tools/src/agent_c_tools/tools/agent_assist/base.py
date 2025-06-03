@@ -53,12 +53,6 @@ class AgentAssistToolBase(Toolset):
         self.persona_cache: Dict[str, AgentConfiguration] = {}
         self.workspace_tool: Optional[WorkspaceTools] = None
 
-    async def _streaming_callback(self, event: SessionEvent):
-        """
-        Callback for streaming events.
-        """
-        if event.type in ['text_delta', 'thought_delta', 'tool_call', 'render_media']:
-            await self.streaming_callback(event)
 
     async def _emit_content_from_agent(self, agent: AgentConfiguration, content: str, name: Optional[str] = None):
         if name is None:
@@ -81,11 +75,20 @@ class AgentAssistToolBase(Toolset):
             await self._emit_content_from_agent(agent, "\n\n".join(content))
 
     async def _handle_complete_thought(self, agent: AgentConfiguration, event: CompleteThoughtEvent):
-        await self._emit_content_from_agent(agent, event.thought, name=f"{agent.name} (thinking)")
+        await self._emit_content_from_agent(agent, event.content, name=f"{agent.name} (thinking)")
 
-    async def _streaming_callback_for_subagent(self, agent: AgentConfiguration, event: SessionEvent):
-        if event.type == 'history_delta':
-            await self._handle_history_delta(agent, event)
+    async def _streaming_callback_for_subagent(self, agent: AgentConfiguration, parent_streaming_callback, event: SessionEvent):
+        if event.type not in [ 'completion', 'interaction', 'history'] and parent_streaming_callback is not None:
+            await parent_streaming_callback(event)
+
+        # self.logger.info(event.type)
+        # if event.type == 'history_delta':
+        #     await self._handle_history_delta(agent, event)
+        # elif event.type == 'complete_thought':
+        #     await self._handle_complete_thought(agent, event)
+        # elif event.type == "tool_call":
+        #     if parent_streaming_callback is not None:
+        #         await parent_streaming_callback(event)
 
     async def post_init(self):
         self.workspace_tool = cast(WorkspaceTools, self.tool_chest.available_tools.get('WorkspaceTools'))
@@ -115,19 +118,22 @@ class AgentAssistToolBase(Toolset):
     async def __chat_params(self, agent: AgentConfiguration, agent_runtime: BaseAgent, user_session_id: Optional[str] = None, **opts) -> Dict[str, Any]:
         tool_params = {}
         client_wants_cancel = self.client_wants_cancel
+        parent_streaming_callback = self.streaming_callback
+
         if opts:
             parent_tool_context = opts.get('parent_tool_context', None)
             if parent_tool_context is not None:
                 client_wants_cancel = opts['parent_tool_context'].get('client_wants_cancel', self.client_wants_cancel)
-
+                parent_streaming_callback = opts['parent_tool_context'].get('streaming_callback', self.streaming_callback)
 
             tool_context = opts.get("tool_call_context", {})
             tool_context['active_agent'] = agent
             opts['tool_call_context'] = tool_context
 
+
         prompt_metadata = await self.__build_prompt_metadata(agent, user_session_id, **opts)
         chat_params = {"prompt_metadata": prompt_metadata, "output_format": 'raw',
-                       "streaming_callback": partial(self._streaming_callback_for_subagent, agent),
+                       "streaming_callback": partial(self._streaming_callback_for_subagent, agent, parent_streaming_callback),
                        "client_wants_cancel": client_wants_cancel, "tool_chest": self.tool_chest
                        }
 

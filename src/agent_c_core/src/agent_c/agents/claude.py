@@ -180,7 +180,7 @@ class ClaudeChatAgent(BaseAgent):
                     messages = result
                 except RateLimitError:
                     self.logger.warning(f"Ratelimit. Retrying...Delay is {delay} seconds")
-                    await self._raise_system_event(f"Claude API is overloaded, retrying... Delay is {delay} seconds \n", severity="warning", **callback_opts)
+                    await self._raise_system_event(f"Rate limit reach, slowing down... Delay is {delay} seconds \n", severity="warning", **callback_opts)
                     delay = await self._handle_retryable_error(delay)
                 except APITimeoutError:
                     self.logger.warning(f"API Timeout. Retrying...Delay is {delay} seconds")

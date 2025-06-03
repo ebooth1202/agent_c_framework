@@ -916,10 +916,6 @@ class AgentBridge:
                         input_types[type(input_obj).__name__] += 1
                     self.logger.info(f"Processing {len(file_inputs)} files: {input_types}")
 
-            # Set the agent’s streaming callback to our consolidated version.
-            original_callback = self.agent.streaming_callback
-            self.agent.streaming_callback = self.streaming_callback_with_logging
-
             prompt_metadata = await self.__build_prompt_metadata()
 
             # Prepare chat parameters
@@ -930,6 +926,7 @@ class AgentBridge:
                 "prompt_metadata": prompt_metadata,
                 "output_format": 'raw',
                 "client_wants_cancel": client_wants_cancel,
+                "streaming_callback": self.streaming_callback_with_logging,
             }
 
             # Categorize file inputs by type to pass to appropriate parameters
@@ -995,8 +992,6 @@ class AgentBridge:
                     break
 
             await chat_task
-            # Restore the original callback
-            self.agent.streaming_callback = original_callback
             await self.session_manager.flush()
 
         except Exception as e:
