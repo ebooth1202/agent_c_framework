@@ -55,10 +55,8 @@ class AgentBridge:
         - File handling capabilities
     """
 
-    def __init__(self, user_id: str = 'default', session_manager: Union[ChatSessionManager, None] = None,
-                 backend: str = 'openai', model_name: str = 'gpt-4o', persona_name: str = 'default',
-                 custom_prompt: str = None,
-                 agent_key: str = None,
+    def __init__(self, agent_config:AgentConfiguration, user_id: str = 'default', session_manager: Union[ChatSessionManager, None] = None,
+                 backend: str = 'openai', model_name: str = 'gpt-4o',
                  essential_tools: List[str] = None,
                  additional_tools: List[str] = None,
                  file_handler: Optional[FileHandler] = None,
@@ -88,7 +86,7 @@ class AgentBridge:
         # Agent events setup, must come first
         self.__init_events()
 
-        self.agent_config: Optional[AgentConfiguration] = None
+        self.agent_config: Optional[AgentConfiguration] = agent_config
 
         # Debugging and Logging Setup
         logging_manager = LoggingManager(__name__)
@@ -103,7 +101,7 @@ class AgentBridge:
 
         self.debug_event = None
 
-        self.agent_name = kwargs.get('agent_name', None)  # Debugging only
+        self.agent_name = kwargs.get('agent_name', self.agent_config.name)  # Debugging only
 
         # Initialize Core Class, there's quite a bit here, so let's go through this.
         # Agent Characteristics
@@ -111,7 +109,6 @@ class AgentBridge:
         # - Model Name: The model name used for the agent, defaults to 'gpt-4o'
         self.backend = backend
         self.model_name = model_name
-        self.agent_key = agent_key
         self.agent_runtime: Optional[BaseAgent] = None
         self.agent_output_format = kwargs.get('output_format', 'raw')
 
@@ -138,20 +135,10 @@ class AgentBridge:
 
         # Agent persona management, pass in the persona name and we'll initialize the persona text now
         # we will pass in custom text later
-        self.persona_name = persona_name
-        self.custom_prompt = custom_prompt
+        self.persona_name = None
+        self.custom_prompt = None
 
-        if self.persona_name is None or self.persona_name == '':
-            self.persona_name = 'default'
-
-        if self.custom_prompt is None:
-            try:
-                self.logger.info(f"Loading persona file for {self.persona_name} because custom_prompt is None")
-                self.custom_prompt = self.__load_persona(self.persona_name)
-            except Exception as e:
-                self.logger.error(f"Error loading persona {self.persona_name}: {e}")
-        else:
-            self.logger.info(f"Using provided custom_prompt: {self.custom_prompt[:10]}...")
+        self.logger.info(f"Using provided agent config : {self.agent_config.key}...")
 
         # Chat Management, this is where the agent stores the chat history
         self.current_chat_Log: Union[List[Dict], None] = None
@@ -159,21 +146,10 @@ class AgentBridge:
         # Tool Chest, Cache, and Setup
         # - Tool Chest: A collection of toolsets that the agent can use, Set to None initialization.
         # - Tool Cache: A cache for storing tool data, set to a default directory.
-        # - Additional Tools: A list of additional toolsets to add to the tool chest, this is where use passes in other toolsets
-        # - Selected Tools: A list of toolsets that the agent will use, this is a combination of essential toolsets and additional toolsets.
         # - Output Tool Arguments: A placeholder for tool argument output preference.
         self.tool_chest: Union[ToolChest, None] = None
         self.tool_cache_dir = kwargs.get("tool_cache_dir", ".tool_cache")
         self.tool_cache = ToolCache(cache_dir=self.tool_cache_dir)
-
-        if essential_tools is None:
-            self.essential_toolsets = ['WorkspaceTools', 'ThinkTools',
-                                       'WorkspacePlanningTools', 'MarkdownToHtmlReportTools',
-                                       'AgentAssistTools']
-        else:
-            self.essential_toolsets = essential_tools
-        self.additional_toolsets = additional_tools or []
-        self.selected_tools = self.essential_toolsets + self.additional_toolsets
         self.output_tool_arguments = True  # Placeholder for tool argument output preference
 
         # Agent Workspace Setup
@@ -198,35 +174,6 @@ class AgentBridge:
         self.debug_event = LoggingManager.get_debug_event()
 
 
-    def __load_persona(self, persona_name: str = None) -> str:
-        """
-        Load the persona prompt from a file based on the given persona name.
-
-        Returns:
-            str: Loaded persona prompt text.
-
-        Raises:
-            Exception: If the persona file cannot be loaded.
-        """
-        if persona_name is None or persona_name == '' or persona_name.lower() == 'custom':
-            return ''
-        try:
-            self.logger.info(f"Agent {self.agent_name} is loading persona: {self.persona_name}")
-            persona_path = os.path.join('personas', f"{self.persona_name}.md")
-
-            # If persona file exists, read it
-            if os.path.exists(persona_path):
-                with open(persona_path, 'r') as file:
-                    return file.read()
-
-            # If no persona file, return empty string
-            self.logger.warning(f"No persona file found for {self.persona_name}. ")
-            return ''
-
-        except Exception as e:
-            self.logger.error(f"Error loading persona {self.persona_name}: {e}")
-            return ''
-
     def __init_workspaces(self):
         """
         Initialize the agent's workspaces by loading local workspace configurations.
@@ -234,7 +181,7 @@ class AgentBridge:
         local_project = LocalProjectWorkspace()
         self.workspaces = [local_project]
         self.logger.info(f"Agent {self.agent_name} initialized workspaces {local_project.workspace_root}")
-
+        # TODO: ALLOWED / DISALLOWED WORKSPACES from agent config
         try:
             with open('.local_workspaces.json', 'r') as json_file:
                 local_workspaces = json.load(json_file)
@@ -278,12 +225,9 @@ class AgentBridge:
             - Agent is reinitialized with new tools while maintaining the session
         """
         self.logger.info(f"Requesting new tool list for agent {self.agent_name} to: {new_tools}")
+        self.agent_config.tools = new_tools
 
-        # Remove duplicates and ensure essential tools are included
-        all_tools = list(set(self.essential_toolsets + new_tools))
 
-        self.additional_toolsets = [t for t in new_tools if t not in self.essential_toolsets]
-        self.selected_tools = all_tools
 
         # Ensure you grab all the necessary options for the tool chest
         tool_opts = {
@@ -294,7 +238,7 @@ class AgentBridge:
             'model_configs': MODELS_CONFIG
         }
         # Reinitialize just the tool chest
-        await self.tool_chest.set_active_toolsets(self.additional_toolsets, tool_opts=tool_opts)
+        await self.tool_chest.activate_toolset(self.agent_config.tools)
         self.agent_runtime.prompt_builder.tool_sections = self.tool_chest.active_tool_sections
 
         self.logger.info(f"Tools updated successfully. Current Active tools: {list(self.tool_chest.active_tools.keys())}")
@@ -322,7 +266,6 @@ class AgentBridge:
         Attributes:
             self.tool_chest (ToolChest): The tool chest instance containing the initialized tools.
             self.tool_cache (ToolCache): Cache manager for tool-related data.
-            self.selected_tools (list): Names of tools selected for initialization.
             self.logger (Logger): Logger instance for logging messages.
             self.agent_name (str): The name of the agent using this tool chest.
 
@@ -333,7 +276,7 @@ class AgentBridge:
         Returns:
             None
         """
-        self.logger.info(f"Requesting initialization of these tools: {self.selected_tools}")
+        self.logger.info(f"Requesting initialization of these tools: {self.agent_config.tools} for agent {self.agent_name}")
 
         # self.tool_cache = ToolCache(cache_dir=".tool_cache") # self.tool_cache is already initialized in __init__
 
@@ -347,31 +290,25 @@ class AgentBridge:
             }
 
             # Initialize the tool chest with essential tools first
-            self.tool_chest = ToolChest(essential_toolsets=self.essential_toolsets, **tool_opts)
+            self.tool_chest = ToolChest(**tool_opts)
 
             # Initialize the tool chest essential tools
             await self.tool_chest.init_tools(tool_opts)
+            await self.tool_chest.activate_toolset(self.agent_config.tools)
             self.logger.info(
                 f"Agent {self.agent_name} successfully initialized essential tools: {list(self.tool_chest.active_tools.keys())}")
-
-            if len(self.additional_toolsets):
-                await self.tool_chest.set_active_toolsets(self.additional_toolsets, tool_opts=tool_opts)
-                self.logger.info(
-                    f"Agent {self.agent_name} successfully initialized additional tools: {list(self.tool_chest.active_tools.keys())}")
-
-
 
             # Usually it's a misspelling of the tool class name from the LLM
             initialized_tools = set(self.tool_chest.active_tools.keys())
 
             # Find tools that were selected but not initialized
             uninitialized_tools = [
-                tool_name for tool_name in self.selected_tools
+                tool_name for tool_name in self.agent_config.tools
                 if tool_name not in initialized_tools
             ]
             if uninitialized_tools:
                 self.logger.warning(
-                    f"The following selected tools were not initialized: {uninitialized_tools} for Agent {self.agent_name}")
+                    f"The following selected tools were not initialized: {uninitialized_tools} for Agent {self.agent_config.name}")
         except Exception as e:
             self.logger.exception("Error initializing tools: %s", e, exc_info=True)
 
@@ -493,7 +430,8 @@ class AgentBridge:
             "current_user_username": self.session_manager.user.user_id,
             "current_user_name": self.session_manager.user.first_name,
             "session_summary": self.session_manager.chat_session.active_memory.summary,
-            "persona_prompt": self.custom_prompt,
+            "persona_prompt": self.agent_config.persona,
+            "agent": self.agent_config,
             "voice_tools": self.voice_tools,  # Add voice tools to metadata
             "timestamp": datetime.now().isoformat(),
             "env_name": os.getenv('ENV_NAME', 'development'),
@@ -510,7 +448,7 @@ class AgentBridge:
         """
         return datetime.now(timezone.utc).isoformat()
 
-    def _get_agent_config(self) -> Dict[str, Any]:
+    def get_agent_runtime_config(self) -> Dict[str, Any]:
         """
         Get the current configuration of the agent.
 
@@ -525,7 +463,6 @@ class AgentBridge:
             'initialized_tools': [],
             'agent_name': self.agent_name,
             'agent_session_id': self.session_id,
-            'custom_prompt': self.custom_prompt,
             'output_format': self.agent_output_format,
             'created_time': self._current_timestamp(),
             'temperature': self.temperature,
@@ -884,7 +821,7 @@ class AgentBridge:
         else:
             self.logger.warning(f"Unhandled event type: {event.type}")
 
-    async def stream_chat(self, user_message: str, custom_prompt: str = None, file_ids: List[str] = None, client_wants_cancel: Optional[threading.Event] = None):
+    async def stream_chat(self, user_message: str,  file_ids: List[str] = None, client_wants_cancel: Optional[threading.Event] = None):
         """
         Streams chat responses for a given user message.
 
@@ -921,9 +858,6 @@ class AgentBridge:
         try:
             await self.session_manager.update()
 
-            if custom_prompt is not None:
-                self.custom_prompt = custom_prompt
-
             file_inputs = []
             if file_ids and self.file_handler:
                 file_inputs = await self.process_files_for_message(file_ids, self.user_id)
@@ -936,7 +870,6 @@ class AgentBridge:
                     self.logger.info(f"Processing {len(file_inputs)} files: {input_types}")
 
             prompt_metadata = await self.__build_prompt_metadata()
-
             # Prepare chat parameters
             chat_params = {
                 "streaming_queue": queue,
@@ -946,7 +879,14 @@ class AgentBridge:
                 "output_format": 'raw',
                 "client_wants_cancel": client_wants_cancel,
                 "streaming_callback": self.streaming_callback_with_logging,
+                'tool_call_context':{'active_agent':self.agent_config }
             }
+
+            tool_params = {}
+            if len(self.agent_config.tools):
+                await self.tool_chest.initialize_toolsets(self.agent_config.tools)
+                tool_params = self.tool_chest.get_inference_data(self.agent_config.tools, self.agent_runtime.tool_format)
+                tool_params["toolsets"] = self.agent_config.tools
 
             # Categorize file inputs by type to pass to appropriate parameters
             image_inputs = [input_obj for input_obj in file_inputs
@@ -966,9 +906,11 @@ class AgentBridge:
             if document_inputs:
                 chat_params["files"] = document_inputs
 
+            full_params = chat_params | tool_params
+
             # Start the chat task
             chat_task = asyncio.create_task(
-                self.agent_runtime.chat(**chat_params)
+                self.agent_runtime.chat(**full_params)
             )
 
             while True:

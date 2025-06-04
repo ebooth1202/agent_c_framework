@@ -352,7 +352,7 @@ class SessionService:
             return None
             
         # Get agent configuration using the agent's method
-        agent_config = agent._get_agent_config()
+        agent_config = agent.get_agent_runtime_config()
         if not agent_config:
             return None
             

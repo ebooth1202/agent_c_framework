@@ -226,6 +226,22 @@ class AgentConfigLoader(ConfigLoader):
 
         return agent_config
 
+    def duplicate(self, agent_key: str) -> AgentConfiguration:
+        """
+        Duplicate an existing agent configuration.
+
+        Args:
+            agent_key: The key of the agent to duplicate.
+
+        Returns:
+            A new AgentConfiguration object with a unique key.
+        """
+        original_config = self._fetch_agent_config(agent_key)
+        if not original_config:
+            raise ValueError(f"Agent {agent_key} does not exist.")
+
+        return AgentConfigurationV2(**original_config.model_dump(exclude_none=True))
+
     @property
     def catalog(self) -> Dict[str, AgentConfiguration]:
         """Returns a catalog of all agent configurations."""

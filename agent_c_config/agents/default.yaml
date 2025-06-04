@@ -17,7 +17,7 @@ prompt_metadata:
   example_object:
     key: "value"
 category:
-  - "agent_assist"
+  - "domo"
   - "default"
 
 persona: |

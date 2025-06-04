@@ -108,12 +108,11 @@ async def get_agent_config(ui_session_id: str, agent_manager=Depends(get_agent_m
             raise HTTPException(status_code=404, detail="Session not found")
 
         agent_bridge = session_data["agent_bridge"]
-        config = agent_bridge._get_agent_config()
+        config = agent_bridge.get_agent_runtime_config()
 
         # Add additional configuration info
         config.update({
             "user_id": config["user_id"],
-            "custom_prompt": config["custom_prompt"],
             "ui_session_id": ui_session_id,
             "agent_c_session_id": session_data.get("agent_c_session_id"),
             "backend": config["backend"],
@@ -178,7 +177,7 @@ async def get_agent_tools(ui_session_id: str, agent_manager=Depends(get_agent_ma
             raise HTTPException(status_code=404, detail="Session not found")
 
         agent_bridge: AgentBridge = session_data["agent_bridge"]
-        config = agent_bridge._get_agent_config()
+        config = agent_bridge.get_agent_runtime_config()
         logger.info(f"Session {ui_session_id} requested tools config: {config['initialized_tools']}")
 
         return {
