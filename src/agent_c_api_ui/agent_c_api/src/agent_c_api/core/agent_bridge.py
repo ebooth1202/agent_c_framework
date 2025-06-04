@@ -176,14 +176,6 @@ class AgentBridge:
         """
         return self.chat_session.messages
 
-    async def __init_session(self):
-        """
-        Initialize the chat session for the agent, including setting up the session manager.
-        """
-        self.logger.info(f"Initializing session for agent {self.agent_name} with session ID: {self.chat_session.session_id}")
-        self.session_id = self.chat_session.session_id
-        self.logger.info(f"Agent {self.agent_name} completed session initialization: {self.session_id}")
-
     async def update_tools(self, new_tools: List[str]):
         """
         Updates the agent's tools without reinitializing the entire agent.
@@ -373,7 +365,7 @@ class AgentBridge:
 
     async def reset_streaming_state(self):
         """Reset streaming state to ensure clean session"""
-        self.logger.info(f"Resetting streaming state for session {self.session_id}")
+        self.logger.info(f"Resetting streaming state for session {self.chat_session.session_id}")
         self._stream_queue = asyncio.Queue()
 
     async def __build_prompt_metadata(self) -> Dict[str, Any]:
@@ -389,7 +381,7 @@ class AgentBridge:
             - persona_prompt (str): Prompt for the persona.
         """
         return {
-            "session_id": self.session_id,
+            "session_id": self.chat_session.session_id,
             "current_user_username": self.chat_session.user_id,
             "persona_prompt": self.chat_session.agent_config.persona,
             "agent_config": self.chat_session.agent_config,
@@ -421,7 +413,7 @@ class AgentBridge:
             'initialized_tools': [],
             'agent_name': self.agent_name,
             'user_session_id': self.chat_session.session_id,
-            'agent_session_id': self.session_id,
+            'agent_session_id': self.chat_session.session_id,
             'output_format': self.agent_output_format,
             'created_time': self._current_timestamp(),
             'temperature': self.temperature,
@@ -709,7 +701,6 @@ class AgentBridge:
         """
         Asynchronously initialize the agent's session, tool chest, and internal agent configuration.
         """
-        await self.__init_session()
         await self.__init_tool_chest()
         await self.initialize_agent_parameters()
 

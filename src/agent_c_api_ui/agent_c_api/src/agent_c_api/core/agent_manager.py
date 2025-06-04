@@ -135,7 +135,7 @@ class UItoAgentBridgeManager:
                 "llm_model": llm_model,
                 "created_at": agent_bridge._current_timestamp(),
                 "agent_name": f"Agent_{ui_session_id}",
-                "agent_c_session_id": agent_bridge.session_id,
+                "agent_c_session_id": agent_bridge.chat_session.session_id,
                 "cancel_event": cancel_event,
                 "agent_config": agent_config,
                 "chat_session": chat_session

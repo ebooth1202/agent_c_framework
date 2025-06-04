@@ -148,10 +148,10 @@ class BaseAgent:
         Returns a dictionary of options for the callback method to be used by default.
         """
         agent_role: str = kwargs.get("agent_role", 'assistant')
-        session_manager: Union[ChatSessionManager, None] = kwargs.get("session_manager", None)
+        chat_session: Optional[ChatSession] = kwargs.get("chat_session", None)
 
-        if session_manager is not None:
-            session_id = session_manager.chat_session.session_id
+        if chat_session is not None:
+            session_id = chat_session.session_id
         else:
             session_id = kwargs.get("session_id", "unknown")
 
