@@ -1,7 +1,27 @@
 from pydantic import Field
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 
 from agent_c.models.events.session_event import SessionEvent
+
+class SystemPromptEvent(SessionEvent):
+    """
+    Sent to notify the UI that the system prompt has been updated.
+    """
+    def __init__(self, **data):
+        super().__init__(type = "system_prompt", **data)
+
+    content: str = Field(..., description="The content of the system prompt")
+    format: str = Field("markdown", description="The format of the content, default is markdown")
+
+class UserRequestEvent(SessionEvent):
+    """
+    Sent to notify the UI that a user request has been initiated.
+    This is typically used to indicate that the user has requested a new interaction.
+    """
+    def __init__(self, **data):
+        super().__init__(type = "user_request", **data)
+
+    data: Dict[str, Any] = Field(..., description="The data associated with the user request, such as the input text or other parameters")
 
 class InteractionEvent(SessionEvent):
     """

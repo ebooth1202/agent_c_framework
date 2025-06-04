@@ -153,7 +153,8 @@ class ClaudeChatAgent(BaseAgent):
         tool_chest = opts['tool_chest']
         session_manager: Union[ChatSessionManager, None] = kwargs.get("session_manager", None)
         messages = opts["completion_opts"]["messages"]
-
+        await self._raise_system_prompt(opts["completion_opts"]["system"], **callback_opts)
+        await self._raise_user_request(kwargs.get('user_message', ''), **callback_opts)
         delay = 1  # Initial delay between retries
         async with (self.semaphore):
             interaction_id = await self._raise_interaction_start(**callback_opts)

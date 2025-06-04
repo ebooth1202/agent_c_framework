@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Union, Optional, Callable, Awaitable, Tuple
 from agent_c.models.chat_history.chat_session import ChatSession
 from agent_c.chat.session_manager import ChatSessionManager
 from agent_c.models import ChatEvent, ImageInput
-from agent_c.models.events.chat import ThoughtDeltaEvent, HistoryDeltaEvent, CompleteThoughtEvent
+from agent_c.models.events.chat import ThoughtDeltaEvent, HistoryDeltaEvent, CompleteThoughtEvent, SystemPromptEvent, UserRequestEvent
 from agent_c.models.input import FileInput, AudioInput
 from agent_c.models.events import ToolCallEvent, InteractionEvent, TextDeltaEvent, HistoryEvent, CompletionEvent, ToolCallDeltaEvent, SystemMessageEvent
 from agent_c.prompting.prompt_builder import PromptBuilder
@@ -116,10 +116,6 @@ class BaseAgent:
     async def chat(self, **kwargs) -> List[dict[str, Any]]:
         """For chat interactions"""
         raise NotImplementedError
-
-
-    async def _save_user_message_to_session(self, mgr: ChatSessionManager, user_message: str):
-        return await self._save_message_to_session(mgr, user_message, "user")
 
     async def _render_contexts(self, **kwargs) -> Tuple[dict[str, Any], dict[str, Any]]:
         tool_call_context = kwargs.get("tool_call_context", {})
@@ -258,6 +254,14 @@ class BaseAgent:
     async def _raise_tool_call_start(self, tool_calls, **data):
         streaming_callback = data.pop('streaming_callback', None)
         await self._raise_event(ToolCallEvent(active=True, tool_calls=tool_calls, **data), streaming_callback=streaming_callback )
+
+    async def _raise_system_prompt(self, prompt: str, **data):
+        streaming_callback = data.pop('streaming_callback', None)
+        await self._raise_event(SystemPromptEvent(content=prompt, **data), streaming_callback=streaming_callback )
+
+    async def _raise_user_request(self, request: str, **data):
+        streaming_callback = data.pop('streaming_callback', None)
+        await self._raise_event(UserRequestEvent(data={"message": request}, **data), streaming_callback=streaming_callback )
 
     async def _raise_tool_call_delta(self, tool_calls, **data):
         streaming_callback = data.pop('streaming_callback', None)

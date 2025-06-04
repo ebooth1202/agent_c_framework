@@ -76,6 +76,7 @@ class AgentBridge:
         # Agent events setup, must come first
         self.__init_events()
         self.chat_session = chat_session
+        self.sections = kwargs.get('sections', None)  # Sections for the prompt builder, if any
 
         # Debugging and Logging Setup
         logging_manager = LoggingManager(__name__)
@@ -155,7 +156,7 @@ class AgentBridge:
         """
         local_project = LocalProjectWorkspace()
         self.workspaces = [local_project]
-        self.logger.info(f"Agent {self.agent_name} initialized workspaces {local_project.workspace_root}")
+        self.logger.info(f"Agent {self.chat_session.agent_config.key} initialized workspaces {local_project.workspace_root}")
         # TODO: ALLOWED / DISALLOWED WORKSPACES from agent config
         try:
             with open('.local_workspaces.json', 'r') as json_file:
@@ -838,6 +839,26 @@ class AgentBridge:
                 await self.tool_chest.initialize_toolsets(self.chat_session.agent_config.tools)
                 tool_params = self.tool_chest.get_inference_data(self.chat_session.agent_config.tools, self.agent_runtime.tool_format)
                 tool_params["toolsets"] = self.chat_session.agent_config.tools
+
+            if self.sections is not None:
+                agent_sections = self.sections
+            elif "ThinkTools" in self.chat_session.agent_config.tools:
+                agent_sections = [ThinkSection(), DynamicPersonaSection()]
+            else:
+                agent_sections = [DynamicPersonaSection()]
+
+            chat_params = {
+                "streaming_queue": queue,
+                "user_id": self.chat_session.user_id,
+                "chat_session": self.chat_session,
+                "user_message": user_message,
+                "prompt_metadata": prompt_metadata,
+                "output_format": 'raw',
+                "client_wants_cancel": client_wants_cancel,
+                "streaming_callback": self.streaming_callback_with_logging,
+                'tool_call_context': {'active_agent': self.chat_session.agent_config},
+                'prompt_builder': PromptBuilder(sections=agent_sections)
+            }
 
             # Categorize file inputs by type to pass to appropriate parameters
             image_inputs = [input_obj for input_obj in file_inputs
