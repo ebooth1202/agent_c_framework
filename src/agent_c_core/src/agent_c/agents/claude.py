@@ -134,9 +134,7 @@ class ClaudeChatAgent(BaseAgent):
         if len(functions):
             completion_opts['tools'] = functions
 
-        session_manager: Union[ChatSessionManager, None] = kwargs.get("session_manager", None)
-        if session_manager is not None:
-            completion_opts["metadata"] = {'user_id': session_manager.user.user_id}
+        completion_opts["metadata"] = {'user_id': kwargs.get('user_id', 'Agent C user')}
 
         opts = {"callback_opts": callback_opts, "completion_opts": completion_opts, 'tool_chest': tool_chest, 'tool_context': tool_context}
         return opts
@@ -159,7 +157,7 @@ class ClaudeChatAgent(BaseAgent):
         delay = 1  # Initial delay between retries
         async with (self.semaphore):
             interaction_id = await self._raise_interaction_start(**callback_opts)
-            while delay <= self.max_delay:
+            while delay <= self.max_delay and not client_wants_cancel.is_set():
                 try:
                     # Stream handling encapsulated in a helper method
                     result, state = await self._handle_claude_stream(
@@ -223,6 +221,7 @@ class ClaudeChatAgent(BaseAgent):
         # Initialize state trackers
         state = self._init_stream_state()
         state['interaction_id'] = interaction_id
+
 
         async with self.client.beta.messages.stream(**completion_opts) as stream:
             async for event in stream:

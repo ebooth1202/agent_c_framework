@@ -4,7 +4,9 @@ from typing import Any, Optional, Dict, cast, List
 import yaml
 
 from agent_c.util.slugs import MnemonicSlugs
-from agent_c import json_schema, BaseAgent, DynamicPersonaSection
+from agent_c.toolsets import json_schema
+
+from agent_c.prompting.basic_sections.persona import DynamicPersonaSection
 from agent_c.models.completion import ClaudeReasoningParams
 from agent_c.models.agent_config import AgentConfiguration, AgentConfigurationV2
 from agent_c.toolsets.tool_set import Toolset

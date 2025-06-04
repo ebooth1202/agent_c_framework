@@ -1,11 +1,10 @@
 import os
 import glob
 import yaml
-import uuid
 from pathlib import Path
 from typing import Dict, Any, Optional, List, TypeVar
 
-from agent_c import ModelConfigurationFile
+from agent_c.models import ModelConfigurationFile
 from agent_c.config import ModelConfigurationLoader
 from agent_c.config.config_loader import ConfigLoader
 from agent_c.models.agent_config import (
@@ -14,6 +13,7 @@ from agent_c.models.agent_config import (
     AgentConfiguration,  # Union type
     CurrentAgentConfiguration  # Latest version alias
 )
+from agent_c.util import MnemonicSlugs
 from agent_c.util.logging_utils import LoggingManager
 
 # Type variable for configuration versions
@@ -108,7 +108,7 @@ class AgentConfigLoader(ConfigLoader):
 
         # Add uid if missing
         if 'uid' not in data:
-            data['uid'] = str(uuid.uuid5(uuid.NAMESPACE_DNS, file_contents))
+            data['uid'] =  MnemonicSlugs.generate_id_slug(3, file_contents)
 
         # Transform agent_params to match completion parameter models
         self._transform_agent_params(data)
@@ -353,27 +353,3 @@ def migrate_all_agents_in_place(config_path: str, backup_dir: str) -> Dict[str, 
     return loader.get_migration_report()
 
 
-# Example usage
-if __name__ == "__main__":
-    # Example 1: Load with auto-migration to latest
-    loader = AgentConfigLoader(
-        config_path="/path/to/config",
-        auto_migrate=True
-    )
-
-    # Get a specific agent (auto-migrated)
-    agent = loader._fetch_agent_config("my_agent")
-    print(f"Loaded agent: {agent.name} (version {loader._get_version(agent)})")
-
-    # Example 2: Load without migration
-    loader_no_migrate = AgentConfigLoader(
-        config_path="/path/to/config",
-        auto_migrate=False
-    )
-
-    # Example 3: Migrate all configs and save
-    report = migrate_all_agents_in_place(
-        config_path="/path/to/config",
-        backup_dir="/path/to/backups"
-    )
-    print(f"Migration report: {report}")

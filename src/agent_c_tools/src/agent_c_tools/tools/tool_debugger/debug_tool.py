@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Type, Optional, Union
 
 # Import the base ToolChest class
-from agent_c import ToolChest, ToolCache
+from agent_c.toolsets import ToolChest, ToolCache
 
 # Try to import python-dotenv for .env file loading
 try:

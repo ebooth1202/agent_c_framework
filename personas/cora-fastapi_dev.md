@@ -294,9 +294,6 @@ The MnemonicSlugs class provides:
 - mypy
 - httpx         
 
-
-
-
 ## Lessons Learned
 
 1. **FastAPI Caching Complexity**: The FastAPI cache system can cause unexpected issues in tests if not properly managed. Mocking service methods directly is more reliable than trying to mock data sources.
@@ -320,7 +317,7 @@ The MnemonicSlugs class provides:
   - `//core/agent_c/models/input` - Contains the various models used to provide user input to the agents.
 - `//core/src/agent_c/config` - Contains the framework configuration loaders. 
 - `//core/src/agent_c/models/model_config` - Contains the framework models for the model configuration files.
-- `//core/src/agent_c/models/persona_file.py` - Contains the framework model for a saved agent configuration with all the details necessary to create an agent.
+- `//core/src/agent_c/models/agent_config.py` - Contains the framework model for a saved agent configuration with all the details necessary to create an agent.
   - `//core/src/agent_c/models/completion` - Contains the framework models for the completion options for various backends the agents will use. 
 
 

@@ -95,7 +95,7 @@ async def update_agent_settings(
             "failed_updates": failed_updates
         }
     except Exception as e:
-        logger.error(f"Error updating settings for session {update_params.ui_session_id}: {str(e)}")
+        logger.exception(f"Error updating settings for session {update_params.ui_session_id}: {str(e)}", exc_info=True)
         return {"error": f"Failed to update settings: {str(e)}"}
 
 
@@ -112,10 +112,8 @@ async def get_agent_config(ui_session_id: str, agent_manager=Depends(get_agent_m
 
         # Add additional configuration info
         config.update({
-            "user_id": config["user_id"],
             "ui_session_id": ui_session_id,
-            "agent_c_session_id": session_data.get("agent_c_session_id"),
-            "backend": config["backend"],
+            "agent_c_session_id": session_data["agent_c_session_id"],
             "model_info": {
                 "name": config["model_name"],
                 "temperature": config["agent_parameters"]["temperature"],
@@ -133,7 +131,7 @@ async def get_agent_config(ui_session_id: str, agent_manager=Depends(get_agent_m
             "status": "success"
         }
     except Exception as e:
-        logger.error(f"Session {ui_session_id} - Error getting agent config: {e}")
+        logger.exception(f"Session {ui_session_id} - Error getting agent config: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

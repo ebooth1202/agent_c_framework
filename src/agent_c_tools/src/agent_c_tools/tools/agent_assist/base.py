@@ -7,18 +7,16 @@ from functools import partial
 from typing import Any, Dict, List, Optional, cast, Tuple
 
 import markdown
-import yaml
 
-from agent_c import PromptSection
-from agent_c.config.model_config_loader import ModelConfigurationLoader, ModelConfigurationFile
-from agent_c.config.agent_config_loader import AgentConfigLoader, CurrentAgentConfiguration
+from agent_c.prompting import PromptSection
+from agent_c.config.model_config_loader import ModelConfigurationLoader
+from agent_c.config.agent_config_loader import AgentConfigLoader
 from agent_c.models.events import SessionEvent
 from agent_c.models.events.chat import HistoryDeltaEvent, CompleteThoughtEvent
 from agent_c.util.slugs import MnemonicSlugs
 from agent_c.toolsets.tool_set import Toolset
 from agent_c.models.agent_config import AgentConfiguration
 from agent_c_tools.tools.agent_assist.expiring_session_cache import AsyncExpiringCache
-from agent_c_tools.tools.agent_clone.prompt import AgentCloneSection
 from agent_c_tools.tools.think.prompt import ThinkSection
 from agent_c.prompting.prompt_builder import PromptBuilder
 from agent_c_tools.tools.workspace.tool import WorkspaceTools

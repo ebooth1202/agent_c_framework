@@ -1,14 +1,13 @@
 import os
 import copy
-import yaml
 import asyncio
 
 from asyncio import Semaphore
 
 from typing import Any, Dict, List, Union, Optional, Callable, Awaitable, Tuple
 
-
-from agent_c.chat import ChatSessionManager
+from agent_c.models.chat_history.chat_session import ChatSession
+from agent_c.chat.session_manager import ChatSessionManager
 from agent_c.models import ChatEvent, ImageInput
 from agent_c.models.events.chat import ThoughtDeltaEvent, HistoryDeltaEvent, CompleteThoughtEvent
 from agent_c.models.input import FileInput, AudioInput
@@ -117,19 +116,6 @@ class BaseAgent:
     async def chat(self, **kwargs) -> List[dict[str, Any]]:
         """For chat interactions"""
         raise NotImplementedError
-
-    @staticmethod
-    async def _save_message_to_session(mgr: ChatSessionManager, text: str, role: str):
-        if mgr is not None:
-            msg =  {'role':role, 'content': text}
-
-            await mgr.add_message(msg)
-
-        return {"role": role, "content": text}
-
-
-    async def _save_interaction_to_session(self, mgr: ChatSessionManager, output_text: str):
-        return await self._save_message_to_session(mgr, output_text, "assistant")
 
 
     async def _save_user_message_to_session(self, mgr: ChatSessionManager, user_message: str):
@@ -340,31 +326,11 @@ class BaseAgent:
         Returns:
             List[dict[str, Any]]: Formatted message array for LLM API
         """
-        sess_mgr: Optional[ChatSessionManager] = kwargs.get("session_manager", None)
         messages: Optional[List[Dict[str, Any]]] = kwargs.get("messages", None)
-
-        if messages is None and sess_mgr is not None:
-           kwargs['messages'] = copy.deepcopy(sess_mgr.active_memory.messages)
-
-        user_message = kwargs.get("user_message")
-        audio_clips: List[AudioInput] = kwargs.get("audio") or []
-        images: List[ImageInput] = kwargs.get("images") or []
-        files: List[FileInput] = kwargs.get("files") or []
-
-        if sess_mgr is not None:
-            # TODO: Add the user message but we need to take into account multimodal messages
-            if user_message is None:
-                if len(audio_clips) > 0:
-                    user_message = audio_clips[0].transcript or "audio input"
-                    await self._save_user_message_to_session(sess_mgr, user_message)
-                # If no audio but we have files, record that files were submitted
-                elif images or files:
-                    user_message = "Files submitted"
-                    await self._save_user_message_to_session(sess_mgr, user_message)
-            elif user_message:
-                await self._save_user_message_to_session(sess_mgr, user_message)
-
-        # User request logging is now handled by EventSessionLogger via streaming_callback
+        if messages is None:
+            chat_session: Optional[ChatSession] = kwargs.get("chat_session", None)
+            messages = chat_session.messages if chat_session is not None else []
+            kwargs["messages"] = messages
 
         return await self.__construct_message_array(**kwargs)
 
