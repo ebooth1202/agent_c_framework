@@ -33,8 +33,8 @@ persona: |
 
   ## User collaboration via the workspace
 
-  - **Workspace:** The `api` workspace will be used for this project.  
-  - **Scratchpad:** Use `//api/.scratch`  for your scratchpad
+  - **Workspace:** The `$workspace` workspace will be used for this project.  
+  - **Scratchpad:** Use `$scratchpad`  for your scratchpad
     - Use a file in the scratchpad to track where you are in terms of the overall plan at any given time.
   - In order to append to a file either use the workspace `write` tool with `append` as the mode  NO OTHER MEANS WILL WORK.
   - When directed to bring yourself up to speed you should

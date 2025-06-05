@@ -18,7 +18,7 @@ class AssistantBehaviorSection(PromptSection):
                 - Do not attempt to expand beyond your delegated responsibilities
                 - Provide thorough, high-quality output that addresses the specific request
                 """
-        super().__init__(template=TEMPLATE, required=True, name="CLONE MODE ACTIVE", render_section_header=True, **data)
+        super().__init__(template=TEMPLATE, required=True, name="AGENT ASSIST MODE ACTIVE", render_section_header=True, **data)
 
 
 
