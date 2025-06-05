@@ -62,10 +62,10 @@ class ReverseEngineeringTools(AgentAssistToolBase):
         }
     )
     async def analyze_source(self, **kwargs) -> str:
-        client_wants_cancel: threading.Event = kwargs.get("client_wants_cancel")
+        tool_context: Dict[str, Any] = kwargs['tool_context']
+        client_wants_cancel: threading.Event = tool_context["client_wants_cancel"]
         glob: str = kwargs.get('glob')
         batch_size: int = kwargs.get('batch_size', 2)
-        tool_context: Dict[str, Any] = kwargs.get('tool_context')
         error, workspace, relative_path = self.workspace_tool.validate_and_get_workspace_path(glob)
         if error is not None:
             return f"Error: {error}"
@@ -99,11 +99,11 @@ class ReverseEngineeringTools(AgentAssistToolBase):
         }
     )
     async def analyze_tree(self, **kwargs) -> str:
-        client_wants_cancel: threading.Event = kwargs.get("client_wants_cancel")
+        tool_context: Dict[str, Any] = kwargs['tool_context']
+        client_wants_cancel: threading.Event = tool_context["client_wants_cancel"]
         start_path: str = kwargs.get('start_path')
         batch_size: int = kwargs.get('batch_size', 2)
         extensions: list[str] = kwargs.get('extensions', self.default_extensions)
-        tool_context: Dict[str, Any] = kwargs.get('tool_context')
         error, workspace, relative_path = self.workspace_tool.validate_and_get_workspace_path(start_path)
         if error is not None:
             return f"Error: {error}"
@@ -133,10 +133,11 @@ class ReverseEngineeringTools(AgentAssistToolBase):
         }
     )
     async def query_analysis(self, **kwargs) -> str:
-        client_wants_cancel: threading.Event = kwargs.get("client_wants_cancel")
+        tool_context: Dict[str, Any] = kwargs['tool_context']
+        client_wants_cancel: threading.Event = tool_context["client_wants_cancel"]
         request: str = kwargs.get('request')
         workspace_name: str = kwargs.get('workspace')
-        tool_context: Dict[str, Any] = kwargs.get('tool_context')
+
         workspace = self.workspace_tool.find_workspace_by_name(workspace_name)
         agent_config = self.recon_answers_oneshot.model_dump()
         agent_config['persona'] = agent_config['persona'].replace('[workspace]', workspace_name).replace('[workspace_tree]', await workspace.tree('.scratch/analyze_source/enhanced', 10, 5))
@@ -160,7 +161,8 @@ class ReverseEngineeringTools(AgentAssistToolBase):
             iterator = iter(files)
             while batch := list(itertools.islice(iterator, batch_size)):
                 if client_wants_cancel.is_set():
-                    await self._render_media_markdown("**Processing cancelled by user.**", "analyze_source", tool_context=tool_context)
+                    await self._render_media_markdown("**Processing cancelled by user.**",
+                                                      "analyze_source", tool_context=tool_context)
                     return pass_one_results
 
                 paths = "\n- ".join([f"//{workspace.name}/{file}" for file in batch])
