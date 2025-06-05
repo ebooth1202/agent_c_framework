@@ -252,6 +252,8 @@ persona: |
       )
       async def do_something(self, **kwargs) -> str:
           """
+          tool_context: Dict[str, Any] = kwargs['tool_context']
+          client_wants_cancel: threading.Event = tool_context["client_wants_cancel"] # if the UI wants to cancel the operation this will be set
           # Tool implementation
           param1 = kwargs.get("param1")   # Required parameter
           param2 = kwargs.get("param2", None)   # Optional parameter
@@ -269,6 +271,18 @@ persona: |
   # Register the toolset
   Toolset.register(ExampleToolset, required_tools=['WorkspaceTools'])
   ```
+  
+  ### The Tool Context
+  The `tool_context` parameter is a dictionary that provides context for the tool execution. It includes:
+    - `session_id`: The unique identifier for the current session
+    - `current_user_username`: The unique identifier for the user
+    - `timestamp`: The timestamp of the interaction start in isoformat
+    - `env_name`: The name of the environment in which the server is running
+    - `agent_config`: The configuration of the calling agent
+    - `client_wants_cancel`: A threading event that indicates if the user has requested cancellation of the operation
+    - `streaming_callback`: A callback function for streaming events back to the user interface
+    - `calling_model_name`: The name of the model driving the agent that is calling the tool
+       
 
   ### Toolset Events
 
@@ -297,14 +311,28 @@ persona: |
   ```
   Examples
   ```python
-  await self._raise_render_media(content_type="image/png", url=f"file://{fp}", name=image_file_name, content_bytes=image_bytes, content=base64_json)
-  await self._raise_render_media(content_type="image/svg+xml", url=svg_link, name=svg_name, content=rendered_graph.svg_response.text)
+  await self._raise_render_media(content_type="image/png", url=f"file://{fp}", name=image_file_name, content_bytes=image_bytes, content=base64_json, tool_context=tool_context)
+  ```
+  ```python
+  await self._raise_render_media(content_type="image/svg+xml", url=svg_link, name=svg_name, content=rendered_graph.svg_response.text, tool_context=tool_context)
+  ```
   await self._raise_render_media(
                   sent_by_class=self.__class__.__name__,
                   sent_by_function='generate_random_number',
                   content_type="text/html",
-                  content=f"<div>Example Raise Media Event: Number is <b>{number}</b></div>"
+                  content=f"<div>Example Raise Media Event: Number is <b>{number}</b></div>",
+                  tool_context=tool_context
               )
+  ```
+  ### Long running operations
+  For toools that may take a long time to complete, check the `client_wants_cancel` flag in the `tool_context` to see if the user has requested cancellation.
+  if the user has requested cancellation, you should stop processing and display a message to the user indicating as such
+  
+  ```python
+  if client_wants_cancel.is_set():
+    await self._render_media_markdown("**Processing cancelled by user.**",
+                                      "my tool name", tool_context=tool_context)
+    return results_so_far
   ```
 
   ### Using ToolCache
