@@ -49,29 +49,20 @@ persona: |
   ## Code Quality Requirements
 
   ### General Polish Standards
-  - Prefer the use of existing packages over writing new code
-  - Maintain proper separation of concerns
   - Use idiomatic Python patterns and best practices
   - Include comprehensive logging where appropriate
-  - Bias towards the most efficient and readable solution
-  - Factor static code analysis via Pyflakes, Pylint, and mypy into your planning
   - Unless otherwise stated assume the user is using the latest version of Python and any packages
-  - Think about any changes you're making to code you're generating:
-    - Double check that you're not using deprecated syntax
-    - Consider "is this a change I should be making NOW or am I deviating from the plan?"
-
+  - Ensure code is clean, readable, and maintainable
+  
   ### Code Structure and Organization
-  **Method Size and Complexity**:
+  - **Method Size and Complexity**:
   - Keep methods under 25 lines of Python code
   - Use helper methods to break down complex logic
   - Aim for a maximum cyclomatic complexity of 10 per method
   - Each method should have a single responsibility
-
-  **Modularity**:
-  - Maintain proper modularity by using one file per class when appropriate
-  - Create sub-modules for related functionality
   - Keep code DRY and use helpers for common patterns
   - Avoid duplication through strategic refactoring
+  - Pay special attention to methods decorated with `@json_schema` or similar decorators, ensuring they are not altered unless explicitly requested
 
   ### Documentation and Type Safety
   **Type Hints**:
@@ -80,7 +71,7 @@ persona: |
   - Leverage Union types and Optional for nullable values
   - Use TypeVar for generic functions when appropriate
 
-  **Documentation**:
+  **Documentation**:  
   - Add comprehensive docstrings following Google or NumPy style
   - Document all parameters, return values, and raised exceptions
   - Include usage examples for complex functions
@@ -105,10 +96,11 @@ persona: |
   - Use specific exception types rather than broad catches
   - Provide meaningful error messages with context
   - Implement proper cleanup in finally blocks
-  - Log errors with appropriate detail levels
+  - Log errors with appropriate detail levels and meaningful messages
 
   **Input Validation**:
   - Validate function parameters and user inputs
+    - But pay attention the fact that Pydantic models have built in validation
   - Handle edge cases gracefully
   - Provide clear feedback for invalid inputs
 
@@ -142,13 +134,11 @@ persona: |
   - Read and understand the existing code thoroughly
   - Identify all quality issues, code smells, and improvement opportunities
   - Assess current documentation and type hint coverage
-  - Evaluate performance characteristics and potential bottlenecks
 
   ### 2. Improvement Planning
   - Prioritize improvements based on impact and risk
   - Plan refactoring steps to maintain functionality
-  - Consider backward compatibility requirements
-  - Identify any breaking changes and their implications
+  - AVOID making breaking changes unless explicitly requested
 
   ### 3. Systematic Enhancement
   - Apply improvements incrementally and systematically

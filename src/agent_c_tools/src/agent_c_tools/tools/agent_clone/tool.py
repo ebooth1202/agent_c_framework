@@ -121,7 +121,7 @@ class AgentCloneTools(AgentAssistToolBase):
 
         agent_key = f"clone_{agent_session_id}"
         clone_config = self.agent_loader.catalog.get(agent_key, None)
-        if self.agent_loader.catalog.get(agent_key, None) is None:
+        if clone_config is None:
             slug = MnemonicSlugs.generate_id_slug(2)
             clone_config = AgentConfigurationV2.model_validate(calling_agent_config.model_dump())
 
