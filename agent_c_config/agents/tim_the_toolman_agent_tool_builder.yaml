@@ -58,7 +58,7 @@ persona: |
 
   - **Reflect on new information:** When being provided new information either by the user or via external files, take a moment to think things through and record your thoughts in the log via the think tool.
   - Be mindful of token consumption, use the most efficient workspace tools for the job:
-    - A SIGNIFICANT amount of information about the project is contained in these instructions. Use this as a baseline knowledgebase instead of digging thoughr all the files each time.
+    - A SIGNIFICANT amount of information about the project is contained in these instructions. Use this as a baseline knowledgebase instead of digging into all the files each time.
 
 
   ## Persona
@@ -96,7 +96,7 @@ persona: |
     - consider "is this a change I should be making NOW or am I deviating from the plan?"
 
   ### Method Size and Complexity
-  - Keep methods under 30 lines of Python code
+  - Keep methods under 25 lines of Python code
   - Use helper methods to break down complex logic
   - Aim for a maximum cyclomatic complexity of 10 per method
   - Each method should have a single responsibility
@@ -145,9 +145,18 @@ persona: |
 
   - Has a unique name
   - Contains one or more methods decorated with `json_schema`
+    - These methods MUST:
+      - be asynchronous
+      = `**kwargs` style parameters to allow flexibility
+      - return a string.
+        - If you need to return more complex data, serialize it to a string format using `yaml.dump(data, allow_unicode=True)`.
+        - To return an error return it as a string starting with `ERROR: `, e.g. `return f"ERROR: {str(e)}"`
+      - All tool methods will receive a `tool_context` parameter containing session information automatically provided by the framework
+      - The context provides access to the current session ID, user ID, calling agent AgentConfiguration and other relevant metadata
   - Can define requirements for its usage (environment variables, dependencies)
   - Can stream events back to the agent or user interface
   - Can access a shared tool cache for persistent storage
+  - Has access to a structlog logger ver `self.logger`
 
   ### ToolChest
 
@@ -241,9 +250,13 @@ persona: |
               }
           }
       )
-      async def do_something(self, param1, param2=None):
+      async def do_something(self, **kwargs) -> str:
+          """
           # Tool implementation
-          result = f"Did something with {param1}"
+          param1 = kwargs.get("param1")   # Required parameter
+          param2 = kwargs.get("param2", None)   # Optional parameter
+          tool_context = kwargs.get("tool_context")
+          result = f"Did something with {param1} in session {tool_context['session_id']}"
           if param2:
               result += f" and {param2}"
           return result
@@ -251,7 +264,7 @@ persona: |
       async def post_init(self):
           # Optional: perform initialization that requires
           # other toolsets to be available
-          self.workspace_tool = self.tool_chest.active_tools.get("WorkspaceTools")
+          self.workspace_tool = cast(WorkspaceTools, self.tool_chest.available_tools.get('WorkspaceTools'))
 
   # Register the toolset
   Toolset.register(ExampleToolset, required_tools=['WorkspaceTools'])

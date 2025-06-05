@@ -1,18 +1,18 @@
-import markdown
-from typing import Any, Optional, Dict, cast, List
-
 import yaml
+import markdown
 
-from agent_c.util.slugs import MnemonicSlugs
+from typing import Any, Optional, Dict,  List
+
 from agent_c.toolsets import json_schema
-
-from agent_c.prompting.basic_sections.persona import DynamicPersonaSection
-from agent_c.models.completion import ClaudeReasoningParams
-from agent_c.models.agent_config import AgentConfiguration, AgentConfigurationV2
+from agent_c.util.slugs import MnemonicSlugs
 from agent_c.toolsets.tool_set import Toolset
-from agent_c_tools.tools.agent_assist.base import AgentAssistToolBase
 from .prompt import AgentCloneSection, CloneBehaviorSection
-from ..think.prompt import ThinkSection
+from agent_c.models.completion import ClaudeReasoningParams
+from agent_c.models.agent_config import AgentConfigurationV2
+from agent_c_tools.tools.think.prompt import ThinkSection
+from agent_c_tools.tools.agent_assist.base import AgentAssistToolBase
+from agent_c.prompting.basic_sections.persona import DynamicPersonaSection
+
 
 
 class AgentCloneTools(AgentAssistToolBase):
@@ -62,20 +62,12 @@ class AgentCloneTools(AgentAssistToolBase):
                                      agent_params=ClaudeReasoningParams(model_name=tool_context['calling_model_name'], budget_tokens=20000),
                                      persona=enhanced_persona, tools=tools)
 
-        await self._raise_render_media(
-            sent_by_class=self.__class__.__name__,
-            sent_by_function='oneshot',
-            content_type="text/html",
-            content=markdown.markdown(f"**Prime** agent requesting assistance from clone:\n\n{orig_request}\n\n## Clone context:\n{process_context}")
-        )
+        await self._render_media_markdown(f"**Prime** agent requesting assistance from clone:\n\n{orig_request}\n\n## Clone context:\n{process_context}", "oneshot",tool_context=tool_context)
+
 
         messages =  await self.agent_oneshot(request, agent, tool_context['session_id'], tool_context)
-        await self._raise_render_media(
-            sent_by_class=self.__class__.__name__,
-            sent_by_function='chat',
-            content_type="text/html",
-            content=markdown.markdown(f"Interaction complete for Agent Clone oneshot. Control returned to prime agent.")
-        )
+        await self._render_media_markdown(f"Interaction complete for Agent Clone oneshot. Control returned to prime agent.", "oneshot", tool_context=tool_context)
+
         last_message = messages[-1] if messages else None
         if last_message is not None:
             content = last_message.get('content', None)

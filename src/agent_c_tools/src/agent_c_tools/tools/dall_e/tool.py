@@ -21,7 +21,6 @@ class DallETools(Toolset):
         super().__init__(**kwargs, name='dalle', tool_role="DALL-E 3")
         self.openai_client: AsyncOpenAI = kwargs.get('openai_client', AsyncOpenAI())
         self.section = DallESection()
-        self.username = kwargs.get('username', None)
         self.workspace = kwargs.get('dalle_workspace', None)
         if self.workspace is None:
             self.workspace_path = kwargs.get('dalle_workspace_path', os.environ.get('DALLE_IMAGE_SAVE_FOLDER', None))
@@ -31,8 +30,8 @@ class DallETools(Toolset):
                     self.workspace = LocalStorageWorkspace(workspace_path=self.workspace_path, max_size=sys.maxsize)
                     self.workspace_tool.add_workspace(self.workspace)
 
-        if self.session_manager is not None and self.session_manager.user is not None:
-            self.valid = True
+
+        self.valid = True
 
     @json_schema(
         'Call this to get an image from DALL-E-3 based on a prompt.',
