@@ -57,7 +57,8 @@ class AgentAssistTools(AgentAssistToolBase):
         )
 
         messages = await self.agent_oneshot(request, agent_config, tool_context['session_id'], tool_context,
-                                             process_context=process_context)
+                                             process_context=process_context,
+                                             client_wants_cancel=tool_context.get('client_wants_cancel', None))
         await self._raise_render_media(
             sent_by_class=self.__class__.__name__,
             sent_by_function='chat',
@@ -123,7 +124,12 @@ class AgentAssistTools(AgentAssistToolBase):
             tool_context=tool_context
         )
 
-        agent_session_id, messages = await self.agent_chat(message, agent_config, tool_context['session_id'], agent_session_id, tool_context, process_context=process_context)
+        agent_session_id, messages = await self.agent_chat(message, agent_config,
+                                                           tool_context['session_id'],
+                                                           agent_session_id,
+                                                           tool_context,
+                                                           process_context=process_context,
+                                                           client_wants_cancel=tool_context.get('client_wants_cancel', None))
         await self._raise_render_media(
             sent_by_class=self.__class__.__name__,
             sent_by_function='chat',

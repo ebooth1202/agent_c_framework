@@ -121,8 +121,9 @@ class BaseAgent:
         tool_call_context = kwargs.get("tool_call_context", {})
         tool_call_context['streaming_callback'] = kwargs.get("streaming_callback", self.streaming_callback)
         tool_call_context['calling_model_name'] = kwargs.get("model_name", self.model_name)
+        tool_call_context['client_wants_cancel'] = kwargs.get("client_wants_cancel")
         prompt_context = kwargs.get("prompt_metadata", {})
-        prompt_builder: Union[PromptBuilder, None] = kwargs.get("prompt_builder", self.prompt_builder)
+        prompt_builder: Optional[PromptBuilder] = kwargs.get("prompt_builder", self.prompt_builder)
 
         sys_prompt: str = "Warn the user there's no system prompt with each response."
         prompt_context["agent"] = self

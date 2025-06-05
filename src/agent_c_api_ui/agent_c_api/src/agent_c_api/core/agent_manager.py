@@ -197,19 +197,16 @@ class UItoAgentBridgeManager:
         if not session_data:
             raise ValueError(f"Invalid session ID: {ui_session_id}")
 
-        agent_bridge = session_data["agent_bridge"]
+        agent_bridge: AgentBridge = session_data["agent_bridge"]
 
         try:
             # Get the cancel event for this session
             cancel_event = self._cancel_events.get(ui_session_id)
-            opts = {'user_message': user_message,'client_wants_cancel': cancel_event}
 
-            # Pass file_ids to the agent's stream_chat method if it accepts them
-            if file_ids and hasattr(agent_bridge, "file_handler") and agent_bridge.file_handler is not None:
-                opts['file_ids'] = file_ids
+            if file_ids is None or agent_bridge.file_handler is None:
+                file_ids = []
 
-
-            async for chunk in agent_bridge.stream_chat(**opts):
+            async for chunk in agent_bridge.stream_chat(user_message, cancel_event, file_ids=file_ids):
                 yield chunk
 
         except Exception as e:

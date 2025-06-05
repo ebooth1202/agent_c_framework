@@ -148,7 +148,7 @@ class ClaudeChatAgent(BaseAgent):
     async def chat(self, **kwargs) -> List[dict[str, Any]]:
         """Main method for interacting with Claude API. Split into smaller helper methods for clarity."""
         opts = await self.__interaction_setup(**kwargs)
-        client_wants_cancel: threading.Event = kwargs.get("client_wants_cancel", threading.Event())
+        client_wants_cancel: threading.Event = kwargs.get("client_wants_cancel")
         callback_opts = opts["callback_opts"]
         tool_chest = opts['tool_chest']
         session_manager: Union[ChatSessionManager, None] = kwargs.get("session_manager", None)
@@ -158,7 +158,7 @@ class ClaudeChatAgent(BaseAgent):
         delay = 1  # Initial delay between retries
         async with (self.semaphore):
             interaction_id = await self._raise_interaction_start(**callback_opts)
-            while delay <= self.max_delay and not client_wants_cancel.is_set():
+            while delay <= self.max_delay:
                 try:
                     # Stream handling encapsulated in a helper method
                     result, state = await self._handle_claude_stream(
@@ -200,8 +200,8 @@ class ClaudeChatAgent(BaseAgent):
                         await self._raise_completion_end(opts["completion_opts"], stop_reason="exception", **callback_opts)
                         return []
 
-        self.logger.warning("Claude API is overloaded. GIVING UP")
-        await self._raise_system_event(f"Claude API is overloaded. GIVING UP.\n", **callback_opts)
+        self.logger.warning("ABNORMAL TERMINATION OF CLAUDE CHAT")
+        await self._raise_system_event(f"ABNORMAL TERMINATION OF CLAUDE CHAT", **callback_opts)
         await self._raise_completion_end(opts["completion_opts"], stop_reason="overload", **callback_opts)
         return messages
 
@@ -722,7 +722,7 @@ class ClaudeChatAgent(BaseAgent):
             - Compatible with all existing session managers and tool chests
         """
         opts = await self.__interaction_setup(**kwargs)
-        client_wants_cancel: threading.Event = kwargs.get("client_wants_cancel", threading.Event())
+        client_wants_cancel: threading.Event = kwargs.get("client_wants_cancel")
         emit_tool_events: bool = kwargs.get("emit_tool_events", False)
         callback_opts = opts["callback_opts"]
         tool_chest = opts['tool_chest']

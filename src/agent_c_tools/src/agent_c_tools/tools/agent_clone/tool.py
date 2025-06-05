@@ -68,7 +68,10 @@ class AgentCloneTools(AgentAssistToolBase):
         await self._render_media_markdown(f"**Prime** agent requesting assistance from clone:\n\n{orig_request}\n\n## Clone context:\n{process_context}", "oneshot",tool_context=tool_context)
 
 
-        messages =  await self.agent_oneshot(request, clone_config, tool_context['session_id'], tool_context)
+        messages =  await self.agent_oneshot(request, clone_config, tool_context['session_id'],
+                                             tool_context, client_wants_cancel=tool_context.get('client_wants_cancel', None),
+                                             process_context=process_context
+                                             )
         await self._render_media_markdown(f"Interaction complete for Agent Clone oneshot. Control returned to prime agent.", "oneshot", tool_context=tool_context)
 
         last_message = messages[-1] if messages else None
@@ -137,7 +140,10 @@ class AgentCloneTools(AgentAssistToolBase):
                                                             "chat",
                                                             tool_context=tool_context)
 
-        agent_session_id, messages = await self.agent_chat(message, clone_config, tool_context['session_id'], agent_session_id, tool_context)
+        agent_session_id, messages = await self.agent_chat(message, clone_config, tool_context['session_id'],
+                                                           agent_session_id, tool_context,
+                                                           process_context=process_context,
+                                                           client_wants_cancel=tool_context.get('client_wants_cancel', None))
         await self._render_media_markdown(markdown.markdown(f"Interaction complete for Agent Clone Session ID: {agent_session_id}. Control returned to prime agent."),
                                                             "chat",
                                                             tool_context=tool_context)

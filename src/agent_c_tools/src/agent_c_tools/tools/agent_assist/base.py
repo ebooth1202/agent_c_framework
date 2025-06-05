@@ -45,9 +45,6 @@ class AgentAssistToolBase(Toolset):
         self.model_configs: Dict[str, Any] = self.model_config_loader.flattened_config()
         self.runtime_cache: Dict[str, BaseAgent] = {}
         self._model_name = kwargs.get('agent_assist_model_name', 'claude-3-7-sonnet-latest')
-
-        self.client_wants_cancel: threading.Event = threading.Event()
-
         self.persona_cache: Dict[str, AgentConfiguration] = {}
         self.workspace_tool: Optional[WorkspaceTools] = None
 
@@ -110,13 +107,13 @@ class AgentAssistToolBase(Toolset):
 
     async def __chat_params(self, agent: AgentConfiguration, agent_runtime: BaseAgent, user_session_id: Optional[str] = None, **opts) -> Dict[str, Any]:
         tool_params = {}
-        client_wants_cancel = self.client_wants_cancel
+        client_wants_cancel = opts.get('client_wants_cancel')
         parent_streaming_callback = self.streaming_callback
 
         if opts:
             parent_tool_context = opts.get('parent_tool_context', None)
             if parent_tool_context is not None:
-                client_wants_cancel = opts['parent_tool_context'].get('client_wants_cancel', self.client_wants_cancel)
+                client_wants_cancel = opts['parent_tool_context'].get('client_wants_cancel', client_wants_cancel)
                 parent_streaming_callback = opts['parent_tool_context'].get('streaming_callback', self.streaming_callback)
 
             tool_context = opts.get("tool_call_context", {})

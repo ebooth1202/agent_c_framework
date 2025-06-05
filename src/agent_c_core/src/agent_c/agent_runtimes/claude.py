@@ -208,7 +208,7 @@ class ClaudeChatAgent(BaseAgent):
     async def chat(self, **kwargs) -> List[dict[str, Any]]:
         """Main method for interacting with Claude API. Split into smaller helper methods for clarity."""
         opts = await self.__interaction_setup(**kwargs)
-        client_wants_cancel: threading.Event = kwargs.get("client_wants_cancel", threading.Event())
+        client_wants_cancel: threading.Event = kwargs.get("client_wants_cancel")
         callback_opts = opts["callback_opts"]
         tool_chest = opts['tool_chest']
         session_manager: Union[ChatSessionManager, None] = kwargs.get("session_manager", None)
