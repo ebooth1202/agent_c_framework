@@ -1,5 +1,5 @@
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import json
 import re
 from pathlib import Path
@@ -129,10 +129,10 @@ class MarkdownFileCollector:
 
             try:
                 # Read the file content
-                file_content = await self.workspace_tool.read(path=normalized_unc_path)
-                if file_content.startswith('{"error":'):
-                    # Detect a read error
-                    raise ValueError(f"Error reading file: {file_content}")
+                error, workspace, relative_path = self.workspace_tool.validate_and_get_workspace_path(normalized_unc_path)
+                if error:
+                    raise ValueError(f"Error reading file: {error}")
+                file_content = await workspace.read_internal(relative_path)
 
                 # Process links in the content
                 processed_content = await self._process_markdown_links(file_content, rel_path, normalized_root_path,
@@ -252,3 +252,382 @@ class MarkdownFileCollector:
         # Process all links in the content
         processed_content = re.sub(link_pattern, replace_link, content)
         return processed_content
+
+    async def validate_custom_structure(self, custom_structure: Dict[str, Any], base_path: Optional[str] = None) -> tuple[bool, str]:
+        """Validate custom structure format and file accessibility.
+        
+        Args:
+            custom_structure: The custom structure dictionary to validate
+            base_path: Optional base path for resolving relative file paths
+            
+        Returns:
+            Tuple of (is_valid, error_message)
+        """
+        try:
+            # Check if custom_structure has required 'items' key
+            if not isinstance(custom_structure, dict):
+                return False, "Custom structure must be a dictionary"
+            
+            if 'items' not in custom_structure:
+                return False, "Custom structure must contain 'items' key"
+            
+            items = custom_structure['items']
+            if not isinstance(items, list):
+                return False, "'items' must be a list"
+            
+            if len(items) == 0:
+                return False, "'items' list cannot be empty"
+            
+            # Validate each item recursively
+            return await self._validate_structure_items(items, base_path, level=0)
+            
+        except Exception as e:
+            logger.error(f"Error validating custom structure: {e}")
+            return False, f"Validation error: {str(e)}"
+    
+    async def _validate_structure_items(self, items: List[Dict[str, Any]], base_path: Optional[str], level: int = 0) -> tuple[bool, str]:
+        """Recursively validate structure items."""
+        # Prevent excessive nesting
+        if level > 20:
+            return False, "Maximum nesting depth (20) exceeded"
+        
+        for i, item in enumerate(items):
+            if not isinstance(item, dict):
+                return False, f"Item {i} must be a dictionary"
+            
+            # Check required fields
+            if 'type' not in item:
+                return False, f"Item {i} missing required 'type' field"
+            
+            if 'name' not in item:
+                return False, f"Item {i} missing required 'name' field"
+            
+            item_type = item['type']
+            item_name = item['name']
+            
+            # Validate type
+            if item_type not in ['file', 'folder']:
+                return False, f"Item {i} has invalid type '{item_type}'. Must be 'file' or 'folder'"
+            
+            # Validate name
+            if not isinstance(item_name, str) or not item_name.strip():
+                return False, f"Item {i} has invalid name. Must be a non-empty string"
+            
+            # Type-specific validation
+            if item_type == 'file':
+                if 'path' not in item:
+                    return False, f"File item {i} ('{item_name}') missing required 'path' field"
+                
+                file_path = item['path']
+                if not isinstance(file_path, str) or not file_path.strip():
+                    return False, f"File item {i} ('{item_name}') has invalid path. Must be a non-empty string"
+                
+                # Validate file exists and is accessible
+                resolved_path = self._resolve_file_path(file_path, base_path)
+                is_valid, error_msg = await self._validate_file_exists(resolved_path, item_name)
+                if not is_valid:
+                    return False, error_msg
+                    
+            elif item_type == 'folder':
+                if 'children' not in item:
+                    return False, f"Folder item {i} ('{item_name}') missing required 'children' field"
+                
+                children = item['children']
+                if not isinstance(children, list):
+                    return False, f"Folder item {i} ('{item_name}') children must be a list"
+                
+                # Recursively validate children
+                if children:  # Allow empty folders
+                    is_valid, error_msg = await self._validate_structure_items(children, base_path, level + 1)
+                    if not is_valid:
+                        return False, f"In folder '{item_name}': {error_msg}"
+        
+        return True, ""
+    
+    def _resolve_file_path(self, file_path: str, base_path: Optional[str]) -> str:
+        """Resolve file path to UNC format."""
+        # If already UNC path, use as-is
+        if file_path.startswith('//'):
+            return file_path
+        
+        # If absolute path starting with /, treat as workspace-relative
+        if file_path.startswith('/'):
+            # Extract workspace from base_path if available
+            if base_path and base_path.startswith('//'):
+                workspace = base_path.split('/')[2]
+                return f"//{workspace}{file_path}"
+            else:
+                return file_path
+        
+        # Relative path - resolve against base_path
+        if base_path:
+            if base_path.startswith('//'):
+                # UNC base path - extract workspace and base directory
+                base_parts = base_path.split('/', 3)  # ['', '', 'workspace', 'path']
+                workspace = base_parts[2]
+                
+                # Check if file_path already starts with the base directory to avoid duplication
+                if len(base_parts) >= 4:
+                    base_dir = base_parts[3]
+                    if file_path.startswith(f"{base_dir}/"):
+                        # File path already includes base directory, use workspace root
+                        return f"//{workspace}/{file_path}"
+                
+                # Normal case: combine base_path with file_path
+                return f"{base_path.rstrip('/')}/{file_path}"
+            else:
+                # Regular base path - check for duplication
+                if file_path.startswith(f"{base_path}/"):
+                    # File path already includes base path, don't duplicate
+                    return file_path
+                return f"{base_path.rstrip('/')}/{file_path}"
+        
+        # No base path, assume workspace root
+        return file_path
+    
+    async def _validate_file_exists(self, file_path: str, item_name: str) -> tuple[bool, str]:
+        """Validate that a file exists and is accessible."""
+        try:
+            # Try to read the file to verify it exists and is accessible
+            error, workspace, relative_path = self.workspace_tool.validate_and_get_workspace_path(file_path)
+            if error:
+                raise ValueError(f"Error reading file: {error}")
+            result = await workspace.read_internal(relative_path)
+            
+            # Check for error response
+            if result.startswith('{"error":'):
+                error_data = json.loads(result)
+                return False, f"File '{item_name}' (path: {file_path}) is not accessible: {error_data['error']}"
+            
+            # Verify it's a markdown file
+            if not has_file_extension(file_path, ['md', 'markdown']):
+                return False, f"File '{item_name}' (path: {file_path}) is not a markdown file (.md or .markdown extension required)"
+            
+            return True, ""
+            
+        except Exception as e:
+            return False, f"Error accessing file '{item_name}' (path: {file_path}): {str(e)}"
+    
+    async def collect_custom_files(self, custom_structure: Dict[str, Any], base_path: Optional[str] = None) -> Dict[str, str]:
+        """Collect files from custom structure.
+        
+        Args:
+            custom_structure: The custom structure dictionary
+            base_path: Optional base path for resolving relative file paths
+            
+        Returns:
+            Dictionary mapping custom paths to UNC paths
+        """
+        markdown_files = {}
+        
+        # Validate structure first
+        is_valid, error_msg = await self.validate_custom_structure(custom_structure, base_path)
+        if not is_valid:
+            raise ValueError(f"Invalid custom structure: {error_msg}")
+        
+        # Collect files from structure
+        await self._collect_files_from_items(custom_structure['items'], markdown_files, base_path)
+        
+        logger.info(f"Collected {len(markdown_files)} files from custom structure")
+        return markdown_files
+    
+    async def _collect_files_from_items(self, items: List[Dict[str, Any]], markdown_files: Dict[str, str], base_path: Optional[str], current_path: str = "") -> None:
+        """Recursively collect files from structure items."""
+        for item in items:
+            item_type = item['type']
+            item_name = item['name']
+            
+            if item_type == 'file':
+                file_path = item['path']
+                resolved_path = self._resolve_file_path(file_path, base_path)
+                
+                # Create a custom path for this file (used as key)
+                custom_path = f"{current_path}/{item_name}" if current_path else item_name
+                markdown_files[custom_path] = resolved_path
+                
+            elif item_type == 'folder':
+                # Recursively process children
+                folder_path = f"{current_path}/{item_name}" if current_path else item_name
+                await self._collect_files_from_items(item['children'], markdown_files, base_path, folder_path)
+    
+    async def build_custom_structure(self, custom_structure: Dict[str, Any], base_path: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Build file structure for HTML viewer from custom hierarchy.
+        
+        Args:
+            custom_structure: The custom structure dictionary
+            base_path: Optional base path for resolving relative file paths
+            
+        Returns:
+            List of structure items for HTML viewer
+        """
+        # First collect all files to create path mappings
+        markdown_files = await self.collect_custom_files(custom_structure, base_path)
+        
+        # Build the structure
+        structure = []
+        await self._build_structure_from_items(custom_structure['items'], structure, markdown_files, base_path)
+        
+        return structure
+    
+    async def _build_structure_from_items(self, items: List[Dict[str, Any]], structure: List[Dict[str, Any]], markdown_files: Dict[str, str], base_path: Optional[str], current_path: str = "") -> None:
+        """Recursively build structure from custom items."""
+        for item in items:
+            item_type = item['type']
+            item_name = item['name']
+            
+            if item_type == 'file':
+                file_path = item['path']
+                resolved_path = self._resolve_file_path(file_path, base_path)
+                custom_path = f"{current_path}/{item_name}" if current_path else item_name
+                
+                try:
+                    # Read the file content
+                    error, workspace, relative_path = self.workspace_tool.validate_and_get_workspace_path(resolved_path)
+                    if error:
+                        raise ValueError(f"Error reading file: {error}")
+                    file_content = await workspace.read_internal(relative_path)
+
+                    
+                    # Process links in the content using custom path mappings
+                    processed_content = await self._process_custom_markdown_links(file_content, custom_path, markdown_files)
+
+                    # Ensure the custom path has .md extension if it's a file or the html viewer won't render the file properly
+                    if item_type == 'file' and not custom_path.endswith('.md'):
+                        custom_path = f"{custom_path}.md"
+
+                    # Ensure the file has a markdown extension
+                    item_name = ensure_file_extension(item_name, '.md')
+                    # ensure it doesn't have two .. in it
+                    item_name = item_name.replace('..md', '.md')
+
+                    # Add the file to the structure
+                    structure.append({
+                        'name': item_name,
+                        'type': 'file',
+                        'path': custom_path,  # Use custom path for navigation
+                        'content': processed_content
+                    })
+                    
+                except Exception as e:
+                    logger.error(f"Error processing file {resolved_path}: {e}")
+                    # Add the file with error message
+                    structure.append({
+                        'name': item_name,
+                        'type': 'file',
+                        'path': custom_path,
+                        'content': f"Error processing file: {str(e)}"
+                    })
+                    
+            elif item_type == 'folder':
+                # Create folder structure
+                folder_path = f"{current_path}/{item_name}" if current_path else item_name
+                folder_item = {
+                    'name': item_name,
+                    'type': 'folder',
+                    'path': folder_path,
+                    'children': []
+                }
+                
+                # Recursively process children
+                await self._build_structure_from_items(item['children'], folder_item['children'], markdown_files, base_path, folder_path)
+                
+                structure.append(folder_item)
+    
+    async def _process_custom_markdown_links(self, content: str, file_custom_path: str, markdown_files: Dict[str, str]) -> str:
+        """Process markdown links for custom structure with custom path mappings."""
+        # Get the directory of the current file for resolving relative paths
+        file_dir = Path(file_custom_path).parent.as_posix() if '/' in file_custom_path else ""
+        
+        # Regular expression to find markdown links
+        link_pattern = r'\[([^\]]+)\]\(([^)]+)\)'
+        
+        def replace_link(match):
+            link_text = match.group(1)
+            link_target = match.group(2)
+            
+            # Handle internal document links (just anchors)
+            if link_target.startswith('#'):
+                anchor_id = link_target.replace("#", "")
+                return f'[{link_text}](javascript:void(scrollToAnchor("{anchor_id}")))'  
+            
+            # Skip already processed javascript links
+            if link_target.startswith('javascript:'):
+                return match.group(0)
+            
+            # Skip external links
+            if link_target.startswith(('http://', 'https://')):
+                return match.group(0)
+            
+            # Split target into file path and anchor if it exists
+            parts = link_target.split('#', 1)
+            target_file = parts[0]
+            anchor = f"#{parts[1]}" if len(parts) > 1 else ""
+            
+            try:
+                # Normalize target file path separators
+                target_file = target_file.replace('\\', '/')
+                
+                # Try to resolve the link target to a custom path
+                resolved_custom_path = self._resolve_custom_link_target(target_file, file_custom_path, markdown_files)
+                
+                if resolved_custom_path:
+                    # Replace with internal link using custom path
+                    if anchor:
+                        return f'[{link_text}](javascript:void(openMarkdownFile("{resolved_custom_path}", "{anchor}")))'  
+                    else:
+                        return f'[{link_text}](javascript:void(openMarkdownFile("{resolved_custom_path}")))'  
+                        
+            except Exception as e:
+                logger.error(f"Error processing link '{link_target}' in file '{file_custom_path}': {e}")
+            
+            # If target doesn't resolve, leave the link unchanged
+            return match.group(0)
+        
+        # Process all links in the content
+        processed_content = re.sub(link_pattern, replace_link, content)
+        return processed_content
+    
+    def _resolve_custom_link_target(self, target_file: str, current_custom_path: str, markdown_files: Dict[str, str]) -> Optional[str]:
+        """Resolve a link target to a custom path in the structure."""
+        # Get current file directory for relative path resolution
+        current_dir = Path(current_custom_path).parent.as_posix() if '/' in current_custom_path else ""
+        
+        # Try different resolution strategies
+        
+        # 1. Direct match to custom path (exact match)
+        if target_file in markdown_files:
+            return target_file
+        
+        # 2. Try relative path resolution from current directory
+        if current_dir and not target_file.startswith('/'):
+            relative_path = f"{current_dir}/{target_file}"
+            if relative_path in markdown_files:
+                return relative_path
+        
+        # 3. Try matching by filename only (search all custom paths)
+        target_filename = Path(target_file).name
+        for custom_path in markdown_files.keys():
+            if Path(custom_path).name == target_filename:
+                return custom_path
+        
+        # 4. Try matching by original file path (check UNC paths)
+        for custom_path, unc_path in markdown_files.items():
+            # Extract relative path from UNC path for comparison
+            if unc_path.startswith('//'):
+                try:
+                    unc_parts = unc_path.split('/', 3)
+                    if len(unc_parts) >= 4:
+                        unc_relative = unc_parts[3]
+                        if target_file == unc_relative or target_file.endswith(f"/{unc_relative}"):
+                            return custom_path
+                except Exception:
+                    continue
+        
+        # 5. Try directory-based matching (if target ends with / or has no extension)
+        if target_file.endswith('/') or '.' not in target_file.split('/')[-1]:
+            search_prefix = target_file.rstrip('/') + '/'
+            for custom_path in markdown_files.keys():
+                if custom_path.startswith(search_prefix):
+                    return custom_path
+        
+        return None

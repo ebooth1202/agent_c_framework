@@ -5,12 +5,13 @@ import logging
 import os
 import sys
 import time
+import types
 from pathlib import Path
 from typing import Dict, List, Any, Type, Optional, Union
 
+
 # Import the base ToolChest class
 from agent_c.toolsets import ToolChest, ToolCache
-
 # Try to import python-dotenv for .env file loading
 try:
     from dotenv import load_dotenv
@@ -33,8 +34,20 @@ class MockTokenCounter:
         # This avoids the "NoneType has no attribute 'count_tokens'" error when using Workspaces without an agent
         return len(text) // 10  # Rough approximation (10 chars per token)
 
+    @staticmethod
+    def count_tokens(text):
+        # Simple mock that returns a token count based on text length
+        # This avoids the "NoneType has no attribute 'count_tokens'" error when using Workspaces without an agent
+        return len(text) // 10  # Rough approximation (10 chars per token)
+
 # Add the mock to sys.modules so it can be imported by local_storage.py
-sys.modules['agent_c.util.token_counter'] = type('TokenCounterModule', (), {'TokenCounter': MockTokenCounter})
+mock_module = types.ModuleType('agent_c.util.token_counter')
+mock_module.TokenCounter = MockTokenCounter
+sys.modules['agent_c.util.token_counter'] = mock_module
+
+
+# Import the base ToolChest class AFTER the mock is set up
+from agent_c import ToolChest, ToolCache
 
 
 class ToolDebugger:
@@ -222,6 +235,9 @@ class ToolDebugger:
 
         from agent_c_tools.tools.workspace.local_storage import LocalStorageWorkspace
         from agent_c_tools.tools.workspace.local_project import LocalProjectWorkspace
+
+        import agent_c_tools.tools.workspace.local_storage as local_storage_module
+        local_storage_module.TokenCounter = MockTokenCounter
 
         local_project = LocalProjectWorkspace()
 
