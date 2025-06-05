@@ -88,19 +88,25 @@ class AgentConfigLoader(ConfigLoader):
         agent_config_path = os.path.join(self.agent_config_folder, f"{agent_config.key}.yaml")
 
         # Save YAML content
-        with open(agent_config_path, 'w') as file:
+        with open(agent_config_path, 'w', encoding='utf-8') as file:
             yaml_content = agent_config.to_yaml()
             file.write(yaml_content)
 
     def load_agent_config_file(self, agent_config_path) -> Optional[AgentConfiguration]:
         if os.path.exists(agent_config_path):
-            with open(agent_config_path, 'r') as file:
-                file_contents = file.read()
+            try:
+                with open(agent_config_path, 'r', encoding='utf-8') as file:
+                    file_contents = file.read()
+
+                data = yaml.safe_load(file_contents)
+            except Exception as e:
+                self.logger.exception(f"Failed to read agent configuration file {agent_config_path}: {e}", exc_info=True)
+                return None
         else:
             raise FileNotFoundError(f"Agent configuration file {agent_config_path} not found.")
 
-        # Load YAML data
-        data = yaml.safe_load(file_contents)
+
+
 
         # Handle missing version field (assume v1)
         if 'version' not in data:

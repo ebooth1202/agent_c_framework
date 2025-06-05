@@ -54,14 +54,15 @@ class AgentAssistToolBase(Toolset):
         self.workspace_tool: Optional[WorkspaceTools] = None
 
 
-    async def _emit_content_from_agent(self, agent: AgentConfiguration, content: str, name: Optional[str] = None):
+    async def _emit_content_from_agent(self, agent: AgentConfiguration, content: str, tool_context, name: Optional[str] = None):
         if name is None:
             name = agent.name
         await self._raise_render_media(
             sent_by_class=self.__class__.__name__,
             sent_by_function=name,
             content_type="text/html",
-            content=markdown.markdown(content))
+            content=markdown.markdown(content),
+            tool_context=tool_context)
 
     async def _handle_history_delta(self, agent, event: HistoryDeltaEvent):
         content = []

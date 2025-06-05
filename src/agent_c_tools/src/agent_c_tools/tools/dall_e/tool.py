@@ -63,7 +63,8 @@ class DallETools(Toolset):
         }
     )
     async def create_image(self, **kwargs):
-        session_id = self.session_manager.chat_session.session_id
+        tool_context = kwargs.get('tool_context')
+        session_id = tool_context.get('user_session_id', tool_context['session_id'])
 
         prompt = kwargs.get('prompt')
         quality: Literal['hd', 'standard'] = 'standard' if kwargs.get('quality', 'standard') == 'standard' else 'hd'
@@ -82,31 +83,28 @@ class DallETools(Toolset):
         if self.workspace is not None:
             response_format = "b64_json"
 
-        await self._raise_text_delta_event(content=f"### Generating image from prompt:\n> {prompt}\n\n")
+        await self._render_media_markdown(f"### Generating image from prompt:\n> {prompt}\n\n",
+                                          "DALL-E-3 Image Generation", session_id=session_id)
 
-        if self.session_manager is not None:
-            user = self.session_manager.user.user_id
-        else:
-            user = self.username
+        user: str = tool_context.get('current_user_username', 'Agent C User')
 
         try:
             response: ImagesResponse = await self.openai_client.images.generate(prompt=prompt, size=size, quality=quality, style=style,
                                                                                 model='dall-e-3', user=user,
                                                                                 response_format=response_format)
         except Exception as e:
-            await self._raise_text_delta_event(content=f"ERROR: {str(e)}")
+            await self._render_media_markdown(f"ERROR: {str(e)}", "DALL-E-3 Image Generation Error", session_id=session_id)
             return str(e)
 
 
         if len(response.data[0].revised_prompt) > 0:
             revised_prompt = f"\n### Notice DALL-E-3 revised your prompt to:\n> {response.data[0].revised_prompt}"
-            await self._raise_text_delta_event(content=f"\n{revised_prompt}\n\n")
+            await self._render_media_markdown(revised_prompt, "DALL-E-3 Prompt Revision",tool_context=tool_context)
         else:
             revised_prompt = ''
 
         if self.workspace is None:
             url: str = response.data[0].url
-            await self._raise_text_delta_event(content=f"\nGenerated Image: \"{url}\"\n")
             await self._raise_render_media(content_type="image/png", url=url)
         else:
             await self.handle_base64_response(response, prompt, quality, ratio, style, size, session_id)

@@ -45,7 +45,8 @@ class AgentAssistTools(AgentAssistToolBase):
             sent_by_class=self.__class__.__name__,
             sent_by_function='oneshot',
             content_type="text/html",
-            content=markdown.markdown(f"**Domo** agent requesting assistance from '*{agent.name}*':\n\n{request}</p>")
+            content=markdown.markdown(f"**Domo** agent requesting assistance from '*{agent.name}*':\n\n{request}</p>"),
+            tool_context=tool_context
         )
 
         messages = await self.agent_oneshot(request, agent, tool_context['session_id'], tool_context)
@@ -53,7 +54,8 @@ class AgentAssistTools(AgentAssistToolBase):
             sent_by_class=self.__class__.__name__,
             sent_by_function='chat',
             content_type="text/html",
-            content=markdown.markdown(f"Interaction complete for Agent Assist oneshot with {agent.name}. Control returned to requesting agent.")
+            content=markdown.markdown(f"Interaction complete for Agent Assist oneshot with {agent.name}. Control returned to requesting agent."),
+            tool_context=tool_context
         )
 
         last_message = messages[-1] if messages else None
@@ -102,7 +104,8 @@ class AgentAssistTools(AgentAssistToolBase):
             sent_by_class=self.__class__.__name__,
             sent_by_function='chat',
             content_type="text/html",
-            content=markdown.markdown(f"**Domo agent** requesting assistance from '*{agent.name}*': \n\n{message}")
+            content=markdown.markdown(f"**Domo agent** requesting assistance from '*{agent.name}*': \n\n{message}"),
+            tool_context=tool_context
         )
 
         agent_session_id, messages = await self.agent_chat(message, agent, tool_context['session_id'], agent_session_id, tool_context)
@@ -110,7 +113,8 @@ class AgentAssistTools(AgentAssistToolBase):
             sent_by_class=self.__class__.__name__,
             sent_by_function='chat',
             content_type="text/html",
-            content=markdown.markdown(f"Interaction complete for Agent Assist Session ID: {agent_session_id} with {agent.name}. Control returned to requesting agent.")
+            content=markdown.markdown(f"Interaction complete for Agent Assist Session ID: {agent_session_id} with {agent.name}. Control returned to requesting agent."),
+            tool_context=tool_context
         )
         if messages is not None and len(messages) > 0:
             last_message = messages[-1]

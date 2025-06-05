@@ -139,20 +139,14 @@ class AgentCloneTools(AgentAssistToolBase):
 
 
 
-        await self._raise_render_media(
-            sent_by_class=self.__class__.__name__,
-            sent_by_function='chat',
-            content_type="text/html",
-            content= markdown.markdown(f"**Prime** agent requesting assistance from clone:\n\n{orig_message}\n\n## Clone context:\n{process_context}")
-        )
+        await self._render_media_markdown(markdown.markdown(f"**Prime** agent requesting assistance from clone:\n\n{orig_message}\n\n## Clone context:\n{process_context}"),
+                                                            "chat",
+                                                            tool_context=tool_context)
 
         agent_session_id, messages = await self.agent_chat(message, agent, tool_context['session_id'], agent_session_id, tool_context)
-        await self._raise_render_media(
-            sent_by_class=self.__class__.__name__,
-            sent_by_function='chat',
-            content_type="text/html",
-            content=markdown.markdown(f"Interaction complete for Agent Clone Session ID: {agent_session_id}. Control returned to prime agent.")
-        )
+        await self._render_media_markdown(markdown.markdown(f"Interaction complete for Agent Clone Session ID: {agent_session_id}. Control returned to prime agent."),
+                                                            "chat",
+                                                            tool_context=tool_context)
         last_message = messages[-1] if messages else None
         if last_message is not None:
             content = last_message.get('content', None)

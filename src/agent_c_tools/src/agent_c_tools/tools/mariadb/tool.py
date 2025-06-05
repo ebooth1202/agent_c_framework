@@ -564,7 +564,8 @@ class MariadbTools(Toolset):
                 sent_by_class=self.__class__.__name__,
                 sent_by_function='execute_query',
                 content_type="text/html",
-                content="<b>done</b>"
+                content="<b>done</b>",
+                tool_context=kwargs.get('tool_context', {})
             )
             # await self._raise_text_delta_event(content="Query executed successfully.")
 
@@ -596,7 +597,8 @@ class MariadbTools(Toolset):
                         sent_by_class=self.__class__.__name__,
                         sent_by_function='execute_query',
                         content_type="text/html",
-                        content=get_file_html(os_path, unc_path)
+                        content=get_file_html(os_path, unc_path),
+                        tool_context=kwargs.get('tool_context', {}),
                     )
                     self.logger.debug(result)
             
@@ -682,7 +684,8 @@ class MariadbTools(Toolset):
             await self._raise_render_media(
                 content_type="text/html",
                 content=schema_html,
-                name=f"{table_name}_schema.html"
+                name=f"{table_name}_schema.html",
+
             )
             
             return json.dumps({

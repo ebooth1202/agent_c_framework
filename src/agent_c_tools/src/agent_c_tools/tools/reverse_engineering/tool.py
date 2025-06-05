@@ -156,22 +156,22 @@ class ReverseEngineeringTools(AgentAssistToolBase):
             iterator = iter(files)
             while batch := list(itertools.islice(iterator, batch_size)):
                 paths = "\n- ".join([f"//{workspace.name}/{file}" for file in batch])
-                await self._raise_text_delta_event(content=f"\n**Processing files (pass 1)**: {paths}... ")
+                await self._render_media_markdown(f"\n**Processing files (pass 1)**: {paths}... ", "analyze_source", tool_context=tool_context)
                 true_batch = [await self.__try_explain_code(f"//{workspace.name}/{file}") for file in batch]
                 results = await self.parallel_agent_oneshots(true_batch,
                                                              persona=self.recon_oneshot,
                                                              user_session_id=tool_context['session_id'],
                                                              tool_context=tool_context)
-                await self._raise_text_delta_event(content=f"\nfinished processing files (pass 1):\n- {paths}")
+                await self._render_media_markdown(f"\nfinished processing files (pass 1):\n- {paths}", "analyze_source", tool_context=tool_context)
                 pass_one_results.extend(results)
         else:
             for file in files:
-                await self._raise_text_delta_event(content=f"\n**Processing file (pass 1)**: {file}... ")
+                await self._render_media_markdown(f"n**Processing file (pass 1)**: {file}... ", "analyze_source", tool_context=tool_context)
                 result = await self.agent_oneshot(user_message=await self.__try_explain_code(f"//{workspace.name}/{file}"),
                                                   persona=self.recon_oneshot,
                                                   user_session_id=tool_context['session_id'],
                                                   tool_context=tool_context)
-                await self._raise_text_delta_event(content=f"\nDone processing file (pass 1): {file}")
+                await self._render_media_markdown(f"\nDone processing file (pass 1): {file}", "analyze_source", tool_context=tool_context)
                 pass_one_results.append(result)
 
         return pass_one_results
@@ -181,7 +181,7 @@ class ReverseEngineeringTools(AgentAssistToolBase):
         pass_two_results = []
 
         for file in files:
-            await self._raise_text_delta_event(content=f"\n**Processing file (pass 1)**: {file}... ")
+            await self._render_media_markdown(f"\n**Processing file (pass 2)**: {file}... ", "analyze_source", tool_context=tool_context)
             result = await self.agent_oneshot(user_message=f"//{workspace.name}/{file}",
                                               persona=self.recon_revise_oneshot,
                                               user_session_id=tool_context['session_id'],

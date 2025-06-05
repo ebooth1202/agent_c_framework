@@ -96,8 +96,8 @@ class ClaudeChatAgent(BaseAgent):
         kwargs['prompt_metadata']['model_id'] = model_name
         (tool_context, prompt_context) = await self._render_contexts(**kwargs)
         sys_prompt: str = prompt_context["system_prompt"]
-
-        completion_opts = {"model": model_name, "messages": messages,
+        allow_betas: bool = kwargs.get("allow_betas", self.allow_betas)
+        completion_opts = {"model": model_name.removeprefix("bedrock_"), "messages": messages,
                            "system": sys_prompt,  "max_tokens": max_tokens,
                            'temperature': temperature}
 
@@ -107,7 +107,7 @@ class ClaudeChatAgent(BaseAgent):
                 if max_searches > 0:
                     functions.append({"type": "web_search_20250305", "name": "web_search", "max_uses": max_searches})
 
-            if self.allow_betas:
+            if allow_betas:
                 if allow_server_tools:
                     functions.append({"type": "code_execution_20250522","name": "code_execution"})
 
@@ -223,8 +223,13 @@ class ClaudeChatAgent(BaseAgent):
         state = self._init_stream_state()
         state['interaction_id'] = interaction_id
 
+        if "betas" in  completion_opts:
+            stream_source = self.client.beta
+        else:
+            stream_source = self.client
 
-        async with self.client.beta.messages.stream(**completion_opts) as stream:
+
+        async with stream_source.messages.stream(**completion_opts) as stream:
             async for event in stream:
                 await self._process_stream_event(event, state, tool_chest, session_manager,
                                                  messages, callback_opts)

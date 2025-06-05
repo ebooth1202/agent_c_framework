@@ -810,4 +810,4 @@ class BrowserPlaywrightTools(Toolset):
 
 
 # Register the toolset with required dependencies
-Toolset.register(BrowserPlaywrightTools, required_tools=['WorkspaceTools'])
+#Toolset.register(BrowserPlaywrightTools, required_tools=['WorkspaceTools'])

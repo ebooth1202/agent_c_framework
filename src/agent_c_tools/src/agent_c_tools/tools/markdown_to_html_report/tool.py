@@ -212,7 +212,8 @@ class MarkdownToHtmlReportTools(Toolset):
                     sent_by_class=self.__class__.__name__,
                     sent_by_function='generate_md_viewer',
                     content_type="text/html",
-                    content=html_content
+                    content=html_content,
+                    tool_context=kwargs.get('tool_context', {})
                 )
                 # markdown_content = await self.media_helper.create_markdown_media(output_info)
                 # await self._raise_render_media(
@@ -396,7 +397,8 @@ class MarkdownToHtmlReportTools(Toolset):
                     sent_by_class=self.__class__.__name__,
                     sent_by_function='markdown_to_docx',
                     content_type="text/html",
-                    content=html_content
+                    content=html_content,
+                    tool_context=kwargs.get('tool_context', {})
                 )
             except Exception as e:
                 logger.error(f"Failed to raise media event: {str(e)}")
