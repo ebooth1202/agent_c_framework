@@ -4,6 +4,23 @@ from typing import Any, Optional, Dict, List
 from agent_c.models.agent_config import AgentConfigurationV2, AgentConfiguration
 from agent_c.prompting.prompt_section import PromptSection, property_bag_item
 
+class AssistantBehaviorSection(PromptSection):
+    def __init__(self, **data: Any):
+        TEMPLATE = """**Important**: Agent Assist mode has been activated.\n\n# Assistant Operating Context
+
+                You are being contacted via the Agent Assist Tool by another agent  to handle a specific delegated task. Important operating guidelines:
+
+                - You are operating as a specialized clone with focused responsibilities
+                - Your role is to complete the specific task assigned by your requesting agent
+                - Limit your actions and responses to the directives and scope provided
+                - Only your final response will be relayed back to the requesting agent
+                - Focus on delivering complete, actionable results within your assigned scope
+                - Do not attempt to expand beyond your delegated responsibilities
+                - Provide thorough, high-quality output that addresses the specific request
+                """
+        super().__init__(template=TEMPLATE, required=True, name="CLONE MODE ACTIVE", render_section_header=True, **data)
+
+
 
 class AgentAssistSection(PromptSection):
     tool: Any

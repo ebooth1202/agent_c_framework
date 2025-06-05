@@ -822,18 +822,6 @@ class AgentBridge:
 
             prompt_metadata = await self.__build_prompt_metadata()
             # Prepare chat parameters
-            chat_params = {
-                "streaming_queue": queue,
-                "user_id": self.chat_session.user_id,
-                "chat_session": self.chat_session,
-                "user_message": user_message,
-                "prompt_metadata": prompt_metadata,
-                "output_format": 'raw',
-                "client_wants_cancel": client_wants_cancel,
-                "streaming_callback": self.streaming_callback_with_logging,
-                'tool_call_context':{'active_agent':self.chat_session.agent_config }
-            }
-
             tool_params = {}
             if len(self.chat_session.agent_config.tools):
                 await self.tool_chest.initialize_toolsets(self.chat_session.agent_config.tools)

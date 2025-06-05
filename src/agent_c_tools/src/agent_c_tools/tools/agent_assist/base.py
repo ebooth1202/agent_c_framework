@@ -1,14 +1,12 @@
-import os
-import glob
+import markdown
 import threading
 
 from datetime import datetime
 from functools import partial
 from typing import Any, Dict, List, Optional, cast, Tuple
 
-import markdown
 
-from agent_c.prompting import PromptSection
+from agent_c.prompting.prompt_section import PromptSection
 from agent_c.config.model_config_loader import ModelConfigurationLoader
 from agent_c.config.agent_config_loader import AgentConfigLoader
 from agent_c.models.events import SessionEvent
@@ -23,7 +21,7 @@ from agent_c_tools.tools.workspace.tool import WorkspaceTools
 from agent_c.agents.gpt import BaseAgent, GPTChatAgent, AzureGPTChatAgent
 from agent_c.agents.claude import ClaudeChatAgent, ClaudeBedrockChatAgent
 from agent_c.prompting.basic_sections.persona import DynamicPersonaSection
-
+from agent_c_tools.tools.agent_assist.prompt import AssistantBehaviorSection
 
 
 class AgentAssistToolBase(Toolset):
@@ -41,7 +39,7 @@ class AgentAssistToolBase(Toolset):
         self.agent_loader = AgentConfigLoader()
         self.model_config_loader = ModelConfigurationLoader()
 
-        self.sections: Optional[List[PromptSection]] = None
+        self.sections: List[PromptSection] = [ThinkSection(), AssistantBehaviorSection(),  DynamicPersonaSection()]
 
         self.session_cache = AsyncExpiringCache(default_ttl=kwargs.get('agent_session_ttl', 300))
         self.model_configs: Dict[str, Any] = self.model_config_loader.flattened_config()
@@ -129,7 +127,8 @@ class AgentAssistToolBase(Toolset):
         prompt_metadata = await self.__build_prompt_metadata(agent, user_session_id, **opts)
         chat_params = {"prompt_metadata": prompt_metadata, "output_format": 'raw',
                        "streaming_callback": partial(self._streaming_callback_for_subagent, agent, parent_streaming_callback, user_session_id),
-                       "client_wants_cancel": client_wants_cancel, "tool_chest": self.tool_chest
+                       "client_wants_cancel": client_wants_cancel, "tool_chest": self.tool_chest,
+                       "prompt_builder": PromptBuilder(sections=self.sections)
                        }
 
         if len(agent.tools):
@@ -152,7 +151,9 @@ class AgentAssistToolBase(Toolset):
                 "timestamp": datetime.now().isoformat()} | agent_props | opts
 
     async def agent_oneshot(self, user_message: str, agent: AgentConfiguration, user_session_id: Optional[str] = None,
-                            parent_tool_context: Optional[Dict[str, Any]] = None, **additional_metadata) -> Optional[List[Dict[str, Any]]]:
+                            parent_tool_context: Optional[Dict[str, Any]] = None,
+                            prompt_builder: Optional[PromptBuilder] = None,
+                            **additional_metadata) -> Optional[List[Dict[str, Any]]]:
 
         try:
             self.logger.info(f"Running one-shot with persona: {agent.key}, user session: {user_session_id}")
