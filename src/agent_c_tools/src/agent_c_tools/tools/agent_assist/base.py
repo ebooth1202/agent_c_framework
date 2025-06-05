@@ -1,31 +1,27 @@
-import os
-import glob
+import markdown
 import threading
 
 from datetime import datetime
 from functools import partial
 from typing import Any, Dict, List, Optional, cast, Tuple
 
-import markdown
-import yaml
 
-from agent_c import PromptSection
-from agent_c.config.model_config_loader import ModelConfigurationLoader, ModelConfigurationFile
-from agent_c.config.agent_config_loader import AgentConfigLoader, CurrentAgentConfiguration
+from agent_c.prompting.prompt_section import PromptSection
+from agent_c.config.model_config_loader import ModelConfigurationLoader
+from agent_c.config.agent_config_loader import AgentConfigLoader
 from agent_c.models.events import SessionEvent
 from agent_c.models.events.chat import HistoryDeltaEvent, CompleteThoughtEvent
 from agent_c.util.slugs import MnemonicSlugs
 from agent_c.toolsets.tool_set import Toolset
 from agent_c.models.agent_config import AgentConfiguration
 from agent_c_tools.tools.agent_assist.expiring_session_cache import AsyncExpiringCache
-from agent_c_tools.tools.agent_clone.prompt import AgentCloneSection
 from agent_c_tools.tools.think.prompt import ThinkSection
 from agent_c.prompting.prompt_builder import PromptBuilder
 from agent_c_tools.tools.workspace.tool import WorkspaceTools
 from agent_c.agents.gpt import BaseAgent, GPTChatAgent, AzureGPTChatAgent
 from agent_c.agents.claude import ClaudeChatAgent, ClaudeBedrockChatAgent
 from agent_c.prompting.basic_sections.persona import DynamicPersonaSection
-
+from agent_c_tools.tools.agent_assist.prompt import AssistantBehaviorSection
 
 
 class AgentAssistToolBase(Toolset):
@@ -43,27 +39,25 @@ class AgentAssistToolBase(Toolset):
         self.agent_loader = AgentConfigLoader()
         self.model_config_loader = ModelConfigurationLoader()
 
-        self.sections: Optional[List[PromptSection]] = None
+        self.sections: List[PromptSection] = [ThinkSection(), AssistantBehaviorSection(),  DynamicPersonaSection()]
 
         self.session_cache = AsyncExpiringCache(default_ttl=kwargs.get('agent_session_ttl', 300))
         self.model_configs: Dict[str, Any] = self.model_config_loader.flattened_config()
         self.runtime_cache: Dict[str, BaseAgent] = {}
         self._model_name = kwargs.get('agent_assist_model_name', 'claude-3-7-sonnet-latest')
-
-        self.client_wants_cancel: threading.Event = threading.Event()
-
         self.persona_cache: Dict[str, AgentConfiguration] = {}
         self.workspace_tool: Optional[WorkspaceTools] = None
 
 
-    async def _emit_content_from_agent(self, agent: AgentConfiguration, content: str, name: Optional[str] = None):
+    async def _emit_content_from_agent(self, agent: AgentConfiguration, content: str, tool_context, name: Optional[str] = None):
         if name is None:
             name = agent.name
         await self._raise_render_media(
             sent_by_class=self.__class__.__name__,
             sent_by_function=name,
             content_type="text/html",
-            content=markdown.markdown(content))
+            content=markdown.markdown(content),
+            tool_context=tool_context)
 
     async def _handle_history_delta(self, agent, event: HistoryDeltaEvent):
         content = []
@@ -113,13 +107,13 @@ class AgentAssistToolBase(Toolset):
 
     async def __chat_params(self, agent: AgentConfiguration, agent_runtime: BaseAgent, user_session_id: Optional[str] = None, **opts) -> Dict[str, Any]:
         tool_params = {}
-        client_wants_cancel = self.client_wants_cancel
+        client_wants_cancel = opts.get('client_wants_cancel')
         parent_streaming_callback = self.streaming_callback
 
         if opts:
             parent_tool_context = opts.get('parent_tool_context', None)
             if parent_tool_context is not None:
-                client_wants_cancel = opts['parent_tool_context'].get('client_wants_cancel', self.client_wants_cancel)
+                client_wants_cancel = opts['parent_tool_context'].get('client_wants_cancel', client_wants_cancel)
                 parent_streaming_callback = opts['parent_tool_context'].get('streaming_callback', self.streaming_callback)
 
             tool_context = opts.get("tool_call_context", {})
@@ -130,7 +124,8 @@ class AgentAssistToolBase(Toolset):
         prompt_metadata = await self.__build_prompt_metadata(agent, user_session_id, **opts)
         chat_params = {"prompt_metadata": prompt_metadata, "output_format": 'raw',
                        "streaming_callback": partial(self._streaming_callback_for_subagent, agent, parent_streaming_callback, user_session_id),
-                       "client_wants_cancel": client_wants_cancel, "tool_chest": self.tool_chest
+                       "client_wants_cancel": client_wants_cancel, "tool_chest": self.tool_chest,
+                       "prompt_builder": PromptBuilder(sections=self.sections)
                        }
 
         if len(agent.tools):
@@ -153,7 +148,9 @@ class AgentAssistToolBase(Toolset):
                 "timestamp": datetime.now().isoformat()} | agent_props | opts
 
     async def agent_oneshot(self, user_message: str, agent: AgentConfiguration, user_session_id: Optional[str] = None,
-                            parent_tool_context: Optional[Dict[str, Any]] = None, **additional_metadata) -> Optional[List[Dict[str, Any]]]:
+                            parent_tool_context: Optional[Dict[str, Any]] = None,
+                            prompt_builder: Optional[PromptBuilder] = None,
+                            **additional_metadata) -> Optional[List[Dict[str, Any]]]:
 
         try:
             self.logger.info(f"Running one-shot with persona: {agent.key}, user session: {user_session_id}")

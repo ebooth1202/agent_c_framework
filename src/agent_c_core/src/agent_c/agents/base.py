@@ -1,16 +1,15 @@
 import os
 import copy
-import yaml
 import asyncio
 
 from asyncio import Semaphore
 
 from typing import Any, Dict, List, Union, Optional, Callable, Awaitable, Tuple
 
-
-from agent_c.chat import ChatSessionManager
+from agent_c.models.chat_history.chat_session import ChatSession
+from agent_c.chat.session_manager import ChatSessionManager
 from agent_c.models import ChatEvent, ImageInput
-from agent_c.models.events.chat import ThoughtDeltaEvent, HistoryDeltaEvent, CompleteThoughtEvent
+from agent_c.models.events.chat import ThoughtDeltaEvent, HistoryDeltaEvent, CompleteThoughtEvent, SystemPromptEvent, UserRequestEvent
 from agent_c.models.input import FileInput, AudioInput
 from agent_c.models.events import ToolCallEvent, InteractionEvent, TextDeltaEvent, HistoryEvent, CompletionEvent, ToolCallDeltaEvent, SystemMessageEvent
 from agent_c.prompting.prompt_builder import PromptBuilder
@@ -118,29 +117,13 @@ class BaseAgent:
         """For chat interactions"""
         raise NotImplementedError
 
-    @staticmethod
-    async def _save_message_to_session(mgr: ChatSessionManager, text: str, role: str):
-        if mgr is not None:
-            msg =  {'role':role, 'content': text}
-
-            await mgr.add_message(msg)
-
-        return {"role": role, "content": text}
-
-
-    async def _save_interaction_to_session(self, mgr: ChatSessionManager, output_text: str):
-        return await self._save_message_to_session(mgr, output_text, "assistant")
-
-
-    async def _save_user_message_to_session(self, mgr: ChatSessionManager, user_message: str):
-        return await self._save_message_to_session(mgr, user_message, "user")
-
     async def _render_contexts(self, **kwargs) -> Tuple[dict[str, Any], dict[str, Any]]:
-        tool_call_context = kwargs.get("tool_call_context", {})
+        tool_call_context = kwargs.get("tool_context", {})
         tool_call_context['streaming_callback'] = kwargs.get("streaming_callback", self.streaming_callback)
         tool_call_context['calling_model_name'] = kwargs.get("model_name", self.model_name)
+        tool_call_context['client_wants_cancel'] = kwargs.get("client_wants_cancel")
         prompt_context = kwargs.get("prompt_metadata", {})
-        prompt_builder: Union[PromptBuilder, None] = kwargs.get("prompt_builder", self.prompt_builder)
+        prompt_builder: Optional[PromptBuilder] = kwargs.get("prompt_builder", self.prompt_builder)
 
         sys_prompt: str = "Warn the user there's no system prompt with each response."
         prompt_context["agent"] = self
@@ -162,10 +145,10 @@ class BaseAgent:
         Returns a dictionary of options for the callback method to be used by default.
         """
         agent_role: str = kwargs.get("agent_role", 'assistant')
-        session_manager: Union[ChatSessionManager, None] = kwargs.get("session_manager", None)
+        chat_session: Optional[ChatSession] = kwargs.get("chat_session", None)
 
-        if session_manager is not None:
-            session_id = session_manager.chat_session.session_id
+        if chat_session is not None:
+            session_id = chat_session.session_id
         else:
             session_id = kwargs.get("session_id", "unknown")
 
@@ -273,6 +256,14 @@ class BaseAgent:
         streaming_callback = data.pop('streaming_callback', None)
         await self._raise_event(ToolCallEvent(active=True, tool_calls=tool_calls, **data), streaming_callback=streaming_callback )
 
+    async def _raise_system_prompt(self, prompt: str, **data):
+        streaming_callback = data.pop('streaming_callback', None)
+        await self._raise_event(SystemPromptEvent(content=prompt, **data), streaming_callback=streaming_callback )
+
+    async def _raise_user_request(self, request: str, **data):
+        streaming_callback = data.pop('streaming_callback', None)
+        await self._raise_event(UserRequestEvent(data={"message": request}, **data), streaming_callback=streaming_callback )
+
     async def _raise_tool_call_delta(self, tool_calls, **data):
         streaming_callback = data.pop('streaming_callback', None)
         await self._raise_event(ToolCallDeltaEvent(tool_calls=tool_calls, **data), streaming_callback=streaming_callback)
@@ -340,31 +331,11 @@ class BaseAgent:
         Returns:
             List[dict[str, Any]]: Formatted message array for LLM API
         """
-        sess_mgr: Optional[ChatSessionManager] = kwargs.get("session_manager", None)
         messages: Optional[List[Dict[str, Any]]] = kwargs.get("messages", None)
-
-        if messages is None and sess_mgr is not None:
-           kwargs['messages'] = copy.deepcopy(sess_mgr.active_memory.messages)
-
-        user_message = kwargs.get("user_message")
-        audio_clips: List[AudioInput] = kwargs.get("audio") or []
-        images: List[ImageInput] = kwargs.get("images") or []
-        files: List[FileInput] = kwargs.get("files") or []
-
-        if sess_mgr is not None:
-            # TODO: Add the user message but we need to take into account multimodal messages
-            if user_message is None:
-                if len(audio_clips) > 0:
-                    user_message = audio_clips[0].transcript or "audio input"
-                    await self._save_user_message_to_session(sess_mgr, user_message)
-                # If no audio but we have files, record that files were submitted
-                elif images or files:
-                    user_message = "Files submitted"
-                    await self._save_user_message_to_session(sess_mgr, user_message)
-            elif user_message:
-                await self._save_user_message_to_session(sess_mgr, user_message)
-
-        # User request logging is now handled by EventSessionLogger via streaming_callback
+        if messages is None:
+            chat_session: Optional[ChatSession] = kwargs.get("chat_session", None)
+            messages = chat_session.messages if chat_session is not None else []
+            kwargs["messages"] = messages
 
         return await self.__construct_message_array(**kwargs)
 

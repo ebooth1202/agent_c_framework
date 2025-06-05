@@ -96,8 +96,8 @@ class ClaudeChatAgent(BaseAgent):
         kwargs['prompt_metadata']['model_id'] = model_name
         (tool_context, prompt_context) = await self._render_contexts(**kwargs)
         sys_prompt: str = prompt_context["system_prompt"]
-
-        completion_opts = {"model": model_name, "messages": messages,
+        allow_betas: bool = kwargs.get("allow_betas", self.allow_betas)
+        completion_opts = {"model": model_name.removeprefix("bedrock_"), "messages": messages,
                            "system": sys_prompt,  "max_tokens": max_tokens,
                            'temperature': temperature}
 
@@ -107,7 +107,7 @@ class ClaudeChatAgent(BaseAgent):
                 if max_searches > 0:
                     functions.append({"type": "web_search_20250305", "name": "web_search", "max_uses": max_searches})
 
-            if self.allow_betas:
+            if allow_betas:
                 if allow_server_tools:
                     functions.append({"type": "code_execution_20250522","name": "code_execution"})
 
@@ -134,9 +134,7 @@ class ClaudeChatAgent(BaseAgent):
         if len(functions):
             completion_opts['tools'] = functions
 
-        session_manager: Union[ChatSessionManager, None] = kwargs.get("session_manager", None)
-        if session_manager is not None:
-            completion_opts["metadata"] = {'user_id': session_manager.user.user_id}
+        completion_opts["metadata"] = {'user_id': kwargs.get('user_id', 'Agent C user')}
 
         opts = {"callback_opts": callback_opts, "completion_opts": completion_opts, 'tool_chest': tool_chest, 'tool_context': tool_context}
         return opts
@@ -150,12 +148,13 @@ class ClaudeChatAgent(BaseAgent):
     async def chat(self, **kwargs) -> List[dict[str, Any]]:
         """Main method for interacting with Claude API. Split into smaller helper methods for clarity."""
         opts = await self.__interaction_setup(**kwargs)
-        client_wants_cancel: threading.Event = kwargs.get("client_wants_cancel", threading.Event())
+        client_wants_cancel: threading.Event = kwargs.get("client_wants_cancel")
         callback_opts = opts["callback_opts"]
         tool_chest = opts['tool_chest']
         session_manager: Union[ChatSessionManager, None] = kwargs.get("session_manager", None)
         messages = opts["completion_opts"]["messages"]
-
+        await self._raise_system_prompt(opts["completion_opts"]["system"], **callback_opts)
+        await self._raise_user_request(kwargs.get('user_message', ''), **callback_opts)
         delay = 1  # Initial delay between retries
         async with (self.semaphore):
             interaction_id = await self._raise_interaction_start(**callback_opts)
@@ -201,8 +200,8 @@ class ClaudeChatAgent(BaseAgent):
                         await self._raise_completion_end(opts["completion_opts"], stop_reason="exception", **callback_opts)
                         return []
 
-        self.logger.warning("Claude API is overloaded. GIVING UP")
-        await self._raise_system_event(f"Claude API is overloaded. GIVING UP.\n", **callback_opts)
+        self.logger.warning("ABNORMAL TERMINATION OF CLAUDE CHAT")
+        await self._raise_system_event(f"ABNORMAL TERMINATION OF CLAUDE CHAT", **callback_opts)
         await self._raise_completion_end(opts["completion_opts"], stop_reason="overload", **callback_opts)
         return messages
 
@@ -224,7 +223,13 @@ class ClaudeChatAgent(BaseAgent):
         state = self._init_stream_state()
         state['interaction_id'] = interaction_id
 
-        async with self.client.beta.messages.stream(**completion_opts) as stream:
+        if "betas" in  completion_opts:
+            stream_source = self.client.beta
+        else:
+            stream_source = self.client
+
+
+        async with stream_source.messages.stream(**completion_opts) as stream:
             async for event in stream:
                 await self._process_stream_event(event, state, tool_chest, session_manager,
                                                  messages, callback_opts)
@@ -717,7 +722,7 @@ class ClaudeChatAgent(BaseAgent):
             - Compatible with all existing session managers and tool chests
         """
         opts = await self.__interaction_setup(**kwargs)
-        client_wants_cancel: threading.Event = kwargs.get("client_wants_cancel", threading.Event())
+        client_wants_cancel: threading.Event = kwargs.get("client_wants_cancel")
         emit_tool_events: bool = kwargs.get("emit_tool_events", False)
         callback_opts = opts["callback_opts"]
         tool_chest = opts['tool_chest']

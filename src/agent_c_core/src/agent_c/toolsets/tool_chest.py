@@ -180,7 +180,7 @@ class ToolChest:
                         continue
                 
                 # Prepare tool_opts with current tool_chest
-                local_tool_opts = {}
+                local_tool_opts = self.__tool_opts
                 if tool_opts is not None:
                     local_tool_opts.update(tool_opts)
                 
@@ -190,9 +190,6 @@ class ToolChest:
                 # Pass tool_cache if we have it
                 if hasattr(self, 'tool_cache') and self.tool_cache is not None:
                     local_tool_opts['tool_cache'] = self.tool_cache
-
-                if hasattr(self, 'session_manager') and self.session_manager is not None:
-                    local_tool_opts['session_manager'] = self.session_manager
 
                 # Create instance
                 try:

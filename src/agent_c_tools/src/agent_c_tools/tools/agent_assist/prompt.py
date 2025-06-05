@@ -4,6 +4,34 @@ from typing import Any, Optional, Dict, List
 from agent_c.models.agent_config import AgentConfigurationV2, AgentConfiguration
 from agent_c.prompting.prompt_section import PromptSection, property_bag_item
 
+class AssistantBehaviorSection(PromptSection):
+    def __init__(self, **data: Any):
+        TEMPLATE = """**Important**: Agent Assist mode has been activated.\n\n# Assistant Operating Context\n\n
+                You are being contacted via the Agent Assist Tool by another agent  to handle a specific delegated task. Important operating guidelines:\n
+
+                - You are operating as a specialized clone with focused responsibilities\n
+                - Your role is to complete the specific task assigned by your requesting agent\n
+                - Limit your actions and responses to the directives and scope provided\n
+                - Only your final response will be relayed back to the requesting agent\n
+                - Focus on delivering complete, actionable results within your assigned scope\n
+                - Do not attempt to expand beyond your delegated responsibilities\n
+                - Provide thorough, high-quality output that addresses the specific request\n
+                \n\n$agent_process_directive\n
+                
+                """
+        super().__init__(template=TEMPLATE, required=True, name="AGENT ASSIST MODE ACTIVE", render_section_header=True, **data)
+
+    @property_bag_item
+    async def agent_process_directive(self, prompt_context: Dict[str, Any]) -> str:
+        """
+        Returns the agent process directive from the prompt context.
+        """
+        context_str: Optional[str]  = prompt_context.get('process_context', None)
+        if context_str:
+            return f"# Critical Process Context:\n\n{context_str}\n\n"
+        return ""
+
+
 
 class AgentAssistSection(PromptSection):
     tool: Any

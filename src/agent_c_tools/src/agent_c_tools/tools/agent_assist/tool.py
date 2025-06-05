@@ -2,11 +2,8 @@ from typing import Any, Optional, Dict
 
 import markdown
 import yaml
-from fastapi_pagination import response
-from markdownify import markdownify
 
-from agent_c import json_schema
-from agent_c.toolsets.tool_set import Toolset
+from agent_c.toolsets import Toolset, json_schema
 from .base import AgentAssistToolBase
 from .prompt import AgentAssistSection
 
@@ -34,13 +31,20 @@ class AgentAssistTools(AgentAssistToolBase):
                 'description': 'The ID key of the agent to make a request of.',
                 'required': True
             },
+            'process_context': {
+                'type': 'string',
+                'description': 'Optional process rules, context, or specific instructions to provide to the assistant. This will be prepended to the assistant\'s persona to guide its behavior for this oneshot.',
+                'required': False
+            }
         }
     )
     async def oneshot(self, **kwargs) -> str:
-        request: str = kwargs.get('request')
+        request: str = ("# Agent Assist Tool Notice\nThe following oneshot request is from another agent. "
+                        f"The agent is delegating a task for YOU to perform.\n\n---\n\n{kwargs.get('request')}\n")
         tool_context: Dict[str, Any] = kwargs.get('tool_context')
+        process_context: Optional[str] = kwargs.get('process_context')
         try:
-            agent = self.agent_loader.catalog[kwargs.get('agent_key')]
+            agent_config = self.agent_loader.catalog[kwargs.get('agent_key')]
         except FileNotFoundError:
             return f"Error: Agent {kwargs.get('agent_key')} not found in catalog."
 
@@ -48,15 +52,19 @@ class AgentAssistTools(AgentAssistToolBase):
             sent_by_class=self.__class__.__name__,
             sent_by_function='oneshot',
             content_type="text/html",
-            content=markdown.markdown(f"**Domo** agent requesting assistance from '*{agent.name}*':\n\n{request}</p>")
+            content=markdown.markdown(f"**Domo** agent requesting assistance from '*{agent_config.name}*':\n\n{request}</p>"),
+            tool_context=tool_context
         )
 
-        messages = await self.agent_oneshot(request, agent, tool_context['session_id'], tool_context)
+        messages = await self.agent_oneshot(request, agent_config, tool_context['session_id'], tool_context,
+                                             process_context=process_context,
+                                             client_wants_cancel=tool_context.get('client_wants_cancel', None))
         await self._raise_render_media(
             sent_by_class=self.__class__.__name__,
             sent_by_function='chat',
             content_type="text/html",
-            content=markdown.markdown(f"Interaction complete for Agent Assist oneshot with {agent.name}. Control returned to requesting agent.")
+            content=markdown.markdown(f"Interaction complete for Agent Assist oneshot with {agent_config.name}. Control returned to requesting agent."),
+            tool_context=tool_context
         )
 
         last_message = messages[-1] if messages else None
@@ -84,6 +92,11 @@ class AgentAssistTools(AgentAssistToolBase):
                 'description': 'The ID key of the agent to chat with.',
                 'required': True
             },
+            'process_context': {
+                'type': 'string',
+                'description': 'Optional process rules, context, or specific instructions to provide to the assistant. This will be prepended to the assistant\'s persona to guide its behavior for this interaction.',
+                'required': False
+            },
             'session_id': {
                 'type': 'string',
                 'description': 'Populate this with a an agent session ID to resume a chat session',
@@ -92,12 +105,14 @@ class AgentAssistTools(AgentAssistToolBase):
         }
     )
     async def chat(self, **kwargs) -> str:
-        message: str = kwargs.get('message')
+        message: str = ("# Agent Assist Tool Notice\nThe following chat message is from another agent. "
+                        f"The agent is delegating to YOU for your expertise.\n\n---\n\n{kwargs.get('message')}\n")
         tool_context: Dict[str, Any] = kwargs.get('tool_context')
         agent_session_id: Optional[str] = kwargs.get('session_id', None)
+        process_context: Optional[str] = kwargs.get('process_context')
 
         try:
-            agent = self.agent_loader.catalog[kwargs.get('agent_key')]
+            agent_config = self.agent_loader.catalog[kwargs.get('agent_key')]
         except FileNotFoundError:
             return f"Error: Agent {kwargs.get('agent_key')} not found in catalog."
 
@@ -105,15 +120,22 @@ class AgentAssistTools(AgentAssistToolBase):
             sent_by_class=self.__class__.__name__,
             sent_by_function='chat',
             content_type="text/html",
-            content=markdown.markdown(f"**Domo agent** requesting assistance from '*{agent.name}*': \n\n{message}")
+            content=markdown.markdown(f"**Domo agent** requesting assistance from '*{agent_config.name}*': \n\n{message}"),
+            tool_context=tool_context
         )
 
-        agent_session_id, messages = await self.agent_chat(message, agent, tool_context['session_id'], agent_session_id, tool_context)
+        agent_session_id, messages = await self.agent_chat(message, agent_config,
+                                                           tool_context['session_id'],
+                                                           agent_session_id,
+                                                           tool_context,
+                                                           process_context=process_context,
+                                                           client_wants_cancel=tool_context.get('client_wants_cancel', None))
         await self._raise_render_media(
             sent_by_class=self.__class__.__name__,
             sent_by_function='chat',
             content_type="text/html",
-            content=markdown.markdown(f"Interaction complete for Agent Assist Session ID: {agent_session_id} with {agent.name}. Control returned to requesting agent.")
+            content=markdown.markdown(f"Interaction complete for Agent Assist Session ID: {agent_session_id} with {agent_config.name}. Control returned to requesting agent."),
+            tool_context=tool_context
         )
         if messages is not None and len(messages) > 0:
             last_message = messages[-1]
