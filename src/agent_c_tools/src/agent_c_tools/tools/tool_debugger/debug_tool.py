@@ -47,7 +47,7 @@ sys.modules['agent_c.util.token_counter'] = mock_module
 
 
 # Import the base ToolChest class AFTER the mock is set up
-from agent_c import ToolChest, ToolCache
+from agent_c.toolsets import ToolChest, ToolCache
 
 
 class ToolDebugger:
