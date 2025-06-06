@@ -73,7 +73,7 @@ class AgentAssistTools(AgentAssistToolBase):
             yaml_response = yaml.dump(last_message, allow_unicode=True)
             agent_response = f"**IMPORTANT**: The following response is also displayed in the UI for the user, you do not need to relay it.\n\nAgent Response:\n{yaml_response}"
         else:
-            agent_response = "No response received from the agent."
+            agent_response = "No response received from the agent. This is likely a transient error, please try again."
 
 
         return agent_response
@@ -143,7 +143,7 @@ class AgentAssistTools(AgentAssistToolBase):
 
             return f"**IMPORTANT**: The following response is also displayed in the UI for the user, you do not need to relay it.\n\nAgent Session ID: {agent_session_id}\n{agent_response}"
 
-        return f"No messages returned from agent session {agent_session_id}."
+        return f"No messages returned from agent session {agent_session_id}.  This is likely a transient error, please try again."
 
     @json_schema(
         'Load an agent agent as a YAML string for you to review',

@@ -240,6 +240,7 @@ class AgentAssistToolBase(Toolset):
                         'message_count': len(session.get('messages', [])),
                         'agent_key': session.get('agent_key'),
                         'metadata': session.get('metadata', {}),
+                        'messages': session.get('messages', []),
                     })
 
         return sessions

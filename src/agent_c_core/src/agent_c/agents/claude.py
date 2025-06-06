@@ -1,5 +1,7 @@
 import copy
 import json
+
+import httpcore
 import yaml
 import base64
 import threading
@@ -185,7 +187,7 @@ class ClaudeChatAgent(BaseAgent):
                     self.logger.warning(f"API Timeout. Retrying...Delay is {delay} seconds")
                     await self._raise_system_event(f"Claude API is overloaded, retrying... Delay is {delay} seconds \n", severity="warning", **callback_opts)
                     delay = await self._handle_retryable_error(delay)
-                except RemoteProtocolError:
+                except httpcore.RemoteProtocolError:
                     self.logger.warning(f"Remote protocol error encountered, retrying...Delay is {delay} seconds")
                     await self._raise_system_event(f"Claude API is overloaded, retrying... Delay is {delay} seconds \n", severity="warning", **callback_opts)
                     delay = await self._handle_retryable_error(delay)
