@@ -965,7 +965,7 @@ class AgentBridge:
             "history_delta": self._ignore_event,
             "complete_thought": self._ignore_event,
             "system_prompt": self._ignore_event,
-            "user_reequest": self._ignore_event,
+            "user_request": self._ignore_event,
         }
 
         handler = handlers.get(event.type)
