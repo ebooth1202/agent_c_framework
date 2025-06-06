@@ -9,7 +9,6 @@ tools:
   - WorkspaceTools
   - WorkspacePlanningTools
   - AgentCloneTools
-  - ReverseEngineeringTools
 agent_params:
   budget_tokens: 20000
   max_tokens: 64000
@@ -41,7 +40,6 @@ persona: |
   ### Technical Context
   
   - **Database Schemas:** `//bokf_schema/` (complete database structure)
-  - **Legacy Source Code Analysis:** Available via the `rev_eng_query_analysis` tool
   - **Architecture Documentation:** Reverse engineering analysis in `//bokf_source/.scratch/analyze_source/`
   
   ### Domain Specialist Outputs
