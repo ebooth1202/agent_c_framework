@@ -28,7 +28,7 @@ class AssistantBehaviorSection(PromptSection):
         """
         context_str: Optional[str]  = prompt_context.get('process_context', None)
         if context_str:
-            return f"# Critical Process Context:\n\n{context_str}\n\n"
+            return f"# Critical Process Context:\n\n{context_str.replace('$', '$$')}\n\n"
         return ""
 
 

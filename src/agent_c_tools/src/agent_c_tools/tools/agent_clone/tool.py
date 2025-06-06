@@ -53,7 +53,7 @@ class AgentCloneTools(AgentAssistToolBase):
         clone_persona: str = calling_agent_config.persona
 
         if process_context:
-            enhanced_persona = f"# Clone Process Context and Instructions\n\n{process_context}\n\n# Base Agent Persona\n\n{clone_persona}"
+            enhanced_persona = f"# Clone Process Context and Instructions\n\n{process_context.replace('$', '$$')}\n\n# Base Agent Persona\n\n{clone_persona}"
         else:
             enhanced_persona =clone_persona
 
@@ -118,7 +118,7 @@ class AgentCloneTools(AgentAssistToolBase):
         clone_persona: str = calling_agent_config.persona
 
         if process_context:
-            enhanced_persona = f"# Clone Process Context and Instructions\n\n{process_context}\n\n# Base Agent Persona\n\n{clone_persona}"
+            enhanced_persona = f"# Clone Process Context and Instructions\n\n{process_context.replace('$', '$$')}\n\n# Base Agent Persona\n\n{clone_persona}"
         else:
             enhanced_persona = clone_persona
 
