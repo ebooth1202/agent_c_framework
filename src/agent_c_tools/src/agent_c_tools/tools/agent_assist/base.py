@@ -140,11 +140,11 @@ class AgentAssistToolBase(Toolset):
         return chat_params | tool_params | agent_params
 
     @staticmethod
-    async def __build_prompt_metadata(agent: AgentConfiguration, user_session_id: Optional[str] = None, **opts) -> Dict[str, Any]:
-        agent_props = agent.prompt_metadata if agent.prompt_metadata else {}
+    async def __build_prompt_metadata(agent_config: AgentConfiguration, user_session_id: Optional[str] = None, **opts) -> Dict[str, Any]:
+        agent_props = agent_config.prompt_metadata if agent_config.prompt_metadata else {}
 
-        return {"session_id": user_session_id, "persona_prompt": agent.persona, "persona": agent.model_dump(exclude_none=True, exclude={'prompt_metadata'}),
-                "agent": agent,
+        return {"session_id": user_session_id, "persona_prompt": agent_config.persona,
+                "agent_config": agent_config,
                 "timestamp": datetime.now().isoformat()} | agent_props | opts
 
     async def agent_oneshot(self, user_message: str, agent: AgentConfiguration, user_session_id: Optional[str] = None,
