@@ -19,8 +19,8 @@ class AgentTeamSection(PromptSection):
 
     @property_bag_item
     async def at_agent_ids(self, prompt_context: Dict[str, Any]) -> str:
-        agent = prompt_context.get('active_agent', None)
-        available = self._filter_agent_catalog(agent)
+        agent_config = prompt_context.get('agent_config')
+        available = self._filter_agent_catalog(agent_config)
         agent_descriptions = []
         for sub_agent in available:
             agent_descriptions.append(f"**{sub_agent.name}**, Agent Key: `{sub_agent.key}`\nTools:{", ".join(sub_agent.tools)}{sub_agent.agent_description}")

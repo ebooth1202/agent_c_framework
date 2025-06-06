@@ -25,8 +25,7 @@ async def update_agent_settings(
     if not session_data:
         return {"error": "Invalid session_id"}
 
-    # get agent object
-    agent_bridge = session_data["agent_bridge"]
+    agent_bridge: AgentBridge = session_data["agent_bridge"]
 
     if not agent_bridge:
         logger.warning(f"No agent bridge found for session {update_params.ui_session_id}")
@@ -52,9 +51,16 @@ async def update_agent_settings(
         failed_updates = []
         needs_agent_reinitialization = False
 
+        if "persona_name" in updates:
+            agent_key = updates["persona_name"]
+
+            agent_config = agent_manager.agent_config_loader.duplicate(agent_key)
+            agent_bridge.chat_session.agent_config = agent_config
+            needs_agent_reinitialization = True
+
+
         for key, value in updates.items():
-            if key in ["temperature", "reasoning_effort", "extended_thinking", "budget_tokens", "custom_prompt",
-                       "persona_name"]:
+            if key in ["temperature", "reasoning_effort", "extended_thinking", "budget_tokens", "custom_prompt", "persona_name"]:
                 # Only update if value is not None
                 if value is not None:
                     # Record the change
