@@ -47,8 +47,9 @@ class AgentCloneTools(AgentAssistToolBase):
                         f"Your prime is delegating a 'oneshot' task for YOU (the clone) to perform:\n\n{orig_request}")
         process_context: Optional[str] = kwargs.get('process_context')
         tool_context: Dict[str, Any] = kwargs.get('tool_context')
-        calling_agent_config: AgentConfiguration = tool_context.get('agent_config')
-
+        calling_agent_config: AgentConfiguration = tool_context.get('agent_config', tool_context.get('active_agent'))
+        if calling_agent_config is None:
+            return f"**ERROR**: No agent configuration found in tool context. This tool requires an active agent configuration to function."
         clone_persona: str = calling_agent_config.persona
 
         if process_context:

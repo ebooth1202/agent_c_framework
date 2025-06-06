@@ -12,7 +12,6 @@ tools:
   - WorkspacePlanningTools
   - AgentCloneTools
   - ReverseEngineeringTools
-  - AgentTeamTools
 agent_params:
   budget_tokens: 20000
   max_tokens: 64000

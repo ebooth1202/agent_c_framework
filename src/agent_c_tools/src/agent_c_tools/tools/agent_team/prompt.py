@@ -42,15 +42,19 @@ class AgentTeamSection(PromptSection):
 
     @property_bag_item
     async def at_sessions(self, prompt_context: Dict[str, Any]) -> str:
-        session_id = prompt_context.get('user_session_id', prompt_context.get('session_id', None))
-        agent_sessions: List[Dict[str, Any]] = self.tool.list_active_sessions(session_id)
-        sess_list = []
+        try:
+            session_id = prompt_context.get('user_session_id', prompt_context.get('session_id', None))
+            agent_sessions: List[Dict[str, Any]] = self.tool.list_active_sessions(session_id)
+            sess_list = []
 
-        if len(agent_sessions):
-            for ses in agent_sessions:
-                agent: AgentConfigurationV2 = self.tool.agent_loader.catalog.get(ses['agent_key'])
-                sess_list.append(f"- `{ses['session_id']}` with {agent.name}. {len(ses['messages'])} messages")
+            if len(agent_sessions):
+                for ses in agent_sessions:
+                    agent_config: AgentConfiguration = self.tool.agent_loader.catalog.get(ses['agent_key'])
+                    sess_list.append(f"- `{ses['agent_session_id']}` with {agent_config.name}. {len(ses['messages'])} messages")
 
-            return f"\n\n## Active Team Sessions:\n{"\n".join(sess_list)}\n\n"
+                return f"\n\n## Active Team Sessions:\n{"\n".join(sess_list)}\n\n"
+        except Exception as e:
+            self.tool.logger.exception(f"Error retrieving active agent sessions: {e}", exc_info=True)
+            return "\n\n## Active Team Sessions:\nError fetching team sessions. \n\n"
 
         return "\n"
