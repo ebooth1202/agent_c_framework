@@ -74,7 +74,7 @@ class AgentAssistToolBase(Toolset):
         await self._emit_content_from_agent(agent, event.content, name=f"{agent.name} (thinking)")
 
     async def _streaming_callback_for_subagent(self, agent: AgentConfiguration, parent_streaming_callback, parent_session_id, event: SessionEvent):
-        if event.type not in [ 'completion', 'interaction', 'history'] and parent_streaming_callback is not None:
+        if event.type not in [ 'interaction', 'history'] and parent_streaming_callback is not None:
             event.session_id = parent_session_id
             await parent_streaming_callback(event)
 
