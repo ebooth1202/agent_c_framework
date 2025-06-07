@@ -1,6 +1,6 @@
 import re
 import httpx
-from typing import List, Optional
+from typing import List, Optional, Dict, Tuple
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -74,15 +74,16 @@ class WebTools(Toolset):
         formatter = next((f for f in self.formatters if f.match(url)), self.default_formatter)
         return formatter.format(content, url)
 
-    async def _fetch_content(self, url: str, expire_secs: int):
+    async def _fetch_content(self, url: str, expire_secs: int, headers: Dict[str, str]) -> Tuple[Optional[str], Optional[str]]:
         if self.tool_cache.get(f"{url}_RAW") is not None:
             self.logger.debug(f'URL found in cache: {url}_RAW')
             return self.tool_cache.get(f"{url}_RAW")
 
         async with httpx.AsyncClient() as client:
             try:
-                headers = {
-                    "User-Agent": "Mozilla/5.0 (iPad; CPU OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"}
+                if "User-Agent" not in headers:
+                    headers["User-Agent"] = "Mozilla/5.0 (iPad; CPU OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+
                 response = await client.get(url, headers=headers)
                 if response.status_code == 403 and self.driver is not None:
                     self.driver.get(url)
@@ -101,16 +102,16 @@ class WebTools(Toolset):
                     self.tool_cache.set(f"{url}_RAW", response_content, expire=expire_secs)
                     self.logger.debug(f'URL cached with with caller specified expiration: {url}_RAW. Expires in {expire_secs} seconds')
 
-                return response_content
+                return None, response_content
             except httpx.HTTPStatusError as e:
                 self.logger.exception(f'HTTP error occurred while fetching {url}: {e}')
-                return f'HTTP error occurred: {e}'
+                return f'HTTP error occurred: {e}', None
             except httpx.RequestError as e:
                 self.logger.exception(f'Request error occurred while fetching {url}: {e}')
-                return f'Request error occurred: {e}'
+                return f'Request error occurred: {e}', None
             except Exception as e:
                 self.logger.exception(f'An error occurred while fetching {url}: {e}')
-                return f'An error occurred: {e}'
+                return f'An error occurred: {e}', None
 
     @json_schema(
         'Fetch a web page in markdown format (preferred) or with raw output, optionally saving it to a workspace.',
@@ -140,9 +141,14 @@ class WebTools(Toolset):
                 'description': 'Maximum number of tokens to return. Default is 2000.',
                 'required': False
             },
+            'additional_headers': {
+                'type': 'object',
+                'description': 'Additional headers to include in the request. As a dictionary of key-value pairs.',
+                'required': False
+            },
         }
     )
-    async def fetch_url(self, **kwargs):
+    async def get(self, **kwargs):
         url: Optional[str] = kwargs.get('url', None)
         save_only: bool = kwargs.get('save_only', False)
         save_to_path: Optional[str] = kwargs.get('save_to_path', None)
@@ -150,7 +156,9 @@ class WebTools(Toolset):
         max_tokens: int = kwargs.get('max_tokens', 2000)
         default_expire: int = kwargs.get("expire_secs", 3600)
         tool_context = kwargs.get('tool_context')
+        additional_headers: Dict[str, str] = kwargs.get('additional_headers', {})
         workspace: Optional[BaseWorkspace] = None
+
         if url is None:
             return "Error: URL is required."
 
@@ -171,9 +179,9 @@ class WebTools(Toolset):
         if save_only and save_to_path is None:
             return "Error: save_to_path must be provided if save_only is True."
 
-        content = await self._fetch_content(url=url, expire_secs=default_expire)
-        if content is None:
-            return "Error: Failed to fetch content from the URL."
+        error_message, content = await self._fetch_content(url=url, expire_secs=default_expire, headers=additional_headers)
+        if error_message is not None:
+            return error_message
 
         if not raw_output:
             content = self.format_content(content, url)
