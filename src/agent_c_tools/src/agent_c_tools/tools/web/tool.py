@@ -133,7 +133,7 @@ class WebTools(Toolset):
             },
             'raw_output': {
                 'type': 'boolean',
-                'description': 'If true the raw content will be SAVED to the workspace',
+                'description': 'If true the raw content will be returned/saved',
                 'required': False
             },
             'max_tokens': {
