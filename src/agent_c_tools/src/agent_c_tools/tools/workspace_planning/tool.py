@@ -309,6 +309,18 @@ class WorkspacePlanningTools(Toolset):
                 "type": "boolean",
                 "description": "Mark the task as completed"
             },
+            "completion_report": {
+                "type": "string",
+                "description": "Optional report on task completion"
+            },
+            "requires_completion_signoff": {
+                "type": "string",
+                "description": "Whether the task requires signoff upon completion. Can be one of: true, false or human_required",
+            },
+            "completion_signoff_by": {
+                "type": "string",
+                "description": "Name of the user or supervising agent who signed off on the task completion",
+            },
             "context": {
                 "type": "string",
                 "description": "New context for the task"
@@ -329,6 +341,9 @@ class WorkspacePlanningTools(Toolset):
         completed = kwargs.get('completed')
         context = kwargs.get('context')
         sequence = kwargs.get('sequence')
+        completion_report = kwargs.get('completion_report')
+        completion_signoff_by = kwargs.get('completion_signoff_by')
+        requires_completion_signoff = kwargs.get('requires_completion_signoff', "true")
 
         if not plan_path:
             return "Error: plan_path is required"
@@ -358,6 +373,12 @@ class WorkspacePlanningTools(Toolset):
             task.context = context
         if sequence is not None:
             task.sequence = sequence
+        if completion_report is not None:
+            task.completion_report = completion_report
+        if completion_signoff_by is not None:
+            task.completion_signoff_by = completion_signoff_by
+        if requires_completion_signoff is not None:
+            task.requires_completion_signoff = requires_completion_signoff
 
         # Update the task's updated_at timestamp
         task.updated_at = datetime.now()

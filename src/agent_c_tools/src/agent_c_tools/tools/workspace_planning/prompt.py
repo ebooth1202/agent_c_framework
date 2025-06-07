@@ -83,6 +83,7 @@ class WorkspacePlanSection(PromptSection):
             
             "### 5. Execution and Tracking\n"
             "- **Progress Updates**: Update context with implementation notes\n"
+            "- **Task Completion**: Include a completion report when updating tasks to complete status\n"
             "- **Blocker Documentation**: Record issues and resolution approaches\n"
             "- **Scope Changes**: Update descriptions and context as requirements evolve\n\n"
             
@@ -152,7 +153,6 @@ class WorkspacePlanSection(PromptSection):
             
             "## Integration with Development Workflow\n"
             "- Use plans to track feature development from conception to deployment\n"
-            "- Reference plan tasks in commit messages and PR descriptions\n"
             "- Update task context with implementation discoveries\n"
             "- Capture lessons learned during code reviews and retrospectives\n"
             "- Use completed plans as project documentation and knowledge base\n"

@@ -20,7 +20,9 @@ class TaskModel(BaseModel):
     sequence: Optional[int] = None  # For controlling display order
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
-    
+    completion_report: Optional[str] = None  # Report on task completion
+    completion_signoff_by: str = Field(default="**NEEDS SIGNOFF**")
+
     @field_serializer('created_at', 'updated_at')
     def serialize_datetime(self, dt: datetime) -> str:
         return dt.isoformat()

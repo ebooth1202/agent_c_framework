@@ -88,7 +88,7 @@ class AgentCloneTools(AgentAssistToolBase):
                 agent_response = yaml.dump(last_message, allow_unicode=True)
                 return agent_response
 
-        return "No response from agent. Tell the user to check the server error logs for more information."
+        return "No response from clone. This usually means that you overloaded the clone with too many tasks."
 
     @json_schema(
         'Begin or resume a chat session with a clone of yourself. The return value will be the final output from the agent along with the agent session ID.',
@@ -164,7 +164,7 @@ class AgentCloneTools(AgentAssistToolBase):
                 return agent_response
 
         self.logger.warning("No response from agent.")
-        return "No response from agent. Tell the user to check the server error logs for more information."
+        return "No response from clone. This usually means that you overloaded the clone with too many tasks. "
 
 
 Toolset.register(AgentCloneTools, required_tools=['WorkspaceTools'])
