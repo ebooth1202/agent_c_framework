@@ -83,6 +83,10 @@ class AgentCloneTools(AgentAssistToolBase):
                 agent_response = yaml.dump(content[-1], allow_unicode=True).replace("\\n", "\n")
 
                 return f"**IMPORTANT**: The following response is also displayed in the UI for the user, you do not need to relay it.\n---\n\n{agent_response}"
+            else:
+                self.logger.warning("No content in last message from agent.")
+                agent_response = yaml.dump(last_message, allow_unicode=True)
+                return agent_response
 
         return "No response from agent. Tell the user to check the server error logs for more information."
 
@@ -154,7 +158,12 @@ class AgentCloneTools(AgentAssistToolBase):
             if content is not None:
                 agent_response = yaml.dump(content[-1], allow_unicode=True).replace("\\n", "\n")
                 return f"**IMPORTANT**: The following response is also displayed in the UI for the user, you do not need to relay it.\n\nAgent Session ID: {agent_session_id}\n{agent_response}"
+            else:
+                self.logger.warning("No content in last message from agent.")
+                agent_response = yaml.dump(last_message, allow_unicode=True)
+                return agent_response
 
+        self.logger.warning("No response from agent.")
         return "No response from agent. Tell the user to check the server error logs for more information."
 
 
