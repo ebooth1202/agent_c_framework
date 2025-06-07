@@ -896,9 +896,8 @@ class WorkspaceTools(Toolset):
             value = await workspace.safe_metadata(key)
             if value is None:
                 self.logger.warning(f"Key '{key}' not found in metadata for workspace '{workspace.name}'")
-
-            if isinstance(value, dict):
-                response = yaml.dump(List(value.keys()), Dumper=yaml.Dumper, default_flow_style=False)
+            elif isinstance(value, dict):
+                response = self._yaml_dump(list(value.keys()))
                 token_count = tool_context['agent_runtime'].count_tokens(response)
                 if token_count > max_tokens:
                     return f"ERROR: Response exceeds max_tokens limit of {max_tokens}. Current token count: {token_count}."
