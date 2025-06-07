@@ -1,21 +1,15 @@
 import re
 import httpx
-import json
-import logging
-import datetime
-
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Tuple
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 
+from agent_c_tools.tools.web.formatters import *
 from agent_c.toolsets import json_schema, Toolset
-from .formatters import *
-from .util.expires_header import expires_header_to_cache_seconds
-# Use local import to avoid circular dependencies
-from ..workspace import WorkspaceTools
-from ...helpers.path_helper import ensure_file_extension, create_unc_path
-
+from agent_c_tools.tools.workspace.tool import WorkspaceTools
+from agent_c_tools.tools.workspace.base import BaseWorkspace
+from agent_c_tools.tools.web.util.expires_header import expires_header_to_cache_seconds
 
 class WebTools(Toolset):
     """
@@ -33,33 +27,10 @@ class WebTools(Toolset):
                                                               ReadableFormatter(re.compile(r".*")))
         self.formatters: List[ContentFormatter] = kwargs.get('wt_formatters', [])
         self.driver = self.__init__wd()
-        self.workspace_tool = Optional[WorkspaceTools]
-        
-        # Initialize tool_cache if not provided
-        if not hasattr(self, 'tool_cache') or self.tool_cache is None:
-            try:
-                from agent_c.toolsets.tool_cache import ToolCache
-                self.tool_cache = ToolCache()
-                logging.info("Initialized default ToolCache for WebTools")
-            except ImportError:
-                logging.warning("Could not import ToolCache, caching will be disabled")
-                self.tool_cache = None
+        self.workspace_tool: Optional[WorkspaceTools] = None
 
     async def post_init(self):
-        self.workspace_tool = self.tool_chest.available_tools.get("WorkspaceTools")
-        # # Defensively access dependencies
-        # if hasattr(self, 'tool_chest') and self.tool_chest is not None:
-        #     self.workspace_tool = self.tool_chest.active_tools.get("WorkspaceTools")
-        #
-        #     # If tool_cache wasn't initialized in __init__, try to get it from tool_chest
-        #     if not hasattr(self, 'tool_cache') or self.tool_cache is None:
-        #         try:
-        #             from agent_c.toolsets.tool_cache import ToolCache
-        #             self.tool_cache = getattr(self.tool_chest, 'tool_cache', ToolCache())
-        #             logging.info("Retrieved ToolCache from tool_chest or created a new one")
-        #         except Exception as e:
-        #             logging.warning(f"Failed to initialize tool_cache: {e}")
-        #             self.tool_cache = None
+        self.workspace_tool: WorkspaceTools = self.tool_chest.available_tools.get("WorkspaceTools")
 
     def __init__wd(self):
         try:
@@ -79,13 +50,14 @@ class WebTools(Toolset):
             options.add_argument('--disable-gpu')
             driver = webdriver.Chrome(options=options)
         except Exception as e:
+            self.logger.warning(f"Failed to initialize WebDriver: {e}")
             return None
 
         return driver
 
     def __del__(self):
         if self.driver:
-            logging.info("Closing WebDriver")
+            self.logger.info("Closing WebDriver")
             self.driver.close()
 
     def format_content(self, content: str, url: str) -> str:
@@ -102,51 +74,16 @@ class WebTools(Toolset):
         formatter = next((f for f in self.formatters if f.match(url)), self.default_formatter)
         return formatter.format(content, url)
 
-    @json_schema(
-        'Fetch the content of a web page and return it to the LLM in Markdown format. Do not save it to the workspace.',
-        {
-            'url': {
-                'type': 'string',
-                'description': 'The URL of the web page you would like to fetch',
-                'required': True
-            }
-        }
-    )
-    async def fetch_webpage(self, **kwargs) -> str:
-        """
-        Fetch a webpage's content and convert it to Markdown format using the specified formatter.
-
-        Args:
-            **kwargs: Keyword arguments containing the 'url' and possibly other configuration details.
-                url: The URL of the web page to fetch
-                raw: Whether to return the raw HTML instead of formatted markdown
-                expire_secs: How long to cache the content
-                save_to_workspace: Whether to save the markdown content to a workspace
-                workspace_name: Workspace name to use for saving the markdown file
-                file_path: File path within the workspace to save the markdown file
-
-        Returns:
-            str: Page content in Markdown format or an error message if an exception occurs.
-                 If saving to workspace, returns a JSON string with the status.
-        """
-        url: str = kwargs.get('url')
-        raw: bool = kwargs.get("raw", False)
-        default_expire: int = kwargs.get("expire_secs", 3600)
-
-        if url is None:
-            return 'url is required'
-            
-        # Handle case where tool_cache is not initialized
-        # response_content: Optional[str] = None
-        # if hasattr(self, 'tool_cache') and self.tool_cache is not None:
-        response_content = self.tool_cache.get(url)
-        if response_content is not None:
-            return response_content
+    async def _fetch_content(self, url: str, expire_secs: int, headers: Dict[str, str]) -> Tuple[Optional[str], Optional[str]]:
+        if self.tool_cache.get(f"{url}_RAW") is not None:
+            self.logger.debug(f'URL found in cache: {url}_RAW')
+            return self.tool_cache.get(f"{url}_RAW")
 
         async with httpx.AsyncClient() as client:
             try:
-                headers = {
-                    "User-Agent": "Mozilla/5.0 (iPad; CPU OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"}
+                if "User-Agent" not in headers:
+                    headers["User-Agent"] = "Mozilla/5.0 (iPad; CPU OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+
                 response = await client.get(url, headers=headers)
                 if response.status_code == 403 and self.driver is not None:
                     self.driver.get(url)
@@ -158,136 +95,118 @@ class WebTools(Toolset):
                     encoding = response.encoding or 'utf-8'
                     response_content = response.content.decode(encoding)
 
-                if not raw:
-                    response_content = self.format_content(response_content, url)
+                if expires_in is not None:
+                    self.tool_cache.set(f"{url}_RAW", response_content, expire=expires_in)
+                    self.logger.debug(f'URL cached with expiration: {url}_RAW. Expires in {expires_in} seconds (from headers')
+                else:
+                    self.tool_cache.set(f"{url}_RAW", response_content, expire=expire_secs)
+                    self.logger.debug(f'URL cached with with caller specified expiration: {url}_RAW. Expires in {expire_secs} seconds')
 
-                # Only cache if tool_cache is available
-                if hasattr(self, 'tool_cache') and self.tool_cache is not None:
-                    if expires_in is not None:
-                        self.tool_cache.set(url, response_content, expire=expires_in)
-                        logging.debug(f'URL cached with expiration: {url}')
-                    else:
-                        self.tool_cache.set(url, response_content, expire=default_expire)
-                        logging.debug(f'URL cached with default expiration: {url}')
-
-                return response_content
+                return None, response_content
             except httpx.HTTPStatusError as e:
-                logging.error(f'An error occurred: - HTTP error: {e}')
-                return f'HTTP error occurred: {e}'
+                self.logger.exception(f'HTTP error occurred while fetching {url}: {e}')
+                return f'HTTP error occurred: {e}', None
             except httpx.RequestError as e:
-                logging.error(f'An error occurred - Request error: {e}')
-                return f'Request error occurred: {e}'
+                self.logger.exception(f'Request error occurred while fetching {url}: {e}')
+                return f'Request error occurred: {e}', None
             except Exception as e:
-                logging.error(f'An error occurred - General error: {e}')
-                return f'An error occurred: {e}'
+                self.logger.exception(f'An error occurred while fetching {url}: {e}')
+                return f'An error occurred: {e}', None
 
     @json_schema(
-        'Fetch and save webpage. Fetch the content of a web page, save it to a workspace and optionally return it to the LLM in Markdown format.',
+        'Fetch a web page in markdown format (preferred) or with raw output, optionally saving it to a workspace.',
         {
             'url': {
                 'type': 'string',
                 'description': 'The URL of the web page you would like to fetch',
                 'required': True
             },
-            'return_to_llm': {
-                'type': 'boolean',
-                'description': 'Whether return the browser page content to the LLM',
-                'required': False,
-                'default': True
-            },
-            'workspace': {
+            'save_to_path': {
                 'type': 'string',
-                'description': 'Workspace to use for saving the markdown file',
-                'required': True,
-                'default': 'project'
-            },
-            'file_path': {
-                'type': 'string',
-                'description': 'Relative file path within the workspace to save the markdown file',
+                'description': 'An optional path workspace UNC path to save the content to.',
                 'required': False
-            }
+            },
+            'save_only': {
+                'type': 'boolean',
+                'description': 'If true, the content will be saved to the workspace but not returned to the caller. Default is Fals',
+                'required': False
+            },
+            'raw_output': {
+                'type': 'boolean',
+                'description': 'If true the raw content will be SAVED to the workspace',
+                'required': False
+            },
+            'max_tokens': {
+                'type': 'integer',
+                'description': 'Maximum number of tokens to return. Default is 2000.',
+                'required': False
+            },
+            'additional_headers': {
+                'type': 'object',
+                'description': 'Additional headers to include in the request. As a dictionary of key-value pairs.',
+                'required': False
+            },
         }
     )
-    async def fetch_and_save(self, **kwargs):
-        url: str = kwargs.get('url')
-        raw: bool = kwargs.get("raw", False)
+    async def get(self, **kwargs):
+        url: Optional[str] = kwargs.get('url', None)
+        save_only: bool = kwargs.get('save_only', False)
+        save_to_path: Optional[str] = kwargs.get('save_to_path', None)
+        raw_output: bool = kwargs.get('raw_output', False)
+        max_tokens: int = kwargs.get('max_tokens', 2000)
         default_expire: int = kwargs.get("expire_secs", 3600)
-        return_to_llm: bool = kwargs.get("save_to_workspace", True)
-        workspace_name: str = kwargs.get("workspace", "project")
-        file_path: str = kwargs.get("file_path")
+        tool_context = kwargs.get('tool_context')
+        additional_headers: Dict[str, str] = kwargs.get('additional_headers', {})
+        workspace: Optional[BaseWorkspace] = None
 
         if url is None:
-            return 'url is required'
+            return "Error: URL is required."
 
-        response_content = await self.fetch_webpage(url=url, raw=raw, expire_secs=default_expire)
-
-        if isinstance(response_content, str) and 'An error occurred:' in response_content:
-            return f"An error occured fetching web page: {response_content}"
-
-        try:
-            # If file_path is not provided, generate one based on the URL
-            if file_path is None:
-                # Extract domain from URL and create a clean filename
-                from urllib.parse import urlparse
-                parsed_url = urlparse(url)
-                domain = parsed_url.netloc.replace('.', '_')
-                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-
-                file_path = f"{domain}_{timestamp}.md"
-
-            # Ensure file has .md extension
-            file_path = ensure_file_extension(file_path, "md")
-
-            # Get workspace toolset
-            if self.workspace_tool is None:
-                return json.dumps({
-                    'error': "Workspace tool not available. Cannot save markdown.",
-                    'content': response_content
-                })
-
-            # Find the workspace and save the content
-            unc_path = create_unc_path(workspace_name, file_path)
-            error, workspace, relative_path = self.workspace_tool.validate_and_get_workspace_path(unc_path)
+        if save_to_path is not None:
+            error, workspace_name, file_path = self.workspace_tool.validate_and_get_workspace_path(save_to_path)
             if error:
-                return f"Invalid path: {error}"
-            result = await self.workspace_tool.write(path=unc_path, mode='write', data=response_content)
-            result_data = json.loads(result)
-            if 'error' in result_data:
-                return f"Error writing file: {result_data['error']}"
+                return f"Invalid save path: {error}"
+            try:
+                workspace: BaseWorkspace = self.workspace_tool.workspaces[workspace_name] if workspace_name else None
+            except KeyError:
+                self.logger.error(f"Workspace {workspace_name} not found in available workspaces.")
+                return f"Error: Workspace {workspace_name} not found."
 
-            # Get the full path of the file
-            # os_path = os_file_system_path(self.workspace_tool, unc_path)
-
-            # workspace_obj = workspace_tool.find_workspace_by_name(workspace)
-            # if workspace_obj is None:
-            #     return json.dumps({
-            #         'error': f"No workspace found with the name: {workspace}",
-            #         'content': response_content
-            #     })
-            #
-            # # Save the markdown content to the workspace
-            # result = await workspace_obj.write(file_path=file_path, mode='write', data=response_content)
-            logging.info(f'Saved webpage content to workspace: {workspace_name} with file name: {file_path}')
-
-            return_dict: Dict[str, str] = {
-                'save_result': result,
-                'message': f"Webpage content saved to {workspace_name}/{file_path}",
-                'file_path': file_path,
-                'workspace_name': workspace_name
-            }
-
-            if return_to_llm:
-                return_dict['content'] = response_content
-
-            return json.dumps(return_dict)
-
-        except Exception as e:
-            logging.error(f'Error saving to workspace: {str(e)}')
-            return json.dumps({
-                'error': f'Error saving to workspace: {str(e)}',
-                'content': response_content,
-                'result': result if 'result' in locals() else None
-            })
+            if workspace is None:
+                return f"Error: No workspace found with the name: {workspace_name}"
 
 
-Toolset.register(WebTools)
+        if save_only and save_to_path is None:
+            return "Error: save_to_path must be provided if save_only is True."
+
+        error_message, content = await self._fetch_content(url=url, expire_secs=default_expire, headers=additional_headers)
+        if error_message is not None:
+            return error_message
+
+        if not raw_output:
+            content = self.format_content(content, url)
+            await self._render_media_markdown(content, "fetch_url", tool_context=tool_context)
+
+        token_count = tool_context['agent_runtime'].count_tokens(content)
+
+        if workspace is not None:
+            await workspace.write(file_path, mode='write', data=content)
+            if save_only:
+                return f"{url} content saved to {save_to_path}. There are {token_count} tokens in the content."
+
+
+        if token_count > max_tokens:
+            error_msg = (f"ERROR: The content of this URL exceeds max_tokens limit of {max_tokens}. "
+                         f"Content token count: {token_count}.")
+            if workspace:
+                error_msg += f"\nContent has been saved to {save_to_path}. You may use the workspace tools to access it."
+
+            if raw_output is False:
+                error_msg += "\nNOTICE: The content HAS been displayed to the user however."
+
+            return error_msg
+
+        return content
+
+
+Toolset.register(WebTools, required_tools=['WorkspaceTools'])

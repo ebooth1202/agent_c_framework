@@ -1,19 +1,16 @@
 import os
 import re
 import copy
+import yaml
 import inspect
-import logging
+import markdown
 
 from typing import Union, List, Dict, Any, Optional
 
-import markdown
-
-from agent_c.chat.session_manager import ChatSessionManager
-from agent_c.models.events import RenderMediaEvent, MessageEvent, TextDeltaEvent
-from agent_c.prompting.prompt_section import PromptSection
 from agent_c.toolsets.tool_cache import ToolCache
 from agent_c.util.logging_utils import LoggingManager
-
+from agent_c.prompting.prompt_section import PromptSection
+from agent_c.models.events import RenderMediaEvent, MessageEvent, TextDeltaEvent
 
 class Toolset:
     tool_registry: List[Any] = []
@@ -81,7 +78,6 @@ class Toolset:
         # Store tool_chest first since it's critical for dependencies
         self.tool_chest: 'ToolChest' = kwargs.get("tool_chest")
 
-        self.session_manager: ChatSessionManager = kwargs.get("session_manager")
         self.use_prefix: bool = kwargs.get("use_prefix", True)
 
         self.valid: bool = True  # post init will deactivate invalid tools.
@@ -156,6 +152,18 @@ class Toolset:
         function_name = tool_name.removeprefix(self.prefix)
         function_to_call: Any = getattr(self, function_name)
         return await function_to_call(**args)
+
+    def _yaml_dump(self, data: Any) -> str:
+        """
+        Dumps data to a YAML formatted string.
+
+        Args:
+            data (Any): The data to be dumped.
+
+        Returns:
+            str: The YAML formatted string.
+        """
+        return yaml.dump(data, allow_unicode=True, sort_keys=False)
 
     def _format_markdown(self, markdown: str) -> str:
         """

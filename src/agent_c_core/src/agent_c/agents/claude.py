@@ -10,7 +10,7 @@ from typing import Any, List, Union, Dict, Tuple
 
 
 from anthropic import AsyncAnthropic, APITimeoutError, Anthropic, RateLimitError, AsyncAnthropicBedrock
-from httpcore import RemoteProtocolError
+
 
 from agent_c.agents.base import BaseAgent
 from agent_c.chat.session_manager import ChatSessionManager
