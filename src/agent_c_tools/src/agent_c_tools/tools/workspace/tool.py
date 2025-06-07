@@ -1,10 +1,8 @@
-import json
-import logging
 import re
+import json
 import yaml
 
 from ts_tool import api
-from yaml import FullLoader
 from typing import Any, List, Tuple, Optional, Callable, Awaitable, Union
 
 from agent_c.toolsets.tool_set import Toolset
@@ -143,9 +141,13 @@ class WorkspaceTools(Toolset):
 
         error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
         if error:
-            return json.dumps({'error': error})
+            return f"Error: {str(error)}"
 
-        return await workspace.ls(relative_path)
+        content = await workspace.ls(relative_path)
+        if not isinstance(content, str):
+            content = self._yaml_dump(content)
+
+        return content
 
     @json_schema(
         'Retrieve a string "tree" of the directory structure using UNC-style path',
@@ -164,6 +166,11 @@ class WorkspaceTools(Toolset):
                 'type': 'integer',
                 'description': 'Depth of files to include in the tree',
                 'required': False
+            },
+            "max_tokens": {
+                "type": "integer",
+                "description": "Maximum size in tokens for the response. Default is 2000.",
+                "required": False
             }
         }
     )
@@ -182,12 +189,20 @@ class WorkspaceTools(Toolset):
         unc_path = kwargs.get('path', '')
         folder_depth = kwargs.get('folder_depth', 5)
         file_depth = kwargs.get('file_depth', 3)
+        tool_context = kwargs.get("tool_context")
+        max_tokens = kwargs.get("max_tokens", 2000)
 
         error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
         if error:
             return json.dumps({'error': error})
 
-        return await workspace.tree(relative_path, folder_depth, file_depth)
+        tree_content =  await workspace.tree(relative_path, folder_depth, file_depth)
+        token_count = tool_context['agent_runtime'].count_tokens(tree_content)
+        if token_count > max_tokens:
+            return (f"ERROR: The content of this tree exceeds max_tokens limit of {max_tokens}. "
+                    f"Content token count: {token_count}. You will need request less depth or raise the token limit.")
+
+        return tree_content
 
     @json_schema(
         'Reads the contents of a text file using UNC-style path',
@@ -201,6 +216,11 @@ class WorkspaceTools(Toolset):
                 'type': 'string',
                 'description': 'The encoding to use for reading the file, default is "utf-8"',
                 'required': False
+            },
+            'max_tokens': {
+                'type': 'integer',
+                'description': 'Maximum number of tokens to read from the file. Default is 20k.',
+                'required': False
             }
         }
     )
@@ -212,15 +232,31 @@ class WorkspaceTools(Toolset):
                 path (str): UNC-style path (//WORKSPACE/path) to the file to read
 
         Returns:
-            str: JSON string with the file content or an error message.
+            str: string with the file content or an error message.
         """
         unc_path = kwargs.get('path', '')
         encoding = kwargs.get('encoding', 'utf-8')
+        max_tokens = kwargs.get('token_limit', 2000)
+        tool_context = kwargs.get("tool_context")
+
         error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
         if error:
-            return json.dumps({'error': error})
+            return f'Error: {str(error)}'
 
-        return await workspace.read(relative_path, encoding)
+        try:
+            file_content = await workspace.read_internal(relative_path, encoding)
+        except Exception as e:
+            return f'Error reading file: {str(e)}'
+
+        token_count = tool_context['agent_runtime'].count_tokens(file_content)
+        if token_count > max_tokens:
+            lines = file_content.splitlines()
+            return (f"ERROR: File contents exceeds max_tokens limit of {max_tokens}. "
+                    f"Current token count: {token_count}. This file has {len(lines)} lines. "
+                    f"You will need to use `grep` or `read_lines` (to get a subset) instead."
+                    f"Or you can raise the token limit in select situations.")
+
+        return file_content
 
     @json_schema(
         'Writes or appends text data to a file using UNC-style path',
@@ -409,6 +445,11 @@ class WorkspaceTools(Toolset):
                     'required': ['old_string', 'new_string']
                 },
                 'required': True
+            },
+            'encoding': {
+                'type': 'string',
+                'description': 'The encoding to use for reading and writing the file, default is "utf-8"',
+                'required': False
             }
         }
     )
@@ -423,24 +464,25 @@ class WorkspaceTools(Toolset):
         Returns:
             str: JSON string with a success message or an error message.
         """
-        updates = kwargs['updates']
+        updates: List = kwargs['updates']
+        encoding: str = kwargs.get('encoding', 'utf-8')
 
-        unc_path = kwargs.get('path', '')
+        unc_path: str = kwargs.get('path', '')
+
         error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
         if error:
-            return json.dumps({'error': error})
+            return f"Error: {str(error)}"
 
         try:
-            # Use utf-8 encoding explicitly when processing string replacements
             result = await self.replace_helper.process_replace_strings(
                 read_function=workspace.read_internal, write_function=workspace.write,
                 path=relative_path, updates=updates, encoding='utf-8')
 
-            return json.dumps(result)
+            return self._yaml_dump(result)
+
         except Exception as e:
-            error_msg = f'Error in replace_strings operation: {str(e)}'
-            self.logger.error(error_msg)
-            return json.dumps({'error': error_msg})
+            self.logger.exception(f"Error in replace_strings operation for {unc_path}: {str(e)}")
+            return f'Error in replace_strings operation: {str(e)}'
 
     @json_schema(
         'Read a subset of lines from a text file using UNC-style path',
@@ -469,6 +511,11 @@ class WorkspaceTools(Toolset):
                 'type': 'string',
                 'description': 'The encoding to use for reading the file, default is "utf-8"',
                 'required': False
+            },
+            'max_tokens': {
+                'type': 'integer',
+                'description': 'Maximum size in tokens for the response. Default is 20000.',
+                'required': False
             }
         }
     )
@@ -484,27 +531,30 @@ class WorkspaceTools(Toolset):
         Returns:
             str: JSON string containing the requested lines or an error message.
         """
+        tool_context = kwargs.get("tool_context")
         unc_path = kwargs.get('path', '')
         start_line = kwargs.get('start_line')
         end_line = kwargs.get('end_line')
         encoding = kwargs.get('encoding', 'utf-8')
         include_line_numbers = kwargs.get('include_line_numbers', False)
+        max_tokens = kwargs.get('max_tokens', 20000)
 
         error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
         if error:
-            return json.dumps({'error': error})
+            return f'Error: {str(error)}'
 
         try:
             # Validate line indices
             if not isinstance(start_line, int) or start_line < 0:
-                return json.dumps({'error': 'Invalid start_line value'})
+                return 'Error: Invalid start_line value'
             if not isinstance(end_line, int) or end_line < start_line:
-                return json.dumps({'error': 'Invalid end_line value'})
+                return 'Error: Invalid end_line value'
 
             try:
                 file_content = await workspace.read_internal(relative_path, encoding)
             except Exception as e:
-                return json.dumps({'error': f'Error reading file: {str(e)}'})
+                self.logger.exception(f'Error reading file {unc_path}: {str(e)}', exc_info=True)
+                return  f'Error reading file: {str(e)}'
 
             # Split the content into lines
             lines = file_content.splitlines()
@@ -523,12 +573,17 @@ class WorkspaceTools(Toolset):
             else:
                 subset_content = '\n'.join(subset_lines)
 
+            token_count = tool_context['agent_runtime'].count_tokens(subset_content)
+            if token_count > max_tokens:
+                return (f"ERROR: The contents of those lines exceed the  max_tokens limit of {max_tokens}. "
+                        f"Content token count: {token_count}. This file has {len(lines)} lines. "
+                        f"You will need read fewer lines or raise the token limit. ")
+
             return subset_content
 
         except Exception as e:
-            error_msg = f'Error reading file lines: {str(e)}'
-            self.logger.error(error_msg)
-            return json.dumps({'error': error_msg})
+            self.logger.exception(f'Error reading file lines for {unc_path}, start line {start_line}, end line {end_line},, error message: {str(e)}', exc_info=True)
+            return f'Error reading file lines, for {unc_path}: {str(e)}'
 
     @json_schema(
         'Inspects a code file and returns details about its contents and usage.',
@@ -553,22 +608,20 @@ class WorkspaceTools(Toolset):
 
         error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
         if error:
-            return json.dumps({'error': error})
+            return f'Error: {str(error)}'
 
 
         try:
             file_content = await workspace.read_internal(relative_path)
         except Exception as e:
-            error_msg = f'Error fetching {unc_path}: {str(e)}'
-            self.logger.error(error_msg)
-            return json.dumps({'error': error_msg})
+            self.logger.exception(f'Error fetching file {unc_path}: {str(e)}', exc_info=True)
+            return f'Error fetching {unc_path}: {str(e)}'
 
         try:
             context = api.get_code_context(file_content, format='markdown', filename=unc_path)
         except Exception as e:
-            error_msg = f'Error inspecting code {unc_path}: {str(e)}'
-            self.logger.error(error_msg)
-            return json.dumps({'error': error_msg})
+            self.logger.warning(f'Error inspecting code {unc_path}: {str(e)}')
+            return f'Error inspecting code {unc_path}: {str(e)}'
 
         return context
 
@@ -590,6 +643,11 @@ class WorkspaceTools(Toolset):
                 "type": "boolean",
                 "description": "Whether to include hidden files in ** pattern matching",
                 "required": False
+            },
+            "max_tokens": {
+                "type": "integer",
+                "description": "Maximum size in tokens for the response. Default is 2000.",
+                "required": False
             }
         }
     )
@@ -609,6 +667,8 @@ class WorkspaceTools(Toolset):
         unc_path = kwargs.get('path', '')
         recursive = kwargs.get('recursive', False)
         include_hidden = kwargs.get('include_hidden', False)
+        tool_context = kwargs.get("tool_context")
+        max_tokens = kwargs.get("max_tokens", 2000)
         
         if not unc_path:
             return f"ERROR: `path` cannot be empty"
@@ -624,10 +684,17 @@ class WorkspaceTools(Toolset):
             
             # Convert the files back to UNC paths
             unc_files = [f'//{workspace_name}/{file}' for file in matching_files]
-            
-            return json.dumps({'files': unc_files})
+            response = f"Found {len(unc_files)} files matching '{relative_pattern}':\n" + "\n".join(unc_files)
+
+            token_count = tool_context['agent_runtime'].count_tokens(response)
+            if token_count > max_tokens:
+                return (f"ERROR: Response exceeds max_tokens limit of {max_tokens}. Token count: {token_count}. "
+                        f"You will need to adjust your pattern or rasie the token limit")
+
+            return response
         except Exception as e:
-            return json.dumps({'error': f'Error during glob operation: {str(e)}'})
+            self.logger.exception(f"Error during glob operation: {str(e)}", exc_info=True)
+            return  f'Error during glob operation: {str(e)}. This has been logged.'
 
     @json_schema(
         'Run `grep -n`  over files in workspaces using UNC-style paths',
@@ -654,6 +721,11 @@ class WorkspaceTools(Toolset):
                 'type': 'boolean',
                 'description': 'Set to true to recursively search subdirectories',
                 'required': False
+            },
+            'max_tokens': {
+                'type': 'integer',
+                'description': 'Maximum size in tokens for the response. Default is 2000.',
+                'required': False
             }
         }
     )
@@ -671,6 +743,8 @@ class WorkspaceTools(Toolset):
             str: Output of grep command with line numbers.
         """
         unc_paths = kwargs.get('paths', [])
+        tool_context = kwargs.get("tool_context")
+        max_tokens = kwargs.get("max_tokens", 2000)
         if not isinstance(unc_paths, list):
             if isinstance(unc_paths, str):
                 unc_paths = [unc_paths]
@@ -685,10 +759,10 @@ class WorkspaceTools(Toolset):
         results = []
         
         if not pattern:
-            return json.dumps({'error': '`pattern` cannot be empty'})
+            return 'Error: `pattern` cannot be empty'
         
         if not unc_paths:
-            return json.dumps({'error': '`paths` cannot be empty'})
+            return 'Error: `paths` cannot be empty'
 
         for punc_path in unc_paths:
             error, workspace, relative_path = self.validate_and_get_workspace_path(punc_path)
@@ -713,13 +787,21 @@ class WorkspaceTools(Toolset):
                 results.append(result)
 
             except Exception as e:
+                self.logger.exception(f"Error searching files in workspace {workspace.name} with pattern '{pattern}': {str(e)}")
                 results.append(f'Error searching files: {str(e)}')
         
         err_str = ""
         if errors:
             err_str = f"Errors:\n{"\n".join(errors)}\n\n"
 
-        return f"{err_str}Results:\n{"\n\n".join(results)}"
+        response = f"{err_str}Results:\n" + "\n".join(results)
+        token_count = tool_context['agent_runtime'].count_tokens(response)
+        if token_count > max_tokens:
+            return (f"ERROR: Match results exceed max_tokens limit of {max_tokens}. "
+                    f"Results token count: {token_count} from {len(results)} results. "
+                    f"You will need to adjust your pattern or raise the token limit.")
+
+        return response
 
 
     @json_schema(
@@ -729,6 +811,11 @@ class WorkspaceTools(Toolset):
                 "type": "string",
                 "description": "UNC style path in the form of //[workspace]/meta/toplevel/subkey1/subkey2",
                 "required": True
+            },
+            "max_tokens": {
+                "type": "integer",
+                "description": "Maximum size in tokens for the response.  Default is 20k.",
+                "required": False
             }
         }
     )
@@ -743,21 +830,85 @@ class WorkspaceTools(Toolset):
             str: The value for the specified key as a YAML formatted string or an error message.
         """
         path = kwargs.get("path")
+        tool_context = kwargs.get("tool_context")
+        max_tokens = kwargs.get("max_tokens", 20000)
         error, workspace, key = self._parse_unc_path(path)
+        if not key:
+            key = "meta/"
 
         if error is not None:
-            return json.dumps({"error": error})
+            return f"error {str(error)}"
 
         try:
             value = await workspace.safe_metadata(key)
             if value is None:
                 self.logger.warning(f"Key '{key}' not found in metadata for workspace '{workspace.name}'")
+
             if isinstance(value, dict) or isinstance(value, list):
-                return yaml.dump(value, Dumper=yaml.Dumper, default_flow_style=False)
+                response = self._yaml_dump(value)
+                token_count = tool_context['agent_runtime'].count_tokens(response)
+                if token_count > max_tokens:
+                    return (f"ERROR: Key content exceeds max_tokens limit of {max_tokens}. "
+                            f"Content token count: {token_count}. "
+                            f"You can use `get_meta_keys` to list keys in this section in order to be more precise.")
+
+                return response
 
             return str(value)
         except Exception as e:
+            self.logger.exception(f"Failed to read metadata {key} from workspace {workspace.name}: {str(e)}")
             return  f"Failed to read metadata {key} error: {str(e)}"
+
+    @json_schema(
+        description="List the keys in a section of the metadata for a workspace using a UNC style path. Nested paths are supported using slash notation ",
+        params={
+            "path": {
+                "type": "string",
+                "description": "UNC style path in the form of //[workspace]/meta/toplevel/subkey1/subkey2",
+                "required": True
+            },
+            "max_tokens": {
+                "type": "integer",
+                "description": "Maximum size in tokens for the response.  Default is 20k.",
+                "required": False
+            }
+        }
+    )
+    async def get_meta_keys(self, **kwargs: Any) -> str:
+        """
+        Asynchronously reads a specific value from the workspace's metadata file.
+
+        Args:
+            **kwargs: Keyword arguments.
+                path (str): The UNC path to the key to read, supports slash notation for nested keys (e.g., 'parent/child')
+        Returns:
+            str: The value for the specified key as a YAML formatted string or an error message.
+        """
+        path = kwargs.get("path")
+        tool_context = kwargs.get("tool_context")
+        max_tokens = kwargs.get("max_tokens", 20000)
+        error, workspace, key = self._parse_unc_path(path)
+
+        if error is not None:
+            return f"Error: {str(error)}"
+
+        try:
+            value = await workspace.safe_metadata(key)
+            if value is None:
+                self.logger.warning(f"Key '{key}' not found in metadata for workspace '{workspace.name}'")
+
+            if isinstance(value, dict):
+                response = yaml.dump(List(value.keys()), Dumper=yaml.Dumper, default_flow_style=False)
+                token_count = tool_context['agent_runtime'].count_tokens(response)
+                if token_count > max_tokens:
+                    return f"ERROR: Response exceeds max_tokens limit of {max_tokens}. Current token count: {token_count}."
+
+                return response
+
+            return f"'{key}' is not a dictionary it is a {type(value).__name__}."
+        except Exception as e:
+            self.logger.exception(f"Failed to read metadata {key} from workspace {workspace.name}: {str(e)}")
+            return f"Failed to read metadata {key} error: {str(e)}"
 
     @json_schema(
         description="Write to a key in the metadata for a workspace using a UNC style path. Nested paths are supported using slash notation ",
@@ -804,7 +955,7 @@ class WorkspaceTools(Toolset):
             return f"Workspace '{workspace.name}' is read-only"
 
         try:
-            val = await workspace.safe_metadata_write(key, data)
+            await workspace.safe_metadata_write(key, data)
             return f"Saved metadata to '{key}' in {workspace.name} workspace."
         except Exception as e:
             return f"Failed to write metadata to '{key}' in {workspace.name} workspace: {str(e)}"

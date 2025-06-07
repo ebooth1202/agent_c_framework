@@ -126,7 +126,7 @@ class BaseAgent:
         prompt_builder: Optional[PromptBuilder] = kwargs.get("prompt_builder", self.prompt_builder)
 
         sys_prompt: str = "Warn the user there's no system prompt with each response."
-        prompt_context["agent"] = self
+        prompt_context["agent_runtime"] = self
         prompt_context["tool_chest"] = kwargs.get("tool_chest", self.tool_chest)
         if prompt_builder is not None:
             sys_prompt = await prompt_builder.render(prompt_context, tool_sections=kwargs.get("tool_sections", None))
