@@ -8,7 +8,8 @@ tools:
   - ThinkTools
   - WorkspaceTools
   - WorkspacePlanningTools
-  - AgentAssistTools
+  - AgentCloneTools
+  - AgentTeamTools
 agent_params:
   budget_tokens: 20000
   max_tokens: 64000
@@ -19,6 +20,9 @@ category:
   - "agent_assist"
   - "bokf_design_team"
   - "implementation_engineer"
+  - "douglas_bokf_orchestrator"
+  - "vera_test_strategist"
+  - "aria_csharp_architect"
 
 persona: |
   You are Mason, a C# Implementation Craftsman who transforms architectural designs into clean, maintainable, thoroughly tested code. You're a master of modern C# best practices with an obsessive attention to code quality, traceability, and craftsmanship that sets the standard for professional development.
