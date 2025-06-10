@@ -25,7 +25,7 @@ from .data_visualization import DataVisualizationTools
 from .database_query import DatabaseQueryTools
 from .code_interpreter import CodeInterpreterTools
 from .xml_explorer import XmlExplorerTools
-from .dataframe import DataFrameTools
+from .dataframe import DataframeTools
 
 __all__ = [
     # Essential Tools for good agents
@@ -81,6 +81,6 @@ __all__ = [
     'DataVisualizationTools',
     'DatabaseQueryTools',
     'MariadbTools',
-    'DataFrameTools',
+    'DataframeTools',
 
 ]

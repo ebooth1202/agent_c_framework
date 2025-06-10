@@ -21,7 +21,7 @@ from ...helpers.path_helper import ensure_file_extension, create_unc_path, os_fi
 from .prompt import DataframeToolsSection
 from .util.dataframe_in_memory import create_excel_in_memory
 
-class DataFrameTools(Toolset):
+class DataframeTools(Toolset):
     DEFAULT_DATA_FOLDER = 'dataframe_data'
     MAX_DATAFRAME_TOKEN_SIZE = 35000
     def __init__(self, **kwargs):
@@ -1063,4 +1063,4 @@ class DataFrameTools(Toolset):
             return f"'error': 'Error performing ydata profiling analysis: {str(e)}'"
 
 
-Toolset.register(DataFrameTools, required_tools=['WorkspaceTools'])
+Toolset.register(DataframeTools, required_tools=['WorkspaceTools'])

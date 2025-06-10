@@ -24,7 +24,7 @@ class DatabaseQueryTools(Toolset):
         super().__init__(**kwargs, name='database_query')
         self.workspace_tool = self.tool_chest.active_tools.get('WorkspaceTools')
         self.db_path = None
-        self.dataframe_tool = self.tool_chest.active_tools.get('DataFrameTools')
+        self.dataframe_tool = self.tool_chest.active_tools.get('DataframeTools')
 
     def _validate_subqueries_and_functions(self, stmt):
         for token in stmt.tokens:
@@ -80,9 +80,9 @@ class DatabaseQueryTools(Toolset):
         try:
             df = pd.DataFrame(results)
             self.dataframe_tool.dataframe = df
-            return f"Data successfully loaded into DataFrameTools. {self.dataframe_tool._standardized_result()}"
+            return f"Data successfully loaded into DataframeTools. {self.dataframe_tool._standardized_result()}"
         except Exception as e:
-            return f"Error loading data into DataFrameTools: {str(e)}"
+            return f"Error loading data into DataframeTools: {str(e)}"
 
     def _execute_query(self, db_path: str, query: str) -> List[Dict[str, Any]]:
         with sqlite3.connect(db_path) as conn:
@@ -124,7 +124,7 @@ class DatabaseQueryTools(Toolset):
             },
             'load_to_dataframe': {
                 'type': 'boolean',
-                'description': 'If true, loads the query results into the DataFrameTools.',
+                'description': 'If true, loads the query results into the DataframeTools.',
                 'required': False,
                 'default': False
             }
@@ -152,14 +152,14 @@ class DatabaseQueryTools(Toolset):
 
             results = self._execute_query(self.db_path, query)
 
-            message = f"Query executed successfully on {db_name}. {len(results)} rows returned."
+            message = f"Query executed successfully on {self.DEMO_DB_NAME}. {len(results)} rows returned."
 
             if load_to_dataframe:
                 df_message = self._load_to_dataframe(results)
                 message += f" {df_message}"
 
             return json.dumps({
-                "results": results if not load_to_dataframe else "Data loaded to DataFrameTools",
+                "results": results if not load_to_dataframe else "Data loaded to DataframeTools",
                 "message": message
             })
         except Exception as e:
@@ -243,10 +243,10 @@ class DatabaseQueryTools(Toolset):
 
             return json.dumps({
                 "schema": schema,
-                "message": f"Successfully retrieved schema for table '{table_name}' from {db_name}."
+                "message": f"Successfully retrieved schema for table '{table_name}' from {self.DEMO_DB_NAME}."
             })
         except Exception as e:
             return json.dumps({"error": f"Error retrieving table schema: {str(e)}"})
 
 
-Toolset.register(DatabaseQueryTools, required_tools=['WorkspaceTools', 'DataFrameTools'])
+Toolset.register(DatabaseQueryTools, required_tools=['WorkspaceTools', 'DataframeTools'])
