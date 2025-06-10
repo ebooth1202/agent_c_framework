@@ -15,3 +15,4 @@ from .database_query import DatabaseQueryTools
 from .dataframe import DataframeTools
 from .data_visualization import DataVisualizationTools
 from .gmail import GmailSearch, GmailMessage
+from .health import FDANDCTools, ClinicalTrialsTools, PubMedTools

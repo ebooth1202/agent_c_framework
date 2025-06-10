@@ -27,6 +27,7 @@ from .code_interpreter import CodeInterpreterTools
 from .xml_explorer import XmlExplorerTools
 from .dataframe import DataframeTools
 from .gmail import GmailSearch, GmailMessage
+from .health import FDANDCTools, ClinicalTrialsTools, PubMedTools
 
 __all__ = [
     # Essential Tools for good agents
@@ -85,5 +86,10 @@ __all__ = [
     'DatabaseQueryTools',
     'MariadbTools',
     'DataframeTools',
+
+    # Health Information tools
+    'FDANDCTools',
+    'ClinicalTrialsTools',
+    'PubMedTools',
 
 ]
