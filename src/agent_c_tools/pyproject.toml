@@ -52,6 +52,8 @@ dependencies = [
     "google-auth-httplib2==0.2.0",        # Auth library for HTTP/2
     "google-auth-oauthlib==1.2.1",        # OAuth 2.0 library
     "google-auth==2.35.0",                # Google authentication library
+    "python-dateutil>=2.8.2",            # For handling GMAIL dates and times
+    "email-validator==2.2.0",           # For validating email addresses
     "simple_salesforce==1.12.6", # salesforce
     "linkedin-api==2.0.3", # linked_in
     "requests==2.32.3", # youtube
