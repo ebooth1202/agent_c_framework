@@ -8,6 +8,8 @@ from typing import Dict, List, Any, Optional
 
 from agent_c.toolsets.tool_set import Toolset
 from agent_c.toolsets.json_schema import json_schema
+from .helpers.javascript_safe_content_processor import JavaScriptSafeContentProcessor
+from .helpers.markdown_javascript_safety_validator import MarkdownJavaScriptSafetyValidator
 from .helpers.validation_helper import ValidationHelper
 from .helpers.media_helper import MediaEventHelper
 from .helpers.markdown_file_collector import MarkdownFileCollector
@@ -37,7 +39,8 @@ class MarkdownToHtmlReportTools(Toolset):
         self.workspace_tool = self.tool_chest.available_tools.get("WorkspaceTools")
         self.file_collector = MarkdownFileCollector(self.workspace_tool)
 
-    async def _safe_operation(self, operation_name, operation_func, *args, **kwargs):
+    @staticmethod
+    async def _safe_operation(operation_name, operation_func, *args, **kwargs):
         """Execute operations with standardized error handling."""
         try:
             return await operation_func(*args, **kwargs)
@@ -76,6 +79,12 @@ class MarkdownToHtmlReportTools(Toolset):
                 "description": "Optional flat list of filenames to ignore when generating the HTML viewer. Does not support folder level differentiation.",
                 "required": False,
                 "default": []
+            },
+            "javascript_safe": {
+                "type": "boolean",
+                "description": "Whether to apply JavaScript safety processing to handle problematic patterns like C# interpolated strings (recommended: true)",
+                "required": False,
+                "default": True
             }
         }
     )
@@ -89,7 +98,7 @@ class MarkdownToHtmlReportTools(Toolset):
                 output_filename: The name of the output HTML file to generate (can be a simple filename or full UNC path)
                 title: Optional title for the HTML viewer
                 files_to_ignore: Optional flat list of filenames to ignore when generating the HTML viewer
-
+                javascript_safe: Whether to apply JavaScript safety processing to handle problematic patterns like C# interpolated strings
         Returns:
             A dictionary with success status and information about the operation
         """
@@ -105,6 +114,7 @@ class MarkdownToHtmlReportTools(Toolset):
         output_filename = kwargs.get('output_filename')
         title = kwargs.get('title', 'output_report.html')
         files_to_ignore = kwargs.get('files_to_ignore', [])
+        javascript_safe = kwargs.get('javascript_safe', True)
 
         try:
             # Create UNC input path
@@ -117,45 +127,85 @@ class MarkdownToHtmlReportTools(Toolset):
             else:
                 output_path_full = output_filename
 
-            # Check if input directory exists
-            logger.debug("Checking if input path exists...")
-            ls_result = await self.workspace_tool.ls(path=input_path_full)
-            ls_data = json.loads(ls_result)
+            # Check if input is a directory or file
+            is_file = False
+            if has_file_extension(input_path, ['md', 'markdown']):
+                # Check if it's actually a file
+                try:
+                    error, workspace_obj, relative_path = self.workspace_tool.validate_and_get_workspace_path(input_path_full)
+                    if not error:
+                        # Convert as Single File
+                        file_content = await workspace_obj.read_internal(relative_path)
+                        if not file_content.startswith('{"error":'):
+                            is_file = True
+                            if javascript_safe:
+                                file_content = JavaScriptSafeContentProcessor().process_markdown_content(file_content)
+                            file_name = Path(input_path).name
+                            file_structure = [{
+                                'name': file_name,
+                                'type': 'file',
+                                'path': file_name,
+                                'content': file_content
+                            }]
+                            file_count = 1
+                            logger.debug(f"Converting single markdown file: {input_path}")
+                        else:
+                            error = f"Error reading file at {input_path}: {file_content}"
+                            logger.error(error)
+                            return json.dumps({
+                                "success": False,
+                                "error": error
+                            })
+                    else:
+                        logger.error(f"Error validating input path: {error}")
+                        return json.dumps({
+                            "success": False,
+                            "error": f"Input path '{input_path}' is not accessible: {error}"
+                        })
+                except:
+                    pass  # Not a file, treat as directory
 
-            if 'error' in ls_data:
-                return json.dumps({
-                    "success": False,
-                    "error": f"Input path '{input_path}' is not accessible: {ls_data['error']}"
-                })
+            if not is_file: # Treat as directory
+                # Check if input directory exists
+                logger.debug("Checking if input path exists...")
+                ls_result = await self.workspace_tool.ls(path=input_path_full)
+                ls_data = json.loads(ls_result)
 
-            # Collect markdown files
-            logger.debug("Collecting markdown files...")
-            combined_ignore_list = files_to_ignore + ([output_filename] if output_filename else [])
-            markdown_files = await self.file_collector.collect_markdown_files(
-                root_path=input_path_full, files_to_ignore=combined_ignore_list)
-
-            if not markdown_files:
-                logger.debug(f"No markdown files found in {input_path}. Will search subdirectories recursively...")
-
-                # Try to search deeper by examining subdirectories manually
-                for item in ls_data.get('items', []):
-                    if item['type'] == 'directory':
-                        subdir_path = f"{input_path_full}/{item['name']}"
-                        subdir_files = await self.file_collector.collect_markdown_files(subdir_path, files_to_ignore=combined_ignore_list)
-                        if subdir_files:
-                            markdown_files.update(subdir_files)
-
-                # If still no files found
-                if not markdown_files:
+                if 'error' in ls_data:
                     return json.dumps({
                         "success": False,
-                        "error": f"No markdown files found in {input_path} or its subdirectories"
+                        "error": f"Input path '{input_path}' is not accessible: {ls_data['error']}"
                     })
 
-            logger.debug(f"Found {len(markdown_files)} markdown files. Building file structure...")
+                # Collect markdown files
+                logger.debug("Collecting markdown files...")
+                combined_ignore_list = files_to_ignore + ([output_filename] if output_filename else [])
+                markdown_files = await self.file_collector.collect_markdown_files(
+                    root_path=input_path_full, files_to_ignore=combined_ignore_list)
 
-            # Build file structure for the viewer
-            file_structure = await self.file_collector.build_file_structure(input_path_full, markdown_files)
+                if not markdown_files:
+                    logger.debug(f"No markdown files found in {input_path}. Will search subdirectories recursively...")
+
+                    # Try to search deeper by examining subdirectories manually
+                    for item in ls_data.get('items', []):
+                        if item['type'] == 'directory':
+                            subdir_path = f"{input_path_full}/{item['name']}"
+                            subdir_files = await self.file_collector.collect_markdown_files(subdir_path, files_to_ignore=combined_ignore_list)
+                            if subdir_files:
+                                markdown_files.update(subdir_files)
+
+                    # If still no files found
+                    if not markdown_files:
+                        return json.dumps({
+                            "success": False,
+                            "error": f"No markdown files found in {input_path} or its subdirectories"
+                        })
+
+                logger.debug(f"Found {len(markdown_files)} markdown files. Building file structure...")
+
+                # Build file structure for the viewer
+                file_structure = await self.file_collector.build_file_structure(input_path_full, markdown_files, safe_processing=javascript_safe)
+                file_count = len(markdown_files)
 
             if not file_structure:
                 return json.dumps({
@@ -203,7 +253,7 @@ class MarkdownToHtmlReportTools(Toolset):
                 "output_filename": output_filename,
                 "output_path": output_path_full,
                 "file_system_path": file_system_path,
-                "file_count": len(markdown_files)
+                "file_count": file_count
             }
 
             # Generate and raise HTML content for the result
@@ -232,7 +282,7 @@ class MarkdownToHtmlReportTools(Toolset):
                 "output_file": output_filename,
                 "output_path": output_path_full,
                 "workspace": workspace,
-                "file_count": len(markdown_files)
+                "file_count": file_count,
             })
 
         except Exception as e:
