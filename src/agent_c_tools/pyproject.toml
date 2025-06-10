@@ -53,6 +53,9 @@ dependencies = [
     "google-auth-oauthlib==1.2.1",        # OAuth 2.0 library
     "google-auth==2.35.0",                # Google authentication library
     "simple_salesforce==1.12.6", # salesforce
+    "linkedin-api==2.0.3", # linked_in
+    "requests==2.32.3", # youtube
+    "youtube_transcript_api==1.0.3", # YouTube_Transcript
 
 ]
 

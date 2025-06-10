@@ -16,3 +16,6 @@ from .dataframe import DataframeTools
 from .data_visualization import DataVisualizationTools
 from .gmail import GmailSearch, GmailMessage
 from .health import FDANDCTools, ClinicalTrialsTools, PubMedTools
+from .salesforce import SalesforceTools
+from .linked_in import LinkedInTools
+from .youtube import YoutubeTranscriptTools, YoutubeCommentsTools, YoutubeSearchViaApiTools, YoutubeSearchViaWebTools

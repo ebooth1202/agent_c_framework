@@ -28,6 +28,9 @@ from .xml_explorer import XmlExplorerTools
 from .dataframe import DataframeTools
 from .gmail import GmailSearch, GmailMessage
 from .health import FDANDCTools, ClinicalTrialsTools, PubMedTools
+from .salesforce import SalesforceTools
+from .linked_in import LinkedInTools
+from .youtube import YoutubeTranscriptTools, YoutubeCommentsTools, YoutubeSearchViaApiTools, YoutubeSearchViaWebTools
 
 __all__ = [
     # Essential Tools for good agents
@@ -60,9 +63,17 @@ __all__ = [
     'WebTools',
     'GmailSearch',
     'GmailMessage',
+    'LinkedInTools',
 
-    # Centric Dynamics 365 Tools
+    # YouTube Tools
+    'YoutubeTranscriptTools',
+    'YoutubeCommentsTools',
+    'YoutubeSearchViaApiTools',
+    'YoutubeSearchViaWebTools',
+
+    # CRM Tools
     "DynamicsTools",
+    "SalesforceTools",
 
     # User preference tools
     'UserPreference',
