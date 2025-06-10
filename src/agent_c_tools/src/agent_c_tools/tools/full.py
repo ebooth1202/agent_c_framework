@@ -22,6 +22,7 @@ from .workspace_knowledge import WorkspaceKnowledgeTools
 from .workspace_sequential_thinking import WorkspaceSequentialThinkingTools
 from .browser_playwright import BrowserPlaywrightTools
 from .data_visualization import DataVisualizationTools
+from .code_interpreter import CodeInterpreterTools
 
 __all__ = [
     # Workspace tools
@@ -65,5 +66,6 @@ __all__ = [
     'WorkspaceKnowledgeTools',
     'WorkspaceSequentialThinkingTools',
     'BrowserPlaywrightTools',
-    'DataVisualizationTools'
+    'DataVisualizationTools',
+    'CodeInterpreterTools'
 ]

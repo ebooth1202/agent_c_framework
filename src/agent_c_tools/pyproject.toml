@@ -43,8 +43,9 @@ dependencies = [
     "scipy",
     "matplotlib",
     "pdfplumber",
-    "matplotlib==3.9.2",    # data_vis
-    "seaborn==0.13.2",      # data_vis
+    "matplotlib==3.9.2", # data_vis
+    "seaborn==0.13.2", # data_vis
+    "docker==7.1.0", # code_interpreter,
 
 ]
 
