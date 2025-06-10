@@ -11,3 +11,5 @@ from .css_explorer.tool import CssExplorerTools
 from .reverse_engineering import ReverseEngineeringTools
 from .math.tool import MathTools
 from .code_interpreter import CodeInterpreterTools
+from .database_query import DatabaseQueryTools
+from .dataframe import DataFrameTools
