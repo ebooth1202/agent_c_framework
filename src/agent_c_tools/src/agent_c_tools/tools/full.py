@@ -26,6 +26,7 @@ from .database_query import DatabaseQueryTools
 from .code_interpreter import CodeInterpreterTools
 from .xml_explorer import XmlExplorerTools
 from .dataframe import DataframeTools
+from .gmail import GmailSearch, GmailMessage
 
 __all__ = [
     # Essential Tools for good agents
@@ -56,6 +57,8 @@ __all__ = [
     'GoogleTrendsTools',
     'NewsApiTools',
     'WebTools',
+    'GmailSearch',
+    'GmailMessage',
 
     # Centric Dynamics 365 Tools
     "DynamicsTools",

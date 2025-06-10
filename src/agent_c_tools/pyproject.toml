@@ -48,6 +48,11 @@ dependencies = [
     "docker==7.1.0", # code_interpreter,
     "ydata_profiling==4.10.0", # dataframe
     "scikit-learn==1.5.2",  # dataframe
+    "google-api-python-client==2.149.0",     # Core Google API client
+    "google-auth-httplib2==0.2.0",        # Auth library for HTTP/2
+    "google-auth-oauthlib==1.2.1",        # OAuth 2.0 library
+    "google-auth==2.35.0",                # Google authentication library
+    "simple_salesforce==1.12.6", # salesforce
 
 ]
 

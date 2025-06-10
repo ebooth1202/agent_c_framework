@@ -13,3 +13,5 @@ from .math.tool import MathTools
 from .code_interpreter import CodeInterpreterTools
 from .database_query import DatabaseQueryTools
 from .dataframe import DataframeTools
+from .data_visualization import DataVisualizationTools
+from .gmail import GmailSearch, GmailMessage
