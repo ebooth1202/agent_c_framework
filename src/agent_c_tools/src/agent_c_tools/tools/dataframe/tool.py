@@ -19,7 +19,7 @@ from ...helpers.media_file_html_helper import get_file_html
 from ...helpers.path_helper import ensure_file_extension, create_unc_path, os_file_system_path
 
 from .prompt import DataframeToolsSection
-from .util.dataframe_in_memory import create_excel_in_memory
+from ...helpers.dataframe_in_memory import create_excel_in_memory
 
 class DataframeTools(Toolset):
     DEFAULT_DATA_FOLDER = 'dataframe_data'
