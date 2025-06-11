@@ -36,12 +36,13 @@ class AgentConfigurationV2(BaseModel):
     def __init__(self, **data) -> None:
         # Ensure the key is set if not provided
         if 'key' not in data:
-            data['key'] =data['name']
+            data['key'] = data['name']
 
         super().__init__(**data)
 
 
 # Union type for all versions
+current_agent_configuration_version: int = 2
 AgentConfiguration = Union[AgentConfigurationV1, AgentConfigurationV2]
 
 # Current version alias for convenience

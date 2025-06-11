@@ -36,8 +36,6 @@ async def initialize_agent(params: AgentInitializationParams,
 
 
         new_session_id = await agent_manager.create_session(
-            llm_model=params.model_name,
-            backend=params.backend,
             **model_params,
             **additional_params,
             **session_params

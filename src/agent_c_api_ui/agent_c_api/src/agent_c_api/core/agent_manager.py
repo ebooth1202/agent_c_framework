@@ -45,7 +45,7 @@ class UItoAgentBridgeManager:
 
 
 
-    def get_session_data(self, ui_session_id: str) -> Dict[str, Any]:
+    async def get_session_data(self, ui_session_id: str) -> Dict[str, Any]:
         """
         Retrieve session data for a given session ID.
 
@@ -56,6 +56,9 @@ class UItoAgentBridgeManager:
             Dict[str, Any]: Session data dictionary containing agent and configuration
                 information, or None if session doesn't exist
         """
+        if ui_session_id not in self.ui_sessions:
+            await self.create_session(existing_ui_session_id=ui_session_id)
+
         return self.ui_sessions.get(ui_session_id)
 
     async def create_session(self,
@@ -100,7 +103,7 @@ class UItoAgentBridgeManager:
                 existing_agent_config: AgentConfiguration = existing_session["agent_config"]
                 chat_session = existing_session["chat_session"]
 
-                if existing_agent_config.key == agent_key:
+                if existing_agent_config.key == agent_key or agent_key == "default":
                     agent_config = existing_agent_config
                 else:
                     agent_config = self.agent_config_loader.duplicate(agent_key)
@@ -110,7 +113,7 @@ class UItoAgentBridgeManager:
                 if ui_session_id in self.chat_session_manager.session_id_list:
                     # If session already exists in chat session manager, load it
                     chat_session = await self.chat_session_manager.get_session(ui_session_id)
-                    if chat_session.agent_config.key == agent_key:
+                    if chat_session.agent_config.key == agent_key or agent_key == "default":
                         agent_config = chat_session.agent_config
                     else:
                         agent_config = self.agent_config_loader.duplicate(agent_key)
@@ -121,7 +124,7 @@ class UItoAgentBridgeManager:
                     chat_session = ChatSession(session_id=ui_session_id, agent_config=agent_config, user_id=user_id)
                     await self.chat_session_manager.new_session(chat_session)
 
-            agent_bridge = AgentBridge(chat_session, self.chat_session_manager, backend=backend, model_name=llm_model, **kwargs)
+            agent_bridge = AgentBridge(chat_session, self.chat_session_manager, **kwargs)
 
             # Now initialize the agent. This fully initializes the agent and its tools as well - with a passed in session manager
             await agent_bridge.initialize()
@@ -194,7 +197,7 @@ class UItoAgentBridgeManager:
             ValueError: If the session ID is invalid
             Exception: If streaming fails
         """
-        session_data = self.get_session_data(ui_session_id)
+        session_data = await self.get_session_data(ui_session_id)
         if not session_data:
             raise ValueError(f"Invalid session ID: {ui_session_id}")
 
@@ -252,7 +255,7 @@ class UItoAgentBridgeManager:
         Raises:
             ValueError: If the session ID is invalid
         """
-        session_data = self.get_session_data(ui_session_id)
+        session_data = await self.get_session_data(ui_session_id)
         if not session_data:
             raise ValueError(f"Invalid session ID: {ui_session_id}")
 

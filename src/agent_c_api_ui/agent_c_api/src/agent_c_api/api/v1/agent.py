@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Form, Depends, Request
 
+from agent_c.models.agent_config import AgentConfiguration
 from agent_c_api.api.dependencies import get_agent_manager
 from agent_c_api.api.v1.llm_models.agent_params import AgentUpdateParams
 from agent_c_api.api.v1.llm_models.tool_model import ToolUpdateRequest
@@ -21,11 +22,11 @@ async def update_agent_settings(
     Update agent settings for a given session.
     """
     # Get current session and agent
-    session_data = agent_manager.get_session_data(update_params.ui_session_id)
-    if not session_data:
+    ui_session_data = agent_manager.get_session_data(update_params.ui_session_id)
+    if not ui_session_data:
         return {"error": "Invalid session_id"}
 
-    agent_bridge: AgentBridge = session_data["agent_bridge"]
+    agent_bridge: AgentBridge = ui_session_data["agent_bridge"]
 
     if not agent_bridge:
         logger.warning(f"No agent bridge found for session {update_params.ui_session_id}")
@@ -49,45 +50,38 @@ async def update_agent_settings(
         # Update each parameter that exists in the update payload
         changes_made = {}
         failed_updates = []
-        needs_agent_reinitialization = False
 
         if "persona_name" in updates:
             agent_key = updates["persona_name"]
-
-            agent_config = agent_manager.agent_config_loader.duplicate(agent_key)
+            agent_config: AgentConfiguration = agent_manager.agent_config_loader.duplicate(agent_key)
+            logger.info(f"Updating agent config for session {update_params.ui_session_id} with key: {agent_key} from{agent_bridge.chat_session.agent_config.key}")
             agent_bridge.chat_session.agent_config = agent_config
-            needs_agent_reinitialization = True
+            await agent_bridge.update_tools(agent_config.tools)
+            ui_session_data["active_tools"] = agent_config.tools
+        else:
+            agent_config = agent_bridge.chat_session.agent_config
+
 
 
         for key, value in updates.items():
-            if key in ["temperature", "reasoning_effort", "extended_thinking", "budget_tokens", "custom_prompt", "persona_name"]:
+            if key in ["temperature", "reasoning_effort", "extended_thinking", "budget_tokens"]:
                 # Only update if value is not None
                 if value is not None:
-                    # Record the change
-                    old_value = getattr(agent_bridge, key, None)
+                    if key in agent_config.agent_params.__fields__:
+                        # Record the change
+                        old_value = getattr(agent_config.agent_params, key, None)
 
-                    # Update only attributes that changed
-                    if old_value != value:
-                        setattr(agent_bridge, key, value)
-                        changes_made[key] = {
-                            "from": safe_truncate(old_value),
-                            "to": safe_truncate(value)
-                        }
-                        needs_agent_reinitialization = True
-                    logger.debug(f"Updated {key}: {safe_truncate(old_value)} -> {safe_truncate(value)}")
-                else:
-                    logger.debug(f"Skipped updating {key} because value is None")
-            else:
-                if key not in ["ui_session_id"]:
-                    failed_updates.append(key)
-                    logger.warning(f"Invalid key - {key} - does not exist on agent.")
+                        # Update only attributes that changed
+                        if old_value != value:
+                            setattr(agent_config.agent_params, key, value)
+                            changes_made[key] = {
+                                "from": safe_truncate(old_value),
+                                "to": safe_truncate(value)
+                            }
+                            needs_agent_reinitialization = True
+                        logger.debug(f"Updated {key}: {safe_truncate(old_value)} -> {safe_truncate(value)}")
 
-        if needs_agent_reinitialization:
-            # logger.info(f"Reinitializing agent for session {ui_} due to parameter changes")
-            # This is critical - reinitialize the internal agent when model parameters change
-            # This will NOT change the underlying agents chat session, because that's done in init_session above and
-            # passed in via reactjs_agent.stream_chat
-            await agent_bridge.initialize_agent_parameters()
+
 
         logger.info(f"Settings updated for session {update_params.ui_session_id}: {changes_made}")
         # logger.info(f"Skipped null values: {[k for k, v in updates.items() if v is None]}")
@@ -109,17 +103,17 @@ async def update_agent_settings(
 async def get_agent_config(ui_session_id: str, agent_manager=Depends(get_agent_manager)):
     try:
         # logger.info(f"get_agent_config called for session: {ui_session_id}")
-        session_data = agent_manager.get_session_data(ui_session_id)
-        if not session_data:
+        ui_session_data = agent_manager.get_session_data(ui_session_id)
+        if not ui_session_data:
             raise HTTPException(status_code=404, detail="Session not found")
 
-        agent_bridge = session_data["agent_bridge"]
+        agent_bridge = ui_session_data["agent_bridge"]
         config = agent_bridge.get_agent_runtime_config()
 
         # Add additional configuration info
         config.update({
             "ui_session_id": ui_session_id,
-            "agent_c_session_id": session_data["agent_c_session_id"],
+            "agent_c_session_id": ui_session_data["agent_c_session_id"],
             "model_info": {
                 "name": config["model_name"],
                 "temperature": config["agent_parameters"]["temperature"],
@@ -148,8 +142,8 @@ async def update_agent_tools(
 ):
     try:
         ui_session_id = data.ui_session_id
-        session_data = agent_manager.get_session_data(ui_session_id)
-        if not session_data:
+        ui_session_data = agent_manager.get_session_data(ui_session_id)
+        if not ui_session_data:
             raise HTTPException(status_code=404, detail="Invalid session ID")
 
         tool_list = data.tools
@@ -157,16 +151,16 @@ async def update_agent_tools(
         if not isinstance(data.tools, list):
             raise HTTPException(status_code=400, detail="Tools must be an array")
 
-        agent_bridge = session_data["agent_bridge"]
+        agent_bridge = ui_session_data["agent_bridge"]
         await agent_bridge.update_tools(tool_list)
-        session_data["active_tools"] = tool_list
+        ui_session_data["active_tools"] = tool_list
 
         return {
             "status": "success",
             "message": "Tools updated successfully",
             "active_tools": tool_list,
             "ui_session_id": ui_session_id,
-            "agent_c_session_id": session_data.get('agent_c_session_id', "Unknown")
+            "agent_c_session_id": ui_session_data.get('agent_c_session_id', "Unknown")
         }
     except Exception as e:
         logger.error(f"Error updating tools: {str(e)}")
