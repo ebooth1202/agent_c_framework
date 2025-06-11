@@ -113,6 +113,12 @@ class Toolset:
         self.output_format: str = kwargs.get('output_format', 'raw')
         self.tool_role: str = kwargs.get('tool_role', 'tool')
 
+    def _count_tokens(self, text: str, tool_context) -> int:
+        if not text or len(text) == 0:
+            return 0
+
+        return tool_context['agent_runtime'].count_tokens(text)
+
     def get_dependency(self, toolset_name: str) -> Optional['Toolset']:
         """
         Safely get a dependency toolset by name.
