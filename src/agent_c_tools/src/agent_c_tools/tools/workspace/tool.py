@@ -1,15 +1,16 @@
 import re
 import json
-import yaml
 
 from ts_tool import api
 from typing import Any, List, Tuple, Optional, Callable, Awaitable, Union
 
 from agent_c.toolsets.tool_set import Toolset
+from agent_c.models.context.base import BaseContext
 from agent_c.toolsets.json_schema import json_schema
 from agent_c_tools.tools.workspace.base import BaseWorkspace
 from agent_c_tools.tools.workspace.prompt import WorkspaceSection
 from agent_c_tools.tools.workspace.util import ReplaceStringsHelper
+from agent_c_tools.tools.workspace.context import WorkspaceToolsContext
 
 class WorkspaceTools(Toolset):
     """
@@ -24,16 +25,18 @@ class WorkspaceTools(Toolset):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs, name="workspace")
         self.workspaces: List[BaseWorkspace] = kwargs.get('workspaces', [])
-        self._create_section()
+        self.section = WorkspaceSection(tool=self)
 
         self.replace_helper = ReplaceStringsHelper()
+
+    @classmethod
+    def default_context(cls) -> Optional[BaseContext]:
+        """Return the default context for this toolset."""
+        return WorkspaceToolsContext()
 
     def add_workspace(self, workspace: BaseWorkspace) -> None:
         """Add a workspace to the list of workspaces."""
         self.workspaces.append(workspace)
-
-    def _create_section(self):
-        self.section = WorkspaceSection(tool=self)
 
     def find_workspace_by_name(self, name):
         """Find a workspace by its name."""
@@ -194,7 +197,7 @@ class WorkspaceTools(Toolset):
 
         error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
         if error:
-            return json.dumps({'error': error})
+            return f'ERROR: {error}'
 
         tree_content =  await workspace.tree(relative_path, folder_depth, file_depth)
         token_count = tool_context['agent_runtime'].count_tokens(tree_content)
