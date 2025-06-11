@@ -183,7 +183,7 @@ class ClaudeChatAgent(BaseAgent):
 
                     new_system_prompt  = await prompt_builder.render(opts['tool_context'], tool_sections=kwargs.get("tool_sections", None))
                     if new_system_prompt != opts["completion_opts"]["system"]:
-                        self.logger.info(f"Updating system prompt for interaction {interaction_id}")
+                        self.logger.debug(f"Updating system prompt for interaction {interaction_id}")
                         opts["completion_opts"]["system"] = new_system_prompt
                         await self._raise_system_prompt(new_system_prompt, **callback_opts)
 

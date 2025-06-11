@@ -24,7 +24,7 @@ async def list_personas() -> List[Dict[str, str]]:
             # this is a domo agent, so we can use the config as a persona
             personas.append({
                 "name": config.key,
-                "content": config.persona,
+                "content": config.agent_description,
                 "file": f"{config.key}.md"
             })
 

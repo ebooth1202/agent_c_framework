@@ -533,7 +533,8 @@ class LocalStorageWorkspace(BaseWorkspace):
         cmd.append(pattern)
         cmd.extend(actual_paths)
 
-        print(" ".join(cmd))
+        # Log the command for debugging
+        self.logger.debug(f"Running grep in {self.name}, command: {' '.join(cmd)}")
 
         try:
             # Create subprocess

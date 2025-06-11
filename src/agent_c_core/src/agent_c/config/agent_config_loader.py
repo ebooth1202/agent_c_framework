@@ -7,11 +7,13 @@ from typing import Dict, Any, Optional, List, TypeVar
 from agent_c.models import ModelConfigurationFile
 from agent_c.config import ModelConfigurationLoader
 from agent_c.config.config_loader import ConfigLoader
+from agent_c.util import SingletonCacheMeta, shared_cache_registry, CacheNames, to_snake_case
 from agent_c.models.agent_config import (
     AgentConfigurationV1,
     AgentConfigurationV2,
     AgentConfiguration,  # Union type
-    CurrentAgentConfiguration  # Latest version alias
+    CurrentAgentConfiguration,  # Latest version alias
+    current_agent_configuration_version # integer for latest version
 )
 from agent_c.util import MnemonicSlugs
 from agent_c.util.logging_utils import LoggingManager
@@ -20,7 +22,7 @@ from agent_c.util.logging_utils import LoggingManager
 T = TypeVar('T', bound=AgentConfiguration)
 
 
-class AgentConfigLoader(ConfigLoader):
+class AgentConfigLoader(ConfigLoader, metaclass=SingletonCacheMeta):
     """
     Loader that handles multiple versions of agent configurations.
 
@@ -30,41 +32,45 @@ class AgentConfigLoader(ConfigLoader):
     def __init__(
             self,
             default_model: str = 'claude-sonnet-4-20250514',
-            model_configs: ModelConfigurationFile = None,
-            config_path: Optional[str] = None,
-            auto_migrate: bool = True,
-            target_version: Optional[int] = None
+            model_configs: Optional[ModelConfigurationFile] = None,
+            config_path: Optional[str] = None
     ):
         """
         Initialize the agent config loader.
 
         Args:
             default_model: Default model ID to use
-            model_configs: Model configuration file
+            model_configs: Model configuration file (if None, uses ModelConfigurationLoader singleton)
             config_path: Path to configuration directory
-            auto_migrate: If True, automatically migrate configs to latest version
-            target_version: If set, migrate to this specific version instead of latest
         """
         super().__init__(config_path)
         logging_manager = LoggingManager(__name__)
         self.logger = logging_manager.get_logger()
 
+        # Get model configs from singleton if not provided
         if model_configs is None:
-            model_configs = ModelConfigurationLoader(self.config_path).load_from_json()
+            model_config_loader = ModelConfigurationLoader(self.config_path)
+            model_configs = model_config_loader.get_cached_config()
 
         self.model_configs = model_configs
         self.agent_config_folder = Path(self.config_path).joinpath("agents")
         self._agent_config_cache: Dict[str, AgentConfiguration] = {}
         self._default_model = default_model
-        self._auto_migrate = auto_migrate
-        self._target_version = target_version
-
-        # Track which configs have been migrated for logging/reporting
         self._migration_log: Dict[str, Dict[str, Any]] = {}
         self.load_agents()
 
     def load_agents(self):
-        for file_path in glob.glob(os.path.join(self.agent_config_folder, "**/*.yaml"), recursive=True):
+        """Load all agent configurations with caching."""
+        # Use cached agent discovery
+        cache_key = f"agent_files:{self.agent_config_folder}"
+        agent_cache = shared_cache_registry.get_cache(CacheNames.AGENT_CONFIGS, max_size=200, ttl_seconds=1800)
+        
+        def discover_agent_files():
+            return glob.glob(os.path.join(self.agent_config_folder, "**/*.yaml"), recursive=True)
+        
+        file_paths = agent_cache.get_or_compute(cache_key, discover_agent_files)
+        
+        for file_path in file_paths:
             self.load_agent_config_file(file_path)
 
     def _load_agent(self, agent_config_name: str) -> Optional[AgentConfiguration]:
@@ -80,14 +86,12 @@ class AgentConfigLoader(ConfigLoader):
             agent_config: The AgentConfiguration object to add.
         """
         self._save_agent_config(agent_config)
-        self._agent_config_cache[agent_config.name] = agent_config
+        self._agent_config_cache[agent_config.key] = agent_config
+        self._invalidate_agent_file_cache()
 
     def _save_agent_config(self, agent_config: AgentConfiguration) -> None:
-
-        # Determine file path
         agent_config_path = os.path.join(self.agent_config_folder, f"{agent_config.key}.yaml")
 
-        # Save YAML content
         with open(agent_config_path, 'w', encoding='utf-8') as file:
             yaml_content = agent_config.to_yaml()
             file.write(yaml_content)
@@ -104,9 +108,6 @@ class AgentConfigLoader(ConfigLoader):
                 return None
         else:
             raise FileNotFoundError(f"Agent configuration file {agent_config_path} not found.")
-
-
-
 
         # Handle missing version field (assume v1)
         if 'version' not in data:
@@ -137,9 +138,8 @@ class AgentConfigLoader(ConfigLoader):
         # Track original version
         original_version = self._get_version(config)
 
-        # Migrate if requested
-        if self._auto_migrate:
-            config = self._migrate_config(config, config.name)
+
+        config = self._migrate_config(config)
 
         # Log migration if it occurred
         final_version = self._get_version(config)
@@ -192,28 +192,21 @@ class AgentConfigLoader(ConfigLoader):
             # Fallback for future versions
             return getattr(config, 'version', 1)
 
-    def _migrate_config(self, config: AgentConfiguration, agent_name: str) -> AgentConfiguration:
+    def _migrate_config(self, config: AgentConfiguration) -> AgentConfiguration:
         """Migrate configuration to target version or latest."""
         current_version = self._get_version(config)
-        target = self._target_version or 2  # Default to v2 as latest
+        target = current_agent_configuration_version
 
         if current_version >= target:
             return config
 
         # Migrate v1 to v2
-        if isinstance(config, AgentConfigurationV1) and target >= 2:
-            return AgentConfigurationV2(
-                version=2,
-                name=config.name,
-                model_id=config.model_id,
-                agent_description=config.agent_description,
-                tools=config.tools,
-                agent_params=config.agent_params,
-                prompt_metadata=config.prompt_metadata,
-                persona=config.persona,
-                uid=config.uid,
-                category=["outdated"],
-            )
+        if isinstance(config, AgentConfigurationV1):
+            config = AgentConfigurationV2(version=2,  name=config.name, key=to_snake_case(config.name),
+                                          model_id=config.model_id, agent_description=config.agent_description,
+                                          tools=config.tools, agent_params=config.agent_params,
+                                          prompt_metadata=config.prompt_metadata, persona=config.persona,
+                                          uid=config.uid, category=["domo","outdated"],)
 
         return config
 
@@ -266,8 +259,7 @@ class AgentConfigLoader(ConfigLoader):
         return {
             'total_migrated': len(self._migration_log),
             'migrations': self._migration_log,
-            'auto_migrate': self._auto_migrate,
-            'target_version': self._target_version
+            'target_version': current_agent_configuration_version
         }
 
     def save_migrated_configs(self, backup_dir: Optional[str] = None) -> None:
@@ -327,18 +319,89 @@ class AgentConfigLoader(ConfigLoader):
                     result[agent_name] = migrated
 
         return result
+    
+    def _invalidate_agent_file_cache(self) -> None:
+        """
+        Invalidate the agent file discovery cache for this loader's directory.
+        
+        This should be called when agent files are added, removed, or modified
+        to ensure the file discovery cache stays current.
+        """
+        cache_key = f"agent_files:{self.agent_config_folder}"
+        agent_cache = shared_cache_registry.get_cache(CacheNames.AGENT_CONFIGS)
+        agent_cache.invalidate(cache_key)
+    
+    @classmethod
+    def clear_agent_caches(cls) -> Dict[str, int]:
+        """
+        Clear all agent configuration caches.
+        
+        Returns:
+            Dictionary with cache clear results
+        """
+        return {
+            'agent_cache_cleared': shared_cache_registry.clear_cache(CacheNames.AGENT_CONFIGS)
+        }
+    
+    @classmethod
+    def get_cache_stats(cls) -> Dict[str, Any]:
+        """
+        Get comprehensive cache statistics for AgentConfigLoader.
+        
+        Returns:
+            Dictionary with cache statistics
+        """
+        agent_cache = shared_cache_registry.get_cache(CacheNames.AGENT_CONFIGS)
+        
+        return {
+            'singleton_stats': super().get_cache_stats() if hasattr(super(), 'get_cache_stats') else {},
+            'agent_config_stats': agent_cache.get_stats()
+        }
+    
+    @classmethod
+    def invalidate_cache(cls, config_path: Optional[str] = None, default_model: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Invalidate AgentConfigLoader caches.
+        
+        Args:
+            config_path: If provided, invalidate singleton instance for this path
+            default_model: If provided, invalidate singleton instance for this model
+            
+        Returns:
+            Dictionary with invalidation results
+        """
+        results = {
+            'singleton_invalidated': False,
+            'caches_cleared': {}
+        }
+        
+        # Invalidate specific singleton instance if parameters provided
+        if config_path is not None or default_model is not None:
+            kwargs = {}
+            if config_path is not None:
+                kwargs['config_path'] = config_path
+            if default_model is not None:
+                kwargs['default_model'] = default_model
+            results['singleton_invalidated'] = cls.invalidate_instance(**kwargs)
+        
+        # Clear agent configuration caches
+        results['caches_cleared'] = cls.clear_agent_caches()
+        
+        return results
 
 
 # Convenience functions for specific use cases
 def load_all_agents_latest(config_path: str) -> Dict[str, CurrentAgentConfiguration]:
     """Load all agents and ensure they're migrated to the latest version."""
-    loader = AgentConfigLoader(config_path=config_path, auto_migrate=True)
+    loader = AgentConfigLoader(config_path=config_path)
     return loader.get_latest_version_configs()
 
 
 def load_agents_preserve_versions(config_path: str) -> Dict[str, AgentConfiguration]:
-    """Load all agents without migrating versions."""
-    loader = AgentConfigLoader(config_path=config_path, auto_migrate=False)
+    """Load all agents (always migrated to latest in simplified version)."""
+    # Note: In simplified version, we always migrate to latest
+    # This function is kept for backward compatibility but behaves the same as load_all_agents_latest
+    loader = AgentConfigLoader(config_path=config_path)
     return loader.catalog
 
 
@@ -348,7 +411,7 @@ def migrate_all_agents_in_place(config_path: str, backup_dir: str) -> Dict[str, 
 
     Returns migration report.
     """
-    loader = AgentConfigLoader(config_path=config_path, auto_migrate=True)
+    loader = AgentConfigLoader(config_path=config_path)
 
     # Load all configs (triggers migration)
     _ = loader.catalog
