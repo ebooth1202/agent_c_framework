@@ -8,6 +8,7 @@ import markdown
 from typing import Union, List, Dict, Any, Optional
 
 from agent_c.toolsets.tool_cache import ToolCache
+from agent_c.models.context.base import BaseContext
 from agent_c.util.logging_utils import LoggingManager
 from agent_c.prompting.prompt_section import PromptSection
 from agent_c.models.events import RenderMediaEvent, MessageEvent, TextDeltaEvent
@@ -45,6 +46,16 @@ class Toolset:
             List[str]: List of required tool names, or empty list if none.
         """
         return cls.tool_dependencies.get(toolset_name, [])
+
+    @classmethod
+    def default_context(cls) -> Optional[BaseContext]:
+        """
+        Returns the default context for the toolset.
+
+        Returns:
+            Optional[BaseContext]: The default context, or None if not set.
+        """
+        return None
 
     def __init__(self, **kwargs: Any) -> None:
         """
@@ -101,6 +112,12 @@ class Toolset:
         self.streaming_callback = kwargs.get('streaming_callback')
         self.output_format: str = kwargs.get('output_format', 'raw')
         self.tool_role: str = kwargs.get('tool_role', 'tool')
+
+    def _count_tokens(self, text: str, tool_context) -> int:
+        if not text or len(text) == 0:
+            return 0
+
+        return tool_context['agent_runtime'].count_tokens(text)
 
     def get_dependency(self, toolset_name: str) -> Optional['Toolset']:
         """

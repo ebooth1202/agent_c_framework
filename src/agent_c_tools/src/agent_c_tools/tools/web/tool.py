@@ -138,7 +138,7 @@ class WebTools(Toolset):
             },
             'max_tokens': {
                 'type': 'integer',
-                'description': 'Maximum number of tokens to return. Default is 2000.',
+                'description': 'Maximum number of tokens to return. Default is 20k',
                 'required': False
             },
             'additional_headers': {
@@ -153,7 +153,7 @@ class WebTools(Toolset):
         save_only: bool = kwargs.get('save_only', False)
         save_to_path: Optional[str] = kwargs.get('save_to_path', None)
         raw_output: bool = kwargs.get('raw_output', False)
-        max_tokens: int = kwargs.get('max_tokens', 2000)
+        max_tokens: int = kwargs.get('max_tokens', 20000)
         default_expire: int = kwargs.get("expire_secs", 3600)
         tool_context = kwargs.get('tool_context')
         additional_headers: Dict[str, str] = kwargs.get('additional_headers', {})

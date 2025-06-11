@@ -92,15 +92,19 @@ class DynamicPersonaSection(PromptSection):
     @property_bag_item
     async def rendered_persona_prompt(self, context) -> str:
         base_prompt = context.get("persona_prompt", "")
-        ws_name = self._extract_workspace_name(base_prompt)
-        if ws_name:
-            ws_tool = context['tool_chest'].active_tools.get('WorkspaceTools')
+        try:
+            ws_name = context.get('primary_workspace',  self._extract_workspace_name(base_prompt))
+            if ws_name:
+                ws_tool = context['tool_chest'].active_tools.get('WorkspaceTools')
 
-            tree = await ws_tool.tree(path=f"//{ws_name}/", folder_depth=7, file_depth=5)
-            context['workspace_tree'] = f"Generated: {self.timestamp()}\n{tree}"
+                tree = await ws_tool.tree(path=f"//{ws_name}/", folder_depth=7, file_depth=5, tool_context=context)
+                context['workspace_tree'] = f"Generated: {self.timestamp()}\n{tree}"
 
-        template: Template = Template(base_prompt, )
-        result = template.substitute(context)
+            template: Template = Template(base_prompt, )
+            result = template.substitute(context)
+        except Exception as e:
+            self.logger.error(f"Error rendering persona prompt: {e}")
+            return base_prompt
         return result
 
     @staticmethod

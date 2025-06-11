@@ -17,6 +17,7 @@ from agent_c.chat.session_manager import ChatSessionManager
 from agent_c.models.input import FileInput
 from agent_c.models.input.audio_input import AudioInput
 from agent_c.models.input.image_input import ImageInput
+from agent_c.prompting import PromptBuilder
 from agent_c.util.token_counter import TokenCounter
 
 
@@ -150,6 +151,7 @@ class ClaudeChatAgent(BaseAgent):
     async def chat(self, **kwargs) -> List[dict[str, Any]]:
         """Main method for interacting with Claude API. Split into smaller helper methods for clarity."""
         opts = await self.__interaction_setup(**kwargs)
+        prompt_builder: PromptBuilder = kwargs.get("prompt_builder")
         client_wants_cancel: threading.Event = kwargs.get("client_wants_cancel")
         callback_opts = opts["callback_opts"]
         tool_chest = opts['tool_chest']
@@ -160,6 +162,7 @@ class ClaudeChatAgent(BaseAgent):
         delay = 1  # Initial delay between retries
         async with (self.semaphore):
             interaction_id = await self._raise_interaction_start(**callback_opts)
+
             while delay <= self.max_delay:
                 try:
                     # Stream handling encapsulated in a helper method
@@ -177,6 +180,13 @@ class ClaudeChatAgent(BaseAgent):
                     if state['complete'] and state['stop_reason'] != 'tool_use':
                         self.logger.info(f"Interaction {interaction_id} stopped with reason: {state['stop_reason']}")
                         return result
+
+                    new_system_prompt  = await prompt_builder.render(opts['tool_context'], tool_sections=kwargs.get("tool_sections", None))
+                    if new_system_prompt != opts["completion_opts"]["system"]:
+                        self.logger.info(f"Updating system prompt for interaction {interaction_id}")
+                        opts["completion_opts"]["system"] = new_system_prompt
+                        await self._raise_system_prompt(new_system_prompt, **callback_opts)
+
                     delay = 1
                     messages = result
                 except RateLimitError:

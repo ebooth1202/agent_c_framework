@@ -96,12 +96,12 @@ class LocalStorageWorkspace(BaseWorkspace):
     def _error_response(self, message: str) -> str:
         """Create a standardized error response."""
         self.logger.error(message)
-        return json.dumps({'error': message})
+        return f'Error: {message}'
 
     @staticmethod
     def _success_response(message: str) -> str:
         """Create a standardized success response."""
-        return json.dumps({'message': message})
+        return message
 
     def _validate_path(self, path: str, error_context: str = "file") -> Tuple[bool, str, Optional[Path]]:
         """Validate a path and return normalized path and full path if valid.
@@ -168,17 +168,17 @@ class LocalStorageWorkspace(BaseWorkspace):
         ))
         return f"Folder depth: {folder_depth}, File Depth {file_depth}\n{tree_txt}"
 
-    async def ls(self, relative_path: str) -> str:
+    async def ls(self, relative_path: str) -> Union[List, str]:
         valid, error_msg, full_path = self._validate_path(relative_path, "path")
         if not valid:
             return self._error_response(error_msg)
 
         try:
             contents = os.listdir(full_path)
-            return json.dumps({'contents': contents})
+            return contents
         except Exception as e:
             error_msg = str(e)
-            self.logger.exception("Failed to list directory contents.")
+            self.logger.exception(f"Failed to list directory contents. {error_msg}", exc_info=True)
             return self._error_response(error_msg)
 
     async def read(self, file_path: str, encoding: Optional[str] = "utf-8") -> str:

@@ -1,15 +1,16 @@
 import re
 import json
-import yaml
 
 from ts_tool import api
 from typing import Any, List, Tuple, Optional, Callable, Awaitable, Union
 
 from agent_c.toolsets.tool_set import Toolset
+from agent_c.models.context.base import BaseContext
 from agent_c.toolsets.json_schema import json_schema
 from agent_c_tools.tools.workspace.base import BaseWorkspace
 from agent_c_tools.tools.workspace.prompt import WorkspaceSection
 from agent_c_tools.tools.workspace.util import ReplaceStringsHelper
+from agent_c_tools.tools.workspace.context import WorkspaceToolsContext
 
 class WorkspaceTools(Toolset):
     """
@@ -24,16 +25,18 @@ class WorkspaceTools(Toolset):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs, name="workspace")
         self.workspaces: List[BaseWorkspace] = kwargs.get('workspaces', [])
-        self._create_section()
+        self.section = WorkspaceSection(tool=self)
 
         self.replace_helper = ReplaceStringsHelper()
+
+    @classmethod
+    def default_context(cls) -> Optional[BaseContext]:
+        """Return the default context for this toolset."""
+        return WorkspaceToolsContext()
 
     def add_workspace(self, workspace: BaseWorkspace) -> None:
         """Add a workspace to the list of workspaces."""
         self.workspaces.append(workspace)
-
-    def _create_section(self):
-        self.section = WorkspaceSection(tool=self)
 
     def find_workspace_by_name(self, name):
         """Find a workspace by its name."""
@@ -124,7 +127,12 @@ class WorkspaceTools(Toolset):
                 'type': 'string',
                 'description': 'UNC-style path (//WORKSPACE/path) to list contents for',
                 'required': True
-            }
+            },
+            'max_tokens': {
+                'type': 'integer',
+                'description': 'Maximum size in tokens for the response. Default is 5000.',
+                'required': False
+            },
         }
     )
     async def ls(self, **kwargs: Any) -> str:
@@ -138,6 +146,7 @@ class WorkspaceTools(Toolset):
             str: JSON string with the listing or an error message.
         """
         unc_path = kwargs.get('path', '')
+        max_tokens = kwargs.get('max_tokens', 5000)
 
         error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
         if error:
@@ -146,6 +155,11 @@ class WorkspaceTools(Toolset):
         content = await workspace.ls(relative_path)
         if not isinstance(content, str):
             content = self._yaml_dump(content)
+
+        token_count = self._count_tokens(content, kwargs.get("tool_context"))
+        if token_count > max_tokens:
+            return (f"ERROR: The content of this directory listing exceeds max_tokens limit of {max_tokens}. "
+                    f"Content token count: {token_count}. You will need use a clone with a raised token limit.")
 
         return content
 
@@ -169,7 +183,7 @@ class WorkspaceTools(Toolset):
             },
             "max_tokens": {
                 "type": "integer",
-                "description": "Maximum size in tokens for the response. Default is 2000.",
+                "description": "Maximum size in tokens for the response. Default is 4000.",
                 "required": False
             }
         }
@@ -190,14 +204,14 @@ class WorkspaceTools(Toolset):
         folder_depth = kwargs.get('folder_depth', 5)
         file_depth = kwargs.get('file_depth', 3)
         tool_context = kwargs.get("tool_context")
-        max_tokens = kwargs.get("max_tokens", 2000)
+        max_tokens = kwargs.get("max_tokens", 4000)
 
         error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
         if error:
-            return json.dumps({'error': error})
+            return f'ERROR: {error}'
 
         tree_content =  await workspace.tree(relative_path, folder_depth, file_depth)
-        token_count = tool_context['agent_runtime'].count_tokens(tree_content)
+        token_count = self._count_tokens(tree_content, tool_context)
         if token_count > max_tokens:
             return (f"ERROR: The content of this tree exceeds max_tokens limit of {max_tokens}. "
                     f"Content token count: {token_count}. You will need request less depth or raise the token limit.")
@@ -219,7 +233,7 @@ class WorkspaceTools(Toolset):
             },
             'max_tokens': {
                 'type': 'integer',
-                'description': 'Maximum number of tokens to read from the file. Default is 20k.',
+                'description': 'Maximum number of tokens to read from the file. Default is 25k.',
                 'required': False
             }
         }
@@ -236,7 +250,7 @@ class WorkspaceTools(Toolset):
         """
         unc_path = kwargs.get('path', '')
         encoding = kwargs.get('encoding', 'utf-8')
-        max_tokens = kwargs.get('token_limit', 2000)
+        max_tokens = kwargs.get('token_limit', 25000)
         tool_context = kwargs.get("tool_context")
 
         error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
@@ -248,7 +262,7 @@ class WorkspaceTools(Toolset):
         except Exception as e:
             return f'Error reading file: {str(e)}'
 
-        token_count = tool_context['agent_runtime'].count_tokens(file_content)
+        token_count = self._count_tokens(file_content, tool_context)
         if token_count > max_tokens:
             lines = file_content.splitlines()
             return (f"ERROR: File contents exceeds max_tokens limit of {max_tokens}. "
@@ -514,7 +528,7 @@ class WorkspaceTools(Toolset):
             },
             'max_tokens': {
                 'type': 'integer',
-                'description': 'Maximum size in tokens for the response. Default is 20000.',
+                'description': 'Maximum size in tokens for the response. Default is 25k.',
                 'required': False
             }
         }
@@ -537,7 +551,7 @@ class WorkspaceTools(Toolset):
         end_line = kwargs.get('end_line')
         encoding = kwargs.get('encoding', 'utf-8')
         include_line_numbers = kwargs.get('include_line_numbers', False)
-        max_tokens = kwargs.get('max_tokens', 20000)
+        max_tokens = kwargs.get('max_tokens', 25000)
 
         error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
         if error:
@@ -573,7 +587,7 @@ class WorkspaceTools(Toolset):
             else:
                 subset_content = '\n'.join(subset_lines)
 
-            token_count = tool_context['agent_runtime'].count_tokens(subset_content)
+            token_count = self._count_tokens(subset_content, tool_context)
             if token_count > max_tokens:
                 return (f"ERROR: The contents of those lines exceed the  max_tokens limit of {max_tokens}. "
                         f"Content token count: {token_count}. This file has {len(lines)} lines. "
@@ -668,7 +682,7 @@ class WorkspaceTools(Toolset):
         recursive = kwargs.get('recursive', False)
         include_hidden = kwargs.get('include_hidden', False)
         tool_context = kwargs.get("tool_context")
-        max_tokens = kwargs.get("max_tokens", 2000)
+        max_tokens = kwargs.get("max_tokens", 4000)
         
         if not unc_path:
             return f"ERROR: `path` cannot be empty"
@@ -686,10 +700,10 @@ class WorkspaceTools(Toolset):
             unc_files = [f'//{workspace_name}/{file}' for file in matching_files]
             response = f"Found {len(unc_files)} files matching '{relative_pattern}':\n" + "\n".join(unc_files)
 
-            token_count = tool_context['agent_runtime'].count_tokens(response)
+            token_count = self._count_tokens(response, tool_context)
             if token_count > max_tokens:
                 return (f"ERROR: Response exceeds max_tokens limit of {max_tokens}. Token count: {token_count}. "
-                        f"You will need to adjust your pattern or rasie the token limit")
+                        f"You will need to adjust your pattern or raise the token limit")
 
             return response
         except Exception as e:
@@ -795,7 +809,7 @@ class WorkspaceTools(Toolset):
             err_str = f"Errors:\n{"\n".join(errors)}\n\n"
 
         response = f"{err_str}Results:\n" + "\n".join(results)
-        token_count = tool_context['agent_runtime'].count_tokens(response)
+        token_count = self._count_tokens(response, tool_context)
         if token_count > max_tokens:
             return (f"ERROR: Match results exceed max_tokens limit of {max_tokens}. "
                     f"Results token count: {token_count} from {len(results)} results. "
@@ -846,7 +860,7 @@ class WorkspaceTools(Toolset):
 
             if isinstance(value, dict) or isinstance(value, list):
                 response = self._yaml_dump(value)
-                token_count = tool_context['agent_runtime'].count_tokens(response)
+                token_count = self._count_tokens(response, tool_context)
                 if token_count > max_tokens:
                     return (f"ERROR: Key content exceeds max_tokens limit of {max_tokens}. "
                             f"Content token count: {token_count}. "
@@ -898,7 +912,7 @@ class WorkspaceTools(Toolset):
                 self.logger.warning(f"Key '{key}' not found in metadata for workspace '{workspace.name}'")
             elif isinstance(value, dict):
                 response = self._yaml_dump(list(value.keys()))
-                token_count = tool_context['agent_runtime'].count_tokens(response)
+                token_count = self._count_tokens(response, tool_context)
                 if token_count > max_tokens:
                     return f"ERROR: Response exceeds max_tokens limit of {max_tokens}. Current token count: {token_count}."
 
