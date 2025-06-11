@@ -7,8 +7,10 @@ from typing import Any, Dict, List, Union, Optional, AsyncGenerator
 from datetime import datetime, timezone
 
 from agent_c.chat import ChatSessionManager
+from agent_c.config import ModelConfigurationLoader
+from agent_c.models.agent_config import AgentConfiguration
 from agent_c.models.input import AudioInput
-from agent_c.agents.gpt import GPTChatAgent
+from agent_c.agents.gpt import GPTChatAgent, AzureGPTChatAgent
 from agent_c.models.events import SessionEvent
 from agent_c.toolsets import ToolChest, ToolCache
 from agent_c_api.config.env_config import settings
@@ -55,13 +57,17 @@ class AgentBridge:
         - Workspace management
         - File handling capabilities
     """
+    __vendor_agent_map = {
+        "azure_openai": AzureGPTChatAgent,
+        "openai": GPTChatAgent,
+        "claude": ClaudeChatAgent,
+        "bedrock": ClaudeBedrockChatAgent
+    }
 
     def __init__(
         self,
         chat_session: ChatSession,
         session_manager: ChatSessionManager,
-        backend: str = DEFAULT_BACKEND,
-        model_name: str = DEFAULT_MODEL_NAME,
         file_handler: Optional[FileHandler] = None,
         **kwargs: Any
     ) -> None:
@@ -75,33 +81,17 @@ class AgentBridge:
         Args:
             chat_session: The chat session to manage.
             session_manager: Session manager for chat sessions.
-            backend: Backend to use for the agent ('openai', 'claude', 'bedrock').
-                Defaults to 'claude'.
             model_name: Name of the AI model to use. Defaults to 'claude-sonnet-4-20250514'.
             file_handler: Handler for file operations. Defaults to None.
             **kwargs: Additional optional keyword arguments including:
-                - temperature (float): Temperature parameter for non-reasoning models
-                - reasoning_effort (float): Reasoning effort parameter for OpenAI models
-                - extended_thinking (bool): Extended thinking parameter for Claude models
-                - budget_tokens (int): Budget tokens parameter for Claude models
-                - agent_name (str): Name for the agent (for debugging)
-                - output_format (str): Output format for agent responses
                 - tool_cache_dir (str): Directory for tool cache
-                - max_tokens (int): Maximum tokens for model responses
                 - sections (List): Sections for the prompt builder
         
         Raises:
             Exception: If there are errors during tool or agent initialization.
         """
-        # Agent events setup, must come first
-        self.__init_events()
-        self.chat_session = chat_session
-        self.sections = kwargs.get('sections', None)  # Sections for the prompt builder, if any
-
-        # Debugging and Logging Setup
         logging_manager = LoggingManager(__name__)
         self.logger = logging_manager.get_logger()
-
         # Set up streaming_callback with logging
         self.streaming_callback_with_logging = create_with_callback(
             log_base_dir=os.getenv('AGENT_LOG_DIR', DEFAULT_LOG_DIR),
@@ -109,35 +99,21 @@ class AgentBridge:
             include_system_prompt=True
         )
 
-        self.debug_event = None
+        self.__init_events()
 
-        self.agent_name = kwargs.get('agent_name', self.chat_session.agent_config.name)  # Debugging only
-
-        # Initialize Core Class, there's quite a bit here, so let's go through this.
-        # Agent Characteristics
-        # - Backend: The backend used for the agent, defaults to 'openai', other open is 'claude'
-        # - Model Name: The model name used for the agent, defaults to 'gpt-4o'
-        self.backend = backend
-        self.model_name = model_name
-        self.agent_runtime: Optional[BaseAgent] = None
-        self.agent_output_format = kwargs.get('output_format', DEFAULT_OUTPUT_FORMAT)
-
-        # Non-Reasoning Models Parameters
-        self.temperature = kwargs.get('temperature')
-
-        # Capture max_tokens if provided
-        self.max_tokens = kwargs.get('max_tokens')
-
-        # Open AI Reasoning model parameters
-        self.reasoning_effort = kwargs.get('reasoning_effort')
-
-        # Claude Reasoning model parameters
-        self.extended_thinking = kwargs.get('extended_thinking')
-        self.budget_tokens = kwargs.get('budget_tokens')
-
-        # self.user_prefs: List[UserPreference] = [AddressMeAsPreference(), AssistantPersonalityPreference()]
-        self.session_manager = session_manager
+        self.chat_session = chat_session
         self.logger.info(f"Using provided agent config : {self.chat_session.agent_config.key}...")
+
+        self.sections = kwargs.get('sections', None)  # Sections for the prompt builder, if any
+
+        self.model_config_loader = ModelConfigurationLoader()
+        self.model_configs: Dict[str, Any] = self.model_config_loader.flattened_config()
+        self.runtime_cache: Dict[str, BaseAgent] = {}
+
+
+        self.debug_event = None
+        self.session_manager = session_manager
+
 
         # Tool Chest, Cache, and Setup
         # - Tool Chest: A collection of toolsets that the agent can use, Set to None initialization.
@@ -152,12 +128,26 @@ class AgentBridge:
         self.workspaces = None
         self.__init_workspaces()
 
-        self.voice_tools = None
-
         # Initialize file handling capabilities
         self.file_handler = file_handler
         self.image_inputs: List[ImageInput] = []
         self.audio_inputs: List[AudioInput] = []
+
+    def runtime_for_agent(self, agent_config: AgentConfiguration):
+        if agent_config.key in self.runtime_cache:
+            return self.runtime_cache[agent_config.key]
+        else:
+            self.runtime_cache[agent_config.key] = self._runtime_for_agent(agent_config)
+            return self.runtime_cache[agent_config.key]
+
+    def _runtime_for_agent(self, agent_config: AgentConfiguration) -> BaseAgent:
+        model_config = self.model_configs[agent_config.model_id]
+        runtime_cls = self.__vendor_agent_map[model_config["vendor"]]
+
+        auth_info = agent_config.agent_params.auth.model_dump() if agent_config.agent_params.auth is not None else  {}
+        client = runtime_cls.client(**auth_info)
+        return runtime_cls(model_name=model_config["id"], client=client)
+
 
     def __init_events(self) -> None:
         """
@@ -169,7 +159,6 @@ class AgentBridge:
         self.exit_event = threading.Event()
         self.input_active_event = threading.Event()
         self.cancel_tts_event = threading.Event()
-        # Get debug event from shared logging manager
         self.debug_event = LoggingManager.get_debug_event()
 
 
@@ -227,7 +216,6 @@ class AgentBridge:
             Exception: If there are errors during tool activation.
             
         Notes:
-            - Essential tools are always preserved
             - Duplicate tools are automatically removed
             - Tool chest is reinitialized with the updated tool set
             - Agent is reinitialized with new tools while maintaining the session
@@ -353,52 +341,14 @@ class AgentBridge:
             Sets self.agent_runtime to the initialized agent instance, which will be
             one of ClaudeChatAgent, ClaudeBedrockChatAgent, or GPTChatAgent.
         """
-
         prompt_builder = await self._sys_prompt_builder()
+        agent_params = self.chat_session.agent_config.agent_params.model_dump(exclude_none=True)
 
-        # Prepare common parameters that apply to both backends
-        agent_params = {
+        agent_params |= {
             "prompt_builder": prompt_builder,
-            "model_name": self.model_name,
             "tool_chest": self.tool_chest,
-            "streaming_callback": self.streaming_callback_with_logging,
-            "output_format": self.agent_output_format
+            "streaming_callback": self.streaming_callback_with_logging
         }
-
-        # Add temperature if it exists (applies to both Claude and GPT)
-        if self.temperature is not None:
-            agent_params["temperature"] = self.temperature
-
-        if self.max_tokens is not None:
-            self.logger.debug(f"Setting agent max_tokens to {self.max_tokens}")
-            agent_params["max_tokens"] = self.max_tokens
-
-        if self.backend == 'claude':
-            # Add Claude-specific parameters
-            # Because claude.py only includes completion params for budget_tokens > 0
-            # we can set it to 0 and it won't affect 3.5 or 3.7 models.
-            budget_tokens = self.budget_tokens if self.budget_tokens is not None else 0
-            agent_params["budget_tokens"] = budget_tokens
-            self.logger.debug(f"Setting agent budget_tokens to {budget_tokens}")
-
-            self.agent_runtime = ClaudeChatAgent(**agent_params)
-            
-        elif self.backend == 'bedrock':
-            # Add Claude Bedrock-specific parameters
-            budget_tokens = self.budget_tokens if self.budget_tokens is not None else 0
-            agent_params["budget_tokens"] = budget_tokens
-            self.logger.debug(f"Setting agent budget_tokens to {budget_tokens}")
-
-            self.agent_runtime = ClaudeBedrockChatAgent(**agent_params)
-            
-        else:
-            # Add OpenAI-specific parameters
-            # Only pass reasoning_effort if it's set and we're using a reasoning model
-            if (self.reasoning_effort is not None and 
-                any(reasoning_model in self.model_name for reasoning_model in OPENAI_REASONING_MODELS)):
-                agent_params["reasoning_effort"] = self.reasoning_effort
-
-            self.agent_runtime = GPTChatAgent(**agent_params)
 
         self.logger.info(f"Agent initialized using the following parameters: {agent_params}")
 
@@ -437,7 +387,6 @@ class AgentBridge:
             "current_user_username": self.chat_session.user_id,
             "persona_prompt": self.chat_session.agent_config.persona,
             "agent_config": self.chat_session.agent_config,
-            "voice_tools": self.voice_tools,
             "timestamp": datetime.now().isoformat(),
             "env_name": os.getenv('ENV_NAME', DEFAULT_ENV_NAME)
         }
@@ -460,23 +409,17 @@ class AgentBridge:
             Dict[str, Any]: Dictionary containing agent configuration details
         """
         config = {
-            'backend': self.backend,
-            'model_name': self.model_name,
+            'backend': "anthropic",
+            'model_name': self.chat_session.agent_config.agent_params.model_name,
             'initialized_tools': [],
-            'agent_name': self.agent_name,
+            'agent_name': self.chat_session.agent_config.name,
             'user_session_id': self.chat_session.session_id,
             'agent_session_id': self.chat_session.session_id,
-            'output_format': self.agent_output_format,
+            'output_format': "markdown",
             'created_time': self._current_timestamp(),
-            'temperature': self.temperature,
-            'reasoning_effort': self.reasoning_effort,
-            'agent_parameters': {
-                'temperature': getattr(self, 'temperature', None),
-                'reasoning_effort': getattr(self, 'reasoning_effort', None),
-                'extended_thinking': getattr(self, 'extended_thinking', None),
-                'budget_tokens': getattr(self, 'budget_tokens', None),
-                'max_tokens': getattr(self, 'max_tokens', None)
-            }
+            'temperature': self.chat_session.agent_config.agent_params.temperature if "temperature" in self.chat_session.agent_config.agent_params.__fields__ else None,
+            'reasoning_effort': self.chat_session.agent_config.agent_params.reasoning_effort if "reasoning_effort" in self.chat_session.agent_config.agent_params.__fields__ else None,
+            'agent_parameters': self.chat_session.agent_config.agent_params.model_dump(exclude_defaults=False)
         }
 
         if self.tool_chest:
@@ -522,6 +465,7 @@ class AgentBridge:
             return json.dumps(data)
         except (TypeError, ValueError) as e:
             raise ValueError(f"Error converting input to string: {str(e)}") from e
+
     @staticmethod
     async def _handle_message(event: SessionEvent) -> str:
         """
@@ -643,21 +587,6 @@ class AgentBridge:
             "format": event.format
         }) + "\n"
         return payload
-
-    def _determine_vendor(self) -> str:
-        """
-        Determine the vendor based on backend and model name.
-        
-        Returns:
-            str: Vendor name ('anthropic', 'openai', 'bedrock', 'azure').
-        """
-        if self.backend in  ['claude', 'bedrock']:
-            return 'claude'
-        elif self.backend in ['openai', 'azure']:
-            return 'openai'
-
-        return 'claude'  # Default to 'claude' if backend is not recognized
-
 
     @staticmethod
     async def _handle_tool_call(event: SessionEvent) -> str:
@@ -1026,7 +955,7 @@ class AgentBridge:
 
         try:
             await self.session_manager.update()
-
+            agent_runtime = self.runtime_for_agent(self.chat_session.agent_config)
             file_inputs = []
             if file_ids and self.file_handler:
                 file_inputs = await self.process_files_for_message(file_ids, self.chat_session.user_id)
@@ -1043,7 +972,7 @@ class AgentBridge:
             tool_params = {}
             if len(self.chat_session.agent_config.tools):
                 await self.tool_chest.initialize_toolsets(self.chat_session.agent_config.tools)
-                tool_params = self.tool_chest.get_inference_data(self.chat_session.agent_config.tools, self.agent_runtime.tool_format)
+                tool_params = self.tool_chest.get_inference_data(self.chat_session.agent_config.tools, agent_runtime.tool_format)
                 tool_params["toolsets"] = self.chat_session.agent_config.tools
 
             if self.sections is not None:
@@ -1057,6 +986,7 @@ class AgentBridge:
                 "streaming_queue": queue,
                 "user_id": self.chat_session.user_id,
                 "chat_session": self.chat_session,
+                "tool_chest": self.tool_chest,
                 "user_message": user_message,
                 "prompt_metadata": prompt_metadata,
                 "output_format": DEFAULT_OUTPUT_FORMAT,
@@ -1087,9 +1017,7 @@ class AgentBridge:
             full_params = chat_params | tool_params
 
             # Start the chat task
-            chat_task = asyncio.create_task(
-                self.agent_runtime.chat(**full_params)
-            )
+            chat_task = asyncio.create_task(agent_runtime.chat(**full_params))
 
             while True:
                 try:
