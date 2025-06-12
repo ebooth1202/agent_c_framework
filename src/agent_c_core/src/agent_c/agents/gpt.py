@@ -56,23 +56,7 @@ class GPTChatAgent(BaseAgent):
 
         # Initialize the client based on environment or provided client
         if kwargs.get("client", None) is None:
-            azure_endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
-            azure_api_key = os.environ.get("AZURE_OPENAI_API_KEY")
-            if azure_endpoint is not None and azure_api_key is not None:
-                self.logger.debug(
-                    "Initializing ****AsyncAzureOpenAI**** with endpoint: %s and API version: %s",
-                    azure_endpoint,
-                    os.environ.get("AZURE_OPENAI_API_VERSION")
-                )
-                self.client = AsyncAzureOpenAI(
-                    azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
-                    api_key=os.environ["AZURE_OPENAI_API_KEY"],
-                    api_version=os.environ.get("AZURE_OPENAI_API_VERSION", "2024-03-01-preview")
-                )
-                self.model_name = os.environ.get("AZURE_OPENAI_MODEL", self.model_name)
-            else:
-                self.logger.debug("Initializing default ****AsyncOpenAI**** client")
-                self.client = kwargs.get("client", AsyncOpenAI())
+            self.client = self.__class__.client()
         else:
             self.logger.debug("Initializing with provided client.")
             self.client = kwargs.get("client")
