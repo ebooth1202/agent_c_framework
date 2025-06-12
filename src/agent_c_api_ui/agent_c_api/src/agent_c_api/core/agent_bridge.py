@@ -764,7 +764,11 @@ class AgentBridge:
             str: JSON-formatted completion status payload.
         """
         if not event.running:
-            self.chat_session.token_count = event.input_tokens + event.output_tokens
+            size = event.input_tokens + event.output_tokens
+            if size > 0:
+                self.chat_session.context_window_size = size
+                self.chat_session.token_count += size
+
         payload = json.dumps({
             "type": "completion_status",
             "data": {

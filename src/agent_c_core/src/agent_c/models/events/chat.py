@@ -44,8 +44,8 @@ class CompletionEvent(SessionEvent):
     running: bool = Field(..., description="If True, the completion will run immediately after the event goes out.")
     completion_options: dict = Field(..., description="The completion options used, in vendor format")
     stop_reason: Optional[str] = Field(None, description="The reason the completion was stopped")
-    input_tokens: Optional[int] = Field(None, description="The number of tokens in the input")
-    output_tokens: Optional[int] = Field(None, description="The number of tokens in the output")
+    input_tokens: Optional[int] = Field(0, description="The number of tokens in the input")
+    output_tokens: Optional[int] = Field(0, description="The number of tokens in the output")
 
 class MessageEvent(SessionEvent):
     """
