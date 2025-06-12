@@ -33,7 +33,7 @@ async def chat_endpoint(
         StreamingResponse: Streaming response from the agent
     """
     logger.info(f"Received chat request for session: {ui_session_id}")
-    session_data = agent_manager.get_session_data(ui_session_id)
+    session_data = await agent_manager.get_session_data(ui_session_id)
     # logger.debug(f"Available sessions: {list(agent_manager.sessions.keys())}")
 
     if not session_data:
@@ -117,7 +117,7 @@ async def cancel_chat(
         JSONResponse: Status of the cancellation request
     """
     logger.info(f"Received cancellation request for session: {ui_session_id}")
-    session_data = agent_manager.get_session_data(ui_session_id)
+    session_data = await agent_manager.get_session_data(ui_session_id)
     
     if not session_data:
         logger.error(f"No session found for session_id: {ui_session_id}")

@@ -219,7 +219,7 @@ async def get_agent_debug_info(
         500: If there's an error retrieving debug information
     """
     try:
-        session_data = agent_manager.get_session_data(str(session_id))
+        session_data = await agent_manager.get_session_data(str(session_id))
         if not session_data:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
 

@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from agent_c.chat import ChatSessionManager
 from agent_c.config import ModelConfigurationLoader
 from agent_c.models.agent_config import AgentConfiguration
+from agent_c.models.context.interaction_context import InteractionContext
 from agent_c.models.input import AudioInput
 from agent_c.agents.gpt import GPTChatAgent, AzureGPTChatAgent
 from agent_c.models.events import SessionEvent
@@ -750,8 +751,8 @@ class AgentBridge:
         """
         return None
 
-    @staticmethod
-    async def _handle_completion(event: SessionEvent) -> str:
+
+    async def _handle_completion(self, event: SessionEvent) -> str:
         """
         Handle completion events from the agent.
         
@@ -764,6 +765,7 @@ class AgentBridge:
         Returns:
             str: JSON-formatted completion status payload.
         """
+        self.chat_session.token_count = event.input_tokens + event.output_tokens
         payload = json.dumps({
             "type": "completion_status",
             "data": {
@@ -1015,6 +1017,17 @@ class AgentBridge:
                 chat_params["files"] = document_inputs
 
             full_params = chat_params | tool_params
+
+            context = InteractionContext(client_wants_cancel=client_wants_cancel,
+                                         session_id=self.chat_session.session_id,
+                                         user_id=self.chat_session.user_id,
+                                         agent_config=self.chat_session.agent_config,
+                                         tool_chest=self.tool_chest, sections=agent_sections,
+                                         streaming_callback=self.streaming_callback_with_logging,
+                                         chat_session=self.chat_session, tool_schemas=tool_params["schemas"],
+                                         agent_runtime=agent_runtime,
+
+                                          )
 
             # Start the chat task
             chat_task = asyncio.create_task(agent_runtime.chat(**full_params))

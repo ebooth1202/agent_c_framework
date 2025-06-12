@@ -63,7 +63,7 @@ async def upload_file(
     try:
         # Verify session exists
         logger.debug(f"Agent keys are {agent_manager.ui_sessions.keys()}")
-        session_data = agent_manager.get_session_data(ui_session_id)
+        session_data = await agent_manager.get_session_data(ui_session_id)
         if not session_data:
             logger.error(f"No session found for session_id: {ui_session_id}")
             raise HTTPException(status_code=404, detail="Session not found")
@@ -112,7 +112,7 @@ async def get_session_files(
     """
     try:
         # Verify session exists
-        session_data = agent_manager.get_session_data(ui_session_id)
+        session_data = await agent_manager.get_session_data(ui_session_id)
         if not session_data:
             logger.error(f"No session found for session_id: {ui_session_id}")
             raise HTTPException(status_code=404, detail="Session not found")
@@ -162,7 +162,7 @@ async def get_file(
     """
     try:
         # Verify session exists
-        session_data = agent_manager.get_session_data(ui_session_id)
+        session_data = await agent_manager.get_session_data(ui_session_id)
         if not session_data:
             logger.error(f"No session found for session_id: {ui_session_id}")
             raise HTTPException(status_code=404, detail="Session not found")
@@ -204,7 +204,7 @@ async def delete_file(
     """
     try:
         # Verify session exists
-        session_data = agent_manager.get_session_data(ui_session_id)
+        session_data = await agent_manager.get_session_data(ui_session_id)
         if not session_data:
             logger.error(f"No session found for session_id: {ui_session_id}")
             raise HTTPException(status_code=404, detail="Session not found")

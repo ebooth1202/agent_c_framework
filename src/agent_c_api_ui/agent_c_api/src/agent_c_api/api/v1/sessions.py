@@ -40,13 +40,13 @@ async def initialize_agent(params: AgentInitializationParams,
             **additional_params,
             **session_params
         )
-
+        session_data = await agent_manager.get_session_data(new_session_id)
         logger.debug(f"Current sessions in memory: {list(agent_manager.ui_sessions.keys())}")
         logger.debug(
-            f"User Session {new_session_id} with session details: {agent_manager.get_session_data(new_session_id)}")
+            f"User Session {new_session_id} with session details: {session_data}")
+
         return {"ui_session_id": new_session_id,
-                "agent_c_session_id": agent_manager.get_session_data(new_session_id).get('agent_c_session_id',
-                                                                                         "Unknown")}
+                "agent_c_session_id": new_session_id}
 
     except Exception as e:
         logger.error(f"Error during session initialization: {str(e)}")

@@ -89,9 +89,9 @@ class ChatService:
             HTTPException(500): If there's an error processing the message
         """
         # Verify the session exists
-        session_data = self.agent_manager.get_session_data(session_id)
+        session_data = await self.agent_manager.get_session_data(session_id)
         if not session_data:
-            self.logger.error("chat_session_not_found", session_id=session_id)
+            self.logger.error("User session_not_found", session_id=session_id)
             raise HTTPException(status_code=404, detail="Session not found")
         
         # For 'user' messages, extract the text content for processing
@@ -147,7 +147,7 @@ class ChatService:
             HTTPException(404): If the session doesn't exist
         """
         # Verify the session exists
-        session_data = self.agent_manager.get_session_data(session_id)
+        session_data = await self.agent_manager.get_session_data(session_id)
         if not session_data:
             self.logger.error("cancel_session_not_found", session_id=session_id)
             raise HTTPException(status_code=404, detail="Session not found")

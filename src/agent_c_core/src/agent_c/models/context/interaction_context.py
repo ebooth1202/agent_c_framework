@@ -33,8 +33,9 @@ class InteractionContext(BaseContext):
         description="A callback function that is called when a streaming event occurs. This is used to handle streaming events from the agent."
     )
 
-    sub_contexts: List[BaseContext] = Field(default_factory=list, description="A list of context models to provide data for tools / prompts."
-                                                                              "Used to pass additional data to tools and prompts during the interaction. ")
+    sub_contexts: Dict[str, BaseContext] = Field(default_factory=dict, description="A dictionary of context models to provide data for tools / prompts."
+                                                                                   "Used to pass additional data to tools and prompts during the interaction. "
+                                                                                   "Key is the context model type, value is the context model.")
 
     sections: Optional[List[PromptSection]] = Field(default_factory=list, description="A list of prompt sections that are used in the interaction. "
                                                                                       "This is used to store the prompt sections that are used in the interaction.")
