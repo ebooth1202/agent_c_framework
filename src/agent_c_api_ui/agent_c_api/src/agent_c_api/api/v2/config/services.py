@@ -3,6 +3,8 @@ import glob
 from typing import Optional
 from fastapi_cache.decorator import cache
 
+from agent_c.config.agent_config_loader import AgentConfigLoader
+from agent_c.models.agent_config import AgentConfigurationV2, AgentConfiguration
 from agent_c.toolsets.tool_set import Toolset
 from agent_c_api.config.config_loader import MODELS_CONFIG
 from agent_c_api.config.env_config import settings
@@ -10,12 +12,14 @@ from agent_c_api.core.agent_manager import UItoAgentBridgeManager
 
 from agent_c_api.api.v2.models.config_models import (
     ModelInfo, PersonaInfo, ToolInfo, ModelParameter, ToolParameter,
-    ModelsResponse, PersonasResponse, ToolsResponse, SystemConfigResponse
+    ModelsResponse, AgentConfigsResponse, ToolsResponse, SystemConfigResponse
 )
 
 class ConfigService:
     """Service for retrieving configuration data from existing sources"""
-    
+    def __init__(self):
+        self.agent_config_loader: AgentConfigLoader = AgentConfigLoader()
+
     @cache(expire=300)  # Cache for 5 minutes
     async def get_models(self) -> ModelsResponse:
         """
@@ -80,53 +84,22 @@ class ConfigService:
         return None
     
     @cache(expire=300)  # Cache for 5 minutes
-    async def get_personas(self) -> PersonasResponse:
+    async def get_agent_configs(self) -> AgentConfigsResponse:
         """
         Get available personas using the existing file-based mechanism
         """
-        # Using the same approach as in v1/personas.py
-        persona_list = []
-        persona_dir = settings.PERSONA_DIR
-        
-        # Ensure directory exists
-        if not os.path.isdir(persona_dir):
-            return PersonasResponse(personas=[])
-            
-        # Get all .md files in personas directory
-        for file_path in glob.glob(os.path.join(persona_dir, "**/*.md"), recursive=True):
-            rel_path = os.path.relpath(file_path, persona_dir)
-            name_with_path: str  = rel_path[:-3]
-            # Replace directory separators with desired character (e.g., '_' or '/')
-            name = name_with_path.replace(os.sep, ' - ')
-            
-            # Read persona content
-            try:
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    content = f.read()
-            except Exception as e:
-                continue
-                
-            persona_info = PersonaInfo(
-                id=name,  # Use the name as the ID
-                name=name,
-                description="",  # No description available in v1 implementation
-                file_path=file_path,
-                content=content
-            )
-            persona_list.append(persona_info)
-        
-        return PersonasResponse(personas=persona_list)
+        return AgentConfigsResponse(agents=list(self.agent_config_loader.catalog.values()))
+
     
     @cache(expire=300)  # Cache for 5 minutes
-    async def get_persona(self, persona_id: str) -> Optional[PersonaInfo]:
+    async def get_agent_config(self, agent_key: str) -> Optional[AgentConfiguration]:
         """
-        Get a specific persona by ID
+        Get a specific agent by ID
         """
-        personas_response = await self.get_personas()
-        for persona in personas_response.personas:
-            if persona.id == persona_id:
-                return persona
-        return None
+        if agent_key not in self.agent_config_loader.catalog:
+            return None
+
+        return self.agent_config_loader.catalog[agent_key]
     
     @cache(expire=300)  # Cache for 5 minutes
     async def get_tools(self) -> ToolsResponse:
@@ -140,10 +113,7 @@ class ConfigService:
         
         # Categories mapping similar to v1 implementation
         category_mapping = {
-            'agent_c_tools': 'Core Tools',
-            'agent_c_demo': 'Demo Tools',
-            'agent_c_voice': 'Voice Tools',
-            'agent_c_rag': 'RAG Tools'
+            'agent_c_tools': 'Core Tools'
         }
         
         # Get all tools from the Toolset registry

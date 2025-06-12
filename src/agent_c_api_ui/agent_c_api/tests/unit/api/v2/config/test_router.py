@@ -7,7 +7,7 @@ from agent_c_api.main import app
 from agent_c_api.api.v2.config.router import get_config_service
 from agent_c_api.api.v2.models.config_models import (
     ModelInfo, PersonaInfo, ToolInfo, ModelParameter, ToolParameter,
-    ModelsResponse, PersonasResponse, ToolsResponse, SystemConfigResponse
+    ModelsResponse, AgentConfigsResponse, ToolsResponse, SystemConfigResponse
 )
 
 

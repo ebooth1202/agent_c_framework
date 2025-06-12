@@ -153,17 +153,17 @@ async def list_sessions(
          summary="Get session details",
          description="Retrieves comprehensive information about a specific session including its configuration")
 async def get_session(
-    session_id: UUID = Path(..., description="Unique identifier of the session to retrieve"),
+    session_id: str = Path(..., description="Unique identifier of the session to retrieve"),
     service: SessionService = Depends(get_session_service)
 ):
     """
     Get session details.
     
-    Retrieves detailed information about a specific session identified by its UUID.
+    Retrieves detailed information about a specific session identified by its ID.
     The response includes all session configuration parameters, tools, and metadata.
     
     Args:
-        session_id: UUID of the session to retrieve
+        session_id: ID of the session to retrieve
         service: Session service dependency injection
         
     Returns:
@@ -201,7 +201,7 @@ async def get_session(
            summary="Update session properties",
            description="Updates one or more properties of an existing session, such as name, persona, or model parameters")
 async def update_session(
-    session_id: UUID = Path(..., description="Unique identifier of the session to update"),
+    session_id: str = Path(..., description="Unique identifier of the session to update"),
     update_data: SessionUpdate = Body(..., description="Session properties to update"),
     service: SessionService = Depends(get_session_service)
 ):
@@ -212,7 +212,7 @@ async def update_session(
     in the request body will be updated; others will remain unchanged.
     
     Args:
-        session_id: UUID of the session to update
+        session_id: ID of the session to update
         update_data: Session properties to update, with null/None values ignored
         service: Session service dependency injection
         
@@ -249,7 +249,7 @@ async def update_session(
         ```
     """
     try:
-        return await service.update_session(str(session_id), update_data)
+        return await service.update_session(session_id, update_data)
     except HTTPException:
         raise
     except Exception as e:
@@ -261,7 +261,7 @@ async def update_session(
            summary="Delete a session",
            description="Permanently removes a session and releases its resources")
 async def delete_session(
-    session_id: UUID = Path(..., description="Unique identifier of the session to delete"),
+    session_id: str = Path(..., description="Unique identifier of the session to delete"),
     service: SessionService = Depends(get_session_service)
 ):
     """
@@ -271,7 +271,7 @@ async def delete_session(
     This operation cannot be undone, and all session data will be lost.
     
     Args:
-        session_id: UUID of the session to delete
+        session_id: ID of the session to delete
         service: Session service dependency injection
         
     Returns:
@@ -300,10 +300,10 @@ async def delete_session(
             print(f"Error: {response.text}")
         ```
     """
-    session = await service.get_session(str(session_id))
+    session = await service.get_session(session_id)
     if not session:
         raise HTTPException(status_code=404, detail=f"Session {session_id} not found")
     
-    success = await service.delete_session(str(session_id))
+    success = await service.delete_session(session_id)
     if not success:
         raise HTTPException(status_code=500, detail="Failed to delete session")

@@ -1,6 +1,8 @@
 from typing import Dict, List, Optional, Any, Union, ClassVar
 from pydantic import BaseModel, Field, ConfigDict
 
+from agent_c.models.agent_config import AgentConfigurationV2, AgentConfiguration
+
 
 class ModelParameter(BaseModel):
     """Parameter for a model configuration"""
@@ -174,31 +176,11 @@ class ModelsResponse(BaseModel):
         })
 
 
-class PersonasResponse(BaseModel):
+class AgentConfigsResponse(BaseModel):
     """Response containing available personas"""
-    personas: List[PersonaInfo] = Field(description="List of available personas")
+    agents: List[AgentConfiguration] = Field(description="List of available agent configurations")
 
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "personas": [
-                    {
-                        "id": "coder",
-                        "name": "Coding Assistant",
-                        "description": "Specialized in writing and reviewing code",
-                        "file_path": "/personas/coder.md",
-                        "content": "You are a coding assistant..."
-                    },
-                    {
-                        "id": "researcher",
-                        "name": "Research Assistant",
-                        "description": "Specialized in academic research and analysis",
-                        "file_path": "/personas/researcher.md",
-                        "content": "You are a research assistant..."
-                    }
-                ]
-            }
-        })
+
 
 class ToolsResponse(BaseModel):
     """Response containing available tools"""
