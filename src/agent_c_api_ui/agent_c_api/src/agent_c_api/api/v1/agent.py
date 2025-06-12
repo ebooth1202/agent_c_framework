@@ -1,4 +1,7 @@
+from typing import Dict, Any
+
 from fastapi import APIRouter, HTTPException, Form, Depends, Request
+from huggingface_hub import model_info
 
 from agent_c.models.agent_config import AgentConfiguration
 from agent_c_api.api.dependencies import get_agent_manager
@@ -22,7 +25,7 @@ async def update_agent_settings(
     Update agent settings for a given session.
     """
     # Get current session and agent
-    ui_session_data = agent_manager.get_session_data(update_params.ui_session_id)
+    ui_session_data = await agent_manager.get_session_data(update_params.ui_session_id)
     if not ui_session_data:
         return {"error": "Invalid session_id"}
 
@@ -103,25 +106,22 @@ async def update_agent_settings(
 async def get_agent_config(ui_session_id: str, agent_manager=Depends(get_agent_manager)):
     try:
         # logger.info(f"get_agent_config called for session: {ui_session_id}")
-        ui_session_data = agent_manager.get_session_data(ui_session_id)
+        ui_session_data = await agent_manager.get_session_data(ui_session_id)
         if not ui_session_data:
             raise HTTPException(status_code=404, detail="Session not found")
 
         agent_bridge = ui_session_data["agent_bridge"]
         config = agent_bridge.get_agent_runtime_config()
 
+        runtime_params: Dict[str, Any] = config['agent_parameters']
+        runtime_params["name"] =  runtime_params.pop("model_name")
+
+
         # Add additional configuration info
         config.update({
             "ui_session_id": ui_session_id,
-            "agent_c_session_id": ui_session_data["agent_c_session_id"],
-            "model_info": {
-                "name": config["model_name"],
-                "temperature": config["agent_parameters"]["temperature"],
-                "reasoning_effort": config["agent_parameters"]["reasoning_effort"],
-                "extended_thinking": config["agent_parameters"]["extended_thinking"],
-                "budget_tokens": config["agent_parameters"]["budget_tokens"],
-                "max_tokens": config["agent_parameters"]["max_tokens"]
-            },
+            "agent_c_session_id": ui_session_id,
+            "model_info": runtime_params,
             "initialized_tools": config["initialized_tools"]
         })
 
@@ -142,7 +142,7 @@ async def update_agent_tools(
 ):
     try:
         ui_session_id = data.ui_session_id
-        ui_session_data = agent_manager.get_session_data(ui_session_id)
+        ui_session_data = await agent_manager.get_session_data(ui_session_id)
         if not ui_session_data:
             raise HTTPException(status_code=404, detail="Invalid session ID")
 
@@ -170,7 +170,7 @@ async def update_agent_tools(
 @router.get("/get_agent_tools/{ui_session_id}")
 async def get_agent_tools(ui_session_id: str, agent_manager=Depends(get_agent_manager)):
     try:
-        session_data = agent_manager.get_session_data(ui_session_id)
+        session_data = await agent_manager.get_session_data(ui_session_id)
         if not session_data:
             raise HTTPException(status_code=404, detail="Session not found")
 
@@ -194,7 +194,7 @@ async def debug_agent_state(ui_session_id: str, agent_manager=Depends(get_agent_
     Debug endpoint to check the state of an agent and its internal components.
     """
     try:
-        session_data = agent_manager.get_session_data(ui_session_id)
+        session_data = await agent_manager.get_session_data(ui_session_id)
         if not session_data:
             raise HTTPException(status_code=404, detail="Session not found")
 

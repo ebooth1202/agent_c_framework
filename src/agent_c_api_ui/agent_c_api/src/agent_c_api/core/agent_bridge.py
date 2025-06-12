@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from agent_c.chat import ChatSessionManager
 from agent_c.config import ModelConfigurationLoader
 from agent_c.models.agent_config import AgentConfiguration
+from agent_c.models.context.interaction_context import InteractionContext
 from agent_c.models.input import AudioInput
 from agent_c.agents.gpt import GPTChatAgent, AzureGPTChatAgent
 from agent_c.models.events import SessionEvent
@@ -26,6 +27,7 @@ from agent_c.prompting import PromptBuilder, CoreInstructionSection
 from agent_c.prompting.basic_sections.persona import DynamicPersonaSection
 from agent_c.agents.claude import ClaudeChatAgent, ClaudeBedrockChatAgent
 from agent_c.util.event_session_logger_factory import create_with_callback
+from agent_c_tools.tools.workspace.base import BaseWorkspace
 from agent_c_tools.tools.workspace.local_storage import LocalProjectWorkspace
 
 # Constants
@@ -125,7 +127,7 @@ class AgentBridge:
         self.output_tool_arguments = True  # Placeholder for tool argument output preference
 
         # Agent Workspace Setup
-        self.workspaces = None
+        self.workspaces: Optional[List[BaseWorkspace]] = None
         self.__init_workspaces()
 
         # Initialize file handling capabilities
@@ -221,7 +223,7 @@ class AgentBridge:
             - Agent is reinitialized with new tools while maintaining the session
         """
         self.logger.info(
-            f"Requesting new tool list for agent {self.agent_name} to: {new_tools}"
+            f"Requesting new tool list for agent {self.chat_session.agent_config.key} to: {new_tools}"
         )
         self.chat_session.agent_config.tools = new_tools
         await self.tool_chest.activate_toolset(self.chat_session.agent_config.tools)
@@ -408,10 +410,16 @@ class AgentBridge:
         Returns:
             Dict[str, Any]: Dictionary containing agent configuration details
         """
+        initialized_tools = [{
+            'instance_name': instance_name,
+            'class_name': tool_instance.__class__.__name__,
+            'developer_tool_name': getattr(tool_instance, 'name', instance_name),
+        } for instance_name, tool_instance in self.tool_chest.active_tools.items()]
+
         config = {
             'backend': "anthropic",
             'model_name': self.chat_session.agent_config.agent_params.model_name,
-            'initialized_tools': [],
+            'initialized_tools': initialized_tools,
             'agent_name': self.chat_session.agent_config.name,
             'user_session_id': self.chat_session.session_id,
             'agent_session_id': self.chat_session.session_id,
@@ -422,15 +430,6 @@ class AgentBridge:
             'agent_parameters': self.chat_session.agent_config.agent_params.model_dump(exclude_defaults=False)
         }
 
-        if self.tool_chest:
-            config['initialized_tools'] = [{
-                'instance_name': instance_name,
-                'class_name': tool_instance.__class__.__name__,
-                'developer_tool_name': getattr(tool_instance, 'name', instance_name),
-                # 'description': tool_instance.__class__.__doc__
-            } for instance_name, tool_instance in self.tool_chest.active_tools.items()]
-
-        # self.logger.debug(f"Agent {self.agent_name} reporting config: {config[:100]}")
         return config
 
     @staticmethod
@@ -578,12 +577,12 @@ class AgentBridge:
         Returns:
             str: JSON-formatted content payload with vendor information.
         """
-        vendor = self._determine_vendor()
+
         
         payload = json.dumps({
             "type": "content",
             "data": event.content,
-            "vendor": vendor,
+            "vendor": self.runtime_for_agent(self.chat_session.agent_config).tool_format,
             "format": event.format
         }) + "\n"
         return payload
@@ -730,8 +729,8 @@ class AgentBridge:
         payload = json.dumps({
             "type": "history",
             "messages": event.messages,
-            "vendor": self.backend,
-            "model_name": self.model_name,
+            "vendor": self.runtime_for_agent(self.chat_session.agent_config).tool_format,
+            "model_name": self.chat_session.agent_config.agent_params.model_name,
         }) + "\n"
         return payload
 
@@ -750,8 +749,8 @@ class AgentBridge:
         """
         return None
 
-    @staticmethod
-    async def _handle_completion(event: SessionEvent) -> str:
+
+    async def _handle_completion(self, event: SessionEvent) -> str:
         """
         Handle completion events from the agent.
         
@@ -764,6 +763,8 @@ class AgentBridge:
         Returns:
             str: JSON-formatted completion status payload.
         """
+        if not event.running:
+            self.chat_session.token_count = event.input_tokens + event.output_tokens
         payload = json.dumps({
             "type": "completion_status",
             "data": {
@@ -816,13 +817,13 @@ class AgentBridge:
         Returns:
             str: JSON-formatted thought delta payload.
         """
-        vendor = self._determine_vendor()
+
         
         payload = json.dumps({
             "type": "thought_delta",
             "data": event.content,
-            "vendor": vendor,
-            "model_name": self.model_name,
+            "vendor": self.runtime_for_agent(self.chat_session.agent_config).tool_format,
+            "model_name": self.chat_session.agent_config.agent_params.model_name,
             "format": "thinking"
         }) + "\n"
         return payload
@@ -1015,6 +1016,15 @@ class AgentBridge:
                 chat_params["files"] = document_inputs
 
             full_params = chat_params | tool_params
+
+            context = InteractionContext(client_wants_cancel=client_wants_cancel,
+                                         agent_config=self.chat_session.agent_config,
+                                         tool_chest=self.tool_chest, sections=agent_sections,
+                                         streaming_callback=self.streaming_callback_with_logging,
+                                         chat_session=self.chat_session, tool_schemas=tool_params["schemas"],
+                                         agent_runtime=agent_runtime,
+                                         user_session_id=self.chat_session.session_id,
+                                          )
 
             # Start the chat task
             chat_task = asyncio.create_task(agent_runtime.chat(**full_params))

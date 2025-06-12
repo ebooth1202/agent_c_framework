@@ -145,7 +145,7 @@ class ChatRepository:
             raise
     
     async def get_messages(self, start: str = "-", end: str = "+", count: int = 100, 
-                      format: str = "default") -> List[Union[Dict[str, Any], CommonChatMessage]]:
+                      msg_format: str = "default") -> List[Union[Dict[str, Any], CommonChatMessage]]:
         """
         Get messages from the chat session.
         
@@ -153,7 +153,7 @@ class ChatRepository:
             start (str): Start ID for range query
             end (str): End ID for range query
             count (int): Maximum number of messages to retrieve
-            format (str): Message format to return: "default" for original format or "common" for CommonChatMessage
+            msg_format (str): Message format to return: "default" for original format or "common" for CommonChatMessage
             
         Returns:
             List[Union[Dict[str, Any], CommonChatMessage]]: List of messages
@@ -230,7 +230,7 @@ class ChatRepository:
                 start=start,
                 end=end,
                 count=count,
-                format=format,
+                format=msg_format,
                 retrieved_count=len(result),
                 duration_ms=round(duration * 1000, 2)
             )
@@ -454,7 +454,7 @@ class ChatRepository:
                             datetime.now().isoformat())
     
     async def get_tool_calls(self, start: str = "-", end: str = "+", count: int = 100,
-                       format: str = "default") -> List[Union[Dict[str, Any], CommonChatMessage]]:
+                       msg_format: str = "default") -> List[Union[Dict[str, Any], CommonChatMessage]]:
         """
         Get tool calls from the chat session.
         
@@ -462,7 +462,7 @@ class ChatRepository:
             start (str): Start ID for range query
             end (str): End ID for range query
             count (int): Maximum number of tool calls to retrieve
-            format (str): Format to return: "default" for original format or "common" for CommonChatMessage
+            msg_format (str): Format to return: "default" for original format or "common" for CommonChatMessage
             
         Returns:
             List[Union[Dict[str, Any], CommonChatMessage]]: List of tool calls
@@ -498,7 +498,7 @@ class ChatRepository:
             processed_data["id"] = call_id_str
             
             # Check if we should return CommonChatMessage format
-            if format == "common":
+            if msg_format == "common":
                 # Check if this is a common chat message
                 is_common_chat = processed_data.get("is_common_chat") == "true"
                 
