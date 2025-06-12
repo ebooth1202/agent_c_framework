@@ -8,7 +8,7 @@ from agent_c_api.api.v2.config.dependencies import get_config_service
 from agent_c_api.api.v2.config.services import ConfigService
 from agent_c_api.api.v2.models.config_models import (
     ModelInfo, PersonaInfo, ToolInfo, ModelParameter, ToolParameter,
-    ModelsResponse, PersonasResponse, ToolsResponse, SystemConfigResponse
+    ModelsResponse, AgentConfigsResponse, ToolsResponse, SystemConfigResponse
 )
 
 
@@ -151,14 +151,14 @@ class TestConfigServiceTests:
             file_path="/personas/default.md",
             content="You are a helpful assistant."
         )
-        test_response = PersonasResponse(personas=[test_persona])
+        test_response = AgentConfigsResponse(personas=[test_persona])
         
         # Patch the service method
         with patch.object(service, 'get_personas', AsyncMock(return_value=test_response)):
             result = await service.get_personas()
             
             # Validate result
-            assert isinstance(result, PersonasResponse)
+            assert isinstance(result, AgentConfigsResponse)
             assert len(result.personas) == 1
             
             # Check persona properties
@@ -181,7 +181,7 @@ class TestConfigServiceTests:
             file_path="/path/to/test.md",
             content="Test content"
         )
-        test_response = PersonasResponse(personas=[test_persona])
+        test_response = AgentConfigsResponse(personas=[test_persona])
         
         # Mock get_personas to return our test data
         service.get_personas = AsyncMock(return_value=test_response)
@@ -203,11 +203,11 @@ class TestConfigServiceTests:
         service = ConfigService()
         
         # Mock get_personas to return empty list
-        empty_response = PersonasResponse(personas=[])
+        empty_response = AgentConfigsResponse(personas=[])
         service.get_personas = AsyncMock(return_value=empty_response)
         
         result = await service.get_personas()
-        assert isinstance(result, PersonasResponse)
+        assert isinstance(result, AgentConfigsResponse)
         assert len(result.personas) == 0
 
     @pytest.mark.asyncio
@@ -216,11 +216,11 @@ class TestConfigServiceTests:
         service = ConfigService()
         
         # Mock get_personas to return empty list
-        empty_response = PersonasResponse(personas=[])
+        empty_response = AgentConfigsResponse(personas=[])
         service.get_personas = AsyncMock(return_value=empty_response)
         
         result = await service.get_personas()
-        assert isinstance(result, PersonasResponse)
+        assert isinstance(result, AgentConfigsResponse)
         assert len(result.personas) == 0
 
     #########################################
@@ -348,7 +348,7 @@ class TestConfigServiceTests:
         service.get_models = AsyncMock(return_value=ModelsResponse(
             models=[ModelInfo(id="gpt-4", name="GPT-4", provider="openai")]
         ))
-        service.get_personas = AsyncMock(return_value=PersonasResponse(
+        service.get_personas = AsyncMock(return_value=AgentConfigsResponse(
             personas=[PersonaInfo(id="default", name="Default Assistant")]
         ))
         service.get_tools = AsyncMock(return_value=ToolsResponse(
@@ -392,7 +392,7 @@ class TestConfigServiceTests:
         service.get_models = AsyncMock(return_value=ModelsResponse(
             models=[ModelInfo(id="gpt-4", name="GPT-4", provider="openai")]
         ))
-        service.get_personas = AsyncMock(return_value=PersonasResponse(
+        service.get_personas = AsyncMock(return_value=AgentConfigsResponse(
             personas=[PersonaInfo(id="default", name="Default Assistant")]
         ))
         service.get_tools = AsyncMock(side_effect=Exception("Tool registry error"))

@@ -6,7 +6,7 @@ from pydantic import ValidationError
 
 from agent_c_api.api.v2.models.config_models import (
     ModelParameter, ModelInfo, PersonaInfo, ToolParameter, ToolInfo,
-    ModelsResponse, PersonasResponse, ToolsResponse, SystemConfigResponse
+    ModelsResponse, AgentConfigsResponse, ToolsResponse, SystemConfigResponse
 )
 
 
@@ -25,7 +25,7 @@ class TestConfigModels:
     - PersonaInfo - Information about available personas
     - ToolParameter - Parameters for tools
     - ToolInfo - Information about available tools
-    - Response wrappers: ModelsResponse, PersonasResponse, ToolsResponse, SystemConfigResponse
+    - Response wrappers: ModelsResponse, AgentConfigsResponse, ToolsResponse, SystemConfigResponse
     """
 
     def test_config_models_imports(self):
@@ -268,26 +268,26 @@ class TestConfigModels:
         assert len(response.models) == 0
 
     def test_personas_response(self):
-        """Test PersonasResponse creation and validation.
+        """Test AgentConfigsResponse creation and validation.
         
-        Verifies that a PersonasResponse correctly wraps a list of PersonaInfo objects.
+        Verifies that a AgentConfigsResponse correctly wraps a list of PersonaInfo objects.
         """
         persona = PersonaInfo(
             id="assistant",
             name="Assistant"
         )
         
-        response = PersonasResponse(personas=[persona])
+        response = AgentConfigsResponse(personas=[persona])
         
         assert len(response.personas) == 1
         assert response.personas[0].id == "assistant"
     
     def test_empty_personas_response(self):
-        """Test PersonasResponse with empty personas list.
+        """Test AgentConfigsResponse with empty personas list.
         
-        Verifies that a PersonasResponse can be created with an empty list.
+        Verifies that a AgentConfigsResponse can be created with an empty list.
         """
-        response = PersonasResponse(personas=[])
+        response = AgentConfigsResponse(personas=[])
         assert len(response.personas) == 0
 
     def test_tools_response(self):

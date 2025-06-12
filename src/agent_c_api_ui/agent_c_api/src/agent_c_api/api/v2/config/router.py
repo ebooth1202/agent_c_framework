@@ -5,7 +5,7 @@ from typing import Optional
 from .services import ConfigService
 from agent_c_api.api.v2.models.config_models import (
     ModelInfo, PersonaInfo, ToolInfo,
-    ModelsResponse, PersonasResponse, ToolsResponse, SystemConfigResponse
+    ModelsResponse, AgentConfigsResponse, ToolsResponse, SystemConfigResponse
 )
 
 # Create router with prefix and tags
@@ -138,7 +138,7 @@ async def get_model(
 
 # Personas endpoints
 @router.get("/personas", 
-           response_model=PersonasResponse,
+           response_model=AgentConfigsResponse,
            summary="List Available Personas",
            description="Returns a list of all available personas that can be used with Agent C.")
 # Version is determined by directory structure
@@ -152,7 +152,7 @@ async def list_personas(
     Personas define the agent's personality, tone, and behavioral characteristics.
     
     Returns:
-        PersonasResponse: A list of available personas with their details
+        AgentConfigsResponse: A list of available personas with their details
         
     Example:
         ```python

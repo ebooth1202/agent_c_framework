@@ -14,6 +14,7 @@ class ChatSession(BaseModel):
     """
     session_id: str = Field(default_factory=lambda: MnemonicSlugs.generate_slug(3))
     token_count: int = Field(0, description="The number of tokens used in the session")
+    context_window_size: int = Field(0, description="The number of tokens in the context window")
     session_name: Optional[str] = Field(None, description="The name of the session, if any")
     created_at: Optional[str] = Field(default_factory=lambda: datetime.datetime.now().isoformat())
     updated_at: Optional[str] = Field(default_factory=lambda: datetime.datetime.now().isoformat())

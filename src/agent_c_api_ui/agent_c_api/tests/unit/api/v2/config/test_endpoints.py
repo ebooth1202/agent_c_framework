@@ -9,7 +9,7 @@ from agent_c_api.api.v2.config.router import get_config_service
 from agent_c_api.api.v2.config.services import ConfigService
 from agent_c_api.api.v2.models.config_models import (
     ModelInfo, PersonaInfo, ToolInfo, ToolParameter, ModelParameter,
-    ModelsResponse, PersonasResponse, ToolsResponse, SystemConfigResponse
+    ModelsResponse, AgentConfigsResponse, ToolsResponse, SystemConfigResponse
 )
 
 
@@ -226,7 +226,7 @@ class TestPersonaEndpoints(TestConfigEndpoints):
         structure and data when personas are available.
         """
         # Set up mock response
-        mock_config_service.get_personas.return_value = PersonasResponse(
+        mock_config_service.get_personas.return_value = AgentConfigsResponse(
             personas=[
                 PersonaInfo(
                     id="default",

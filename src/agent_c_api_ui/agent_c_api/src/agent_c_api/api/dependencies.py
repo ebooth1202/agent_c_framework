@@ -7,6 +7,7 @@ from collections import defaultdict
 from contextlib import asynccontextmanager
 
 from agent_c_api.config.config_loader import get_allowed_params
+from agent_c_api.core.agent_manager import UItoAgentBridgeManager
 from agent_c_api.core.util.logging_utils import LoggingManager
 from agent_c_api.config.redis_config import RedisConfig
 from redis import asyncio as aioredis
@@ -15,7 +16,7 @@ logging_manager = LoggingManager(__name__)
 logger = logging_manager.get_logger()
 
 
-def get_agent_manager(request: Request) -> Any:  # Use Any instead of UItoAgentBridgeManager
+def get_agent_manager(request: Request) -> UItoAgentBridgeManager:
     return request.app.state.agent_manager
 
 

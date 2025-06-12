@@ -12,7 +12,7 @@ from agent_c_api.api.v2.config.dependencies import get_config_service
 from agent_c_api.api.v2.config.services import ConfigService
 from agent_c_api.api.v2.models.config_models import (
     ModelInfo, PersonaInfo, ToolInfo, ToolParameter, ModelParameter,
-    ModelsResponse, PersonasResponse, ToolsResponse, SystemConfigResponse
+    ModelsResponse, AgentConfigsResponse, ToolsResponse, SystemConfigResponse
 )
 
 
@@ -173,7 +173,7 @@ def mock_config_service():
         allowed_inputs=["text"]
     ))
     
-    service.get_personas = AsyncMock(return_value=PersonasResponse(
+    service.get_personas = AsyncMock(return_value=AgentConfigsResponse(
         personas=[
             PersonaInfo(
                 id="default",

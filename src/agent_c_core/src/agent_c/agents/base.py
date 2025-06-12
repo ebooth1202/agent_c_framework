@@ -240,15 +240,11 @@ class BaseAgent:
         """
         Raise a completion start event to the event stream.
         """
-        # logging.debug(f"_raise_completion_end called with stop_reason={data.get('stop_reason', 'none')}")
         completion_options: dict = copy.deepcopy(comp_options)
         completion_options.pop("messages", None)
         streaming_callback = data.pop('streaming_callback', None)
-        # logging.debug(f"Creating CompletionEvent with running=False, data={data}")
         event = CompletionEvent(running=False, completion_options=completion_options, **data)
-        # logging.debug(f"CompletionEvent created: type={event.type}, stop_reason={getattr(event, 'stop_reason', 'none')}")
 
-        # logging.debug(f"About to raise CompletionEvent through _raise_event")
         await self._raise_event(event, streaming_callback=streaming_callback)
         # logging.debug(f"Completed raising CompletionEvent")
 
