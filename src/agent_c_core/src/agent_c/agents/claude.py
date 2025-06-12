@@ -668,7 +668,7 @@ class ClaudeChatAgent(BaseAgent):
         else:
             content = assistant_message.get('content', '')
         prefixed_content = "[Tool Call] " + content
-        await self._save_message_to_session(session_manager, prefixed_content, 'assistant')
+
 
         # Process the tool result message (second message, if it exists)
         if len(tool_response_messages) > 1:

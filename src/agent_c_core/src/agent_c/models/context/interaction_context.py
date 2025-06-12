@@ -39,12 +39,16 @@ class InteractionContext(BaseContext):
 
     sections: Optional[List[PromptSection]] = Field(default_factory=list, description="A list of prompt sections that are used in the interaction. "
                                                                                       "This is used to store the prompt sections that are used in the interaction.")
-    tool_schemas: Optional[Dict[str, Any]] = Field(default_factory=dict, description="A dictionary of tool schemas that are used in the interaction. "
+    tool_schemas: Optional[List[Dict[str, Any]]] = Field(default_factory=dict, description="A dictionary of tool schemas that are used in the interaction. "
                                                                                      "This is used to store the schemas of the tools that are used in the interaction.")
+    user_session_id: Optional[str] = Field(None, description="The user session ID associated with the interaction. If this is a sub session "
+                                                                    "This is used to identify the user session that this interaction belongs to.")
 
+    parent_context: Optional['InteractionContext'] = Field(None, description="The parent context of this interaction. "
+                                                                           "This is used to link interactions together in a hierarchy.")
 
     def __init__(self, **data) -> None:
         if 'interaction_id' not in data:
-            data['interaction_id'] = f"{data['session_id']}:{MnemonicSlugs.generate_slug(2)}"
+            data['interaction_id'] = f"{data['chat_session'].session_id}:{MnemonicSlugs.generate_slug(2)}"
 
         super().__init__(**data)

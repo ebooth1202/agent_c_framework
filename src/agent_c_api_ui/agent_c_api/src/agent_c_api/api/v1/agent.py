@@ -1,4 +1,7 @@
+from typing import Dict, Any
+
 from fastapi import APIRouter, HTTPException, Form, Depends, Request
+from huggingface_hub import model_info
 
 from agent_c.models.agent_config import AgentConfiguration
 from agent_c_api.api.dependencies import get_agent_manager
@@ -110,18 +113,15 @@ async def get_agent_config(ui_session_id: str, agent_manager=Depends(get_agent_m
         agent_bridge = ui_session_data["agent_bridge"]
         config = agent_bridge.get_agent_runtime_config()
 
+        runtime_params: Dict[str, Any] = config['agent_parameters']
+        runtime_params["name"] =  runtime_params.pop("model_name")
+
+
         # Add additional configuration info
         config.update({
             "ui_session_id": ui_session_id,
-            "agent_c_session_id": ui_session_data["agent_c_session_id"],
-            "model_info": {
-                "name": config["model_name"],
-                "temperature": config["agent_parameters"]["temperature"],
-                "reasoning_effort": config["agent_parameters"]["reasoning_effort"],
-                "extended_thinking": config["agent_parameters"]["extended_thinking"],
-                "budget_tokens": config["agent_parameters"]["budget_tokens"],
-                "max_tokens": config["agent_parameters"]["max_tokens"]
-            },
+            "agent_c_session_id": ui_session_id,
+            "model_info": runtime_params,
             "initialized_tools": config["initialized_tools"]
         })
 

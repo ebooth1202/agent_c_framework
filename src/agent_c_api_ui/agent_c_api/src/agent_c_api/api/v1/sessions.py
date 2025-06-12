@@ -9,9 +9,9 @@ logger = logging.getLogger(__name__)
 
 
 @router.post("/initialize")
-async def initialize_agent(params: AgentInitializationParams,
-        agent_manager=Depends(get_agent_manager)
-):
+async def initialize_user_session(params: AgentInitializationParams,
+                                  agent_manager=Depends(get_agent_manager)
+                                  ):
     """
     Creates an agent session with the provided parameters.
     """

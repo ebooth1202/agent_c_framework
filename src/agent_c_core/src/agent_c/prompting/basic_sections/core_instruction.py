@@ -78,9 +78,6 @@ class EndOperatingGuideLinesSection(PromptSection):
     Represents the end of the operating guidelines section in the chat prompt.
 
     This closes the `operating_guidelines` named entity via XML tags
-
-    Args:
-        None
     """
 
     def __init__(self) -> None:
