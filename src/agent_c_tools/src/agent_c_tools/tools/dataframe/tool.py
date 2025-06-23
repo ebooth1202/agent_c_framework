@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from datetime import datetime
-from ydata_profiling import ProfileReport
+
 from sklearn.linear_model import LinearRegression
 from scipy.stats import pearsonr, spearmanr, kendalltau
 
@@ -1018,6 +1018,7 @@ class DataframeTools(Toolset):
         explorative = kwargs.get('explorative', False)
 
         try:
+            from ydata_profiling import ProfileReport
             profile = ProfileReport(self.dataframe, minimal=minimal, explorative=explorative)
             result ={
                 "message": "ydata profiling analysis completed.",
