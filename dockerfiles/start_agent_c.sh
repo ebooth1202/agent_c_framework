@@ -87,8 +87,8 @@ if [ "$(uname -m)" = "arm64" ]; then
 fi
 
 # Run in detached mode (background) with platform support:
-COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose -f docker-compose.yml -p agent_c build
-docker-compose -f docker-compose.yml -p agent_c up -d
+#COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose -f docker-compose.yml -p agent_c build
+docker-compose -f docker-compose.yml -p agent_c up -d --pull always
 
 # Wait for the containers to be healthy
 echo "Waiting for services to start..."
