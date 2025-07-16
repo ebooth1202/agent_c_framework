@@ -7,9 +7,9 @@ different search providers.
 """
 
 import json
-import logging
 from typing import Dict, List, Optional, Any, Union
 from datetime import datetime
+from agent_c.util.structured_logging import get_logger
 
 from agent_c.toolsets import json_schema, Toolset
 
@@ -26,7 +26,7 @@ from .engines import (
     create_wikipedia_engine, create_news_api_engine, create_hacker_news_engine
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class WebSearchTools(Toolset):

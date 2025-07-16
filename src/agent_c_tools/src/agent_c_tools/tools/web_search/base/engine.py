@@ -9,15 +9,15 @@ web search system.
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional
 import time
-import logging
 from datetime import datetime
+from agent_c.util.structured_logging import get_logger
 
 from .models import (
     SearchResponse, SearchResult, SearchParameters, 
     WebSearchConfig, EngineHealthStatus, SearchType
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class BaseWebSearchEngine(ABC):

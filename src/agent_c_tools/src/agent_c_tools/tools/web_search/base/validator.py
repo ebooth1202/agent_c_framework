@@ -6,14 +6,14 @@ they meet engine requirements and are properly formatted before execution.
 """
 
 import re
-import logging
 from typing import Dict, Any, List, Optional, Union
 from datetime import datetime, date
 from urllib.parse import urlparse
+from agent_c.util.structured_logging import get_logger
 
 from .models import SearchParameters, SearchType, SafeSearchLevel, SearchDepth
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ValidationError(Exception):

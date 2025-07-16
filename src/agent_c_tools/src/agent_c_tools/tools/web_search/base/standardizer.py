@@ -5,15 +5,15 @@ This module provides standardization of search results from different engines
 into a consistent format for the unified web search system.
 """
 
-import logging
 from typing import Dict, Any, List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import re
+from agent_c.util.structured_logging import get_logger
 
 from .models import SearchResult, SearchResponse, SearchType
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ResponseStandardizer:

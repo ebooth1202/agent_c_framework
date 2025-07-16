@@ -7,14 +7,14 @@ engine availability.
 """
 
 import re
-import logging
 from typing import Dict, List, Optional, Pattern, Tuple
 from datetime import datetime
+from agent_c.util.structured_logging import get_logger
 
 from .models import SearchType, SearchParameters
 from .registry import EngineRegistry
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class QueryAnalyzer:

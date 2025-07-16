@@ -6,14 +6,14 @@ and managing web search engines within the unified search system.
 """
 
 from typing import Dict, List, Optional, Type, Set
-import logging
 import importlib
 from pathlib import Path
+from agent_c.util.structured_logging import get_logger
 
 from .engine import BaseWebSearchEngine
 from .models import WebSearchConfig, SearchType, EngineHealthStatus
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class EngineRegistry:

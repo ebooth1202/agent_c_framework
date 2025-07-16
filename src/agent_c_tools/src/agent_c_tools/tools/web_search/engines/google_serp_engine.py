@@ -6,16 +6,16 @@ BaseWebSearchEngine interface while wrapping the existing GoogleSerpTools.
 """
 
 import json
-import logging
 import asyncio
 from typing import Dict, Any, Optional
 from datetime import datetime
+from agent_c.util.structured_logging import get_logger
 
 from ..base.engine import BaseWebSearchEngine, EngineException
 from ..base.models import SearchParameters, WebSearchConfig, EngineCapabilities, SearchType
 from ..google_serp.tool import GoogleSerpTools
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class GoogleSerpEngine(BaseWebSearchEngine):

@@ -5,16 +5,16 @@ This module provides comprehensive error handling, fallback strategies,
 and recovery mechanisms for the unified web search system.
 """
 
-import logging
 import time
 from typing import Dict, Any, List, Optional, Callable
 from datetime import datetime, timedelta
 from enum import Enum
+from agent_c.util.structured_logging import get_logger
 
 from .models import SearchResponse, SearchParameters, SearchType
 from .engine import EngineException, EngineUnavailableException
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ErrorSeverity(Enum):
@@ -193,15 +193,17 @@ class ErrorHandler:
         execution_time: float
     ) -> None:
         """Log error information for monitoring and debugging."""
-        log_level = {
-            ErrorSeverity.LOW: logging.INFO,
-            ErrorSeverity.MEDIUM: logging.WARNING,
-            ErrorSeverity.HIGH: logging.ERROR,
-            ErrorSeverity.CRITICAL: logging.CRITICAL
-        }.get(error_info['severity'], logging.ERROR)
+        # Map severity to log method
+        severity_to_method = {
+            ErrorSeverity.LOW: logger.info,
+            ErrorSeverity.MEDIUM: logger.warning,
+            ErrorSeverity.HIGH: logger.error,
+            ErrorSeverity.CRITICAL: logger.critical
+        }
         
-        logger.log(
-            log_level,
+        log_method = severity_to_method.get(error_info['severity'], logger.error)
+        
+        log_method(
             f"Search error: {error_info['category'].value} - "
             f"{error_info['error_type']} in {error_info['engine_name']} - "
             f"Query: '{params.query[:50]}...' - "
