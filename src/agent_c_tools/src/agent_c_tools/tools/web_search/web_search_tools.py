@@ -21,6 +21,7 @@ from .base.registry import get_global_registry
 from .base.router import EngineRouter
 from .base.validator import ParameterValidator
 from .base.error_handler import ErrorHandler
+from .base.config_manager import get_config_manager, validate_web_search_configuration
 from .engines import (
     create_duckduckgo_engine, create_google_serp_engine, create_tavily_engine,
     create_wikipedia_engine, create_news_api_engine, create_hacker_news_engine
@@ -47,9 +48,13 @@ class WebSearchTools(Toolset):
         self.router = EngineRouter(self.registry)
         self.validator = ParameterValidator()
         self.error_handler = ErrorHandler()
+        self.config_manager = get_config_manager()
         
         # Register all available engines
         self._register_engines()
+        
+        # Validate configuration and log status
+        self._validate_and_log_configuration()
         
         logger.info("WebSearchTools initialized successfully")
     
@@ -71,6 +76,32 @@ class WebSearchTools(Toolset):
                 logger.info(f"Registered engine: {engine_name}")
             except Exception as e:
                 logger.error(f"Failed to register engine {engine_name}: {e}")
+    
+    def _validate_and_log_configuration(self) -> None:
+        """Validate configuration and log status information."""
+        try:
+            is_valid, error_messages = validate_web_search_configuration()
+            
+            if is_valid:
+                config_status = self.config_manager.get_configuration_status()
+                logger.info(f"Web search configuration valid. Available engines: {config_status.available_engines}")
+                
+                # Log missing optional configurations
+                if config_status.missing_api_keys:
+                    logger.info(f"Optional API keys not configured: {config_status.missing_api_keys}")
+                    logger.info("Run get_engine_info() for setup instructions")
+            else:
+                logger.warning("Web search configuration issues detected:")
+                for error in error_messages:
+                    logger.warning(f"  - {error}")
+                logger.warning("Run get_engine_info() for detailed configuration status")
+                
+        except Exception as e:
+            logger.error(f"Configuration validation failed: {e}")
+    
+    def get_configuration_summary(self) -> str:
+        """Get a human-readable configuration summary."""
+        return self.config_manager.get_configuration_summary()
     
     @json_schema(
         'Perform a comprehensive web search across multiple search engines. '
@@ -192,8 +223,32 @@ class WebSearchTools(Toolset):
             return json.dumps(response.to_dict(), indent=2, default=str)
             
         except Exception as e:
-            error_response = self.error_handler.handle_search_error(e, kwargs.get('query', ''))
-            return json.dumps(error_response, indent=2, default=str)
+            # Check if this is a configuration error
+            error_message = str(e)
+            if 'api key' in error_message.lower() or 'not configured' in error_message.lower():
+                # Provide configuration-specific error response
+                config_status = self.config_manager.get_configuration_status()
+                error_response = {
+                    'success': False,
+                    'error': 'Configuration Error',
+                    'message': error_message,
+                    'query': kwargs.get('query', ''),
+                    'available_engines': config_status.available_engines,
+                    'suggestion': 'Run get_engine_info() to see configuration status and setup instructions'
+                }
+                
+                # Add specific setup instructions if available
+                requested_engine = kwargs.get('engine', 'auto')
+                if requested_engine != 'auto' and requested_engine in config_status.engine_configs:
+                    engine_config = config_status.engine_configs[requested_engine]
+                    if engine_config.configuration_hints:
+                        error_response['setup_instructions'] = engine_config.configuration_hints
+                
+                return json.dumps(error_response, indent=2, default=str)
+            else:
+                # Use standard error handling for other errors
+                error_response = self.error_handler.handle_search_error(e, kwargs.get('query', ''))
+                return json.dumps(error_response, indent=2, default=str)
     
     @json_schema(
         'Search for news articles using news-specific search engines.',
@@ -510,6 +565,12 @@ class WebSearchTools(Toolset):
                 'type': 'string',
                 'description': 'Specific engine to get info about. If not provided, returns info for all engines.',
                 'required': False
+            },
+            'include_setup_instructions': {
+                'type': 'boolean',
+                'description': 'Include setup instructions for missing configurations.',
+                'required': False,
+                'default': True
             }
         }
     )
@@ -522,18 +583,34 @@ class WebSearchTools(Toolset):
         """
         try:
             engine_name = kwargs.get('engine_name')
+            include_setup = kwargs.get('include_setup_instructions', True)
             
             if engine_name:
                 # Get info for specific engine
                 engine = self.registry.get_engine(engine_name)
                 if not engine:
-                    return json.dumps({'error': f'Engine {engine_name} not found'})
+                    # Check if it's a known engine that's not configured
+                    config_status = self.config_manager.get_configuration_status()
+                    if engine_name in config_status.engine_configs:
+                        engine_config = config_status.engine_configs[engine_name]
+                        info = {
+                            'engine_name': engine_name,
+                            'available': False,
+                            'configuration_status': engine_config.to_dict(),
+                            'error': f'Engine {engine_name} not available - configuration required'
+                        }
+                        if include_setup and engine_config.configuration_hints:
+                            info['setup_instructions'] = engine_config.configuration_hints
+                        return json.dumps(info, indent=2, default=str)
+                    else:
+                        return json.dumps({'error': f'Engine {engine_name} not found'})
                 
                 health_status = engine.get_health_status()
                 supported_params = engine.get_supported_parameters()
                 
                 info = {
                     'engine_name': engine_name,
+                    'available': True,
                     'health_status': health_status.to_dict(),
                     'supported_parameters': supported_params,
                     'capabilities': {
@@ -546,23 +623,42 @@ class WebSearchTools(Toolset):
                     }
                 }
             else:
-                # Get info for all engines
+                # Get comprehensive info for all engines
+                config_status = self.config_manager.get_configuration_status()
                 all_engines = self.registry.get_available_engines()
                 health_status = self.registry.get_health_status_all()
                 
                 info = {
+                    'configuration_summary': config_status.to_dict(),
                     'available_engines': all_engines,
                     'healthy_engines': self.registry.get_healthy_engines(),
                     'configured_engines': self.registry.get_engines_with_api_keys(),
                     'health_status': {name: status.to_dict() for name, status in health_status.items()},
                     'registry_stats': self.registry.get_registry_stats()
                 }
+                
+                # Add setup instructions for missing configurations
+                if include_setup and config_status.missing_api_keys:
+                    missing_configs = self.config_manager.get_missing_configurations()
+                    setup_instructions = {}
+                    for engine_name, api_key_name, instructions in missing_configs:
+                        setup_instructions[engine_name] = {
+                            'api_key_name': api_key_name,
+                            'instructions': instructions
+                        }
+                    info['setup_instructions'] = setup_instructions
+                
+                # Add configuration summary text
+                info['configuration_summary_text'] = self.config_manager.get_configuration_summary()
             
             return json.dumps(info, indent=2, default=str)
             
         except Exception as e:
             logger.error(f"Error getting engine info: {e}")
-            return json.dumps({'error': str(e)})
+            return json.dumps({
+                'error': str(e),
+                'suggestion': 'Check your environment variables and API key configuration'
+            }, indent=2)
     
     def _build_search_parameters(self, kwargs: Dict[str, Any]) -> SearchParameters:
         """

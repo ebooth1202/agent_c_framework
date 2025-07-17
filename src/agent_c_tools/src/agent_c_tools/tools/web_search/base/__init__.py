@@ -12,6 +12,15 @@ from .router import EngineRouter
 from .validator import ParameterValidator
 from .standardizer import ResponseStandardizer
 from .error_handler import ErrorHandler
+from .config_manager import (
+    WebSearchConfigManager, 
+    WebSearchConfiguration, 
+    EngineConfigStatus,
+    get_config_manager,
+    validate_web_search_configuration,
+    get_configuration_status,
+    get_missing_configurations
+)
 
 __all__ = [
     'BaseWebSearchEngine',
@@ -22,5 +31,12 @@ __all__ = [
     'EngineRouter',
     'ParameterValidator',
     'ResponseStandardizer',
-    'ErrorHandler'
+    'ErrorHandler',
+    'WebSearchConfigManager',
+    'WebSearchConfiguration',
+    'EngineConfigStatus',
+    'get_config_manager',
+    'validate_web_search_configuration',
+    'get_configuration_status',
+    'get_missing_configurations'
 ]
