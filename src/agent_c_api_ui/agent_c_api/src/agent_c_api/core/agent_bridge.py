@@ -963,7 +963,7 @@ class AgentBridge:
             agent_runtime = self.runtime_for_agent(self.chat_session.agent_config)
             file_inputs = []
             if file_ids and self.file_handler:
-                file_inputs = await self.process_files_for_message(file_ids, self.chat_session.user_id)
+                file_inputs = await self.process_files_for_message(file_ids, self.chat_session.session_id)
 
                 # Log information about processed files
                 if file_inputs:
