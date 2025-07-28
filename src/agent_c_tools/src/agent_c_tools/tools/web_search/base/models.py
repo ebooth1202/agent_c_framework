@@ -10,6 +10,8 @@ from typing import Dict, List, Optional, Union, Any
 from datetime import datetime
 from enum import Enum
 
+from .yaml_utils import YAMLSerializationMixin
+
 
 class SearchType(Enum):
     """Enumeration of supported search types."""
@@ -39,7 +41,7 @@ class SearchDepth(Enum):
 
 
 @dataclass
-class SearchResult:
+class SearchResult(YAMLSerializationMixin):
     """Standard search result structure used across all engines."""
     
     title: str
@@ -64,7 +66,7 @@ class SearchResult:
 
 
 @dataclass
-class SearchResponse:
+class SearchResponse(YAMLSerializationMixin):
     """Standard search response structure used across all engines."""
     
     success: bool
@@ -97,7 +99,7 @@ class SearchResponse:
 
 
 @dataclass
-class EngineCapabilities:
+class EngineCapabilities(YAMLSerializationMixin):
     """Defines what capabilities an engine supports."""
     
     search_types: List[SearchType]
@@ -120,10 +122,26 @@ class EngineCapabilities:
             except ValueError:
                 return False
         return search_type in self.search_types
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
+        return {
+            'search_types': [st.value for st in self.search_types],
+            'supports_pagination': self.supports_pagination,
+            'supports_date_filtering': self.supports_date_filtering,
+            'supports_domain_filtering': self.supports_domain_filtering,
+            'supports_safe_search': self.supports_safe_search,
+            'supports_language_filtering': self.supports_language_filtering,
+            'supports_region_filtering': self.supports_region_filtering,
+            'supports_image_search': self.supports_image_search,
+            'supports_content_extraction': self.supports_content_extraction,
+            'max_results_per_request': self.max_results_per_request,
+            'rate_limit_per_minute': self.rate_limit_per_minute
+        }
 
 
 @dataclass
-class WebSearchConfig:
+class WebSearchConfig(YAMLSerializationMixin):
     """Configuration for web search engines."""
     
     engine_name: str
@@ -163,10 +181,26 @@ class WebSearchConfig:
             
         import os
         return os.getenv(self.api_key_name)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
+        return {
+            'engine_name': self.engine_name,
+            'requires_api_key': self.requires_api_key,
+            'api_key_name': self.api_key_name,
+            'base_url': self.base_url,
+            'timeout': self.timeout,
+            'max_retries': self.max_retries,
+            'retry_delay': self.retry_delay,
+            'capabilities': self.capabilities.to_dict() if self.capabilities else None,
+            'default_parameters': self.default_parameters or {},
+            'health_check_url': self.health_check_url,
+            'cache_ttl': self.cache_ttl
+        }
 
 
 @dataclass
-class SearchParameters:
+class SearchParameters(YAMLSerializationMixin):
     """Validated and normalized search parameters."""
     
     query: str
@@ -215,7 +249,7 @@ class SearchParameters:
 
 
 @dataclass
-class EngineHealthStatus:
+class EngineHealthStatus(YAMLSerializationMixin):
     """Health status information for an engine."""
     
     engine_name: str
