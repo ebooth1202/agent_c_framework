@@ -5,6 +5,8 @@ from fastapi.security import HTTPBearer
 from jose import jwt, JWTError
 from datetime import datetime, timedelta, UTC
 import os
+import argparse
+import sys
 
 # JWT Configuration
 SECRET_KEY = os.getenv("JWT_SECRET_KEY")
@@ -60,3 +62,79 @@ async def validate_websocket_jwt(websocket: WebSocket) -> dict:
 
     token = auth_header[7:]  # Remove "Bearer " prefix
     return verify_jwt_token(token)
+
+
+def main():
+    """Command-line interface for JWT token operations"""
+    parser = argparse.ArgumentParser(description='Generate and verify JWT tokens')
+    subparsers = parser.add_subparsers(dest='command', help='Available commands')
+    
+    # Generate token command
+    gen_parser = subparsers.add_parser('generate', help='Generate a new JWT token')
+    gen_parser.add_argument('user_id', help='User ID for the token')
+    gen_parser.add_argument('--permissions', '-p', 
+                           help='Comma-separated list of permissions (e.g., "read,write,admin")',
+                           default='')
+    gen_parser.add_argument('--hours', '-t', type=int, default=24,
+                           help='Token expiration time in hours (default: 24)')
+    
+    # Verify token command
+    verify_parser = subparsers.add_parser('verify', help='Verify and decode a JWT token')
+    verify_parser.add_argument('token', help='JWT token to verify')
+    
+    args = parser.parse_args()
+    
+    if not args.command:
+        parser.print_help()
+        sys.exit(1)
+    
+    try:
+        if args.command == 'generate':
+            # Parse permissions
+            permissions = [p.strip() for p in args.permissions.split(',') if p.strip()] if args.permissions else []
+            
+            # Generate token
+            token = create_jwt_token(
+                user_id=args.user_id,
+                permissions=permissions,
+                time_delta=timedelta(hours=args.hours)
+            )
+            
+            print(f"Generated JWT token for user '{args.user_id}':")
+            print(f"Permissions: {permissions if permissions else 'none'}")
+            print(f"Expires in: {args.hours} hours")
+            print(f"\nToken:")
+            print(token)
+            
+        elif args.command == 'verify':
+            # Verify token
+            try:
+                payload = verify_jwt_token(args.token)
+                print("Token is valid!")
+                print(f"User ID: {payload['user_id']}")
+                print(f"Permissions: {payload['permissions']}")
+                
+                # Convert exp timestamp to readable format
+                exp_timestamp = payload['exp']
+                exp_datetime = datetime.fromtimestamp(exp_timestamp, UTC)
+                print(f"Expires: {exp_datetime.isoformat()}")
+                
+                # Check if token is expired
+                now = datetime.now(UTC)
+                if exp_datetime < now:
+                    print("⚠️  WARNING: Token is expired!")
+                else:
+                    time_left = exp_datetime - now
+                    print(f"Time remaining: {time_left}")
+                    
+            except HTTPException as e:
+                print(f"❌ Token verification failed: {e.detail}")
+                sys.exit(1)
+                
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()

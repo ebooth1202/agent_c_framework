@@ -1,5 +1,7 @@
 from typing import List
 
+from pydantic import Field
+
 from agent_c.models.agent_config import CurrentAgentConfiguration, AgentCatalogEntry
 from agent_c.models.events import BaseEvent
 from agent_c.models.heygen import Avatar, HeygenAvatarSessionData
@@ -64,6 +66,7 @@ class TextInputEvent(BaseEvent):
         text (str): The text input to send.
     """
     text: str
+    file_ids: List[str] =  Field(list)
 
 class ErrorEvent(BaseEvent):
     """

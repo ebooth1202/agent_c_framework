@@ -1,5 +1,8 @@
+import asyncio
 import json
-from typing import Optional
+import threading
+import traceback
+from typing import Any, Dict, List, Union, Optional, AsyncGenerator, Coroutine
 
 from fastapi import WebSocket, WebSocketDisconnect
 from functools import singledispatchmethod
@@ -10,9 +13,17 @@ from agent_c.models import ChatSession
 from agent_c.models.events import BaseEvent
 from agent_c.util.heygen_streaming_avatar_client import HeyGenStreamingAvatarClient
 from agent_c.util.registries.event import EventRegistry
-from agent_c_api.api.avatar.models.client_events import GetAgentsEvent, ErrorEvent, AgentListEvent, GetAvatarsEvent, AvatarListEvent
+from agent_c_api.api.avatar.models.client_events import GetAgentsEvent, ErrorEvent, AgentListEvent, GetAvatarsEvent, AvatarListEvent, TextInputEvent
 from agent_c_api.core.agent_bridge import AgentBridge
+from agent_c.models.context.interaction_context import InteractionContext
+from agent_c.models.input import AudioInput
+from agent_c_api.config.env_config import settings
+from agent_c.models.input.file_input import FileInput
 from agent_c_api.core.file_handler import FileHandler
+from agent_c.models.input.image_input import ImageInput
+from agent_c_tools.tools.think.prompt import ThinkSection
+from agent_c.prompting import PromptBuilder, CoreInstructionSection
+from agent_c.prompting.basic_sections.persona import DynamicPersonaSection
 
 
 class AvatarBridge(AgentBridge):
@@ -25,6 +36,7 @@ class AvatarBridge(AgentBridge):
         self.is_running = False
         self.agent_config_loader: AgentConfigLoader = AgentConfigLoader()
         self.heygen = HeyGenStreamingAvatarClient()
+        self.client_wants_cancel = threading.Event()
 
     @singledispatchmethod
     async def handle_client_event(self, event: BaseEvent) -> None:
@@ -35,6 +47,10 @@ class AvatarBridge(AgentBridge):
     @handle_client_event.register
     async def _(self, _: GetAgentsEvent) -> None:
         await self.send_agent_list()
+
+    @handle_client_event.register
+    async def _(self, event: TextInputEvent) -> None:
+        await self.interact(user_message=event.text, file_ids=event.file_ids)
 
     async def send_agent_list(self) -> None:
         await self.send_event(AgentListEvent(agents=self.agent_config_loader.client_catalog))
@@ -73,6 +89,17 @@ class AvatarBridge(AgentBridge):
         """Send error message to client"""
         await self.send_event(ErrorEvent(message=message))
 
+    @singledispatchmethod
+    async def handle_runtime_event(self, event: BaseEvent):
+        """Default handler for runtime events, forward to client"""
+        await self.send_event(event)
+
+    async def runtime_callback(self, event: BaseEvent):
+        """Handle runtime events from the agent"""
+        self.logger.debug(f"AvatarBridge {self.chat_session.session_id}: Received runtime event: {event.type}")
+        await self.handle_runtime_event(event)
+
+
     async def run(self, websocket: WebSocket):
         """Main run loop for the bridge"""
         self.websocket=websocket
@@ -101,3 +128,112 @@ class AvatarBridge(AgentBridge):
         finally:
             self.logger.info(f"AvatarBridge stopped for session {self.chat_session.session_id}")
 
+
+    async def interact(
+        self,
+        user_message: str,
+        file_ids: Optional[List[str]] = None,
+    ) -> None:
+        """
+        Streams chat responses for a given user message.
+
+        This method handles the complete chat interaction process, including:
+        - Session updates
+        - Custom prompt integration
+        - Message processing
+        - Response streaming
+        - Event handling
+
+        Args:
+            user_message (str): The message from the user to process
+            file_ids (List[str], optional): IDs of files to include with the message
+        Raises:
+            Exception: Any errors during chat processing
+        """
+        self.client_wants_cancel.clear()
+
+        try:
+            await self.session_manager.update()
+            agent_runtime = self.runtime_for_agent(self.chat_session.agent_config)
+            file_inputs = []
+            if file_ids and self.file_handler:
+                file_inputs = await self.process_files_for_message(file_ids, self.chat_session.session_id)
+
+                # Log information about processed files
+                if file_inputs:
+                    input_types = {type(input_obj).__name__: 0 for input_obj in file_inputs}
+                    for input_obj in file_inputs:
+                        input_types[type(input_obj).__name__] += 1
+                    self.logger.info(f"Processing {len(file_inputs)} files: {input_types}")
+
+            prompt_metadata = await self.__build_prompt_metadata()
+            # Prepare chat parameters
+            tool_params = {}
+            if len(self.chat_session.agent_config.tools):
+                await self.tool_chest.initialize_toolsets(self.chat_session.agent_config.tools)
+                tool_params = self.tool_chest.get_inference_data(self.chat_session.agent_config.tools, agent_runtime.tool_format)
+                tool_params["toolsets"] = self.chat_session.agent_config.tools
+
+            if self.sections is not None:
+                agent_sections = self.sections
+            elif "ThinkTools" in self.chat_session.agent_config.tools:
+                agent_sections = [ThinkSection(), DynamicPersonaSection()]
+            else:
+                agent_sections = [DynamicPersonaSection()]
+
+            chat_params = {
+                "user_id": self.chat_session.user_id,
+                "chat_session": self.chat_session,
+                "tool_chest": self.tool_chest,
+                "user_message": user_message,
+                "prompt_metadata": prompt_metadata,
+                "client_wants_cancel": self.client_wants_cancel,
+                "streaming_callback": self.runtime_callback,
+                'tool_call_context': {'active_agent': self.chat_session.agent_config},
+                'prompt_builder': PromptBuilder(sections=agent_sections)
+            }
+
+            # Categorize file inputs by type to pass to appropriate parameters
+            image_inputs = [input_obj for input_obj in file_inputs
+                            if isinstance(input_obj, ImageInput)]
+            audio_inputs = [input_obj for input_obj in file_inputs
+                            if isinstance(input_obj, AudioInput)]
+            document_inputs = [input_obj for input_obj in file_inputs
+                               if isinstance(input_obj, FileInput) and
+                               not isinstance(input_obj, ImageInput) and
+                               not isinstance(input_obj, AudioInput)]
+
+            # Only add parameters if there are inputs of that type
+            if image_inputs:
+                chat_params["images"] = image_inputs
+            if audio_inputs:
+                chat_params["audio_clips"] = audio_inputs
+            if document_inputs:
+                chat_params["files"] = document_inputs
+
+            full_params = chat_params | tool_params
+        except Exception as e:
+            error_type = type(e).__name__
+            error_traceback = traceback.format_exc()
+            self.logger.error(f"Error preparing chat parameters: {error_type}: {str(e)}\n{error_traceback}")
+            await self.send_error(f"Error preparing chat parameters: {error_type}: {str(e)}\n{error_traceback}")
+            return
+
+        try:
+            await agent_runtime.chat(**full_params)
+        except Exception as e:
+            error_type = type(e).__name__
+            error_traceback = traceback.format_exc()
+            self.logger.error(f"Error in agent_runtime.chat: {error_type}: {str(e)}\n{error_traceback}")
+            await  self.send_error( f"Error in agent_runtime.chat: {error_type}: {str(e)}\n{error_traceback}")
+            return
+
+        try:
+            await self.session_manager.flush(self.chat_session.session_id)
+
+        except Exception as e:
+            error_type = type(e).__name__
+            error_traceback = traceback.format_exc()
+            self.logger.error(f"Error flushing session manager: {error_type}: {str(e)}\n{error_traceback}")
+            await self.send_error(f"Error flushing session manager: {error_type}: {str(e)}\n{error_traceback}")
+            return
