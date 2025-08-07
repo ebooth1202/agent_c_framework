@@ -5,12 +5,12 @@ import threading
 import traceback
 
 from typing import Dict, Optional, List, Any
-
 from agent_c.util import MnemonicSlugs
 from agent_c.config.agent_config_loader import AgentConfigLoader
 from agent_c.models.agent_config import AgentConfiguration
 from agent_c.chat.session_manager import ChatSessionManager, ChatSession
 from agent_c_api.core.agent_bridge import AgentBridge
+from agent_c_api.core.avatar_bridge import AvatarBridge
 from agent_c_api.core.util.logging_utils import LoggingManager
 
 
@@ -45,6 +45,7 @@ class UItoAgentBridgeManager:
 
 
 
+
     async def get_session_data(self, ui_session_id: str) -> Dict[str, Any]:
         """
         Retrieve session data for a given session ID.
@@ -61,17 +62,48 @@ class UItoAgentBridgeManager:
 
         return self.ui_sessions.get(ui_session_id)
 
+    async def _get_or_create_chat_session(self, ui_session_id: str, agent_key: str, user_id: str) -> ChatSession:
+        if agent_key not in self.agent_config_loader.catalog:
+            self.logger.warning(f"Agent key '{agent_key}' not found in catalog. Using default agent configuration.")
+            agent_key = "default"
+
+        existing_session = self.ui_sessions.get(ui_session_id, None)
+
+        if existing_session is not None:
+            existing_agent_config: AgentConfiguration = existing_session["agent_config"]
+            chat_session = existing_session["chat_session"]
+
+            if existing_agent_config.key == agent_key or agent_key == "default":
+                agent_config = existing_agent_config
+            else:
+                agent_config = self.agent_config_loader.duplicate(agent_key)
+                chat_session.agent_config = agent_config
+                chat_session.touch()
+        else:
+            if ui_session_id in self.chat_session_manager.session_id_list:
+                # If session already exists in chat session manager, load it
+                chat_session = await self.chat_session_manager.get_session(ui_session_id)
+                if chat_session.agent_config.key == agent_key or agent_key == "default":
+                    agent_config = chat_session.agent_config
+                else:
+                    agent_config = self.agent_config_loader.duplicate(agent_key)
+                    chat_session.agent_config = agent_config
+                    chat_session.touch()
+            else:
+                agent_config = self.agent_config_loader.duplicate(agent_key)
+                chat_session = ChatSession(session_id=ui_session_id, agent_config=agent_config, user_id=user_id)
+                await self.chat_session_manager.new_session(chat_session)
+
+        return chat_session
+
+
     async def create_session(self,
-                             llm_model: str = None,
-                             backend: str = None,
-                             agent_key: str = None,
-                             existing_ui_session_id: str = None, **kwargs) -> str:
+                             agent_key: str = "default",
+                             existing_ui_session_id: str = None) -> str:
         """
         Create a new session or update an existing session with a new agent.
 
         Args:
-            llm_model: The model to use
-            backend: The backend provider ('openai' or 'claude')
             agent_key: The name of the persona to use
             existing_ui_session_id: If provided, updates existing session instead of creating new one
             **kwargs: Additional keyword arguments: currently passes kwargs to ReactJSAgent
@@ -84,9 +116,6 @@ class UItoAgentBridgeManager:
         """
         # If updating existing session, use that ID, otherwise generate new one - this will transfer chat history
         ui_session_id = existing_ui_session_id if existing_ui_session_id else MnemonicSlugs.generate_slug(3)
-        if agent_key not in self.agent_config_loader.catalog:
-            self.logger.warning(f"Agent key '{agent_key}' not found in catalog. Using default agent configuration.")
-            agent_key = "default"
 
         # Create lock if it doesn't exist
         if ui_session_id not in self._locks:
@@ -95,36 +124,9 @@ class UItoAgentBridgeManager:
         async with self._locks[ui_session_id]:
             # Get existing session data if updating
             user_id = os.environ.get("AGENT_C_USER_ID", "Agent C User")
-            existing_agent_bridge: Optional[AgentBridge] = None
-            existing_session = self.ui_sessions.get(ui_session_id, None)
-            chat_session: Optional[ChatSession] = None
-            if existing_session is not None:
-                existing_agent_bridge = existing_session["agent_bridge"]
-                existing_agent_config: AgentConfiguration = existing_session["agent_config"]
-                chat_session = existing_session["chat_session"]
+            chat_session = await self._get_or_create_chat_session(ui_session_id, agent_key, user_id)
 
-                if existing_agent_config.key == agent_key or agent_key == "default":
-                    agent_config = existing_agent_config
-                else:
-                    agent_config = self.agent_config_loader.duplicate(agent_key)
-                    chat_session.agent_config = agent_config
-                    chat_session.touch()
-            else:
-                if ui_session_id in self.chat_session_manager.session_id_list:
-                    # If session already exists in chat session manager, load it
-                    chat_session = await self.chat_session_manager.get_session(ui_session_id)
-                    if chat_session.agent_config.key == agent_key or agent_key == "default":
-                        agent_config = chat_session.agent_config
-                    else:
-                        agent_config = self.agent_config_loader.duplicate(agent_key)
-                        chat_session.agent_config = agent_config
-                        chat_session.touch()
-                else:
-                    agent_config = self.agent_config_loader.duplicate(agent_key)
-                    chat_session = ChatSession(session_id=ui_session_id, agent_config=agent_config, user_id=user_id)
-                    await self.chat_session_manager.new_session(chat_session)
-
-            agent_bridge = AgentBridge(chat_session, self.chat_session_manager, **kwargs)
+            agent_bridge = AgentBridge(chat_session, self.chat_session_manager)
 
             # Now initialize the agent. This fully initializes the agent and its tools as well - with a passed in session manager
             await agent_bridge.initialize()
@@ -136,17 +138,67 @@ class UItoAgentBridgeManager:
             # Update sessions dictionary
             self.ui_sessions[ui_session_id] = {
                 "agent_bridge": agent_bridge,
-                "llm_model": llm_model,
+                "llm_model": chat_session.agent_config.model_id,
                 "created_at": agent_bridge._current_timestamp(),
-                "agent_name": f"Agent_{ui_session_id}",
+                "agent_name": chat_session.agent_config.key,
                 "agent_c_session_id": agent_bridge.chat_session.session_id,
                 "cancel_event": cancel_event,
-                "agent_config": agent_config,
+                "agent_config": chat_session.agent_config,
                 "chat_session": chat_session
             }
 
             self.logger.info(f"Session {ui_session_id} created with agent: {agent_bridge}")
             return ui_session_id
+
+    async def create_avatar_session(self,
+                                    user_id: str,
+                                    existing_ui_session_id: str = None) -> AvatarBridge:
+        """
+        Create a new session or update an existing session with a new agent.
+
+        Args:
+            user_id: The user ID for the session
+            existing_ui_session_id: If provided, updates existing session instead of creating new one
+
+        Returns:
+            str: The session ID (either new or existing)
+
+        Raises:
+            Exception: If agent initialization fails
+        """
+        # If updating existing session, use that ID, otherwise generate new one - this will transfer chat history
+        ui_session_id = existing_ui_session_id if existing_ui_session_id else MnemonicSlugs.generate_slug(3)
+
+        # Create lock if it doesn't exist
+        if ui_session_id not in self._locks:
+            self._locks[ui_session_id] = asyncio.Lock()
+
+        async with self._locks[ui_session_id]:
+            chat_session = await self._get_or_create_chat_session(ui_session_id, 'default', user_id)
+
+            agent_bridge = AvatarBridge(chat_session, self.chat_session_manager)
+
+            # Now initialize the agent. This fully initializes the agent and its tools as well - with a passed in session manager
+            await agent_bridge.initialize()
+
+            # Create a cancellation event for this session
+            cancel_event = threading.Event()
+            self._cancel_events[ui_session_id] = cancel_event
+
+            # Update sessions dictionary
+            self.ui_sessions[ui_session_id] = {
+                "agent_bridge": agent_bridge,
+                "llm_model": chat_session.agent_config.model_id,
+                "created_at": agent_bridge._current_timestamp(),
+                "agent_name": chat_session.agent_config.key,
+                "agent_c_session_id": agent_bridge.chat_session.session_id,
+                "cancel_event": cancel_event,
+                "agent_config": chat_session.agent_config,
+                "chat_session": chat_session
+            }
+
+            self.logger.info(f"Session {ui_session_id} created with agent: {agent_bridge}")
+            return agent_bridge
 
     async def cleanup_session(self, ui_session_id: str):
         """

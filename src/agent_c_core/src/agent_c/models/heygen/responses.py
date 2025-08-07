@@ -6,7 +6,7 @@ from typing import Optional, List, Dict, Any
 
 from agent_c.models.base import BaseModel
 from .avatar import Avatar
-from .session import SessionData, ActiveSession, HistoricalSession
+from .session import HeygenAvatarSessionData, ActiveSession, HistoricalSession
 
 
 class HeyGenBaseResponse(BaseModel):
@@ -25,7 +25,7 @@ class ListAvatarsResponse(HeyGenBaseResponse):
 class NewSessionResponse(HeyGenBaseResponse):
     """Response model for creating a new session."""
     
-    data: SessionData
+    data: HeygenAvatarSessionData
 
 
 class ActiveSessionsData(BaseModel):

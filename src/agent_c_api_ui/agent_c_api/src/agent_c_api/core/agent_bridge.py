@@ -70,8 +70,7 @@ class AgentBridge:
         self,
         chat_session: ChatSession,
         session_manager: ChatSessionManager,
-        file_handler: Optional[FileHandler] = None,
-        **kwargs: Any
+        file_handler: Optional[FileHandler] = None
     ) -> None:
         """
         Initialize the AgentBridge instance.
@@ -106,7 +105,7 @@ class AgentBridge:
         self.chat_session = chat_session
         self.logger.info(f"Using provided agent config : {self.chat_session.agent_config.key}...")
 
-        self.sections = kwargs.get('sections', None)  # Sections for the prompt builder, if any
+        self.sections = None
 
         self.model_config_loader = ModelConfigurationLoader()
         self.model_configs: Dict[str, Any] = self.model_config_loader.flattened_config()
@@ -122,7 +121,7 @@ class AgentBridge:
         # - Tool Cache: A cache for storing tool data, set to a default directory.
         # - Output Tool Arguments: A placeholder for tool argument output preference.
         self.tool_chest: Union[ToolChest, None] = None
-        self.tool_cache_dir = kwargs.get("tool_cache_dir", DEFAULT_TOOL_CACHE_DIR)
+        self.tool_cache_dir = DEFAULT_TOOL_CACHE_DIR
         self.tool_cache = ToolCache(cache_dir=self.tool_cache_dir)
         self.output_tool_arguments = True  # Placeholder for tool argument output preference
 

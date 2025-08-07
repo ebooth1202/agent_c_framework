@@ -1,4 +1,5 @@
 # Multi-Agent Coordination Design Bible
+
 ## Universal Framework for Building Robust Agent Teams with Clone Delegation
 
 *Version 2.0 - Incorporating Operational Refinements*
@@ -16,26 +17,31 @@ This design bible provides proven patterns and principles for building sophistic
 ## Fundamental Design Principles
 
 ### 1. Clear Role Separation
+
 - **Prime Agents**: Orchestrators, coordinators, and strategic decision makers
 - **Clone Agents**: Focused executors of specific, time-bounded tasks
 - **Orchestrator Agent**: Overall workflow state management and agent coordination
 
 ### 2. Sequential Processing Over Parallel
+
 - Process complex work sequentially to maintain context control
 - Prevent context conflicts and enable better error recovery
 - Allow for proper validation gates between major phases
 
 ### 3. Planning-Tool-Driven Delegation Control
+
 - Use workspace planning tools for delegation tracking and control
 - Keep metadata for valuable clone outputs, not generic status tracking
 - Leverage planning tool features for completion signoff and recovery
 
 ### 4. Context Window Discipline
+
 - Proactive context management prevents operational failures
 - Clone tasks must be sized to prevent context burnout
 - Implement robust fallback protocols when context limits are reached
 
 ### 5. Recovery-First Design
+
 - Every delegation must be resumable after failure
 - Track sufficient state to avoid work repetition
 - Design for graceful degradation when tools fail
@@ -45,6 +51,7 @@ This design bible provides proven patterns and principles for building sophistic
 ## Agent Team Architecture Patterns
 
 ### Pattern 1: Sequential Orchestration (Proven)
+
 ```
 Orchestrator Agent
     ↓ (assigns work)
@@ -62,6 +69,7 @@ Orchestrator Agent
 **Example**: Enterprise capability analysis with domain specialists
 
 ### Pattern 2: Hub-and-Spoke Coordination
+
 ```
 Central Orchestrator
     ↓ ↙ ↘
@@ -75,6 +83,7 @@ Clone Tasks   Clone Tasks   Clone Tasks
 **Example**: Multi-domain analysis with independent domains
 
 ### Pattern 3: Pipeline Processing
+
 ```
 Prime Agent A → Clone Tasks → Prime Agent B → Clone Tasks → Prime Agent C
 ```
@@ -84,6 +93,7 @@ Prime Agent A → Clone Tasks → Prime Agent B → Clone Tasks → Prime Agent 
 **Example**: Requirements → Analysis → Design → Implementation planning
 
 ### Pattern 4: Direct Communication Mesh (Evolution)
+
 ```
 Orchestrator Agent (Douglas)
     ↓ (coordinates overall workflow)
@@ -101,12 +111,14 @@ Specialist Agent Network:
 **Example**: Competitive development teams where requirements specialists need direct communication with architects, who need direct communication with implementers
 
 **Implementation Notes**:
+
 - Each specialist agent configured with other specialists in their AgentTeamTools
 - Orchestrator maintains workflow coordination and quality gates
 - Direct specialist communication reduces context loss and accelerates collaboration
 - Maintains clone delegation discipline for complex individual tasks
 
 **Advantages over Sequential Orchestration**:
+
 - ✅ Eliminates information filtering through central coordinator
 - ✅ Enables real-time specialist collaboration and clarification
 - ✅ Reduces coordination overhead for routine specialist interactions
@@ -120,20 +132,24 @@ Specialist Agent Network:
 ### Core Delegation Principles
 
 #### 1. Optimal Clone Task Characteristics
+
 - **Duration**: 15-30 minutes of focused work maximum
 - **Scope**: Single, well-defined deliverable with clear success criteria
 - **Context**: Minimal external dependencies within the task
 - **Output**: Specific, actionable result that advances the workflow
 
 #### 2. Task Sequence Management
+
 **CRITICAL**: Never assign sequences of tasks to a single clone
 
 **❌ Anti-Pattern - Task Sequences**:
+
 ```
 Clone Task: "1. Analyze domain requirements, 2. Identify capabilities, 3. Document integration points, 4. Create stakeholder summary"
 ```
 
 **✅ Correct Pattern - Single Focused Tasks**:
+
 ```
 Task 1: "Analyze domain requirements and extract key business capabilities"
 Task 2: "Identify integration points for the documented capabilities" 
@@ -141,6 +157,7 @@ Task 3: "Create stakeholder-friendly summary of domain analysis"
 ```
 
 #### 3. Context Burnout Prevention
+
 - **Single Task Focus**: Each clone gets exactly one focused deliverable
 - **Clear Boundaries**: Specific start and end points for each task
 - **Output Specification**: Exactly what format and content is expected
@@ -149,6 +166,7 @@ Task 3: "Create stakeholder-friendly summary of domain analysis"
 ### Planning Tool Integration for Delegation Control
 
 #### Using Workspace Planning Tools for Delegation
+
 ```
 # Create focused clone task
 wsp_create_task plan_path="//workspace/project" 
@@ -172,16 +190,19 @@ wsp_update_task plan_path="//workspace/project"
 #### New Planning Tool Features for Robust Delegation
 
 **`requires_completion_signoff`**: 
+
 - Prevents automatic completion when clone context burns out
 - Ensures prime agent validation before considering work complete
 - Enables "human required" stage gates for critical checkpoints
 
 **`completion_signoff_by`**:
+
 - Tracks accountability for task completion validation
 - Enables audit trails for quality assurance
 - Supports escalation workflows when validation fails
 
 **`completion_report`**:
+
 - Captures essential deliverables and insights from clone work
 - Prevents work repetition when resuming after failures
 - Provides context for subsequent tasks without re-reading full outputs
@@ -193,6 +214,7 @@ wsp_update_task plan_path="//workspace/project"
 ### Proactive Context Window Management
 
 #### 1. Context Compression Techniques
+
 - **Progressive Summarization**: Extract and compress key insights at each step
 - **Metadata Preservation**: Store critical state in workspace metadata (for useful outputs only)
 - **Checkpoint Creation**: Regular progress snapshots for recovery
@@ -201,6 +223,7 @@ wsp_update_task plan_path="//workspace/project"
 #### 2. Context Burnout Recovery Protocols
 
 **When Clone Context Burns Out**:
+
 1. **Recognize the Failure Type**: Context burnout vs. tool failure vs. other issues
 2. **Preserve Partial Work**: Extract any completed deliverables from the attempt
 3. **Update Planning Tool**: Mark task with partial completion status and what was accomplished
@@ -208,6 +231,7 @@ wsp_update_task plan_path="//workspace/project"
 5. **Resume with Fresh Context**: Start new clone with focused, smaller scope
 
 **Prime Agent Response to Context Burnout**:
+
 ```
 # DO NOT retry the same large task
 # DO extract partial results if available
@@ -219,12 +243,14 @@ wsp_update_task plan_path="//workspace/project"
 ### Metadata Usage Discipline
 
 #### ✅ Appropriate Metadata Usage
+
 - **Clone Analysis Results**: Key insights and findings from clone work
 - **Decision Rationale**: Why certain approaches were chosen
 - **Integration Points**: Critical information for agent handoffs
 - **Recovery State**: Minimal state needed to resume after failures
 
 #### ❌ Metadata Anti-Patterns
+
 - Generic task status updates ("Task 1 complete", "Working on Task 2")
 - Detailed progress tracking that belongs in planning tools
 - Redundant information already captured in planning tool
@@ -237,18 +263,21 @@ wsp_update_task plan_path="//workspace/project"
 ### Multi-Level Quality Gates
 
 #### 1. Clone Output Validation
+
 - **Immediate Validation**: Prime agent validates each clone deliverable
 - **Completeness Check**: Ensure all required elements are present
 - **Quality Assessment**: Verify output meets standards and requirements
 - **Integration Readiness**: Confirm output can be used by subsequent steps
 
 #### 2. Phase Completion Gates
+
 - **Comprehensive Review**: All phase deliverables validated together
 - **Cross-Reference Validation**: Ensure consistency across related outputs
 - **Stakeholder Readiness**: Confirm outputs are ready for business review
 - **Handoff Preparation**: Package outputs for next phase or agent
 
 #### 3. Orchestrator Validation Points
+
 - **Strategic Alignment**: Ensure work aligns with overall objectives
 - **Quality Standards**: Verify adherence to established quality criteria
 - **Risk Assessment**: Identify potential issues before they cascade
@@ -257,6 +286,7 @@ wsp_update_task plan_path="//workspace/project"
 ### Completion Signoff Protocols
 
 #### Using `requires_completion_signoff` Effectively
+
 ```
 # For critical tasks requiring validation
 requires_completion_signoff: true
@@ -269,6 +299,7 @@ requires_completion_signoff: "human_required"
 ```
 
 #### Signoff Validation Process
+
 1. **Clone Completes Work**: Updates task with completion_report
 2. **Prime Agent Reviews**: Validates deliverables against requirements
 3. **Quality Check**: Ensures output meets standards
@@ -282,16 +313,19 @@ requires_completion_signoff: "human_required"
 ### Failure Type Classification
 
 #### 1. Context Burnout Failures
+
 **Symptoms**: Clone stops responding, partial work visible, context window exceeded
 **Response**: Extract partial work, decompose remaining tasks, resume with fresh context
 **Prevention**: Better task sizing, context monitoring, proactive decomposition
 
 #### 2. Tool Failures
+
 **Symptoms**: Tool returns error messages, no partial work available
 **Response**: Retry with same task, escalate if persistent, use fallback methods
 **Prevention**: Tool reliability monitoring, alternative tool preparation
 
 #### 3. Quality Failures
+
 **Symptoms**: Clone completes but output doesn't meet requirements
 **Response**: Provide feedback, request revisions, or reassign to different clone
 **Prevention**: Clear requirements, better clone instructions, validation checkpoints
@@ -299,6 +333,7 @@ requires_completion_signoff: "human_required"
 ### Resumption Protocols
 
 #### State Preservation for Recovery
+
 ```
 # Planning tool tracks:
 - Task completion status with signoff requirements
@@ -314,6 +349,7 @@ requires_completion_signoff: "human_required"
 ```
 
 #### Recovery Workflow
+
 1. **Assess Failure Type**: Context burnout vs. tool failure vs. quality issue
 2. **Preserve Completed Work**: Extract and document any usable deliverables
 3. **Update Planning State**: Record progress and remaining work
@@ -325,6 +361,7 @@ requires_completion_signoff: "human_required"
 ## Team Composition Guidelines
 
 ### Orchestrator Agent Requirements
+
 - **Workflow State Management**: Maintain overall project state and progress
 - **Agent Coordination**: Coordinate multiple prime agents using agent team tools
 - **Quality Gate Management**: Enforce validation checkpoints and quality standards
@@ -332,6 +369,7 @@ requires_completion_signoff: "human_required"
 - **Recovery Coordination**: Handle failure scenarios and resumption protocols
 
 ### Prime Agent Requirements
+
 - **Domain Expertise**: Deep knowledge in specific functional area
 - **Clone Coordination**: Effective delegation and validation of clone work
 - **Context Management**: Proactive context window management and compression
@@ -339,6 +377,7 @@ requires_completion_signoff: "human_required"
 - **Handoff Preparation**: Package work for orchestrator or other agents
 
 ### Clone Task Design Requirements
+
 - **Single Focus**: One clear deliverable per clone task
 - **Time Bounded**: 15-30 minutes of focused work maximum
 - **Clear Instructions**: Specific requirements and output format
@@ -354,18 +393,21 @@ requires_completion_signoff: "human_required"
 **The Evolution**: The BOKF competitive team implementation revealed a critical limitation in Sequential Orchestration patterns - the "telephone game" effect where information gets filtered, lost, or delayed as it passes through central coordinators.
 
 **The Problem with Pure Sequential Orchestration**:
+
 - ❌ Information loss through multiple handoffs
 - ❌ Delayed clarifications requiring full round-trips through coordinator
 - ❌ Coordinator becomes bottleneck for routine specialist interactions
 - ❌ Context dilution as requirements/specifications pass through intermediaries
 
 **The Direct Communication Mesh Solution**:
+
 - ✅ **AgentTeamTools Configuration**: Each specialist configured with access to other specialists
 - ✅ **Preserved Coordination**: Orchestrator maintains workflow oversight and quality gates
 - ✅ **Direct Expert Collaboration**: Rex can directly clarify requirements with Aria, Aria can directly coordinate with Mason, etc.
 - ✅ **Maintained Clone Discipline**: Complex individual tasks still use proven clone delegation patterns
 
 **Implementation Pattern**:
+
 ```yaml
 # Example: Rex (Requirements Specialist) Configuration
 tools:
@@ -385,12 +427,14 @@ categories:
 ```
 
 **When to Use Direct Communication Mesh**:
+
 - Complex collaborative projects requiring frequent specialist interaction
 - Competitive scenarios where speed and accuracy are critical
 - Teams with well-defined specialist roles and clear boundaries
 - Projects where information fidelity is crucial (requirements → implementation)
 
 **When to Stick with Sequential Orchestration**:
+
 - Simple linear workflows with clear handoff points
 - Teams with less experienced agents requiring more oversight
 - Projects where central control and validation are paramount
@@ -409,30 +453,35 @@ categories:
 ## Implementation Best Practices
 
 ### 1. Start with Planning Tool Structure
+
 - Design your task hierarchy before implementing agents
 - Define completion signoff requirements for each task type
 - Establish clear task sizing guidelines
 - Plan for recovery and resumption scenarios
 
 ### 2. Implement Context Discipline Early
+
 - Build context monitoring into all prime agents
 - Establish clear task decomposition protocols
 - Train agents to recognize context burnout vs. other failures
 - Implement proactive context compression
 
 ### 3. Use Metadata Strategically
+
 - Reserve metadata for valuable clone outputs and insights
 - Avoid generic status tracking in metadata
 - Focus on information needed for handoffs and integration
 - Keep recovery state minimal but sufficient
 
 ### 4. Design for Failure Recovery
+
 - Every delegation must be resumable
 - Track sufficient state to avoid work repetition
 - Plan for graceful degradation when tools fail
 - Test recovery scenarios during development
 
 ### 5. Validate Quality Gates
+
 - Test completion signoff workflows
 - Verify validation criteria are clear and actionable
 - Ensure quality gates prevent progression of incomplete work
@@ -443,21 +492,27 @@ categories:
 ## Common Anti-Patterns to Avoid
 
 ### ❌ Task Sequence Assignment
+
 Assigning multiple sequential tasks to a single clone leads to context burnout
 
 ### ❌ Metadata Status Pollution
+
 Using metadata for generic task tracking instead of valuable outputs
 
 ### ❌ Context Burnout as Tool Failure
+
 Treating context exhaustion as a generic tool failure leads to inappropriate retry logic
 
 ### ❌ Work Repetition After Failures
+
 Failing to preserve partial work and track progress leads to repeated effort
 
 ### ❌ Parallel Processing Without Coordination
+
 Running multiple complex workflows in parallel without proper orchestration
 
 ### ❌ Generic Fallback Protocols
+
 Using one-size-fits-all fallback logic instead of failure-type-specific responses
 
 ---
@@ -465,6 +520,7 @@ Using one-size-fits-all fallback logic instead of failure-type-specific response
 ## Success Metrics and Validation
 
 ### Operational Success Indicators
+
 - **Low Work Repetition**: Minimal repeated effort after failures
 - **Effective Recovery**: Quick resumption after context burnout or tool failures
 - **Clean Metadata**: Metadata contains valuable insights, not status clutter
@@ -472,6 +528,7 @@ Using one-size-fits-all fallback logic instead of failure-type-specific response
 - **Context Efficiency**: Agents maintain context discipline and avoid burnout
 
 ### Quality Assurance Metrics
+
 - **Completion Signoff Rate**: Percentage of tasks requiring validation vs. auto-completion
 - **Recovery Success Rate**: Successful resumption after various failure types
 - **Context Utilization**: Efficient use of context windows without burnout
@@ -482,18 +539,21 @@ Using one-size-fits-all fallback logic instead of failure-type-specific response
 ## Framework Evolution and Adaptation
 
 ### Adapting to New Domains
+
 - Identify domain-specific expertise requirements
 - Define appropriate task decomposition patterns for the domain
 - Establish quality criteria and validation methods
 - Design recovery protocols for domain-specific failure modes
 
 ### Scaling Considerations
+
 - Plan for increased coordination complexity with more agents
 - Design metadata structures that scale with team size
 - Establish clear escalation paths for larger teams
 - Consider performance implications of planning tool usage
 
 ### Continuous Improvement
+
 - Monitor operational metrics and failure patterns
 - Refine task sizing guidelines based on experience
 - Update recovery protocols as new failure modes are discovered

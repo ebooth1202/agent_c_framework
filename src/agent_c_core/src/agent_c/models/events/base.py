@@ -3,6 +3,8 @@ from pydantic import Field
 
 from agent_c.util import to_snake_case
 from agent_c.models.base import BaseModel
+from agent_c.util.registries.event import EventRegistry
+
 
 class BaseEvent(BaseModel):
     """
@@ -24,3 +26,8 @@ class BaseEvent(BaseModel):
             data['type'] = to_snake_case(self.__class__.__name__.removesuffix('Event'))
 
         super().__init__(**data)
+
+    def __init_subclass__(cls, **kwargs):
+        """Auto-register event classes when they're defined"""
+        super().__init_subclass__(**kwargs)
+        EventRegistry.register(cls)

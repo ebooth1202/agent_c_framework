@@ -7,7 +7,7 @@ organized by functional areas.
 
 from .avatar import Avatar
 from .session import (
-    SessionData,
+    HeygenAvatarSessionData,
     ActiveSession,
     HistoricalSession,
 )
@@ -36,7 +36,7 @@ __all__ = [
     "Avatar",
     
     # Session models
-    "SessionData",
+    "HeygenAvatarSessionData",
     "ActiveSession", 
     "HistoricalSession",
     

@@ -3,7 +3,8 @@ HeyGen Streaming Avatar API Client
 
 This module provides an httpx-based client for interacting with the HeyGen Streaming Avatar API.
 """
-
+import os
+import json
 from typing import Optional
 from datetime import datetime
 import httpx
@@ -36,7 +37,7 @@ class HeyGenStreamingAvatarClient:
     
     BASE_URL = "https://api.heygen.com"
     
-    def __init__(self, api_key: str, timeout: float = 30.0):
+    def __init__(self,  timeout: float = 30.0, api_key: Optional[str] = None):
         """
         Initialize the HeyGen client.
         
@@ -44,7 +45,7 @@ class HeyGenStreamingAvatarClient:
             api_key: HeyGen API key for authentication
             timeout: Request timeout in seconds
         """
-        self.api_key = api_key
+        self.api_key = api_key if api_key else os.environ.get("HEYGEN_API_KEY")
         self.timeout = timeout
         self._client = httpx.AsyncClient(
             base_url=self.BASE_URL,
@@ -54,7 +55,33 @@ class HeyGenStreamingAvatarClient:
                 "Content-Type": "application/json"
             }
         )
-    
+
+    @staticmethod
+    def _locate_config_path() -> str:
+        """
+        Locate configuration path by walking up directory tree.
+
+        Returns:
+            Path to agent_c_config directory
+
+        Raises:
+            FileNotFoundError: If configuration folder cannot be found
+        """
+        current_dir = os.getcwd()
+        while True:
+            config_dir = os.path.join(current_dir, "agent_c_config")
+            if os.path.exists(config_dir):
+                return config_dir
+
+            parent_dir = os.path.dirname(current_dir)
+            if current_dir == parent_dir:  # Reached root directory
+                break
+            current_dir = parent_dir
+
+        raise FileNotFoundError(
+            "Configuration folder not found. Please ensure you are in the correct directory or set AGENT_C_CONFIG_PATH."
+        )
+
     async def __aenter__(self):
         """Async context manager entry."""
         return self
@@ -67,19 +94,83 @@ class HeyGenStreamingAvatarClient:
         """Close the HTTP client."""
         await self._client.aclose()
     
+    async def fetch_avatars(self) -> ListAvatarsResponse:
+        """
+        Fetch avatars from HeyGen API and cache the results.
+        
+        This method makes the actual API call to HeyGen, deduplicates the results,
+        and saves them to a JSON cache file in the config directory.
+        
+        Returns:
+            ListAvatarsResponse containing unique avatars
+            
+        Raises:
+            httpx.HTTPError: If the request fails
+            FileNotFoundError: If config directory cannot be found
+        """
+        response = await self._client.get("/v1/streaming/avatar.list")
+        response.raise_for_status()
+        
+        raw_response = response.json()
+        
+        # Deduplicate avatars by avatar_id, keeping the most recent (highest created_at)
+        avatars_by_id = {}
+        for avatar_data in raw_response["data"]:
+            avatar_id = avatar_data["avatar_id"]
+            if avatar_id not in avatars_by_id or avatar_data["created_at"] > avatars_by_id[avatar_id]["created_at"]:
+                avatars_by_id[avatar_id] = avatar_data
+        
+        # Reconstruct response with deduplicated avatars
+        deduplicated_response = {
+            "code": raw_response["code"],
+            "message": raw_response["message"],
+            "data": list(avatars_by_id.values())
+        }
+        
+        # Cache the results
+        try:
+            config_path = self._locate_config_path()
+            cache_file = os.path.join(config_path, "avatars_cache.json")
+            with open(cache_file, 'w') as f:
+                json.dump(deduplicated_response, f, indent=2)
+        except Exception as e:
+            # Log the error but don't fail the request
+            # In a production system, you'd want proper logging here
+            pass
+        
+        return ListAvatarsResponse.model_validate(deduplicated_response)
+    
     async def list_avatars(self) -> ListAvatarsResponse:
         """
         List available streaming avatars.
         
+        This method first checks for cached avatar data in the config directory.
+        If cached data exists, it loads and returns that. Otherwise, it calls
+        fetch_avatars() to get fresh data from the API.
+        
+        Note: HeyGen's API returns duplicate avatars (different revisions with same avatar_id).
+        The fetch method deduplicates by avatar_id, keeping the most recent version.
+        
         Returns:
-            ListAvatarsResponse containing available avatars
+            ListAvatarsResponse containing unique avatars
             
         Raises:
-            httpx.HTTPError: If the request fails
+            httpx.HTTPError: If the request fails and no cache is available
         """
-        response = await self._client.get("/v1/streaming/avatar.list")
-        response.raise_for_status()
-        return ListAvatarsResponse.model_validate(response.json())
+        try:
+            config_path = self._locate_config_path()
+            cache_file = os.path.join(config_path, "avatars_cache.json")
+            
+            if os.path.exists(cache_file):
+                with open(cache_file, 'r') as f:
+                    cached_data = json.load(f)
+                return ListAvatarsResponse.model_validate(cached_data)
+        except Exception:
+            # If cache loading fails, fall through to API call
+            pass
+        
+        # No cache available or cache loading failed, fetch from API
+        return await self.fetch_avatars()
     
     async def create_new_session(self, request: NewSessionRequest) -> NewSessionResponse:
         """

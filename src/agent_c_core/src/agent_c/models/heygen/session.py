@@ -7,7 +7,7 @@ from typing import Optional, List, Dict, Any
 from agent_c.models.base import BaseModel
 
 
-class SessionData(BaseModel):
+class HeygenAvatarSessionData(BaseModel):
     """Model representing session data from new session creation."""
     
     session_id: str

@@ -19,14 +19,6 @@ async def initialize_user_session(params: AgentInitializationParams,
         # Create a new session with both model and backend parameters
         logging.debug(f"Creating new session with model: {params.model_name}, backend: {params.backend}")
 
-        # Get only the relevant model parameters using your filtering method.
-        model_params = params.to_agent_kwargs()
-        logging.debug(f"--->Model parameters: {model_params} identified")
-
-        # Get the additional parameters (including persona_name and custom prompt).
-        additional_params = params.to_additional_params()
-        logging.debug(f"--->Additional parameters: {additional_params} identified")
-
         # Use ui_session_id if provided (for model changes) - this allows us to transfer chat history
         session_params = {}
         existing_ui_session_id = getattr(params, 'ui_session_id', None)
@@ -35,11 +27,7 @@ async def initialize_user_session(params: AgentInitializationParams,
         logger.debug(f"Existing session ID (if passed): {existing_ui_session_id}")
 
 
-        new_session_id = await agent_manager.create_session(
-            **model_params,
-            **additional_params,
-            **session_params
-        )
+        new_session_id = await agent_manager.create_session(params.persona_name, params.ui_session_id)
         session_data = await agent_manager.get_session_data(new_session_id)
         logger.debug(f"Current sessions in memory: {list(agent_manager.ui_sessions.keys())}")
         logger.debug(

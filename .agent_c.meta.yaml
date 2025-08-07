@@ -1913,4 +1913,22 @@ _plans:
         updated_at: '2025-06-09T10:32:48.640443'
     title: BOKF Design Team Coordination Framework
     updated_at: '2025-06-09T10:32:48.640443'
+agents:
+  hank_agent:
+    agent_key: hank_agent
+    base_patterns:
+    - sandy_shadcn_javascript_expertise
+    - mason_clone_delegation
+    - douglas_step_by_step_orchestration
+    created_by: bobb_agent_builder
+    creation_date: '2024-12-28'
+    primary_workspace: virt_joe
+    project_focus: virtual_joe_avatar_integration
+    reference_workspace: avatar_demo
+    specializations:
+    - heygen_avatar_integration
+    - agent_c_api_migration
+    - react_nextjs_development
+    - real_time_avatar_communication
+    status: ready_for_use
 current_plan: agent_documentation_showcase
