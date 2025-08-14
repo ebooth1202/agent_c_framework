@@ -638,10 +638,10 @@ class MarkdownToHtmlReportTools(Toolset):
                 output_path_full = output_filename
 
             # Read and Process the markdown file
-            error, workspace, relative_path = self.workspace_tool.validate_and_get_workspace_path(input_path_full)
+            error, workspace_obj, relative_path = self.workspace_tool.validate_and_get_workspace_path(input_path_full)
             if error:
                 raise ValueError(f"Error reading file: {error}")
-            file_content = await workspace.read_internal(relative_path)
+            file_content = await workspace_obj.read_internal(relative_path)
 
             if file_content.startswith('{"error":'):
                 raise ValueError(f"Error reading file: {file_content}")
