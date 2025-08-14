@@ -17,7 +17,50 @@ class MarkdownFileCollector:
         self.workspace_tool = workspace_tool
         self.js_processor = JavaScriptSafeContentProcessor()
 
-    async def collect_markdown_files(self, root_path: str, files_to_ignore: List[str] = None) -> Dict[str, str]:
+    @staticmethod
+    def _parse_workspace_result(result: str, operation_name: str = "workspace operation"):
+        """Parse workspace tool results that may be JSON, YAML, or error strings.
+        
+        Args:
+            result: The result string from a workspace tool method
+            operation_name: Name of the operation for error reporting
+            
+        Returns:
+            tuple: (success: bool, data: dict|str, error_msg: str|None)
+        """
+        if not isinstance(result, str):
+            return False, None, f"Expected string result from {operation_name}, got {type(result)}"
+            
+        # Check for error responses
+        if result.startswith(("Error:", "ERROR:")):
+            return False, None, result
+            
+        # Try JSON first (most common for some operations)
+        try:
+            data = json.loads(result)
+            if isinstance(data, dict) and 'error' in data:
+                return False, data, data['error']
+            return True, data, None
+        except json.JSONDecodeError:
+            pass
+            
+        # Try YAML (common for ls operations)
+        try:
+            import yaml
+            data = yaml.safe_load(result)
+            if isinstance(data, dict) and 'error' in data:
+                return False, data, data['error']
+            return True, data, None
+        except Exception:
+            pass
+            
+        # If all parsing fails, treat as raw string (might be success message)
+        if "success" in result.lower() or "completed" in result.lower():
+            return True, result, None
+        else:
+            return False, None, f"Could not parse {operation_name} result: {result}"
+
+    async def collect_markdown_files(self, root_path: str, tool_context, files_to_ignore: List[str] = None, ) -> Dict[str, str]:
         """Collect all markdown files in the workspace directory structure."""
         markdown_files = {}
         files_to_ignore = [f.lower() for f in (files_to_ignore or [])]
@@ -32,14 +75,23 @@ class MarkdownFileCollector:
                 normalized_dir_path += '/'
 
             try:
-                ls_result = await self.workspace_tool.ls(path=normalized_dir_path)
-                ls_data = json.loads(ls_result)
-
-                if 'error' in ls_data:
-                    logger.error(f"Error listing directory '{normalized_dir_path}': {ls_data['error']}")
+                ls_result = await self.workspace_tool.ls(path=normalized_dir_path, tools='ls', tool_context=tool_context)
+                
+                # Parse the ls result using the helper function
+                success, ls_data, error_msg = self._parse_workspace_result(ls_result, "directory listing")
+                if not success:
+                    logger.error(f"Error listing directory '{normalized_dir_path}': {error_msg}")
                     return
 
-                items = ls_data.get('contents', [])
+                # Handle different data formats from ls operation
+                if isinstance(ls_data, list):
+                    items = ls_data
+                elif isinstance(ls_data, dict):
+                    items = ls_data.get('contents', ls_data.get('items', []))
+                else:
+                    logger.warning(f"Unexpected ls data format for {normalized_dir_path}: {type(ls_data)}")
+                    items = []
+                    
                 logger.debug(f"Found {len(items)} items in {normalized_dir_path}")
 
                 for item_name in items:
@@ -63,9 +115,24 @@ class MarkdownFileCollector:
                     else:
                         # Only check if it's a directory - we don't process non-markdown files
                         is_dir_result = await self.workspace_tool.is_directory(path=item_path)
-                        is_dir_data = json.loads(is_dir_result)
+                        
+                        # Parse the is_directory result using the helper function
+                        success, is_dir_data, error_msg = self._parse_workspace_result(is_dir_result, "directory check")
+                        
+                        # Handle the directory check result
+                        is_directory = False
+                        if success:
+                            if isinstance(is_dir_data, dict):
+                                is_directory = is_dir_data.get('is_directory', False)
+                            elif isinstance(is_dir_data, bool):
+                                is_directory = is_dir_data
+                            elif isinstance(is_dir_data, str):
+                                # Some workspace tools might return "true"/"false" strings
+                                is_directory = is_dir_data.lower() in ('true', '1', 'yes')
+                        else:
+                            logger.warning(f"Could not determine if {item_path} is a directory: {error_msg}")
 
-                        if 'error' not in is_dir_data and is_dir_data.get('is_directory', False):
+                        if is_directory:
                             # Recursively process subdirectory
                             new_rel_path = f"{rel_path}/{item_name}" if rel_path else item_name
                             await process_directory(item_path, new_rel_path)
@@ -407,10 +474,15 @@ class MarkdownFileCollector:
                 raise ValueError(f"Error reading file: {error}")
             result = await workspace.read_internal(relative_path)
 
-            # Check for error response
-            if result.startswith('{"error":'):
-                error_data = json.loads(result)
-                return False, f"File '{item_name}' (path: {file_path}) is not accessible: {error_data['error']}"
+            # Check for error response using robust parsing
+            if result.startswith('"error"') or result.startswith('{"error"'):
+                # Try to parse the error response robustly
+                success, error_data, error_msg = self._parse_workspace_result(result, "file read")
+                if not success:
+                    return False, f"File '{item_name}' (path: {file_path}) is not accessible: {error_msg}"
+                elif isinstance(error_data, dict) and 'error' in error_data:
+                    return False, f"File '{item_name}' (path: {file_path}) is not accessible: {error_data['error']}"
+                # If parsing succeeded but no specific error, fall through to other checks
 
             # Verify it's a markdown file
             if not has_file_extension(file_path, ['md', 'markdown']):

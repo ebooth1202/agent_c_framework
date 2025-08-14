@@ -48,6 +48,49 @@ class MarkdownToHtmlReportTools(Toolset):
             logger.exception(f"Error in {operation_name}: {str(e)}")
             return {"success": False, "error": f"Error in {operation_name}: {str(e)}"}
 
+    @staticmethod
+    def _parse_workspace_result(result: str, operation_name: str = "workspace operation"):
+        """Parse workspace tool results that may be JSON, YAML, or error strings.
+        
+        Args:
+            result: The result string from a workspace tool method
+            operation_name: Name of the operation for error reporting
+            
+        Returns:
+            tuple: (success: bool, data: dict|str, error_msg: str|None)
+        """
+        if not isinstance(result, str):
+            return False, None, f"Expected string result from {operation_name}, got {type(result)}"
+            
+        # Check for error responses
+        if result.startswith(("Error:", "ERROR:")):
+            return False, None, result
+            
+        # Try JSON first (most common for write operations)
+        try:
+            data = json.loads(result)
+            if isinstance(data, dict) and 'error' in data:
+                return False, data, data['error']
+            return True, data, None
+        except json.JSONDecodeError:
+            pass
+            
+        # Try YAML (common for ls operations)
+        try:
+            import yaml
+            data = yaml.safe_load(result)
+            if isinstance(data, dict) and 'error' in data:
+                return False, data, data['error']
+            return True, data, None
+        except Exception:
+            pass
+            
+        # If all parsing fails, treat as raw string (might be success message)
+        if "success" in result.lower() or "completed" in result.lower():
+            return True, result, None
+        else:
+            return False, None, f"Could not parse {operation_name} result: {result}"
+
     @json_schema(
         description="Generate an interactive HTML viewer for markdown files in a workspace directory",
         params={
@@ -115,7 +158,7 @@ class MarkdownToHtmlReportTools(Toolset):
         title = kwargs.get('title', 'output_report.html')
         files_to_ignore = kwargs.get('files_to_ignore', [])
         javascript_safe = kwargs.get('javascript_safe', True)
-
+        tool_context = kwargs.get('tool_context', {})
         try:
             # Create UNC input path
             input_path_full = create_unc_path(workspace, input_path)
@@ -168,20 +211,29 @@ class MarkdownToHtmlReportTools(Toolset):
             if not is_file: # Treat as directory
                 # Check if input directory exists
                 logger.debug("Checking if input path exists...")
-                ls_result = await self.workspace_tool.ls(path=input_path_full)
-                ls_data = json.loads(ls_result)
-
-                if 'error' in ls_data:
+                ls_result = await self.workspace_tool.ls(path=input_path_full, tool_context=tool_context)
+                
+                # Parse the ls result using the helper function
+                success, ls_data, error_msg = self._parse_workspace_result(ls_result, "directory listing")
+                if not success:
                     return json.dumps({
                         "success": False,
-                        "error": f"Input path '{input_path}' is not accessible: {ls_data['error']}"
+                        "error": f"Input path '{input_path}' is not accessible: {error_msg}"
                     })
+                
+                # Ensure ls_data is in the expected format for downstream processing
+                if isinstance(ls_data, list):
+                    # Convert list to the expected format with items
+                    ls_data = {'items': [{'name': item, 'type': 'file' if '.' in item else 'directory'} for item in ls_data]}
+                elif not isinstance(ls_data, dict) or 'items' not in ls_data:
+                    # Fallback for unexpected format
+                    ls_data = {'items': []}
 
                 # Collect markdown files
                 logger.debug("Collecting markdown files...")
                 combined_ignore_list = files_to_ignore + ([output_filename] if output_filename else [])
                 markdown_files = await self.file_collector.collect_markdown_files(
-                    root_path=input_path_full, files_to_ignore=combined_ignore_list)
+                    root_path=input_path_full, files_to_ignore=combined_ignore_list, tool_context=tool_context)
 
                 if not markdown_files:
                     logger.debug(f"No markdown files found in {input_path}. Will search subdirectories recursively...")
@@ -190,7 +242,7 @@ class MarkdownToHtmlReportTools(Toolset):
                     for item in ls_data.get('items', []):
                         if item['type'] == 'directory':
                             subdir_path = f"{input_path_full}/{item['name']}"
-                            subdir_files = await self.file_collector.collect_markdown_files(subdir_path, files_to_ignore=combined_ignore_list)
+                            subdir_files = await self.file_collector.collect_markdown_files(root_path=subdir_path, files_to_ignore=combined_ignore_list, tool_context=tool_context)
                             if subdir_files:
                                 markdown_files.update(subdir_files)
 
@@ -235,11 +287,12 @@ class MarkdownToHtmlReportTools(Toolset):
                 mode="write"
             )
 
-            write_data = json.loads(write_result)
-            if 'error' in write_data:
+            # Parse the write result using the helper function
+            success, write_data, error_msg = self._parse_workspace_result(write_result, "write operation")
+            if not success:
                 return json.dumps({
                     "success": False,
-                    "error": f"Failed to write HTML file: {write_data['error']}"
+                    "error": f"Failed to write HTML file: {error_msg}"
                 })
 
             message = f"Successfully generated HTML viewer at {output_filename}."
@@ -264,8 +317,8 @@ class MarkdownToHtmlReportTools(Toolset):
                     sent_by_function='generate_md_viewer',
                     content_type="text/html",
                     content=html_content,
-                    tool_context=kwargs.get('tool_context', {})
-                )
+                    tool_context=tool_context)
+
                 # markdown_content = await self.media_helper.create_markdown_media(output_info)
                 # await self._raise_render_media(
                 #     sent_by_class=self.__class__.__name__,
@@ -610,11 +663,12 @@ class MarkdownToHtmlReportTools(Toolset):
                     "error": f"Failed to write Word document: {str(e)}"
                 })
 
-            write_data = json.loads(write_result)
-            if 'error' in write_data:
+            # Parse the write result using the helper function
+            success, write_data, error_msg = self._parse_workspace_result(write_result, "write operation")
+            if not success:
                 return json.dumps({
                     "success": False,
-                    "error": f"Failed to write Word document: {write_data['error']}"
+                    "error": f"Failed to write Word document: {error_msg}"
                 })
 
             # Get file system path
