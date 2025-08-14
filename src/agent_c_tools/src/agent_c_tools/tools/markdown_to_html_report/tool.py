@@ -2,7 +2,6 @@ import json
 import logging
 from pathlib import Path
 from typing import Optional
-import re
 
 from agent_c.toolsets.tool_set import Toolset
 from agent_c.toolsets.json_schema import json_schema
