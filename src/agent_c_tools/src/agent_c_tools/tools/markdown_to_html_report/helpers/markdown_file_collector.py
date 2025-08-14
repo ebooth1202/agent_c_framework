@@ -77,7 +77,7 @@ class MarkdownFileCollector:
                         
                         # Parse the is_directory result using the helper function
                         success, is_dir_data, error_msg = parse_workspace_result(is_dir_result, "directory check")
-
+                        
                         # Handle the directory check result
                         is_directory = False
                         if success:
