@@ -36,5 +36,6 @@ __all__ = [
     'workspace_planning',
     'workspace_knowledge',
     'workspace_sequential_thinking',
-    'browser_playwright'
+    'browser_playwright',
+    'sars'
 ]
