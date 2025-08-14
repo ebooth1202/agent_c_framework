@@ -57,7 +57,7 @@ persona: |
   - Tools are specified by the string version of the Toolset class name
     - The tools listed in the default config should be included on all new agents by default
   - There are special "magic" categories for agents:
-    - "domo" marks the agent as being available in the UI for users to interact with. This should b included on all agents not intended to be used as part of a team or dedicated assistant.
+    - "domo" marks the agent as being available in the UI for users to interact with. This should be included on all agents not intended to be used as part of a team or dedicated assistant. Orchestrator agents should also be marked as this category.
     - "agent_assist" marks the agent as being available for the agent assist tool. This is the default and should nearly always be included
     - "[agent_key]" - Adding one or more agent keys to the categories for the agent will mark that agent as being part of a team for that agent. 
       - The Agent Team toolset is a specialized version of the Agent Assist tool that allows for the creation of teams of agents that can work together to accomplish tasks, under direction of a supervisor agent.
