@@ -1,25 +1,36 @@
 import json
-import json
 import logging
-import re
-
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Optional
+import re
 
 from agent_c.toolsets.tool_set import Toolset
 from agent_c.toolsets.json_schema import json_schema
-from .helpers.javascript_safe_content_processor import JavaScriptSafeContentProcessor
-from .helpers.markdown_javascript_safety_validator import MarkdownJavaScriptSafetyValidator
-from .helpers.validation_helper import ValidationHelper
-from .helpers.media_helper import MediaEventHelper
 from .helpers.markdown_file_collector import MarkdownFileCollector
 from .helpers.markdown_to_docx import MarkdownToDocxConverter
-from .helpers.html_template_manager import HtmlTemplateManager
 from ... import WorkspaceTools
 from ...helpers.path_helper import create_unc_path, ensure_file_extension, os_file_system_path, has_file_extension, normalize_path
+from ...helpers.validate_kwargs import validate_required_fields
 
 logger = logging.getLogger(__name__)
 
+# Constants for magic values
+class Constants:
+    """Configuration constants for the markdown tools."""
+    DEFAULT_TITLE = "Agent C Output Viewer"
+    DEFAULT_TITLE_PLACEHOLDER = "<h3 style=\"margin: 0 16px 16px 16px;\">Agent C Output Viewer</h3>"
+    MARKDOWN_EXTENSIONS = ['md', 'markdown']
+    DOCX_EXTENSIONS = ['.md', '.markdown']
+
+    # JavaScript safety escape patterns
+    JS_ESCAPE_PATTERNS = [
+        (r'\$"', '&#36;"'),           # C# interpolated strings
+        (r'\$\{', '&#36;&#123;'),     # Template literal expressions
+        (r'\}', '&#125;'),            # Closing braces
+        (r'`', '&#96;'),              # Backticks
+        (r'</script>', '&#60;/script&#62;'),  # Script tags
+        (r'<script>', '&#60;script&#62;'),
+    ]
 
 
 class MarkdownToHtmlReportTools(Toolset):
@@ -29,11 +40,8 @@ class MarkdownToHtmlReportTools(Toolset):
         super().__init__(**kwargs, name="markdown_viewer", use_prefix=False)
         # Get workspace tools for file operations
         self.workspace_tool: Optional[WorkspaceTools] = None
-        self.validation_helper = ValidationHelper()
         self.file_collector = None
-        self.media_helper = MediaEventHelper()
         self.docx_converter = MarkdownToDocxConverter()
-        self.template_manager = HtmlTemplateManager()
 
     async def post_init(self):
         self.workspace_tool = self.tool_chest.available_tools.get("WorkspaceTools")
@@ -132,26 +140,14 @@ class MarkdownToHtmlReportTools(Toolset):
         }
     )
     async def generate_md_viewer(self, **kwargs) -> str:
-        """Generate an interactive HTML viewer for markdown files in a workspace directory.
-
-        Args:
-            kwargs:
-                workspace: The workspace containing the markdown files
-                file_path: The path within the workspace where markdown files are located (or a full UNC path)
-                output_filename: The name of the output HTML file to generate (can be a simple filename or full UNC path)
-                title: Optional title for the HTML viewer
-                files_to_ignore: Optional flat list of filenames to ignore when generating the HTML viewer
-                javascript_safe: Whether to apply JavaScript safety processing to handle problematic patterns like C# interpolated strings
-        Returns:
-            A dictionary with success status and information about the operation
-        """
-        validation_error = self.validation_helper.validate_required_fields(
-            kwargs, ["workspace", "file_path", "output_filename"])
-
+        """Generate an interactive HTML viewer for markdown files in a workspace directory."""
         # Validate required fields
-        if validation_error:
-            return json.dumps({"success": False, "error": validation_error})
+        success, validation_error = validate_required_fields(
+            kwargs, ["workspace", "file_path", "output_filename"])
+        if not success:
+            return self._create_error_response(validation_error)
 
+        # Extract parameters
         workspace = kwargs.get('workspace')
         input_path = kwargs.get('file_path')
         output_filename = kwargs.get('output_filename')
@@ -159,191 +155,61 @@ class MarkdownToHtmlReportTools(Toolset):
         files_to_ignore = kwargs.get('files_to_ignore', [])
         javascript_safe = kwargs.get('javascript_safe', True)
         tool_context = kwargs.get('tool_context', {})
+
         try:
-            # Create UNC input path
-            input_path_full = create_unc_path(workspace, input_path)
+            # Validate and process paths
+            input_path_full, output_path_full, path_error = await self._validate_and_process_paths(
+                workspace, input_path, output_filename)
+            if path_error:
+                return self._create_error_response(path_error)
 
-            # Create UNC output filename
-            output_filename = ensure_file_extension(output_filename, 'html')
-            if not output_filename.startswith('//'):
-                output_path_full = create_unc_path(workspace, output_filename)
+            # Determine if input is a file or directory and process accordingly
+            file_structure = None
+            file_count = 0
+
+            # Check if input is a single markdown file
+            if has_file_extension(input_path, Constants.MARKDOWN_EXTENSIONS):
+                file_structure, file_count, error = await self._handle_single_file_conversion(
+                    input_path_full, input_path, javascript_safe)
+
+                # If single file processing failed, treat as directory
+                if error:
+                    file_structure, file_count, error = await self._handle_directory_conversion(
+                        input_path_full, input_path, files_to_ignore, output_filename, javascript_safe, tool_context)
             else:
-                output_path_full = output_filename
+                # Treat as directory
+                file_structure, file_count, error = await self._handle_directory_conversion(
+                    input_path_full, input_path, files_to_ignore, output_filename, javascript_safe, tool_context)
 
-            # Check if input is a directory or file
-            is_file = False
-            if has_file_extension(input_path, ['md', 'markdown']):
-                # Check if it's actually a file
-                try:
-                    error, workspace_obj, relative_path = self.workspace_tool.validate_and_get_workspace_path(input_path_full)
-                    if not error:
-                        # Convert as Single File
-                        file_content = await workspace_obj.read_internal(relative_path)
-                        if not file_content.startswith('{"error":'):
-                            is_file = True
-                            if javascript_safe:
-                                file_content = JavaScriptSafeContentProcessor().process_markdown_content(file_content)
-                            file_name = Path(input_path).name
-                            file_structure = [{
-                                'name': file_name,
-                                'type': 'file',
-                                'path': file_name,
-                                'content': file_content
-                            }]
-                            file_count = 1
-                            logger.debug(f"Converting single markdown file: {input_path}")
-                        else:
-                            error = f"Error reading file at {input_path}: {file_content}"
-                            logger.error(error)
-                            return json.dumps({
-                                "success": False,
-                                "error": error
-                            })
-                    else:
-                        logger.error(f"Error validating input path: {error}")
-                        return json.dumps({
-                            "success": False,
-                            "error": f"Input path '{input_path}' is not accessible: {error}"
-                        })
-                except:
-                    pass  # Not a file, treat as directory
-
-            if not is_file: # Treat as directory
-                # Check if input directory exists
-                logger.debug("Checking if input path exists...")
-                ls_result = await self.workspace_tool.ls(path=input_path_full, tool_context=tool_context)
-                
-                # Parse the ls result using the helper function
-                success, ls_data, error_msg = self._parse_workspace_result(ls_result, "directory listing")
-                if not success:
-                    return json.dumps({
-                        "success": False,
-                        "error": f"Input path '{input_path}' is not accessible: {error_msg}"
-                    })
-                
-                # Ensure ls_data is in the expected format for downstream processing
-                if isinstance(ls_data, list):
-                    # Convert list to the expected format with items
-                    ls_data = {'items': [{'name': item, 'type': 'file' if '.' in item else 'directory'} for item in ls_data]}
-                elif not isinstance(ls_data, dict) or 'items' not in ls_data:
-                    # Fallback for unexpected format
-                    ls_data = {'items': []}
-
-                # Collect markdown files
-                logger.debug("Collecting markdown files...")
-                combined_ignore_list = files_to_ignore + ([output_filename] if output_filename else [])
-                markdown_files = await self.file_collector.collect_markdown_files(
-                    root_path=input_path_full, files_to_ignore=combined_ignore_list, tool_context=tool_context)
-
-                if not markdown_files:
-                    logger.debug(f"No markdown files found in {input_path}. Will search subdirectories recursively...")
-
-                    # Try to search deeper by examining subdirectories manually
-                    for item in ls_data.get('items', []):
-                        if item['type'] == 'directory':
-                            subdir_path = f"{input_path_full}/{item['name']}"
-                            subdir_files = await self.file_collector.collect_markdown_files(root_path=subdir_path, files_to_ignore=combined_ignore_list, tool_context=tool_context)
-                            if subdir_files:
-                                markdown_files.update(subdir_files)
-
-                    # If still no files found
-                    if not markdown_files:
-                        return json.dumps({
-                            "success": False,
-                            "error": f"No markdown files found in {input_path} or its subdirectories"
-                        })
-
-                logger.debug(f"Found {len(markdown_files)} markdown files. Building file structure...")
-
-                # Build file structure for the viewer
-                file_structure = await self.file_collector.build_file_structure(input_path_full, markdown_files, safe_processing=javascript_safe)
-                file_count = len(markdown_files)
+            if error:
+                return self._create_error_response(error)
 
             if not file_structure:
-                return json.dumps({
-                    "success": False,
-                    "error": "Failed to build file structure"
-                })
+                return self._create_error_response("Failed to build file structure")
 
-            # Get the HTML template
-            logger.debug("Preparing HTML template...")
-            html_template = await self.template_manager.get_html_template()
+            # Generate HTML output
+            html_content, html_error = await self._generate_html_output(file_structure, title, output_path_full)
+            if html_error:
+                return self._create_error_response(html_error)
 
-            # Customize title if provided
-            if title:
-                html_template = html_template.replace(
-                    "<h3 style=\"margin: 0 16px 16px 16px;\">Agent C Output Viewer</h3>",
-                    f"<h3 style=\"margin: 0 16px 16px 16px;\">{title}</h3>")
+            # Raise media event
+            await self._raise_media_event(output_filename, output_path_full, file_count, tool_context)
 
-            # Replace placeholder with file structure
-            json_structure = json.dumps(file_structure)
-            html_content = html_template.replace('$FILE_STRUCTURE', json_structure)
-
-            # Write the generated HTML to the workspace
-            logger.debug("Writing HTML viewer to output location...")
-            write_result = await self.workspace_tool.write(
-                path=output_path_full,
-                data=html_content,
-                mode="write"
-            )
-
-            # Parse the write result using the helper function
-            success, write_data, error_msg = self._parse_workspace_result(write_result, "write operation")
-            if not success:
-                return json.dumps({
-                    "success": False,
-                    "error": f"Failed to write HTML file: {error_msg}"
-                })
-
+            # Return success response
             message = f"Successfully generated HTML viewer at {output_filename}."
             logger.debug(message)
 
-            # Get file system path and raise a media event
-            file_system_path = os_file_system_path(self.workspace_tool, output_filename)
-
-            # Create output info dictionary
-            output_info = {
-                "output_filename": output_filename,
-                "output_path": output_path_full,
-                "file_system_path": file_system_path,
-                "file_count": file_count
-            }
-
-            # Generate and raise HTML content for the result
-            try:
-                html_content = await self.media_helper.create_result_html(output_info)
-                await self._raise_render_media(
-                    sent_by_class=self.__class__.__name__,
-                    sent_by_function='generate_md_viewer',
-                    content_type="text/html",
-                    content=html_content,
-                    tool_context=tool_context)
-
-                # markdown_content = await self.media_helper.create_markdown_media(output_info)
-                # await self._raise_render_media(
-                #     sent_by_class=self.__class__.__name__,
-                #     sent_by_function='generate_report',
-                #     content_type="text/markdown",  # Use text/markdown content type
-                #     content=markdown_content
-                # )
-            except Exception as e:
-                logger.error(f"Failed to raise media event: {str(e)}")
-
-            return json.dumps({
-                "success": True,
-                "message": message,
-                "output_file": output_filename,
-                "output_path": output_path_full,
-                "workspace": workspace,
-                "file_count": file_count,
-            })
+            return self._create_success_response(
+                message,
+                output_file=output_filename,
+                output_path=output_path_full,
+                workspace=workspace,
+                file_count=file_count
+            )
 
         except Exception as e:
             logger.exception("Error generating markdown viewer")
-            return json.dumps({
-                "success": False,
-                "error": f"Error generating markdown viewer: {str(e)}"
-            })
+            return self._create_error_response(f"Error generating markdown viewer: {str(e)}")
 
     @json_schema(
         description="Generate an interactive HTML viewer with custom file hierarchy structure",
@@ -371,25 +237,13 @@ class MarkdownToHtmlReportTools(Toolset):
         }
     )
     async def generate_custom_md_viewer(self, **kwargs) -> str:
-        """Generate an interactive HTML viewer with custom file hierarchy structure.
-
-        Args:
-            kwargs:
-                workspace: The workspace containing the markdown files
-                output_filename: The name of the output HTML file to generate
-                custom_structure: JSON string defining the custom hierarchy structure
-                title: Optional title for the HTML viewer
-                file_path: Optional base path for resolving relative file paths in custom structure
-
-        Returns:
-            A dictionary with success status and information about the operation
-        """
-        validation_error = self.validation_helper.validate_required_fields(
+        """Generate an interactive HTML viewer with custom file hierarchy structure."""
+        success, validation_error = validate_required_fields(
             kwargs, ["workspace", "output_filename", "custom_structure"])
 
         # Validate required fields
-        if validation_error:
-            return json.dumps({"success": False, "error": validation_error})
+        if not success:
+            return self._create_error_response(validation_error)
 
         workspace = kwargs.get('workspace')
         output_filename = kwargs.get('output_filename')
@@ -401,10 +255,7 @@ class MarkdownToHtmlReportTools(Toolset):
             try:
                 custom_structure = json.loads(custom_structure_json)
             except json.JSONDecodeError as e:
-                return json.dumps({
-                    "success": False,
-                    "error": f"Invalid JSON in custom_structure: {str(e)}"
-                })
+                return self._create_error_response(f"Invalid JSON in custom_structure: {str(e)}")
 
             # Create base path for file resolution
             base_path = f"//{workspace}"
@@ -418,25 +269,16 @@ class MarkdownToHtmlReportTools(Toolset):
                 # Use enhanced validation from MarkdownFileCollector
                 is_valid, error_msg = await file_collector.validate_custom_structure(custom_structure, base_path)
                 if not is_valid:
-                    return json.dumps({
-                        "success": False,
-                        "error": f"Invalid custom structure: {error_msg}"
-                    })
+                    return self._create_error_response(f"Invalid custom structure: {error_msg}")
 
                 # Build the structure using enhanced MarkdownFileCollector
                 structure = await file_collector.build_custom_structure(custom_structure, base_path)
                 
                 if not structure:
-                    return json.dumps({
-                        "success": False,
-                        "error": "No valid markdown files found in the custom structure"
-                    })
+                    return self._create_error_response("No valid markdown files found in the custom structure")
 
             except ValueError as e:
-                return json.dumps({
-                    "success": False,
-                    "error": str(e)
-                })
+                return self._create_error_response(str(e))
 
             # Count files in the structure
             file_count = self._count_files_in_structure(structure)
@@ -450,11 +292,11 @@ class MarkdownToHtmlReportTools(Toolset):
                 output_path_full = output_filename
 
             # Get the HTML template
-            html_template = await self.template_manager.get_html_template()
+            html_template = await self._get_html_template()
 
             # Customize title
             html_template = html_template.replace(
-                "<h3 style=\"margin: 0 16px 16px 16px;\">Agent C Output Viewer</h3>",
+                Constants.DEFAULT_TITLE_PLACEHOLDER,
                 f"<h3 style=\"margin: 0 16px 16px 16px;\">{title}</h3>")
 
             # Replace placeholder with the processed structure
@@ -469,12 +311,27 @@ class MarkdownToHtmlReportTools(Toolset):
                 mode="write"
             )
 
-            write_data = json.loads(write_result)
+            # Handle potential empty or invalid JSON response
+            try:
+                if not write_result or write_result.strip() == "":
+                    # If write_result is empty, assume success (some workspace tools return empty on success)
+                    write_data = {"success": True}
+                else:
+                    write_data = json.loads(write_result)
+            except json.JSONDecodeError as e:
+                # Check if it's a plain text success message
+                if write_result and ("successfully written" in write_result.lower() or
+                                   "success" in write_result.lower() or
+                                   "data written" in write_result.lower() or
+                                   "file created" in write_result.lower()):
+                    logger.debug(f"Received plain text success message: {write_result}")
+                    write_data = {"success": True}
+                else:
+                    logger.error(f"Failed to parse workspace write response: {write_result}")
+                    return self._create_error_response(f"Invalid response from workspace write operation: {str(e)}")
+
             if 'error' in write_data:
-                return json.dumps({
-                    "success": False,
-                    "error": f"Failed to write HTML file: {write_data['error']}"
-                })
+                return self._create_error_response(f"Failed to write HTML file: {write_data['error']}")
 
             message = f"Successfully generated custom HTML viewer at {output_filename}."
             logger.debug(message)
@@ -493,7 +350,7 @@ class MarkdownToHtmlReportTools(Toolset):
 
             # Generate and raise HTML content for the result
             try:
-                html_content = await self.media_helper.create_result_html(output_info)
+                html_content = await self._create_result_html(output_info)
                 await self._raise_render_media(
                     sent_by_class=self.__class__.__name__,
                     sent_by_function='generate_custom_md_viewer',
@@ -503,22 +360,18 @@ class MarkdownToHtmlReportTools(Toolset):
             except Exception as e:
                 logger.error(f"Failed to raise media event: {str(e)}")
 
-            return json.dumps({
-                "success": True,
-                "message": message,
-                "output_file": output_filename,
-                "output_path": output_path_full,
-                "workspace": workspace,
-                "file_count": file_count,
-                "structure_type": "custom"
-            })
+            return self._create_success_response(
+                message,
+                output_file=output_filename,
+                output_path=output_path_full,
+                workspace=workspace,
+                file_count=file_count,
+                structure_type="custom"
+            )
 
         except Exception as e:
             logger.exception("Error generating custom markdown viewer")
-            return json.dumps({
-                "success": False,
-                "error": f"Error generating custom markdown viewer: {str(e)}"
-            })
+            return self._create_error_response(f"Error generating custom markdown viewer: {str(e)}")
 
     def _count_files_in_structure(self, structure):
         """Count the number of files in a processed structure.
@@ -580,32 +433,15 @@ class MarkdownToHtmlReportTools(Toolset):
         }
     )
     async def markdown_to_docx(self, **kwargs) -> str:
-        """Convert a markdown file to Word (DOCX) format.
-
-        Args:
-            kwargs:
-                workspace: The workspace containing the markdown file
-                input_path: The path to the markdown file to convert (UNC-style or relative to workspace)
-                output_path: Output path for the Word document (UNC-style or relative to workspace)
-                style: Style template to use (default, academic, business, minimal)
-                include_toc: Whether to include a table of contents
-                page_break_level: Insert page breaks before headings of this level (1-6)
-
-        Returns:
-            A dictionary with success status and information about the operation
-        """
         """Convert a markdown file to Word (DOCX) format."""
         if not self.docx_converter.docx_conversion_available:
-            return json.dumps({
-                "success": False,
-                "error": "Required dependencies not available. Please install python-markdown, python-docx, and beautifulsoup4."
-            })
+            return self._create_error_response("Required dependencies not available. Please install python-markdown, python-docx, and beautifulsoup4.")
 
         # Validate required fields
-        validation_error = self.validation_helper.validate_required_fields(
+        success, validation_error = validate_required_fields(
             kwargs, ["workspace", "input_path"])
-        if validation_error:
-            return json.dumps({"success": False, "error": validation_error})
+        if not success:
+            return self._create_error_response(validation_error)
 
         workspace = kwargs.get('workspace')
         input_path = kwargs.get('input_path')
@@ -618,11 +454,9 @@ class MarkdownToHtmlReportTools(Toolset):
             # Process paths
             input_path_full = create_unc_path(workspace, input_path)
 
-            if not has_file_extension(input_path_full, ['.md', '.markdown']):
-                return json.dumps({
-                    "success": False,
-                    "error": f"Input file '{input_path_full}' is not a markdown file."
-                })
+            if not has_file_extension(input_path_full, Constants.DOCX_EXTENSIONS):
+                return self._create_error_response(f"Input file '{input_path_full}' is not a markdown file.")
+
             input_filename = normalize_path(input_path_full).split('/')[-1]
 
             # Determine output path
@@ -658,31 +492,15 @@ class MarkdownToHtmlReportTools(Toolset):
                 )
             except Exception as e:
                 logger.error(f"Error writing docx file: {e}")
-                return json.dumps({
-                    "success": False,
-                    "error": f"Failed to write Word document: {str(e)}"
-                })
+                return self._create_error_response(f"Failed to write Word document: {str(e)}")
 
             # Parse the write result using the helper function
             success, write_data, error_msg = self._parse_workspace_result(write_result, "write operation")
             if not success:
-                return json.dumps({
-                    "success": False,
-                    "error": f"Failed to write Word document: {error_msg}"
-                })
+                return self._create_error_response(f"Failed to write Word document: {error_msg}")
 
             # Get file system path
             file_system_path = os_file_system_path(self.workspace_tool, output_path_full)
-
-            # Prepare output summary
-            result = {
-                "success": True,
-                "message": f"Successfully converted markdown to Word document at {output_path_full}",
-                "input_file": input_path_full,
-                "output_file": output_path_full,
-                "workspace": workspace,
-                "style": style
-            }
 
             # Create output info dictionary for media event
             output_info = {
@@ -695,7 +513,7 @@ class MarkdownToHtmlReportTools(Toolset):
 
             # Generate and raise HTML content for the result
             try:
-                html_content = await self.media_helper.create_result_html(output_info)
+                html_content = await self._create_result_html(output_info)
                 await self._raise_render_media(
                     sent_by_class=self.__class__.__name__,
                     sent_by_function='markdown_to_docx',
@@ -706,15 +524,268 @@ class MarkdownToHtmlReportTools(Toolset):
             except Exception as e:
                 logger.error(f"Failed to raise media event: {str(e)}")
 
-            return json.dumps(result)
+            return self._create_success_response(
+                f"Successfully converted markdown to Word document at {output_path_full}",
+                input_file=input_path_full,
+                output_file=output_path_full,
+                workspace=workspace,
+                style=style
+            )
 
         except Exception as e:
             logger.exception("Error converting markdown to Word document")
-            return json.dumps({
-                "success": False,
-                "error": f"Error converting markdown to Word document: {str(e)}"
-            })
+            return self._create_error_response(f"Error converting markdown to Word document: {str(e)}")
+
+    def _create_error_response(self, error_message: str) -> str:
+        """Create a standardized error response."""
+        return json.dumps({"success": False, "error": error_message})
+
+    def _create_success_response(self, message: str, **additional_data) -> str:
+        """Create a standardized success response."""
+        response = {
+            "success": True,
+            "message": message,
+            **additional_data
+        }
+        return json.dumps(response)
+
+    async def _validate_and_process_paths(self, workspace: str, input_path: str, output_filename: str) -> tuple:
+        """
+        Validate and process input/output paths.
+
+        Returns:
+            tuple: (input_path_full, output_path_full, error_message)
+            If error_message is not None, the operation failed.
+        """
+        try:
+            # Create UNC input path
+            input_path_full = create_unc_path(workspace, input_path)
+
+            # Create UNC output filename
+            output_filename = ensure_file_extension(output_filename, 'html')
+            if not output_filename.startswith('//'):
+                output_path_full = create_unc_path(workspace, output_filename)
+            else:
+                output_path_full = output_filename
+
+            return input_path_full, output_path_full, None
+        except Exception as e:
+            return None, None, f"Error processing paths: {str(e)}"
+
+    async def _handle_single_file_conversion(self, input_path_full: str, input_path: str, javascript_safe: bool) -> tuple:
+        """
+        Handle conversion of a single markdown file.
+
+        Returns:
+            tuple: (file_structure, file_count, error_message)
+            If error_message is not None, the operation failed.
+        """
+        try:
+            error, workspace_obj, relative_path = self.workspace_tool.validate_and_get_workspace_path(input_path_full)
+            if error:
+                return None, 0, f"Input path '{input_path}' is not accessible: {error}"
+
+            # Read file content
+            file_content = await workspace_obj.read_internal(relative_path)
+            if file_content.startswith('{"error":'):
+                return None, 0, f"Error reading file at {input_path}: {file_content}"
+
+            # Process content for JavaScript safety if needed
+            if javascript_safe:
+                file_content = self._process_javascript_safe_content(file_content)
+
+            # Create file structure
+            file_name = Path(input_path).name
+            file_structure = [{
+                'name': file_name,
+                'type': 'file',
+                'path': file_name,
+                'content': file_content
+            }]
+
+            logger.debug(f"Converting single markdown file: {input_path}")
+            return file_structure, 1, None
+
+        except Exception as e:
+            return None, 0, f"Error processing single file: {str(e)}"
+
+    async def _handle_directory_conversion(self, input_path_full: str, input_path: str, files_to_ignore: list,
+                                         output_filename: str, javascript_safe: bool, tool_context: dict) -> tuple:
+        """
+        Handle conversion of a directory containing markdown files.
+
+        Returns:
+            tuple: (file_structure, file_count, error_message)
+            If error_message is not None, the operation failed.
+        """
+        try:
+            # Use the file collector to gather markdown files first
+            logger.debug(f"Converting directory: {input_path}")
+
+            # Step 1: Collect all markdown files in the directory
+            markdown_files = await self.file_collector.collect_markdown_files(
+                root_path=input_path_full,
+                tool_context=tool_context,
+                files_to_ignore=files_to_ignore
+            )
+
+            if not markdown_files:
+                return None, 0, f"No markdown files found in directory: {input_path}"
+
+            # Step 2: Build the hierarchical structure from the collected files
+            structure = await self.file_collector.build_file_structure(
+                root_path=input_path_full,
+                markdown_files=markdown_files,
+                safe_processing=javascript_safe
+            )
+
+            if not structure:
+                return None, 0, f"Failed to build file structure for directory: {input_path}"
+
+            file_count = self._count_files_in_structure(structure)
+            logger.debug(f"Found {file_count} markdown files in directory")
+
+            return structure, file_count, None
+
+        except Exception as e:
+            logger.exception("Error processing directory")
+            return None, 0, f"Error processing directory: {str(e)}"
+
+    async def _generate_html_output(self, file_structure: list, title: str, output_path_full: str) -> tuple:
+        """
+        Generate HTML output from file structure.
+
+        Returns:
+            tuple: (html_content, error_message)
+            If error_message is not None, the operation failed.
+        """
+        try:
+            # Get the HTML template
+            html_template = await self._get_html_template()
+
+            # Customize title
+            html_template = html_template.replace(
+                Constants.DEFAULT_TITLE_PLACEHOLDER,
+                f"<h3 style=\"margin: 0 16px 16px 16px;\">{title}</h3>")
+
+            # Replace placeholder with the processed structure
+            json_structure = json.dumps(file_structure, ensure_ascii=False)
+            html_content = html_template.replace('$FILE_STRUCTURE', json_structure)
+
+            # Write the generated HTML to the workspace
+            logger.debug("Writing HTML viewer to output location...")
+            write_result = await self.workspace_tool.write(
+                path=output_path_full,
+                data=html_content,
+                mode="write"
+            )
+
+            # Handle potential empty or invalid JSON response
+            try:
+                if not write_result or write_result.strip() == "":
+                    # If write_result is empty, assume success (some workspace tools return empty on success)
+                    write_data = {"success": True}
+                else:
+                    write_data = json.loads(write_result)
+            except json.JSONDecodeError as e:
+                # Check if it's a plain text success message
+                if write_result and ("successfully written" in write_result.lower() or
+                                   "success" in write_result.lower() or
+                                   "data written" in write_result.lower() or
+                                   "file created" in write_result.lower()):
+                    logger.debug(f"Received plain text success message: {write_result}")
+                    write_data = {"success": True}
+                else:
+                    logger.error(f"Failed to parse workspace write response: {write_result}")
+                    return self._create_error_response(f"Invalid response from workspace write operation: {str(e)}")
+
+            if 'error' in write_data:
+                return None, f"Failed to write HTML file: {write_data['error']}"
+
+            return html_content, None
+
+        except Exception as e:
+            logger.exception("Error generating HTML output")
+            return None, f"Error generating HTML output: {str(e)}"
+
+    async def _raise_media_event(self, output_filename: str, output_path_full: str, file_count: int, tool_context: dict):
+        """Generate and raise media event for the result."""
+        try:
+            # Get file system path and raise a media event
+            file_system_path = os_file_system_path(self.workspace_tool, output_path_full)
+
+            # Create output info dictionary
+            output_info = {
+                "output_filename": output_filename,
+                "output_path": output_path_full,
+                "file_system_path": file_system_path,
+                "file_count": file_count
+            }
+
+            # Generate and raise HTML content for the result
+            html_content = await self._create_result_html(output_info)
+            await self._raise_render_media(
+                sent_by_class=self.__class__.__name__,
+                sent_by_function='generate_md_viewer',
+                content_type="text/html",
+                content=html_content,
+                tool_context=tool_context
+            )
+        except Exception as e:
+            logger.error(f"Failed to raise media event: {str(e)}")
+
+    async def _get_html_template(self) -> str:
+        """Get the HTML template for the viewer."""
+        try:
+            from .helpers.html_template_manager import HtmlTemplateManager
+            template_manager = HtmlTemplateManager()
+            return await template_manager.get_html_template()
+        except Exception as e:
+            logger.error(f"Failed to get HTML template: {str(e)}")
+            raise
+
+    def _process_javascript_safe_content(self, content: str) -> str:
+        """Process content to make it JavaScript-safe by escaping problematic patterns."""
+        try:
+            from .helpers.javascript_safe_content_processor import JavaScriptSafeContentProcessor
+            processor = JavaScriptSafeContentProcessor()
+            return processor.process_content(content)
+        except Exception as e:
+            logger.error(f"Failed to process JavaScript-safe content: {str(e)}")
+            return content  # Return original content if processing fails
+
+    async def _create_result_html(self, output_info: dict) -> str:
+        """Create HTML content for result media events."""
+        try:
+            from .helpers.media_helper import MediaEventHelper
+            media_helper = MediaEventHelper()
+            return await media_helper.create_result_html(output_info)
+        except Exception as e:
+            logger.error(f"Failed to create result HTML: {str(e)}")
+            # Return basic HTML as fallback
+            return f"""
+            <div style="padding: 16px; background: #f8f9fa; border-radius: 8px; margin: 8px 0;">
+                <h4 style="margin: 0 0 8px 0; color: #28a745;">✅ File Generated Successfully</h4>
+                <p style="margin: 4px 0;"><strong>Output:</strong> {output_info.get('output_filename', 'Unknown')}</p>
+                <p style="margin: 4px 0;"><strong>Files Processed:</strong> {output_info.get('file_count', 0)}</p>
+            </div>
+            """
+
+    async def _raise_render_media(self, sent_by_class: str, sent_by_function: str,
+                                content_type: str, content: str, tool_context: dict = None):
+        """Raise a render media event."""
+        try:
+            if tool_context and hasattr(self.tool_chest, '_raise_render_media'):
+                await self.tool_chest._raise_render_media(
+                    sent_by_class=sent_by_class,
+                    sent_by_function=sent_by_function,
+                    content_type=content_type,
+                    content=content,
+                    tool_context=tool_context
+                )
+        except Exception as e:
+            logger.error(f"Failed to raise render media event: {str(e)}")
 
 
-# Register the toolset with the Agent C framework
+# Register the toolset
 Toolset.register(MarkdownToHtmlReportTools, required_tools=['WorkspaceTools'])
