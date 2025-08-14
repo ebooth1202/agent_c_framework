@@ -11,6 +11,7 @@ from .helpers.markdown_to_docx import MarkdownToDocxConverter
 from ... import WorkspaceTools
 from ...helpers.path_helper import create_unc_path, ensure_file_extension, os_file_system_path, has_file_extension, normalize_path
 from ...helpers.validate_kwargs import validate_required_fields
+from ...helpers.workspace_result_parser import parse_workspace_result
 
 logger = logging.getLogger(__name__)
 
@@ -55,49 +56,6 @@ class MarkdownToHtmlReportTools(Toolset):
         except Exception as e:
             logger.exception(f"Error in {operation_name}: {str(e)}")
             return {"success": False, "error": f"Error in {operation_name}: {str(e)}"}
-
-    @staticmethod
-    def _parse_workspace_result(result: str, operation_name: str = "workspace operation"):
-        """Parse workspace tool results that may be JSON, YAML, or error strings.
-        
-        Args:
-            result: The result string from a workspace tool method
-            operation_name: Name of the operation for error reporting
-            
-        Returns:
-            tuple: (success: bool, data: dict|str, error_msg: str|None)
-        """
-        if not isinstance(result, str):
-            return False, None, f"Expected string result from {operation_name}, got {type(result)}"
-            
-        # Check for error responses
-        if result.startswith(("Error:", "ERROR:")):
-            return False, None, result
-            
-        # Try JSON first (most common for write operations)
-        try:
-            data = json.loads(result)
-            if isinstance(data, dict) and 'error' in data:
-                return False, data, data['error']
-            return True, data, None
-        except json.JSONDecodeError:
-            pass
-            
-        # Try YAML (common for ls operations)
-        try:
-            import yaml
-            data = yaml.safe_load(result)
-            if isinstance(data, dict) and 'error' in data:
-                return False, data, data['error']
-            return True, data, None
-        except Exception:
-            pass
-            
-        # If all parsing fails, treat as raw string (might be success message)
-        if "success" in result.lower() or "completed" in result.lower():
-            return True, result, None
-        else:
-            return False, None, f"Could not parse {operation_name} result: {result}"
 
     @json_schema(
         description="Generate an interactive HTML viewer for markdown files in a workspace directory",
@@ -495,7 +453,7 @@ class MarkdownToHtmlReportTools(Toolset):
                 return self._create_error_response(f"Failed to write Word document: {str(e)}")
 
             # Parse the write result using the helper function
-            success, write_data, error_msg = self._parse_workspace_result(write_result, "write operation")
+            success, write_data, error_msg = parse_workspace_result(write_result, "write operation")
             if not success:
                 return self._create_error_response(f"Failed to write Word document: {error_msg}")
 
