@@ -32,6 +32,7 @@ from .health import FDANDCTools, ClinicalTrialsTools, PubMedTools
 from .salesforce import SalesforceTools
 from .linked_in import LinkedInTools
 from .youtube import YoutubeTranscriptTools, YoutubeCommentsTools, YoutubeSearchViaApiTools, YoutubeSearchViaWebTools
+from .sars import SarsTools
 
 __all__ = [
     # Essential Tools for good agents
@@ -104,5 +105,8 @@ __all__ = [
     'FDANDCTools',
     'ClinicalTrialsTools',
     'PubMedTools',
+
+    # BOKF Demo Only
+    'SARSTools',
 
 ]
