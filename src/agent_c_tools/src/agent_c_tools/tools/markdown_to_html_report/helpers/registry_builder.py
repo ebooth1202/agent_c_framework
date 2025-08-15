@@ -429,7 +429,20 @@ class RegistryBuilder:
                 collisions[name] = list(paths)
         return collisions
 
+    def _inject_content_into_tree(self, ui_tree: List[Dict], registry: DocRegistry) -> None:
+        """Update file nodes in the provided ui_tree with content from the registry."""
 
+        def walk(nodes: List[Dict]):
+            for n in nodes:
+                if n.get('type') == 'file':
+                    p = n.get('path')
+                    doc = registry.by_path.get(p)
+                    if doc:
+                        n['content'] = doc.content
+                elif n.get('type') == 'folder' and 'children' in n:
+                    walk(n['children'])
+
+        walk(ui_tree)
 # -----------------------
 # Module-level API
 # -----------------------
@@ -474,8 +487,13 @@ async def build_registry_and_tree(
     final_registry, rewrite_warnings = builder.apply_link_rewriting(result.registry)
     all_warnings.extend(rewrite_warnings)
 
-    # IMPORTANT: Rebuild the UI tree AFTER rewriting so 'content' reflects rewritten links
-    final_ui_tree = builder._build_hierarchical_tree(final_registry)
+    if mode == 'custom':
+        # keep the user-provided grouping, just refresh content from the registry
+        final_ui_tree = result.ui_tree
+        builder._inject_content_into_tree(final_ui_tree, final_registry)
+    else:
+        # directory mode: build canonical OS-based tree
+        final_ui_tree = builder._build_hierarchical_tree(final_registry)
 
     return final_registry, final_ui_tree, all_warnings
 
@@ -514,3 +532,4 @@ def validate_registry_integrity(registry: DocRegistry) -> List[str]:
         issues.append(f"Documents with empty content: {empty_docs}")
 
     return issues
+

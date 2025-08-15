@@ -1015,15 +1015,16 @@
                 if (!link) return;
                 const href = link.getAttribute('href') || '';
 
-                if (href.startsWith('viewer://')) {
+                // 1) Show popup for unresolved FIRST
+                if (link.classList.contains('unresolved')) {
+                    event.preventDefault();
+                    this.showNotification(link.getAttribute('title') || 'Link not available', 'warning');
+                } else if (href.startsWith('viewer://')) {
                     event.preventDefault();
                     this.handleViewerLink(href);
                 } else if (href.startsWith('#')) {
                     event.preventDefault();
-                    this.scrollToAnchor(href.slice(1));
-                } else if (link.classList.contains('unresolved')) {
-                    event.preventDefault();
-                    this.showNotification(link.getAttribute('title') || 'Link not available', 'warning');
+                    this.handleViewerLink(href);
                 } else if (/^https?:\/\//i.test(href)) {
                     if (!link.hasAttribute('target')) {
                         link.setAttribute('target', '_blank');
