@@ -296,21 +296,31 @@ class RegistryBuilder:
 
             if item_type == 'file':
                 file_path = item['path']
+                # UNC / on-disk path for reading:
                 resolved_path = self._resolve_custom_file_path(file_path, base_path)
 
-                # The canonical registry key (path) we want to expose to the viewer
-                custom_path = f"{current_path}/{item_name}".strip('/') if current_path else item_name
-                if not custom_path.lower().endswith(('.md', '.markdown', '.mdx')):
-                    custom_path += '.md'
+                # Canonical *registry* path used for link resolution & viewer:// URLs:
+                # - strip leading slash
+                # - normalize separators
+                registry_path = file_path.lstrip('/').replace('\\', '/')
 
-                doc = await self._create_doc_from_file(resolved_path, custom_path, item_name)
+                # Display label shown in the tree:
+                display_name = item.get('name') or Path(registry_path).stem
+
+                # Read & register using the canonical registry path
+                doc = await self._create_doc_from_file(
+                    resolved_path,
+                    registry_path,  # <-- IMPORTANT: use canonical registry path, not a "pretty" one
+                    display_name
+                )
                 registry.add_document(doc)
 
+                # UI node: show the custom name, but the clickable path must be the canonical one
                 ui_tree.append({
-                    'name': item_name,
+                    'name': display_name,
                     'type': 'file',
-                    'path': custom_path,
-                    'content': doc.content,     # include content so the template can render
+                    'path': registry_path,  # <-- MUST match registry.by_path key
+                    'content': doc.content,
                 })
 
             elif item_type == 'folder':
