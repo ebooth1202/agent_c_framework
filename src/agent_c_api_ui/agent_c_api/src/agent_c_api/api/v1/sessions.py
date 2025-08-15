@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 import logging
-from agent_c_api.core.agent_manager import UItoAgentBridgeManager
+# from agent_c_api.core.agent_manager import UItoAgentBridgeManager
 from agent_c_api.api.dependencies import get_agent_manager
 from agent_c_api.api.v1.llm_models.agent_params import AgentInitializationParams
 
@@ -61,8 +61,7 @@ async def get_sessions(agent_manager=Depends(get_agent_manager)):
         HTTPException: If there's an error retrieving sessions
     """
     try:
-        mgr: UItoAgentBridgeManager = agent_manager
-        sessions = mgr.chat_session_manager.session_id_list
+        sessions = agent_manager.chat_session_manager.session_id_list
         return {"session_ids": sessions}
 
     except Exception as e:

@@ -2,7 +2,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends, WebSocket
 
 from agent_c.util.logging_utils import LoggingManager
-from agent_c_api.core.agent_manager import UItoAgentBridgeManager
+# from agent_c_api.core.agent_manager import UItoAgentBridgeManager
 from agent_c_api.api.dependencies import get_agent_manager
 from agent_c_api.core.util.jwt import validate_websocket_jwt
 
@@ -53,8 +53,8 @@ async def get_sessions(agent_manager=Depends(get_agent_manager)):
         HTTPException: If there's an error retrieving sessions
     """
     try:
-        mgr: UItoAgentBridgeManager = agent_manager
-        sessions = mgr.chat_session_manager.session_id_list
+
+        sessions = agent_manager.chat_session_manager.session_id_list
         return {"session_ids": sessions}
 
     except Exception as e:

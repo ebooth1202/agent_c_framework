@@ -1,8 +1,7 @@
-import asyncio
 import json
 import threading
 import traceback
-from typing import Any, Dict, List, Union, Optional, AsyncGenerator, Coroutine
+from typing import List, Optional, Any, Dict
 
 from fastapi import WebSocket, WebSocketDisconnect
 from functools import singledispatchmethod
@@ -15,14 +14,13 @@ from agent_c.util.heygen_streaming_avatar_client import HeyGenStreamingAvatarCli
 from agent_c.util.registries.event import EventRegistry
 from agent_c_api.api.avatar.models.client_events import GetAgentsEvent, ErrorEvent, AgentListEvent, GetAvatarsEvent, AvatarListEvent, TextInputEvent
 from agent_c_api.core.agent_bridge import AgentBridge
-from agent_c.models.context.interaction_context import InteractionContext
 from agent_c.models.input import AudioInput
-from agent_c_api.config.env_config import settings
+
 from agent_c.models.input.file_input import FileInput
 from agent_c_api.core.file_handler import FileHandler
 from agent_c.models.input.image_input import ImageInput
 from agent_c_tools.tools.think.prompt import ThinkSection
-from agent_c.prompting import PromptBuilder, CoreInstructionSection
+from agent_c.prompting import PromptBuilder
 from agent_c.prompting.basic_sections.persona import DynamicPersonaSection
 
 
@@ -181,7 +179,7 @@ class AvatarBridge(AgentBridge):
             else:
                 agent_sections = [DynamicPersonaSection()]
 
-            chat_params = {
+            chat_params: Dict[str, Any] = {
                 "user_id": self.chat_session.user_id,
                 "chat_session": self.chat_session,
                 "tool_chest": self.tool_chest,

@@ -4,10 +4,11 @@ HeyGen Streaming Avatar API Client
 This module provides an httpx-based client for interacting with the HeyGen Streaming Avatar API.
 """
 import os
-import json
-from typing import Optional
-from datetime import datetime
 import httpx
+import json
+
+from typing import Optional, Dict, Any
+
 
 from agent_c.models.heygen import (
     # Request models
@@ -25,6 +26,7 @@ from agent_c.models.heygen import (
     HeyGenBaseResponse,
     SimpleStatusResponse,
 )
+from agent_c.util.logging_utils import LoggingManager
 
 
 class HeyGenStreamingAvatarClient:
@@ -45,16 +47,11 @@ class HeyGenStreamingAvatarClient:
             api_key: HeyGen API key for authentication
             timeout: Request timeout in seconds
         """
+        self.logger = LoggingManager(__name__).get_logger()
         self.api_key = api_key if api_key else os.environ.get("HEYGEN_API_KEY")
         self.timeout = timeout
-        self._client = httpx.AsyncClient(
-            base_url=self.BASE_URL,
-            timeout=timeout,
-            headers={
-                "x-api-key": api_key,
-                "Content-Type": "application/json"
-            }
-        )
+        self._client = httpx.AsyncClient( base_url=self.BASE_URL, timeout=timeout,
+                                          headers={"x-api-key": api_key, "Content-Type": "application/json" })
 
     @staticmethod
     def _locate_config_path() -> str:
@@ -136,7 +133,7 @@ class HeyGenStreamingAvatarClient:
         except Exception as e:
             # Log the error but don't fail the request
             # In a production system, you'd want proper logging here
-            pass
+            self.logger.exception("Failed to cache avatars", exc_info=e)
         
         return ListAvatarsResponse.model_validate(deduplicated_response)
     
@@ -157,18 +154,18 @@ class HeyGenStreamingAvatarClient:
         Raises:
             httpx.HTTPError: If the request fails and no cache is available
         """
-        try:
-            config_path = self._locate_config_path()
-            cache_file = os.path.join(config_path, "avatars_cache.json")
-            
-            if os.path.exists(cache_file):
+
+        config_path = self._locate_config_path()
+        cache_file = os.path.join(config_path, "avatars_cache.json")
+
+        if os.path.exists(cache_file):
+            try:
                 with open(cache_file, 'r') as f:
                     cached_data = json.load(f)
                 return ListAvatarsResponse.model_validate(cached_data)
-        except Exception:
-            # If cache loading fails, fall through to API call
-            pass
-        
+            except Exception:
+                self.logger.exception("Failed to load cached avatars", exc_info=True)
+
         # No cache available or cache loading failed, fetch from API
         return await self.fetch_avatars()
     
@@ -185,10 +182,7 @@ class HeyGenStreamingAvatarClient:
         Raises:
             httpx.HTTPError: If the request fails
         """
-        response = await self._client.post(
-            "/v1/streaming.new",
-            json=request.model_dump(exclude_none=True)
-        )
+        response = await self._client.post("/v1/streaming.new",json=request.model_dump(exclude_none=True))
         response.raise_for_status()
         return NewSessionResponse.model_validate(response.json())
     
@@ -205,10 +199,7 @@ class HeyGenStreamingAvatarClient:
         Raises:
             httpx.HTTPError: If the request fails
         """
-        response = await self._client.post(
-            "/v1/streaming.start",
-            json=request.model_dump()
-        )
+        response = await self._client.post("/v1/streaming.start", json=request.model_dump() )
         response.raise_for_status()
         return SimpleStatusResponse.model_validate(response.json())
     
@@ -225,10 +216,7 @@ class HeyGenStreamingAvatarClient:
         Raises:
             httpx.HTTPError: If the request fails
         """
-        response = await self._client.post(
-            "/v1/streaming.task",
-            json=request.model_dump(exclude_none=True)
-        )
+        response = await self._client.post("/v1/streaming.task", json=request.model_dump(exclude_none=True))
         response.raise_for_status()
         return SendTaskResponse.model_validate(response.json())
     
@@ -245,10 +233,7 @@ class HeyGenStreamingAvatarClient:
         Raises:
             httpx.HTTPError: If the request fails
         """
-        response = await self._client.post(
-            "/v1/streaming.interrupt",
-            json=request.model_dump()
-        )
+        response = await self._client.post("/v1/streaming.interrupt", json=request.model_dump())
         response.raise_for_status()
         return HeyGenBaseResponse.model_validate(response.json())
     
@@ -265,10 +250,7 @@ class HeyGenStreamingAvatarClient:
         Raises:
             httpx.HTTPError: If the request fails
         """
-        response = await self._client.post(
-            "/v1/streaming.stop",
-            json=request.model_dump()
-        )
+        response = await self._client.post("/v1/streaming.stop", json=request.model_dump())
         response.raise_for_status()
         return SimpleStatusResponse.model_validate(response.json())
     
@@ -285,10 +267,7 @@ class HeyGenStreamingAvatarClient:
         Raises:
             httpx.HTTPError: If the request fails
         """
-        response = await self._client.post(
-            "/v1/streaming.keep_alive",
-            json=request.model_dump()
-        )
+        response = await self._client.post("/v1/streaming.keep_alive", json=request.model_dump())
         response.raise_for_status()
         return HeyGenBaseResponse.model_validate(response.json())
     
@@ -346,7 +325,7 @@ class HeyGenStreamingAvatarClient:
         Raises:
             httpx.HTTPError: If the request fails
         """
-        params = {
+        params: Dict[str, Any] = {
             "page": page,
             "page_size": page_size
         }
