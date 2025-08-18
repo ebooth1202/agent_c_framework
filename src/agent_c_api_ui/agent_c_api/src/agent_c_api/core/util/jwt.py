@@ -1,21 +1,26 @@
-from typing import Optional
+import os
+import sys
+import argparse
 
+from typing import Optional
 from fastapi import WebSocket, HTTPException, status
 from fastapi.security import HTTPBearer
 from jose import jwt, JWTError
 from datetime import datetime, timedelta, UTC
-import os
-import argparse
-import sys
+
 
 # JWT Configuration
-SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-if not SECRET_KEY:
-    raise ValueError("JWT_SECRET_KEY environment variable is required")
 ALGORITHM = "HS256"
 
 security = HTTPBearer()
 
+def _jwt_secret_key() -> str:
+    """Get the JWT secret key from environment variable"""
+    secret_key = os.getenv("JWT_SECRET_KEY")
+    if not secret_key:
+        raise ValueError("JWT_SECRET_KEY environment variable is required")
+
+    return secret_key
 
 def create_jwt_token(user_id: str, permissions: list = None, time_delta: Optional[timedelta] = None ) -> str:
     """Create a JWT token for a user"""
@@ -28,12 +33,12 @@ def create_jwt_token(user_id: str, permissions: list = None, time_delta: Optiona
         "exp": now + time_delta,
         "iat": now,
     }
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(payload, _jwt_secret_key(), algorithm=ALGORITHM)
 
 def verify_jwt_token(token: str) -> dict:
     """Verify and decode JWT token"""
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, _jwt_secret_key(), algorithms=[ALGORITHM])
         user_id = payload.get("sub")
         if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid token")
@@ -137,4 +142,6 @@ def main():
 
 
 if __name__ == '__main__':
+    from dotenv import load_dotenv
+    load_dotenv()
     main()

@@ -52,6 +52,8 @@ class SetAvatarEvent(BaseEvent):
         avatar_id (str): The ID of the avatar to set.
     """
     avatar_id: str
+    quality: str = "medium"
+    video_encoding: str = "VP8"
 
 class AvatarConnectionChangedEvent(BaseEvent):
     token: str

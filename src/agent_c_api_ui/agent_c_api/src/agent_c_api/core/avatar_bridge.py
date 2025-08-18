@@ -10,9 +10,10 @@ from agent_c.chat import ChatSessionManager
 from agent_c.config.agent_config_loader import AgentConfigLoader
 from agent_c.models import ChatSession
 from agent_c.models.events import BaseEvent
+from agent_c.models.heygen import HeygenAvatarSessionData, NewSessionRequest
 from agent_c.util.heygen_streaming_avatar_client import HeyGenStreamingAvatarClient
 from agent_c.util.registries.event import EventRegistry
-from agent_c_api.api.avatar.models.client_events import GetAgentsEvent, ErrorEvent, AgentListEvent, GetAvatarsEvent, AvatarListEvent, TextInputEvent
+from agent_c_api.api.avatar.models.client_events import GetAgentsEvent, ErrorEvent, AgentListEvent, GetAvatarsEvent, AvatarListEvent, TextInputEvent, SetAvatarEvent
 from agent_c_api.core.agent_bridge import AgentBridge
 from agent_c.models.input import AudioInput
 
@@ -35,6 +36,7 @@ class AvatarBridge(AgentBridge):
         self.agent_config_loader: AgentConfigLoader = AgentConfigLoader()
         self.heygen = HeyGenStreamingAvatarClient()
         self.client_wants_cancel = threading.Event()
+        self.avatar_session: Optional[HeygenAvatarSessionData] = None
 
     @singledispatchmethod
     async def handle_client_event(self, event: BaseEvent) -> None:
@@ -60,6 +62,32 @@ class AvatarBridge(AgentBridge):
     async def send_avatar_list(self) -> None:
         resp = await self.heygen.list_avatars()
         await self.send_event(AvatarListEvent(avatars=resp.data))
+
+    async def end_avatar_session(self) -> None:
+        """End the current avatar session if it exists"""
+        if self.avatar_session:
+            try:
+                await self.heygen.close_session(self.avatar_session.session_id)
+                self.logger.info(f"Avatar session {self.avatar_session.session_id} ended successfully")
+            except Exception as e:
+                self.logger.error(f"Failed to end avatar session {self.avatar_session.session_id}: {e}")
+            finally:
+                self.avatar_session = None
+
+    @handle_client_event.register
+    async def _(self, event: SetAvatarEvent) -> None:
+        await self.set_avatar(event.avatar_id)
+
+    async def set_avatar(self, avatar_id: str, quality: str = "medium", vide0_encoding: str = "vp8") -> None:
+        """Set the avatar for the current session by creating a HeyGen session"""
+        if self.avatar_session is not None:
+            await self.end_avatar_session()
+
+        request = NewSessionRequest(avatar_id=avatar_id, quality=quality, video_encoding=vide0_encoding)
+        resp = await self.heygen.list_avatars()
+        await self.send_event(AvatarListEvent(avatars=resp.data))
+
+
 
     def parse_event(self, data: dict) -> BaseEvent:
         """Parse incoming data into appropriate event type"""

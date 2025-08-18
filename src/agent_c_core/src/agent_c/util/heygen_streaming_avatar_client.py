@@ -186,12 +186,12 @@ class HeyGenStreamingAvatarClient:
         response.raise_for_status()
         return NewSessionResponse.model_validate(response.json())
     
-    async def start_session(self, request: SessionIdRequest) -> SimpleStatusResponse:
+    async def start_session(self, session_id: str ) -> SimpleStatusResponse:
         """
         Start an existing streaming session.
         
         Args:
-            request: Session start parameters
+            session_id: The session to start
             
         Returns:
             SimpleStatusResponse containing status
@@ -199,16 +199,21 @@ class HeyGenStreamingAvatarClient:
         Raises:
             httpx.HTTPError: If the request fails
         """
+        request = SessionIdRequest(session_id=session_id)
         response = await self._client.post("/v1/streaming.start", json=request.model_dump() )
         response.raise_for_status()
         return SimpleStatusResponse.model_validate(response.json())
     
-    async def send_task(self, request: SendTaskRequest) -> SendTaskResponse:
+    async def send_task(self, session_id: str, text: str, task_mode: str = "async",
+                        task_type: str = "repeat") -> SendTaskResponse:
         """
         Send a task to an active session.
         
         Args:
-            request: Task parameters including session_id and text
+            session_id : The session ID to send the task to
+            text: The text input for the task
+            task_mode: The mode of the task, either "sync" or "async" (default: "async")
+            task_type: The type of task, e.g., "repeat"
             
         Returns:
             SendTaskResponse containing task response with duration and task_id
@@ -216,16 +221,17 @@ class HeyGenStreamingAvatarClient:
         Raises:
             httpx.HTTPError: If the request fails
         """
+        request = SendTaskRequest(session_id=session_id, text=text, task_mode=task_mode, task_type=task_type)
         response = await self._client.post("/v1/streaming.task", json=request.model_dump(exclude_none=True))
         response.raise_for_status()
         return SendTaskResponse.model_validate(response.json())
     
-    async def interrupt_task(self, request: SessionIdRequest) -> HeyGenBaseResponse:
+    async def interrupt_task(self, session_id: str) -> HeyGenBaseResponse:
         """
         Interrupt a running task in a session.
         
         Args:
-            request: Task interruption parameters
+            session_id: The session ID to interrupt
             
         Returns:
             HeyGenBaseResponse containing interruption response
@@ -233,16 +239,17 @@ class HeyGenStreamingAvatarClient:
         Raises:
             httpx.HTTPError: If the request fails
         """
+        request = SessionIdRequest(session_id=session_id)
         response = await self._client.post("/v1/streaming.interrupt", json=request.model_dump())
         response.raise_for_status()
         return HeyGenBaseResponse.model_validate(response.json())
     
-    async def close_session(self, request: SessionIdRequest) -> SimpleStatusResponse:
+    async def close_session(self, session_id: str) -> SimpleStatusResponse:
         """
         Close an active session.
         
         Args:
-            request: Session closure parameters
+            session_id: The session ID to close
             
         Returns:
             SimpleStatusResponse containing closure response
@@ -250,16 +257,17 @@ class HeyGenStreamingAvatarClient:
         Raises:
             httpx.HTTPError: If the request fails
         """
+        request =  SessionIdRequest(session_id=session_id)
         response = await self._client.post("/v1/streaming.stop", json=request.model_dump())
         response.raise_for_status()
         return SimpleStatusResponse.model_validate(response.json())
     
-    async def keep_alive(self, request: SessionIdRequest) -> HeyGenBaseResponse:
+    async def keep_alive(self, session_id: str) -> HeyGenBaseResponse:
         """
         Reset the idle timeout countdown for an active session.
         
         Args:
-            request: Keep alive parameters
+            session_id: The session ID to keep alive
             
         Returns:
             HeyGenBaseResponse containing keep alive response
@@ -267,11 +275,12 @@ class HeyGenStreamingAvatarClient:
         Raises:
             httpx.HTTPError: If the request fails
         """
+        request = SessionIdRequest(session_id=session_id)
         response = await self._client.post("/v1/streaming.keep_alive", json=request.model_dump())
         response.raise_for_status()
         return HeyGenBaseResponse.model_validate(response.json())
     
-    async def create_session_token(self) -> CreateSessionTokenResponse:
+    async def create_session_token(self) -> str:
         """
         Create a session token.
         
@@ -283,7 +292,10 @@ class HeyGenStreamingAvatarClient:
         """
         response = await self._client.post("/v1/streaming.create_token", json={})
         response.raise_for_status()
-        return CreateSessionTokenResponse.model_validate(response.json())
+        resp_model =  CreateSessionTokenResponse.model_validate(response.json())
+        if resp_model.error:
+            raise httpx.HTTPError(f"Error creating session token: {resp_model.error}")
+        return resp_model.data.token
     
     async def list_active_sessions(self) -> ListActiveSessionsResponse:
         """
