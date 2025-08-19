@@ -1,0 +1,135 @@
+id: "research_labs"
+name: "Xenobiology Research Labs"
+description: "State-of-the-art research facilities where multi-species teams study the unique ecosystem of Kepler-442b. Specimen containers line the walls, while analysis equipment hums with activity. The lab's main computer terminal shows recent searches for 'stellar cartography' and 'dying star systems.'"
+connections: ["main_corridor", "restricted_lab"]
+access_requirements: []
+objects: ["specimen_containers", "analysis_equipment", "main_terminal", "research_notes"]
+secrets: ["computer_searches_reveal_zara_research", "unauthorized_equipment_usage"]
+
+# Room-specific clues and interactions
+room_clues:
+  - id: "unauthorized_equipment"
+    description: "Computer logs show Zara accessed xenobiology equipment for 'stellar cartography analysis' - equipment not normally used for navigation purposes"
+    reveals: "Zara was using research equipment to analyze star system data"
+    discovery_requirements: ["examine_research_terminal"]
+  - id: "computer_searches_reveal_zara_research"
+    description: "Terminal search history shows recent queries about stellar collapse, evacuation procedures, and long-range communication protocols"
+    reveals: "Zara was researching emergency procedures related to stellar disasters"
+    discovery_requirements: ["access_main_terminal"]
+
+# Atmospheric details specific to this room
+atmosphere:
+  lighting: "Bright white research lighting with specialized spectrum analysis capabilities"
+  sounds: ["analysis_equipment_humming", "specimen_container_life_support", "computer_processing_alerts"]
+  technology: ["advanced_microscopy", "genetic_sequencers", "atmospheric_analyzers", "quantum_computers"]
+  temperature: "Precisely controlled for optimal equipment operation and specimen preservation"
+  mood: "Scientific curiosity mixed with concern about unauthorized equipment usage"
+
+# Research facilities and equipment
+laboratory_equipment:
+  specimen_containers:
+    function: "Preservation and study of Kepler-442b biological samples"
+    contents: ["microbial_cultures", "plant_specimens", "atmospheric_samples"]
+    life_support: "Specialized environmental controls for each specimen type"
+    security: "Containment protocols for potentially hazardous materials"
+  
+  analysis_equipment:
+    microscopy_suite: "Advanced electron and quantum microscopes"
+    genetic_sequencers: "DNA/RNA analysis for alien biological samples"
+    atmospheric_analyzers: "Composition analysis of planetary atmosphere samples"
+    spectrometers: "Elemental and molecular composition analysis"
+  
+  main_terminal:
+    processing_power: "Quantum computing capabilities for complex analysis"
+    database_access: "Scientific databases and research archives"
+    search_history: "Recent queries about stellar phenomena and emergency procedures"
+    unauthorized_usage: "Evidence of navigation-related research by non-research personnel"
+
+# Character encounters
+character_encounters:
+  - character_id: "researcher_keth"
+    default_location: true
+    greeting: "The geometric patterns of stellar collapse follow predictable mathematical models. Zara understood this better than most humans."
+    availability: "always"
+    knowledge: ["zara_research_collaboration", "stellar_cartography", "altairian_logic_patterns"]
+    trust_factors: ["scientific_understanding", "research_protocols", "genuine_concern_for_zara"]
+
+# Multi-species research collaboration
+research_teams:
+  human_researchers:
+    specializations: ["planetary_geology", "atmospheric_chemistry", "biological_classification"]
+    approach: "Intuitive and experimental methodology"
+    contributions: "Creative problem-solving and adaptive research techniques"
+  
+  altairian_scientists:
+    specializations: ["mathematical_modeling", "logical_analysis", "pattern_recognition"]
+    approach: "Geometric and systematic methodology"
+    contributions: "Precise calculations and logical framework development"
+  
+  zephyrian_consultants:
+    specializations: ["stellar_navigation", "space_phenomena", "emergency_protocols"]
+    approach: "Holistic and intuitive understanding of cosmic systems"
+    contributions: "Navigation expertise and stellar phenomenon interpretation"
+
+# Research projects
+current_studies:
+  kepler_442b_ecosystem:
+    focus: "Understanding the planet's unique biological systems"
+    significance: "Potential for life-supporting colonization"
+    discoveries: "Complex microbial communities and atmospheric interactions"
+    implications: "Valuable for future human and alien settlement"
+  
+  stellar_phenomena:
+    focus: "Study of local star system stability and evolution"
+    significance: "Long-term safety of research station operations"
+    recent_activity: "Unauthorized research into distant stellar systems"
+    connection_to_mystery: "Zara's interest in dying star systems"
+
+# Unauthorized equipment usage
+security_concerns:
+  equipment_misuse:
+    unauthorized_user: "Navigator Zara accessed research equipment"
+    purpose: "Stellar cartography analysis using xenobiology tools"
+    timing: "Recent activity coinciding with Zara's disappearance"
+    implications: "Suggests desperate need for specialized analysis capabilities"
+  
+  research_protocols:
+    proper_procedures: "Equipment reserved for authorized research personnel"
+    safety_concerns: "Misuse could damage sensitive instruments"
+    security_implications: "Unauthorized access suggests emergency situation"
+    investigation_necessity: "Need to understand motivation for protocol violation"
+
+# Access to restricted areas
+restricted_lab_connection:
+  access_requirements: "Higher clearance needed for restricted research areas"
+  security_protocols: "Additional safety measures for dangerous research"
+  connection_to_mystery: "Zara may have accessed restricted equipment"
+  investigation_path: "Following Zara's research trail leads to restricted areas"
+
+# Progression gates specific to this room
+progression_gates:
+  - gate_id: "access_research_terminal"
+    requirements: ["examine_main_terminal"]
+    hint_triggers:
+      - condition: "noticed_unusual_search_history"
+        hint: "Dr. Keth'var's geometric head tilts thoughtfully. 'The terminal shows research patterns inconsistent with our current projects. Someone was seeking information outside their normal expertise.'"
+  
+  - gate_id: "understand_equipment_misuse"
+    requirements: ["gained_researcher_trust"]
+    hint_triggers:
+      - condition: "discovered_unauthorized_usage"
+        hint: "Dr. Keth'var processes the information with mathematical precision. 'Zara's actions follow logical patterns when viewed through the lens of emergency necessity. They required capabilities our standard navigation equipment could not provide.'"
+
+# Scientific atmosphere
+research_environment:
+  collaborative_spirit: "Multi-species teams working together on complex problems"
+  intellectual_curiosity: "Pursuit of knowledge about alien ecosystems and phenomena"
+  methodical_approach: "Systematic investigation and analysis procedures"
+  innovation_pressure: "Need to develop new techniques for unprecedented challenges"
+
+# Technology integration
+advanced_systems:
+  quantum_computing: "Processing power for complex biological and stellar modeling"
+  multi_species_interfaces: "Equipment designed for different alien physiologies"
+  safety_protocols: "Containment and protection systems for hazardous research"
+  data_sharing: "Integrated networks for collaborative research across species"

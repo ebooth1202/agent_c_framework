@@ -1,0 +1,145 @@
+# Vehicle Objects for Shadow Pines Manor
+
+objects:
+  red_atv:
+    id: "red_atv"
+    name: "Red All-Terrain Vehicle"
+    type: "vehicle"
+    location: "garage"
+    description: "A sturdy red ATV perfect for navigating woodland trails. Its robust construction and wide tires suggest it's built for serious off-road exploration."
+    interactions:
+      examine: "The ATV shows signs of recent heavy use but appears to be in excellent mechanical condition."
+      check_fuel: "The fuel gauge needle points firmly to empty."
+      attempt_start: "Engine turns over but won't catch without fuel."
+      refuel: "Requires the hidden gas can to fill the tank."
+      start_with_fuel: "Roars to life with mechanical precision, ready for woodland adventure."
+    
+    mechanical_state:
+      fuel_level: "empty"
+      condition: "excellent"
+      can_start: false
+      maintenance_status: "recently_serviced"
+    
+    capabilities:
+      terrain: "Excellent for rough woodland trails and moderate hills"
+      passenger_capacity: "Single rider"
+      cargo_space: "Small rear storage compartment"
+      speed: "Moderate speed with excellent stability"
+    
+    fuel_requirements:
+      tank_capacity: "5 gallons"
+      fuel_type: "Regular gasoline"
+      source: "Hidden gas can in garage"
+      consumption: "Efficient for woodland exploration"
+    
+    trail_access:
+      suitable_paths: ["main_woodland_trail", "atv_specific_routes"]
+      destination_access: "Can reach hidden clearing via wider forest paths"
+      advantages: "Stability and cargo capacity for longer expeditions"
+    
+    recent_use_evidence:
+      tire_treads: "Fresh mud and pine needles in tire treads"
+      engine_warmth: "Engine shows signs of recent operation"
+      wear_patterns: "Heavy use patterns on seat and handlebars"
+      maintenance_log: "Recent entries in garage maintenance records"
+
+  black_dirtbike:
+    id: "black_dirtbike"
+    name: "Black Dirt Motorcycle"
+    type: "vehicle"
+    location: "garage"
+    description: "A sleek black dirtbike built for speed and agility through forest paths. Its lightweight frame and knobby tires are designed for navigating narrow trails and quick maneuvers."
+    interactions:
+      examine: "The dirtbike appears to be a high-quality machine designed for serious trail riding."
+      check_fuel: "The fuel tank cap is loose, as if recently opened, and the tank is completely empty."
+      attempt_start: "Engine cranks with mechanical precision but refuses to start without fuel."
+      refuel: "Requires the hidden gas can to fill the tank."
+      start_with_fuel: "Springs to life with a satisfying rumble, eager for forest trails."
+    
+    mechanical_state:
+      fuel_level: "empty"
+      condition: "excellent"
+      can_start: false
+      maintenance_status: "recently_serviced"
+    
+    capabilities:
+      terrain: "Excellent for narrow trails, steep inclines, and quick navigation"
+      passenger_capacity: "Single rider only"
+      cargo_space: "Minimal - small tool pouch only"
+      speed: "High speed with excellent maneuverability"
+    
+    fuel_requirements:
+      tank_capacity: "3 gallons"
+      fuel_type: "Regular gasoline"
+      source: "Hidden gas can in garage"
+      consumption: "Efficient but burns faster at high speeds"
+    
+    trail_access:
+      suitable_paths: ["narrow_forest_trails", "motorcycle_specific_routes"]
+      destination_access: "Can reach hidden clearing via agile trail navigation"
+      advantages: "Speed and agility for quick forest exploration"
+    
+    recent_use_evidence:
+      chain_lubrication: "Fresh oil on the drive chain"
+      tire_condition: "Excellent tread with fresh trail debris"
+      loose_fuel_cap: "Suggests recent refueling and emptying"
+      exhaust_residue: "Warm exhaust pipe indicating recent operation"
+
+  # Vehicle Support Items
+  gas_can:
+    id: "gas_can"
+    name: "Emergency Fuel Can"
+    type: "vehicle_accessory"
+    location: "garage_hidden"
+    description: "A red metal gas can marked 'Emergency Use Only', nearly full of fuel. It's been carefully hidden behind the tool rack."
+    interactions:
+      examine: "Heavy with fuel, marked with emergency use warnings."
+      take: "Can be carried to refuel either vehicle."
+      use_on_atv: "Fills the ATV tank completely, enabling forest exploration."
+      use_on_dirtbike: "Fills the dirtbike tank completely, enabling trail navigation."
+    
+    fuel_properties:
+      capacity: "5 gallons"
+      current_level: "nearly_full"
+      fuel_type: "Regular gasoline"
+      condition: "Fresh, high-quality fuel"
+    
+    discovery_requirements:
+      location: "Hidden behind tool rack in garage"
+      search_action: "Requires thorough garage search"
+      clue_trigger: "Maintenance log mentions emergency fuel supply"
+    
+    strategic_importance:
+      necessity: "Required to operate either vehicle"
+      choice_factor: "Players must choose which vehicle to fuel first"
+      exploration_enabler: "Key to accessing the hidden forest clearing"
+
+  # Vehicle-Related Tools and Equipment
+  tool_rack:
+    id: "tool_rack"
+    name: "Garage Tool Rack"
+    type: "vehicle_accessory"
+    location: "garage"
+    description: "A well-organized rack holding various mechanical tools. Everything has its place, suggesting a methodical approach to vehicle maintenance."
+    interactions:
+      examine: "Tools are neatly arranged and show signs of recent use."
+      search: "Behind the tool rack, something is carefully hidden."
+      use_tools: "Various tools available for vehicle maintenance and exploration."
+    
+    tool_inventory:
+      - "socket_wrenches"
+      - "screwdrivers"
+      - "pliers"
+      - "tire_pressure_gauge"
+      - "oil_funnel"
+      - "cleaning_supplies"
+    
+    hidden_storage:
+      concealed_item: "Emergency gas can hidden behind the rack"
+      discovery_method: "Thorough search reveals the hidden fuel supply"
+      strategic_placement: "Positioned to hide the gas can from casual observation"
+    
+    maintenance_evidence:
+      recent_use: "Tools show fresh oil and use marks"
+      organization: "Precise arrangement suggests skilled mechanic"
+      cleanliness: "Well-maintained tools indicating professional care"

@@ -1,0 +1,19 @@
+id: "library"
+name: "Ravenscroft Family Library"
+description: "Floor-to-ceiling bookshelves filled with leather-bound volumes. A reading chair by the fireplace shows recent use. Some books have been pulled slightly from their places, suggesting recent searching."
+connections: ["study", "entrance_hall"]
+access_requirements: []
+objects: ["leather_books", "reading_chair", "fireplace", "family_histories"]
+secrets: ["hidden_compartment", "family_scandal_records"]
+
+atmosphere:
+  lighting: "Firelight dancing across book spines"
+  sounds: ["crackling_fire", "pages_turning", "settling_wood"]
+  scents: ["old_books", "leather", "wood_smoke"]
+  mood: "Scholarly refuge containing dangerous family knowledge"
+
+room_clues:
+  - id: "family_scandal"
+    description: "Hidden records revealing past family scandals and debts"
+    reveals: "The Ravenscroft family has a history of financial and moral scandals"
+    discovery_requirements: ["found_hidden_compartment"]

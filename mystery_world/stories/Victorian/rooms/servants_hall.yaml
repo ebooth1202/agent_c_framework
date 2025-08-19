@@ -1,0 +1,18 @@
+id: "servants_hall"
+name: "Below-Stairs Servants' Hall"
+description: "The heart of household operations, where servants gather for meals and gossip. The bell system shows which rooms are calling for service. Whispered conversations cease when strangers approach."
+connections: ["kitchen", "entrance_hall"]
+access_requirements: ["butler_permission"]
+objects: ["servants_table", "bell_system", "household_accounts", "gossip_corner"]
+secrets: ["servant_knowledge", "gambling_debts_discussion"]
+
+atmosphere:
+  lighting: "Practical oil lamps and small windows"
+  sounds: ["bell_ringing", "whispered_conversations", "kitchen_activity"]
+  scents: ["cooking_food", "soap", "working_class_life"]
+  mood: "Bustling efficiency with undercurrents of worry and gossip"
+
+character_encounters:
+  - character_id: "butler_harrison"
+    default_location: true
+    greeting: "The household continues its duties despite our recent tragedy"

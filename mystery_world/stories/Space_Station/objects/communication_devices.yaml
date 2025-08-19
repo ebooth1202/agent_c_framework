@@ -1,0 +1,181 @@
+# Communication Devices and Systems for Research Station Kepler-442b
+
+objects:
+  communication_console:
+    id: "communication_console"
+    name: "Multi-Frequency Communication Console"
+    type: "communication_system"
+    location: "command_center"
+    description: "The station's primary communication hub, capable of multi-frequency transmission across interstellar distances. Holographic displays show active channels and recent transmission logs."
+    interactions:
+      examine: "Advanced communication equipment with quantum encryption capabilities"
+      access_logs: "Recent transmission records show unusual encrypted messages"
+      monitor_channels: "Multiple communication frequencies active and monitored"
+      send_transmission: "Capable of reaching ships, stations, and planetary bases"
+    
+    technical_capabilities:
+      frequency_range: "Full spectrum from local station communications to interstellar transmissions"
+      encryption_systems: "Military-grade quantum encryption for sensitive communications"
+      multi_species_protocols: "Compatible with human, Zephyrian, and Altairian communication standards"
+      emergency_channels: "Direct access to emergency services and rescue coordination"
+    
+    recent_activity:
+      encrypted_transmissions: "Several encrypted messages sent to coordinates outside normal operations"
+      zara_access_codes: "Transmissions originated from Navigator Zara's personal access codes"
+      unusual_destinations: "Messages sent to coordinates in Zephyrian space"
+      increasing_frequency: "Communication activity increased significantly over past week"
+    
+    mystery_significance:
+      evidence_source: "Contains crucial evidence about Zara's secret communications"
+      progression_gate: "Access requires Administrator Chen's trust and clearance"
+      revelation_tool: "Reveals Zara's contact with Zephyrian emergency authorities"
+    
+    operational_features:
+      holographic_interface: "Three-dimensional display of communication networks"
+      voice_synthesis: "Universal translation for multi-species communication"
+      data_transmission: "High-bandwidth data transfer capabilities"
+      emergency_broadcast: "Station-wide emergency notification system"
+
+  hidden_communication_device:
+    id: "hidden_communication_device"
+    name: "Concealed Long-Range Communicator"
+    type: "personal_communication_device"
+    location: "zara_quarters_hidden"
+    description: "A sophisticated personal communication device hidden among Zara's belongings, configured for direct contact with Zephyrian emergency frequencies across interstellar distances."
+    interactions:
+      examine: "Advanced personal communicator with non-standard modifications"
+      check_logs: "Recent contact with Zephyrian emergency services and family"
+      analyze_configuration: "Specifically tuned for Zephyrian homeworld frequencies"
+      decrypt_messages: "Encrypted communications about stellar crisis and evacuation"
+    
+    concealment_details:
+      hiding_method: "Disguised within standard personal electronics"
+      discovery_requirements: "Thorough search of Zara's quarters needed"
+      security_features: "Encrypted storage and transmission protocols"
+      personal_nature: "Clearly Zara's private communication equipment"
+    
+    communication_evidence:
+      emergency_contacts: "Direct communication with Zephyrian crisis authorities"
+      family_messages: "Personal communications with family in threatened areas"
+      evacuation_coordination: "Messages about rescue mission planning and coordination"
+      crisis_updates: "Regular updates about stellar collapse progression"
+    
+    technical_specifications:
+      range: "Interstellar communication across vast distances"
+      encryption: "Advanced Zephyrian encryption protocols"
+      frequency_access: "Emergency channels and official crisis communication frequencies"
+      power_source: "High-capacity energy cell for extended operation"
+    
+    mystery_importance:
+      personal_motivation: "Reveals Zara's desperate attempt to help their people"
+      crisis_confirmation: "Proves the reality and urgency of the stellar emergency"
+      communication_proof: "Evidence of ongoing coordination with homeworld authorities"
+      emotional_context: "Shows personal stakes in the distant crisis"
+
+  communication_array:
+    id: "communication_array"
+    name: "Unauthorized Long-Range Communication Array"
+    type: "advanced_communication_system"
+    location: "restricted_lab"
+    description: "A sophisticated communication array that has been recently installed in the restricted lab, configured for long-range transmission to specific coordinates in Zephyrian space."
+    interactions:
+      examine: "Recently installed equipment with advanced transmission capabilities"
+      analyze_configuration: "Specifically configured for Zephyrian emergency frequencies"
+      check_transmission_logs: "Multiple encrypted communications to crisis authorities"
+      assess_installation: "Professional installation requiring significant technical expertise"
+    
+    installation_evidence:
+      recent_installation: "Equipment installed within the past week"
+      professional_work: "High-quality installation suggesting expert knowledge"
+      power_modifications: "Station power systems modified to support the array"
+      concealment_attempts: "Installation designed to avoid casual detection"
+    
+    transmission_capabilities:
+      interstellar_range: "Capable of reaching distant Zephyrian space"
+      quantum_encryption: "Advanced encryption for secure communications"
+      emergency_protocols: "Direct access to crisis response networks"
+      multi_channel: "Simultaneous communication on multiple frequencies"
+    
+    usage_evidence:
+      heavy_utilization: "Signs of intensive use over the past week"
+      zephyrian_frequencies: "Configured specifically for homeworld emergency channels"
+      crisis_coordination: "Communications related to stellar collapse and evacuation"
+      increasing_urgency: "Transmission patterns show escalating crisis situation"
+    
+    mystery_resolution:
+      zara_location: "Where Zara is found collapsed from exhaustion"
+      crisis_hub: "Central location for coordinating rescue efforts"
+      final_evidence: "Proves Zara's heroic efforts to save their people"
+      resolution_tool: "Enables proper reporting and assistance coordination"
+
+  personal_message_board:
+    id: "personal_message_board"
+    name: "Crew Personal Message Board"
+    type: "social_communication_system"
+    location: "crew_quarters"
+    description: "An informal digital message board where crew members post personal messages, social invitations, and updates. Recent messages show growing concern about Zara's behavior."
+    interactions:
+      examine: "Digital display showing various crew messages and social updates"
+      read_messages: "Personal communications between crew members"
+      check_recent_posts: "Growing concern about Zara's stress and sleepless nights"
+      post_message: "Ability to leave messages for other crew members"
+    
+    message_categories:
+      social_invitations: "Recreational activities and social gatherings"
+      shift_schedules: "Informal coordination of work schedules and coverage"
+      personal_updates: "Life events, celebrations, and personal news"
+      concern_messages: "Recent worried messages about Zara's behavior"
+    
+    cultural_integration:
+      multi_species_posts: "Messages in various languages and communication styles"
+      universal_translation: "Automatic translation for inter-species communication"
+      cultural_sensitivity: "Respectful accommodation of different communication preferences"
+      community_building: "Fosters social connections among diverse crew"
+    
+    recent_content:
+      zara_concerns: "Multiple crew members expressing worry about Zara's stress"
+      sleep_disturbances: "Reports of Zara's sleepless nights and unusual behavior"
+      offer_help: "Crew members offering support and assistance to Zara"
+      speculation: "Gentle speculation about what might be troubling Zara"
+    
+    social_dynamics:
+      community_support: "Evidence of close-knit crew relationships"
+      mutual_care: "Crew members looking out for each other's well-being"
+      informal_communication: "Casual channel for non-official information sharing"
+      emotional_barometer: "Reflects crew morale and interpersonal concerns"
+
+  duty_roster:
+    id: "duty_roster"
+    name: "Station Duty Roster Display"
+    type: "operational_communication_system"
+    location: "command_center"
+    description: "A holographic display showing current duty assignments, shift schedules, and crew availability. Zara's status shows as 'Missing - 18 hours' with backup navigation protocols engaged."
+    interactions:
+      examine: "Current shift assignments and crew status information"
+      check_zara_status: "Shows Zara as missing with backup systems activated"
+      review_schedules: "Normal duty rotations and emergency coverage assignments"
+      update_status: "Administrative function for crew status changes"
+    
+    operational_information:
+      current_shifts: "Active duty assignments for all crew members"
+      crew_availability: "On-duty, off-duty, and unavailable status indicators"
+      emergency_coverage: "Backup assignments for critical positions"
+      missing_personnel: "Clear indication of Zara's absence and duration"
+    
+    administrative_features:
+      real_time_updates: "Automatic updates based on crew check-ins and assignments"
+      emergency_protocols: "Automatic activation of backup procedures for missing crew"
+      multi_species_display: "Information presented in formats suitable for all crew"
+      historical_records: "Archive of past duty assignments and attendance patterns"
+    
+    mystery_context:
+      zara_absence: "Official record of Zara's disappearance timeline"
+      backup_activation: "Shows station's response to missing navigator"
+      operational_impact: "Demonstrates importance of Zara's role to station operations"
+      search_coordination: "Potential tool for organizing search efforts"
+    
+    crew_management:
+      shift_coordination: "Ensures adequate coverage for all critical positions"
+      workload_distribution: "Balanced assignment of duties across crew members"
+      emergency_readiness: "Rapid response capability for crisis situations"
+      personnel_tracking: "Location and availability monitoring for crew safety"

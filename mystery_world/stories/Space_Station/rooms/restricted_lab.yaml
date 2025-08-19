@@ -1,0 +1,138 @@
+id: "restricted_lab"
+name: "Restricted Xenobiology Lab"
+description: "A secured laboratory section containing sensitive research equipment and classified specimens. Environmental suits hang ready for dangerous work, while a specialized communication array - not standard station equipment - has been recently installed and shows signs of heavy use."
+connections: ["research_labs"]
+access_requirements: ["found_lab_access_code", "medic_clearance"]
+objects: ["environmental_suits", "classified_specimens", "communication_array", "installation_tools"]
+secrets: ["communication_array_configured_for_long_range_transmission", "zara_contacted_homeworld"]
+
+# Room-specific clues and interactions
+room_clues:
+  - id: "communication_array"
+    description: "A sophisticated communication array has been recently installed and configured for long-range transmission to specific coordinates in Zephyrian space"
+    reveals: "Zara established secret communication with Zephyrian authorities about the crisis"
+    discovery_requirements: ["found_lab_access_code", "medic_clearance", "examine_restricted_lab"]
+  - id: "zara_contacted_homeworld"
+    description: "Communication logs show multiple encrypted transmissions to Zephyrian emergency frequencies, with increasing urgency over the past week"
+    reveals: "Zara has been coordinating with homeworld authorities about the stellar crisis"
+    discovery_requirements: ["access_communication_array", "decrypt_transmission_logs"]
+
+# Atmospheric details specific to this room
+atmosphere:
+  lighting: "Red-tinted emergency lighting mixed with specialized analysis equipment illumination"
+  sounds: ["environmental_suit_life_support", "communication_array_power_hum", "specimen_containment_alerts"]
+  technology: ["advanced_containment_systems", "long_range_communication_equipment", "hazardous_material_analyzers"]
+  temperature: "Cooler than standard labs due to sensitive equipment cooling requirements"
+  mood: "High security tension mixed with desperate urgency of secret communications"
+
+# Security and access control
+restricted_access:
+  security_measures:
+    access_code: "Encrypted entry code known only to senior research staff"
+    medical_clearance: "Health certification required for hazardous material exposure"
+    biometric_verification: "Additional identity confirmation for sensitive areas"
+    emergency_protocols: "Lockdown procedures for containment breaches"
+  
+  clearance_requirements:
+    lab_access_code: "Obtained from senior research staff or emergency protocols"
+    medic_clearance: "Dr. Okafor can provide medical authorization"
+    safety_certification: "Understanding of hazardous material handling procedures"
+    emergency_justification: "Valid reason for accessing restricted materials"
+
+# Specialized equipment
+restricted_equipment:
+  environmental_suits:
+    function: "Protection against hazardous biological and chemical agents"
+    specifications: "Multi-species compatibility with life support systems"
+    recent_use: "Signs of recent activation and decontamination"
+    emergency_readiness: "Prepared for immediate use in crisis situations"
+  
+  classified_specimens:
+    content: "Potentially dangerous biological samples from Kepler-442b"
+    containment: "Advanced isolation systems with multiple redundancies"
+    research_value: "Critical for understanding planetary ecosystem dangers"
+    security_classification: "Access restricted to authorized personnel only"
+  
+  communication_array:
+    installation: "Recently installed non-standard equipment"
+    capabilities: "Long-range transmission across interstellar distances"
+    configuration: "Specifically tuned for Zephyrian emergency frequencies"
+    usage_evidence: "Heavy use patterns indicating urgent communications"
+
+# Installation evidence
+recent_modifications:
+  installation_tools:
+    equipment: "Specialized tools for communication array installation"
+    timing: "Recent installation coinciding with Zara's stress symptoms"
+    authorization: "Unclear whether installation was officially approved"
+    technical_complexity: "Advanced equipment requiring expert installation"
+  
+  power_modifications:
+    electrical_work: "Station power systems modified to support new equipment"
+    energy_consumption: "Significant power draw for long-range communications"
+    system_integration: "Array connected to station's main communication grid"
+    concealment_attempts: "Modifications designed to avoid detection"
+
+# Communication evidence
+transmission_analysis:
+  long_range_communications:
+    destination: "Coordinates in Zephyrian space matching homeworld systems"
+    frequency: "Emergency channels used for crisis communications"
+    encryption: "Advanced encryption protocols to maintain secrecy"
+    urgency_patterns: "Increasing frequency and priority over time"
+  
+  zephyrian_contact:
+    recipients: "Zephyrian emergency authorities and evacuation coordinators"
+    content_analysis: "Discussions about stellar collapse and rescue operations"
+    response_patterns: "Incoming messages showing crisis escalation"
+    coordination_efforts: "Attempts to organize multi-species rescue mission"
+
+# Character encounters
+character_encounters:
+  - character_id: "medic_okafor"
+    availability: "when_providing_clearance"
+    greeting: "This area requires medical clearance for good reason. The specimens here could be dangerous if mishandled."
+    knowledge: ["hazardous_materials", "zara_medical_requests", "safety_protocols"]
+    trust_factors: ["safety_consciousness", "medical_confidentiality", "crew_protection"]
+
+# Mystery resolution location
+resolution_significance:
+  zara_location: "Navigator Zara is found collapsed in this lab from exhaustion"
+  communication_hub: "Primary location for Zara's emergency communications with homeworld"
+  crisis_coordination: "Center of efforts to organize rescue mission for threatened colonies"
+  final_revelation: "Where the complete truth about the stellar crisis is revealed"
+
+# Progression gates specific to this room
+progression_gates:
+  - gate_id: "access_restricted_lab"
+    requirements: ["found_lab_access_code", "medic_clearance"]
+    hint_triggers:
+      - condition: "tried_access_restricted_lab_without_clearance"
+        hint: "The restricted lab door requires both an access code and medical clearance. Dr. Okafor might be able to help with the medical requirements, and Dr. Keth'var might know about access codes."
+  
+  - gate_id: "understand_communication_array"
+    requirements: ["examine_communication_array", "gained_researcher_trust"]
+    hint_triggers:
+      - condition: "discovered_unauthorized_equipment"
+        hint: "Dr. Keth'var's geometric analysis reveals the truth: 'The communication array's configuration follows patterns consistent with emergency protocols. Zara was not acting randomly - they were following logical crisis response procedures.'"
+
+# Final mystery elements
+crisis_resolution:
+  zara_discovery: "Zara found collapsed from exhaustion while maintaining emergency communications"
+  stellar_crisis: "Full understanding of the dying star system threatening Zephyrian colonies"
+  rescue_coordination: "Evidence of ongoing efforts to organize inter-species rescue mission"
+  player_role: "Player's investigation enables proper reporting and assistance coordination"
+
+# Safety and containment
+hazardous_materials:
+  biological_hazards: "Potentially dangerous specimens requiring containment"
+  chemical_risks: "Reactive compounds from alien ecosystem analysis"
+  radiation_sources: "Materials requiring specialized shielding and handling"
+  emergency_procedures: "Protocols for containment breach or exposure incidents"
+
+# Technology integration
+advanced_communication:
+  quantum_entanglement: "Instantaneous communication across interstellar distances"
+  encryption_protocols: "Military-grade security for sensitive transmissions"
+  multi_frequency: "Capability to reach various alien communication systems"
+  emergency_channels: "Direct access to crisis response networks"

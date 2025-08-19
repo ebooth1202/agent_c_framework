@@ -1,0 +1,40 @@
+id: "front_grounds"
+name: "Shadow Pines Manor Grounds"
+description: "Expansive grounds where gravel paths wind between ancient pine trees that give the manor its name. A stone fountain bubbles quietly in the center, while garden benches offer peaceful spots to contemplate the mysteries that seem to lurk in every shadow."
+connections: ["front_door", "garage", "woods_edge"]
+access_requirements: []
+objects: ["stone_fountain", "garden_bench"]
+secrets: ["tire_tracks_leading_to_woods"]
+
+# Room-specific clues and interactions
+room_clues:
+  - id: "tire_tracks_clue"
+    description: "Fresh tire tracks leading from the garage toward the pine woods, pressed deep into the earth as if carrying heavy cargo"
+    reveals: "Someone recently made a significant journey to the woods with equipment"
+    discovery_requirements: ["examine_grounds_carefully"]
+
+# Atmospheric details specific to this room
+atmosphere:
+  lighting: "Filtered through ancient pine boughs, creating dappled patterns"
+  sounds: ["fountain_bubbling", "gravel_crunching", "pine_needles_rustling", "distant_bird_calls"]
+  scents: ["pine_needles", "damp_earth", "fountain_water", "autumn_air"]
+  temperature: "Cool and fresh, with occasional warm spots in sunny clearings"
+  mood: "Peaceful contemplation with hints of hidden activity"
+
+# Weather effects
+weather_variations:
+  overcast: "Mist rolls between the pine trunks, creating an ethereal atmosphere"
+  sunny: "Shafts of sunlight pierce the canopy, illuminating dust motes and secrets"
+  evening: "Shadows lengthen dramatically, making every tree trunk a potential hiding place"
+
+# Exploration opportunities
+exploration_points:
+  - area: "around_fountain"
+    description: "The stone fountain shows signs of recent maintenance"
+    secrets: ["decorative_stones_and_pennies_only"]
+  - area: "garden_paths"
+    description: "Gravel paths wind between carefully maintained garden areas"
+    secrets: ["tire_tracks_leading_to_woods"]
+  - area: "pine_grove"
+    description: "Ancient pines create natural cathedral spaces"
+    secrets: ["carved_initials_in_bark", "old_trail_markers"]

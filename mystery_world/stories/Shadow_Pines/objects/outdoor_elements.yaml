@@ -1,0 +1,235 @@
+# Outdoor and Natural Elements for Shadow Pines Manor
+
+objects:
+  trail_markers:
+    id: "trail_markers"
+    name: "Ancient Trail Markers"
+    type: "outdoor_navigation"
+    location: "woods_edge"
+    description: "Carved symbols and directional indicators etched into the bark of ancient pine trees. These markers show the wear of decades and hint at paths used by generations of the Pemberton family."
+    interactions:
+      examine: "Weathered carvings showing directional arrows and family initials."
+      study_symbols: "Each marker tells a story of family expeditions and secret destinations."
+      follow_directions: "The markers point toward deeper woodland paths."
+    
+    historical_significance:
+      age: "Carved over several generations, oldest dating to the 1840s"
+      creators: "Various Pemberton family members"
+      purpose: "Navigation system for family woodland expeditions"
+      evolution: "Markers show different carving styles across decades"
+    
+    navigation_information:
+      directions: ["hidden_clearing", "old_hunting_blind", "stream_crossing"]
+      distance_indicators: "Notch marks showing approximate distances"
+      difficulty_markers: "Symbols indicating trail difficulty levels"
+      seasonal_notes: "Some markers include seasonal accessibility warnings"
+    
+    family_connections:
+      initials_found: ["L.P. 1847", "C.P. 1872", "M.P. 1885"]
+      family_stories: "Each set of initials represents different family expeditions"
+      generational_use: "Evidence of continuous family use of these trails"
+    
+    atmospheric_contribution:
+      mystery: "Suggest secret family activities in the deep woods"
+      history: "Physical evidence of family legacy and woodland knowledge"
+      guidance: "Practical navigation aid for modern explorers"
+
+  old_signpost:
+    id: "old_signpost"
+    name: "Weathered Wooden Signpost"
+    type: "outdoor_navigation"
+    location: "woods_edge"
+    description: "A weathered wooden signpost with multiple directional arms pointing deeper into the pine woods. The paint has faded, but the destinations are still readable."
+    interactions:
+      examine: "Multiple wooden arms point to different woodland destinations."
+      read_signs: "Faded text reveals various forest locations and distances."
+      follow_directions: "Each arm points to a different woodland adventure."
+    
+    directional_arms:
+      - destination: "Hidden Clearing"
+        distance: "2 miles"
+        condition: "Faded but readable"
+        difficulty: "Moderate trail"
+      - destination: "Old Mill Ruins"
+        distance: "3.5 miles"
+        condition: "Partially obscured"
+        difficulty: "Challenging path"
+      - destination: "Pemberton Hunting Lodge"
+        distance: "1.5 miles"
+        condition: "Well-maintained"
+        difficulty: "Easy walking trail"
+      - destination: "Pine Ridge Overlook"
+        distance: "4 miles"
+        condition: "Weather-worn"
+        difficulty: "Steep climb"
+    
+    historical_context:
+      installation_date: "Approximately 1860s"
+      maintenance_history: "Periodically updated by family members"
+      usage_patterns: "Shows wear from regular family expeditions"
+    
+    strategic_importance:
+      navigation_hub: "Central point for woodland exploration"
+      decision_point: "Players must choose their exploration direction"
+      mystery_guidance: "Points toward the hidden clearing containing secrets"
+
+  umbrella_stand:
+    id: "umbrella_stand"
+    name: "Hallway Umbrella Stand"
+    type: "outdoor_equipment"
+    location: "hallway"
+    description: "An ornate brass umbrella stand holding various walking sticks and umbrellas. Each implement suggests different outdoor activities and adventures."
+    interactions:
+      examine: "Contains a collection of walking sticks, umbrellas, and outdoor implements."
+      select_walking_stick: "Various sticks available for woodland exploration."
+      take_umbrella: "Practical protection against English weather."
+    
+    contents_inventory:
+      walking_sticks:
+        - type: "Carved oak walking stick"
+          description: "Sturdy oak with intricate carvings"
+          use: "Excellent for woodland hiking"
+        - type: "Gentleman's cane"
+          description: "Polished mahogany with silver handle"
+          use: "Formal outdoor occasions"
+        - type: "Hiking staff"
+          description: "Practical wooden staff with iron tip"
+          use: "Serious woodland exploration"
+      umbrellas:
+        - type: "Large black umbrella"
+          description: "Substantial protection against rain"
+          condition: "Well-maintained"
+        - type: "Lady's parasol"
+          description: "Delicate parasol for sun protection"
+          condition: "Decorative rather than practical"
+    
+    family_stories:
+      usage_patterns: "Different implements for different family members"
+      adventure_hints: "Each item suggests various outdoor activities"
+      maintenance: "Well-cared-for collection indicating regular use"
+    
+    practical_benefits:
+      woodland_exploration: "Walking sticks aid in forest navigation"
+      weather_protection: "Umbrellas provide practical outdoor protection"
+      family_tradition: "Collection represents generations of outdoor enthusiasm"
+
+  walking_sticks:
+    id: "walking_sticks"
+    name: "Collection of Walking Sticks"
+    type: "outdoor_equipment"
+    location: "front_door"
+    description: "A selection of walking sticks and canes near the entrance, each showing the wear of countryside adventures. They hint at the family's love of outdoor exploration."
+    interactions:
+      examine: "Each stick tells a story of outdoor adventures and exploration."
+      select: "Choose an appropriate stick for woodland exploration."
+      use: "Provides practical assistance for forest navigation."
+    
+    stick_collection:
+      - name: "Lord Pemberton's Oak Staff"
+        description: "Heavy oak staff with brass fittings"
+        history: "Used for serious woodland expeditions"
+        condition: "Well-worn but sturdy"
+      - name: "Carved Pine Walking Stick"
+        description: "Locally carved from Shadow Pines wood"
+        history: "Made from a tree on the estate"
+        condition: "Smooth from years of use"
+      - name: "Imported Blackthorn Shillelagh"
+        description: "Traditional Irish walking stick"
+        history: "Brought back from family travels"
+        condition: "Excellent craftsmanship"
+    
+    practical_applications:
+      forest_navigation: "Essential for safe woodland exploration"
+      trail_assistance: "Helpful for navigating uneven forest terrain"
+      traditional_use: "Part of proper English countryside attire"
+    
+    atmospheric_significance:
+      adventure_suggestion: "Implies family tradition of outdoor exploration"
+      practical_preparation: "Shows family's serious approach to woodland activities"
+      historical_connection: "Links current mystery to family's outdoor heritage"
+
+  abandoned_campsite:
+    id: "abandoned_campsite"
+    name: "Recently Abandoned Campsite"
+    type: "outdoor_evidence"
+    location: "hidden_clearing"
+    description: "A campsite showing signs of recent use, with carefully arranged equipment and evidence of systematic excavation work. The organization suggests this wasn't a casual camping trip."
+    interactions:
+      examine: "Recent camping equipment arranged with military precision."
+      search_tent: "Weathered tent contains personal belongings and notes."
+      investigate_fire_ring: "Cold fire ring shows recent use and careful extinguishing."
+      study_excavation: "Systematic dig sites show methodical searching patterns."
+    
+    campsite_equipment:
+      shelter:
+        - "weathered_canvas_tent"
+        - "sleeping_roll"
+        - "camp_chair"
+      cooking:
+        - "portable_camp_stove"
+        - "cooking_utensils"
+        - "water_containers"
+      excavation:
+        - "shovels_and_spades"
+        - "metal_detector"
+        - "archaeological_brushes"
+        - "measurement_tools"
+    
+    evidence_of_purpose:
+      systematic_search: "Multiple dig sites arranged in grid pattern"
+      documentation: "Careful notes and measurements recorded"
+      recent_activity: "Equipment shows use within the past few days"
+      professional_approach: "Tools and methods suggest experienced treasure hunter"
+    
+    story_implications:
+      treasure_hunting: "Someone has been systematically searching for buried items"
+      recent_departure: "Campsite abandoned hastily, possibly due to success"
+      connection_to_mystery: "Search pattern suggests knowledge of what they were looking for"
+      family_involvement: "May be connected to Pemberton family members or associates"
+    
+    atmospheric_contribution:
+      mystery_deepening: "Raises questions about who else knows the manor's secrets"
+      recent_activity: "Creates sense of urgency and ongoing mystery"
+      professional_intrigue: "Suggests mystery extends beyond casual family secrets"
+
+  buried_chest:
+    id: "buried_chest"
+    name: "Ornate Buried Chest"
+    type: "treasure_container"
+    location: "hidden_clearing"
+    description: "An ornate wooden chest buried beneath an ancient oak stump. The chest bears the Pemberton family crest and shows signs of recent excavation around it."
+    interactions:
+      examine: "Beautifully crafted chest with family heraldry and brass fittings."
+      attempt_open: "The chest is locked but shows signs of recent disturbance."
+      open_with_tools: "Excavation tools from the campsite can be used to fully unearth it."
+      unlock: "Requires both ancient keys to open completely."
+    
+    physical_description:
+      material: "Dark oak with brass reinforcements"
+      size: "Medium-sized, suitable for valuable documents and artifacts"
+      condition: "Well-preserved despite burial"
+      decoration: "Pemberton family crest and Victorian-era craftsmanship"
+    
+    burial_context:
+      location: "Beneath ancient oak stump marking"
+      depth: "Partially excavated by recent treasure hunters"
+      concealment: "Originally hidden by natural forest growth"
+      discovery_method: "Recent systematic searching revealed its location"
+    
+    contents_preview:
+      primary_treasure: "The second ancient key needed to complete the mystery"
+      supporting_documents: "Family papers explaining the manor's central secret"
+      historical_artifacts: "Items connecting to the Pemberton family legacy"
+      photographic_evidence: "Old photographs showing family members at this location"
+    
+    mystery_significance:
+      victory_condition: "Contains the second key needed to solve the central mystery"
+      family_legacy: "Represents generations of family secret-keeping"
+      treasure_culmination: "Final reward for thorough exploration and puzzle-solving"
+      story_resolution: "Provides the missing piece to understand Shadow Pines Manor's secrets"
+    
+    unlock_requirements:
+      first_key: "Hidden key found behind the portrait in the study"
+      second_key: "Key contained within this very chest (circular mystery design)"
+      alternative_access: "Excavation tools can force entry but may damage contents"
+      proper_sequence: "Both keys used together reveal the complete family secret"

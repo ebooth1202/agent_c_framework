@@ -8,14 +8,9 @@ pushd %CD%
 if "%CD:~-7%"=="scripts" (
     cd ..
 )
-
-:: Start the backend server (in a new window)
-start cmd /k ".venv\scripts\activate.bat && python -m uvicorn agent_c_api.main:app --host 0.0.0.0 --port 8000 --log-level info"
-:: Start RAG Backend
-:: start cmd /k ".venv\scripts\activate.bat && python -m uvicorn agent_c_rag_api.main:app --host 0.0.0.0 --port 8001 --log-level info"
-:: Start the frontend dev server (in a new window)
-start cmd /k "cd src\agent_c_api_ui\agent_c_react_client && npm run dev"
-
+CALL .venv\scripts\activate.bat
+start cmd /k "scripts\start_api.bat"
+start cmd /k "scripts\start_fe.bat"
 :: Return to original directory
 popd
 

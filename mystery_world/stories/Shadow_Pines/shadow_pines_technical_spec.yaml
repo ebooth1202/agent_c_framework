@@ -1,0 +1,191 @@
+# Shadow Pines Manor Technical Implementation Specification
+
+coordinator_agent:
+  key: "victorian_mystery_coordinator"
+  title: "Victorian Mystery Coordinator"
+  description: "Orchestrates Shadow Pines Manor mystery experience through specialized clone delegation"
+  categories: ["domo"]
+  tools: ["WorkspaceTools", "AgentTeamTools", "WorkspacePlanning"]
+  
+  delegation_logic:
+    movement_commands: ["go", "enter", "leave", "move", "travel", "walk", "run"] 
+    delegation_target: "world_navigator_clone"
+    
+    object_commands: ["examine", "look", "take", "use", "search", "touch", "open"]
+    delegation_target: "interactive_object_clone"
+    
+    vehicle_commands: ["start", "fuel", "refuel", "drive", "ride", "engine"]
+    delegation_target: "vehicle_systems_clone"
+    
+    character_commands: ["talk", "ask", "speak", "question", "butler", "james"]
+    delegation_target: "character_dialogue_clone"
+    
+    mystery_commands: ["hint", "clue", "progress", "stuck", "help"]
+    delegation_target: "mystery_logic_clone"
+
+  state_schema:
+    player_location: "string"
+    discovered_objects: ["array"]
+    found_clues: ["array"] 
+    inventory: ["array"]
+    character_met: ["array"]
+    mystery_stage: "string"
+    vehicle_states:
+      red_atv:
+        fuel: "empty|partial|full"
+        condition: "excellent|good|poor"
+        can_start: "boolean"
+      black_dirtbike:
+        fuel: "empty|partial|full"
+        condition: "excellent|good|poor" 
+        can_start: "boolean"
+
+clone_agents:
+  - key: "world_navigator_clone"
+    title: "World Navigator"
+    categories: ["victorian_mystery_coordinator"]
+    context_budget: "medium"
+    specialization: "location_movement"
+    
+    input_processing:
+      - extract_movement_intent: "Determine desired destination from player command"
+      - validate_connections: "Check if movement is allowed from current location" 
+      - check_requirements: "Verify access requirements are met"
+      - generate_response: "Create atmospheric description of new location"
+    
+    output_format:
+      success: 
+        new_location: "location_id"
+        description: "atmospheric description text"
+        available_actions: ["action suggestions"]
+      failure:
+        error_type: "invalid_direction|locked|requirements_not_met"  
+        message: "helpful error message"
+        suggestions: ["alternative actions"]
+
+  - key: "mystery_logic_clone"
+    title: "Mystery Logic Engine"
+    categories: ["victorian_mystery_coordinator"]
+    context_budget: "large"
+    specialization: "puzzle_progression"
+    
+    input_processing:
+      - evaluate_discovery: "Check if player action triggers clue discovery"
+      - assess_progression: "Determine current mystery stage completion"
+      - check_victory: "Validate if victory conditions are met"
+      - generate_hints: "Provide contextual assistance if player is stuck"
+    
+    output_format:
+      clue_discovered:
+        clue_id: "string"
+        description: "discovery text"
+        reveals: "information unlocked"
+        next_steps: ["suggested actions"]
+      progression_update:
+        new_stage: "string"
+        gates_unlocked: ["gate_ids"]
+        requirements_remaining: ["requirement descriptions"]
+      victory_achieved:
+        condition_met: "string"
+        ending_narrative: "victory description"
+
+  - key: "interactive_object_clone" 
+    title: "Object Interaction Specialist"
+    categories: ["victorian_mystery_coordinator"]
+    context_budget: "small"
+    specialization: "object_manipulation"
+    
+    input_processing:
+      - identify_target: "Determine which object player is interacting with"
+      - check_availability: "Verify object is present and accessible"
+      - process_action: "Handle specific interaction (examine/take/use)"
+      - update_state: "Track any object state changes"
+    
+    output_format:
+      interaction_success:
+        object_id: "string"
+        description: "detailed object description"
+        state_change: "before/after state if applicable"
+        items_gained: ["item_ids if any"]
+        secrets_revealed: ["secret_ids if any"]
+      interaction_failure:
+        reason: "not_present|not_accessible|invalid_action"
+        message: "contextual error message"
+
+  - key: "vehicle_systems_clone"
+    title: "Vehicle Systems Manager" 
+    categories: ["victorian_mystery_coordinator"]
+    context_budget: "small"
+    specialization: "mechanical_systems"
+    
+    input_processing:
+      - identify_vehicle: "Determine target vehicle (ATV/dirtbike)"
+      - check_fuel_level: "Verify current fuel status"  
+      - process_operation: "Handle start/fuel/ride actions"
+      - validate_access: "Check if vehicle enables location access"
+    
+    output_format:
+      operation_success:
+        vehicle_id: "string"
+        action_performed: "string"
+        new_state: "vehicle state after action"
+        locations_accessible: ["location_ids now reachable"]
+      operation_failure:
+        vehicle_id: "string"
+        failure_reason: "no_fuel|mechanical_issue|invalid_operation"
+        required_items: ["item_ids needed to proceed"]
+        instructions: "how to resolve the issue"
+
+  - key: "character_dialogue_clone"
+    title: "Character Dialogue Engine"
+    categories: ["victorian_mystery_coordinator"] 
+    context_budget: "medium"
+    specialization: "npc_interaction"
+    
+    input_processing:
+      - identify_character: "Determine which character (Butler James)"
+      - assess_context: "Consider player progress and discovery state"
+      - generate_dialogue: "Create personality-consistent response"
+      - reveal_information: "Provide appropriate hints/secrets based on progress"
+    
+    output_format:
+      dialogue_response:
+        character_id: "butler_james"
+        dialogue: "character speech in Victorian style"
+        information_revealed: ["knowledge shared"]
+        personality_traits_shown: ["traits displayed"]
+        follow_up_available: "boolean for continued conversation"
+
+performance_targets:
+  token_efficiency: "10-17% improvement vs single agent"
+  response_time: "<2 seconds per action"
+  delegation_accuracy: ">95% correct routing"
+  fallback_success: ">90% graceful degradation"
+  
+testing_scenarios:
+  smoke_tests:
+    - "Player completes full mystery (30-40 actions)"
+    - "Player explores all locations successfully"
+    - "Player interacts with all objects and finds secrets"
+    - "Player successfully operates both vehicles" 
+    - "Player has meaningful dialogue with Butler James"
+  
+  stress_tests:
+    - "Rapid command input (10 actions in 60 seconds)"
+    - "Complex multi-domain actions"
+    - "Deliberate clone failures with recovery"
+    - "Maximum context window usage"
+  
+  edge_cases:
+    - "Invalid/ambiguous player commands"
+    - "Attempts to break game logic"
+    - "Repeated actions on same objects"
+    - "Out-of-sequence mystery attempts"
+
+monitoring_metrics:
+  - "Total tokens per game session"
+  - "Tokens per clone type per invocation"
+  - "Response time per delegation"
+  - "Context window utilization percentage"
+  - "Fallback activation frequency"
+  - "Player satisfaction indicators"

@@ -1,0 +1,69 @@
+# Household Items and Systems for Ravenscroft Manor
+
+objects:
+  gas_lamps:
+    id: "gas_lamps"
+    name: "Gas Lighting System"
+    type: "lighting"
+    location: "study"
+    description: "Amber gas flames flicker behind etched glass globes, casting dancing shadows across the mahogany paneling."
+    atmospheric_contribution:
+      lighting: "Warm amber glow with flickering shadows"
+      mood: "Victorian authenticity with Gothic atmosphere"
+
+  persian_rug:
+    id: "persian_rug"
+    name: "Persian Rug"
+    type: "floor_covering"
+    location: "study"
+    description: "An expensive Persian rug that has been recently cleaned—perhaps too recently, given the family's mourning period."
+    interactions:
+      examine: "Recent cleaning seems unusual during mourning period"
+    secrets: ["blood_stain_removal", "evidence_destruction"]
+
+  bell_system:
+    id: "bell_system"
+    name: "Servants' Bell System"
+    type: "communication_system"
+    location: "servants_hall"
+    description: "A complex system of bells and indicators showing which rooms are calling for service. The study bell has been ringing frequently lately."
+    interactions:
+      examine: "Study bell shows signs of frequent recent use"
+    secrets: ["lord_ravenscroft_final_requests", "desperate_summons"]
+
+  fresh_flowers:
+    id: "fresh_flowers"
+    name: "Fresh Flower Arrangements"
+    type: "decorative"
+    location: "drawing_room"
+    description: "Beautiful fresh flowers in crystal vases, suggesting recent entertaining despite the family being in mourning."
+    interactions:
+      examine: "Fresh flowers seem inappropriate during mourning period"
+    secrets: ["secret_entertaining", "mourning_protocol_violations"]
+
+  mourning_wreaths:
+    id: "mourning_wreaths"
+    name: "Mourning Wreaths"
+    type: "memorial"
+    location: "entrance_hall"
+    description: "Fresh black ribboned wreaths hanging beside the door, marking the household's period of mourning for Lord Ravenscroft."
+    atmospheric_contribution:
+      mood: "Somber reminder of recent tragedy"
+      social_context: "Victorian mourning customs and expectations"
+
+  exotic_plants:
+    id: "exotic_plants"
+    name: "Conservatory Plants"
+    type: "botanical"
+    location: "conservatory"
+    description: "Lush exotic plants creating private nooks and hidden corners perfect for concealing secret correspondence."
+    interactions:
+      search: "Thorough searching reveals hidden items among the foliage"
+    secrets: ["hidden_love_letters", "secret_meeting_place"]
+
+  wicker_furniture:
+    id: "wicker_furniture"
+    name: "Conservatory Wicker Furniture"
+    type: "furniture"
+    location: "conservatory"
+    description: "Comfortable wicker chairs and tables arranged for intimate conversation among the plants."

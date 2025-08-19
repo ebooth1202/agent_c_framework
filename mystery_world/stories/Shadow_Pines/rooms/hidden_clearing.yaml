@@ -1,0 +1,80 @@
+id: "hidden_clearing"
+name: "Hidden Forest Clearing"
+description: "A secret clearing deep within the pine woods, where shafts of filtered sunlight illuminate an abandoned campsite. The silence here feels different - expectant, as if the trees themselves are keeping secrets."
+connections: ["woods_edge"]
+access_requirements: ["found_tire_tracks", "chose_vehicle"]
+objects: ["abandoned_campsite", "buried_chest"]
+secrets: ["second_key_in_chest"]
+
+# Room-specific clues and interactions
+room_clues:
+  - id: "second_key_discovery"
+    description: "An ornate key buried within the chest, matching the style of the first key"
+    reveals: "The second ancient key needed to unlock Shadow Pines Manor's complete secret"
+    discovery_requirements: ["opened_buried_chest"]
+  - id: "campsite_evidence"
+    description: "Recent camping equipment and signs of careful excavation"
+    reveals: "Someone has been systematically searching this area"
+    discovery_requirements: ["examine_campsite_thoroughly"]
+
+# Atmospheric details specific to this room
+atmosphere:
+  lighting: "Dramatic shafts of sunlight piercing the canopy, creating natural spotlights"
+  sounds: ["profound_forest_silence", "occasional_bird_call", "wind_in_high_branches"]
+  scents: ["pine_resin", "damp_earth", "wildflowers", "old_campfire_smoke"]
+  temperature: "Cool and sheltered, with warm spots in direct sunlight"
+  mood: "Sacred grove feeling - ancient secrets and hidden purposes"
+
+# The buried chest and its contents
+buried_chest:
+  location: "beneath_old_oak_stump"
+  description: "An ornate wooden chest buried beneath an ancient oak stump"
+  contents:
+    - "second_ancient_key"
+    - "family_documents"
+    - "old_photographs"
+    - "cryptic_journal_entries"
+  discovery_requirements: ["found_tire_tracks", "followed_trail", "searched_clearing"]
+
+# Campsite details
+abandoned_campsite:
+  equipment:
+    - "weathered_tent"
+    - "cold_fire_ring"
+    - "excavation_tools"
+    - "camping_supplies"
+  evidence:
+    - "recent_use_signs"
+    - "systematic_search_patterns"
+    - "careful_excavation_marks"
+  story_implications: "Someone has been methodically searching for the buried chest"
+
+# Victory condition elements
+mystery_resolution:
+  significance: "Final piece of the Shadow Pines Manor mystery"
+  requirements: ["found_first_key", "found_second_key"]
+  next_step: "Return to manor to unlock the complete secret"
+  victory_proximity: "Players are now one step away from solving the central mystery"
+
+# Environmental storytelling
+historical_significance:
+  - element: "ancient_oak_stump"
+    story: "Centuries-old tree that served as a landmark for the Pemberton family"
+    interaction: "The stump shows careful carving and maintenance over generations"
+  - element: "natural_amphitheater"
+    story: "Clearing formed by fallen trees creates a natural gathering space"
+    interaction: "Perfect acoustics suggest this was used for family meetings"
+  - element: "hidden_paths"
+    story: "Multiple trails converge here, showing this was a significant location"
+    interaction: "Well-worn paths indicate regular family use over decades"
+
+# Access and departure
+vehicle_parking:
+  atv_area: "Natural clearing suitable for parking the ATV"
+  dirtbike_area: "Smaller space perfect for the dirtbike"
+  concealment: "Both vehicles can be hidden from casual observation"
+
+return_journey:
+  urgency: "With both keys found, players feel compelled to return to the manor"
+  anticipation: "The complete secret of Shadow Pines Manor awaits revelation"
+  satisfaction: "Players have successfully navigated the full mystery trail"

@@ -1,0 +1,156 @@
+world:
+  metadata:
+    title: "Shadow Pines Manor"
+    genre: "Victorian Cozy Mystery"
+    created_by: "mystery_game_development"
+    created_date: "2024-12-19"
+    description: "A mysterious Victorian manor where ancient secrets lie hidden behind portraits and in forgotten clearings deep within the pine woods."
+    
+  setting:
+    time_period: "1890s"
+    location: "Shadow Pines Manor - English Countryside"
+    weather: "Overcast afternoon with mist rolling through the pine woods"
+    atmosphere: "Quiet, scholarly, mysterious with an undercurrent of ancient secrets"
+    
+  locations:
+    - id: "study"
+      name: "Lord Pemberton's Study"
+      description: "A wood-paneled study with tall bookshelves and a large oak desk. The scent of aged leather and pipe tobacco lingers in the air, while shadows from the tall windows dance across family portraits that seem to watch your every move."
+      connections: ["hallway"]
+      access_requirements: []
+      objects: ["oak_desk", "portrait_of_lady", "bookshelf", "fireplace"]
+      secrets: ["hidden_key_behind_portrait"]
+      
+    - id: "hallway"
+      name: "Main Hallway"
+      description: "A grand hallway with marble floors and family portraits stretching back generations. The grandfather clock's steady tick echoes through the space, while the umbrella stand holds walking sticks that hint at many countryside adventures."
+      connections: ["study", "front_door"]
+      access_requirements: []
+      objects: ["grandfather_clock", "umbrella_stand"]
+      secrets: []
+      
+    - id: "front_door"
+      name: "Manor Entrance"
+      description: "Heavy oak doors with iron hinges that have weathered decades of English storms. The coat rack holds garments that still carry the faint scent of the pine woods beyond."
+      connections: ["hallway", "front_grounds"]
+      access_requirements: []
+      objects: ["coat_rack", "walking_sticks"]
+      secrets: []
+      
+    - id: "front_grounds"
+      name: "Shadow Pines Manor Grounds"
+      description: "Expansive grounds where gravel paths wind between ancient pine trees that give the manor its name. A stone fountain bubbles quietly in the center, while garden benches offer peaceful spots to contemplate the mysteries that seem to lurk in every shadow."
+      connections: ["front_door", "garage", "woods_edge"]
+      access_requirements: []
+      objects: ["stone_fountain", "garden_bench"]
+      secrets: ["tire_tracks_leading_to_woods"]
+      
+    - id: "garage"
+      name: "Estate Garage"
+      description: "A stone building that houses the manor's vehicles. Tools hang neatly on racks, and a workbench shows signs of recent mechanical work. The scent of motor oil and pine needles creates an oddly comforting atmosphere."
+      connections: ["front_grounds"]
+      access_requirements: []
+      objects: ["red_atv", "black_dirtbike", "tool_rack", "workbench"]
+      secrets: ["maintenance_log_with_locations", "gas_can_behind_tools"]
+      
+    - id: "woods_edge"
+      name: "Edge of the Pine Woods"
+      description: "Dense woodland where towering pine trees create a natural cathedral. Ancient trail markers carved into bark hint at paths used for generations, while an old signpost points deeper into the mysterious depths of Shadow Pines."
+      connections: ["front_grounds", "hidden_clearing"]
+      access_requirements: []
+      objects: ["trail_markers", "old_signpost"]
+      secrets: ["fresh_footprints"]
+      
+    - id: "hidden_clearing"
+      name: "Hidden Forest Clearing"
+      description: "A secret clearing deep within the pine woods, where shafts of filtered sunlight illuminate an abandoned campsite. The silence here feels different - expectant, as if the trees themselves are keeping secrets."
+      connections: ["woods_edge"]
+      access_requirements: ["found_tire_tracks", "chose_vehicle"]
+      objects: ["abandoned_campsite", "buried_chest"]
+      secrets: ["second_key_in_chest"]
+      
+  characters:
+    - id: "butler_james"
+      name: "James the Butler"
+      description: "An elderly, proper butler whose knowing eyes suggest he has served the Pemberton family through many secrets. His formal demeanor occasionally cracks to reveal genuine concern for the manor's mysteries."
+      location: "hallway"
+      personality: ["dutiful", "observant", "slightly secretive", "protective_of_family_honor"]
+      secrets: ["knows_about_hidden_compartments", "remembers_the_last_expedition_to_the_clearing"]
+      interaction_requirements: []
+      
+  mystery:
+    central_mystery: "Uncover the complete secret of Shadow Pines Manor by finding both ancient keys"
+    clues:
+      - id: "portrait_hint"
+        location: "study"
+        description: "The lady in the portrait seems to be pointing toward the fireplace with an expression of urgent secrecy"
+        reveals: "Direction to first hidden key location behind the portrait"
+        discovery_requirements: ["examine_portrait_carefully"]
+      - id: "tire_tracks_clue"
+        location: "front_grounds"
+        description: "Fresh tire tracks leading from the garage toward the pine woods, pressed deep into the earth as if carrying heavy cargo"
+        reveals: "Someone recently made a significant journey to the woods with equipment"
+        discovery_requirements: ["examine_grounds_carefully"]
+      - id: "maintenance_log"
+        location: "garage"
+        description: "A leather-bound vehicle maintenance log showing recent trips to 'the old clearing' with notes about 'final preparations'"
+        reveals: "Location of hidden forest clearing and hints about its importance"
+        discovery_requirements: ["examine_garage_thoroughly"]
+      - id: "empty_fuel_tanks"
+        location: "garage"
+        description: "Both the ATV and dirtbike have completely empty fuel tanks, though they show signs of recent heavy use"
+        reveals: "Vehicles were recently used extensively and need refueling before another journey"
+        discovery_requirements: ["check_vehicle_gas_levels"]
+      - id: "hidden_gas_can"
+        location: "garage"
+        description: "A red gas can carefully hidden behind the tool rack, nearly full and marked with 'Emergency Use Only'"
+        reveals: "Fuel source for reaching the hidden clearing"
+        discovery_requirements: ["search_garage_for_gas"]
+    red_herrings: 
+      - "The fireplace poker looks suspicious but is merely an ornate family heirloom"
+      - "The garden fountain seems to hide something but contains only decorative stones and old pennies"
+      - "The grandfather clock's pendulum swings mysteriously but it's just an old mechanical quirk"
+      
+  rules:
+    progression_gates:
+      - gate_id: "access_desk_drawer"
+        requirements: ["found_hidden_key"]
+        hint_triggers:
+          - condition: "examined_desk_without_key"
+            hint: "The desk drawer bears an intricate lock that seems to require a very specific key. Perhaps something hidden nearby?"
+      - gate_id: "start_atv"
+        requirements: ["checked_atv_gas", "filled_atv_tank"]
+        hint_triggers:
+          - condition: "tried_start_atv_without_gas"
+            hint: "The ATV's engine turns over eagerly but won't catch. The fuel gauge needle points firmly to empty."
+      - gate_id: "start_dirtbike"
+        requirements: ["checked_dirtbike_gas", "filled_dirtbike_tank"]
+        hint_triggers:
+          - condition: "tried_start_dirtbike_without_gas"
+            hint: "The dirtbike's engine cranks with mechanical precision but refuses to start. You notice the fuel tank cap is loose, as if recently opened."
+    victory_conditions:
+      - condition: "solved_complete_mystery"
+        requirements: ["found_first_key", "found_second_key", "opened_final_secret"]
+        description: "Both ancient keys have been recovered and the complete secret of Shadow Pines Manor stands revealed"
+    vehicle_states:
+      red_atv:
+        fuel_level: "empty"
+        condition: "excellent"
+        can_start: false
+        description: "A sturdy red ATV perfect for navigating woodland trails"
+      black_dirtbike:
+        fuel_level: "empty"
+        condition: "excellent" 
+        can_start: false
+        description: "A sleek black dirtbike built for speed and agility through forest paths"
+    items:
+      gas_can:
+        location: "garage_hidden"
+        description: "Red metal gas can marked 'Emergency Use Only', nearly full of fuel"
+        discovered: false
+    failure_conditions: []
+    hint_system:
+      - trigger: "player_stuck_5_minutes"
+        response: "The lady in the portrait seems to catch your eye, her painted gaze directing you toward something important"
+      - trigger: "player_stuck_10_minutes"
+        response: "James the butler clears his throat softly, 'Perhaps a more thorough examination of the room might prove... illuminating, if I may suggest.'"

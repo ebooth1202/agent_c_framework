@@ -1,0 +1,18 @@
+id: "drawing_room"
+name: "Main Drawing Room"
+description: "An elegant reception room with velvet furnishings and crystal chandeliers. Fresh flowers suggest recent entertaining despite the mourning period. Family portraits dominate the walls."
+connections: ["study", "conservatory", "entrance_hall"]
+access_requirements: []
+objects: ["velvet_sofa", "crystal_chandelier", "family_portraits", "fresh_flowers"]
+secrets: ["entertaining_during_mourning", "hidden_love_letters"]
+
+atmosphere:
+  lighting: "Crystal chandelier refracting gas light into rainbow patterns"
+  sounds: ["silk_rustling", "distant_servants", "grandfather_clock"]
+  scents: ["fresh_roses", "furniture_polish", "dying_flowers"]
+  mood: "Elegant propriety masking family desperation"
+
+character_encounters:
+  - character_id: "lady_ravenscroft"
+    availability: "afternoon_visits"
+    greeting: "I fear I am not receiving visitors during this period of mourning"

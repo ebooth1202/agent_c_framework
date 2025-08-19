@@ -18,7 +18,7 @@ dependencies = [
     "spectree>=1.4.7",
     "fastapi-utils>=0.8.0",
     "uvicorn==0.34.0",
-    "pydantic==2.9.2",
+    "pydantic==2.11.7",
     "pydantic-settings==2.6.0",
     "weaviate-client==4.8.1", # Also used by agent_c-rag
     "python-multipart",

@@ -1,0 +1,30 @@
+id: "study"
+name: "Lord Pemberton's Study"
+description: "A wood-paneled study with tall bookshelves and a large oak desk. The scent of aged leather and pipe tobacco lingers in the air, while shadows from the tall windows dance across family portraits that seem to watch your every move."
+connections: ["hallway"]
+access_requirements: []
+objects: ["oak_desk", "portrait_of_lady", "bookshelf", "fireplace"]
+secrets: ["hidden_key_behind_portrait"]
+
+# Room-specific clues and interactions
+room_clues:
+  - id: "portrait_hint"
+    description: "The lady in the portrait seems to be pointing toward the fireplace with an expression of urgent secrecy"
+    reveals: "Direction to first hidden key location behind the portrait"
+    discovery_requirements: ["examine_portrait_carefully"]
+
+# Atmospheric details specific to this room
+atmosphere:
+  lighting: "Filtered afternoon light through tall windows creates dancing shadows"
+  sounds: "Occasional creak of leather-bound books settling on shelves"
+  scents: ["aged_leather", "pipe_tobacco", "beeswax_polish"]
+  temperature: "Comfortably warm from the fireplace"
+  mood: "Scholarly contemplation with undercurrent of secrets"
+
+# Room progression rules
+progression_gates:
+  - gate_id: "access_desk_drawer"
+    requirements: ["found_hidden_key"]
+    hint_triggers:
+      - condition: "examined_desk_without_key"
+        hint: "The desk drawer bears an intricate lock that seems to require a very specific key. Perhaps something hidden nearby?"

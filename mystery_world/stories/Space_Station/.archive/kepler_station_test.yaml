@@ -1,0 +1,207 @@
+world:
+  metadata:
+    title: "Research Station Kepler-442b"
+    genre: "Space Station Mystery"
+    created_by: "space_station_mystery_pipeline"
+    created_date: "2024-12-19"
+    description: "A civilian research station orbiting Kepler-442b where a missing alien navigator holds the key to finding a lost star system and potentially saving their entire species."
+    
+  setting:
+    time_period: "2157 CE"
+    location: "Research Station Kepler-442b - Deep Space Orbit"
+    environment: "Pressurized station with artificial gravity, viewing ports showing the planet below and star field beyond"
+    atmosphere: "Professional but tense, with underlying currents of inter-species cooperation and the isolation of deep space"
+    
+  locations:
+    - id: "docking_bay"
+      name: "Docking Bay 7"
+      description: "The primary civilian docking bay where transport shuttles arrive and depart. Atmospheric processors hum quietly while status displays show green across all safety systems. Through the transparent aluminum viewing ports, the blue-green surface of Kepler-442b rotates slowly below."
+      connections: ["main_corridor"]
+      access_requirements: []
+      objects: ["atmospheric_processor", "safety_displays", "viewing_ports", "guest_orientation_terminal"]
+      secrets: ["shuttle_departure_logs_show_unauthorized_access"]
+      
+    - id: "main_corridor"
+      name: "Central Corridor Alpha"
+      description: "The station's main thoroughfare, with color-coded directional strips leading to different sections. Multi-species safety notices are posted in Standard, Zephyrian glyphs, and Altairian geometric patterns. The gentle hum of life support systems provides a constant, reassuring background."
+      connections: ["docking_bay", "command_center", "crew_quarters", "research_labs"]
+      access_requirements: []
+      objects: ["directional_strips", "safety_notices", "emergency_stations"]
+      secrets: []
+      
+    - id: "command_center"
+      name: "Station Command Center"
+      description: "The operational heart of the station, with holographic displays showing orbital mechanics, communication arrays, and station status. The central navigation console remains dark - its primary operator has been missing for 18 hours."
+      connections: ["main_corridor"]
+      access_requirements: []
+      objects: ["orbital_displays", "communication_console", "navigation_console", "duty_roster"]
+      secrets: ["navigation_console_shows_unauthorized_star_chart_access", "encrypted_message_logs"]
+      
+    - id: "crew_quarters"
+      name: "Residential Section C"
+      description: "Living quarters for the station's multi-species crew. The corridor is lined with doors adapted for different species' needs - some with modified atmosphere controls, others with specialized lighting. Personal items and cultural artifacts create a sense of home in the void."
+      connections: ["main_corridor", "zara_quarters"]
+      access_requirements: []
+      objects: ["atmosphere_controls", "cultural_displays", "personal_message_board"]
+      secrets: ["worried_messages_about_zara"]
+      
+    - id: "zara_quarters"
+      name: "Navigator Zara's Quarters"
+      description: "Personal quarters adapted for Zephyrian physiology, with specialized atmospheric controls and bioluminescent lighting that mimics their homeworld. Star charts and navigation instruments are scattered across the desk, with one particular chart highlighted and annotated in urgent Zephyrian script."
+      connections: ["crew_quarters"]
+      access_requirements: ["gained_administrator_trust"]
+      objects: ["zephyrian_star_charts", "navigation_instruments", "personal_belongings", "highlighted_chart"]
+      secrets: ["urgent_annotations_about_dying_star_system", "hidden_communication_device"]
+      
+    - id: "research_labs"
+      name: "Xenobiology Research Labs"
+      description: "State-of-the-art research facilities where multi-species teams study the unique ecosystem of Kepler-442b. Specimen containers line the walls, while analysis equipment hums with activity. The lab's main computer terminal shows recent searches for 'stellar cartography' and 'dying star systems.'"
+      connections: ["main_corridor", "restricted_lab"]
+      access_requirements: []
+      objects: ["specimen_containers", "analysis_equipment", "main_terminal", "research_notes"]
+      secrets: ["computer_searches_reveal_zara_research", "unauthorized_equipment_usage"]
+      
+    - id: "restricted_lab"
+      name: "Restricted Xenobiology Lab"
+      description: "A secured laboratory section containing sensitive research equipment and classified specimens. Environmental suits hang ready for dangerous work, while a specialized communication array - not standard station equipment - has been recently installed and shows signs of heavy use."
+      connections: ["research_labs"]
+      access_requirements: ["found_lab_access_code", "medic_clearance"]
+      objects: ["environmental_suits", "classified_specimens", "communication_array", "installation_tools"]
+      secrets: ["communication_array_configured_for_long_range_transmission", "zara_contacted_homeworld"]
+      
+    - id: "observation_deck"
+      name: "Stellar Observation Deck"
+      description: "A quiet area with panoramic views of space, popular for contemplation and off-duty relaxation. Advanced telescopes and star-mapping equipment are available for crew use. One telescope has been left configured to view a specific region of space - coordinates that don't match any known navigation routes."
+      connections: ["main_corridor"]
+      access_requirements: []
+      objects: ["panoramic_windows", "telescopes", "star_mapping_equipment", "observation_logs"]
+      secrets: ["telescope_configured_for_unknown_coordinates", "observation_logs_show_zara_frequent_visits"]
+      
+  characters:
+    - id: "admin_chen"
+      name: "Administrator Chen Wei"
+      description: "A competent human administrator who has managed civilian operations on Kepler Station for eight years. Her professional demeanor masks growing concern about crew safety and the implications of Zara's disappearance for station operations."
+      location: "command_center"
+      personality: ["professional", "responsible", "protective_of_crew", "torn_between_protocol_and_compassion"]
+      secrets: ["knows_zara_received_distressing_news_from_homeworld", "worried_about_station_security_implications"]
+      interaction_requirements: []
+      
+    - id: "engineer_torres"
+      name: "Chief Engineer Maria Torres"
+      description: "A practical human engineer who keeps the station running smoothly. She knows every system, every shortcut, and every unauthorized modification on the station. Her technical expertise makes her invaluable, but she's been acting nervous since Zara's disappearance."
+      location: "main_corridor"
+      personality: ["practical", "hands_on", "protective_of_station_systems", "suspicious_of_unauthorized_changes"]
+      secrets: ["noticed_unauthorized_equipment_installation", "found_evidence_of_communication_tampering", "knows_about_restricted_lab_access"]
+      interaction_requirements: []
+      
+    - id: "medic_okafor"
+      name: "Dr. Amara Okafor"
+      description: "A compassionate human medical officer who serves as the station's primary healthcare provider. She understands the psychological pressures of deep space isolation and has been particularly concerned about Zara's recent behavioral changes."
+      location: "crew_quarters"
+      personality: ["compassionate", "observant", "protective_of_patient_confidentiality", "worried_about_crew_mental_health"]
+      secrets: ["zara_requested_medical_clearance_for_dangerous_activities", "noticed_signs_of_extreme_stress_in_zara", "knows_about_zara_sleep_disturbances"]
+      interaction_requirements: []
+      
+    - id: "researcher_keth"
+      name: "Dr. Keth'var (Altairian)"
+      description: "An Altairian xenobiologist whose geometric thought patterns and logical approach to problems complement the human crew. Keth'var has been working closely with Zara on stellar cartography research and is deeply concerned about their colleague's disappearance."
+      location: "research_labs"
+      personality: ["logical", "methodical", "loyal_to_research_partners", "struggling_with_emotional_concepts"]
+      secrets: ["helped_zara_access_restricted_research_equipment", "knows_about_zara_secret_communication_attempts", "understands_the_urgency_of_zara_mission"]
+      interaction_requirements: []
+      
+    - id: "trader_voss"
+      name: "Marcus Voss"
+      description: "An independent human trader who regularly visits the station for supply runs and information exchange. His connections throughout the sector make him a valuable source of news and gossip, though his motivations aren't always clear."
+      location: "docking_bay"
+      personality: ["opportunistic", "well_connected", "street_smart", "morally_flexible"]
+      secrets: ["knows_about_zephyrian_homeworld_crisis", "has_contacts_who_might_help_find_zara", "aware_of_black_market_navigation_data"]
+      interaction_requirements: []
+      
+  mystery:
+    central_mystery: "Find Navigator Zara and uncover why they disappeared while secretly researching a specific star system"
+    clues:
+      - id: "navigation_console_access"
+        location: "command_center"
+        description: "The navigation console shows unauthorized access to deep space star charts at 0347 hours, focusing on an uncharted region designated only as 'Sector Zephyr-Prime'"
+        reveals: "Zara was researching a specific star system before disappearing"
+        discovery_requirements: ["examine_navigation_console"]
+      - id: "encrypted_messages"
+        location: "command_center"
+        description: "Communication logs show several encrypted transmissions sent to coordinates outside normal station operations, all originating from Zara's personal access codes"
+        reveals: "Zara was secretly communicating with someone off-station"
+        discovery_requirements: ["access_communication_logs", "gained_administrator_trust"]
+      - id: "urgent_star_chart"
+        location: "zara_quarters"
+        description: "A star chart on Zara's desk shows frantic annotations in Zephyrian script around a dying star system, with calculations about remaining stellar lifespan and evacuation timeframes"
+        reveals: "Zara's homeworld or a Zephyrian colony is in immediate danger from stellar collapse"
+        discovery_requirements: ["gained_administrator_trust", "examine_zara_quarters"]
+      - id: "hidden_communication_device"
+        location: "zara_quarters"
+        description: "A concealed long-range communication device, non-standard and clearly personal equipment, shows recent contact with Zephyrian emergency frequencies"
+        reveals: "Zara received urgent news from Zephyrian space about an emergency situation"
+        discovery_requirements: ["gained_administrator_trust", "examine_zara_quarters_thoroughly"]
+      - id: "unauthorized_equipment"
+        location: "research_labs"
+        description: "Computer logs show Zara accessed xenobiology equipment for 'stellar cartography analysis' - equipment not normally used for navigation purposes"
+        reveals: "Zara was using research equipment to analyze star system data"
+        discovery_requirements: ["examine_research_terminal"]
+      - id: "communication_array"
+        location: "restricted_lab"
+        description: "A sophisticated communication array has been recently installed and configured for long-range transmission to specific coordinates in Zephyrian space"
+        reveals: "Zara established secret communication with Zephyrian authorities about the crisis"
+        discovery_requirements: ["found_lab_access_code", "medic_clearance", "examine_restricted_lab"]
+      - id: "telescope_configuration"
+        location: "observation_deck"
+        description: "The main telescope is configured to observe coordinates matching the dying star system from Zara's charts, with observation logs showing nightly monitoring for the past week"
+        reveals: "Zara was monitoring the crisis situation and tracking its progression"
+        discovery_requirements: ["examine_telescope_settings"]
+    red_herrings: 
+      - "Shuttle departure logs suggest unauthorized access, but it was actually a maintenance crew running diagnostics"
+      - "Strange readings from the atmospheric processor are concerning but unrelated to Zara's disappearance"
+      - "Personal messages on the crew message board seem suspicious but are just normal social interactions"
+      
+  rules:
+    progression_gates:
+      - gate_id: "access_zara_quarters"
+        requirements: ["gained_administrator_trust"]
+        hint_triggers:
+          - condition: "tried_access_quarters_without_permission"
+            hint: "Administrator Chen looks concerned. 'I can't just let anyone into crew quarters, even with good intentions. Station protocols exist for everyone's safety and privacy.'"
+      - gate_id: "access_restricted_lab"
+        requirements: ["found_lab_access_code", "medic_clearance"]
+        hint_triggers:
+          - condition: "tried_access_restricted_lab_without_clearance"
+            hint: "The restricted lab door requires both an access code and medical clearance. Dr. Okafor might be able to help with the medical requirements."
+      - gate_id: "understand_zephyrian_annotations"
+        requirements: ["gained_researcher_trust"]
+        hint_triggers:
+          - condition: "examined_star_chart_without_translation"
+            hint: "The Zephyrian script is complex and urgent-looking, but you'll need someone familiar with the language to understand its meaning."
+    victory_conditions:
+      - condition: "solved_complete_mystery"
+        requirements: ["found_zara_location", "understood_stellar_crisis", "contacted_zephyrian_authorities"]
+        description: "Navigator Zara has been found and the stellar crisis threatening Zephyrian colonies has been properly reported to authorities"
+    trust_system:
+      administrator_trust:
+        gained_by: ["showing_competence", "following_protocols", "demonstrating_care_for_crew"]
+        lost_by: ["ignoring_safety_procedures", "being_pushy_about_access", "showing_disrespect_for_station_authority"]
+      researcher_trust:
+        gained_by: ["showing_scientific_understanding", "respecting_research_protocols", "demonstrating_genuine_concern_for_zara"]
+        lost_by: ["dismissing_scientific_concerns", "rushing_through_explanations", "showing_species_bias"]
+      medic_trust:
+        gained_by: ["showing_compassion", "respecting_medical_confidentiality", "understanding_psychological_pressures"]
+        lost_by: ["being_callous_about_crew_welfare", "demanding_confidential_information", "ignoring_mental_health_concerns"]
+    failure_conditions: []
+    hint_system:
+      - trigger: "player_stuck_5_minutes"
+        response: "Administrator Chen glances at the navigation console with concern. 'Zara was always so meticulous about logging their work. It's unlike them to leave things incomplete.'"
+      - trigger: "player_stuck_10_minutes"
+        response: "Dr. Keth'var's geometric head tilts thoughtfully. 'In Altairian logic, when seeking the missing, one must first understand what drove them to depart. What was Zara's most pressing concern?'"
+      - trigger: "player_stuck_15_minutes"
+        response: "Engineer Torres taps her tablet nervously. 'I've been running diagnostics all morning. Some of our equipment has been used in... creative ways recently. Might be worth checking what Zara was working on.'"
+
+  resolution:
+    zara_location: "Navigator Zara is found in the restricted lab, having collapsed from exhaustion while attempting to establish emergency communication with Zephyrian rescue authorities about a dying star system threatening multiple colonies"
+    stellar_crisis: "A critical star in Zephyrian space is undergoing premature collapse, threatening three colony worlds with extinction unless immediate evacuation assistance is provided"
+    rescue_mission: "With the crisis properly reported and Zara's navigation expertise, a joint human-Zephyrian rescue operation can be organized to save the threatened colonies"
