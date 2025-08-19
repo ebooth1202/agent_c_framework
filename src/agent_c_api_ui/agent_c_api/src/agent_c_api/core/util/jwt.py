@@ -3,7 +3,7 @@ import sys
 import argparse
 
 from typing import Optional
-from fastapi import WebSocket, HTTPException, status
+from fastapi import WebSocket, HTTPException, status, Request
 from fastapi.security import HTTPBearer
 from jose import jwt, JWTError
 from datetime import datetime, timedelta, UTC
@@ -49,6 +49,24 @@ def verify_jwt_token(token: str) -> dict:
         }
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
+
+async def validate_request_jwt(request: Request) -> dict:
+    """Extract and validate JWT from WebSocket headers or query params"""
+    # Try Authorization header first
+    auth_header = None
+    for name, value in request.headers.items():
+        if name.lower() == "authorization":
+            auth_header = value
+            break
+
+    token = None
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header[7:]  # Remove "Bearer " prefix
+
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing authorization")
+
+    return verify_jwt_token(token)
 
 
 async def validate_websocket_jwt(websocket: WebSocket) -> dict:

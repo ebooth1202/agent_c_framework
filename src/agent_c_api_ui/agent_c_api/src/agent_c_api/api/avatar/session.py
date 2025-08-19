@@ -1,15 +1,39 @@
 from typing import Optional, Dict, Any
 from fastapi import APIRouter, HTTPException, Depends, WebSocket, Request
 
+from agent_c.config.agent_config_loader import AgentConfigLoader
+from agent_c.util.heygen_streaming_avatar_client import HeyGenStreamingClient
 from agent_c.util.logging_utils import LoggingManager
 from agent_c_api.api.dependencies import get_agent_manager
-from agent_c_api.core.util.jwt import validate_websocket_jwt
+from agent_c_api.core.util.jwt import validate_websocket_jwt, validate_request_jwt
 
 router = APIRouter()
 logger = LoggingManager(__name__).get_logger()
 
 
 
+@router.get("/config")
+async def get_avatar_config():
+    """
+    Retrieves the configuration for the avatar session.
+
+    Returns:
+        dict: A dictionary containing the avatar session configuration.
+    """
+    #_ = validate_request_jwt(request)
+    try:
+        heygen_client = HeyGenStreamingClient()
+        loader: AgentConfigLoader = AgentConfigLoader()
+        agents = loader.client_catalog
+        avatar_list = (await heygen_client.list_avatars()).data
+        return {'agents': agents, "avatars": avatar_list}
+
+    except Exception as e:
+        logger.error(f"Error retrieving avatar config: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to retrieve avatar config: {str(e)}"
+        )
 
 
 @router.websocket("/ws")

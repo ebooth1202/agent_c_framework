@@ -12,7 +12,7 @@ from agent_c.models import ChatSession
 from agent_c.models.events import BaseEvent, TextDeltaEvent, CompletionEvent
 from agent_c.models.events.chat import ThoughtDeltaEvent
 from agent_c.models.heygen import HeygenAvatarSessionData, NewSessionRequest
-from agent_c.util.heygen_streaming_avatar_client import HeyGenClient, HeyGenStreamingClient
+from agent_c.util.heygen_streaming_avatar_client import HeyGenStreamingClient
 from agent_c.util.registries.event import EventRegistry
 from agent_c_api.api.avatar.models.client_events import GetAgentsEvent, ErrorEvent, AgentListEvent, GetAvatarsEvent, AvatarListEvent, TextInputEvent, SetAvatarEvent, AvatarConnectionChangedEvent, \
     SetAgentEvent, AgentConfigurationChangedEvent
@@ -36,8 +36,7 @@ class AvatarBridge(AgentBridge):
         self.websocket: Optional[WebSocket] = None
         self.is_running = False
         self.agent_config_loader: AgentConfigLoader = AgentConfigLoader()
-        self.heygen_base_client = HeyGenClient()
-        self.heygen_stream_client: Optional[HeyGenStreamingClient] = None
+        self.heygen_client = HeyGenStreamingClient()
         self.client_wants_cancel = threading.Event()
         self.avatar_session: Optional[HeygenAvatarSessionData] = None
         self._partial_agent_message: str = ""
@@ -67,20 +66,20 @@ class AvatarBridge(AgentBridge):
         await self.send_avatar_list()
 
     async def send_avatar_list(self) -> None:
-        resp = await self.heygen_base_client.list_avatars()
+        resp = await self.heygen_client.list_avatars()
         await self.send_event(AvatarListEvent(avatars=resp.data))
 
     async def end_avatar_session(self) -> None:
         """End the current avatar session if it exists"""
         if self.avatar_session:
             try:
-                await self.heygen_stream_client.close_session()
+                await self.heygen_client.close_session()
                 self.logger.info(f"Avatar session {self.avatar_session.session_id} ended successfully")
             except Exception as e:
                 self.logger.error(f"Failed to end avatar session {self.avatar_session.session_id}: {e}")
             finally:
                 self.avatar_session = None
-                self.heygen_stream_client = None
+                self.heygen_client = None
 
     @handle_client_event.register
     async def _(self, event: SetAvatarEvent) -> None:
@@ -91,8 +90,7 @@ class AvatarBridge(AgentBridge):
         if self.avatar_session is not None:
             await self.end_avatar_session()
 
-        self.heygen_stream_client = await self.heygen_base_client.create_streaming_client()
-        self.avatar_session = await self.heygen_stream_client.create_new_session(NewSessionRequest(avatar_id=avatar_id, quality=quality, video_encoding=video_encoding))
+        self.avatar_session = await self.heygen_client.create_new_session(NewSessionRequest(avatar_id=avatar_id, quality=quality, video_encoding=video_encoding))
         await self.send_event(AvatarConnectionChangedEvent(avatar_session=self.avatar_session))
 
     @handle_client_event.register
@@ -176,7 +174,7 @@ class AvatarBridge(AgentBridge):
         if not self._avatar_did_think:
             self._avatar_did_think = True
             try:
-                await self.heygen_stream_client.send_task(self.avatar_think_message)
+                await self.heygen_client.send_task(self.avatar_think_message)
             except Exception as e:
                 self.logger.error(f"AvatarBridge {self.chat_session.session_id}: Failed to send message to avatar: {e}")
 
@@ -189,11 +187,11 @@ class AvatarBridge(AgentBridge):
         await self.avatar_say(left + "\n", role="assistant")
 
     async def avatar_say(self, text: str, role: str = "assistant"):
-        if not self.heygen_stream_client or not self.avatar_session:
+        if not self.heygen_client or not self.avatar_session:
             self.logger.error(f"AvatarBridge {self.chat_session.session_id}: No active avatar session to send message")
             return
         try:
-            await self.heygen_stream_client.send_task(text)
+            await self.heygen_client.send_task(text)
         except Exception as e:
             self.logger.error(f"AvatarBridge {self.chat_session.session_id}: Failed to send message to avatar: {e}")
             await self.send_error(f"Failed to send message to avatar: {str(e)}")
