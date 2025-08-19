@@ -1,8 +1,7 @@
-from typing import Optional
-from fastapi import APIRouter, HTTPException, Depends, WebSocket
+from typing import Optional, Dict, Any
+from fastapi import APIRouter, HTTPException, Depends, WebSocket, Request
 
 from agent_c.util.logging_utils import LoggingManager
-# from agent_c_api.core.agent_manager import UItoAgentBridgeManager
 from agent_c_api.api.dependencies import get_agent_manager
 from agent_c_api.core.util.jwt import validate_websocket_jwt
 
@@ -15,34 +14,33 @@ logger = LoggingManager(__name__).get_logger()
 
 @router.websocket("/ws")
 async def initialize_avatar_session(websocket: WebSocket,
-                                    session_id: Optional[str] = None,
-                                    agent_manager=Depends(get_agent_manager)):
+                                    session_id: Optional[str] = None):
     """
     Creates an agent session with the provided parameters.
     """
     try:
-        user_info = await validate_websocket_jwt(websocket)
-        new_session_id = await agent_manager.create_avtar_session(websocket, session_id)
-        logger.info(f"Initialized user Session {new_session_id}")
+        user_info: Dict[str, Any] = await validate_websocket_jwt(websocket)
+        agent_manager = websocket.app.state.agent_manager
+        avatar_bridge = await agent_manager.create_avatar_session(user_info['user_id'], session_id)
 
-        return {"ui_session_id": new_session_id,
-                "agent_c_session_id": new_session_id}
+        await avatar_bridge.run(websocket)
 
     except Exception as e:
-        logger.error(f"Error during session initialization: {str(e)}")
+        logger.exception(f"Error during session initialization: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/verify_session/{ui_session_id}")
-async def verify_session(ui_session_id: str, agent_manager=Depends(get_agent_manager)):
+async def verify_session(ui_session_id: str, request: Request):
     """
     Verifies if a session exists and is valid
     """
+    agent_manager = get_agent_manager(request)
     session_data = agent_manager.get_session_data(ui_session_id)
     return {"valid": session_data is not None}
 
 @router.get("/sessions")
-async def get_sessions(agent_manager=Depends(get_agent_manager)):
+async def get_sessions(request: Request):
     """
     Retrieves all available sessions.
 
@@ -53,7 +51,7 @@ async def get_sessions(agent_manager=Depends(get_agent_manager)):
         HTTPException: If there's an error retrieving sessions
     """
     try:
-
+        agent_manager = get_agent_manager(request)
         sessions = agent_manager.chat_session_manager.session_id_list
         return {"session_ids": sessions}
 

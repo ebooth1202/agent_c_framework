@@ -51,21 +51,26 @@ def verify_jwt_token(token: str) -> dict:
         raise HTTPException(status_code=401, detail="Invalid token")
 
 
-# WebSocket JWT validation
 async def validate_websocket_jwt(websocket: WebSocket) -> dict:
-    """Extract and validate JWT from WebSocket headers"""
-    # Get Authorization header
+    """Extract and validate JWT from WebSocket headers or query params"""
+    # Try Authorization header first
     auth_header = None
     for name, value in websocket.headers.items():
         if name.lower() == "authorization":
             auth_header = value
             break
 
-    if not auth_header or not auth_header.startswith("Bearer "):
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Missing or invalid authorization header")
-        raise HTTPException(status_code=401, detail="Missing authorization header")
+    token = None
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header[7:]  # Remove "Bearer " prefix
+    else:
+        # Fallback to query parameter for browser clients
+        token = websocket.query_params.get("token")
 
-    token = auth_header[7:]  # Remove "Bearer " prefix
+    if not token:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Missing authorization")
+        raise HTTPException(status_code=401, detail="Missing authorization")
+
     return verify_jwt_token(token)
 
 

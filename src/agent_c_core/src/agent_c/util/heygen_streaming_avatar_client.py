@@ -60,7 +60,7 @@ class HeyGenStreamingClient:
             base_url=self.BASE_URL,
             timeout=timeout,
             headers={
-                "Authorization": f"Bearer {access_token}",
+                "x-api-key": access_token,
                 "Content-Type": "application/json"
             }
         )
@@ -93,12 +93,14 @@ class HeyGenStreamingClient:
         Raises:
             httpx.HTTPError: If the request fails
         """
-        response = await self._client.post("/v1/streaming.new", json=request.model_dump(exclude_none=True))
+        payload = request.model_dump(exclude_none=True)
+        response = await self._client.post("/v1/streaming.new", json=payload)
         response.raise_for_status()
 
-        session_response = NewSessionResponse.model_validate(response.json())
+        payload = response.json()
+        session_response = NewSessionResponse.model_validate(payload)
         self.heygen_session = session_response.data
-
+        await self.start_session()
         return self.heygen_session
 
     async def start_session(self, session_id: Optional[str] = None) -> SimpleStatusResponse:
@@ -304,7 +306,7 @@ class HeyGenClient:
             ValueError: If API key is missing
         """
         access_token = await self.create_streaming_access_token()
-        return HeyGenStreamingClient(access_token)
+        return HeyGenStreamingClient(self.api_key)
 
     @staticmethod
     def _locate_config_path() -> str:

@@ -11,43 +11,45 @@ from agent_c.models.base import BaseModel
 class ElevenlabsSettings(BaseModel):
     """Voice settings for ElevenLabs voice provider."""
     
-    stability: Optional[float] = 0.75
+    stability: Optional[float] = None
     model_id: Optional[str] = "eleven_flash_v2_5"
-    similarity_boost: Optional[float] = 0.75
-    style: Optional[float] = 0.0
-    use_speaker_boost: Optional[bool] = True
+    similarity_boost: Optional[float] = None
+    style: Optional[float] = None
+    use_speaker_boost: Optional[bool] = None
 
 
 class VoiceSettings(BaseModel):
     """Voice configuration for streaming avatar."""
     
     voice_id: Optional[str] = None
-    rate: Optional[float] = 1.0
-    emotion: Optional[str] = None
-    elevenlabs_settings: Optional[ElevenlabsSettings] = None
+    rate: Optional[float] = 1.5
+    emotion: Optional[str] = "excited"
+    elevenlabs_settings: Optional[ElevenlabsSettings] = Field(default_factory=lambda: ElevenlabsSettings())
 
 
 class STTSettings(BaseModel):
     """Speech-to-text configuration settings."""
     
-    provider: Optional[str] = "assembly_ai"
-    confidence: Optional[float] = 0.55
+    provider: Optional[str] = "deepgram"
+    confidence: Optional[float] = None
 
 
 class NewSessionRequest(BaseModel):
     """Request model for creating a new streaming session."""
-    
+    avatar_id: Optional[str] = None
     quality: Optional[str] = "medium"
-    avatar_id: Optional[str] = "default"
-    voice: Optional[VoiceSettings] = None
-    voice_name: Optional[str] = None
-    stt_settings: Optional[STTSettings] = None
-    video_encoding: Optional[str] = "VP8"
+    voice: Optional[VoiceSettings] = Field(default_factory=lambda: VoiceSettings())
+    language: Optional[str] = "en"
+    version: Optional[str] = "v2"
+    video_encoding: Optional[str] = "H264"
+    source: Optional[str] = "sdk"
+    stt_settings: Optional[STTSettings] = Field(default_factory=lambda: STTSettings())
+    ia_is_livekit_transport: Optional[bool] = False
     knowledge_base: Optional[str] = None
-    version: Optional[str] = None
     knowledge_base_id: Optional[str] = None
-    disable_idle_timeout: Optional[bool] = False
-    activity_idle_timeout: Optional[int] = 120
+    disable_idle_timeout: Optional[bool] = None
+    activity_idle_timeout: Optional[int] = None
+
 
 
 class SendTaskRequest(BaseModel):

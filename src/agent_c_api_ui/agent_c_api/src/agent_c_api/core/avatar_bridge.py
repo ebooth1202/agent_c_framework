@@ -59,7 +59,8 @@ class AvatarBridge(AgentBridge):
         await self.interact(user_message=event.text, file_ids=event.file_ids)
 
     async def send_agent_list(self) -> None:
-        await self.send_event(AgentListEvent(agents=self.agent_config_loader.client_catalog))
+        catalog = self.agent_config_loader.client_catalog
+        await self.send_event(AgentListEvent(agents=catalog))
 
     @handle_client_event.register
     async def _(self, _: GetAvatarsEvent) -> None:
@@ -83,15 +84,15 @@ class AvatarBridge(AgentBridge):
 
     @handle_client_event.register
     async def _(self, event: SetAvatarEvent) -> None:
-        await self.set_avatar(event.avatar_id)
+        await self.set_avatar(event.avatar_id, event.quality, event.video_encoding)
 
-    async def set_avatar(self, avatar_id: str, quality: str = "medium", vide0_encoding: str = "vp8") -> None:
+    async def set_avatar(self, avatar_id: str, quality: str = "medium", video_encoding: str = "H264") -> None:
         """Set the avatar for the current session by creating a HeyGen session"""
         if self.avatar_session is not None:
             await self.end_avatar_session()
 
         self.heygen_stream_client = await self.heygen_base_client.create_streaming_client()
-        self.avatar_session = await self.heygen_stream_client.create_new_session(NewSessionRequest(avatar_id=avatar_id, quality=quality, video_encoding=vide0_encoding))
+        self.avatar_session = await self.heygen_stream_client.create_new_session(NewSessionRequest(avatar_id=avatar_id, quality=quality, video_encoding=video_encoding))
         await self.send_event(AvatarConnectionChangedEvent(avatar_session=self.avatar_session))
 
     @handle_client_event.register
@@ -212,6 +213,7 @@ class AvatarBridge(AgentBridge):
 
     async def run(self, websocket: WebSocket):
         """Main run loop for the bridge"""
+        await websocket.accept()
         self.websocket=websocket
         self.is_running = True
         self.logger.info (f"AvatarBridge started for session {self.chat_session.session_id}")
@@ -235,7 +237,9 @@ class AvatarBridge(AgentBridge):
                     self.logger.exception(f"Error handling event for session {self.chat_session.session_id}: {e}")
                     await self.send_error(f"Error processing event: {str(e)}")
 
+
         finally:
+            await self.end_avatar_session()  # Ensure avatar session cleanup
             self.logger.info(f"AvatarBridge stopped for session {self.chat_session.session_id}")
 
 

@@ -62,7 +62,7 @@ class SetAvatarEvent(BaseEvent):
     """
     avatar_id: str
     quality: str = "medium"
-    video_encoding: str = "VP8"
+    video_encoding: str = "H264"
 
 class AvatarConnectionChangedEvent(BaseEvent):
     avatar_session: HeygenAvatarSessionData

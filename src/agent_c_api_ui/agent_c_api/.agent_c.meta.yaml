@@ -1,4 +1,68 @@
 _plans:
+  avatar-dependency-fix:
+    created_at: '2025-08-19T13:02:38.998775'
+    description: Fix the dependency injection issue in avatar/session.py where get_agent_manager
+      fails due to missing request parameter. The endpoints need to be updated to
+      follow the V2 API pattern for proper dependency injection.
+    id: 8b440bf6-ed76-4dc9-b14d-cdb9450ea7d9
+    lessons_learned: []
+    tasks:
+      f0b8f3a0-fbd3-40ee-a766-44791ce408b0:
+        child_tasks: []
+        completed: true
+        completion_report: 'Successfully updated avatar/session.py to fix dependency
+          injection issues:
+
+
+          1. Added Request import to the imports
+
+          2. Updated HTTP endpoints (verify_session, get_sessions) to include request:
+          Request parameter and call get_agent_manager(request) directly
+
+          3. Updated WebSocket endpoint to access agent_manager from websocket.app.state.agent_manager
+          since WebSocket connections don''t have Request objects
+
+          4. Removed all Depends(get_agent_manager) usage that was causing the injection
+          failures
+
+
+          The endpoints should now work properly without dependency injection errors.'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-08-19T13:02:49.059118'
+        description: 'Modify the avatar/session.py endpoints to follow the V2 pattern:
+          add Request parameter to endpoints and call get_agent_manager(request) explicitly
+          instead of using Depends(get_agent_manager).'
+        id: f0b8f3a0-fbd3-40ee-a766-44791ce408b0
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: Update avatar session endpoints to use proper dependency injection
+        updated_at: '2025-08-19T13:03:26.140915'
+      fc92a908-80be-4c88-b7af-406dfe52b409:
+        child_tasks: []
+        completed: true
+        completion_report: 'Analysis complete. The issue is that avatar/session.py
+          uses Depends(get_agent_manager) but get_agent_manager requires a Request
+          parameter that FastAPI can''t inject because the endpoints don''t have Request
+          parameters. The V2 endpoints solve this by adding request: Request parameter
+          and calling get_agent_manager(request) directly.'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-08-19T13:02:44.732295'
+        description: Review the current avatar/session.py endpoints and understand
+          the dependency injection failure. Document the correct pattern used in V2
+          endpoints.
+        id: fc92a908-80be-4c88-b7af-406dfe52b409
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: Analyze current dependency injection pattern
+        updated_at: '2025-08-19T13:03:00.231918'
+    title: Fix Avatar Session Dependency Injection
+    updated_at: '2025-08-19T13:03:26.140924'
   redis_refactor_plan:
     created_at: '2025-05-23T22:41:22.404438'
     description: Comprehensive refactor of the Redis implementation to fix multiple
