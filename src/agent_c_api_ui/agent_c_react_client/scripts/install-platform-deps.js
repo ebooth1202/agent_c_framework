@@ -15,8 +15,15 @@ try {
     console.log('Installing Linux-specific dependencies...');
     execSync('npm install @rollup/rollup-linux-x64-gnu', { stdio: 'inherit' });
   } else if (platform === 'darwin') {
-    console.log('Installing macOS-specific dependencies...');
-    execSync('npm install @rollup/rollup-darwin-x64', { stdio: 'inherit' });
+    if (process.arch === 'arm64') {
+      console.log('Installing macOS-specific dependencies for Apple Silicon...');
+      execSync('npm install @rollup/rollup-darwin-arm64', { stdio: 'inherit' });
+    } else if (process.arch === 'x64') {
+      console.log('Installing macOS-specific dependencies for Intel...');
+      execSync('npm install @rollup/rollup-darwin-x64', { stdio: 'inherit' });
+    } else {
+      console.log(`No specific rollup dependencies available for macOS ${process.arch}`);
+    }
   } else {
     console.log(`No specific dependencies to install for platform: ${platform}`);
   }

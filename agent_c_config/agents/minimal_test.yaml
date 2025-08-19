@@ -1,0 +1,17 @@
+version: 2
+name: "Minimal Test"
+key: "minimal_test"
+agent_description: "Minimal test agent"
+model_id: "claude-sonnet-4-20250514"
+tools:
+  - ThinkTools
+  - WorkspaceTools
+  - WorkspacePlanningTools
+  - AgentAssistTools
+  - AgentCloneTools
+agent_params:
+  budget_tokens: 20000
+  max_tokens: 64000
+category:
+  - "domo"
+persona: "You are a minimal test agent."

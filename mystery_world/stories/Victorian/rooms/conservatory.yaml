@@ -1,0 +1,19 @@
+id: "conservatory"
+name: "Glass Conservatory"
+description: "A beautiful glass structure filled with exotic plants and comfortable seating. Hidden among the foliage are love letters tied with ribbon—evidence of secret romantic correspondence."
+connections: ["drawing_room", "grounds"]
+access_requirements: []
+objects: ["exotic_plants", "wicker_furniture", "love_letters", "garden_tools"]
+secrets: ["secret_romance", "financial_motivation_for_marriage"]
+
+atmosphere:
+  lighting: "Natural light filtered through glass and green leaves"
+  sounds: ["rustling_leaves", "distant_birds", "glass_creaking"]
+  scents: ["exotic_flowers", "humid_earth", "growing_things"]
+  mood: "Romantic sanctuary hiding desperate secrets"
+
+room_clues:
+  - id: "love_letters"
+    description: "Passionate correspondence revealing a secret romance and financial motivations"
+    reveals: "Lady Ravenscroft has a lover who needs money desperately"
+    discovery_requirements: ["search_conservatory_thoroughly"]

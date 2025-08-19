@@ -1,0 +1,29 @@
+id: "front_door"
+name: "Manor Entrance"
+description: "Heavy oak doors with iron hinges that have weathered decades of English storms. The coat rack holds garments that still carry the faint scent of the pine woods beyond."
+connections: ["hallway", "front_grounds"]
+access_requirements: []
+objects: ["coat_rack", "walking_sticks"]
+secrets: []
+
+# Room-specific features
+room_features:
+  - feature: "heavy_oak_doors"
+    description: "Massive doors with ornate iron hardware"
+    interaction: "The doors open with satisfying weight and authority"
+  - feature: "entrance_threshold"
+    description: "The boundary between manor interior and grounds"
+    interaction: "Stepping through feels like crossing between two worlds"
+
+# Atmospheric details specific to this room
+atmosphere:
+  lighting: "Natural light from outside, creating dramatic entrance lighting"
+  sounds: ["wind_through_door_gaps", "distant_pine_rustling", "door_hardware_creaking"]
+  scents: ["pine_woods", "fresh_air", "old_oak", "leather_coats"]
+  temperature: "Variable - influenced by outside weather"
+  mood: "Threshold between civilized interior and mysterious exterior"
+
+# Transition descriptions
+transitions:
+  to_hallway: "You step back into the formal grandeur of the manor's interior"
+  to_front_grounds: "You emerge onto the manor grounds, where ancient pines whisper secrets in the mist"

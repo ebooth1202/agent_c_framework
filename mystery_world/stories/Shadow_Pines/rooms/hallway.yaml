@@ -1,0 +1,31 @@
+id: "hallway"
+name: "Main Hallway"
+description: "A grand hallway with marble floors and family portraits stretching back generations. The grandfather clock's steady tick echoes through the space, while the umbrella stand holds walking sticks that hint at many countryside adventures."
+connections: ["study", "front_door"]
+access_requirements: []
+objects: ["grandfather_clock", "umbrella_stand"]
+secrets: []
+
+# Room-specific interactions
+room_features:
+  - feature: "family_portraits"
+    description: "Generations of Pembertons gaze down with aristocratic bearing"
+    interaction: "Each portrait tells a story of family legacy and hidden secrets"
+  - feature: "marble_floors"
+    description: "Polished marble that reflects the light from tall windows"
+    interaction: "Footsteps echo with authority and history"
+
+# Atmospheric details specific to this room
+atmosphere:
+  lighting: "Natural light from tall windows, supplemented by gas fixtures"
+  sounds: ["grandfather_clock_ticking", "footsteps_echoing", "occasional_settling_sounds"]
+  scents: ["marble_dust", "furniture_polish", "faint_pipe_tobacco"]
+  temperature: "Cool from the stone floors and high ceilings"
+  mood: "Grand formality with watchful family presence"
+
+# Character appearances
+character_encounters:
+  - character_id: "butler_james"
+    default_location: true
+    greeting: "Good afternoon. I trust you are finding the manor... illuminating?"
+    availability: "always"

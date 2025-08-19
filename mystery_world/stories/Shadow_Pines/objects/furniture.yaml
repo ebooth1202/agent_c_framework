@@ -1,0 +1,106 @@
+# Furniture Objects for Shadow Pines Manor
+
+objects:
+  oak_desk:
+    id: "oak_desk"
+    name: "Lord Pemberton's Oak Desk"
+    type: "furniture"
+    location: "study"
+    description: "A massive oak desk with intricate carvings and brass fittings. The leather writing surface shows the wear of decades of correspondence and scholarly work."
+    interactions:
+      examine: "The desk bears the patina of age and use. Multiple drawers with ornate brass handles await exploration."
+      search: "Requires the hidden key to access the locked drawer containing crucial documents."
+    states:
+      locked_drawer: 
+        status: "locked"
+        key_required: "hidden_key_behind_portrait"
+        contents: ["family_correspondence", "estate_documents", "mysterious_map"]
+    atmospheric_details:
+      texture: "Smooth, polished oak with brass fittings cool to the touch"
+      scent: "Leather, ink, and aged wood"
+      sounds: "Creaking of old wood when drawers are opened"
+
+  bookshelf:
+    id: "bookshelf"
+    name: "Floor-to-Ceiling Bookshelf"
+    type: "furniture"
+    location: "study"
+    description: "Towering mahogany bookshelves filled with leather-bound volumes on history, literature, and natural philosophy. Some books show more wear than others."
+    interactions:
+      examine: "Hundreds of volumes, from ancient texts to recent publications. Some gaps suggest missing books."
+      search: "Certain books can be pulled to reveal hidden compartments or secret passages."
+    contents:
+      - "family_histories"
+      - "natural_philosophy_texts"
+      - "poetry_collections"
+      - "estate_management_records"
+    secrets:
+      hidden_compartment: "Behind Shakespeare's complete works"
+      secret_passage: "Activated by pulling three specific books in sequence"
+
+  grandfather_clock:
+    id: "grandfather_clock"
+    name: "Pemberton Family Grandfather Clock"
+    type: "furniture"
+    location: "hallway"
+    description: "An imposing mahogany grandfather clock with brass fittings and a pendulum that catches the light. Its steady tick-tock provides the manor's heartbeat."
+    interactions:
+      examine: "The clock shows the correct time and appears to be in perfect working order."
+      listen: "The steady tick-tock is occasionally interrupted by chimes on the hour."
+    mechanical_details:
+      accuracy: "Keeps perfect time"
+      chimes: "Westminster chimes every hour"
+      pendulum: "Brass pendulum with hypnotic swing"
+    atmospheric_contribution:
+      sound: "Steady ticking that echoes through the hallway"
+      presence: "Imposing timekeeper that seems to watch over the manor"
+
+  garden_bench:
+    id: "garden_bench"
+    name: "Stone Garden Bench"
+    type: "furniture"
+    location: "front_grounds"
+    description: "A weathered stone bench positioned to overlook the fountain and pine groves. Carved with subtle decorative elements that speak of craftsmanship and permanence."
+    interactions:
+      examine: "The bench shows wear from weather and use, but remains sturdy and inviting."
+      sit: "Provides a peaceful vantage point for observing the grounds and contemplating mysteries."
+    atmospheric_details:
+      material: "Cool limestone with carved decorative elements"
+      position: "Strategic placement for optimal ground observation"
+      comfort: "Surprisingly comfortable despite being stone"
+
+  workbench:
+    id: "workbench"
+    name: "Garage Workbench"
+    type: "furniture"
+    location: "garage"
+    description: "A sturdy wooden workbench scarred by years of mechanical work. Tools are arranged with precision, and oil stains tell stories of countless repairs."
+    interactions:
+      examine: "Recent work evident from fresh oil stains and tool arrangements."
+      search: "Various mechanical tools and supplies, some showing recent use."
+    contents:
+      - "mechanical_tools"
+      - "spare_parts"
+      - "maintenance_supplies"
+      - "work_logs"
+    evidence:
+      recent_activity: "Fresh oil stains and warm tools suggest recent engine work"
+      organization: "Meticulous tool arrangement indicates skilled mechanic"
+
+  coat_rack:
+    id: "coat_rack"
+    name: "Entrance Coat Rack"
+    type: "furniture"
+    location: "front_door"
+    description: "An ornate wooden coat rack holding various outdoor garments. The scent of pine woods clings to the hanging coats and cloaks."
+    interactions:
+      examine: "Several coats and cloaks hang here, each telling a story of outdoor adventures."
+      search: "Pockets might contain interesting items or clues."
+    contents:
+      - "wool_overcoat"
+      - "riding_cloak"
+      - "walking_jacket"
+      - "leather_gloves"
+    atmospheric_details:
+      scents: ["pine_woods", "leather", "wool", "outdoor_air"]
+      stories: "Each garment suggests different outdoor activities and adventures"

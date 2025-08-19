@@ -1,0 +1,56 @@
+# Documents and Books for Ravenscroft Manor
+
+objects:
+  family_ledgers:
+    id: "family_ledgers"
+    name: "Ravenscroft Financial Ledgers"
+    type: "documents"
+    location: "study"
+    description: "Leather-bound ledgers showing mounting debts and desperate financial measures. Recent entries show increasingly frantic attempts to raise funds."
+    interactions:
+      examine: "Reveals the family's dire financial situation and Lord Ravenscroft's desperation"
+    secrets: ["gambling_debts", "mortgage_defaults", "creditor_threats"]
+
+  altered_will:
+    id: "altered_will"
+    name: "Lord Ravenscroft's Will"
+    type: "legal_document"
+    location: "study_hidden"
+    description: "A will with suspicious alterations and fresh ink over the original text. Someone has changed the inheritance distribution after the original signing."
+    discovery_requirements: ["gained_butler_trust", "search_desk_thoroughly"]
+    secrets: ["inheritance_theft", "forgery_evidence"]
+
+  love_letters:
+    id: "love_letters"
+    name: "Secret Love Letters"
+    type: "correspondence"
+    location: "conservatory_hidden"
+    description: "Passionate correspondence tied with ribbon, revealing Lady Ravenscroft's secret romance and her lover's desperate need for money."
+    discovery_requirements: ["search_conservatory_thoroughly"]
+    secrets: ["secret_affair", "financial_motive", "murder_conspiracy"]
+
+  leather_books:
+    id: "leather_books"
+    name: "Library Collection"
+    type: "books"
+    location: "library"
+    description: "Thousands of leather-bound volumes, including family histories and records. Some books have been recently disturbed."
+    interactions:
+      examine: "Some books pulled slightly from shelves suggest recent searching"
+      search: "Thorough search reveals hidden compartments and family secrets"
+
+  family_histories:
+    id: "family_histories"
+    name: "Ravenscroft Family Chronicles"
+    type: "historical_documents"
+    location: "library"
+    description: "Detailed records of the Ravenscroft family lineage, including carefully hidden scandals and financial disasters from previous generations."
+    secrets: ["generational_scandals", "pattern_of_financial_ruin", "family_curse"]
+
+  household_accounts:
+    id: "household_accounts"
+    name: "Household Account Books"
+    type: "financial_records"
+    location: "servants_hall"
+    description: "Detailed records of household expenses, staff wages, and supplier payments. Recent entries show delayed payments and creditor demands."
+    secrets: ["unpaid_wages", "supplier_threats", "household_desperation"]

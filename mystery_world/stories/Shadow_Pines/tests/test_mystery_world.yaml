@@ -1,0 +1,149 @@
+world:
+  metadata:
+    title: "The Hidden Key Mystery"
+    genre: "Victorian Cozy Mystery"
+    created_by: "test_session"
+    created_date: "2024-01-15"
+    
+  setting:
+    time_period: "1890s"
+    location: "English Manor House"
+    weather: "Overcast afternoon"
+    atmosphere: "Quiet, scholarly, mysterious"
+    
+  locations:
+    - id: "study"
+      name: "Lord Pemberton's Study"
+      description: "A wood-paneled study with tall bookshelves and a large oak desk"
+      connections: ["hallway"]
+      access_requirements: []
+      objects: ["oak_desk", "portrait_of_lady", "bookshelf", "fireplace"]
+      secrets: ["hidden_key_behind_portrait"]
+      
+    - id: "hallway"
+      name: "Main Hallway"
+      description: "A grand hallway with marble floors and family portraits"
+      connections: ["study", "front_door"]
+      access_requirements: []
+      objects: ["grandfather_clock", "umbrella_stand"]
+      secrets: []
+      
+    - id: "front_door"
+      name: "Manor Entrance"
+      description: "Heavy oak doors leading to the outside grounds"
+      connections: ["hallway", "front_grounds"]
+      access_requirements: []
+      objects: ["coat_rack", "walking_sticks"]
+      secrets: []
+      
+    - id: "front_grounds"
+      name: "Manor Front Grounds"
+      description: "Expansive grounds with gravel paths and distant woods"
+      connections: ["front_door", "garage", "woods_edge"]
+      access_requirements: []
+      objects: ["stone_fountain", "garden_bench"]
+      secrets: ["tire_tracks_leading_to_woods"]
+      
+    - id: "garage"
+      name: "Estate Garage"
+      description: "Stone building housing various vehicles"
+      connections: ["front_grounds"]
+      access_requirements: []
+      objects: ["red_atv", "black_dirtbike", "tool_rack", "workbench"]
+      secrets: ["maintenance_log_with_locations", "gas_can_behind_tools"]
+      
+    - id: "woods_edge"
+      name: "Edge of Pemberton Woods"
+      description: "Dense woodland with winding trails"
+      connections: ["front_grounds", "hidden_clearing"]
+      access_requirements: []
+      objects: ["trail_markers", "old_signpost"]
+      secrets: ["fresh_footprints"]
+      
+    - id: "hidden_clearing"
+      name: "Hidden Forest Clearing"
+      description: "Secret clearing deep in the woods"
+      connections: ["woods_edge"]
+      access_requirements: ["found_tire_tracks", "chose_vehicle"]
+      objects: ["abandoned_campsite", "buried_chest"]
+      secrets: ["second_key_in_chest"]
+      
+  characters:
+    - id: "butler_james"
+      name: "James the Butler"
+      description: "Elderly, proper butler with knowing eyes"
+      location: "hallway"
+      personality: ["dutiful", "observant", "slightly secretive"]
+      secrets: ["knows_about_hidden_compartments"]
+      interaction_requirements: []
+      
+  mystery:
+    central_mystery: "Find both keys to unlock the complete secret"
+    clues:
+      - id: "portrait_hint"
+        location: "study"
+        description: "The lady in the portrait seems to be pointing at something"
+        reveals: "Direction to first hidden key location"
+        discovery_requirements: ["examine_portrait_carefully"]
+      - id: "tire_tracks_clue"
+        location: "front_grounds"
+        description: "Fresh tire tracks leading toward the woods"
+        reveals: "Someone recently went to the woods with a vehicle"
+        discovery_requirements: ["examine_grounds_carefully"]
+      - id: "maintenance_log"
+        location: "garage"
+        description: "Vehicle maintenance log showing recent trips to 'clearing'"
+        reveals: "Location of hidden forest clearing"
+        discovery_requirements: ["examine_garage_thoroughly"]
+      - id: "empty_fuel_tanks"
+        location: "garage"
+        description: "Both vehicles have empty fuel tanks"
+        reveals: "Vehicles need gas before they can be used"
+        discovery_requirements: ["check_vehicle_gas_levels"]
+      - id: "hidden_gas_can"
+        location: "garage"
+        description: "A red gas can tucked behind the tool rack"
+        reveals: "Fuel source for the vehicles"
+        discovery_requirements: ["search_garage_for_gas"]
+    red_herrings: 
+      - "The fireplace poker looks suspicious but is just a normal tool"
+      - "The garden fountain seems to hide something but it's just decorative"
+      
+  rules:
+    progression_gates:
+      - gate_id: "access_desk_drawer"
+        requirements: ["found_hidden_key"]
+        hint_triggers:
+          - condition: "examined_desk_without_key"
+            hint: "The drawer seems to require a special key"
+      - gate_id: "start_atv"
+        requirements: ["checked_atv_gas", "filled_atv_tank"]
+        hint_triggers:
+          - condition: "tried_start_atv_without_gas"
+            hint: "The ATV turns over but won't start. Something seems to be missing."
+      - gate_id: "start_dirtbike"
+        requirements: ["checked_dirtbike_gas", "filled_dirtbike_tank"]
+        hint_triggers:
+          - condition: "tried_start_dirtbike_without_gas"
+            hint: "The dirtbike engine cranks but won't catch. You might be missing something important."
+    victory_conditions:
+      - condition: "solved_complete_mystery"
+        requirements: ["found_first_key", "found_second_key", "opened_final_secret"]
+    vehicle_states:
+      red_atv:
+        fuel_level: "empty"
+        condition: "good"
+        can_start: false
+      black_dirtbike:
+        fuel_level: "empty"
+        condition: "good"
+        can_start: false
+    items:
+      gas_can:
+        location: "garage_hidden"
+        description: "Red metal gas can, nearly full"
+        discovered: false
+    failure_conditions: []
+    hint_system:
+      - trigger: "player_stuck_5_minutes"
+        response: "The portrait catches your eye"

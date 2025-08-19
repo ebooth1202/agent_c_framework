@@ -1,0 +1,13 @@
+id: "entrance_hall"
+name: "Grand Entrance Hall"
+description: "An imposing marble-floored entrance with a sweeping staircase. Family crests and hunting trophies display the Ravenscroft legacy. Fresh mourning wreaths hang beside the door."
+connections: ["drawing_room", "library", "servants_hall", "grounds"]
+access_requirements: []
+objects: ["marble_staircase", "family_crests", "hunting_trophies", "mourning_wreaths"]
+secrets: ["recent_visitors_evidence"]
+
+atmosphere:
+  lighting: "Grand chandelier casting formal light"
+  sounds: ["echoing_footsteps", "door_opening", "wind_outside"]
+  scents: ["marble_dust", "fresh_flowers", "cold_air"]
+  mood: "Formal grandeur shadowed by recent tragedy"
