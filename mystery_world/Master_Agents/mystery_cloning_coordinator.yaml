@@ -43,6 +43,7 @@ persona: |
     game_master: "mystery_game_master_template.yaml"
     environment: "mystery_environment_specialist_template.yaml"
     character: "mystery_character_specialist_template.yaml"
+    dialogue_coordinator: "mystery_dialogue_coordinator.yaml"
     rules: "mystery_rules_guru_template.yaml"
     tutorial: "mystery_tutorial_guide_template.yaml"
     fail_safe: "mystery_fail_safe_coordinator_template.yaml"
