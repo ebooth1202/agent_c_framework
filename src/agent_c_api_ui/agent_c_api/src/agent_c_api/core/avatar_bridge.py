@@ -9,11 +9,13 @@ from functools import singledispatchmethod
 from agent_c.chat import ChatSessionManager
 from agent_c.config.agent_config_loader import AgentConfigLoader
 from agent_c.models import ChatSession
-from agent_c.models.events import BaseEvent
+from agent_c.models.events import BaseEvent, TextDeltaEvent, CompletionEvent
+from agent_c.models.events.chat import ThoughtDeltaEvent
 from agent_c.models.heygen import HeygenAvatarSessionData, NewSessionRequest
-from agent_c.util.heygen_streaming_avatar_client import HeyGenStreamingAvatarClient
+from agent_c.util.heygen_streaming_avatar_client import HeyGenClient, HeyGenStreamingClient
 from agent_c.util.registries.event import EventRegistry
-from agent_c_api.api.avatar.models.client_events import GetAgentsEvent, ErrorEvent, AgentListEvent, GetAvatarsEvent, AvatarListEvent, TextInputEvent, SetAvatarEvent
+from agent_c_api.api.avatar.models.client_events import GetAgentsEvent, ErrorEvent, AgentListEvent, GetAvatarsEvent, AvatarListEvent, TextInputEvent, SetAvatarEvent, AvatarConnectionChangedEvent, \
+    SetAgentEvent, AgentConfigurationChangedEvent
 from agent_c_api.core.agent_bridge import AgentBridge
 from agent_c.models.input import AudioInput
 
@@ -34,10 +36,14 @@ class AvatarBridge(AgentBridge):
         self.websocket: Optional[WebSocket] = None
         self.is_running = False
         self.agent_config_loader: AgentConfigLoader = AgentConfigLoader()
-        self.heygen = HeyGenStreamingAvatarClient()
+        self.heygen_base_client = HeyGenClient()
+        self.heygen_stream_client: Optional[HeyGenStreamingClient] = None
         self.client_wants_cancel = threading.Event()
         self.avatar_session: Optional[HeygenAvatarSessionData] = None
+        self._partial_agent_message: str = ""
+        self._avatar_did_think = False
 
+    # Handlers for events coming from the client websocket
     @singledispatchmethod
     async def handle_client_event(self, event: BaseEvent) -> None:
         """Default handler for unknown events"""
@@ -60,19 +66,20 @@ class AvatarBridge(AgentBridge):
         await self.send_avatar_list()
 
     async def send_avatar_list(self) -> None:
-        resp = await self.heygen.list_avatars()
+        resp = await self.heygen_base_client.list_avatars()
         await self.send_event(AvatarListEvent(avatars=resp.data))
 
     async def end_avatar_session(self) -> None:
         """End the current avatar session if it exists"""
         if self.avatar_session:
             try:
-                await self.heygen.close_session(self.avatar_session.session_id)
+                await self.heygen_stream_client.close_session()
                 self.logger.info(f"Avatar session {self.avatar_session.session_id} ended successfully")
             except Exception as e:
                 self.logger.error(f"Failed to end avatar session {self.avatar_session.session_id}: {e}")
             finally:
                 self.avatar_session = None
+                self.heygen_stream_client = None
 
     @handle_client_event.register
     async def _(self, event: SetAvatarEvent) -> None:
@@ -83,11 +90,27 @@ class AvatarBridge(AgentBridge):
         if self.avatar_session is not None:
             await self.end_avatar_session()
 
-        request = NewSessionRequest(avatar_id=avatar_id, quality=quality, video_encoding=vide0_encoding)
-        resp = await self.heygen.list_avatars()
-        await self.send_event(AvatarListEvent(avatars=resp.data))
+        self.heygen_stream_client = await self.heygen_base_client.create_streaming_client()
+        self.avatar_session = await self.heygen_stream_client.create_new_session(NewSessionRequest(avatar_id=avatar_id, quality=quality, video_encoding=vide0_encoding))
+        await self.send_event(AvatarConnectionChangedEvent(avatar_session=self.avatar_session))
 
+    @handle_client_event.register
+    async def _(self, event: SetAgentEvent) -> None:
+        await self.set_agent(event.agent_key)
 
+    async def set_agent(self, agent_key: str) -> None:
+        """Set the agent for the current session"""
+        if not self.chat_session.agent_config or self.chat_session.agent_config.key != agent_key:
+            agent_config = self.agent_config_loader.duplicate(agent_key)
+            if not agent_config:
+                await self.send_error(f"Agent '{agent_key}' not found")
+                return
+
+            self.chat_session.agent_config = agent_config
+            await self.tool_chest.activate_toolset(self.chat_session.agent_config.tools)
+            self.logger.info(f"AvatarBridge {self.chat_session.session_id}: Agent set to {agent_key}")
+
+        await self.send_event(AgentConfigurationChangedEvent(agent_config=self.chat_session.agent_config))
 
     def parse_event(self, data: dict) -> BaseEvent:
         """Parse incoming data into appropriate event type"""
@@ -115,14 +138,75 @@ class AvatarBridge(AgentBridge):
         """Send error message to client"""
         await self.send_event(ErrorEvent(message=message))
 
+    # Handlers for runtime events coming over the callback
     @singledispatchmethod
     async def handle_runtime_event(self, event: BaseEvent):
         """Default handler for runtime events, forward to client"""
         await self.send_event(event)
 
+    @handle_runtime_event.register
+    async def _(self, event: CompletionEvent):
+        if event.running == False and len(self._partial_agent_message.rstrip()):
+            # Send any remaining partial message
+            await self.avatar_say(self._partial_agent_message, role="assistant")
+            self._partial_agent_message = ""
+
+        await self.send_event(event)
+
+    @handle_runtime_event.register
+    async def _(self, event: TextDeltaEvent):
+        self._avatar_did_think = False
+        self._partial_agent_message += event.text_delta
+        await self._handle_partial_agent_message()
+
+    @property
+    def avatar_think_message(self) -> str:
+        # Placeholder for avatar thinking message
+        return "Let me think about that..."
+
+    @handle_runtime_event.register
+    async def _(self, event: ThoughtDeltaEvent):
+        """Handle thought events from the agent"""
+        await self._handle_agent_thought_token()
+        await self.send_event(event)
+
+    async def _handle_agent_thought_token(self):
+        """Handle agent thought messages"""
+        if not self._avatar_did_think:
+            self._avatar_did_think = True
+            try:
+                await self.heygen_stream_client.send_task(self.avatar_think_message)
+            except Exception as e:
+                self.logger.error(f"AvatarBridge {self.chat_session.session_id}: Failed to send message to avatar: {e}")
+
+    async def _handle_partial_agent_message(self):
+        if "\n" not in self._partial_agent_message:
+            return
+
+        left, right = self._partial_agent_message.rsplit("\n", 1)
+        self._partial_agent_message = right
+        await self.avatar_say(left + "\n", role="assistant")
+
+    async def avatar_say(self, text: str, role: str = "assistant"):
+        if not self.heygen_stream_client or not self.avatar_session:
+            self.logger.error(f"AvatarBridge {self.chat_session.session_id}: No active avatar session to send message")
+            return
+        try:
+            await self.heygen_stream_client.send_task(text)
+        except Exception as e:
+            self.logger.error(f"AvatarBridge {self.chat_session.session_id}: Failed to send message to avatar: {e}")
+            await self.send_error(f"Failed to send message to avatar: {str(e)}")
+
+        await self.send_event(TextDeltaEvent(
+            content=text,
+            session_id=self.chat_session.session_id,
+            role=role
+        ))
+
     async def runtime_callback(self, event: BaseEvent):
         """Handle runtime events from the agent"""
         self.logger.debug(f"AvatarBridge {self.chat_session.session_id}: Received runtime event: {event.type}")
+        # These are already in model format and don't need parsed.
         await self.handle_runtime_event(event)
 
 

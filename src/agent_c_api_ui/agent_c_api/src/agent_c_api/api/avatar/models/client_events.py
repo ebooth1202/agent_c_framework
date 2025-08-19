@@ -33,6 +33,15 @@ class SetAgentEvent(BaseEvent):
     """
     agent_key: str
 
+class AgentConfigurationChangedEvent(BaseEvent):
+    """
+    Event to notify that the agent configuration has changed.
+
+    Attributes:
+        agent_config (CurrentAgentConfiguration): The new agent configuration.
+    """
+    agent_config: CurrentAgentConfiguration
+
 class GetAvatarsEvent(BaseEvent):
     """
     Event to request a list of available avatars.
@@ -56,7 +65,6 @@ class SetAvatarEvent(BaseEvent):
     video_encoding: str = "VP8"
 
 class AvatarConnectionChangedEvent(BaseEvent):
-    token: str
     avatar_session: HeygenAvatarSessionData
 
 
