@@ -231,7 +231,7 @@ class AgentBridge:
             f"{list(self.tool_chest.active_tools.keys())}"
         )
 
-    async def __init_tool_chest(self) -> None:
+    async def _init_tool_chest(self) -> None:
         """
         Initialize the agent's tool chest with selected tools and configurations.
 
@@ -365,7 +365,7 @@ class AgentBridge:
         )
         self._stream_queue = asyncio.Queue()
 
-    async def __build_prompt_metadata(self) -> Dict[str, Any]:
+    async def _build_prompt_metadata(self) -> Dict[str, Any]:
         """
         Build metadata for prompts including user and session information.
 
@@ -841,7 +841,7 @@ class AgentBridge:
         Raises:
             Exception: If initialization of tools or agent parameters fails.
         """
-        await self.__init_tool_chest()
+        await self._init_tool_chest()
         await self.initialize_agent_parameters()
 
 
@@ -971,7 +971,7 @@ class AgentBridge:
                         input_types[type(input_obj).__name__] += 1
                     self.logger.info(f"Processing {len(file_inputs)} files: {input_types}")
 
-            prompt_metadata = await self.__build_prompt_metadata()
+            prompt_metadata = await self._build_prompt_metadata()
             # Prepare chat parameters
             tool_params = {}
             if len(self.chat_session.agent_config.tools):

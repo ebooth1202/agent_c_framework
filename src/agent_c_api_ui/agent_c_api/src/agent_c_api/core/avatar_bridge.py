@@ -1,7 +1,9 @@
+import asyncio
 import json
 import threading
 import traceback
-from typing import List, Optional, Any, Dict
+from contextlib import suppress
+from typing import List, Optional, Any, Dict, AsyncGenerator, AsyncIterator
 
 from fastapi import WebSocket, WebSocketDisconnect
 from functools import singledispatchmethod
@@ -15,7 +17,7 @@ from agent_c.models.heygen import HeygenAvatarSessionData, NewSessionRequest
 from agent_c.util.heygen_streaming_avatar_client import HeyGenStreamingClient
 from agent_c.util.registries.event import EventRegistry
 from agent_c_api.api.avatar.models.client_events import GetAgentsEvent, ErrorEvent, AgentListEvent, GetAvatarsEvent, AvatarListEvent, TextInputEvent, SetAvatarEvent, AvatarConnectionChangedEvent, \
-    SetAgentEvent, AgentConfigurationChangedEvent
+    SetAgentEvent, AgentConfigurationChangedEvent, SetAvatarSessionEvent
 from agent_c_api.core.agent_bridge import AgentBridge
 from agent_c.models.input import AudioInput
 
@@ -37,8 +39,11 @@ class AvatarBridge(AgentBridge):
         self.is_running = False
         self.agent_config_loader: AgentConfigLoader = AgentConfigLoader()
         self.heygen_client = HeyGenStreamingClient()
+        self.avatar_client = self.heygen_client
         self.client_wants_cancel = threading.Event()
         self.avatar_session: Optional[HeygenAvatarSessionData] = None
+        self.avatar_session_id: Optional[str] = None
+        self.avatar_session_token: Optional[str] = None
         self._partial_agent_message: str = ""
         self._avatar_did_think = False
 
@@ -90,8 +95,27 @@ class AvatarBridge(AgentBridge):
         if self.avatar_session is not None:
             await self.end_avatar_session()
 
-        self.avatar_session = await self.heygen_client.create_new_session(NewSessionRequest(avatar_id=avatar_id, quality=quality, video_encoding=video_encoding))
-        await self.send_event(AvatarConnectionChangedEvent(avatar_session=self.avatar_session))
+        self.avatar_client = self.heygen_client
+        session_request = NewSessionRequest(avatar_id=avatar_id, quality=quality, video_encoding=video_encoding)
+        self.avatar_session = await self.heygen_client.create_new_session(session_request)
+        await self.send_event(AvatarConnectionChangedEvent(avatar_session=self.avatar_session,
+                                                           avatar_session_request= session_request))
+
+    @handle_client_event.register
+    async def _(self, event: SetAvatarSessionEvent) -> None:
+        """Set the avatar session using the provided access token and session ID"""
+        await self.set_avatar_session(event.access_token, event.avatar_session_id)
+
+    async def set_avatar_session(self, access_token: str, avatar_session_id: str) -> None:
+        """Set the avatar session for the current session"""
+        if self.avatar_session is not None:
+            await self.end_avatar_session()
+        self.avatar_session_id = avatar_session_id
+        self.avatar_session_token = access_token
+        self.avatar_client = HeyGenStreamingClient(api_key=access_token)
+        self.avatar_client.session_id = avatar_session_id
+        await self.avatar_say("Avtar bridge connected to avatar session", role="system")
+
 
     @handle_client_event.register
     async def _(self, event: SetAgentEvent) -> None:
@@ -155,7 +179,7 @@ class AvatarBridge(AgentBridge):
     @handle_runtime_event.register
     async def _(self, event: TextDeltaEvent):
         self._avatar_did_think = False
-        self._partial_agent_message += event.text_delta
+        self._partial_agent_message += event.content
         await self._handle_partial_agent_message()
 
     @property
@@ -174,7 +198,7 @@ class AvatarBridge(AgentBridge):
         if not self._avatar_did_think:
             self._avatar_did_think = True
             try:
-                await self.heygen_client.send_task(self.avatar_think_message)
+                await self.avatar_client.send_task(self.avatar_think_message)
             except Exception as e:
                 self.logger.error(f"AvatarBridge {self.chat_session.session_id}: Failed to send message to avatar: {e}")
 
@@ -187,11 +211,11 @@ class AvatarBridge(AgentBridge):
         await self.avatar_say(left + "\n", role="assistant")
 
     async def avatar_say(self, text: str, role: str = "assistant"):
-        if not self.heygen_client or not self.avatar_session:
+        if not self.avatar_session and not self.avatar_session_id:
             self.logger.error(f"AvatarBridge {self.chat_session.session_id}: No active avatar session to send message")
             return
         try:
-            await self.heygen_client.send_task(text)
+            await self.avatar_client.send_task(text)
         except Exception as e:
             self.logger.error(f"AvatarBridge {self.chat_session.session_id}: Failed to send message to avatar: {e}")
             await self.send_error(f"Failed to send message to avatar: {str(e)}")
@@ -240,11 +264,65 @@ class AvatarBridge(AgentBridge):
             await self.end_avatar_session()  # Ensure avatar session cleanup
             self.logger.info(f"AvatarBridge stopped for session {self.chat_session.session_id}")
 
+    async def iter_interact(self, text: str, file_ids: Optional[List[str]] = None, max_buffer: int = 512) -> AsyncIterator[str]:
+        """
+        Wraps the interaction in an async generator to yield text chunks
+        as they are received from the agent so that they can be processed
+        by TTS system in real-time.
+
+        Usage:
+            async for chunk in iter_interact(agent, "Hello"):
+                yield chunk  # -> pipe to TTS
+
+        Backpressure policy: if producer is faster than consumer, we drop the oldest
+        item to keep latency low (tweak as you like).
+        """
+        queue: asyncio.Queue[Any] = asyncio.Queue(maxsize=max_buffer)
+        DONE = object()
+
+        def on_event(event: BaseEvent):
+            if event.type == "text_delta":
+                try:
+                    queue.put_nowait(event.content)
+                except asyncio.QueueFull:
+                    with suppress(Exception):
+                        queue.get_nowait()
+                    queue.put_nowait(event.content)
+
+            self.runtime_callback(event)
+
+        async def run_chat():
+            try:
+                await self.interact(text, file_ids, on_event)
+            except Exception as e:
+                # propagate runtime errors
+                await queue.put(e)
+            finally:
+                await queue.put(DONE)
+
+        # Run your chat in parallel while we consume the queue.
+        task = asyncio.create_task(run_chat())
+
+        try:
+            while True:
+                item = await queue.get()
+                if item is DONE:
+                    break
+                if isinstance(item, BaseException):
+                    raise item
+                yield item  # item is a str chunk
+        finally:
+            # If the consumer stops early (barge-in, stop button), cancel the chat.
+            if not task.done():
+                task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await task
 
     async def interact(
         self,
         user_message: str,
         file_ids: Optional[List[str]] = None,
+        on_event: Optional[callable] = None
     ) -> None:
         """
         Streams chat responses for a given user message.
@@ -278,7 +356,7 @@ class AvatarBridge(AgentBridge):
                         input_types[type(input_obj).__name__] += 1
                     self.logger.info(f"Processing {len(file_inputs)} files: {input_types}")
 
-            prompt_metadata = await self.__build_prompt_metadata()
+            prompt_metadata = await self._build_prompt_metadata()
             # Prepare chat parameters
             tool_params = {}
             if len(self.chat_session.agent_config.tools):
@@ -300,7 +378,7 @@ class AvatarBridge(AgentBridge):
                 "user_message": user_message,
                 "prompt_metadata": prompt_metadata,
                 "client_wants_cancel": self.client_wants_cancel,
-                "streaming_callback": self.runtime_callback,
+                "streaming_callback": on_event  if on_event else self.runtime_callback,
                 'tool_call_context': {'active_agent': self.chat_session.agent_config},
                 'prompt_builder': PromptBuilder(sections=agent_sections)
             }

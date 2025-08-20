@@ -4,7 +4,7 @@ from pydantic import Field
 
 from agent_c.models.agent_config import CurrentAgentConfiguration, AgentCatalogEntry
 from agent_c.models.events import BaseEvent
-from agent_c.models.heygen import Avatar, HeygenAvatarSessionData
+from agent_c.models.heygen import Avatar, HeygenAvatarSessionData, NewSessionRequest
 
 
 class GetAgentsEvent(BaseEvent):
@@ -53,6 +53,13 @@ class GetAvatarsEvent(BaseEvent):
 class AvatarListEvent(BaseEvent):
     avatars: List[Avatar]
 
+class SetAvatarSessionEvent(BaseEvent):
+    """
+    Contains the access token and avatar session ID to allow the server to drive the HeyGen avatar speech.
+    """
+    access_token: str
+    avatar_session_id: str
+
 class SetAvatarEvent(BaseEvent):
     """
     Event to set the avatar for the current session.
@@ -65,6 +72,7 @@ class SetAvatarEvent(BaseEvent):
     video_encoding: str = "H264"
 
 class AvatarConnectionChangedEvent(BaseEvent):
+    avatar_session_request: NewSessionRequest
     avatar_session: HeygenAvatarSessionData
 
 

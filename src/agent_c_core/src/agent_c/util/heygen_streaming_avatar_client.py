@@ -44,6 +44,19 @@ class HeyGenStreamingClient:
 
     BASE_URL = "https://api.heygen.com"
 
+    @property
+    def session_id(self) -> Optional[str]:
+        """Get the current session ID."""
+        return self.heygen_session.session_id if self.heygen_session else self._session_id
+
+    @session_id.setter
+    def session_id(self, value: Optional[str]):
+        """Set the current session ID."""
+        if self.heygen_session:
+            raise ValueError("Cannot set session_id directly when a HeygenAvatarSessionData is active. Use the session object instead.")
+        else:
+            self._session_id = value
+
     def __init__(self, api_key: Optional[str] = None, timeout: float = 30.0):
         """
         Initialize the token generator.
@@ -56,7 +69,7 @@ class HeyGenStreamingClient:
         self.api_key = api_key if api_key else os.environ.get("HEYGEN_API_KEY")
         if not self.api_key:
             raise ValueError("HeyGen API key is required")
-        self.session_id: Optional[str] = None
+        self._session_id: Optional[str] = None
         self.heygen_session: Optional[HeygenAvatarSessionData] = None
         self.timeout = timeout
         self._client = httpx.AsyncClient(
@@ -230,7 +243,6 @@ class HeyGenStreamingClient:
         payload = response.json()
         session_response = NewSessionResponse.model_validate(payload)
         self.heygen_session = session_response.data
-        await self.start_session()
         return self.heygen_session
 
     async def start_session(self, session_id: Optional[str] = None) -> SimpleStatusResponse:
@@ -247,7 +259,7 @@ class HeyGenStreamingClient:
             httpx.HTTPError: If the request fails
             ValueError: If no session_id is available
         """
-        session_id = session_id or self.heygen_session.session_id
+        session_id = session_id or self.session_id
         if not session_id:
             raise ValueError("No session_id available. Create a session first or provide session_id.")
 
@@ -275,7 +287,7 @@ class HeyGenStreamingClient:
             httpx.HTTPError: If the request fails
             ValueError: If no session_id is available
         """
-        session_id = session_id or self.heygen_session.session_id
+        session_id = session_id or self.session_id
         if not session_id:
             raise ValueError("No session_id available. Create a session first or provide session_id.")
 
@@ -298,7 +310,7 @@ class HeyGenStreamingClient:
             httpx.HTTPError: If the request fails
             ValueError: If no session_id is available
         """
-        session_id = session_id or self.heygen_session.session_id
+        session_id = session_id or self.session_id
         if not session_id:
             raise ValueError("No session_id available. Create a session first or provide session_id.")
 
@@ -321,7 +333,7 @@ class HeyGenStreamingClient:
             httpx.HTTPError: If the request fails
             ValueError: If no session_id is available
         """
-        session_id = session_id or self.heygen_session.session_id
+        session_id = session_id or self.session_id
         if not session_id:
             raise ValueError("No session_id available. Create a session first or provide session_id.")
 
@@ -348,7 +360,7 @@ class HeyGenStreamingClient:
             httpx.HTTPError: If the request fails
             ValueError: If no session_id is available
         """
-        session_id = session_id or self.heygen_session.session_id
+        session_id = session_id or self.session_id
         if not session_id:
             raise ValueError("No session_id available. Create a session first or provide session_id.")
 
