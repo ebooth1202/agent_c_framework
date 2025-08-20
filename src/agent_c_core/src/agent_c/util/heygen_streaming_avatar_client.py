@@ -11,7 +11,7 @@ import os
 import httpx
 import json
 
-from typing import Optional, Dict, Any
+from typing import Optional
 
 
 from agent_c.models.heygen import (
@@ -56,7 +56,8 @@ class HeyGenStreamingClient:
         self.api_key = api_key if api_key else os.environ.get("HEYGEN_API_KEY")
         if not self.api_key:
             raise ValueError("HeyGen API key is required")
-
+        self.session_id: Optional[str] = None
+        self.heygen_session: Optional[HeygenAvatarSessionData] = None
         self.timeout = timeout
         self._client = httpx.AsyncClient(
             base_url=self.BASE_URL,
@@ -198,8 +199,7 @@ class HeyGenStreamingClient:
         # No cache available or cache loading failed, fetch from API
         return await self.fetch_avatars()
 
-        # Track session state
-        self.session_id: Optional[str] = None
+
 
     async def __aenter__(self):
         """Async context manager entry."""
@@ -209,9 +209,6 @@ class HeyGenStreamingClient:
         """Async context manager exit."""
         await self.close()
 
-    async def close(self):
-        """Close the HTTP client."""
-        await self._client.aclose()
 
     async def create_new_session(self, request: NewSessionRequest) -> Optional[HeygenAvatarSessionData]:
         """
@@ -257,7 +254,8 @@ class HeyGenStreamingClient:
         request = SessionIdRequest(session_id=session_id)
         response = await self._client.post("/v1/streaming.start", json=request.model_dump())
         response.raise_for_status()
-        return SimpleStatusResponse.model_validate(response.json())
+        jsn = response.json()
+        return SimpleStatusResponse.model_validate(jsn)
 
     async def send_task(self, text: str, session_id: Optional[str] = None,
                         task_mode: str = "async", task_type: str = "repeat") -> SendTaskResponse:
@@ -359,45 +357,6 @@ class HeyGenStreamingClient:
         response.raise_for_status()
         return HeyGenBaseResponse.model_validate(response.json())
 
-class HeyGenClient:
-    """
-    Handles HeyGen API key operations - specifically generating access tokens.
 
-    This class should be used sparingly and only for token generation.
-    The actual streaming operations should use HeyGenStreamingClient with access tokens.
-    """
-
-    BASE_URL = "https://api.heygen.com"
-
-    def __init__(self, api_key: Optional[str] = None, timeout: float = 30.0):
-        """
-        Initialize the token generator.
-
-        Args:
-            api_key: HeyGen API key for authentication
-            timeout: Request timeout in seconds
-        """
-        self.logger = LoggingManager(__name__).get_logger()
-        self.api_key = api_key if api_key else os.environ.get("HEYGEN_API_KEY")
-        if not self.api_key:
-            raise ValueError("HeyGen API key is required")
-
-        self.timeout = timeout
-        self._client = httpx.AsyncClient(
-            base_url=self.BASE_URL,
-            timeout=timeout,
-            headers={
-                "x-api-key": self.api_key,
-                "Content-Type": "application/json"
-            }
-        )
-
-    async def __aenter__(self):
-        """Async context manager entry."""
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Async context manager exit."""
-        await self.close()
 
 

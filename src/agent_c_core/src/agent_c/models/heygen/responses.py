@@ -78,5 +78,5 @@ class CreateSessionTokenResponse(BaseModel):
 
 class SimpleStatusResponse(HeyGenBaseResponse):
     """Simple response model for operations that return just status."""
-    
+    data: Optional[Dict[str, Any]] = None
     status: Optional[str] = None
