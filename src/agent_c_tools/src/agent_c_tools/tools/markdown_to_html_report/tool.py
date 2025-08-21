@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 class Constants:
     """Configuration constants for the markdown tools."""
     DEFAULT_TITLE = "Agent C Output Viewer"
-    DEFAULT_TITLE_PLACEHOLDER = "<h3 style=\"margin: 0 16px 16px 16px;\">Agent C Output Viewer</h3>"
+    DEFAULT_TITLE_PLACEHOLDER = "<h3 style=\"margin:0 16px 16px 16px;\">Agent C Output Viewer</h3>"
     MARKDOWN_EXTENSIONS = ['md', 'markdown']
     DOCX_EXTENSIONS = ['.md', '.markdown']
 
@@ -598,7 +598,7 @@ class MarkdownToHtmlReportTools(Toolset):
             # Customize title
             html_template = html_template.replace(
                 Constants.DEFAULT_TITLE_PLACEHOLDER,
-                f"<h3 style=\"margin: 0 16px 16px 16px;\">{title}</h3>")
+                f"<h3 style=\"margin:0 16px 16px 16px;\">{title}</h3>")
 
             # Inject JavaScript slugger code for consistency
             from .helpers.slugger import get_javascript_slugger_code
