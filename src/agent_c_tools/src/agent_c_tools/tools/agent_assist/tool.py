@@ -116,6 +116,10 @@ class AgentAssistTools(AgentAssistToolBase):
         except FileNotFoundError:
             return f"Error: Agent {kwargs.get('agent_key')} not found in catalog."
 
+        # TODO: FYI, the 'message' is a string of markdown. It's not rendered well to html.  I've tried replacing
+        # --- with ***.  It helps prevent "The following chat message..." being rendered as H2.
+        # I've also tried adding \n.
+        # The display results in compressed text, not all lists are rendered as bullets.  It's just not pretty.
         await self._raise_render_media(
             sent_by_class=self.__class__.__name__,
             sent_by_function='chat',
