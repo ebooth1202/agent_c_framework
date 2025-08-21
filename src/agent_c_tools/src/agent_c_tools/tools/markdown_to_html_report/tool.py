@@ -476,7 +476,7 @@ class MarkdownToHtmlReportTools(Toolset):
             registry = DocRegistry()
 
             # Create DocMeta for the single file
-            from .helpers.doc_registry import DocMeta, extract_headings_from_markdown
+            from .helpers.doc_registry import DocMeta
 
             display_name = Path(input_path).stem.replace('_', ' ').replace('-', ' ').title()
 
