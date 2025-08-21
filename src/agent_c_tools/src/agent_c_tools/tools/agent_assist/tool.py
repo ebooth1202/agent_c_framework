@@ -1,5 +1,5 @@
 from typing import Any, Optional, Dict
-
+import re
 import markdown
 import yaml
 
@@ -15,6 +15,35 @@ class AgentAssistTools(AgentAssistToolBase):
         super().__init__( **kwargs)
         self.section = AgentAssistSection(tool=self)
 
+    @staticmethod
+    def fix_markdown_formatting(text: str) -> str:
+        """Fix common markdown formatting issues caused by missing newlines."""
+
+        if not isinstance(text, str):
+            text = str(text)
+
+        # Add blank lines before lists (bullet and numbered)
+        renamed_text = re.sub(r'(?<!^)(?<!\n\n)(\n[-*+] )', r'\n\1', text)  # Bullet lists
+        renamed_text = re.sub(r'(?<!^)(?<!\n\n)(\n\d+\. )', r'\n\1', text)  # Numbered lists
+
+        # CRITICAL: Add blank line when bold text is immediately followed by a list
+        renamed_text = re.sub(r'(\*\*[^*]+\*\*:?)\n([-*+] )', r'\1\n\n\2', text)  # Bold text followed by bullet
+        renamed_text = re.sub(r'(\*\*[^*]+\*\*:?)\n(\d+\. )', r'\1\n\n\2', text)  # Bold text followed by number
+
+        # Add blank lines before headers
+        renamed_text = re.sub(r'(?<!^)(?<!\n\n)(\n#{1,6} )', r'\n\1', text)
+
+        # Add blank lines before code blocks
+        renamed_text = re.sub(r'(?<!^)(?<!\n\n)(\n```)', r'\n\1', text)
+
+        # Add blank lines before blockquotes
+        renamed_text = re.sub(r'(?<!^)(?<!\n\n)(\n> )', r'\n\1', text)
+
+        # Add blank lines before horizontal rules
+        renamed_text = re.sub(r'(?<!^)(?<!\n\n)(\n---)', r'\n\1', text)
+        renamed_text = re.sub(r'(?<!^)(?<!\n\n)(\n\*\*\*)', r'\n\1', text)
+
+        return renamed_text
 
     @json_schema(
         ('Make a request of an agent and receive a response. This is a reasoning agent with a large thinking budget. '
@@ -52,7 +81,7 @@ class AgentAssistTools(AgentAssistToolBase):
             sent_by_class=self.__class__.__name__,
             sent_by_function='oneshot',
             content_type="text/html",
-            content=markdown.markdown(f"**Domo** agent requesting assistance from '*{agent_config.name}*':\n\n{request}</p>"),
+            content=markdown.markdown(f"**Domo** agent requesting assistance from '*{agent_config.name}*':\n\n{self.fix_markdown_formatting(request)}</p>"),
             tool_context=tool_context
         )
 
@@ -120,11 +149,18 @@ class AgentAssistTools(AgentAssistToolBase):
         # --- with ***.  It helps prevent "The following chat message..." being rendered as H2.
         # I've also tried adding \n.
         # The display results in compressed text, not all lists are rendered as bullets.  It's just not pretty.
+        # temp_text=f"**Domo agent** requesting assistance from '*{agent_config.name}*': \n\n{message}"
+        # content=markdown.markdown(temp_text, extensions=['markdown.extensions.nl2br', 'markdown.extensions.tables'])
+        # more research seems that the message is removing some newlines, so nl2br should help - but not in all cases.
+        # list in particular end up with stripped newlines.
+        # A way to fix is implemented via self.fix_markdown_formatting
+
         await self._raise_render_media(
             sent_by_class=self.__class__.__name__,
             sent_by_function='chat',
             content_type="text/html",
-            content=markdown.markdown(f"**Domo agent** requesting assistance from '*{agent_config.name}*': \n\n{message}"),
+            content=markdown.markdown(self.fix_markdown_formatting(
+                f"**Domo agent** requesting assistance from '*{agent_config.name}*': \n\n{message}")),
             tool_context=tool_context
         )
 
@@ -138,7 +174,7 @@ class AgentAssistTools(AgentAssistToolBase):
             sent_by_class=self.__class__.__name__,
             sent_by_function='chat',
             content_type="text/html",
-            content=markdown.markdown(f"Interaction complete for Agent Assist Session ID: {agent_session_id} with {agent_config.name}. Control returned to requesting agent."),
+            content=markdown.markdown(self.fix_markdown_formatting(f"Interaction complete for Agent Assist Session ID: {agent_session_id} with {agent_config.name}. Control returned to requesting agent.")),
             tool_context=tool_context
         )
         if messages is not None and len(messages) > 0:
