@@ -22,28 +22,36 @@ class AgentAssistTools(AgentAssistToolBase):
         if not isinstance(text, str):
             text = str(text)
 
-        # Add blank lines before lists (bullet and numbered)
-        renamed_text = re.sub(r'(?<!^)(?<!\n\n)(\n[-*+] )', r'\n\1', text)  # Bullet lists
-        renamed_text = re.sub(r'(?<!^)(?<!\n\n)(\n\d+\. )', r'\n\1', text)  # Numbered lists
+        print("=== BEFORE FIXING ===")
+        print(repr(text))
+        print("=== END BEFORE ===")
 
-        # CRITICAL: Add blank line when bold text is immediately followed by a list
-        renamed_text = re.sub(r'(\*\*[^*]+\*\*:?)\n([-*+] )', r'\1\n\n\2', text)  # Bold text followed by bullet
-        renamed_text = re.sub(r'(\*\*[^*]+\*\*:?)\n(\d+\. )', r'\1\n\n\2', text)  # Bold text followed by number
+        # STEP 1: Handle specific cases first (bold followed by lists)
+        original_text = text
+        text = re.sub(r'(\*\*[^*]+\*\*:?)\n([-*+] )', r'\1\n\n\2', text)
+        if text != original_text:
+            print("=== AFTER BOLD→BULLET FIX ===")
+            print(repr(text))
+            print("=== END AFTER ===")
 
-        # Add blank lines before headers
-        renamed_text = re.sub(r'(?<!^)(?<!\n\n)(\n#{1,6} )', r'\n\1', text)
+        text = re.sub(r'(\*\*[^*]+\*\*:?)\n(\d+\. )', r'\1\n\n\2', text)
 
-        # Add blank lines before code blocks
-        renamed_text = re.sub(r'(?<!^)(?<!\n\n)(\n```)', r'\n\1', text)
+        # STEP 2: Handle general cases
+        text = re.sub(r'(?<!^)(?<!\n\n)(\n[-*+] )', r'\n\1', text)
+        text = re.sub(r'(?<!^)(?<!\n\n)(\n\d+\. )', r'\n\1', text)
 
-        # Add blank lines before blockquotes
-        renamed_text = re.sub(r'(?<!^)(?<!\n\n)(\n> )', r'\n\1', text)
+        # STEP 3: Other markdown elements
+        text = re.sub(r'(?<!^)(?<!\n\n)(\n#{1,6} )', r'\n\1', text)
+        text = re.sub(r'(?<!^)(?<!\n\n)(\n```)', r'\n\1', text)
+        text = re.sub(r'(?<!^)(?<!\n\n)(\n> )', r'\n\1', text)
+        text = re.sub(r'(?<!^)(?<!\n\n)(\n---)', r'\n\1', text)
+        text = re.sub(r'(?<!^)(?<!\n\n)(\n\*\*\*)', r'\n\1', text)
 
-        # Add blank lines before horizontal rules
-        renamed_text = re.sub(r'(?<!^)(?<!\n\n)(\n---)', r'\n\1', text)
-        renamed_text = re.sub(r'(?<!^)(?<!\n\n)(\n\*\*\*)', r'\n\1', text)
+        print("=== FINAL RESULT ===")
+        print(repr(text))
+        print("=== END FINAL ===")
 
-        return renamed_text
+        return markdown.markdown(text, extensions=['markdown.extensions.nl2br', 'markdown.extensions.tables'])
 
     @json_schema(
         ('Make a request of an agent and receive a response. This is a reasoning agent with a large thinking budget. '
@@ -81,7 +89,7 @@ class AgentAssistTools(AgentAssistToolBase):
             sent_by_class=self.__class__.__name__,
             sent_by_function='oneshot',
             content_type="text/html",
-            content=markdown.markdown(f"**Domo** agent requesting assistance from '*{agent_config.name}*':\n\n{self.fix_markdown_formatting(request)}</p>"),
+            content=self.fix_markdown_formatting(f"**Domo** agent requesting assistance from '*{agent_config.name}*':\n\n{request})\n\n"),
             tool_context=tool_context
         )
 
@@ -92,7 +100,7 @@ class AgentAssistTools(AgentAssistToolBase):
             sent_by_class=self.__class__.__name__,
             sent_by_function='chat',
             content_type="text/html",
-            content=markdown.markdown(f"Interaction complete for Agent Assist oneshot with {agent_config.name}. Control returned to requesting agent."),
+            content=self.fix_markdown_formatting(f"Interaction complete for Agent Assist oneshot with {agent_config.name}. Control returned to requesting agent."),
             tool_context=tool_context
         )
 
@@ -159,8 +167,8 @@ class AgentAssistTools(AgentAssistToolBase):
             sent_by_class=self.__class__.__name__,
             sent_by_function='chat',
             content_type="text/html",
-            content=markdown.markdown(self.fix_markdown_formatting(
-                f"**Domo agent** requesting assistance from '*{agent_config.name}*': \n\n{message}")),
+            content=self.fix_markdown_formatting(
+                f"**Domo agent** requesting assistance from '*{agent_config.name}*': \n\n{message}"),
             tool_context=tool_context
         )
 
@@ -174,7 +182,7 @@ class AgentAssistTools(AgentAssistToolBase):
             sent_by_class=self.__class__.__name__,
             sent_by_function='chat',
             content_type="text/html",
-            content=markdown.markdown(self.fix_markdown_formatting(f"Interaction complete for Agent Assist Session ID: {agent_session_id} with {agent_config.name}. Control returned to requesting agent.")),
+            content=self.fix_markdown_formatting(f"Interaction complete for Agent Assist Session ID: {agent_session_id} with {agent_config.name}. Control returned to requesting agent."),
             tool_context=tool_context
         )
         if messages is not None and len(messages) > 0:
