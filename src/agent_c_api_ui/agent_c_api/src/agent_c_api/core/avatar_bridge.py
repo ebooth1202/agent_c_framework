@@ -12,7 +12,7 @@ from agent_c.chat import ChatSessionManager
 from agent_c.config.agent_config_loader import AgentConfigLoader
 from agent_c.models import ChatSession
 from agent_c.models.events import BaseEvent, TextDeltaEvent, CompletionEvent
-from agent_c.models.events.chat import ThoughtDeltaEvent
+from agent_c.models.events.chat import ThoughtDeltaEvent, AudioInputDeltaEvent
 from agent_c.models.heygen import HeygenAvatarSessionData, NewSessionRequest
 from agent_c.util.heygen_streaming_avatar_client import HeyGenStreamingClient
 from agent_c.util.registries.event import EventRegistry
@@ -100,6 +100,10 @@ class AvatarBridge(AgentBridge):
         self.avatar_session = await self.heygen_client.create_new_session(session_request)
         await self.send_event(AvatarConnectionChangedEvent(avatar_session=self.avatar_session,
                                                            avatar_session_request= session_request))
+
+    @handle_client_event.register
+    async def _(self, event: AudioInputDeltaEvent) -> None:
+        self.logger.info("AvatarBridge received audio input delta event")
 
     @handle_client_event.register
     async def _(self, event: SetAvatarSessionEvent) -> None:

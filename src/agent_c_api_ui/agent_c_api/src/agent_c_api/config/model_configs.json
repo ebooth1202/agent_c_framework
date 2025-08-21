@@ -380,11 +380,11 @@
               "required": true
             },
             "max_tokens": {
-              "default": 8192,
+              "default": 64000,
               "limits": {
                 "min": 1000,
                 "max": {
-                  "standard": 8192,
+                  "standard": 64000,
                   "with_extended_thinking": 64000
                 }
               },
@@ -404,9 +404,9 @@
           }
         },
         {
-          "id": "claude-opus-4-20250514",
+          "id": "claude-opus-4-1-20250805",
           "model_type": "chat",
-          "ui_name": "Claude 4 Opus",
+          "ui_name": "Claude 4.1 Opus",
           "description": "Powerful, large model for complex challenges",
           "parameters": {
             "extended_thinking": {
@@ -419,11 +419,11 @@
               "required": true
             },
             "max_tokens": {
-              "default": 8192,
+              "default": 64000,
               "limits": {
                 "min": 1000,
                 "max": {
-                  "standard": 8192,
+                  "standard": 64000,
                   "with_extended_thinking": 64000
                 }
               },

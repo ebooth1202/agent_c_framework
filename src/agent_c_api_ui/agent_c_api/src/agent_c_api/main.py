@@ -67,6 +67,8 @@ def run():
             "agent_c_api.main:app",
             host=settings.HOST,
             port=settings.PORT,
+            ssl_keyfile="./localhost+3-key.pem",
+            ssl_certfile="./localhost+3.pem",
             reload=settings.RELOAD,
             log_level=LoggingManager.LOG_LEVEL.lower() if hasattr(LoggingManager, 'LOG_LEVEL') else "info"
         )
