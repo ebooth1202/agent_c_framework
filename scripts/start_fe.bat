@@ -24,4 +24,4 @@ SET VITE_RAG_API_URL=https://localhost:%RAG_PORT%/api/v1
 cd src\agent_c_api_ui\agent_c_react_client
 
 :: Run vite with the specified port
-npx vite --port %PORT% --https
+npx vite --port %PORT%

@@ -78,6 +78,8 @@ def run():
             app,
             host=settings.HOST,
             port=settings.PORT,
+            ssl_keyfile="./localhost+3-key.pem",
+            ssl_certfile="./localhost+3.pem",
             log_level=LoggingManager.LOG_LEVEL.lower() if hasattr(LoggingManager, 'LOG_LEVEL') else "info"
         )
     logger.info(f"Exiting Run Loop: {time.time()}")

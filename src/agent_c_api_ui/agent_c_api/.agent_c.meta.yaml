@@ -3397,4 +3397,171 @@ _plans:
         updated_at: '2025-05-25T16:24:27.926886'
     title: Structured Logging Infrastructure Design & Implementation
     updated_at: '2025-05-25T18:23:08.419468'
+  websocket_auth_implementation:
+    created_at: '2025-08-22T16:19:53.573464'
+    description: Implement comprehensive authentication system for the new realtime
+      WebSocket API using ChatUser model, SQLite persistence, and JWT tokens. This
+      includes user registration, login, password management, and WebSocket authentication
+      middleware.
+    id: 3a7af232-10cd-448f-b5ed-23aecee624ee
+    lessons_learned: []
+    tasks:
+      0b9d5e45-dc13-4b2e-aff5-9dfed23b7f21:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: '- Unit tests for auth service and repository
+
+          - Integration tests for auth endpoints
+
+          - WebSocket authentication tests
+
+          - API documentation updates
+
+          - Example client code for WebSocket auth
+
+          - Security testing and validation'
+        created_at: '2025-08-22T16:20:24.943790'
+        description: Create comprehensive tests for authentication system and update
+          API documentation
+        id: 0b9d5e45-dc13-4b2e-aff5-9dfed23b7f21
+        parent_id: null
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 5
+        title: 5. Testing and Documentation
+        updated_at: '2025-08-22T16:20:24.943791'
+      6517b7ae-a197-430e-8d52-c980b5e9ea60:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: '**Virtual Joe Integration Endpoints:**
+
+          - POST /api/avatar/auth/login - Authenticate user and return JWT + config
+
+          - GET /api/avatar/auth/config - Get user-specific configuration payload
+
+          - Enhanced /api/avatar/config endpoint to include user context
+
+          - Return config payload includes: agents, avatars, user permissions, session
+          settings
+
+          - Support for demo user accounts'
+        created_at: '2025-08-22T16:20:14.015376'
+        description: Create auth endpoints for Virtual Joe client login with config
+          payload
+        id: 6517b7ae-a197-430e-8d52-c980b5e9ea60
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 3
+        title: 3. Avatar API Authentication Endpoints
+        updated_at: '2025-08-22T16:43:31.902392'
+      bf46b783-bde9-449c-ba43-d8064d36308e:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: '- Password hashing using bcrypt via passlib
+
+          - User registration with email validation
+
+          - Login authentication with rate limiting
+
+          - JWT token generation and refresh
+
+          - Password reset functionality
+
+          - User session management'
+        created_at: '2025-08-22T16:20:08.624347'
+        description: Create authentication service with user registration, login,
+          password hashing, and token management
+        id: bf46b783-bde9-449c-ba43-d8064d36308e
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 2
+        title: 2. Authentication Service Layer
+        updated_at: '2025-08-22T16:20:08.624349'
+      ec68d30a-13d3-4b3b-a67d-70e3cd73c9c6:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: '**Multi-User WebSocket Architecture:**
+
+          - Connection manager for tracking multiple user WebSocket connections
+
+          - User isolation - ensure messages route to correct user sessions
+
+          - Session cleanup when users disconnect
+
+          - Rate limiting per user to prevent abuse
+
+          - User context in avatar_bridge sessions
+
+          - Proper error handling for concurrent connections
+
+          - Integration with existing agent_manager.create_avatar_session()'
+        created_at: '2025-08-22T16:20:19.444131'
+        description: Enhance WebSocket handling to support multiple concurrent user
+          sessions properly
+        id: ec68d30a-13d3-4b3b-a67d-70e3cd73c9c6
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 4
+        title: 4. Multi-User WebSocket Connection Management
+        updated_at: '2025-08-22T16:43:39.251376'
+      f36bd35c-4ff4-49fe-a5b2-151bd1d262ed:
+        child_tasks: []
+        completed: true
+        completion_report: "Successfully implemented multi-user authentication database\
+          \ setup with:\n\n**Core Components:**\n✅ Extended authentication models\
+          \ (User SQLAlchemy model + Pydantic request/response models)\n✅ SQLite database\
+          \ configuration with async SQLAlchemy \n✅ Authentication repository with\
+          \ full CRUD operations\n✅ Authentication service with bcrypt password hashing\
+          \ and JWT integration\n✅ CLI tool for user management (create, list, delete,\
+          \ demo users)\n✅ Database initialization integrated into app startup/shutdown\n\
+          \n**Key Features:**\n- SQLite database with User table (user_id, username,\
+          \ password_hash, roles, etc.)\n- Compatibility with existing ChatUser model\
+          \ via conversion methods  \n- Async database operations with proper error\
+          \ handling and logging\n- CLI management: `agent_c-users create username`\
+          \ / `agent_c-users list` / etc.\n- JWT token generation integrated with\
+          \ existing jwt.py utilities\n- Automatic database initialization on app\
+          \ startup\n\n**Files Created/Modified:**\n- `src/agent_c_api/models/auth_models.py`\
+          \ - Authentication models\n- `src/agent_c_api/config/database.py` - Database\
+          \ configuration  \n- `src/agent_c_api/core/repositories/auth_repository.py`\
+          \ - Database operations\n- `src/agent_c_api/core/services/auth_service.py`\
+          \ - Authentication business logic\n- `src/agent_c_api/cli/users.py` - CLI\
+          \ user management tool\n- `src/agent_c_api/core/setup.py` - Added database\
+          \ initialization\n- `pyproject.toml` - Added SQLAlchemy dependencies and\
+          \ CLI script\n\n**Testing Ready:** Database setup can be tested with provided\
+          \ verification script."
+        completion_signoff_by: null
+        context: '**For Virtual Joe Demo Client Integration:**
+
+          - Simple SQLite setup for user credentials (username/password)
+
+          - Extend existing ChatUser model with auth fields
+
+          - User session tracking for multiple concurrent WebSocket connections
+
+          - Integration with existing agent_manager session handling
+
+          - Database initialization script for demo users'
+        created_at: '2025-08-22T16:20:00.097682'
+        description: Set up SQLite database with user authentication for Virtual Joe
+          demo client integration
+        id: f36bd35c-4ff4-49fe-a5b2-151bd1d262ed
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 1
+        title: 1. Multi-User Authentication Database Setup
+        updated_at: '2025-08-22T16:59:15.783053'
+    title: WebSocket API Authentication Implementation
+    updated_at: '2025-08-22T16:59:15.783075'
 current_plan: structured_logging_api_integration

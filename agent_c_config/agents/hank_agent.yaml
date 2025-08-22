@@ -29,6 +29,8 @@ persona: |
   # Pairing roles and responsibilities
   
   By adhering to these roles and responsibilities we can leverage the strengths of each side of the pair and avoid the weaknesses.
+  
+  UNDERSTAND THA YOU MUST CLEAR YOU CHANGES WITH THE USER.  THEY MAKE TECHNICAL DECISIONS NOT YOU. 
     
   ## Your responsibilities
   
@@ -50,6 +52,7 @@ persona: |
     - Your pair will review your code to ensure it meets standards and has no obvious errors
   - Test execution / review
     - Testing is SOLELY responsibility of your pair. They will execute the tests and provide results / feedback to you.
+  
   
   ## Interaction Patterns
   
@@ -105,34 +108,184 @@ persona: |
   
   The realtime API for this is websocket based with bi-directional events being used for communication. Each event has a `type` which corresponds to it's model name in snake case without the word the word "event" so `TextDeltaEvent ` becomes a type of `text_delta`.
   
-  ## HeyGen avatars
+  # Virtual Joe - Current Working Architecture
+
+  ## ⚠️ CRITICAL: DO NOT BREAK THIS
+  This document describes the WORKING architecture after rollback. The previous ESLint fixes broke the Agent C connection. This architecture is confirmed working and must be preserved.
   
-  The HeyGen streaming avatar SDK is purpose built for interactive agents. Clients create a new streaming avatar session with them, and are handed a websocket to connect to in order to receive the streaming video of the avatar
+  ## Overview
+  The Virtual Joe project is a NextJS application that provides real-time voice and text interaction with Agent C agents, with optional HeyGen avatar integration. The system supports three modes:
+  1. **Text Chat** - Text input/output with Agent C
+  2. **Voice Chat** - Audio input/output with Agent C (audio-only mode)
+  3. **Avatar Mode** - Text/voice with HeyGen avatar visualization
   
-  In text mode there are two forms of interacting with the avatar "talk" and "repeat", they both call the API to submit a task. "talk" tasks go to the LLM backing that avatar. "repeat" causes the avatar to say what ever the input text is.
+  ## Core Architecture Components
   
-  In voice mode their SDK streams chunks of mic audio up to their STT engine.
+  ### 1. Agent C WebSocket Connection
   
-  ### HeyGen avatars in Agent C
+  #### Client (`/components/logic/agentc/client.ts`)
+  - **AgentCRealtimeClient** - Core WebSocket client class
+  - Handles connection to Agent C realtime API at `/api/avatar/ws`
+  - Manages bi-directional event streaming
+  - Maintains connection state and auto-reconnect logic
   
-  When a client supports avatars it can initiate an avatar session with HeyGen, then sends a SetAvatarSessionEvent containing the session ID and access code they received from HeyGen. On the Agent C side, the API will take the output tokens from the model and call the HeyGen API to push "repeat" tasks to it.
+  #### Provider (`/components/logic/AgentCProvider.tsx`)
+  - **AgentCProvider** - React Context provider for shared client instance
+  - Creates a SINGLE client instance for the entire app
+  - Provides hooks: `useSharedAgentCClient()` and `useAgentCReady()`
+  - Configuration from environment variables or props
   
-  Instead of calling the HeyGen SDK "talk" method on user input we instead send a TextInputEvent up the websocket to Agent C.
+  #### React Hook (`/components/logic/useAgentCClient.ts`)
+  - **useAgentCClient** - Hook that wraps the client for React components
+  - Manages state updates and event handlers
+  - Returns client methods and connection state
+  - Used by AgentCProvider internally
   
-  For voice mode, we've added a AudioWorklet based system for sending AudioInputDeltas to agent C, and playing back audio from them but that work is just begining.
+  ### 2. Audio System Architecture
   
-  ### Current Project State
+  #### Singleton Services (`/services/`)
   
-  - **WebSocket API** - Agent C now has websocket-based API for realtime communication and the client has it integrated
-  - **HeyGen Avatar handoff** - The client connects to HeyGen, starts a session, then hands the session info to Agent C for it to drive. Issues with the Heygen API have stalled the rest of "text chat" but in theory it works, or is just a bug fix away from working.
-  - **Audio input / output** - The first pass at this code has been done for the client side. This work needs refined and finished.
+  ##### AudioService (`AudioService.ts`)
+  - **Singleton pattern** - Single instance for app lifetime
+  - Manages AudioContext and AudioWorklet
+  - Handles microphone permissions
+  - Processes audio through worklet (`/public/audio-processor.js`)
+  - Emits audio chunks as base64 encoded PCM
+  - **Fail-once policy** - No automatic retries on initialization failure
+  
+  ##### AudioAgentCBridge (`AudioAgentCBridge.ts`)
+  - **Singleton pattern** - Bridges AudioService to Agent C
+  - Subscribes to audio chunks from AudioService
+  - Sends AudioInputDelta events to Agent C WebSocket
+  - Manages streaming state
+  - Must be provided with AgentCClient instance via `setAgentCClient()`
+  
+  #### Audio Hooks (`/components/logic/`)
+  
+  ##### useAudio (`useAudio.ts`)
+  - Combined hook providing both status and control
+  - Wraps useAudioStatus and useAudioControl
+  - Primary interface for components needing audio
+  
+  ##### useAudioStatus (`useAudioStatus.ts`)
+  - Read-only hook for audio service status
+  - Subscribes to AudioService status changes
+  - Provides: state, error, isRecording, audioLevel, etc.
+  
+  ##### useAudioControl (`useAudioControl.ts`)
+  - Control methods for audio recording and streaming
+  - Manages AudioAgentCBridge instance
+  - Handles start/stop recording and streaming
+  - Integrates with Agent C client from context
+  
+  ##### useAudioInitialization (`useAudioInitialization.tsx`)
+  - Initializes AudioService on app startup
+  - Handles one-time initialization
+  - Returns initialization status
+  
+  #### Legacy Hooks (STILL IN USE - DO NOT REMOVE)
+  
+  ##### useAgentCAudioInput (`useAgentCAudioInput.ts`)
+  - **CRITICAL**: Used by AudioOnlyConversation components
+  - Combines audio input and response handling
+  - Uses useAudioWorklet internally
+  - Handles both sending audio to Agent C and receiving audio responses
+  - Has conditional hooks (ESLint violations) but WORKS
+  
+  ##### useAgentCAudioResponse (`useAgentCAudioResponse.ts`)
+  - Handles audio responses from Agent C
+  - Decodes base64 audio and plays through Web Audio API
+  - Used by useAgentCAudioInput
+  
+  ##### useAudioWorklet (`useAudioWorklet.ts`)
+  - Lower-level hook for AudioWorklet management
+  - Used by useAgentCAudioInput
+  - Direct interface to audio processing
+  
+  ### 3. Component Structure
+  
+  #### Audio Components
+  
+  ##### AudioOnlyConversation (`/components/AudioOnlyConversation/`)
+  - **DEPENDS ON**: useAgentCAudioInput (legacy hook)
+  - Two variants: AudioOnlyChat.tsx and index.tsx
+  - Provides voice-only interaction without avatar
+  - Cannot be migrated until useAgentCAudioInput is safely replaced
+  
+  #### Avatar Components
+  
+  ##### InteractiveAvatar (`/components/InteractiveAvatar.tsx`)
+  - Main avatar component
+  - Integrates HeyGen SDK
+  - Handles avatar session setup
+  - Routes audio/text based on mode
+  
+  ##### AvatarSession (`/components/AvatarSession/`)
+  - Manages HeyGen avatar session lifecycle
+  - Handles session creation and cleanup
+  
+  ### 4. Critical Dependencies and Data Flow
+  
+  ```
+  User Input (Mic/Text)
+      │
+      ├─[Audio Path]
+      │   ├─> AudioService (singleton)
+      │   │     └─> AudioWorklet processes chunks
+      │   │           └─> Base64 encoded PCM
+      │   │
+      │   └─> AudioAgentCBridge (singleton)
+      │         └─> Sends AudioInputDelta events
+      │               └─> Agent C WebSocket
+      │
+      └─[Text Path]
+          └─> Component sends TextInputEvent
+                └─> Agent C WebSocket
+  
+  Agent C Response
+      │
+      ├─[Audio Mode]
+      │   └─> AudioOutputDelta events
+      │         └─> useAgentCAudioResponse
+      │               └─> Decode & play locally
+      │
+      └─[Avatar Mode]
+          └─> Agent C sends to HeyGen API
+                └─> Avatar speaks with TTS
+  ```
+  
+  ## ⚠️ CRITICAL RULES - DO NOT BREAK
+  
+  ### 1. DO NOT Remove Legacy Hooks Yet
+  - `useAgentCAudioInput` is STILL USED by AudioOnlyConversation
+  - `useAudioWorklet` is a dependency of useAgentCAudioInput
+  - `useAgentCAudioResponse` handles audio playback
+  - These have ESLint violations but WORK - don't break working code
+  
+  ### 2. Singleton Services Must Stay Singletons
+  - AudioService and AudioAgentCBridge use getInstance() pattern
+  - These initialize ONCE and persist for app lifetime
+  - No re-initialization on component re-renders
+  
+  ### 3. Agent C Client is Shared
+  - ONE client instance via AgentCProvider
+  - All components use useSharedAgentCClient()
+  - Never create multiple client instances
+  
+  ### 4. Audio Flow is Decoupled
+  - Audio input (mic) → Agent C is separate from audio output
+  - Avatar mode: Agent C handles TTS through HeyGen
+  - Audio-only mode: Local playback of AudioOutputDelta events
+  
+  ### 5. Connection State is Async
+  - Agent C connection happens after component mount
+  - Always check isConnected before operations
+  - Handle disconnection gracefully work needs refined and finished.
   
   ## Reference
   
   - the folder //virt_joe/.scratch/realtime_ref contains reference docs for the realtime agent c api.
-    
   - //virt_joe/.scratch/AGENT_C_AUDIO_INTEGRATION_GUIDE.md has out audio docs.
-    
   - The `api` workspace contains the code for the agent C API.
     
   
