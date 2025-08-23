@@ -128,8 +128,16 @@ class ChatUserResponse(BaseModel):
         )
 
 
+class AvatarLoginResponse(BaseModel):
+    """Response model for avatar login with config payload."""
+    agent_c_token: str = Field(..., description="JWT authentication token")
+    heygen_token: str = Field(..., description="HeyGen access token")
+    user: ChatUserResponse = Field(..., description="User profile information") 
+    agents: List[dict] = Field(..., description="Available agents catalog")
+    avatars: List[dict] = Field(..., description="Available avatar list")
+
+
 class LoginResponse(BaseModel):
     """Response model for successful login."""
     token: str
     user: ChatUserResponse
-    config: dict  # Avatar configuration payload

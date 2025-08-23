@@ -99,8 +99,9 @@ async def create_user(username: str, password: str = None, email: str = None,
             return True
             
     except ValueError as e:
+        # Return the error message for better handling
         print(f"❌ Error: {e}")
-        return False
+        return str(e)
     except Exception as e:
         print(f"❌ Unexpected error: {e}")
         return False
@@ -278,12 +279,23 @@ def main():
                 
                 print("Creating demo users...")
                 success_count = 0
+                skipped_count = 0
                 for username, password, email, first_name, last_name, roles in demo_users:
                     print(f"\nCreating {username}...")
-                    if await create_user(username, password, email, first_name, last_name, roles):
+                    result = await create_user(username, password, email, first_name, last_name, roles)
+                    if result is True:
                         success_count += 1
+                    elif isinstance(result, str) and "already exists" in result:
+                        print(f"  ⚠️  {username} already exists, skipping")
+                        skipped_count += 1
                 
-                print(f"\n✅ Created {success_count} out of {len(demo_users)} demo users.")
+                print(f"\n✅ Demo users summary:")
+                print(f"   Created: {success_count}")
+                print(f"   Already existed: {skipped_count}")
+                print(f"   Total available: {success_count + skipped_count}/{len(demo_users)}")
+                
+                if success_count + skipped_count == len(demo_users):
+                    print("\n🎉 All demo users are ready to use!")
             
             asyncio.run(create_demo_users())
             

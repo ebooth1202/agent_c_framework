@@ -219,18 +219,7 @@ class AuthService:
             
             # Prepare response
             user_response = ChatUserResponse.from_chat_user(user)
-            
-            # Basic config payload (will be enhanced in Phase 2)
-            config = {
-                "user_id": user.user_id,
-                "username": user.username,
-                "roles": user.roles,
-                "session_settings": {
-                    "timeout_minutes": 30,
-                    "max_connections": 5
-                }
-            }
-            
+
             duration = time.time() - start_time
             self.logger.info(
                 "auth_login_successful",
@@ -240,11 +229,7 @@ class AuthService:
                 duration_ms=round(duration * 1000, 2)
             )
             
-            return LoginResponse(
-                token=token,
-                user=user_response,
-                config=config
-            )
+            return LoginResponse(token=token, user=user_response)
             
         except Exception as e:
             duration = time.time() - start_time

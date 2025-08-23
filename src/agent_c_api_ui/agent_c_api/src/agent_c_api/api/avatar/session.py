@@ -1,15 +1,47 @@
 from typing import Optional, Dict, Any
 from fastapi import APIRouter, HTTPException, Depends, WebSocket, Request
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from agent_c.config.agent_config_loader import AgentConfigLoader
 from agent_c.util.heygen_streaming_avatar_client import HeyGenStreamingClient
 from agent_c.util.logging_utils import LoggingManager
 from agent_c_api.api.dependencies import get_agent_manager
-from agent_c_api.core.util.jwt import validate_websocket_jwt, validate_request_jwt
+from agent_c_api.core.util.jwt import validate_websocket_jwt, validate_request_jwt, create_jwt_token
+from agent_c_api.config.database import get_db_session
+
+from agent_c_api.models.auth_models import UserLoginRequest, AvatarLoginResponse
 
 router = APIRouter()
 logger = LoggingManager(__name__).get_logger()
 
+
+
+@router.post("/login", response_model=AvatarLoginResponse)
+async def login(login_request: UserLoginRequest, db_session: AsyncSession = Depends(get_db_session)) -> AvatarLoginResponse:
+    """
+    Authenticate user and return config with token.
+    """
+    from agent_c_api.core.services.auth_service import AuthService
+    auth_service = AuthService(db_session)
+    login_response = await auth_service.login(login_request.username, login_request.password)
+    
+    if not login_response:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    # Get config data
+    heygen_client = HeyGenStreamingClient()
+    heygen_token = await heygen_client.create_streaming_access_token()
+    loader: AgentConfigLoader = AgentConfigLoader()
+    agents = loader.client_catalog
+    avatar_list = (await heygen_client.list_avatars()).data
+    
+    return AvatarLoginResponse(
+        agent_c_token=login_response.token,
+        heygen_token=heygen_token,
+        user=login_response.user,
+        agents=agents,
+        avatars=avatar_list
+    )
 
 
 @router.get("/config")
@@ -20,7 +52,6 @@ async def get_avatar_config():
     Returns:
         dict: A dictionary containing the avatar session configuration.
     """
-    #_ = validate_request_jwt(request)
     try:
         heygen_client = HeyGenStreamingClient()
         loader: AgentConfigLoader = AgentConfigLoader()
