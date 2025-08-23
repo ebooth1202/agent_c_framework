@@ -32,11 +32,13 @@ const ChatPage = () => {
     isOptionsOpen,
     setIsOptionsOpen
   } = useContext(SessionContext);
+  
+  console.log("ChatPage is rendering!", { isLoading, sessionId, isInitialized });
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-lg text-muted-foreground animate-pulse">
+      <div className="flex-1 flex items-center justify-center bg-blue-50">
+        <div className="text-lg text-blue-700 animate-pulse bg-blue-100 px-6 py-4 rounded-lg border border-blue-200">
           Initializing session...
         </div>
       </div>
@@ -44,17 +46,17 @@ const ChatPage = () => {
   }
 
   return (
-    <div className="flex flex-col flex-1 overflow-hidden">
-      <div className="flex flex-col space-y-2 mb-1">
+    <div className="flex flex-col flex-1 overflow-hidden bg-blue-50">
+      <div className="flex flex-col space-y-2 mb-1 px-4 pt-4">
         {error && (
-          <Alert variant="destructive" className="mb-2">
+          <Alert variant="destructive" className="mb-2 bg-red-50 border-red-300 text-red-800">
             <AlertDescription className="flex justify-between items-center">
               {error}
               <button
                 onClick={() => {
                   // Clear error if needed (or expose a context setter)
                 }}
-                className="ml-2 text-sm underline hover:no-underline"
+                className="ml-2 text-sm underline hover:no-underline text-red-700 hover:text-red-900"
               >
                 Dismiss
               </button>
@@ -64,10 +66,10 @@ const ChatPage = () => {
       </div>
 
       {sessionId && isInitialized && (
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-blue-50">
           {/* CollapsibleOptions removed from here since it's now in ChatInterface */}
           
-          <div className="flex-1 overflow-hidden flex flex-col">
+          <div className="flex-1 overflow-hidden flex flex-col bg-white border-t border-blue-200 rounded-t-lg mx-4 shadow-sm">
             <ChatInterface
               sessionId={sessionId}
               customPrompt={customPrompt}

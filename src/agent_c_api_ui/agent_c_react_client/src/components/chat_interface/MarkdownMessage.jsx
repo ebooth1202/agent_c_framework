@@ -125,14 +125,14 @@ const MarkdownMessage = ({content, standalone = false}) => {
                     {memoizedContent}
                 </ReactMarkdown>
                 </div>
-                {/* Copy button that appears on hover */}
-                <div className="markdown-copy-button-container">
-                    <CopyButton
-                        content={content}
-                        tooltipText="Copy markdown"
-                        position="left"
-                    />
-                </div>
+                {/*/!* Copy button that appears on hover *!/*/}
+                {/*<div className="markdown-copy-button-container">*/}
+                {/*    <CopyButton*/}
+                {/*        content={content}*/}
+                {/*        tooltipText="Copy markdown"*/}
+                {/*        position="left"*/}
+                {/*    />*/}
+                {/*</div>*/}
             </CardContent>
         </Card>
     );
