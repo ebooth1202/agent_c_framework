@@ -10,6 +10,9 @@ tools:
   - WorkspacePlanningTools
   - AgentAssistTools
   - AgentCloneTools
+  - FDANDCTools
+  - ClinicalTrialsTools
+  - PubMedTools
 agent_params:
   budget_tokens: 20000
   max_tokens: 64000
