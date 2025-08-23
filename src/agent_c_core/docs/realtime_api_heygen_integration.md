@@ -178,7 +178,7 @@ When an agent begins thinking (first `thought_delta` received), the avatar autom
 The default thinking message can be customized by modifying the `avatar_think_message` property:
 
 ```javascript
-// In the AvatarBridge implementation
+// In the RealtimeBridge implementation
 get avatar_think_message() {
   return "Let me think about that..."; // Customize this message
 }

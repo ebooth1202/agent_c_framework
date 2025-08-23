@@ -8,7 +8,7 @@ from agent_c.models.base import BaseModel
 class ChatUser(BaseModel):
     version: int = Field(1, description="The version of the user model. This is used to track changes in the user model.")
     user_id: Optional[str] = Field(
-        None,
+        default_factory=lambda: MnemonicSlugs.generate_slug(2),
         description=("The ID of the user, in slug format. This is the core ID for the user. "
                      "If not provided, it will be generated based on the user name.")
     )

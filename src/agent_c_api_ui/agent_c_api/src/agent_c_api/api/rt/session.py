@@ -3,21 +3,22 @@ from fastapi import APIRouter, HTTPException, Depends, WebSocket, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from agent_c.config.agent_config_loader import AgentConfigLoader
+from agent_c.util import MnemonicSlugs
 from agent_c.util.heygen_streaming_avatar_client import HeyGenStreamingClient
 from agent_c.util.logging_utils import LoggingManager
 from agent_c_api.api.dependencies import get_agent_manager
-from agent_c_api.core.util.jwt import validate_websocket_jwt, validate_request_jwt, create_jwt_token
+from agent_c_api.core.util.jwt import validate_websocket_jwt, validate_request_jwt, create_jwt_token, verify_jwt_token
 from agent_c_api.config.database import get_db_session
 
-from agent_c_api.models.auth_models import UserLoginRequest, AvatarLoginResponse
+from agent_c_api.models.auth_models import UserLoginRequest, RealtimeLoginResponse
 
 router = APIRouter()
 logger = LoggingManager(__name__).get_logger()
 
 
 
-@router.post("/login", response_model=AvatarLoginResponse)
-async def login(login_request: UserLoginRequest, db_session: AsyncSession = Depends(get_db_session)) -> AvatarLoginResponse:
+@router.post("/login", response_model=RealtimeLoginResponse)
+async def login(login_request: UserLoginRequest, db_session: AsyncSession = Depends(get_db_session)) -> RealtimeLoginResponse:
     """
     Authenticate user and return config with token.
     """
@@ -34,51 +35,41 @@ async def login(login_request: UserLoginRequest, db_session: AsyncSession = Depe
     loader: AgentConfigLoader = AgentConfigLoader()
     agents = loader.client_catalog
     avatar_list = (await heygen_client.list_avatars()).data
+
+    # TODO: Grab the chat session index entries for the user and include them in the response
     
-    return AvatarLoginResponse(
-        agent_c_token=login_response.token,
-        heygen_token=heygen_token,
-        user=login_response.user,
-        agents=agents,
-        avatars=avatar_list
-    )
-
-
-@router.get("/config")
-async def get_avatar_config():
+    return RealtimeLoginResponse(agent_c_token=login_response.token,
+                                 heygen_token=heygen_token,
+                                 user=login_response.user,
+                                 agents=agents,
+                                 avatars=avatar_list,
+                                 ui_session_id=MnemonicSlugs.generate_slug(3))
+@router.get("/refresh_token")
+async def refresh_token(request: Request):
     """
-    Retrieves the configuration for the avatar session.
-
-    Returns:
-        dict: A dictionary containing the avatar session configuration.
+    Refreshes the JWT token for the user.
     """
-    try:
-        heygen_client = HeyGenStreamingClient()
-        loader: AgentConfigLoader = AgentConfigLoader()
-        agents = loader.client_catalog
-        avatar_list = (await heygen_client.list_avatars()).data
-        return {'agents': agents, "avatars": avatar_list}
+    user_info = await validate_request_jwt(request)
+    if not user_info:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
-    except Exception as e:
-        logger.error(f"Error retrieving avatar config: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to retrieve avatar config: {str(e)}"
-        )
+    new_token = create_jwt_token(user_info['user_id'], user_info.get('permissions', []))
+    return {"token": new_token}
 
 
 @router.websocket("/ws")
-async def initialize_avatar_session(websocket: WebSocket,
-                                    session_id: Optional[str] = None):
+async def initialize_realtime_session(websocket: WebSocket,
+                                      token: str,
+                                      session_id: Optional[str] = None):
     """
     Creates an agent session with the provided parameters.
     """
     try:
-        user_info: Dict[str, Any] = await validate_websocket_jwt(websocket)
-        agent_manager = websocket.app.state.agent_manager
-        avatar_bridge = await agent_manager.create_avatar_session(user_info['user_id'], session_id)
+        user_info: Dict[str, Any] = verify_jwt_token(token)
+        manager = websocket.app.state.realtime_session_manager
+        ui_session = await manager.create_realtime_session(user_info['user_id'], session_id)
 
-        await avatar_bridge.run(websocket)
+        await ui_session.bridge.run(websocket)
 
     except Exception as e:
         logger.exception(f"Error during session initialization: {str(e)}", exc_info=True)
@@ -90,8 +81,15 @@ async def verify_session(ui_session_id: str, request: Request):
     """
     Verifies if a session exists and is valid
     """
+    user_info = await validate_request_jwt(request)
+    if not user_info:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
     agent_manager = get_agent_manager(request)
     session_data = agent_manager.get_session_data(ui_session_id)
+    if session_data and session_data.user_id != user_info['user_id']:
+        session_data = None  # Invalidate if user IDs don't match
+
     return {"valid": session_data is not None}
 
 @router.get("/sessions")

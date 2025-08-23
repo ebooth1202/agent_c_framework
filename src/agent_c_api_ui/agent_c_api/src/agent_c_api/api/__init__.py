@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from .v1 import router as v1_router
 from .v2 import router as v2_router
-from .avatar import router as avatar_router
+from .rt import router as avatar_router
 
 # Create main API router with explicit /api prefix
 router = APIRouter(prefix="/api")

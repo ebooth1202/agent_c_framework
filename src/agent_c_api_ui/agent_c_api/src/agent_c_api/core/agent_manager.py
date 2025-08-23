@@ -10,7 +10,7 @@ from agent_c.config.agent_config_loader import AgentConfigLoader
 from agent_c.models.agent_config import AgentConfiguration
 from agent_c.chat.session_manager import ChatSessionManager, ChatSession
 from agent_c_api.core.agent_bridge import AgentBridge
-from agent_c_api.core.avatar_bridge import AvatarBridge
+from agent_c_api.core.realtime_bridge import RealtimeBridge
 from agent_c_api.core.util.logging_utils import LoggingManager
 
 
@@ -106,7 +106,6 @@ class UItoAgentBridgeManager:
         Args:
             agent_key: The name of the persona to use
             existing_ui_session_id: If provided, updates existing session instead of creating new one
-            **kwargs: Additional keyword arguments: currently passes kwargs to ReactJSAgent
 
         Returns:
             str: The session ID (either new or existing)
@@ -150,9 +149,9 @@ class UItoAgentBridgeManager:
             self.logger.info(f"Session {ui_session_id} created with agent: {agent_bridge}")
             return ui_session_id
 
-    async def create_avatar_session(self,
-                                    user_id: str,
-                                    existing_ui_session_id: str = None) -> AvatarBridge:
+    async def create_realtime_session(self,
+                                      user_id: str,
+                                      existing_ui_session_id: str = None) -> RealtimeBridge:
         """
         Create a new session or update an existing session with a new agent.
 
@@ -176,7 +175,7 @@ class UItoAgentBridgeManager:
         async with self._locks[ui_session_id]:
             chat_session = await self._get_or_create_chat_session(ui_session_id, 'default', user_id)
 
-            agent_bridge = AvatarBridge(chat_session, self.chat_session_manager)
+            agent_bridge = RealtimeBridge(chat_session, self.chat_session_manager)
 
             # Now initialize the agent. This fully initializes the agent and its tools as well - with a passed in session manager
             await agent_bridge.initialize()
@@ -252,7 +251,7 @@ class UItoAgentBridgeManager:
         session_data = await self.get_session_data(ui_session_id)
         if not session_data:
             raise ValueError(f"Invalid session ID: {ui_session_id}")
-
+        self._cancel_events[ui_session_id].clear()
         agent_bridge: AgentBridge = session_data["agent_bridge"]
 
         try:
@@ -288,10 +287,7 @@ class UItoAgentBridgeManager:
         # Set the event to signal cancellation
         self.logger.info(f"Cancelling interaction for session: {ui_session_id}")
         self._cancel_events[ui_session_id].set()
-        
-        # Reset the event for future use
-        self._cancel_events[ui_session_id] = threading.Event()
-        
+
         return True
         
     async def debug_session(self, ui_session_id: str):

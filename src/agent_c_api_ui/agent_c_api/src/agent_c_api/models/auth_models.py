@@ -11,6 +11,9 @@ from sqlalchemy import Column, String, Boolean, Text, JSON, Integer
 from sqlalchemy.ext.declarative import declarative_base
 from pydantic import BaseModel, Field, EmailStr
 
+from agent_c.models.agent_config import CurrentAgentConfiguration, AgentCatalogEntry
+from agent_c.models.heygen import Avatar
+
 Base = declarative_base()
 
 
@@ -127,17 +130,16 @@ class ChatUserResponse(BaseModel):
             last_login=chat_user.last_login
         )
 
-
-class AvatarLoginResponse(BaseModel):
-    """Response model for avatar login with config payload."""
-    agent_c_token: str = Field(..., description="JWT authentication token")
-    heygen_token: str = Field(..., description="HeyGen access token")
-    user: ChatUserResponse = Field(..., description="User profile information") 
-    agents: List[dict] = Field(..., description="Available agents catalog")
-    avatars: List[dict] = Field(..., description="Available avatar list")
-
-
 class LoginResponse(BaseModel):
     """Response model for successful login."""
     token: str
     user: ChatUserResponse
+
+class RealtimeLoginResponse(BaseModel):
+    """Response model for avatar login with config payload."""
+    agent_c_token: str = Field(..., description="JWT authentication token")
+    heygen_token: str = Field(..., description="HeyGen access token")
+    ui_session_id: str = Field(..., description="UI session identifier")
+    user: ChatUserResponse = Field(..., description="User profile information")
+    agents: List[AgentCatalogEntry] = Field(..., description="Available agents catalog")
+    avatars: List[Avatar] = Field(..., description="Available avatar list")

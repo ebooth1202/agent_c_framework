@@ -10,6 +10,7 @@ from fastapi_cache.backends.inmemory import InMemoryBackend
 
 
 from agent_c_api.config.env_config import settings
+from agent_c_api.core.realtime_session_manager import RealtimeSessionManager
 from agent_c_api.core.util.logging_utils import LoggingManager
 from agent_c_api.core.agent_manager import UItoAgentBridgeManager
 from agent_c_api.core.util.middleware_logging import APILoggingMiddleware
@@ -101,9 +102,13 @@ def create_application(router: APIRouter, **kwargs) -> FastAPI:
             logger.warning(f"   Or check connection settings in environment configuration")
         
         # Shared AgentManager instance.
-        logger.info("🤖 Initializing Agent Manager...")
+        logger.info("🤖 Initializing Chat Manager...")
         lifespan_app.state.agent_manager = UItoAgentBridgeManager()
-        logger.info("✅ Agent Manager initialized successfully")
+        logger.info("✅ Chat Manager initialized successfully")
+
+        logger.info("🤖 Initializing Realtime Manager...")
+        lifespan_app.state.realtime_manager = RealtimeSessionManager()
+        logger.info("✅ Realtime Manager initialized successfully")
         
         # Initialize FastAPICache with InMemoryBackend
         logger.info("💾 Initializing FastAPI Cache...")

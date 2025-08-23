@@ -10,13 +10,13 @@ from functools import singledispatchmethod
 
 from agent_c.chat import ChatSessionManager
 from agent_c.config.agent_config_loader import AgentConfigLoader
-from agent_c.models import ChatSession
+from agent_c.models import ChatSession, ChatUser
 from agent_c.models.events import BaseEvent, TextDeltaEvent, CompletionEvent
 from agent_c.models.events.chat import ThoughtDeltaEvent, AudioInputDeltaEvent
 from agent_c.models.heygen import HeygenAvatarSessionData, NewSessionRequest
 from agent_c.util.heygen_streaming_avatar_client import HeyGenStreamingClient
 from agent_c.util.registries.event import EventRegistry
-from agent_c_api.api.avatar.models.client_events import GetAgentsEvent, ErrorEvent, AgentListEvent, GetAvatarsEvent, AvatarListEvent, TextInputEvent, SetAvatarEvent, AvatarConnectionChangedEvent, \
+from agent_c_api.api.rt.models.client_events import GetAgentsEvent, ErrorEvent, AgentListEvent, GetAvatarsEvent, AvatarListEvent, TextInputEvent, SetAvatarEvent, AvatarConnectionChangedEvent, \
     SetAgentEvent, AgentConfigurationChangedEvent, SetAvatarSessionEvent
 from agent_c_api.core.agent_bridge import AgentBridge
 from agent_c.models.input import AudioInput
@@ -29,12 +29,17 @@ from agent_c.prompting import PromptBuilder
 from agent_c.prompting.basic_sections.persona import DynamicPersonaSection
 
 
-class AvatarBridge(AgentBridge):
+class RealtimeBridge(AgentBridge):
     def __init__(self,
-                 chat_session: ChatSession,
+                 chat_user: ChatUser,
+                 ui_session_id: str,
                  session_manager: ChatSessionManager,
                  file_handler: Optional[FileHandler] = None):
-        super().__init__(chat_session, session_manager, file_handler)
+        super().__init__(None, session_manager, file_handler)
+        self.chat_session_manager: ChatSessionManager = session_manager
+        self.chat_user: ChatUser = chat_user
+        self.ui_session_id: str = ui_session_id
+
         self.websocket: Optional[WebSocket] = None
         self.is_running = False
         self.agent_config_loader: AgentConfigLoader = AgentConfigLoader()
@@ -51,7 +56,7 @@ class AvatarBridge(AgentBridge):
     @singledispatchmethod
     async def handle_client_event(self, event: BaseEvent) -> None:
         """Default handler for unknown events"""
-        self.logger.warning(f"AvatarBridge {self.chat_session.session_id}: Unhandled event type: {event.type}")
+        self.logger.warning(f"RealtimeBridge {self.chat_session.session_id}: Unhandled event type: {event.type}")
         await self.send_error(f"Unknown event type: {event.type}")
 
     @handle_client_event.register
@@ -103,7 +108,7 @@ class AvatarBridge(AgentBridge):
 
     @handle_client_event.register
     async def _(self, event: AudioInputDeltaEvent) -> None:
-        self.logger.info("AvatarBridge received audio input delta event")
+        self.logger.info("RealtimeBridge received audio input delta event")
 
     @handle_client_event.register
     async def _(self, event: SetAvatarSessionEvent) -> None:
@@ -135,7 +140,7 @@ class AvatarBridge(AgentBridge):
 
             self.chat_session.agent_config = agent_config
             await self.tool_chest.activate_toolset(self.chat_session.agent_config.tools)
-            self.logger.info(f"AvatarBridge {self.chat_session.session_id}: Agent set to {agent_key}")
+            self.logger.info(f"RealtimeBridge {self.chat_session.session_id}: Agent set to {agent_key}")
 
         await self.send_event(AgentConfigurationChangedEvent(agent_config=self.chat_session.agent_config))
 
@@ -204,7 +209,7 @@ class AvatarBridge(AgentBridge):
             try:
                 await self.avatar_client.send_task(self.avatar_think_message)
             except Exception as e:
-                self.logger.error(f"AvatarBridge {self.chat_session.session_id}: Failed to send message to avatar: {e}")
+                self.logger.error(f"RealtimeBridge {self.chat_session.session_id}: Failed to send message to avatar: {e}")
 
     async def _handle_partial_agent_message(self):
         if "\n" not in self._partial_agent_message:
@@ -216,12 +221,12 @@ class AvatarBridge(AgentBridge):
 
     async def avatar_say(self, text: str, role: str = "assistant"):
         if not self.avatar_session and not self.avatar_session_id:
-            self.logger.error(f"AvatarBridge {self.chat_session.session_id}: No active avatar session to send message")
+            self.logger.error(f"RealtimeBridge {self.chat_session.session_id}: No active avatar session to send message")
             return
         try:
             await self.avatar_client.send_task(text)
         except Exception as e:
-            self.logger.error(f"AvatarBridge {self.chat_session.session_id}: Failed to send message to avatar: {e}")
+            self.logger.error(f"RealtimeBridge {self.chat_session.session_id}: Failed to send message to avatar: {e}")
             await self.send_error(f"Failed to send message to avatar: {str(e)}")
 
         await self.send_event(TextDeltaEvent(
@@ -232,17 +237,16 @@ class AvatarBridge(AgentBridge):
 
     async def runtime_callback(self, event: BaseEvent):
         """Handle runtime events from the agent"""
-        self.logger.debug(f"AvatarBridge {self.chat_session.session_id}: Received runtime event: {event.type}")
+        self.logger.debug(f"RealtimeBridge {self.chat_session.session_id}: Received runtime event: {event.type}")
         # These are already in model format and don't need parsed.
         await self.handle_runtime_event(event)
-
 
     async def run(self, websocket: WebSocket):
         """Main run loop for the bridge"""
         await websocket.accept()
         self.websocket=websocket
         self.is_running = True
-        self.logger.info (f"AvatarBridge started for session {self.chat_session.session_id}")
+        self.logger.info (f"RealtimeBridge started for session {self.chat_session.session_id}")
 
         try:
             await self.send_agent_list()
@@ -266,7 +270,7 @@ class AvatarBridge(AgentBridge):
 
         finally:
             await self.end_avatar_session()  # Ensure avatar session cleanup
-            self.logger.info(f"AvatarBridge stopped for session {self.chat_session.session_id}")
+            self.logger.info(f"RealtimeBridge stopped for session {self.chat_session.session_id}")
 
     async def iter_interact(self, text: str, file_ids: Optional[List[str]] = None, max_buffer: int = 512) -> AsyncIterator[str]:
         """
@@ -322,12 +326,7 @@ class AvatarBridge(AgentBridge):
                 with suppress(asyncio.CancelledError):
                     await task
 
-    async def interact(
-        self,
-        user_message: str,
-        file_ids: Optional[List[str]] = None,
-        on_event: Optional[callable] = None
-    ) -> None:
+    async def interact(self, user_message: str, file_ids: Optional[List[str]] = None, on_event: Optional[callable] = None) -> None:
         """
         Streams chat responses for a given user message.
 
@@ -341,6 +340,8 @@ class AvatarBridge(AgentBridge):
         Args:
             user_message (str): The message from the user to process
             file_ids (List[str], optional): IDs of files to include with the message
+            on_event (callable, optional): Callback function to override the default runtime callback
+                                           the iter_interact method uses to stream text chunks
         Raises:
             Exception: Any errors during chat processing
         """
@@ -431,3 +432,19 @@ class AvatarBridge(AgentBridge):
             self.logger.error(f"Error flushing session manager: {error_type}: {str(e)}\n{error_traceback}")
             await self.send_error(f"Error flushing session manager: {error_type}: {str(e)}\n{error_traceback}")
             return
+
+    async def _get_or_create_chat_session(self, session_id: Optional[str] = None, user_id: Optional[str] = None, agent_key: str = 'default_realtime') -> ChatSession:
+        session_id = session_id or self.ui_session_id
+        chat_session = await self.chat_session_manager.get_session(session_id)
+
+        if chat_session is None:
+            agent_config = self.agent_config_loader.duplicate(agent_key)
+            user_id = user_id or self.chat_user.user_id
+            chat_session = ChatSession(session_id=session_id, agent_config=agent_config, user_id=user_id)
+
+        return chat_session
+
+    async def initialize(self) -> None:
+        self.chat_session = await self._get_or_create_chat_session()
+        await self._init_tool_chest()
+        await self.initialize_agent_parameters()
