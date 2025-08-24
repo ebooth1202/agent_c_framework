@@ -417,13 +417,15 @@ class ClaudeChatAgent(BaseAgent):
         # Save interaction to session
         #assistant_content = self._format_model_outputs_to_text(state['model_outputs'])
         #await self._save_interaction_to_session(session_manager, assistant_content)
-
+        #
         # Update messages
-        msg = {'role': 'assistant', 'content': state['model_outputs']}
-        messages.append(msg)
-        await self._raise_history_delta([msg], **callback_opts)
-        if session_manager is not None:
-            session_manager.active_memory.messages = messages
+
+        if len(state['model_outputs']) > 0:
+            msg = {'role': 'assistant', 'content': state['model_outputs']}
+            messages.append(msg)
+            await self._raise_history_delta([msg], **callback_opts)
+            if session_manager is not None:
+                session_manager.active_memory.messages = messages
 
     async def _handle_content_block_end(self, event, state, callback_opts):
         if state['current_block_type'] == "thinking":
