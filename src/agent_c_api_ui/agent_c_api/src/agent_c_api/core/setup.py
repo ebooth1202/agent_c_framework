@@ -121,14 +121,30 @@ def create_application(router: APIRouter, **kwargs) -> FastAPI:
         await initialize_database()
         logger.info("✅ Authentication database initialized")
         
+        # Initialize authentication service
+        logger.info("🔐 Initializing Authentication Service...")
+        from agent_c_api.core.services.auth_service import AuthService
+        lifespan_app.state.auth_service = AuthService()
+        await lifespan_app.state.auth_service.initialize()
+        logger.info("✅ Authentication Service initialized successfully")
+        
         # Log startup completion
         logger.info("🎉 Application startup completed successfully")
         logger.info(f"📍 Redis Status: {'Connected' if redis_status['connected'] else 'Disconnected'}")
 
         yield
 
-        # Shutdown: Close database and Redis connections
+        # Shutdown: Close authentication service, database and Redis connections
         logger.info("🔄 Application shutdown initiated...")
+        
+        # Close authentication service
+        logger.info("🔐 Closing Authentication Service...")
+        try:
+            if hasattr(lifespan_app.state, 'auth_service'):
+                await lifespan_app.state.auth_service.close()
+            logger.info("✅ Authentication Service closed successfully")
+        except Exception as e:
+            logger.error(f"❌ Error during Authentication Service cleanup: {e}")
         
         # Close database connections
         logger.info("🗄️ Closing database connections...")

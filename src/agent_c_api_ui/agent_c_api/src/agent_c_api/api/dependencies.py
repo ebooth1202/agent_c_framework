@@ -15,6 +15,11 @@ def get_agent_manager(request: Request) -> 'UItoAgentBridgeManager':
     return request.app.state.agent_manager
 
 
+def get_auth_service(request: Request) -> 'AuthService':
+    """FastAPI dependency that provides the AuthService from app state."""
+    return request.app.state.auth_service
+
+
 def build_fields_from_config(config: dict) -> dict:
     """
     Recursively build a dictionary of fields for create_model.

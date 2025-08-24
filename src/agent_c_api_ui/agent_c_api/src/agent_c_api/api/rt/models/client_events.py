@@ -1,7 +1,8 @@
-from typing import List
+from typing import List, Optional, Any
 
 from pydantic import Field
 
+from agent_c.models import ChatSession
 from agent_c.models.agent_config import CurrentAgentConfiguration, AgentCatalogEntry
 from agent_c.models.events import BaseEvent
 from agent_c.models.heygen import Avatar, HeygenAvatarSessionData, NewSessionRequest
@@ -94,3 +95,69 @@ class ErrorEvent(BaseEvent):
         message (str): The error message to send.
     """
     message: str
+    source: Optional[str] = None
+
+class NewChatSessionEvent(BaseEvent):
+    """
+    Event to request a new chat session.
+
+    This event does not require any additional data.
+    """
+    agent_key: Optional[str] = None
+
+class ResumeChatSessionEvent(BaseEvent):
+    """
+    Event to request resuming a chat session.
+
+    Attributes:
+        session_id (str): The ID of the session to resume.
+    """
+    session_id: str
+
+class ChatSessionChangedEvent(BaseEvent):
+    """
+    Event to notify that the chat session has changed.
+
+    Attributes:
+        chat_session (ChatSession): The updated chat session.
+    """
+    chat_session: ChatSession
+
+class SetChatSessionNameEvent(BaseEvent):
+    """
+    Event to set the name of the current chat session.
+
+    Attributes:
+        session_name (str): The new name for the chat session.
+    """
+    session_name: str
+
+class ChatSessionNameChangedEvent(BaseEvent):
+    """
+    Event to notify that the chat session name has changed.
+
+    Attributes:
+        session_name (str): The updated name of the chat session.
+    """
+    session_name: str
+
+class SetSessionMetadataEvent(BaseEvent):
+    """
+    Event to set metadata for the current chat session.
+    """
+    meta: dict
+
+class SessionMetadataChangedEvent(BaseEvent):
+    """
+    Event to notify that the chat session metadata has changed.
+
+    Attributes:
+        meta (dict): The updated metadata of the chat session.
+    """
+    meta: dict
+
+class SetSessionMessagesEvent(BaseEvent):
+    """
+    Event to set messages for the current chat session.
+    """
+    messages: List[dict[str, Any]] = Field(default_factory=list, description="New list of messages in the session")

@@ -13,6 +13,7 @@ from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from agent_c.models.chat_history.user import ChatUser
+from agent_c_api.config.database import get_database_config
 from agent_c_api.core.repositories.auth_repository import AuthRepository
 from agent_c_api.core.util.jwt import create_jwt_token, verify_jwt_token
 from agent_c_api.models.auth_models import UserCreateRequest, ChatUserResponse, LoginResponse
@@ -21,19 +22,80 @@ from agent_c_api.models.auth_models import UserCreateRequest, ChatUserResponse, 
 class AuthService:
     """Service for user authentication and management operations."""
     
-    def __init__(self, db_session: AsyncSession):
+    def __init__(self):
         """
-        Initialize the authentication service.
+        Initialize the authentication service as a singleton.
         
-        Args:
-            db_session: Database session for repository operations
+        This service manages its own database session lifecycle and should be
+        initialized once during application startup.
         """
-        self.db_session = db_session
-        self.auth_repo = AuthRepository(db_session)
         self.logger = structlog.get_logger(__name__)
+        self.db_session: Optional[AsyncSession] = None
+        self.auth_repo: Optional[AuthRepository] = None
         
         # Initialize password hashing context
         self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    
+    async def initialize(self):
+        """
+        Initialize the database session and repository.
+        
+        This should be called during application startup after the service
+        is created but before it's used.
+        """
+        try:
+            self.logger.info("auth_service_initializing")
+            
+            # Get database configuration and create session
+            db_config = get_database_config()
+            self.db_session = db_config.async_session_factory()
+            
+            # Initialize repository with the session
+            self.auth_repo = AuthRepository(self.db_session)
+            
+            self.logger.info("auth_service_initialized")
+            
+        except Exception as e:
+            self.logger.error(
+                "auth_service_initialization_failed",
+                error=str(e)
+            )
+            raise
+    
+    async def close(self):
+        """
+        Close the database session and cleanup resources.
+        
+        This should be called during application shutdown.
+        """
+        try:
+            self.logger.info("auth_service_closing")
+            
+            if self.db_session:
+                await self.db_session.close()
+                self.db_session = None
+            
+            self.auth_repo = None
+            
+            self.logger.info("auth_service_closed")
+            
+        except Exception as e:
+            self.logger.error(
+                "auth_service_close_error",
+                error=str(e)
+            )
+    
+    def _ensure_initialized(self):
+        """
+        Ensure the service is properly initialized.
+        
+        Raises:
+            RuntimeError: If the service hasn't been initialized
+        """
+        if not self.db_session or not self.auth_repo:
+            raise RuntimeError(
+                "AuthService not initialized. Call initialize() during app startup."
+            )
     
     def _hash_password(self, password: str) -> str:
         """
@@ -73,6 +135,7 @@ class AuthService:
         Raises:
             ValueError: If username already exists
         """
+        self._ensure_initialized()
         start_time = time.time()
         
         try:
@@ -127,6 +190,7 @@ class AuthService:
         Returns:
             Optional[User]: User model if authentication successful, None otherwise
         """
+        self._ensure_initialized()
         start_time = time.time()
         
         try:
@@ -202,6 +266,7 @@ class AuthService:
         Returns:
             Optional[LoginResponse]: Login response with token and user data, or None if failed
         """
+        self._ensure_initialized()
         start_time = time.time()
         
         try:
@@ -251,6 +316,7 @@ class AuthService:
         Returns:
             Optional[ChatUser]: User model if token is valid, None otherwise
         """
+        self._ensure_initialized()
         try:
             # Verify and decode token
             payload = verify_jwt_token(token)
@@ -288,6 +354,7 @@ class AuthService:
         Returns:
             List[UserResponse]: List of all users (without passwords)
         """
+        self._ensure_initialized()
         users = await self.auth_repo.list_users()
         return [ChatUserResponse.from_chat_user(user) for user in users]
     
@@ -301,6 +368,7 @@ class AuthService:
         Returns:
             bool: True if user was deleted, False if not found
         """
+        self._ensure_initialized()
         self.logger.info("auth_user_deleting", user_id=user_id)
         result = await self.auth_repo.delete_user(user_id)
         

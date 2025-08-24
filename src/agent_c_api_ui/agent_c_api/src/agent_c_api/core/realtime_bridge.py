@@ -11,13 +11,14 @@ from functools import singledispatchmethod
 from agent_c.chat import ChatSessionManager
 from agent_c.config.agent_config_loader import AgentConfigLoader
 from agent_c.models import ChatSession, ChatUser
-from agent_c.models.events import BaseEvent, TextDeltaEvent, CompletionEvent
+from agent_c.models.events import BaseEvent, TextDeltaEvent, CompletionEvent, HistoryEvent
 from agent_c.models.events.chat import ThoughtDeltaEvent, AudioInputDeltaEvent
 from agent_c.models.heygen import HeygenAvatarSessionData, NewSessionRequest
 from agent_c.util.heygen_streaming_avatar_client import HeyGenStreamingClient
 from agent_c.util.registries.event import EventRegistry
 from agent_c_api.api.rt.models.client_events import GetAgentsEvent, ErrorEvent, AgentListEvent, GetAvatarsEvent, AvatarListEvent, TextInputEvent, SetAvatarEvent, AvatarConnectionChangedEvent, \
-    SetAgentEvent, AgentConfigurationChangedEvent, SetAvatarSessionEvent
+    SetAgentEvent, AgentConfigurationChangedEvent, SetAvatarSessionEvent, ChatSessionChangedEvent, SessionMetadataChangedEvent, ChatSessionNameChangedEvent, ResumeChatSessionEvent, NewChatSessionEvent
+from agent_c_api.api.rt.models.client_events import SetChatSessionNameEvent, SetSessionMessagesEvent, ChatSessionNameChangedEvent, SetSessionMetadataEvent, SessionMetadataChangedEvent
 from agent_c_api.core.agent_bridge import AgentBridge
 from agent_c.models.input import AudioInput
 
@@ -51,6 +52,11 @@ class RealtimeBridge(AgentBridge):
         self.avatar_session_token: Optional[str] = None
         self._partial_agent_message: str = ""
         self._avatar_did_think = False
+
+    async def flush_session(self):
+        """Flush the current chat session to persistent storage"""
+        if self.chat_session:
+            await self.session_manager.flush(self.chat_session.session_id)
 
     # Handlers for events coming from the client websocket
     @singledispatchmethod
@@ -125,6 +131,61 @@ class RealtimeBridge(AgentBridge):
         self.avatar_client.session_id = avatar_session_id
         await self.avatar_say("Avtar bridge connected to avatar session", role="system")
 
+    @handle_client_event.register
+    async def _(self, event: ResumeChatSessionEvent) -> None:
+        await self.resume_chat_session(event.session_id)
+
+    async def resume_chat_session(self, session_id: str) -> None:
+        session_info = await self.chat_session_manager.get_session(session_id)
+        if not session_info or session_info.user_id != self.chat_user.user_id:
+            await self.send_error(f"Session '{session_id}' not found", source="resume_chat_session")
+            return
+
+        self.chat_session = session_info
+        await self.tool_chest.activate_toolset(self.chat_session.agent_config.tools)
+        self.logger.info(f"RealtimeBridge resumed chat session {self.chat_session.session_id}")
+        await self.send_chat_session()
+
+    @handle_client_event.register
+    async def _(self, event: SetChatSessionNameEvent) -> None:
+        await self.set_chat_session_name(event.session_name)
+
+    async def set_chat_session_name(self, session_name: str) -> None:
+        """Set the name of the current chat session"""
+        self.chat_session.session_name = session_name
+        self.logger.info(f"RealtimeBridge {self.chat_session.session_id}: Session name set to '{session_name}'")
+        await self.send_chat_session_name()
+
+    @handle_client_event.register
+    async def _(self, event: SetSessionMetadataEvent) -> None:
+        await self.set_session_metadata(event.meta)
+
+    async def set_session_metadata(self, meta: Dict[str, Any]) -> None:
+        """Set the metadata for the current chat session"""
+        self.chat_session.metadata = meta
+        self.logger.info(f"RealtimeBridge {self.chat_session.session_id}: Session metadata updated")
+
+        await self.send_chat_session_meta()
+
+    @handle_client_event.register
+    async def _(self, event: NewChatSessionEvent) -> None:
+        await self.new_chat_session(event.agent_key)
+
+    async def new_chat_session(self, agent_key: Optional[str] = None) -> None:
+        agent_key = agent_key or self.chat_session.agent_config.key
+        await self.flush_session()
+        await self._get_or_create_chat_session(agent_key=agent_key)
+
+    @handle_client_event.register
+    async def _(self, event: SetSessionMessagesEvent) -> None:
+        await self.set_session_messages(event.messages)
+
+    async def set_session_messages(self, messages: List[Dict[str, Any]]) -> None:
+        """Set the messages for the current chat session"""
+        self.chat_session.messages = messages
+        self.logger.info(f"RealtimeBridge {self.chat_session.session_id}: Session messages updated")
+        await self.flush_session()
+        await self.send_event(HistoryEvent(messages=self.chat_session.messages, session_id=self.chat_session.session_id))
 
     @handle_client_event.register
     async def _(self, event: SetAgentEvent) -> None:
@@ -166,9 +227,24 @@ class RealtimeBridge(AgentBridge):
             self.logger.exception(f"Failed to send event to {self.chat_session.session_id}: {e}")
             self.is_running = False
 
-    async def send_error(self, message: str):
+    async def send_error(self, message: str, source: Optional[str] = None):
         """Send error message to client"""
-        await self.send_event(ErrorEvent(message=message))
+        await self.send_event(ErrorEvent(message=message, source=source))
+
+    async def send_chat_session(self):
+        """Send the current chat session state to the client"""
+        if self.chat_session:
+            await self.send_event(ChatSessionChangedEvent(chat_session=self.chat_session))
+
+    async def send_chat_session_meta(self):
+        """Send the current chat session state to the client"""
+        if self.chat_session:
+            await self.send_event(SessionMetadataChangedEvent(meta=self.chat_session.metadata))
+
+    async def send_chat_session_name(self):
+        """Send the current chat session name to the client"""
+        if self.chat_session and self.chat_session.session_name:
+            await self.send_event(ChatSessionNameChangedEvent(session_name=self.chat_session.session_name))
 
     # Handlers for runtime events coming over the callback
     @singledispatchmethod
@@ -249,8 +325,7 @@ class RealtimeBridge(AgentBridge):
         self.logger.info (f"RealtimeBridge started for session {self.chat_session.session_id}")
 
         try:
-            await self.send_agent_list()
-            await self.send_avatar_list()
+
 
             while self.is_running:
                 try:

@@ -103,8 +103,6 @@ class AgentBridge:
         self.__init_events()
 
         self.chat_session = chat_session
-        self.logger.info(f"Using provided agent config : {self.chat_session.agent_config.key}...")
-
         self.sections = None
 
         self.model_config_loader = ModelConfigurationLoader()
@@ -177,10 +175,6 @@ class AgentBridge:
         """
         local_project = LocalProjectWorkspace()
         self.workspaces = [local_project]
-        self.logger.info(
-            f"Agent {self.chat_session.agent_config.key} initialized workspaces "
-            f"{local_project.workspace_root}"
-        )
         # TODO: ALLOWED / DISALLOWED WORKSPACES from agent config
         try:
             with open(LOCAL_WORKSPACES_FILE, 'r', encoding='utf-8') as json_file:
