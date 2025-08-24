@@ -19,11 +19,9 @@ logger = logging.getLogger(__name__)
 
 class OfficeToMarkdownTools(Toolset):
     """
-    Toolset for converting office files to markdown using the MarkItDown library.
-    
-    This tool provides a clean interface for converting various office document formats
-    (docx, pptx, xlsx, pdf, html) to markdown format, following clean architecture
-    principles with proper separation of concerns.
+    Enables your agent to convert office documents (Word, PowerPoint, Excel, PDF, HTML) into clean,
+    readable markdown format. This makes office documents more accessible for analysis, editing,
+    version control, and integration with other text-based workflows.
     """
     
     def __init__(self, **kwargs):

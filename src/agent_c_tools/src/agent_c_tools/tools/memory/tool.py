@@ -6,12 +6,9 @@ from .prompt import MemorySection
 
 class MemoryTools(Toolset):
     """
-    MemoryTools is a class that extends ZepDependentToolset to provide methods
-    for storing and clearing metadata associated with the current user/session.
-
-    This simple tool unlocks a LOT of capabilities, the model can store complex information
-    using nothing more than this tool and some model instructions.  This is a tool you'll likely want
-    to supply your own version of the `PromptSection` to provide better model instructions.
+    Allows your agent to remember important information about you and your conversations across sessions.
+    Your agent can store preferences, context, and key details that help personalize your interactions
+    and maintain continuity between different conversations and tasks.
     """
 
     def __init__(self, **kwargs: Any):

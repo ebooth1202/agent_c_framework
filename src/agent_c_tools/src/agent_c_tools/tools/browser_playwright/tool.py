@@ -19,7 +19,9 @@ from agent_c_tools.tools.workspace.tool import WorkspaceTools
 
 class BrowserPlaywrightTools(Toolset):
     """
-    BrowserPlaywrightTools provides methods for web browser automation using Playwright.
+    Gives your agent the ability to control a web browser to interact with websites, fill out forms,
+    take screenshots, and automate web tasks. Your agent can navigate pages, click buttons, type in forms,
+    and extract information from web pages as if it were using a real browser.
     """
 
     def __init__(self, **kwargs: Any):

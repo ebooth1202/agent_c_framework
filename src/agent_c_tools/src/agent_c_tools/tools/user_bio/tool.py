@@ -5,7 +5,9 @@ from .prompt import UserBioSection, UserBioSectionNoToolUse
 
 class UserBioTools(Toolset):
     """
-    UserBioTools  is a tool to allow the model to update the user record.
+    Allows your agent to learn and remember personal information about you, such as your name and preferences.
+    This helps your agent provide more personalized interactions and maintain relevant context about who you are
+    across different conversations and sessions.
     """
 
     def __init__(self, **kwargs: Any):

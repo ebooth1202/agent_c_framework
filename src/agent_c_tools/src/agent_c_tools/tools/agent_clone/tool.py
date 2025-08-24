@@ -16,6 +16,11 @@ from agent_c.prompting.basic_sections.persona import DynamicPersonaSection
 
 
 class AgentCloneTools(AgentAssistToolBase):
+    """
+    Allows your agent to create copies of itself to work on multiple tasks simultaneously or approach problems
+    from different angles. The agent can delegate work to its clones and have extended conversations with them,
+    enabling parallel problem-solving and collaborative thinking.
+    """
     def __init__(self, **kwargs):
         if not 'name' in kwargs:
             kwargs['name'] = 'act'

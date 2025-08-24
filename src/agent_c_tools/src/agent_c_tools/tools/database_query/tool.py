@@ -11,6 +11,11 @@ from ...helpers.path_helper import create_unc_path, os_file_system_path
 
 
 class DatabaseQueryTools(Toolset):
+    """
+    Gives your agent the ability to query databases safely with read-only access. Your agent can explore
+    database schemas, execute SELECT queries, analyze table structures, and seamlessly load query results
+    into data analysis tools for further processing.
+    """
     DEMO_DB_NAME = 'demo_agent_data.db'
     DATA_FOLDER = 'data_demo'
     ALLOWED_FUNCTIONS = {

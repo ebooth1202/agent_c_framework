@@ -13,12 +13,9 @@ from agent_c_tools.tools.web.util.expires_header import expires_header_to_cache_
 
 class WebTools(Toolset):
     """
-    WebTools class to fetch and format web page content.
-
-    Attributes:
-        default_formatter (ContentFormatter): Default formatter to use when no specific formatter is found.
-        formatters (List[ContentFormatter]): List of custom formatters for specific URL patterns.
-        cache (Cache): Cache object for storing responses.
+    Allows your agent to browse the web and retrieve content from websites. Your agent can fetch web pages,
+    extract readable content, handle different formats, and save web content to your workspace for later use.
+    This enables your agent to research topics, gather information, and stay updated with online content.
     """
 
     def __init__(self, **kwargs):

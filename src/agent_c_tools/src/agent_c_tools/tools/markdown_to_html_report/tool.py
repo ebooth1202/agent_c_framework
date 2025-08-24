@@ -23,7 +23,11 @@ logger = logging.getLogger(__name__)
 
 
 class MarkdownToHtmlReportTools(Toolset):
-    """Toolset for generating interactive HTML viewers from markdown files in a workspace."""
+    """
+    Transforms your markdown documents into beautiful, interactive HTML reports and Word documents.
+    Your agent can create professional presentations, documentation, and reports that are easy to share,
+    navigate, and read across different platforms and devices.
+    """
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs, name="markdown_viewer", use_prefix=False)

@@ -12,6 +12,11 @@ from .prompt import RSSSection
 
 
 class RssTools(Toolset):
+    """
+    Allows your agent to stay updated with the latest news, blogs, and content from RSS feeds.
+    Your agent can fetch and monitor RSS feeds from various sources to keep you informed about
+    topics that matter to you, from news outlets to personal blogs and industry updates.
+    """
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs, name='rss')

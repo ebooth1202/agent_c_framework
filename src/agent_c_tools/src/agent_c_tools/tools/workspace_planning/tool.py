@@ -16,7 +16,9 @@ from agent_c_tools.tools.workspace_planning.models import PlanModel, TaskModel, 
 
 class WorkspacePlanningTools(Toolset):
     """
-    WorkspacePlanningTools provides methods for creating and tracking plans using the metadata of a workspace.
+    Enables your agent to create and manage detailed project plans, break down complex goals into manageable tasks,
+    track progress, and learn from experiences. Your agent can organize work hierarchically, set priorities,
+    manage deadlines, and generate comprehensive reports to keep projects on track.
     """
 
     def __init__(self, **kwargs: Any):

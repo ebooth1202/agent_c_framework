@@ -17,6 +17,11 @@ from ...helpers.path_helper import create_unc_path, os_file_system_path
 
 
 class DataVisualizationTools(Toolset):
+    """
+    Enables your agent to create professional charts and graphs from your data, including bar charts, line plots,
+    scatter plots, histograms, heatmaps, and more. Your agent can visualize relationships, trends, and patterns
+    in your data to help you understand and present your information clearly.
+    """
     def __init__(self, **kwargs):
         super().__init__(**kwargs, name='data_visualization')
         self.workspace_tool = self.tool_chest.active_tools.get('WorkspaceTools')
