@@ -6,34 +6,40 @@
 
 /* Custom styles for markdown in user messages - Updated for modest-markdown */
 .markdown-user-message .modest-markdown {
-  color: white;
+  color: var(--user-message-foreground);
   max-width: none;
   background: transparent; /* Ensure background doesn't override */
 }
 
 .markdown-user-message .modest-markdown strong {
-  color: white !important;
+  color: var(--user-message-foreground) !important;
   font-weight: bold;
 }
 
 .markdown-user-message .modest-markdown code {
   background-color: rgba(255, 255, 255, 0.2) !important;
-  color: white !important;
+  color: var(--user-message-foreground) !important;
 }
 
 .markdown-user-message .modest-markdown pre {
   background-color: rgba(0, 0, 0, 0.3) !important;
+  color: var(--user-message-foreground) !important;
   margin: 0.5rem 0;
 }
 
 .markdown-user-message .modest-markdown a {
-  color: white !important;
+  color: var(--user-message-foreground) !important;
   text-decoration: underline;
+  opacity: 0.8;
+}
+
+.markdown-user-message .modest-markdown a:hover {
+  opacity: 1;
 }
 
 /* IMPORTANT: Fix bullet points in user messages */
 .markdown-user-message .modest-markdown ul {
-  color: white !important;
+  color: var(--user-message-foreground) !important;
   margin-top: 0.5rem !important;
   margin-bottom: 0.5rem !important;
   list-style-type: disc !important;
@@ -42,7 +48,7 @@
 }
 
 .markdown-user-message .modest-markdown ol {
-  color: white !important;
+  color: var(--user-message-foreground) !important;
   margin-top: 0.5rem !important;
   margin-bottom: 0.5rem !important;
   list-style-type: decimal !important;
@@ -56,7 +62,13 @@
 .markdown-user-message .modest-markdown h4,
 .markdown-user-message .modest-markdown h5,
 .markdown-user-message .modest-markdown h6 {
-  color: white !important;
+  color: var(--user-message-foreground) !important;
+}
+
+.markdown-user-message .modest-markdown p,
+.markdown-user-message .modest-markdown blockquote,
+.markdown-user-message .modest-markdown li {
+  color: var(--user-message-foreground) !important;
 }
 
 /* Remove old prose-based styles that are no longer used */

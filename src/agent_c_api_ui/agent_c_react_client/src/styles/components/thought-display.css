@@ -41,8 +41,11 @@
   transition: background-color 0.2s ease;
 }
 
-.thought-trigger-button:hover {
-  background-color: hsl(var(--muted) / 0.5);
+/* Override shadcn/ui button hover - more specific selector */
+.thought-trigger-button:hover,
+button.thought-trigger-button:hover {
+  background-color: var(--thought-hover) !important;
+  color: var(--thought-background) !important;
 }
 
 /* ThoughtDisplay: Collapsible content */
