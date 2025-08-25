@@ -162,13 +162,13 @@ class AgentAssistTools(AgentAssistToolBase):
         # more research seems that the message is removing some newlines, so nl2br should help - but not in all cases.
         # list in particular end up with stripped newlines.
         # A way to fix is implemented via self.fix_markdown_formatting
-
+        content = self.fix_markdown_formatting(
+                f"**Domo agent** requesting assistance from '*{agent_config.name}*': \n\n{message}")
         await self._raise_render_media(
             sent_by_class=self.__class__.__name__,
             sent_by_function='chat',
             content_type="text/html",
-            content=self.fix_markdown_formatting(
-                f"**Domo agent** requesting assistance from '*{agent_config.name}*': \n\n{message}"),
+            content=content,
             tool_context=tool_context
         )
 
