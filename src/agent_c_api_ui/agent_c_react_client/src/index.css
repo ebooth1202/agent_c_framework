@@ -4,44 +4,59 @@
 /* Import our main CSS file which contains common styles and component styles */
 @import './styles/main.css';
 
-/* Custom styles for markdown in user messages */
-.markdown-user-message .prose {
+/* Custom styles for markdown in user messages - Updated for modest-markdown */
+.markdown-user-message .modest-markdown {
   color: white;
   max-width: none;
+  background: transparent; /* Ensure background doesn't override */
 }
 
-.markdown-user-message .prose strong {
-  color: white;
+.markdown-user-message .modest-markdown strong {
+  color: white !important;
   font-weight: bold;
 }
 
-.markdown-user-message .prose code {
-  background-color: rgba(255, 255, 255, 0.2);
-  color: white;
+.markdown-user-message .modest-markdown code {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+  color: white !important;
 }
 
-.markdown-user-message .prose pre {
-  background-color: rgba(0, 0, 0, 0.3);
+.markdown-user-message .modest-markdown pre {
+  background-color: rgba(0, 0, 0, 0.3) !important;
   margin: 0.5rem 0;
 }
 
-.markdown-user-message .prose a {
-  color: white;
+.markdown-user-message .modest-markdown a {
+  color: white !important;
   text-decoration: underline;
 }
 
-.markdown-user-message .prose ul,
-.markdown-user-message .prose ol {
-  color: white;
-  margin-top: 0.5rem;
-  margin-bottom: 0.5rem;
+/* IMPORTANT: Fix bullet points in user messages */
+.markdown-user-message .modest-markdown ul {
+  color: white !important;
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+  list-style-type: disc !important;
+  list-style-position: outside !important;
+  padding-left: 1.5rem !important;
 }
 
-.markdown-user-message .prose h1,
-.markdown-user-message .prose h2,
-.markdown-user-message .prose h3,
-.markdown-user-message .prose h4,
-.markdown-user-message .prose h5,
-.markdown-user-message .prose h6 {
-  color: white;
+.markdown-user-message .modest-markdown ol {
+  color: white !important;
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+  list-style-type: decimal !important;
+  list-style-position: outside !important;
+  padding-left: 1.5rem !important;
 }
+
+.markdown-user-message .modest-markdown h1,
+.markdown-user-message .modest-markdown h2,
+.markdown-user-message .modest-markdown h3,
+.markdown-user-message .modest-markdown h4,
+.markdown-user-message .modest-markdown h5,
+.markdown-user-message .modest-markdown h6 {
+  color: white !important;
+}
+
+/* Remove old prose-based styles that are no longer used */
