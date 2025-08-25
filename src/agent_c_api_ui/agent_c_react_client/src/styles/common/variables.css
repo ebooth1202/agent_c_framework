@@ -4,7 +4,23 @@
 :root {
   /* ===== COLOR SCALES - Available in both themes ===== */
   /* These are base HSL values that don't change between themes */
-  
+
+  /* Brand Primary Colors */
+  --indigo: #2c1a5d;
+  --gold: #fdb825;
+
+  /* Brand Secondary Colors */
+  --gulfstream: #6ca7d0;
+  --peacock: #1f5d82;
+
+  /* Brand Tertiary Colors */
+  --slate: #232d3d;
+  --shamrock: #2fb677;
+  --glacier: #67686a;
+  --cerulean: #2d84bb;
+  --midnight: #404041;
+  --cool-gray: #ebebeb;
+
   /* Colors - Gray Scale */
   --color-gray-50: 210 40% 98%;
   --color-gray-100: 214 32% 91%;
