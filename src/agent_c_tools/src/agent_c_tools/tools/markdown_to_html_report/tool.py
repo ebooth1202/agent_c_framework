@@ -20,7 +20,7 @@ from .helpers.javascript_safe_content_processor import JavaScriptSafeContentProc
 
 # Existing components (preserved)
 from agent_c_tools.tools.markdown_to_html_report.md_to_docx.markdown_to_docx import MarkdownToDocxConverter
-from ... import WorkspaceTools
+from ..workspace.tool import WorkspaceTools
 from ...helpers.path_helper import create_unc_path, ensure_file_extension, os_file_system_path, has_file_extension, normalize_path
 from ...helpers.validate_kwargs import validate_required_fields
 from ...helpers.workspace_result_parser import parse_workspace_result

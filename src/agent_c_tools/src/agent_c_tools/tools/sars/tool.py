@@ -6,7 +6,7 @@ from agent_c.toolsets import json_schema, Toolset
 import logging
 
 from ...helpers.validate_kwargs import validate_required_fields
-from ... import WorkspaceTools
+from ..workspace.tool import WorkspaceTools
 from ...helpers.path_helper import create_unc_path, ensure_file_extension, os_file_system_path, has_file_extension, normalize_path
 
 
