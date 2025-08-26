@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple, Optional
 import logging
 
 from ..tools.workspace import WorkspaceTools
@@ -40,3 +40,23 @@ def os_file_system_path(workspace_tool: WorkspaceTools, unc_path: str) -> str|No
     except Exception as e:
         logger.error(f"Error getting file system path: {e}")
         return None
+
+def os_path(workspace_tools: WorkspaceTools,
+                        unc_path: str,
+                        *,
+                        mkdirs: bool = False) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Resolve //WORKSPACE/relative/path -> absolute OS path safely.
+
+    Returns (error, abs_path). If error is not None, abs_path is None.
+    """
+    err, workspace, rel_path = workspace_tools.validate_and_get_workspace_path(unc_path)
+    if err:
+        return err, None
+    try:
+        abs_path = workspace.full_path(rel_path or "", mkdirs=mkdirs)  # validated + normalized
+        if not abs_path:
+            return f"Invalid path: {rel_path!r}", None
+        return None, abs_path
+    except Exception as e:
+        return f"Failed to resolve path: {e}", None

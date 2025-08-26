@@ -20,7 +20,7 @@ from . import workspace_sequential_thinking  # Workspace Sequential Thinking too
 from . import browser_playwright  # Browser Playwright toolset
 from . import insurance_demo  # Insurance Demo toolset
 from . import sars  # SARS toolset
-
+from .developer import git_tool  # Git tool
 __all__ = [
     'workspace',
     'web', 
@@ -41,5 +41,6 @@ __all__ = [
     'workspace_sequential_thinking',
     'browser_playwright',
     'sars',
-    'insurance_demo'
+    'insurance_demo',
+    'git_tool'
 ]
