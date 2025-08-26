@@ -4,7 +4,7 @@ from agent_c.models.base import BaseModel
 from pydantic import Field
 
 class ClientToolInfo(BaseModel):
-    """Information about a tool available to the client"""
+    """Information about tools available to be added to agents"""
     name: str = Field(..., description="Name of the toolset")
     description: str = Field("", description="Description of the tool's functionality")
     schemas: Dict[str, Any] = Field(..., description="JSON schema defining the tool's parameters and structure for tools in the toolset")

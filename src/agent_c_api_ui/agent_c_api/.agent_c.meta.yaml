@@ -200,6 +200,148 @@ _plans:
         updated_at: '2025-08-23T23:29:59.356663'
     title: Auth Service App Lifecycle Integration
     updated_at: '2025-08-23T23:39:10.795008'
+  realtime_api_update:
+    created_at: '2025-08-26T11:47:01.389252'
+    description: Update the realtime API implementation guide to reflect recent changes
+      including new RealtimeLoginResponse fields, HTTPS requirement, new client events,
+      audio streaming, turn management, voice models, and session handling improvements.
+    id: d7bfef32-4ea1-49b4-b6d6-153b5345da0f
+    lessons_learned: []
+    tasks:
+      5f4689da-02c3-405e-8d29-cde41802a24c:
+        child_tasks: []
+        completed: true
+        completion_report: Added comprehensive Binary Audio Streaming section explaining
+          PCM input format, TTS output streaming, implementation examples, and the
+          complete audio processing pipeline from client to server and back.
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-08-26T11:47:22.582259'
+        description: Add section explaining binary WebSocket audio packet support,
+          including PCM input and TTS output streaming capabilities.
+        id: 5f4689da-02c3-405e-8d29-cde41802a24c
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 4
+        title: Document Binary Audio Streaming
+        updated_at: '2025-08-26T11:50:02.700353'
+      7ad0f4ad-87fe-448f-9137-bbd90f566b1b:
+        child_tasks: []
+        completed: true
+        completion_report: Added documentation for special voice models including
+          the 'avatar' voice model for HeyGen integration and the 'none' voice model
+          for text-only mode. Explained their purpose, behavior, and usage patterns
+          with JSON examples.
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-08-26T11:47:27.793894'
+        description: Explain the special voice models including 'avatar' for HeyGen
+          integration and 'none' for text-only mode.
+        id: 7ad0f4ad-87fe-448f-9137-bbd90f566b1b
+        parent_id: null
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 5
+        title: Document Special Voice Models
+        updated_at: '2025-08-26T11:50:20.034455'
+      7cd72992-4d2f-44a5-ba71-4006e989d173:
+        child_tasks: []
+        completed: true
+        completion_report: Updated implementation patterns with HTTPS WebSocket connections,
+          binary audio sending examples, and comprehensive event handling including
+          turn management and voice events. Added additional references section with
+          key component file paths for developers.
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-08-26T11:47:38.503790'
+        description: Update implementation patterns and add references to new voice
+          management and realtime bridge components.
+        id: 7cd72992-4d2f-44a5-ba71-4006e989d173
+        parent_id: null
+        priority: low
+        requires_completion_signoff: 'true'
+        sequence: 7
+        title: Update Reference Links and Implementation Patterns
+        updated_at: '2025-08-26T11:52:50.432207'
+      a365075a-9355-4e92-9465-384ad7bcb13d:
+        child_tasks: []
+        completed: true
+        completion_report: Added documentation for new client events including voice
+          management (set_agent_voice), turn management events (user_turn_start, user_turn_end),
+          and voice response events (agent_voice_changed). Added proper sections with
+          JSON examples and descriptions.
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-08-26T11:47:17.237913'
+        description: Add documentation for new client events including user turn events,
+          voice management events, and other new events from client_events.py.
+        id: a365075a-9355-4e92-9465-384ad7bcb13d
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 3
+        title: Document New Client Events
+        updated_at: '2025-08-26T11:49:41.018540'
+      a37e970e-8701-4a27-99a0-f3fed27b069a:
+        child_tasks: []
+        completed: true
+        completion_report: Added comprehensive Session Management section explaining
+          the distinction between UI session IDs (for client connections) and Chat
+          session IDs (for persistent conversations). Included purpose, scope, usage
+          patterns, and example workflow showing how the two session types work together.
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-08-26T11:47:33.210878'
+        description: Clarify the distinction between UI session IDs (client connection)
+          and Chat session IDs (persistent chat sessions).
+        id: a37e970e-8701-4a27-99a0-f3fed27b069a
+        parent_id: null
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 6
+        title: Update Session Management Section
+        updated_at: '2025-08-26T11:50:50.030906'
+      c1550787-6457-41a1-ba85-28af1e2a823d:
+        child_tasks: []
+        completed: true
+        completion_report: Added HTTPS requirement documentation explaining that the
+          API runs on HTTPS even in development to support proper audio functionality
+          for web clients. Updated WebSocket connection example to use wss:// instead
+          of ws://.
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-08-26T11:47:11.912638'
+        description: Document that HTTPS is required for proper audio support and
+          that the API runs on HTTPS even in development.
+        id: c1550787-6457-41a1-ba85-28af1e2a823d
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 2
+        title: Add HTTPS Requirement Documentation
+        updated_at: '2025-08-26T11:48:43.971229'
+      c6fea842-a8ea-4e1d-878b-bd890eba8c5c:
+        child_tasks: []
+        completed: true
+        completion_report: Updated the RealtimeLoginResponse JSON documentation to
+          include the new toolsets and voices fields. Added examples showing the structure
+          of ClientToolInfo objects with tool schemas and AvailableVoiceModel objects
+          with different voice types including special voice models.
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-08-26T11:47:06.782584'
+        description: Update the RealtimeLoginResponse section to include the new toolsets
+          and voices fields, explaining their purpose and structure.
+        id: c6fea842-a8ea-4e1d-878b-bd890eba8c5c
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 1
+        title: Update Login Response Documentation
+        updated_at: '2025-08-26T11:48:30.199328'
+    title: Update Realtime API Implementation Guide
+    updated_at: '2025-08-26T11:52:50.432229'
   websocket_auth_implementation:
     created_at: '2025-08-22T16:19:53.573464'
     description: Implement comprehensive authentication system for the new realtime

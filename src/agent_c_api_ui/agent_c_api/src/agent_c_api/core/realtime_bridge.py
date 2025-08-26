@@ -17,7 +17,8 @@ from agent_c.models.heygen import HeygenAvatarSessionData, NewSessionRequest
 from agent_c.util.heygen_streaming_avatar_client import HeyGenStreamingClient
 from agent_c.util.registries.event import EventRegistry
 from agent_c_api.api.rt.models.client_events import GetAgentsEvent, ErrorEvent, AgentListEvent, GetAvatarsEvent, AvatarListEvent, TextInputEvent, SetAvatarEvent, AvatarConnectionChangedEvent, \
-    SetAgentEvent, AgentConfigurationChangedEvent, SetAvatarSessionEvent, ChatSessionChangedEvent, SessionMetadataChangedEvent, ChatSessionNameChangedEvent, ResumeChatSessionEvent, NewChatSessionEvent
+    SetAgentEvent, AgentConfigurationChangedEvent, SetAvatarSessionEvent, ChatSessionChangedEvent, SessionMetadataChangedEvent, ChatSessionNameChangedEvent, ResumeChatSessionEvent, \
+    NewChatSessionEvent, SetAgentVoiceEvent, AgentVoiceChangedEvent, UserTurnStartEvent, UserTurnEndEvent
 from agent_c_api.api.rt.models.client_events import SetChatSessionNameEvent, SetSessionMessagesEvent, ChatSessionNameChangedEvent, SetSessionMetadataEvent, SessionMetadataChangedEvent
 from agent_c_api.core.agent_bridge import AgentBridge
 from agent_c.models.input import AudioInput
@@ -25,6 +26,8 @@ from agent_c.models.input import AudioInput
 from agent_c.models.input.file_input import FileInput
 from agent_c_api.core.file_handler import FileHandler
 from agent_c.models.input.image_input import ImageInput
+from agent_c_api.core.voice.models import open_ai_voice_models, AvailableVoiceModel, heygen_avatar_voice_model, no_voice_model
+from agent_c_api.core.voice.voice_io_manager import VoiceIOManager
 from agent_c_tools.tools.think.prompt import ThinkSection
 from agent_c.prompting import PromptBuilder
 from agent_c.prompting.basic_sections.persona import DynamicPersonaSection
@@ -52,6 +55,9 @@ class RealtimeBridge(AgentBridge):
         self.avatar_session_token: Optional[str] = None
         self._partial_agent_message: str = ""
         self._avatar_did_think = False
+        self.voice_io_manager = VoiceIOManager(self)
+        self._voices = open_ai_voice_models
+        self._voice: AvailableVoiceModel = no_voice_model
 
     async def flush_session(self):
         """Flush the current chat session to persistent storage"""
@@ -62,12 +68,25 @@ class RealtimeBridge(AgentBridge):
     @singledispatchmethod
     async def handle_client_event(self, event: BaseEvent) -> None:
         """Default handler for unknown events"""
-        self.logger.warning(f"RealtimeBridge {self.chat_session.session_id}: Unhandled event type: {event.type}")
+        self.logger.warning(f"RealtimeBridge {self.ui_session_id}: Unhandled event type: {event.type}")
         await self.send_error(f"Unknown event type: {event.type}")
 
     @handle_client_event.register
     async def _(self, _: GetAgentsEvent) -> None:
         await self.send_agent_list()
+
+    @handle_client_event.register
+    async def _(self, event: SetAgentVoiceEvent):
+        voice = next((v for v in self._voices if v.voice_id == event.voice_id), None)
+        if not voice:
+            await self.send_error(f"Voice '{event.voice_id}' not found", source="set_agent_voice")
+            return
+
+        await self.set_agent_voice(voice)
+
+    async def set_agent_voice(self, voice: AvailableVoiceModel) -> None:
+        self.voice_io_manager.change_voice(voice)
+        await self.send_event(AgentVoiceChangedEvent(voice=voice))
 
     @handle_client_event.register
     async def _(self, event: TextInputEvent) -> None:
@@ -91,6 +110,7 @@ class RealtimeBridge(AgentBridge):
             try:
                 await self.heygen_client.close_session()
                 self.logger.info(f"Avatar session {self.avatar_session.session_id} ended successfully")
+                self.voice_io_manager.close()
             except Exception as e:
                 self.logger.error(f"Failed to end avatar session {self.avatar_session.session_id}: {e}")
             finally:
@@ -111,6 +131,7 @@ class RealtimeBridge(AgentBridge):
         self.avatar_session = await self.heygen_client.create_new_session(session_request)
         await self.send_event(AvatarConnectionChangedEvent(avatar_session=self.avatar_session,
                                                            avatar_session_request= session_request))
+        self.voice_io_manager.start(heygen_avatar_voice_model)
 
     @handle_client_event.register
     async def _(self, event: AudioInputDeltaEvent) -> None:
@@ -129,6 +150,8 @@ class RealtimeBridge(AgentBridge):
         self.avatar_session_token = access_token
         self.avatar_client = HeyGenStreamingClient(api_key=access_token)
         self.avatar_client.session_id = avatar_session_id
+        await self.send_event(AgentVoiceChangedEvent(voice=heygen_avatar_voice_model))
+        self.voice_io_manager.start(heygen_avatar_voice_model)
         await self.avatar_say("Avtar bridge connected to avatar session", role="system")
 
     @handle_client_event.register
@@ -174,7 +197,8 @@ class RealtimeBridge(AgentBridge):
     async def new_chat_session(self, agent_key: Optional[str] = None) -> None:
         agent_key = agent_key or self.chat_session.agent_config.key
         await self.flush_session()
-        await self._get_or_create_chat_session(agent_key=agent_key)
+        self.chat_session =  await self._get_or_create_chat_session(agent_key=agent_key)
+        await self.send_chat_session()
 
     @handle_client_event.register
     async def _(self, event: SetSessionMessagesEvent) -> None:
@@ -218,6 +242,14 @@ class RealtimeBridge(AgentBridge):
         else:
             self.logger.warning(f"Unknown event type '{event_type}', using BaseEvent")
             return BaseEvent(**data)
+
+    async def send_user_turn_start(self):
+        """Notify client that user turn is starting"""
+        await self.send_event(UserTurnStartEvent())
+
+    async def send_user_turn_end(self):
+        """Notify client that user turn is starting"""
+        await self.send_event(UserTurnEndEvent())
 
     async def send_event(self, event: BaseEvent):
         """Send event to the client"""
@@ -323,29 +355,33 @@ class RealtimeBridge(AgentBridge):
         self.websocket=websocket
         self.is_running = True
         self.logger.info (f"RealtimeBridge started for session {self.chat_session.session_id}")
+        await self.send_chat_session()
+        await self.send_user_turn_start()
 
         try:
-
-
             while self.is_running:
                 try:
-                    data = await self.websocket.receive_json()
-                    event = self.parse_event(data)
-                    await self.handle_client_event(event)
+                    message = await self.websocket.receive() # .receive_json()
+                    if message["type"] == "websocket.receive":
+                        if "text" in message:
+                            event = self.parse_event(json.loads(message["text"]))
+                            await self.handle_client_event(event)
+                        elif "bytes" in message:
+                            self.voice_io_manager.add_audio(message["bytes"])
+                    elif message["type"] == "websocket.disconnect":
+                        self.logger.info(f"Session {self.chat_session.session_id} disconnected normally")
+                        break
 
                 except WebSocketDisconnect:
-                    self.logger.info(f"Session {self.chat_session.session_id} disconnected normally")
+                    self.logger.info(f"Session {self.ui_session_id} disconnected normally")
                     break
                 except json.JSONDecodeError:
                     await self.send_error("Invalid JSON received")
                 except Exception as e:
-                    self.logger.exception(f"Error handling event for session {self.chat_session.session_id}: {e}")
+                    self.logger.exception(f"Error handling event for session {self.ui_session_id}: {e}")
                     await self.send_error(f"Error processing event: {str(e)}")
-
-
         finally:
-            await self.end_avatar_session()  # Ensure avatar session cleanup
-            self.logger.info(f"RealtimeBridge stopped for session {self.chat_session.session_id}")
+            self.logger.info(f"RealtimeBridge stopped for session {self.ui_session_id}")
 
     async def iter_interact(self, text: str, file_ids: Optional[List[str]] = None, max_buffer: int = 512) -> AsyncIterator[str]:
         """
@@ -401,7 +437,7 @@ class RealtimeBridge(AgentBridge):
                 with suppress(asyncio.CancelledError):
                     await task
 
-    async def interact(self, user_message: str, file_ids: Optional[List[str]] = None, on_event: Optional[callable] = None) -> None:
+    async def interact(self, user_message: str, file_ids: Optional[List[str]] = None, on_event: Optional[callable] = None, send_turn: bool = True) -> None:
         """
         Streams chat responses for a given user message.
 
@@ -421,7 +457,7 @@ class RealtimeBridge(AgentBridge):
             Exception: Any errors during chat processing
         """
         self.client_wants_cancel.clear()
-
+        await self.send_user_turn_end()
         try:
             await self.session_manager.update()
             agent_runtime = self.runtime_for_agent(self.chat_session.agent_config)
@@ -496,10 +532,12 @@ class RealtimeBridge(AgentBridge):
             error_traceback = traceback.format_exc()
             self.logger.error(f"Error in agent_runtime.chat: {error_type}: {str(e)}\n{error_traceback}")
             await  self.send_error( f"Error in agent_runtime.chat: {error_type}: {str(e)}\n{error_traceback}")
+            await self.send_user_turn_start()
             return
 
         try:
             await self.session_manager.flush(self.chat_session.session_id)
+            await self.send_user_turn_start()
 
         except Exception as e:
             error_type = type(e).__name__

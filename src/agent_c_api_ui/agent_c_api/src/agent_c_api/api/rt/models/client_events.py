@@ -6,6 +6,7 @@ from agent_c.models import ChatSession
 from agent_c.models.agent_config import CurrentAgentConfiguration, AgentCatalogEntry
 from agent_c.models.events import BaseEvent
 from agent_c.models.heygen import Avatar, HeygenAvatarSessionData, NewSessionRequest
+from agent_c_api.core.voice.models import AvailableVoiceModel
 
 
 class GetAgentsEvent(BaseEvent):
@@ -161,3 +162,37 @@ class SetSessionMessagesEvent(BaseEvent):
     Event to set messages for the current chat session.
     """
     messages: List[dict[str, Any]] = Field(default_factory=list, description="New list of messages in the session")
+
+class SetAgentVoiceEvent(BaseEvent):
+    """
+    Event to set the voice for the current agent.
+
+    Attributes:
+        voice_id (str): The ID of the voice to set.
+    """
+    voice_id: str
+
+class AgentVoiceChangedEvent(BaseEvent):
+    """
+    Event to notify that the agent voice has changed.
+
+    Attributes:
+        voice (AvailableVoiceModel): The updated voice of the agent.
+    """
+    voice: AvailableVoiceModel
+
+class UserTurnStartEvent(BaseEvent):
+    """
+    Event to notify that the client we're accepting user input
+
+    This event does not require any additional data.
+    """
+    pass
+
+class UserTurnEndEvent(BaseEvent):
+    """
+    Event to notify that the client we're accepting user input
+
+    This event does not require any additional data.
+    """
+    pass

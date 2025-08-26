@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field, EmailStr
 from agent_c.models.agent_config import CurrentAgentConfiguration, AgentCatalogEntry
 from agent_c.models.client_tool_info import ClientToolInfo
 from agent_c.models.heygen import Avatar
+from agent_c_api.core.voice.models import AvailableVoiceModel
 
 Base = declarative_base()
 
@@ -145,3 +146,4 @@ class RealtimeLoginResponse(BaseModel):
     agents: List[AgentCatalogEntry] = Field(..., description="Available agents catalog")
     avatars: List[Avatar] = Field(..., description="Available avatar list")
     toolsets: List[ClientToolInfo] = Field(..., description="Available toolsets and their tools")
+    voices: List[AvailableVoiceModel] = Field(..., description="Available TTS voice models")

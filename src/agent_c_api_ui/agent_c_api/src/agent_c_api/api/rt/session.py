@@ -9,6 +9,7 @@ from agent_c.util.heygen_streaming_avatar_client import HeyGenStreamingClient
 from agent_c.util.logging_utils import LoggingManager
 from agent_c_api.api.dependencies import get_agent_manager, get_auth_service
 from agent_c_api.core.util.jwt import validate_websocket_jwt, validate_request_jwt, create_jwt_token, verify_jwt_token
+from agent_c_api.core.voice.models import open_ai_voice_models, heygen_avatar_voice_model, no_voice_model
 from agent_c_api.models.auth_models import UserLoginRequest, RealtimeLoginResponse
 
 if TYPE_CHECKING:
@@ -38,7 +39,7 @@ async def login(login_request: UserLoginRequest, auth_service: "AuthService" = D
     tools = [ClientToolInfo.from_toolset(tool_class) for tool_class in Toolset.tool_registry]
     tools.sort(key=lambda x: x['name'].lower())
 
-    # TODO: Grab the chat session index entries for the user and include them in the response
+    voices = [no_voice_model, heygen_avatar_voice_model] + open_ai_voice_models
     
     return RealtimeLoginResponse(agent_c_token=login_response.token,
                                  heygen_token=heygen_token,
@@ -46,7 +47,8 @@ async def login(login_request: UserLoginRequest, auth_service: "AuthService" = D
                                  agents=agents,
                                  avatars=avatar_list,
                                  ui_session_id=MnemonicSlugs.generate_slug(3),
-                                 toolsets=tools)
+                                 toolsets=tools,
+                                 voices=voices)
 
 @router.get("/refresh_token")
 async def refresh_token(request: Request):
@@ -82,67 +84,3 @@ async def initialize_realtime_session(websocket: WebSocket,
     except Exception as e:
         logger.exception(f"Error during session initialization: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/config")
-async def get_avatar_config(request: Request):
-    """
-    Retrieves the configuration for the avatar session.
-
-    Returns:
-        dict: A dictionary containing the avatar session configuration.
-    """
-    #_ = validate_request_jwt(request)
-    try:
-        heygen_client = HeyGenStreamingClient()
-        loader: AgentConfigLoader = AgentConfigLoader()
-        agents = loader.client_catalog
-        avatar_list = (await heygen_client.list_avatars()).data
-        return {'agents': agents, "avatars": avatar_list}
-
-    except Exception as e:
-        logger.error(f"Error retrieving avatar config: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to retrieve avatar config: {str(e)}"
-        )
-
-
-@router.get("/verify_session/{ui_session_id}")
-async def verify_session(ui_session_id: str, request: Request):
-    """
-    Verifies if a session exists and is valid
-    """
-    user_info = await validate_request_jwt(request)
-    if not user_info:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-    agent_manager = get_agent_manager(request)
-    session_data = agent_manager.get_session_data(ui_session_id)
-    if session_data and session_data.user_id != user_info['user_id']:
-        session_data = None  # Invalidate if user IDs don't match
-
-    return {"valid": session_data is not None}
-
-@router.get("/sessions")
-async def get_sessions(request: Request):
-    """
-    Retrieves all available sessions.
-
-    Returns:
-        dict: A dictionary containing session IDs and their details
-
-    Raises:
-        HTTPException: If there's an error retrieving sessions
-    """
-    try:
-        agent_manager = get_agent_manager(request)
-        sessions = agent_manager.chat_session_manager.session_id_list
-        return {"session_ids": sessions}
-
-    except Exception as e:
-        logger.error(f"Error retrieving sessions: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to retrieve sessions: {str(e)}"
-        )
