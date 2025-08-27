@@ -1,5 +1,5 @@
 from typing import Any, Optional, Dict
-
+import re
 import markdown
 import yaml
 
@@ -15,6 +15,43 @@ class AgentAssistTools(AgentAssistToolBase):
         super().__init__( **kwargs)
         self.section = AgentAssistSection(tool=self)
 
+    @staticmethod
+    def fix_markdown_formatting(text: str) -> str:
+        """Fix common markdown formatting issues caused by missing newlines."""
+
+        if not isinstance(text, str):
+            text = str(text)
+
+        print("=== BEFORE FIXING ===")
+        print(repr(text))
+        print("=== END BEFORE ===")
+
+        # STEP 1: Handle specific cases first (bold followed by lists)
+        original_text = text
+        text = re.sub(r'(\*\*[^*]+\*\*:?)\n([-*+] )', r'\1\n\n\2', text)
+        if text != original_text:
+            print("=== AFTER BOLD→BULLET FIX ===")
+            print(repr(text))
+            print("=== END AFTER ===")
+
+        text = re.sub(r'(\*\*[^*]+\*\*:?)\n(\d+\. )', r'\1\n\n\2', text)
+
+        # STEP 2: Handle general cases
+        text = re.sub(r'(?<!^)(?<!\n\n)(\n[-*+] )', r'\n\1', text)
+        text = re.sub(r'(?<!^)(?<!\n\n)(\n\d+\. )', r'\n\1', text)
+
+        # STEP 3: Other markdown elements
+        text = re.sub(r'(?<!^)(?<!\n\n)(\n#{1,6} )', r'\n\1', text)
+        text = re.sub(r'(?<!^)(?<!\n\n)(\n```)', r'\n\1', text)
+        text = re.sub(r'(?<!^)(?<!\n\n)(\n> )', r'\n\1', text)
+        text = re.sub(r'(?<!^)(?<!\n\n)(\n---)', r'\n\1', text)
+        text = re.sub(r'(?<!^)(?<!\n\n)(\n\*\*\*)', r'\n\1', text)
+
+        print("=== FINAL RESULT ===")
+        print(repr(text))
+        print("=== END FINAL ===")
+
+        return markdown.markdown(text, extensions=['markdown.extensions.nl2br', 'markdown.extensions.tables'])
 
     @json_schema(
         ('Make a request of an agent and receive a response. This is a reasoning agent with a large thinking budget. '
@@ -52,7 +89,7 @@ class AgentAssistTools(AgentAssistToolBase):
             sent_by_class=self.__class__.__name__,
             sent_by_function='oneshot',
             content_type="text/html",
-            content=markdown.markdown(f"**Domo** agent requesting assistance from '*{agent_config.name}*':\n\n{request}</p>"),
+            content=self.fix_markdown_formatting(f"**Domo** agent requesting assistance from '*{agent_config.name}*':\n\n{request})\n\n"),
             tool_context=tool_context
         )
 
@@ -63,7 +100,7 @@ class AgentAssistTools(AgentAssistToolBase):
             sent_by_class=self.__class__.__name__,
             sent_by_function='chat',
             content_type="text/html",
-            content=markdown.markdown(f"Interaction complete for Agent Assist oneshot with {agent_config.name}. Control returned to requesting agent."),
+            content=self.fix_markdown_formatting(f"Interaction complete for Agent Assist oneshot with {agent_config.name}. Control returned to requesting agent."),
             tool_context=tool_context
         )
 
@@ -116,11 +153,22 @@ class AgentAssistTools(AgentAssistToolBase):
         except FileNotFoundError:
             return f"Error: Agent {kwargs.get('agent_key')} not found in catalog."
 
+        # TODO: FYI, the 'message' is a string of markdown. It's not rendered well to html.  I've tried replacing
+        # --- with ***.  It helps prevent "The following chat message..." being rendered as H2.
+        # I've also tried adding \n.
+        # The display results in compressed text, not all lists are rendered as bullets.  It's just not pretty.
+        # temp_text=f"**Domo agent** requesting assistance from '*{agent_config.name}*': \n\n{message}"
+        # content=markdown.markdown(temp_text, extensions=['markdown.extensions.nl2br', 'markdown.extensions.tables'])
+        # more research seems that the message is removing some newlines, so nl2br should help - but not in all cases.
+        # list in particular end up with stripped newlines.
+        # A way to fix is implemented via self.fix_markdown_formatting
+        content = self.fix_markdown_formatting(
+                f"**Domo agent** requesting assistance from '*{agent_config.name}*': \n\n{message}")
         await self._raise_render_media(
             sent_by_class=self.__class__.__name__,
             sent_by_function='chat',
             content_type="text/html",
-            content=markdown.markdown(f"**Domo agent** requesting assistance from '*{agent_config.name}*': \n\n{message}"),
+            content=content,
             tool_context=tool_context
         )
 
@@ -134,7 +182,7 @@ class AgentAssistTools(AgentAssistToolBase):
             sent_by_class=self.__class__.__name__,
             sent_by_function='chat',
             content_type="text/html",
-            content=markdown.markdown(f"Interaction complete for Agent Assist Session ID: {agent_session_id} with {agent_config.name}. Control returned to requesting agent."),
+            content=self.fix_markdown_formatting(f"Interaction complete for Agent Assist Session ID: {agent_session_id} with {agent_config.name}. Control returned to requesting agent."),
             tool_context=tool_context
         )
         if messages is not None and len(messages) > 0:

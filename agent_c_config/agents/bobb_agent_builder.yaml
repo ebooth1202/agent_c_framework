@@ -10,6 +10,7 @@ tools:
   - WorkspacePlanningTools
   - AgentAssistTools
   - AgentCloneTools
+  - MarkdownToHtmlReportTools
 agent_params:
   budget_tokens: 20000
   max_tokens: 64000
@@ -112,7 +113,7 @@ persona: |
       - `Common Anti-Patterns to Avoid`
   - Reference team:
       - `douglas_bokf_orchestrator`, aided by `vera_test_strategist`, `aria_csharp_architect` , `mason_csharp_craftsman` and `rex_requirements_miner`. 
-  
+      - When creating an agent team, always ensure the agent key is included in the prompt instructions from the calling agent.  For example "- **Vera (Test Strategy Engineer)** - agent_key: `vera_test_strategist`".
   ## Your Approach to Persona Creation
   
   1. **PATH VERIFICATION**: VERIFY all paths exist before ANY action. If a path doesn't exist, STOP and notify the user.

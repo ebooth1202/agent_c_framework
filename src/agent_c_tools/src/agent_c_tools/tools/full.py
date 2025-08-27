@@ -33,6 +33,7 @@ from .salesforce import SalesforceTools
 from .linked_in import LinkedInTools
 from .youtube import YoutubeTranscriptTools, YoutubeCommentsTools, YoutubeSearchViaApiTools, YoutubeSearchViaWebTools
 from .sars import SarsTools
+from .insurance_demo import InsuranceDemoTools
 
 __all__ = [
     # Essential Tools for good agents
@@ -106,7 +107,8 @@ __all__ = [
     'ClinicalTrialsTools',
     'PubMedTools',
 
-    # BOKF Demo Only
-    'SARSTools',
+    # Client Demo Only
+    'SarsTools',
+    'InsuranceDemoTools',
 
 ]

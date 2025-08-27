@@ -16,6 +16,7 @@
 @import './components/layout.css';
 @import './components/thought-display.css';
 @import './components/markdown-message.css';
+@import './components/modest-markdown.css';
 @import './components/agent-config-display.css';
 @import './components/agent-config-hover-card.css';
 @import './components/app-sidebar.css';

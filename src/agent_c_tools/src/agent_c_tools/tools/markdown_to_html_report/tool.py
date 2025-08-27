@@ -20,7 +20,7 @@ from .helpers.javascript_safe_content_processor import JavaScriptSafeContentProc
 
 # Existing components (preserved)
 from agent_c_tools.tools.markdown_to_html_report.md_to_docx.markdown_to_docx import MarkdownToDocxConverter
-from ... import WorkspaceTools
+from ..workspace.tool import WorkspaceTools
 from ...helpers.path_helper import create_unc_path, ensure_file_extension, os_file_system_path, has_file_extension, normalize_path
 from ...helpers.validate_kwargs import validate_required_fields
 from ...helpers.workspace_result_parser import parse_workspace_result
@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 class Constants:
     """Configuration constants for the markdown tools."""
     DEFAULT_TITLE = "Agent C Output Viewer"
-    DEFAULT_TITLE_PLACEHOLDER = "<h3 style=\"margin: 0 16px 16px 16px;\">Agent C Output Viewer</h3>"
+    DEFAULT_TITLE_PLACEHOLDER = "<h3 style=\"margin:0 16px 16px 16px;\">Agent C Output Viewer</h3>"
     MARKDOWN_EXTENSIONS = ['md', 'markdown']
     DOCX_EXTENSIONS = ['.md', '.markdown']
 
@@ -476,7 +476,7 @@ class MarkdownToHtmlReportTools(Toolset):
             registry = DocRegistry()
 
             # Create DocMeta for the single file
-            from .helpers.doc_registry import DocMeta, extract_headings_from_markdown
+            from .helpers.doc_registry import DocMeta
 
             display_name = Path(input_path).stem.replace('_', ' ').replace('-', ' ').title()
 
@@ -598,7 +598,7 @@ class MarkdownToHtmlReportTools(Toolset):
             # Customize title
             html_template = html_template.replace(
                 Constants.DEFAULT_TITLE_PLACEHOLDER,
-                f"<h3 style=\"margin: 0 16px 16px 16px;\">{title}</h3>")
+                f"<h3 style=\"margin:0 16px 16px 16px;\">{title}</h3>")
 
             # Inject JavaScript slugger code for consistency
             from .helpers.slugger import get_javascript_slugger_code

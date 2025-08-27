@@ -28,75 +28,75 @@ async def run_example():
 
     result = await tester.run_tool_test(
         tool_name='generate_md_viewer',
-        tool_params={"workspace_start": "//test_markdown",
-                     "output_filename": "test_all.html",
-                     "title": "All markdown test", }
+        tool_params={"workspace_start": "//insurance/initialtry",
+                     "output_filename": "demo_underwriting.html",
+                     "title": "Bella Vista Underwriting", }
     )
 
     content = tester.extract_content_from_results(result)
     if content:
         print("Raw content:", content)
 
-    result = await tester.run_tool_test(
-        tool_name='generate_custom_md_viewer',
-        tool_params={
-            "workspace": "test_markdown",
-            "output_filename": "custom.html",
-            "custom_structure": """{
-                "items": [
-                    {
-                        "type": "folder",
-                        "name": "📋 Document Overview",
-                        "children": [
-                            {
-                                "type": "file",
-                                "name": "Multi-Function Document",
-                                "path": "test_overview.md"
-                            }
-                        ]
-                    },
-                    {
-                        "type": "folder",
-                        "name": "🏦 Miscellaneous",
-                        "children": [
-                            {
-                                "type": "folder",
-                                "name": "custom dir 1",
-                                "children": [
-                                    {
-                                        "type": "file",
-                                        "name": "Project Guide",
-                                        "path": "/dir1/02_project-guide.md"
-                                    }
-                                ]
-                            },
-                            {
-                                "type": "folder",
-                                "name": "CUSTOM dir 2a",
-                                "children": [
-                                    {
-                                        "type": "file",
-                                        "name": "Custom Index",
-                                        "path": "dir2/01 index.md"
-                                    },
-                                    {
-                                        "type": "file",
-                                        "name": "Custom FAQ",
-                                        "path": "dir2/04 faq.md"
-                                    }
-                                ]
-                            }
-                        ]
-                    }
-                ]
-            }""",
-            "title": "Custom Markdown Test",
-            "file_path": "."
-        }
-    )
-    content = tester.extract_content_from_results(result)
-    if content:
-        print("Raw content:", content)
+    # result = await tester.run_tool_test(
+    #     tool_name='generate_custom_md_viewer',
+    #     tool_params={
+    #         "workspace": "test_markdown",
+    #         "output_filename": "custom.html",
+    #         "custom_structure": """{
+    #             "items": [
+    #                 {
+    #                     "type": "folder",
+    #                     "name": "📋 Document Overview",
+    #                     "children": [
+    #                         {
+    #                             "type": "file",
+    #                             "name": "Multi-Function Document",
+    #                             "path": "test_overview.md"
+    #                         }
+    #                     ]
+    #                 },
+    #                 {
+    #                     "type": "folder",
+    #                     "name": "🏦 Miscellaneous",
+    #                     "children": [
+    #                         {
+    #                             "type": "folder",
+    #                             "name": "custom dir 1",
+    #                             "children": [
+    #                                 {
+    #                                     "type": "file",
+    #                                     "name": "Project Guide",
+    #                                     "path": "/dir1/02_project-guide.md"
+    #                                 }
+    #                             ]
+    #                         },
+    #                         {
+    #                             "type": "folder",
+    #                             "name": "CUSTOM dir 2a",
+    #                             "children": [
+    #                                 {
+    #                                     "type": "file",
+    #                                     "name": "Custom Index",
+    #                                     "path": "dir2/01 index.md"
+    #                                 },
+    #                                 {
+    #                                     "type": "file",
+    #                                     "name": "Custom FAQ",
+    #                                     "path": "dir2/04 faq.md"
+    #                                 }
+    #                             ]
+    #                         }
+    #                     ]
+    #                 }
+    #             ]
+    #         }""",
+    #         "title": "Custom Markdown Test",
+    #         "file_path": "."
+    #     }
+    # )
+    # content = tester.extract_content_from_results(result)
+    # if content:
+    #     print("Raw content:", content)
 
 
     # result = await tester.run_tool_test(tool_name='markdown_to_docx',tool_params={

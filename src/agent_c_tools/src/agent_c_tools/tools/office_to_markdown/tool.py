@@ -9,7 +9,7 @@ from typing import Optional
 
 from agent_c.toolsets.tool_set import Toolset
 from agent_c.toolsets.json_schema import json_schema
-from ... import WorkspaceTools
+from ..workspace.tool import WorkspaceTools
 from ...helpers.path_helper import create_unc_path, ensure_file_extension, os_file_system_path
 from ...helpers.validate_kwargs import validate_required_fields
 from .business_logic.office_converter import OfficeToMarkdownConverter
