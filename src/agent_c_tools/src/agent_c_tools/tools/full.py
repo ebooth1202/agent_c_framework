@@ -34,7 +34,6 @@ from .linked_in import LinkedInTools
 from .youtube import YoutubeTranscriptTools, YoutubeCommentsTools, YoutubeSearchViaApiTools, YoutubeSearchViaWebTools
 from .sars import SarsTools
 from .insurance_demo import InsuranceDemoTools
-from .developer import GitTools
 
 __all__ = [
     # Essential Tools for good agents
@@ -111,8 +110,5 @@ __all__ = [
     # Client Demo Only
     'SarsTools',
     'InsuranceDemoTools',
-
-    # Developer Tools
-    'GitTools',
 
 ]

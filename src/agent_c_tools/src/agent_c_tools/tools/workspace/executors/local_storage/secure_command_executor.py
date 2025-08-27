@@ -1,16 +1,22 @@
 import asyncio
 import json
+import shutil
 from datetime import datetime
 import time
 import shlex
 import os
 import platform
-from typing import Dict, Any, List, Optional, Mapping, Tuple, Callable
+from typing import Dict, Any, List, Optional, Mapping, Tuple, Callable, Protocol
 from dataclasses import dataclass
 
 from agent_c.util.logging_utils import LoggingManager
-from ..validators.base_validator import BasicCommandValidator, CommandValidator
-from ..validators.git_validator import GitCommandValidator
+from agent_c_tools.tools.workspace.executors.local_storage.validators.base_validator import BasicCommandValidator, CommandValidator, ValidationResult
+from agent_c_tools.tools.workspace.executors.local_storage.validators.dotnet_validator import DotnetCommandValidator
+from agent_c_tools.tools.workspace.executors.local_storage.validators.git_validator import GitCommandValidator
+from agent_c_tools.tools.workspace.executors.local_storage.validators.node_validator import NodeCommandValidator
+from agent_c_tools.tools.workspace.executors.local_storage.validators.npm_validator import NpmCommandValidator
+from agent_c_tools.tools.workspace.executors.local_storage.validators.os_basic_validator import OSBasicValidator
+from agent_c_tools.tools.workspace.executors.local_storage.validators.pytest_validator import PytestCommandValidator
 
 
 @dataclass
@@ -170,6 +176,9 @@ class CommandExecutionResult:
             'error_message': self.error_message
         }
 
+class PolicyProvider(Protocol):
+    def get_policy(self, base_cmd: str, parts: List[str]) -> Optional[Mapping[str, Any]]: ...
+
 
 class SecureCommandExecutor:
     """
@@ -177,13 +186,17 @@ class SecureCommandExecutor:
     Handles Windows and Unix-like systems with appropriate platform-specific security measures.
     """
 
-    def __init__(self, show_windows: bool = False, debug_mode: bool = False, log_output: bool = False,
+    def __init__(self, show_windows: bool = False,
+                 log_output: bool = True,
                  default_timeout: int = 30,
-                 max_output_size: int = 1024 * 1024
+                 max_output_size: int = 1024 * 1024,
+                 *,
+                 policy_provider: Optional[PolicyProvider] = None,
+                 default_policies: Optional[Mapping[str, Any]] = None
                  ) -> None:
         # Platform detection - impacts how commands are parsed and executed
         self.platform = platform.system().lower()
-        self.is_windows = platform.system().lower().startswith("win") # False is Unix-like
+        self.is_windows = platform.system().lower().startswith("win") or platform.system().lower().startswith("nt")# False is Unix-like
 
         # Resource limits
         self.default_timeout = int(default_timeout)
@@ -191,12 +204,20 @@ class SecureCommandExecutor:
 
         # Debugging Options
         self.show_windows = show_windows
-        self.debug_mode = debug_mode
 
-        # Validators
+        # policy providers
+        self.policy_provider = policy_provider
+        self.default_policies = dict(default_policies or {})
+
+        # Validators - Add your specific validator classes here!
         self.basic_validator = BasicCommandValidator()
         self.validators: Dict[str, CommandValidator] = {
-            "git": GitCommandValidator()
+            "git": GitCommandValidator(),
+            "pytest": PytestCommandValidator(),
+            "os_basic": OSBasicValidator(),
+            "node": NodeCommandValidator(),
+            "npm": NpmCommandValidator(),
+            "dotnet": DotnetCommandValidator(),
         }
 
         # Logging setup
@@ -205,8 +226,35 @@ class SecureCommandExecutor:
             logging_manager = LoggingManager(self.__class__.__name__)
             self.logger = logging_manager.get_logger()
 
-    def register_validator(self, command_name: str, validator: CommandValidator) -> None:
-        self.validators[command_name] = validator
+    @staticmethod
+    def _resolve_base(parts: List[str]) -> str:
+        # basename without key extensions
+        base = os.path.basename(parts[0])
+        lower = base.lower()
+        for ext in (".exe", ".cmd", ".bat", ".com"):
+            if lower.endswith(ext):
+                base = base[:-len(ext)]
+                break
+
+        # Treat "python -m pytest ..." as pytest
+        if base in ("python", "python3") and len(parts) >= 3 and parts[1] == "-m":
+            module = parts[2]
+            if module == "pytest":
+                return "pytest"
+        return base
+
+    def _resolve_executable(self, cmd: str, env: Dict[str, str]) -> Optional[str]:
+        """Resolve an executable using PATH/PATHEXT from the provided environment."""
+        exe = shutil.which(cmd, path=env.get("PATH"))
+        if exe:
+            return exe
+        # Belt-and-suspenders for Windows if PATHEXT is missing/odd
+        if self.is_windows and not cmd.lower().endswith((".exe", ".cmd", ".bat", ".com")):
+            for ext in (".cmd", ".bat", ".exe", ".com"):
+                exe = shutil.which(cmd + ext, path=env.get("PATH"))
+                if exe:
+                    return exe
+        return None
 
     def _log_command_execution(self, command: str, result: CommandExecutionResult):
         log_entry = {
@@ -223,23 +271,25 @@ class SecureCommandExecutor:
 
         self.logger.info(json.dumps(log_entry))
 
+    def register_validator(self, command_name: str, validator: CommandValidator) -> None:
+        self.validators[command_name] = validator
+
     async def execute_command(self, command: str,
                               working_directory: str = None,
-                              env: Optional[Dict[str, str]] = None,
-                              allowed_commands: Optional[Mapping[str, Any]] = None,
-                              timeout: int = None) -> CommandExecutionResult:
+                              override_env: Optional[Dict[str, str]] = None,
+                              timeout: Optional[int] = None) -> CommandExecutionResult:
         """
         Execute a single command under policy control.
 
         Args:
           command: e.g., "git status --porcelain"
           working_directory: absolute path; caller owns sandboxing
-          env: base environment for the process (merged with validator's overrides)
-          allowed_commands: policy map { base_cmd: <policy> }
+          override_env: base environment for the process (merged with validator's overrides)
           timeout: fallback timeout if neither per-command nor executor default is provided
         """
         start_ms = time.time()
 
+        # Parse the command into parts - return errors if empty or cannot parse
         try:
             parts = shlex.split(command, posix=not self.is_windows)
         except ValueError as e:
@@ -248,34 +298,67 @@ class SecureCommandExecutor:
         if not parts:
             return self._blocked(command, working_directory, "Empty command")
 
-        base = parts[0]
+        # get the base of the command - return an error if we cannot get the main command
+        base = self._resolve_base(parts)
+        if not base:
+            return self._blocked(command, working_directory, "Unable to resolve base command")
 
-        # Must be in the allowlist of base commands
-        policy_for_base = (allowed_commands or {}).get(base)
-        if policy_for_base is None:
-            return self._blocked(command, working_directory, f"Command not allowed: {base}")
+        # Must be in the allowlist of base commands - meaning if they submit a command that we don't have a policy for, it's blocked
+        policy = self.policy_provider.get_policy(base, parts)
+        if not policy:
+            return self._blocked(command, working_directory, f"No policy for '{base}'")
 
-        # Pick validator
-        validator = self.validators.get(base, self.basic_validator)
+        # Now get the validator for that command - if we don't have a validator, block it.
+        # We can create a validator that inherits from BasicCommandValidator if we want to have a generic validator for commands without a custom handler.
+        # by forcing us to create one, we ensure we don't just allow arbitrary commands through without review.
+        validator_key = (policy.get("validator") or base).lower()
+        validator = self.validators.get(validator_key)
+        if validator is None:
+            return self._blocked(command, working_directory, f"No validator registered for '{base}'")
 
-        # Validate
-        vres = validator.validate(parts, policy_for_base)
+        # validate the command and its args against the policy. If not allowed, block it.
+        vres: ValidationResult = validator.validate(parts, policy)
         if not vres.allowed:
-            return self._blocked(command, working_directory, vres.reason)
+            return self._blocked(command, working_directory, vres.reason or "Validation failed")
 
         # Build env
-        base_env = dict(os.environ)
-        if env:
-            base_env.update(env)
-        exec_env = validator.adjust_environment(base_env, parts, policy_for_base)
+        effective_env = dict(os.environ)
+        # Apply policy-provided safe env first
+        safe_env = policy.get("safe_env") or {}
+        effective_env.update({k: str(v) for (k, v) in safe_env.items()})
+
+        # Let validator override / adjust environment
+        if hasattr(validator, "adjust_environment"):
+            # type: ignore[attr-defined]
+            effective_env = validator.adjust_environment(effective_env, parts, policy)  # noqa
+
+        # Finally apply user-supplied env (last writer wins)
+        if override_env:
+            effective_env.update(override_env)
+
+        # Ensure Windows can resolve .cmd/.bat if caller didn't supply PATHEXT
+        if self.is_windows:
+            effective_env.setdefault("PATHEXT", ".COM;.EXE;.BAT;.CMD")
+
+        # Optional: allow PATH_PREPEND if a validator/policy wants to inject it
+        path_prepend = effective_env.pop("PATH_PREPEND", None)
+        if path_prepend:
+            sep = ";" if self.is_windows else ":"
+            effective_env["PATH"] = f"{path_prepend}{sep}{effective_env.get('PATH', '')}"
 
         # Final timeout: arg > per-command > executor default
-        effective_timeout = int(timeout or vres.timeout or self.default_timeout)
+        effective_timeout = int(vres.timeout or timeout or policy.get("default_timeout", self.default_timeout))
 
-        # Execute (async, shell=False)
+        # Resolve the executable using the effective PATH/PATHEXT
+        resolved = self._resolve_executable(parts[0], effective_env)
+        if not resolved:
+            return self._blocked(command, working_directory, f"Executable not found: {parts[0]}")
+        parts[0] = resolved
+
+        # Execute the command (async, shell=False)
         try:
             stdout, stderr, rc, truncated_out, truncated_err = await self._run_subprocess_async(
-                parts, cwd=working_directory, env=exec_env, timeout=effective_timeout
+                parts, cwd=working_directory, env=effective_env, timeout=effective_timeout
             )
 
             duration = int((time.time() - start_ms) * 1000)
@@ -308,6 +391,8 @@ class SecureCommandExecutor:
             )
             self._log_command_execution(command, result)
             return result
+        except FileNotFoundError:
+            return self._blocked(command, working_directory, f"Executable not found: {parts[0]}")
         except Exception as e:
             duration = int((time.time() - start_ms) * 1000)
             result = CommandExecutionResult(
