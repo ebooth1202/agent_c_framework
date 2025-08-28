@@ -26,6 +26,10 @@ class DynamicCommandToolset(Toolset):
             "node":   {"description": "Run safe, non-destructive node commands."},
             "pytest": {"description": "Run safe, non-destructive pytest invocations."},
             "dotnet": {"description": "Run safe, non-destructive dotnet commands."},
+            "which": {"description": "Run safe, non-destructive which commands."},
+            "where": {"description": "Run safe, non-destructive where commands."},
+            "whoami": {"description": "Run safe, non-destructive whoami commands."},
+            "echo": {"description": "Run safe, non-destructive echo commands."},
             # Add more as policies/validators exist
         }
 
