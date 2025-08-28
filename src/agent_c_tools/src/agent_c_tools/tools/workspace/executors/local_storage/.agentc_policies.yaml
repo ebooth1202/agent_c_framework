@@ -160,16 +160,16 @@ dotnet:
         --verbosity: [ "minimal","quiet" ]
         --logger: "console;verbosity=minimal"
 
-    deny_subcommands: [ "run","publish","tool","new","pack","clean","nuget","workload" ]
-    default_timeout: 300
-    env_overrides:
-      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
-      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "1"
-      DOTNET_NOLOGO: "1"
-      NUGET_PACKAGES: ".nuget/packages"
-      # Generic no-color hints:
-      CLICOLOR: "0"
-      NO_COLOR: "1"
-      TERM: "dumb"
-      # Stable, English output (helps tokenization & parsing):
-      DOTNET_CLI_UI_LANGUAGE: "en-US"
+  deny_subcommands: [ "run","publish","tool","new","pack","clean","nuget","workload" ]
+  default_timeout: 300
+  env_overrides:
+    DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+    DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "1"
+    DOTNET_NOLOGO: "1"
+    NUGET_PACKAGES: ".nuget/packages"
+    # Generic no-color hints:
+    CLICOLOR: "0"
+    NO_COLOR: "1"
+    TERM: "dumb"
+    # Stable, English output (helps tokenization & parsing):
+    DOTNET_CLI_UI_LANGUAGE: "en-US"
