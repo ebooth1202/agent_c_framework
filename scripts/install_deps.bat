@@ -3,7 +3,7 @@ SETLOCAL
 
 :: Store the starting directory
 pushd %CD%
-
+CALL .venv\scripts\activate
 :: Install the requirements
 echo Installing dependencies.
 python -m pip install --upgrade pip

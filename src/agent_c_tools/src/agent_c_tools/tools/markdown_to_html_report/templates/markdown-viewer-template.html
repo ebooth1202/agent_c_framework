@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+    <title>Markdown Viewer</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+
+    <!-- Highlight.js -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github.min.css"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/csharp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/java.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/typescript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/json.min.js"></script>
+
+    <!-- Marked -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@4.0.0/marked.min.js"></script>
+
+    <!-- Mermaid -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+
+    <style>
+        :root {
+            --gold: #fdb825;
+            --indigo: #2c1a5d;
+            --peacock: #1f5d82;
+            --gulfstream: #6ca7d0;
+            --slate: #232d3d;
+            --glacier: #67686a;
+            --shamrock: #2fb677;
+            --cerulean: #2d84bb;
+            --midnight: #404041;
+            --light-gray: #ebebeb;
+            --sidebar-width: 300px;
+            --sidebar-min-width: 100px;
+            --sidebar-max-width: 600px;
+            --sidebar-bg: var(--light-gray);
+            --border-color: #e1e4e8;
+            --code-bg: #f8f9fa;
+            --text-color: var(--slate);
+            --heading-color: var(--indigo);
+            --link-color: var(--peacock);
+            --folder-icon-color: var(--gulfstream);
+            --file-icon-color: var(--glacier);
+            --toggle-btn-color: var(--glacier);
+            --toggle-btn-hover-color: var(--midnight);
+            --resize-handle-width: 8px;
+            --fullscreen-bg: rgba(0, 0, 0, 0.8);
+            --z-index-fullscreen: 1000;
+            --z-index-drag-handle: 10;
+            --z-index-back-to-top: 100;
+            --toc-bg-color: #f8f9fa;
+            --toc-border-color: var(--indigo);
+            --code-border-color: var(--gold);
+            --mermaid-bg-color: #f8f9fa;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --section-spacing: 40px
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden
+        }
+
+        #sidebar {
+            width: var(--sidebar-width);
+            min-width: var(--sidebar-min-width);
+            max-width: var(--sidebar-max-width);
+            height: 100%;
+            overflow-y: auto;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            padding: 20px 0;
+            position: relative;
+            flex-shrink: 0
+        }
+
+        #sidebar-resize-handle {
+            position: absolute;
+            top: 0;
+            right: -5px;
+            width: var(--resize-handle-width);
+            height: 100%;
+            cursor: col-resize;
+            z-index: var(--z-index-drag-handle)
+        }
+
+        #content {
+            flex-grow: 1;
+            height: 100%;
+            overflow-y: auto;
+            padding: 20px 40px;
+            position: relative;
+            scroll-behavior: smooth
+        }
+
+        #sidebar-toggle {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background: var(--sidebar-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            padding: 5px 8px;
+            cursor: pointer;
+            color: var(--toggle-btn-color);
+            font-weight: bold;
+            font-size: 14px;
+            z-index: 5
+        }
+
+        #sidebar-toggle:hover {
+            color: var(--toggle-btn-hover-color)
+        }
+
+        .tree-view {
+            list-style: none;
+            padding-left: 15px;
+            margin: 0
+        }
+
+        .tree-view li {
+            margin: 5px 0;
+            position: relative
+        }
+
+        .folder {
+            cursor: pointer;
+            user-select: none;
+            padding: 5px 8px;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            transition: background-color .2s, transform .1s
+        }
+
+        .folder:hover {
+            background: rgba(0, 0, 0, .05);
+            transform: translateX(2px)
+        }
+
+        .folder:before {
+            content: '📁';
+            margin-right: 8px;
+            color: var(--folder-icon-color)
+        }
+
+        .folder.open:before {
+            content: '📂'
+        }
+
+        .file {
+            padding: 5px 8px;
+            cursor: pointer;
+            user-select: none;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            transition: background-color .2s, transform .1s
+        }
+
+        .file:hover {
+            background: rgba(0, 0, 0, .05);
+            transform: translateX(2px)
+        }
+
+        .file:before {
+            content: '📄';
+            margin-right: 8px;
+            color: var(--file-icon-color)
+        }
+
+        .file.active {
+            background: rgba(44, 26, 93, 0.1);
+            color: var(--indigo);
+            font-weight: 500
+        }
+
+        .hidden {
+            display: none
+        }
+
+        .unresolved {
+            color: #dc3545 !important;
+            text-decoration: line-through !important;
+            cursor: help !important;
+            opacity: .7
+        }
+
+        .unresolved:hover {
+            opacity: 1;
+            background: rgba(220, 53, 69, 0.1);
+            padding: 2px 4px;
+            border-radius: 3px
+        }
+
+        #back-to-top {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--indigo);
+            color: #fff;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity .3s, transform .3s;
+            z-index: var(--z-index-back-to-top);
+            box-shadow: 0 2px 5px var(--shadow-color)
+        }
+
+        #back-to-top.visible {
+            opacity: .7
+        }
+
+        #back-to-top:hover {
+            opacity: 1;
+            transform: translateY(-3px)
+        }
+
+        #markdown-content h1 {
+            padding-bottom: .3em;
+            font-size: 2em;
+            border-bottom: 1px solid var(--border-color);
+            margin-top: var(--section-spacing);
+            margin-bottom: 24px;
+            font-weight: 600;
+            color: var(--heading-color)
+        }
+
+        #markdown-content h2 {
+            padding-bottom: .3em;
+            font-size: 1.5em;
+            border-bottom: 1px solid var(--border-color);
+            margin-top: var(--section-spacing);
+            margin-bottom: 20px;
+            font-weight: 600;
+            color: var(--heading-color)
+        }
+
+        #markdown-content h3 {
+            font-size: 1.25em;
+            margin-top: 32px;
+            margin-bottom: 16px;
+            font-weight: 600;
+            color: var(--heading-color)
+        }
+
+        #markdown-content a {
+            color: var(--link-color);
+            text-decoration: none;
+            transition: color .2s
+        }
+
+        #markdown-content a:hover {
+            text-decoration: underline;
+            color: var(--indigo)
+        }
+
+        #markdown-content code {
+            font-family: SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+            padding: .2em .4em;
+            font-size: 85%;
+            background: var(--code-bg);
+            border-radius: 3px
+        }
+
+        #markdown-content pre {
+            background: var(--code-bg);
+            border-radius: 8px;
+            padding: 16px 16px 16px 20px;
+            overflow: auto;
+            margin: 0 0 24px;
+            position: relative;
+            border-left: 4px solid var(--code-border-color);
+            box-shadow: 0 2px 8px var(--shadow-color)
+        }
+
+        #markdown-content pre code {
+            padding: 0;
+            margin: 0;
+            background: transparent;
+            font-size: 85%;
+            line-height: 1.5;
+            display: block;
+            overflow-x: auto
+        }
+
+        #markdown-content > ul:first-of-type, #markdown-content > ol:first-of-type {
+            background: var(--toc-bg-color);
+            border-radius: 8px;
+            padding: 20px 20px 20px 40px;
+            margin-bottom: 32px;
+            border-left: 4px solid var(--toc-border-color);
+            box-shadow: 0 2px 8px var(--shadow-color)
+        }
+
+        #markdown-content > ul:first-of-type a, #markdown-content > ol:first-of-type a {
+            display: inline-block;
+            transition: transform .2s, color .2s;
+            padding: 2px 5px;
+            border-radius: 3px
+        }
+
+        #markdown-content > ul:first-of-type a:hover, #markdown-content > ol:first-of-type a:hover {
+            transform: translateX(3px);
+            background: rgba(44, 26, 93, 0.05)
+        }
+
+        #markdown-content > ul:first-of-type a.active, #markdown-content > ol:first-of-type a.active {
+            font-weight: 500;
+            background: rgba(44, 26, 93, 0.1);
+            color: var(--indigo)
+        }
+
+        #markdown-content blockquote {
+            padding: 0 1em;
+            color: #6a737d;
+            border-left: .25em solid #dfe2e5;
+            margin: 0 0 24px 0
+        }
+
+        #markdown-content table {
+            display: block;
+            width: 100%;
+            overflow: auto;
+            border-spacing: 0;
+            border-collapse: collapse;
+            margin: 0 0 24px
+        }
+
+        #markdown-content table tr {
+            background: #fff;
+            border-top: 1px solid #c6cbd1
+        }
+
+        #markdown-content table tr:nth-child(2n) {
+            background: #f6f8fa
+        }
+
+        #markdown-content table th, #markdown-content table td {
+            padding: 8px 13px;
+            border: 1px solid #dfe2e5
+        }
+
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: absolute;
+            top: 0;
+            right: 0;
+            padding: 4px 10px;
+            font-size: 12px;
+            background: var(--code-bg);
+            border-bottom-left-radius: 6px;
+            z-index: 1
+        }
+
+        .code-language {
+            color: var(--glacier);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: .5px
+        }
+
+        .copy-btn {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 2px 6px;
+            margin-left: 10px;
+            color: var(--glacier);
+            font-size: 14px
+        }
+
+        .copy-btn:hover {
+            color: var(--indigo)
+        }
+
+        .fullscreen-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--fullscreen-bg);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column
+        }
+
+        .fullscreen-content {
+            max-width: 95%;
+            max-height: 90%;
+            overflow: auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, .2)
+        }
+
+        .fullscreen-content img {
+            max-width: 100%;
+            max-height: 85vh;
+            object-fit: contain
+        }
+
+        .fullscreen-content .mermaid {
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px
+        }
+
+        .fullscreen-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: #fff;
+            font-size: 30px;
+            cursor: pointer;
+            background: rgba(0, 0, 0, .5);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            line-height: 1
+        }
+
+        .fullscreen-close:hover {
+            background: rgba(0, 0, 0, .7)
+        }
+
+        .fullscreen-trigger {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(0, 0, 0, .2);
+            color: #fff;
+            padding: 5px;
+            border-radius: 3px;
+            cursor: pointer;
+            display: none;
+            font-size: 16px;
+            z-index: 10
+        }
+
+        #markdown-content .mermaid-wrapper {
+            position: relative;
+            margin-bottom: 32px;
+            background: var(--mermaid-bg-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px var(--shadow-color)
+        }
+
+        #markdown-content .mermaid-wrapper:hover .fullscreen-trigger, #markdown-content p:has(img):hover .fullscreen-trigger {
+            display: block
+        }
+
+        #markdown-content p:has(img) {
+            position: relative;
+            display: inline-block
+        }
+
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column
+            }
+
+            #sidebar {
+                width: 100% !important;
+                height: auto;
+                max-height: 30vh;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color)
+            }
+
+            #sidebar-resize-handle {
+                display: none
+            }
+
+            #content {
+                height: auto;
+                max-height: 70vh
+            }
+
+            #back-to-top {
+                bottom: 10px;
+                right: 10px;
+                width: 35px;
+                height: 35px
+            }
+        }
+    </style>
+</head>
+<body>
+<div id="sidebar">
+    <button id="sidebar-toggle" title="Toggle Sidebar">Hide</button>
+    <div id="sidebar-resize-handle" title="Drag to resize"></div>
+    <h3 style="margin:0 16px 16px 16px;">Agent C Output Viewer</h3>
+    <ul id="tree-view" class="tree-view"></ul>
+</div>
+
+<div id="content">
+    <div id="markdown-content"></div>
+    <div id="back-to-top" title="Back to top">↑</div>
+</div>
+
+<script>
+    // Injected by generator
+    const fileStructure = $FILE_STRUCTURE;
+
+    // DOM refs
+    const treeView = document.getElementById('tree-view');
+    const markdownContent = document.getElementById('markdown-content');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const sidebarResizeHandle = document.getElementById('sidebar-resize-handle');
+    const content = document.getElementById('content');
+    const backToTopButton = document.getElementById('back-to-top');
+
+    // Sidebar width persistence
+    const savedSidebarWidth = localStorage.getItem('sidebarWidth');
+    if (savedSidebarWidth) sidebar.style.width = savedSidebarWidth + 'px';
+
+    let sidebarHidden = false;
+    sidebarToggle.addEventListener('click', () => {
+        sidebarHidden = !sidebarHidden;
+        if (sidebarHidden) {
+            const w = sidebar.offsetWidth;
+            localStorage.setItem('lastSidebarWidth', w);
+            sidebar.style.width = '0';
+            sidebarToggle.textContent = 'Show';
+            sidebarToggle.style.right = '10px';
+            sidebarToggle.style.position = 'fixed';
+            sidebarResizeHandle.style.display = 'none';
+        } else {
+            const last = localStorage.getItem('lastSidebarWidth') || 300;
+            sidebar.style.width = last + 'px';
+            sidebarToggle.textContent = 'Hide';
+            sidebarToggle.style.right = '10px';
+            sidebarToggle.style.position = 'absolute';
+            sidebarResizeHandle.style.display = 'block';
+        }
+    });
+
+    // Sidebar resize
+    let isResizing = false;
+    sidebarResizeHandle.addEventListener('mousedown', e => {
+        isResizing = true;
+        document.body.style.cursor = 'col-resize';
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', stopResize);
+        e.preventDefault();
+    });
+
+    function onMove(e) {
+        if (!isResizing) return;
+        let newWidth = e.clientX;
+        const min = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-min-width'));
+        const max = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-max-width'));
+        if (newWidth < min) newWidth = min;
+        if (newWidth > max) newWidth = max;
+        sidebar.style.width = newWidth + 'px';
+        localStorage.setItem('sidebarWidth', newWidth);
+    }
+
+    function stopResize() {
+        isResizing = false;
+        document.body.style.cursor = '';
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', stopResize);
+    }
+
+    // Back to top visibility
+    content.addEventListener('scroll', () => {
+        backToTopButton.classList.toggle('visible', content.scrollTop > 300);
+    });
+    backToTopButton.addEventListener('click', () => content.scrollTo({top: 0, behavior: 'smooth'}));
+
+    // Marked configuration & renderer hooks
+    marked.setOptions({
+        highlight: (code, lang) => {
+            if (lang && hljs.getLanguage(lang)) {
+                try {
+                    return hljs.highlight(code, {language: lang}).value;
+                } catch {
+                }
+            }
+            return hljs.highlightAuto(code).value;
+        },
+        langPrefix: 'hljs language-',
+        headerIds: true,
+        mangle: false,
+        gfm: true
+    });
+
+    const renderer = new marked.Renderer();
+    const origCode = renderer.code.bind(renderer);
+    const origImage = renderer.image.bind(renderer);
+
+    renderer.code = (code, language, escaped) => {
+        if (language === 'mermaid') {
+            return `<div class="mermaid-wrapper">
+                  <div class="fullscreen-trigger" onclick="openFullscreen(this.nextElementSibling)">⛶</div>
+                  <div class="mermaid">${code}</div>
+                </div>`;
+        }
+        const langDisplay = language || 'text';
+        const rendered = origCode(code, language, escaped);
+        return `<div style="position:relative;">
+                <div class="code-header">
+                  <span class="code-language">${langDisplay}</span>
+                  <button class="copy-btn" onclick="copyCode(this)" title="Copy code">Copy</button>
+                </div>
+                ${rendered}
+              </div>`;
+    };
+
+    renderer.image = (href, title, text) => {
+        const img = origImage(href, title, text);
+        return `<span style="position:relative;display:inline-block;">
+                <span class="fullscreen-trigger" onclick="openFullscreen(this.nextElementSibling)">⛶</span>
+                ${img}
+              </span>`;
+    };
+
+    marked.use({renderer});
+
+    // Helpers: copy & fullscreen
+    window.copyCode = (button) => {
+        const codeBlock = button.parentElement.nextElementSibling.querySelector('code');
+        navigator.clipboard.writeText(codeBlock.textContent || '').then(() => {
+            const t = button.textContent;
+            button.textContent = 'Copied!';
+            button.style.color = '#2fb677';
+            setTimeout(() => {
+                button.textContent = t;
+                button.style.color = '';
+            }, 1500);
+        }).catch(() => {
+            const t = button.textContent;
+            button.textContent = 'Failed';
+            button.style.color = 'red';
+            setTimeout(() => {
+                button.textContent = t;
+                button.style.color = '';
+            }, 1500);
+        });
+    };
+
+    window.openFullscreen = (element) => {
+        const overlay = document.createElement('div');
+        overlay.className = 'fullscreen-overlay';
+        const content = document.createElement('div');
+        content.className = 'fullscreen-content';
+        const closeBtn = document.createElement('div');
+        closeBtn.className = 'fullscreen-close';
+        closeBtn.textContent = '×';
+        closeBtn.onclick = () => document.body.removeChild(overlay);
+
+        if (element.tagName === 'IMG') {
+            const img = document.createElement('img');
+            img.src = element.src;
+            img.alt = element.alt;
+            content.appendChild(img);
+        } else if (element.classList.contains('mermaid')) {
+            const clone = element.cloneNode(true);
+            clone.removeAttribute('style');
+            content.appendChild(clone);
+            setTimeout(() => mermaid.init(undefined, [clone]), 100);
+        }
+
+        overlay.appendChild(closeBtn);
+        overlay.appendChild(content);
+        document.body.appendChild(overlay);
+        document.addEventListener('keydown', function esc(e) {
+            if (e.key === 'Escape') {
+                document.body.removeChild(overlay);
+                document.removeEventListener('keydown', esc);
+            }
+        });
+        overlay.addEventListener('click', e => {
+            if (e.target === overlay) document.body.removeChild(overlay);
+        });
+    };
+
+    // Display tree
+    function createTreeView(structure, parent) {
+        function formatDisplayName(filename) {
+            let n = filename.replace(/^\d+\./, '');   // drop leading numbers
+            n = n.replace(/\.(md|markdown|mdx)$/i, ''); // drop ext
+            n = n.replace(/_/g, ' ');
+            n = n.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+            return n;
+        }
+
+        structure.forEach(item => {
+            const li = document.createElement('li');
+
+            if (item.type === 'folder') {
+                const folder = document.createElement('div');
+                folder.className = 'folder';
+                folder.textContent = formatDisplayName(item.name);
+                li.appendChild(folder);
+
+                const ul = document.createElement('ul');
+                ul.className = 'tree-view hidden';
+                li.appendChild(ul);
+
+                folder.addEventListener('click', e => {
+                    e.stopPropagation();
+                    folder.classList.toggle('open');
+                    ul.classList.toggle('hidden');
+                });
+
+                if (item.children?.length) {
+                    createTreeView(item.children, ul);
+                    if (item.children.length === 1 && item.children[0].type === 'folder') {
+                        folder.classList.add('open');
+                        ul.classList.remove('hidden');
+                    }
+                }
+            } else if (item.type === 'file') {
+                // Only show markdown-like files by PATH (not name)
+                if (/\.(md|markdown|mdx)$/i.test(item.path)) {
+                    const file = document.createElement('div');
+                    file.className = 'file';
+                    file.textContent = formatDisplayName(item.name);
+                    file.dataset.path = item.path;
+                    file.dataset.content = item.content;
+                    li.appendChild(file);
+
+                    file.addEventListener('click', e => {
+                        e.stopPropagation();
+                        document.querySelectorAll('.file.active').forEach(el => el.classList.remove('active'));
+                        file.classList.add('active');
+                        renderMarkdown(file.dataset.content);
+                        updateHistory(item.path);
+                        if (window.innerWidth <= 768) {
+                            sidebarHidden = true;
+                            sidebar.style.width = '0';
+                        }
+                    });
+                }
+            }
+            parent.appendChild(li);
+        });
+    }
+
+    function ensureHeadingIds() {
+        // Fallback: ensure headings have ids
+        document.querySelectorAll('#markdown-content h1,#markdown-content h2,#markdown-content h3,#markdown-content h4,#markdown-content h5,#markdown-content h6')
+            .forEach(h => {
+                if (!h.id) {
+                    let id = h.textContent.trim().toLowerCase()
+                        .replace(/[^a-z0-9]+/g, '-')
+                        .replace(/(^-|-$)/g, '');
+                    h.id = id || 'heading';
+                }
+            });
+    }
+
+    function renderMarkdown(contentStr) {
+        markdownContent.innerHTML = marked.parse(contentStr || '');
+        ensureHeadingIds();
+
+        // Mermaid
+        if (window.mermaid) {
+            mermaid.initialize({startOnLoad: false, theme: 'default', securityLevel: 'loose', logLevel: 5});
+            try {
+                mermaid.init(undefined, document.querySelectorAll('.mermaid'));
+            } catch (e) {
+                console.warn('Mermaid init failed', e);
+            }
+        }
+
+        // Highlight
+        document.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
+
+        // Process links inside content
+        document.querySelectorAll('#markdown-content a').forEach(link => {
+            const href = link.getAttribute('href') || '';
+            if (/^https?:\/\//i.test(href)) { // external
+                link.setAttribute('target', '_blank');
+                link.setAttribute('rel', 'noopener noreferrer');
+            } else if (href.startsWith('#')) {    // same-doc
+                link.addEventListener('click', e => {
+                    e.preventDefault();
+                    scrollToAnchor(href.slice(1));
+                });
+            }
+            // viewer:// handled globally by the bridge
+        });
+
+        addTableOfContentsInteractivity();
+
+        // If page has a hash on first render
+        if (window.location.hash) {
+            const el = document.getElementById(window.location.hash.slice(1));
+            if (el) el.scrollIntoView({behavior: 'smooth'});
+        }
+    }
+
+    function addTableOfContentsInteractivity() {
+        const tocList = markdownContent.querySelector('ul:first-of-type, ol:first-of-type');
+        if (!tocList) return;
+        const tocLinks = tocList.querySelectorAll('a');
+        if (!tocLinks.length) return;
+
+        const headings = markdownContent.querySelectorAll('h1,h2,h3,h4,h5,h6');
+
+        function updateActive() {
+            tocLinks.forEach(a => a.classList.remove('active'));
+            const visible = [];
+            headings.forEach(h => {
+                const r = h.getBoundingClientRect();
+                if (r.top > 0 && r.top < window.innerHeight * 0.5) visible.push(h);
+            });
+            if (visible.length) {
+                const active = visible[0].id;
+                tocLinks.forEach(a => {
+                    if (a.getAttribute('href') === `#${active}`) a.classList.add('active');
+                });
+            } else if (content.scrollTop < 200) {
+                tocLinks[0].classList.add('active');
+            }
+        }
+
+        content.addEventListener('scroll', updateActive);
+        updateActive();
+
+        tocLinks.forEach(a => {
+            a.addEventListener('click', e => {
+                e.preventDefault();
+                scrollToAnchor(a.getAttribute('href').slice(1));
+            });
+        });
+    }
+
+    function updateHistory(filePath) {
+        const url = new URL(window.location);
+        url.searchParams.set('file', filePath);
+        history.pushState({filePath}, '', url);
+    }
+
+    function openMarkdownFile(filePath, anchor = '') {
+        try {
+            filePath = decodeURIComponent(filePath);
+        } catch {
+        }
+
+        // Directory path? pick first file under
+        if (filePath.endsWith('/') || !filePath.includes('.')) {
+            const dir = filePath.endsWith('/') ? filePath : filePath + '/';
+            const els = document.querySelectorAll('.file[data-path]');
+            for (const el of els) {
+                if (el.dataset.path.startsWith(dir)) return openMarkdownFile(el.dataset.path, anchor);
+            }
+        }
+
+        const fileEl = document.querySelector(`.file[data-path="${CSS.escape(filePath)}"]`);
+
+        if (!fileEl) return false;
+
+        document.querySelectorAll('.file.active').forEach(el => el.classList.remove('active'));
+        fileEl.classList.add('active');
+
+        renderMarkdown(fileEl.dataset.content);
+        updateHistory(filePath);
+
+        // expand parent folders
+        let p = fileEl.parentElement;
+        while (p) {
+            if (p.tagName === 'UL' && p.classList.contains('tree-view')) {
+                p.classList.remove('hidden');
+                const folderDiv = p.previousElementSibling;
+                if (folderDiv?.classList.contains('folder')) folderDiv.classList.add('open');
+            }
+            p = p.parentElement;
+        }
+
+        if (anchor) {
+            const el = document.getElementById(anchor.replace(/^#/, ''));
+            if (el) setTimeout(() => el.scrollIntoView({behavior: 'smooth'}), 100);
+        }
+        return true;
+    }
+
+    function findFileInStructure(structure, path) {
+        for (const item of structure) {
+            if (item.type === 'file' && item.path === path) return item;
+            if (item.type === 'folder' && item.children) {
+                const f = findFileInStructure(item.children, path);
+                if (f) return f;
+            }
+        }
+        return null;
+    }
+
+    function findAndDisplayFirstMarkdownFile(structure) {
+        const findFirst = (items) => {
+            for (const it of items) {
+                if (it.type === 'file' && /\.(md|markdown|mdx)$/i.test(it.path)) return it;
+                if (it.type === 'folder' && it.children?.length) {
+                    const f = findFirst(it.children);
+                    if (f) return f;
+                }
+            }
+            return null;
+        };
+
+        const params = new URLSearchParams(window.location.search);
+        const fileParam = params.get('file');
+        if (fileParam) {
+            const item = findFileInStructure(structure, fileParam);
+            if (item) {
+                setTimeout(() => openMarkdownFile(item.path), 100);
+                return;
+            }
+        }
+
+        const first = findFirst(structure);
+        if (first) setTimeout(() => openMarkdownFile(first.path), 100);
+        else markdownContent.innerHTML = '<h1>No markdown files found</h1>';
+    }
+
+    window.addEventListener('popstate', (e) => {
+        if (e.state?.filePath) openMarkdownFile(e.state.filePath);
+        else findAndDisplayFirstMarkdownFile(fileStructure);
+    });
+
+    function initializeViewer() {
+        createTreeView(fileStructure, treeView);
+        findAndDisplayFirstMarkdownFile(fileStructure);
+    }
+
+    function scrollToAnchor(anchorId) {
+        try {
+            anchorId = decodeURIComponent(anchorId);
+        } catch {
+        }
+        const el = document.getElementById(anchorId);
+        if (el) {
+            el.scrollIntoView({behavior: 'smooth'});
+            const orig = el.style.backgroundColor;
+            el.style.backgroundColor = 'rgba(253,184,37,0.2)';
+            setTimeout(() => el.style.backgroundColor = orig, 1200);
+        }
+    }
+
+    // expose for bridge
+    window.openMarkdownFile = openMarkdownFile;
+    window.scrollToAnchor = scrollToAnchor;
+
+    window.addEventListener('DOMContentLoaded', initializeViewer);
+</script>
+
+<!-- Viewer Bridge -->
+<script>
+    // Simple slugger for anchor normalization (browser source of truth)
+    class Slugger {
+        slug(value) {
+            return (value ?? '')
+                .toString()
+                .trim()
+                .toLowerCase()
+                .replace(/[^\w\s-]/g, '')
+                .replace(/[\s_-]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+        }
+    }
+
+    class ViewerBridge {
+        constructor() {
+            this.slugger = new Slugger();
+            this.setupLinkHandlers();
+            this.setupScrollHandlers();
+        }
+
+        setupLinkHandlers() {
+            document.addEventListener('click', (event) => {
+                const link = event.target.closest('a');
+                if (!link) return;
+                const href = link.getAttribute('href') || '';
+
+                // 1) Show popup for unresolved FIRST
+                if (link.classList.contains('unresolved')) {
+                    event.preventDefault();
+                    this.showNotification(link.getAttribute('title') || 'Link not available', 'warning');
+                } else if (href.startsWith('viewer://')) {
+                    event.preventDefault();
+                    this.handleViewerLink(href);
+                } else if (href.startsWith('#')) {
+                    event.preventDefault();
+                    this.handleViewerLink(href);
+                } else if (/^https?:\/\//i.test(href)) {
+                    if (!link.hasAttribute('target')) {
+                        link.setAttribute('target', '_blank');
+                        link.setAttribute('rel', 'noopener noreferrer');
+                    }
+                }
+            });
+        }
+
+        setupScrollHandlers() {
+            window.addEventListener('hashchange', () => {
+                const hash = window.location.hash.slice(1);
+                if (hash) this.scrollToAnchor(hash);
+            });
+            if (window.location.hash) {
+                setTimeout(() => this.scrollToAnchor(window.location.hash.slice(1)), 100);
+            }
+        }
+
+        handleViewerLink(href) {
+            // href like: viewer://dir2/02%20meeting-notes.md#section
+            const raw = href.slice('viewer://'.length);
+
+            // Split path and fragment, then decode both
+            let [pathPart, frag] = raw.split('#', 2);
+            try {
+                pathPart = decodeURIComponent(pathPart);
+            } catch {
+            }
+            try {
+                frag = frag ? decodeURIComponent(frag) : '';
+            } catch {
+            }
+
+            // Ask the app to open the file; if it worked, scroll to anchor
+            const ok = (typeof openMarkdownFile === 'function') ? openMarkdownFile(pathPart) : false;
+            if (ok && frag) {
+                setTimeout(() => this.scrollToAnchor(frag), 150);
+            } else if (!ok) {
+                this.showNotification(`Document not found: ${pathPart}`, 'error');
+            }
+        }
+
+
+        scrollToAnchor(anchor) {
+            if (!anchor) return;
+
+            // 1) direct id
+            let el = document.getElementById(anchor);
+            if (el) return this.performScroll(el, anchor);
+
+            // 2) normalized id
+            const norm = this.slugger.slug(anchor);
+            if (norm && norm !== anchor) {
+                el = document.getElementById(norm);
+                if (el) return this.performScroll(el, anchor);
+            }
+
+            // 3) case-insensitive id match
+            for (const node of document.querySelectorAll('[id]')) {
+                if (node.id.toLowerCase() === anchor.toLowerCase()) return this.performScroll(node, anchor);
+            }
+
+            // 4) match by heading text slug
+            for (const h of document.querySelectorAll('#markdown-content h1,h2,h3,h4,h5,h6')) {
+                const s = this.slugger.slug(h.textContent);
+                if (s === norm || s === anchor.toLowerCase()) return this.performScroll(h, anchor);
+            }
+
+            this.showNotification(`Section not found: ${anchor}`, 'warning');
+        }
+
+        performScroll(el, originalAnchor) {
+            el.scrollIntoView({behavior: 'smooth', block: 'start'});
+            this.highlight(el);
+            if (window.location.hash !== `#${originalAnchor}`) {
+                history.replaceState(null, '', `#${originalAnchor}`);
+            }
+        }
+
+        highlight(el) {
+            const bg = el.style.backgroundColor, tr = el.style.transition;
+            el.style.transition = 'background-color .3s ease';
+            el.style.backgroundColor = 'rgba(253,184,37,0.3)';
+            setTimeout(() => {
+                el.style.backgroundColor = bg;
+                setTimeout(() => el.style.transition = tr, 300);
+            }, 1200);
+        }
+
+        showNotification(message, type = 'info') {
+            let n = document.getElementById('viewer-notification');
+            if (!n) {
+                n = document.createElement('div');
+                n.id = 'viewer-notification';
+                n.style.cssText = `
+            position:fixed;top:20px;right:20px;padding:12px 16px;border-radius:6px;color:#fff;
+            font-family:'Roboto',sans-serif;font-size:14px;z-index:10000;opacity:0;transition:opacity .3s;
+            max-width:320px;box-shadow:0 4px 12px rgba(0,0,0,.2);
+          `;
+                document.body.appendChild(n);
+            }
+            const colors = {info: '#2d84bb', warning: '#fdb825', error: '#dc3545', success: '#2fb677'};
+            n.style.backgroundColor = colors[type] || colors.info;
+            n.textContent = message;
+            n.style.opacity = '1';
+            setTimeout(() => n.style.opacity = '0', 2500);
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            window.viewerBridge = new ViewerBridge();
+        });
+    } else {
+        window.viewerBridge = new ViewerBridge();
+    }
+</script>
+</body>
+</html>
