@@ -92,6 +92,7 @@ npm:
       view:   { allowed_flags: ["--json"] }
       list:   { allowed_flags: ["--depth","--json"] }
       ping:   { allowed_flags: [] }
+      outdated: { allowed_flags: [] }
 
       # Only allow "npm config get <key>"
       config:
