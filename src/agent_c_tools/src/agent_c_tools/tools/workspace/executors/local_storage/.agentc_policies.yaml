@@ -89,30 +89,36 @@ npm:
   validator: npm
   root_flags: ["-v","--version","--help"]
   subcommands:
-    view: { flags: ["--json"] }
-    list: { flags: ["--depth","--json"] }
-    ping: { flags: [] }
-    config: { flags: ["get"] }
-    # --- Scripts (ALLOWLIST) ---
-    run:
-      # Only these script names are allowed, and no extra arguments are permitted.
-      allowed_scripts: [ "build","test","lint","format","typecheck" ]
-      deny_args: true
-      # --- Safe, lockfile-based install (DISABLED by default) ---
-      # Flip 'enabled' to true if/when you want to allow dependency install.
+      view:   { allowed_flags: ["--json"] }
+      list:   { allowed_flags: ["--depth","--json"] }
+      ping:   { allowed_flags: [] }
+
+      # Only allow "npm config get <key>"
+      config:
+        get_only: true
+        allowed_flags: []       # keep empty; we gate on 'get'
+
+      # --- Scripts (ALLOWLIST) ---
+      run:
+        allowed_scripts: ["build","test","lint","format","typecheck"]
+        deny_args: true         # no extra args (incl. after --)
+
+      # --- Safe, lockfile-based install ---
       ci:
-        enabled: true                # ← allow 'npm ci' (safe)  | set to false to disallow
-        require_no_packages: true    # disallow 'npm ci react' etc.
-        require_flags_all: [ "--ignore-scripts" ]
-        allowed_flags: [ "--ignore-scripts","--no-audit","--no-fund","--prefer-offline","--cache" ]
+        enabled: true
+        require_no_packages: true
+        require_flags: ["--ignore-scripts"]
+        allowed_flags: ["--ignore-scripts","--no-audit","--no-fund","--prefer-offline","--cache"]
 
       install:
-        enabled: false               # ← keep false for now; set true only if necessary
-        require_no_packages: true    # only lockfile-based; no 'npm install <pkg>'
-        require_flags_all: [ "--ignore-scripts" ]
-        allowed_flags: [ "--ignore-scripts","--no-audit","--no-fund","--prefer-offline","--cache" ]
+        enabled: false
+        require_no_packages: true
+        require_flags: ["--ignore-scripts"]
+        allowed_flags: ["--ignore-scripts","--no-audit","--no-fund","--prefer-offline","--cache"]
 
+  # keep ‘i’ denied unless you want it—the validator aliases it to 'install'
   deny_subcommands: ["exec","publish","update","audit","ci-info","token","login","adduser","whoami","pack","link","unlink"]
+
   default_timeout: 120
   env_overrides:
     NPM_CONFIG_COLOR: "false"       # npm itself: no color
