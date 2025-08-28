@@ -10,13 +10,13 @@ from typing import Dict, Any, List, Optional, Mapping, Tuple, Callable, Protocol
 from dataclasses import dataclass
 
 from agent_c.util.logging_utils import LoggingManager
-from agent_c_tools.tools.workspace.executors.local_storage.validators.base_validator import BasicCommandValidator, CommandValidator, ValidationResult
-from agent_c_tools.tools.workspace.executors.local_storage.validators.dotnet_validator import DotnetCommandValidator
-from agent_c_tools.tools.workspace.executors.local_storage.validators.git_validator import GitCommandValidator
-from agent_c_tools.tools.workspace.executors.local_storage.validators.node_validator import NodeCommandValidator
-from agent_c_tools.tools.workspace.executors.local_storage.validators.npm_validator import NpmCommandValidator
-from agent_c_tools.tools.workspace.executors.local_storage.validators.os_basic_validator import OSBasicValidator
-from agent_c_tools.tools.workspace.executors.local_storage.validators.pytest_validator import PytestCommandValidator
+from .validators.base_validator import BasicCommandValidator, CommandValidator, ValidationResult
+from .validators.dotnet_validator import DotnetCommandValidator
+from .validators.git_validator import GitCommandValidator
+from .validators.node_validator import NodeCommandValidator
+from .validators.npm_validator import NpmCommandValidator
+from .validators.os_basic_validator import OSBasicValidator
+from .validators.pytest_validator import PytestCommandValidator
 
 
 @dataclass
