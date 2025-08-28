@@ -994,6 +994,11 @@ class WorkspaceTools(Toolset):
     #             'description': 'Command and arguments (no shell). Examples: "git status", "npm -v", "dotnet build --no-restore"',
     #             'required': True
     #         },
+    #         "timeout": {
+    #             "type": "integer",
+    #             "description": "Requested timeout (seconds). May be lowered by policy/validator.",
+    #             "required": False,
+    #         },
     #         'max_tokens': {
     #             'type': 'integer',
     #             'description': 'Max output tokens. Default 1000. Large outputs truncated.',
@@ -1020,6 +1025,7 @@ class WorkspaceTools(Toolset):
         tool_context = kwargs.get("tool_context", {})
         max_tokens = kwargs.get("max_tokens", 1000)
         command = kwargs.get('command', '').strip()
+        timeout: Optional[int] = kwargs.get('timeout', None)
 
         # validate required fields exist
         success, message = validate_required_fields(kwargs=kwargs, required_fields=['command', 'path'])
@@ -1047,7 +1053,7 @@ class WorkspaceTools(Toolset):
             return f"Failed to resolve path: {e}"
 
         # pass command to underlying workspace run_command method, e.g. LocalWorkspace
-        result: CommandExecutionResult = await workspace.run_command(command=command, working_directory=abs_path)
+        result: CommandExecutionResult = await workspace.run_command(command=command, working_directory=abs_path, timeout=timeout)
 
         # Create UI message
         html_content = await MediaEventHelper.stdout_html(result.to_dict())
