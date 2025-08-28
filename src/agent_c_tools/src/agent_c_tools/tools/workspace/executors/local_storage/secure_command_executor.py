@@ -321,6 +321,15 @@ class SecureCommandExecutor:
         if not vres.allowed:
             return self._blocked(command, working_directory, vres.reason or "Validation failed")
 
+        # Override-or-append required flags as per `require_flags`, and normalize verbosity flags. Used by DOTNET validator
+        # In future, we may want to do this prior to validator.validate
+        if hasattr(validator, "adjust_arguments"):
+            try:
+                parts = validator.adjust_arguments(parts, policy)
+            except Exception as e:
+                # (optional) log at debug level; fall back to original parts
+                pass
+
         # Build env
         effective_env = dict(os.environ)
         # Apply policy-provided safe env first

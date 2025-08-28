@@ -1,9 +1,9 @@
 git:
   subcommands:
-    status:  { flags: ["--porcelain", "-s", "-b"], timeout: 20 }
-    log:     { flags: ["--oneline","--graph","--decorate","-n","-p"] }
-    show:    { flags: ["--name-only","--stat","-p"] }
-    diff:    { flags: ["--name-only","--stat","--cached","-p"] }
+    status:  { flags: ["--porcelain", "-s", "-b", "--no-color"], timeout: 20 }
+    log:     { flags: ["--oneline","--graph","--decorate","-n","-p", "--no-color"] }
+    show:    { flags: ["--name-only","--stat","-p", "--no-color"] }
+    diff:    { flags: ["--name-only","--stat","--cached","-p", "--no-color"] }
     add: { "flags": [ ] }
     restore: { "flags": [ "--staged" ] }
     reset: { "flags": [ "--hard", "--soft", "--mixed" ] }
@@ -20,13 +20,22 @@ git:
     GIT_CONFIG_NOSYSTEM: "1"
     GIT_CONFIG_GLOBAL: "/dev/null"
     GIT_ALLOW_PROTOCOL: "https,file"
+  env_overrides:
+    # Token Optimizations
+    GIT_PAGER: "cat"          # disable pager (no escape codes from 'less -R')
+    CLICOLOR: "0"               # disable colorization
+    TERM: "dumb"               # discourages color/TTY tricks
   default_timeout: 30
 
 pytest:
   # PytestCommandValidator uses SAFE_FLAGS; this sets defaults/timeouts or env overrides
+  flags: [ "-q","--maxfail","--disable-warnings","--color" ]
   default_timeout: 120
   env_overrides:
     PYTHONDONTWRITEBYTECODE: "1"
+    PYTEST_ADDOPTS: "-q --color=no --maxfail=1" # quiet + no ANSI + stop early
+    PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"         # avoids third-party plugin noise
+    PYTHONWARNINGS: "ignore"                    # ignore depreciation warnings from test runs
 
 # ---- OS basics ----
 which:
@@ -71,6 +80,8 @@ node_common: &node_common
   default_timeout: 5
   env_overrides:
     NODE_DISABLE_COLORS: "1"
+    NO_COLOR: "1"
+    FORCE_COLOR: "0"
 node:    *node_common
 nodejs:  *node_common
 
@@ -104,6 +115,13 @@ npm:
   deny_subcommands: ["exec","publish","update","audit","ci-info","token","login","adduser","whoami","pack","link","unlink"]
   default_timeout: 120
   env_overrides:
+    NPM_CONFIG_COLOR: "false"       # npm itself: no color
+    NPM_CONFIG_PROGRESS: "false"    # no progress bars
+    NPM_CONFIG_LOGLEVEL: "warn"     # or "error" to be even quieter
+    NO_COLOR: "1"                   # many tools respect this
+    FORCE_COLOR: "0"                # chalk/colorette/etc. honor this
+    NODE_DISABLE_COLORS: "1"        # belt-and-suspenders for some libs
+    CI: "1"                         # many CLIs reduce interactivity/spinners
     NPM_CONFIG_FUND: "false"
     NPM_CONFIG_AUDIT: "false"
     NPM_CONFIG_UPDATE_NOTIFIER: "false"
@@ -120,18 +138,27 @@ dotnet:
     --list-runtimes: { flags: [ ] }
 
     restore:
-      allowed_flags: [ "--locked-mode","--configfile","--source","--verbosity","-v","--nologo" ]
-      require_flags_all: [ "--locked-mode" ]   # enforce locked dependency graph
+      flags: [ "--locked-mode","--configfile","--source","--verbosity","-v","--nologo" ]
+      require_flags:
+        --locked-mode: true
+        --nologo: true
+        --verbosity: [ "quiet","minimal" ]   # enforce locked dependency graph
 
     build:
-      allowed_flags: [ "--configuration","-c","--no-restore","--nologo","--verbosity","-v" ]
+      flags: [ "--configuration","-c","--no-restore","--nologo","--verbosity","-v" ]
       # If you want to *require* separate restore/build phases, uncomment:
-      # require_flags_all: ["--no-restore"]
+      # require_flagsl: ["--no-restore"]
+      require_flags:
+        --nologo: true
+        --verbosity: [ "quiet","minimal" ] # enforce quiet, no-logo builds
 
     test:
-      allowed_flags: [ "--configuration","-c","--no-build","--nologo","--verbosity","-v","--filter" ]
-      # If you want to *require* build-before-test, uncomment:
-      require_flags_all: ["--no-build"]
+      flags: [ "--configuration","-c","--no-build","--nologo","--verbosity","-v","--filter" ]
+      require_flags:
+        --no-build: true
+        --nologo: true
+        --verbosity: [ "minimal","quiet" ]
+        --logger: "console;verbosity=minimal"
 
     deny_subcommands: [ "run","publish","tool","new","pack","clean","nuget","workload" ]
     default_timeout: 300
@@ -140,3 +167,9 @@ dotnet:
       DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "1"
       DOTNET_NOLOGO: "1"
       NUGET_PACKAGES: ".nuget/packages"
+      # Generic no-color hints:
+      CLICOLOR: "0"
+      NO_COLOR: "1"
+      TERM: "dumb"
+      # Stable, English output (helps tokenization & parsing):
+      DOTNET_CLI_UI_LANGUAGE: "en-US"
