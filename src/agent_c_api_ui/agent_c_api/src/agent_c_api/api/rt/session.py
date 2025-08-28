@@ -37,7 +37,7 @@ async def login(login_request: UserLoginRequest, auth_service: "AuthService" = D
     agents = loader.client_catalog
     avatar_list = (await heygen_client.list_avatars()).data
     tools = [ClientToolInfo.from_toolset(tool_class) for tool_class in Toolset.tool_registry]
-    tools.sort(key=lambda x: x['name'].lower())
+    tools.sort(key=lambda x: x.name.lower())
 
     voices = [no_voice_model, heygen_avatar_voice_model] + open_ai_voice_models
     

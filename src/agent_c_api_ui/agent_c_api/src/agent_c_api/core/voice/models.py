@@ -22,7 +22,7 @@ class OpenAIVoiceModel(AvailableVoiceModel):
 
 """List of available OpenAI voice models for TTS"""
 open_ai_voice_models = [OpenAIVoiceModel(voice_id="alloy"), OpenAIVoiceModel(voice_id="ash"),
-                        OpenAIVoiceModel(voice_id="ballad"), OpenAIVoiceModel(voice_id="coral"),
+                        OpenAIVoiceModel(voice_id="coral"),
                         OpenAIVoiceModel(voice_id="echo"), OpenAIVoiceModel(voice_id="fable"),
                         OpenAIVoiceModel(voice_id="nova"), OpenAIVoiceModel(voice_id="onyx"),
                         OpenAIVoiceModel(voice_id="sage"), OpenAIVoiceModel(voice_id="shimmer")]

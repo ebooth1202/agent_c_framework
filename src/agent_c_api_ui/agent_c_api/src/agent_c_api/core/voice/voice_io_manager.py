@@ -94,7 +94,7 @@ class VoiceIOManager:
         self._pipeline = VoicePipeline(workflow=self._workflow, config=config)
         self._pipeline_task = asyncio.create_task(self._run_pipeline())
 
-    def add_audio_delta(self, audio_delta: AudioInputDeltaEvent):
+    def add_audio_delta(self, audio_delta: 'AudioInputDeltaEvent'):
         """
         Add an audio chunk to the input stream for processing.
 
@@ -111,6 +111,7 @@ class VoiceIOManager:
         Args:
             audio_delta (bytes): The incoming audio data chunk.
         """
+        self.logger.debug("Adding audio chunk")
         audio_chunk = np.frombuffer(audio_delta, dtype=np.int16)
         self._input.add_audio(audio_chunk)
 
@@ -128,6 +129,7 @@ class VoiceIOManager:
         result = await self._pipeline.run(self._input)
         async for event in result.stream():
             if event.type == "voice_stream_event_audio":
+                self.logger.debug("Sending audio chunk")
                 await self._bridge.websocket.send_bytes(event.data)
             elif event.type == "voice_stream_event_error":
                 self.logger.error(f"UI session {self._bridge.ui_session_id }, voice pipeline error: {event.data}")
