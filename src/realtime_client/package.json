@@ -1,0 +1,19 @@
+{
+  "name": "@agentc/realtime-client",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "lerna run build",
+    "test": "lerna run test",
+    "clean": "lerna run clean && rimraf node_modules",
+    "dev": "lerna run --parallel dev"
+  },
+  "devDependencies": {
+    "lerna": "^8.2.3",
+    "typescript": "^5.3.0",
+    "rimraf": "^5.0.0",
+    "concurrently": "^8.0.0"
+  }
+}

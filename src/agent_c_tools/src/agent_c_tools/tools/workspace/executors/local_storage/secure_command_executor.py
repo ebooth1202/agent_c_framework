@@ -351,6 +351,10 @@ class SecureCommandExecutor:
 
         # Resolve the executable using the effective PATH/PATHEXT
         resolved = self._resolve_executable(parts[0], effective_env)
+        if parts[0] == 'npm':
+            parts.append('--no-color')
+
+
         if not resolved:
             return self._blocked(command, working_directory, f"Executable not found: {parts[0]}")
         parts[0] = resolved

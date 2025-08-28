@@ -104,6 +104,13 @@ npm:
   deny_subcommands: ["exec","publish","update","audit","ci-info","token","login","adduser","whoami","pack","link","unlink"]
   default_timeout: 120
   env_overrides:
+    NPM_CONFIG_COLOR: "false"       # npm itself: no color
+    NPM_CONFIG_PROGRESS: "false"    # no progress bars
+    NPM_CONFIG_LOGLEVEL: "warn"     # or "error" to be even quieter
+    NO_COLOR: "1"                   # many tools respect this
+    FORCE_COLOR: "0"                # chalk/colorette/etc. honor this
+    NODE_DISABLE_COLORS: "1"        # belt-and-suspenders for some libs
+    CI: "1"                         # many CLIs reduce interactivity/spinners
     NPM_CONFIG_FUND: "false"
     NPM_CONFIG_AUDIT: "false"
     NPM_CONFIG_UPDATE_NOTIFIER: "false"

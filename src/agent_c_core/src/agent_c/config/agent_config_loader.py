@@ -253,7 +253,9 @@ class AgentConfigLoader(ConfigLoader, metaclass=SingletonCacheMeta):
     @property
     def client_catalog(self) -> List[AgentCatalogEntry]:
         """Returns a catalog of all agent configurations as the latest version."""
-        return sorted([config.as_catalog_entry() for config in self.catalog.values()],
+        agents = self.catalog.values()
+        domo_agents  = [agent for agent in agents if 'domo' in (agent.category or [])]
+        return sorted([config.as_catalog_entry() for config in domo_agents],
                       key=lambda x: x.name.lower())
 
     @property
