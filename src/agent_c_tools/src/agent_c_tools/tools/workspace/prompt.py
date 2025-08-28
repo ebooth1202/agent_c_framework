@@ -30,6 +30,7 @@ class WorkspaceSection(PromptSection):
                     "  - Arbitrary shell commands, pipes, redirection, and scripting are NOT supported\n"
                     "  - Examples of allowed commands: 'git status', 'npm test', 'pytest --help'\n"
                     "  - Use platform-agnostic tools when possible (e.g., 'git ls-files \"*.md\"' instead of find/where)\n"
+                    "  - Prefer optimized outputs, e.g., 'git status -s' for concise status or 'git log --oneline -n 50' (and avoid -p unless truly needed)\n"
                     "\n## CRITICAL: Workspace Efficiency Rules:\n"
                     "- Prefer `inspect_code` over reading entire code files in Python, or C# code.\n" 
                     "   - This will give you the signatures and doc strings for code files"
