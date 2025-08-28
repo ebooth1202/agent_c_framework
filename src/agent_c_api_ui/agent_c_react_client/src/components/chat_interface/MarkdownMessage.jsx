@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 
 const MarkdownMessage = ({content, standalone = false}) => {
     const markdownRef = useRef(null);
+
     // Memoize the markdown content to prevent unnecessary re-renders
     const memoizedContent = useMemo(() => {
         if (content === undefined || content === null) {
@@ -42,28 +43,18 @@ const MarkdownMessage = ({content, standalone = false}) => {
     }, [content]);
 
     return (
-        <Card ref={markdownRef} className={cn("prose prose-sm max-w-none prose-p:my-1 prose-headings:mt-2 prose-headings:mb-1 prose-ul:my-1 markdown-container", { 'no-shadow': !standalone })}>
-            <CardContent className="p-0"> {/* Remove default padding to match original design */}
-                {/* Main content */}
-                <div className="markdown-content">
-
+        <Card ref={markdownRef} className={cn("modest-markdown", { 'no-shadow': !standalone })}>
+            <CardContent className="p-0">
+                <div>
                 <ReactMarkdown
                     components={{
-                        h1: ({node, ...props}) => <h1 className="markdown-h1" {...props} />,
-                        h2: ({node, ...props}) => <h2 className="markdown-h2" {...props} />,
-                        h3: ({node, ...props}) => <h3 className="markdown-h3" {...props} />,
-                        h4: ({node, ...props}) => <h4 className="markdown-h4" {...props} />,
-                        // Enhanced list rendering - reduced margins
-                        ul: ({node, ...props}) => (
-                            <ul className="markdown-ul" {...props} />
-                        ),
-                        li: ({node, ...props}) => (
-                            <li className="markdown-li" {...props} />
-                        ),
-                        // Enhanced bold text rendering
-                        strong: ({node, ...props}) => (
-                            <strong className="markdown-strong" {...props} />
-                        ),
+                        h1: ({node, ...props}) => <h1 {...props} />,
+                        h2: ({node, ...props}) => <h2 {...props} />,
+                        h3: ({node, ...props}) => <h3 {...props} />,
+                        h4: ({node, ...props}) => <h4 {...props} />,
+                        ul: ({node, ...props}) => <ul {...props} />,
+                        li: ({node, ...props}) => <li {...props} />,
+                        strong: ({node, ...props}) => <strong {...props} />,
                         // Enhanced code block rendering with copy button
                         code: ({node, inline, className, children, ...props}) => {
                             const match = /language-(\w+)/.exec(className || '');
@@ -71,11 +62,10 @@ const MarkdownMessage = ({content, standalone = false}) => {
                             const codeString = String(children).replace(/\n$/, '');
 
                             // Enhanced inline detection
-                            // If ReactMarkdown says it's inline OR our additional checks suggest it should be inline
                             const shouldBeInline = inline ||
-                                (!language && // No language specified
-                                    codeString.length < 50 && // Short content
-                                    !codeString.includes('\n')); // No newlines
+                                (!language &&
+                                    codeString.length < 50 &&
+                                    !codeString.includes('\n'));
 
                             return !shouldBeInline ? (
                                 // Code block (triple backticks) formatting
@@ -110,22 +100,22 @@ const MarkdownMessage = ({content, standalone = false}) => {
                         },
                         // Enhanced blockquote rendering
                         blockquote: ({node, ...props}) => (
-                            <blockquote className="markdown-blockquote" {...props} />
+                            <blockquote {...props} />
                         ),
                         // Enhance paragraph rendering with reduced spacing
                         p: ({node, ...props}) => (
-                            <p className="markdown-paragraph" {...props} />
+                            <p {...props} />
                         ),
                         // Enhanced horizontal rule using Separator
                         hr: ({node, ...props}) => (
-                            <Separator className="markdown-hr" {...props} />
+                            <Separator {...props} />
                         ),
                     }}
                 >
                     {memoizedContent}
                 </ReactMarkdown>
                 </div>
-                {/* Copy button that appears on hover */}
+                {/* Copy button for markdown content */}
                 <div className="markdown-copy-button-container">
                     <CopyButton
                         content={content}
@@ -141,7 +131,7 @@ const MarkdownMessage = ({content, standalone = false}) => {
 // PropTypes to validate component props
 MarkdownMessage.propTypes = {
     content: PropTypes.string.isRequired,
-    standalone: PropTypes.bool // Whether this component is used standalone (not inside a message bubble)
+    standalone: PropTypes.bool, // Whether this component is used standalone (not inside a message bubble)
 };
 
 export default MarkdownMessage;

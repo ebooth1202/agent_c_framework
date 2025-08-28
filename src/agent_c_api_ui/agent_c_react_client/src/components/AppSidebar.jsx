@@ -16,7 +16,7 @@ import {
 } from './ui/sidebar';
 import { ThemeToggle } from './ui/theme-toggle';
 import { Separator } from './ui/separator';
-import { cn } from '../lib/utils';
+import { cn } from '@/lib/utils';
 import {Icon} from "@/components/ui/icon";
 
 /**
@@ -77,7 +77,7 @@ const AppSidebar = ({ children, defaultOpen = true, collapsible = "icon" }) => {
           <SidebarFooter>
             <Separator className="my-2" />
             <div className="flex flex-col items-center px-2 gap-3">
-              <div className="theme-toggle-container">
+              <div className="theme-toggle-container flex gap-2">
                 <ThemeToggle/>
               </div>
               <div className="footer-logo-container">

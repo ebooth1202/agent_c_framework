@@ -7,10 +7,14 @@ from typing import Any, List, Tuple, Optional, Callable, Awaitable, Union
 from agent_c.toolsets.tool_set import Toolset
 from agent_c.models.context.base import BaseContext
 from agent_c.toolsets.json_schema import json_schema
+from agent_c_tools.helpers.validate_kwargs import validate_required_fields
 from agent_c_tools.tools.workspace.base import BaseWorkspace
+from agent_c_tools.tools.workspace.executors.local_storage.secure_command_executor import CommandExecutionResult
+from agent_c_tools.tools.workspace.executors.local_storage.media_event_helper.media_helper import MediaEventHelper
 from agent_c_tools.tools.workspace.prompt import WorkspaceSection
 from agent_c_tools.tools.workspace.util import ReplaceStringsHelper
 from agent_c_tools.tools.workspace.context import WorkspaceToolsContext
+
 
 class WorkspaceTools(Toolset):
     """
@@ -76,7 +80,8 @@ class WorkspaceTools(Toolset):
 
         return None, workspace, relative_path
 
-    async def _run_cp_or_mv(self, operation: Callable[[object, str, str], Awaitable[str]], *, src_path: str, dest_path: str) -> str:
+    async def _run_cp_or_mv(self, operation: Callable[[object, str, str], Awaitable[str]], *, src_path: str,
+                            dest_path: str) -> str:
         """
         Validate UNC paths, ensure same workspace, then perform the operation.
         """
@@ -99,7 +104,8 @@ class WorkspaceTools(Toolset):
         # Do the copy or move
         return await operation(src_workspace, src_relative_path, dest_relative_path)
 
-    def validate_and_get_workspace_path(self, unc_path: str) -> Tuple[Optional[str], Optional[BaseWorkspace], Optional[str]]:
+    def validate_and_get_workspace_path(self, unc_path: str) -> Tuple[
+        Optional[str], Optional[BaseWorkspace], Optional[str]]:
         """
         Validate a UNC path and return the workspace object and relative path.
 
@@ -209,7 +215,7 @@ class WorkspaceTools(Toolset):
         if error:
             return f'ERROR: {error}'
 
-        tree_content =  await workspace.tree(relative_path, folder_depth, file_depth)
+        tree_content = await workspace.tree(relative_path, folder_depth, file_depth)
         token_count = self._count_tokens(tree_content, tool_context)
         if token_count > max_tokens:
             return (f"ERROR: The content of this tree exceeds max_tokens limit of {max_tokens}. "
@@ -397,7 +403,7 @@ class WorkspaceTools(Toolset):
             error_msg = f'Error checking if path is a directory: {e}'
             self.logger.error(error_msg)
             return json.dumps({'error': error_msg})
-    
+
     @json_schema(
         'Move a file or directory using UNC-style paths',
         {
@@ -567,7 +573,7 @@ class WorkspaceTools(Toolset):
                 file_content = await workspace.read_internal(relative_path, encoding)
             except Exception as e:
                 self.logger.exception(f'Error reading file {unc_path}: {str(e)}', exc_info=True)
-                return  f'Error reading file: {str(e)}'
+                return f'Error reading file: {str(e)}'
 
             # Split the content into lines
             lines = file_content.splitlines()
@@ -595,7 +601,9 @@ class WorkspaceTools(Toolset):
             return subset_content
 
         except Exception as e:
-            self.logger.exception(f'Error reading file lines for {unc_path}, start line {start_line}, end line {end_line},, error message: {str(e)}', exc_info=True)
+            self.logger.exception(
+                f'Error reading file lines for {unc_path}, start line {start_line}, end line {end_line},, error message: {str(e)}',
+                exc_info=True)
             return f'Error reading file lines, for {unc_path}: {str(e)}'
 
     @json_schema(
@@ -623,7 +631,6 @@ class WorkspaceTools(Toolset):
         if error:
             return f'Error: {str(error)}'
 
-
         try:
             file_content = await workspace.read_internal(relative_path)
         except Exception as e:
@@ -637,7 +644,6 @@ class WorkspaceTools(Toolset):
             return f'Error inspecting code {unc_path}: {str(e)}'
 
         return context
-
 
     @json_schema(
         description="Find files matching a glob pattern in a workspace. Equivalent to `glob.glob` in Python",
@@ -682,19 +688,19 @@ class WorkspaceTools(Toolset):
         include_hidden = kwargs.get('include_hidden', False)
         tool_context = kwargs.get("tool_context")
         max_tokens = kwargs.get("max_tokens", 4000)
-        
+
         if not unc_path:
             return f"ERROR: `path` cannot be empty"
-            
+
         workspace_name, workspace, relative_pattern = self._parse_unc_path(unc_path)
-        
+
         if not workspace:
             return f"ERROR:'Invalid workspace: {workspace_name}'"
-            
+
         try:
             # Use the workspace's glob method to find matching files
             matching_files = await workspace.glob(relative_pattern, recursive=recursive, include_hidden=include_hidden)
-            
+
             # Convert the files back to UNC paths
             unc_files = [f'//{workspace_name}/{file}' for file in matching_files]
             response = f"Found {len(unc_files)} files matching '{relative_pattern}':\n" + "\n".join(unc_files)
@@ -707,7 +713,7 @@ class WorkspaceTools(Toolset):
             return response
         except Exception as e:
             self.logger.exception(f"Error during glob operation: {str(e)}", exc_info=True)
-            return  f'Error during glob operation: {str(e)}. This has been logged.'
+            return f'Error during glob operation: {str(e)}. This has been logged.'
 
     @json_schema(
         'Run `grep -n`  over files in workspaces using UNC-style paths',
@@ -770,10 +776,10 @@ class WorkspaceTools(Toolset):
         errors = []
         queue = {}
         results = []
-        
+
         if not pattern:
             return 'Error: `pattern` cannot be empty'
-        
+
         if not unc_paths:
             return 'Error: `paths` cannot be empty'
 
@@ -800,9 +806,10 @@ class WorkspaceTools(Toolset):
                 results.append(result)
 
             except Exception as e:
-                self.logger.exception(f"Error searching files in workspace {workspace.name} with pattern '{pattern}': {str(e)}")
+                self.logger.exception(
+                    f"Error searching files in workspace {workspace.name} with pattern '{pattern}': {str(e)}")
                 results.append(f'Error searching files: {str(e)}')
-        
+
         err_str = ""
         if errors:
             err_str = f"Errors:\n{"\n".join(errors)}\n\n"
@@ -815,7 +822,6 @@ class WorkspaceTools(Toolset):
                     f"You will need to adjust your pattern or raise the token limit.")
 
         return response
-
 
     @json_schema(
         description="Read a from the metadata for a workspace using a UNC style path. Nested paths are supported using slash notation ",
@@ -870,7 +876,7 @@ class WorkspaceTools(Toolset):
             return str(value)
         except Exception as e:
             self.logger.exception(f"Failed to read metadata {key} from workspace {workspace.name}: {str(e)}")
-            return  f"Failed to read metadata {key} error: {str(e)}"
+            return f"Failed to read metadata {key} error: {str(e)}"
 
     @json_schema(
         description="List the keys in a section of the metadata for a workspace using a UNC style path. Nested paths are supported using slash notation ",
@@ -971,5 +977,91 @@ class WorkspaceTools(Toolset):
             return f"Saved metadata to '{key}' in {workspace.name} workspace."
         except Exception as e:
             return f"Failed to write metadata to '{key}' in {workspace.name} workspace: {str(e)}"
+
+    @json_schema(
+        'Execute allowlisted, non-interactive commands (git, npm, pytest, etc.) in workspace. '
+        'No shell features (pipes, redirection, globbing). Returns stdout/stderr/exit_code.'
+        'Prefer platform agnostic tools over OS commands for portability: e.g., git ls-files "*.md" instead of platform-specific find/where.',
+        {
+            'path': {
+                "type": "string",
+                'description': 'UNC workspace path (//workspace/subpath) as working directory. Must start with //',
+                'required': True
+            },
+            'command': {
+                'type': 'string',
+                'description': 'Command and arguments (no shell). Examples: "git status", "npm -v", "dotnet build --no-restore"',
+                'required': True
+            },
+            'max_tokens': {
+                'type': 'integer',
+                'description': 'Max output tokens. Default 1000. Large outputs truncated.',
+                'required': False,
+                'default': 1000
+            }
+        }
+    )
+    async def run_command(self, **kwargs: Any) -> str:
+        """Run an os level command over files in workspaces using an UNC-style path.
+
+        Args:
+            **kwargs: Keyword arguments.
+                path (list): UNC-style paths (//WORKSPACE/path) to grep
+                command (str): Grep pattern to search for
+                max_tokens (integer): max tokens to return to the agent
+
+        Returns:
+            str: output of the command.
+        """
+        unc_path = kwargs.get('path')
+        tool_context = kwargs.get("tool_context", {})
+        max_tokens = kwargs.get("max_tokens", 1000)
+        command = kwargs.get('command', '').strip()
+
+        # validate required fields exist
+        success, message = validate_required_fields(kwargs=kwargs, required_fields=['command', 'path'])
+
+        if not success:
+            return message
+
+        # Ensure workspace path is valid and get relative path
+        # for Joe: this converts the UNC path to a workspace object and the relative path inside that workspace
+        # so \\ALPHA\project\readme.md becomes (Workspace('ALPHA'), 'project/readme.md')
+        err, workspace, rel_path = self.validate_and_get_workspace_path(unc_path)
+
+        if err:
+            return f"ERROR: {err}"
+
+        if not workspace or not hasattr(workspace, 'run_command'):
+            return f"ERROR: Workspace: {workspace.name if workspace else 'None'} does not support OS level run commands"
+
+        try:
+            # Get OS absolute path
+            abs_path = workspace.full_path(rel_path or "", mkdirs=False)  # validated + normalized
+            if not abs_path:
+                return f"Invalid path: {rel_path!r}"
+        except Exception as e:
+            return f"Failed to resolve path: {e}"
+
+        # pass command to underlying workspace run_command method, e.g. LocalWorkspace
+        result: CommandExecutionResult = await workspace.run_command(command=command, working_directory=abs_path)
+
+        # Create UI message
+        html_content = await MediaEventHelper.stdout_html(result.to_dict())
+        await self._raise_render_media(
+            sent_by_class=workspace.__class__.__name__,
+            sent_by_function='execute_command',
+            content_type="text/html",
+            content=html_content,
+            tool_context=tool_context
+        )
+
+        # Trim response to max tokens back to LLM in a smart way
+        counter = tool_context.get("agent_runtime").count_tokens
+        if counter is None:
+            return result.to_yaml()
+        else:
+            return result.to_yaml_capped(max_tokens, counter)
+
 
 Toolset.register(WorkspaceTools)

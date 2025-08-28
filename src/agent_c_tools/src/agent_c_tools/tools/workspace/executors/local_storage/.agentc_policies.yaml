@@ -1,0 +1,142 @@
+git:
+  subcommands:
+    status:  { flags: ["--porcelain", "-s", "-b"], timeout: 20 }
+    log:     { flags: ["--oneline","--graph","--decorate","-n","-p"] }
+    show:    { flags: ["--name-only","--stat","-p"] }
+    diff:    { flags: ["--name-only","--stat","--cached","-p"] }
+    add: { "flags": [ ] }
+    restore: { "flags": [ "--staged" ] }
+    reset: { "flags": [ "--hard", "--soft", "--mixed" ] }
+    checkout: { "flags": [ "-b", "--" ] }
+    switch: { "flags": [ "-c", "-" ] }  # not git -c; this is switch -c (create)
+    branch: { "flags": [ "-a", "-vv", "-d", "-D" ] }
+    stash: { "flags": [ "list", "push", "pop", "apply", "drop", "clear" ] }
+    commit: { "flags": [ "-m", "--amend", "--no-verify" ] }
+    rev-parse: { "flags": [ "--abbrev-ref", "--short", "HEAD", "--verify" ] }
+    ls-files: { "flags": [ "--exclude-standard", "--others", "--cached" ] }
+  deny_global_flags: ["-c","--exec-path","--help","-P"]
+  safe_env:
+    GIT_TERMINAL_PROMPT: "0"
+    GIT_CONFIG_NOSYSTEM: "1"
+    GIT_CONFIG_GLOBAL: "/dev/null"
+    GIT_ALLOW_PROTOCOL: "https,file"
+  default_timeout: 30
+
+pytest:
+  # PytestCommandValidator uses SAFE_FLAGS; this sets defaults/timeouts or env overrides
+  default_timeout: 120
+  env_overrides:
+    PYTHONDONTWRITEBYTECODE: "1"
+
+# ---- OS basics ----
+which:
+  validator: os_basic
+  flags: ["-a","--version"]
+  default_timeout: 5
+
+where:               # Windows equivalent of 'which'
+  validator: os_basic
+  flags: ["/r"]      # (optional) supports scanning a dir; consider omitting for safety
+  default_timeout: 5
+
+whoami:
+  validator: os_basic
+  flags: []          # (Windows 'whoami' has flags like /USER; add if needed)
+  default_timeout: 5
+
+echo:
+  validator: os_basic
+  flags: ["--help","-n","-e"]   # keep minimal; shell redirection is ignored under shell=False
+  default_timeout: 5
+
+# Windows uses find for inside of files, but *nix find is for filesystem searching.  Disabling for now.
+#find:
+#  validator: os_basic
+#  flags: ["-name","-maxdepth","-type","-mtime","-not","-path","-print"]
+#  deny_tokens: ["-exec","-ok","-delete","-fdelete","-execdir","-prune"]
+#  default_timeout: 10
+
+# On Windows you may prefer 'findstr' (text search) instead of 'find'
+#findstr:
+#  validator: os_basic
+#  flags: ["/I","/N","/R","/S"]  # be careful with recursive /S
+#  default_timeout: 10
+
+# ---- Language-specific ----
+
+node_common: &node_common
+  validator: node
+  flags: ["-v","--version","--help"]
+  deny_global_flags: ["-e","--eval","-p","--print"]
+  default_timeout: 5
+  env_overrides:
+    NODE_DISABLE_COLORS: "1"
+node:    *node_common
+nodejs:  *node_common
+
+npm:
+  validator: npm
+  root_flags: ["-v","--version","--help"]
+  subcommands:
+    view: { flags: ["--json"] }
+    list: { flags: ["--depth","--json"] }
+    ping: { flags: [] }
+    config: { flags: ["get"] }
+    # --- Scripts (ALLOWLIST) ---
+    run:
+      # Only these script names are allowed, and no extra arguments are permitted.
+      allowed_scripts: [ "build","test","lint","format","typecheck" ]
+      deny_args: true
+      # --- Safe, lockfile-based install (DISABLED by default) ---
+      # Flip 'enabled' to true if/when you want to allow dependency install.
+      ci:
+        enabled: true                # ← allow 'npm ci' (safe)  | set to false to disallow
+        require_no_packages: true    # disallow 'npm ci react' etc.
+        require_flags_all: [ "--ignore-scripts" ]
+        allowed_flags: [ "--ignore-scripts","--no-audit","--no-fund","--prefer-offline","--cache" ]
+
+      install:
+        enabled: false               # ← keep false for now; set true only if necessary
+        require_no_packages: true    # only lockfile-based; no 'npm install <pkg>'
+        require_flags_all: [ "--ignore-scripts" ]
+        allowed_flags: [ "--ignore-scripts","--no-audit","--no-fund","--prefer-offline","--cache" ]
+
+  deny_subcommands: ["exec","publish","update","audit","ci-info","token","login","adduser","whoami","pack","link","unlink"]
+  default_timeout: 120
+  env_overrides:
+    NPM_CONFIG_FUND: "false"
+    NPM_CONFIG_AUDIT: "false"
+    NPM_CONFIG_UPDATE_NOTIFIER: "false"
+    NPM_CONFIG_PREFIX: ".npm-prefix"
+    NPM_CONFIG_CACHE: ".npm-cache"
+    # ensure Windows can resolve .cmd if the parent env omitted it
+    PATHEXT: ".COM;.EXE;.BAT;.CMD"
+
+dotnet:
+  validator: dotnet
+  subcommands:
+    --info: { flags: [ ] }
+    --list-sdks: { flags: [ ] }
+    --list-runtimes: { flags: [ ] }
+
+    restore:
+      allowed_flags: [ "--locked-mode","--configfile","--source","--verbosity","-v","--nologo" ]
+      require_flags_all: [ "--locked-mode" ]   # enforce locked dependency graph
+
+    build:
+      allowed_flags: [ "--configuration","-c","--no-restore","--nologo","--verbosity","-v" ]
+      # If you want to *require* separate restore/build phases, uncomment:
+      # require_flags_all: ["--no-restore"]
+
+    test:
+      allowed_flags: [ "--configuration","-c","--no-build","--nologo","--verbosity","-v","--filter" ]
+      # If you want to *require* build-before-test, uncomment:
+      require_flags_all: ["--no-build"]
+
+    deny_subcommands: [ "run","publish","tool","new","pack","clean","nuget","workload" ]
+    default_timeout: 300
+    env_overrides:
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "1"
+      DOTNET_NOLOGO: "1"
+      NUGET_PACKAGES: ".nuget/packages"
