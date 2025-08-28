@@ -1,4 +1,6 @@
 # Byte-compiled / optimized / DLL files
+agent_c_config/saved_sessions
+agent_c_config/users
 centric_tools
 __pycache__/
 *.py[cod]
