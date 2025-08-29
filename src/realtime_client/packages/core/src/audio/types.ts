@@ -191,3 +191,60 @@ export const DEFAULT_AUDIO_CONFIG: Required<AudioProcessorConfig> = {
   workletPath: '/worklets/audio-processor.worklet.js',
   debug: false
 };
+
+/**
+ * AudioService state types
+ */
+export type AudioServiceState = 
+  | 'idle' 
+  | 'initializing' 
+  | 'ready' 
+  | 'recording' 
+  | 'failed' 
+  | 'permission-denied';
+
+/**
+ * AudioService status interface
+ */
+export interface AudioServiceStatus {
+  /** Current state of the service */
+  state: AudioServiceState;
+  
+  /** Whether the service is currently recording */
+  isRecording: boolean;
+  
+  /** Current audio level (0.0 to 1.0) */
+  audioLevel: number;
+  
+  /** Total number of frames processed */
+  frameCount: number;
+  
+  /** Error message if in error state */
+  error?: string;
+  
+  /** Device information */
+  deviceId?: string;
+  
+  /** Sample rate in Hz */
+  sampleRate: number;
+  
+  /** Number of audio channels */
+  channelCount: number;
+}
+
+/**
+ * AudioService event types
+ */
+export interface AudioServiceEvents {
+  /** Emitted when a new audio chunk is ready */
+  audioChunk: (chunk: AudioChunkData) => void;
+  
+  /** Emitted when the service status changes */
+  statusChange: (status: AudioServiceStatus) => void;
+  
+  /** Emitted when an error occurs */
+  error: (error: Error) => void;
+  
+  /** Emitted when audio level changes */
+  levelChange: (level: number) => void;
+}

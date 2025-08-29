@@ -2,8 +2,9 @@
  * Audio module exports for the Agent C Realtime Client SDK
  */
 
-// Export the main AudioProcessor class
+// Export the main audio classes
 export { AudioProcessor } from './AudioProcessor';
+export { AudioService } from './AudioService';
 
 // Export all types and interfaces
 export {
@@ -11,6 +12,11 @@ export {
   AudioChunkData,
   AudioProcessorConfig,
   AudioProcessorStatus,
+  
+  // Service types
+  AudioServiceState,
+  AudioServiceStatus,
+  AudioServiceEvents,
   
   // Worklet message types
   WorkletMessage,
