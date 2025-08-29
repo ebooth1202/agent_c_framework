@@ -54,6 +54,11 @@ graph LR
 | Token Management | Backend handles refresh | SDK auto-refresh |
 | Security | Full isolation | Convenient but insecure |
 
+📘 **Complete Initialization Guide**  
+The login response contains much more than just tokens - it includes agents, voices, avatars, toolsets, and user information. For a comprehensive guide on using ALL the login payload data, see our [Complete Initialization Example](./examples/complete-initialization.md).
+
+**Important:** The WebSocket URL is NOT included in the login response and must be constructed from your API host configuration.
+
 ## Installation
 
 Choose your package manager and install the appropriate packages:

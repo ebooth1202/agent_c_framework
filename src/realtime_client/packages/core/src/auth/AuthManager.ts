@@ -62,6 +62,7 @@ export class AuthManager extends EventEmitter<AuthManagerEvents> {
       tokens: null,
       user: null,
       uiSessionId: null,
+      wsUrl: null,
       isAuthenticating: false,
       isRefreshing: false,
       error: null,
@@ -111,6 +112,23 @@ export class AuthManager extends EventEmitter<AuthManagerEvents> {
    */
   getUiSessionId(): string | null {
     return this.state.uiSessionId;
+  }
+
+  /**
+   * Get WebSocket URL for realtime connection
+   * Constructs the URL from the base API URL
+   */
+  getWebSocketUrl(): string | null {
+    if (!this.config.apiUrl) {
+      return null;
+    }
+    
+    // Convert HTTP(S) URL to WebSocket URL
+    const url = new URL(this.config.apiUrl);
+    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+    url.pathname = '/rt/ws';
+    
+    return url.toString();
   }
 
   /**
@@ -339,6 +357,7 @@ export class AuthManager extends EventEmitter<AuthManagerEvents> {
       tokens: null,
       user: null,
       uiSessionId: null,
+      wsUrl: null,
       isAuthenticating: false,
       isRefreshing: false,
       error: null,
@@ -346,6 +365,63 @@ export class AuthManager extends EventEmitter<AuthManagerEvents> {
 
     // Emit logout event
     this.emit('auth:logout', undefined);
+  }
+
+  /**
+   * Initialize AuthManager from a complete login payload
+   * Useful for production apps where the backend provides the full payload
+   * 
+   * @param payload - Complete login response from the backend
+   * @param wsUrl - Optional WebSocket URL for the realtime connection
+   */
+  async initializeFromPayload(payload: LoginResponse, wsUrl?: string): Promise<void> {
+    try {
+      // Parse JWT to get expiry
+      const expiresAt = this.parseJWTExpiry(payload.agent_c_token);
+      
+      // Create token pair
+      const tokens: TokenPair = {
+        agentCToken: payload.agent_c_token,
+        heygenToken: payload.heygen_token,
+        expiresAt,
+      };
+
+      // Store login data (contains agents, avatars, voices, toolsets)
+      this.loginData = payload;
+
+      // Store tokens
+      await this.config.storage.setTokens(tokens);
+
+      // Update state with all the data from the payload
+      this.updateState({
+        isAuthenticated: true,
+        tokens,
+        user: payload.user,
+        uiSessionId: payload.ui_session_id,
+        wsUrl: wsUrl || null,  // Store the WebSocket URL if provided
+        isAuthenticating: false,
+        isRefreshing: false,
+        error: null,
+      });
+
+      // Schedule refresh if enabled
+      if (this.config.autoRefresh) {
+        this.scheduleTokenRefresh(tokens);
+      }
+
+      // Emit login event with the payload
+      this.emit('auth:login', payload);
+      
+    } catch (error) {
+      const authError = error instanceof Error ? error : new Error('Failed to initialize from payload');
+      this.updateState({
+        isAuthenticating: false,
+        error: authError,
+      });
+      this.emit('auth:error', authError);
+      this.config.onAuthError?.(authError);
+      throw authError;
+    }
   }
 
   /**

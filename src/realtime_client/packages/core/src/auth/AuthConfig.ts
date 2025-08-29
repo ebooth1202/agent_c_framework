@@ -132,6 +132,11 @@ export interface AuthState {
   uiSessionId: string | null;
 
   /**
+   * WebSocket URL for realtime connection
+   */
+  wsUrl: string | null;
+
+  /**
    * Whether authentication is in progress
    */
   isAuthenticating: boolean;
