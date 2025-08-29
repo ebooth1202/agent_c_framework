@@ -248,3 +248,43 @@ export interface AudioServiceEvents {
   /** Emitted when audio level changes */
   levelChange: (level: number) => void;
 }
+
+/**
+ * Configuration for the AudioAgentCBridge
+ */
+export interface AudioAgentCBridgeConfig {
+  /** Whether to respect turn state from TurnManager (default: true) */
+  respectTurnState?: boolean;
+  
+  /** Enable debug logging for audio chunks (default: false) */
+  logAudioChunks?: boolean;
+  
+  /** Enable general debug logging (default: false) */
+  debug?: boolean;
+}
+
+/**
+ * Status of the AudioAgentCBridge
+ */
+export interface AudioAgentCBridgeStatus {
+  /** Whether the bridge is currently streaming audio to the client */
+  isStreaming: boolean;
+  
+  /** Whether a RealtimeClient is connected */
+  isConnected: boolean;
+  
+  /** Whether the user currently has the turn to send input */
+  userHasTurn: boolean;
+  
+  /** Total number of chunks streamed to the server */
+  chunksStreamed: number;
+  
+  /** Total number of chunks suppressed due to turn state */
+  chunksSuppressed: number;
+  
+  /** Whether turn state is being respected */
+  respectingTurnState: boolean;
+  
+  /** Current client connection state */
+  clientState?: 'connected' | 'disconnected' | 'connecting';
+}

@@ -5,6 +5,7 @@
 // Export the main audio classes
 export { AudioProcessor } from './AudioProcessor';
 export { AudioService } from './AudioService';
+export { AudioAgentCBridge } from './AudioAgentCBridge';
 
 // Export all types and interfaces
 export {
@@ -17,6 +18,10 @@ export {
   AudioServiceState,
   AudioServiceStatus,
   AudioServiceEvents,
+  
+  // Bridge types
+  AudioAgentCBridgeConfig,
+  AudioAgentCBridgeStatus,
   
   // Worklet message types
   WorkletMessage,
