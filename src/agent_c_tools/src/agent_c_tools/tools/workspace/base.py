@@ -329,7 +329,7 @@ class BaseWorkspace:
 
         return self._metadata
 
-    async def run_command(self, command: str, working_directory: Optional[str] = None):
+    async def run_command(self, command: str, working_directory: Optional[str] = None, timeout: Optional[int] = None):
         """
         Override in subclasses that support commands.
         Having this on the base class satisfies static type checkers/IDEs.

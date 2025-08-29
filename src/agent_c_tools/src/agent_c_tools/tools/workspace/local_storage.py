@@ -16,8 +16,8 @@ from agent_c.util.token_counter import TokenCounter
 from agent_c_tools.tools.workspace.base import BaseWorkspace
 from agent_c_tools.tools.workspace.util.trees.renderers.minimal import MinimalTreeRenderer
 from agent_c_tools.tools.workspace.util.trees.builders.local_file_system import LocalFileSystemTreeBuilder
-from agent_c_tools.tools.workspace.executors.local_storage.secure_command_executor import SecureCommandExecutor, CommandExecutionResult
-from agent_c_tools.tools.workspace.executors.local_storage.yaml_policy_provider import YamlPolicyProvider
+from .executors.local_storage.secure_command_executor import SecureCommandExecutor, CommandExecutionResult
+from .executors.local_storage.yaml_policy_provider import YamlPolicyProvider
 
 # Type variable for function return types
 T = TypeVar('T')
@@ -593,7 +593,7 @@ class LocalStorageWorkspace(BaseWorkspace):
         except Exception as e:
             return f"Exception occurred: {str(e)}"
 
-    async def run_command(self, command: str, working_directory: Optional[str] = None) -> CommandExecutionResult:
+    async def run_command(self, command: str, working_directory: Optional[str] = None, timeout: Optional[int]=None) -> CommandExecutionResult:
         """Run a shell command in the workspace with secure execution."""
         if working_directory:
             valid, error_msg, full_path = self._validate_path(working_directory, "working directory")
@@ -608,5 +608,7 @@ class LocalStorageWorkspace(BaseWorkspace):
                 )
             working_directory = str(full_path)
 
-        return await self.executor.execute_command(command=command, working_directory=working_directory, override_env=None, timeout=None)
+        # currently only dynamic toolset can pass in a timeout
+        # currently override_env is not being used
+        return await self.executor.execute_command(command=command, working_directory=working_directory, override_env=None, timeout=timeout)
 from agent_c_tools.tools.workspace.local_project import LocalProjectWorkspace  # noqa

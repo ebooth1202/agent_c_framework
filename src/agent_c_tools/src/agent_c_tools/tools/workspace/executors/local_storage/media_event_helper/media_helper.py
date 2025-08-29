@@ -50,7 +50,7 @@ class MediaEventHelper:
         html_content = f"""
         <div style="padding: 16px; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; border: 1px solid #e2e8f0; border-radius: 8px; background-color: #f8fafc;">
           <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-            <strong style="color:#334155;">git output</strong>
+            <strong style="color:#334155;">Command Indicators</strong>
             {badge(status or 'unknown')}
             {badge(f"rc={return_code}") if return_code is not None else ""}
             {badge(f"{duration_ms} ms")} 
