@@ -11,12 +11,15 @@ import {
     RealtimeClientConfig,
     ConnectionState,
     ReconnectionConfig,
+    AudioConfig,
     mergeConfig
 } from './ClientConfig';
 import { WebSocketManager } from './WebSocketManager';
 import { ReconnectionManager } from './ReconnectionManager';
 import { AuthManager, TokenPair } from '../auth';
 import { TurnManager } from '../session';
+import { AudioService, AudioAgentCBridge, AudioOutputService } from '../audio';
+import type { AudioStatus } from '../audio/types';
 
 /**
  * Main client class for connecting to Agent C Realtime API
@@ -30,6 +33,12 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
     private sessionId: string | null = null;
     private authManager: AuthManager | null = null;
     private turnManager: TurnManager | null = null;
+    
+    // Audio system components
+    private audioService: AudioService | null = null;
+    private audioBridge: AudioAgentCBridge | null = null;
+    private audioOutputService: AudioOutputService | null = null;
+    private audioConfig: AudioConfig | null = null;
 
     constructor(config: RealtimeClientConfig) {
         super();
@@ -78,6 +87,66 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
         // Initialize turn manager if enabled
         if (this.config.enableTurnManager) {
             this.turnManager = new TurnManager(this);
+        }
+        
+        // Initialize audio system if enabled
+        if (this.config.enableAudio && this.config.audioConfig) {
+            this.audioConfig = this.config.audioConfig;
+            this.initializeAudioSystem();
+        }
+    }
+    
+    /**
+     * Initialize the audio system components
+     */
+    private initializeAudioSystem(): void {
+        if (!this.audioConfig) return;
+        
+        try {
+            // Get singleton instances
+            this.audioService = AudioService.getInstance();
+            this.audioBridge = AudioAgentCBridge.getInstance();
+            this.audioOutputService = AudioOutputService.getInstance();
+            
+            // Configure audio bridge with this client
+            this.audioBridge.setClient(this);
+            
+            // The turn manager integration is handled by the AudioAgentCBridge
+            // which checks turn state before streaming if respectTurnState is enabled
+            
+            // Set initial volume
+            if (this.audioConfig.initialVolume !== undefined) {
+                this.audioOutputService.setVolume(this.audioConfig.initialVolume);
+            }
+            
+            // Subscribe to audio output events for playback
+            this.on('audio:output', (audioData: ArrayBuffer) => {
+                if (this.audioConfig?.enableOutput && this.audioOutputService) {
+                    this.audioOutputService.playAudioChunk(audioData);
+                }
+            });
+            
+            // Subscribe to voice model changes
+            this.on('agent_voice_changed', (event: any) => {
+                if (this.audioOutputService && event.voice_id) {
+                    // Update the voice model in the output service
+                    // The output service will adapt its behavior based on the voice
+                    if (this.config.debug) {
+                        console.debug('Voice model changed to:', event.voice_id);
+                    }
+                }
+            });
+            
+            if (this.config.debug) {
+                console.log('Audio system initialized');
+            }
+        } catch (error) {
+            console.error('Failed to initialize audio system:', error);
+            this.emit('error', {
+                type: 'error',
+                message: 'Failed to initialize audio system',
+                source: 'audio_init'
+            });
         }
     }
 
@@ -129,6 +198,12 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
                             this.setConnectionState(ConnectionState.CONNECTED);
                             this.reconnectionManager.reset();
                             this.emit('connected', undefined);
+                            
+                            // Reconnect audio bridge if audio is enabled
+                            if (this.audioBridge && this.audioConfig?.enableInput) {
+                                this.audioBridge.setClient(this);
+                            }
+                            
                             resolve();
                         },
                         onClose: (event) => {
@@ -173,6 +248,21 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
      */
     disconnect(): void {
         this.reconnectionManager.stopReconnection();
+        
+        // Stop audio streaming if active
+        if (this.audioBridge?.getStatus().isStreaming) {
+            this.audioBridge.stopStreaming();
+        }
+        
+        // Stop audio recording if active
+        if (this.audioService?.getStatus().isRecording) {
+            this.audioService.stopRecording();
+        }
+        
+        // Clear audio output buffers
+        if (this.audioOutputService) {
+            this.audioOutputService.clearBuffers();
+        }
 
         if (this.wsManager) {
             this.wsManager.disconnect(1000, 'Client disconnect');
@@ -345,6 +435,97 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
     getTurnManager(): TurnManager | null {
         return this.turnManager;
     }
+    
+    // Audio control methods
+    
+    /**
+     * Start audio recording from microphone
+     */
+    async startAudioRecording(): Promise<void> {
+        if (!this.audioService) {
+            throw new Error('Audio system not initialized');
+        }
+        if (!this.audioConfig?.enableInput) {
+            throw new Error('Audio input is disabled');
+        }
+        await this.audioService.startRecording();
+    }
+    
+    /**
+     * Stop audio recording
+     */
+    stopAudioRecording(): void {
+        if (!this.audioService) {
+            throw new Error('Audio system not initialized');
+        }
+        this.audioService.stopRecording();
+    }
+    
+    /**
+     * Start streaming audio to server
+     */
+    startAudioStreaming(): void {
+        if (!this.audioBridge) {
+            throw new Error('Audio system not initialized');
+        }
+        if (!this.isConnected()) {
+            throw new Error('Not connected to server');
+        }
+        this.audioBridge.startStreaming();
+    }
+    
+    /**
+     * Stop streaming audio to server
+     */
+    stopAudioStreaming(): void {
+        if (!this.audioBridge) {
+            throw new Error('Audio system not initialized');
+        }
+        this.audioBridge.stopStreaming();
+    }
+    
+    /**
+     * Set audio playback volume
+     * @param volume Volume level (0-1)
+     */
+    setAudioVolume(volume: number): void {
+        if (!this.audioOutputService) {
+            throw new Error('Audio output not initialized');
+        }
+        if (volume < 0 || volume > 1) {
+            throw new Error('Volume must be between 0 and 1');
+        }
+        this.audioOutputService.setVolume(volume);
+    }
+    
+    /**
+     * Get combined audio system status
+     */
+    getAudioStatus(): AudioStatus {
+        const inputStatus = this.audioService?.getStatus();
+        const bridgeStatus = this.audioBridge?.getStatus();
+        const outputStatus = this.audioOutputService?.getStatus();
+        
+        return {
+            // Input status
+            isRecording: inputStatus?.isRecording || false,
+            isStreaming: bridgeStatus?.isStreaming || false,
+            isProcessing: inputStatus?.state === 'recording' || false,
+            hasPermission: inputStatus?.state !== 'permission-denied' && inputStatus?.state !== 'idle',
+            currentLevel: inputStatus?.audioLevel || 0,
+            averageLevel: inputStatus?.audioLevel || 0,  // Using current level as average for now
+            
+            // Output status
+            isPlaying: outputStatus?.isPlaying || false,
+            bufferSize: outputStatus?.queueLength || 0,
+            volume: outputStatus?.volume || 1,
+            
+            // System status
+            isAudioEnabled: !!this.audioService,
+            isInputEnabled: !!this.audioConfig?.enableInput,
+            isOutputEnabled: !!this.audioConfig?.enableOutput
+        };
+    }
 
     /**
      * Set the auth manager instance
@@ -506,14 +687,39 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
      * Clean up resources
      */
     destroy(): void {
+        // Stop and clean up audio first
+        if (this.audioBridge?.getStatus().isStreaming) {
+            this.audioBridge.stopStreaming();
+        }
+        
+        if (this.audioService?.getStatus().isRecording) {
+            this.audioService.stopRecording();
+        }
+        
+        // Note: We don't destroy the singletons, just clean up our references
+        this.audioService = null;
+        
+        if (this.audioBridge) {
+            this.audioBridge.setClient(null);
+            this.audioBridge = null;
+        }
+        
+        if (this.audioOutputService) {
+            this.audioOutputService.clearBuffers();
+            this.audioOutputService = null;
+        }
+        
         this.disconnect();
+        
         if (this.authManager) {
             this.authManager.removeAllListeners();
         }
+        
         if (this.turnManager) {
             this.turnManager.destroy();
             this.turnManager = null;
         }
+        
         this.removeAllListeners();
     }
 }

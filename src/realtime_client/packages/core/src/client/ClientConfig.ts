@@ -37,6 +37,32 @@ export interface ReconnectionConfig {
 }
 
 /**
+ * Configuration for audio functionality
+ */
+export interface AudioConfig {
+  /** Enable audio input (microphone) */
+  enableInput?: boolean;
+  /** Enable audio output (speakers) */
+  enableOutput?: boolean;
+  /** Respect turn state for audio input */
+  respectTurnState?: boolean;
+  /** Log audio chunks for debugging */
+  logAudioChunks?: boolean;
+  /** Audio sample rate (default: 24000) */
+  sampleRate?: number;
+  /** Audio chunk size in samples (default: 4800) */
+  chunkSize?: number;
+  /** Initial playback volume (0-1, default: 1.0) */
+  initialVolume?: number;
+  /** Enable automatic gain control */
+  autoGainControl?: boolean;
+  /** Enable echo cancellation */
+  echoCancellation?: boolean;
+  /** Enable noise suppression */
+  noiseSuppression?: boolean;
+}
+
+/**
  * Configuration for the Realtime Client
  */
 export interface RealtimeClientConfig {
@@ -84,6 +110,12 @@ export interface RealtimeClientConfig {
   
   /** Enable turn management (default: true) */
   enableTurnManager?: boolean;
+  
+  /** Enable audio functionality */
+  enableAudio?: boolean;
+  
+  /** Audio configuration */
+  audioConfig?: AudioConfig;
 }
 
 /**
@@ -99,6 +131,22 @@ export const defaultReconnectionConfig: ReconnectionConfig = {
 };
 
 /**
+ * Default audio configuration
+ */
+export const defaultAudioConfig: AudioConfig = {
+  enableInput: true,
+  enableOutput: true,
+  respectTurnState: true,
+  logAudioChunks: false,
+  sampleRate: 24000,
+  chunkSize: 4800,
+  initialVolume: 1.0,
+  autoGainControl: true,
+  echoCancellation: true,
+  noiseSuppression: true
+};
+
+/**
  * Default client configuration
  */
 export const defaultConfig: Partial<RealtimeClientConfig> = {
@@ -110,7 +158,9 @@ export const defaultConfig: Partial<RealtimeClientConfig> = {
   maxMessageSize: 10 * 1024 * 1024, // 10MB
   debug: false,
   binaryType: 'arraybuffer',
-  enableTurnManager: true     // Enable turn management by default
+  enableTurnManager: true,    // Enable turn management by default
+  enableAudio: false,         // Audio disabled by default (requires user opt-in)
+  audioConfig: defaultAudioConfig
 };
 
 /**
@@ -131,6 +181,14 @@ export function mergeConfig(
     ...defaultReconnectionConfig,
     ...(userConfig.reconnection || {})
   };
+  
+  // Merge audio config if audio is enabled
+  if (config.enableAudio) {
+    config.audioConfig = {
+      ...defaultAudioConfig,
+      ...(userConfig.audioConfig || {})
+    };
+  }
 
   // Ensure required fields are present
   if (!config.apiUrl) {

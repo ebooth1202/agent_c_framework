@@ -340,3 +340,47 @@ export interface AudioOutputStatus {
   /** Whether playback is being skipped due to voice mode */
   skipPlayback: boolean;
 }
+
+/**
+ * Combined audio status for the entire audio system
+ */
+export interface AudioStatus {
+  // Input status
+  /** Whether the service is currently recording */
+  isRecording: boolean;
+  
+  /** Whether the service is currently streaming to server */
+  isStreaming: boolean;
+  
+  /** Whether audio is being processed */
+  isProcessing: boolean;
+  
+  /** Whether microphone permission has been granted */
+  hasPermission: boolean;
+  
+  /** Current audio input level (0.0 to 1.0) */
+  currentLevel: number;
+  
+  /** Average audio input level (0.0 to 1.0) */
+  averageLevel: number;
+  
+  // Output status
+  /** Whether audio is currently playing */
+  isPlaying: boolean;
+  
+  /** Current size of the audio output buffer */
+  bufferSize: number;
+  
+  /** Current volume level (0.0 to 1.0) */
+  volume: number;
+  
+  // System status
+  /** Whether the audio system is enabled */
+  isAudioEnabled: boolean;
+  
+  /** Whether audio input is enabled */
+  isInputEnabled: boolean;
+  
+  /** Whether audio output is enabled */
+  isOutputEnabled: boolean;
+}
