@@ -1,5 +1,6 @@
 import asyncio
 import json
+import re
 import shutil
 from datetime import datetime
 import time
@@ -10,14 +11,16 @@ from typing import Dict, Any, List, Optional, Mapping, Tuple, Callable, Protocol
 from dataclasses import dataclass
 
 from agent_c.util.logging_utils import LoggingManager
-from agent_c_tools.tools.workspace.executors.local_storage.validators.base_validator import BasicCommandValidator, CommandValidator, ValidationResult
-from agent_c_tools.tools.workspace.executors.local_storage.validators.dotnet_validator import DotnetCommandValidator
-from agent_c_tools.tools.workspace.executors.local_storage.validators.git_validator import GitCommandValidator
-from agent_c_tools.tools.workspace.executors.local_storage.validators.node_validator import NodeCommandValidator
-from agent_c_tools.tools.workspace.executors.local_storage.validators.npm_validator import NpmCommandValidator
-from agent_c_tools.tools.workspace.executors.local_storage.validators.os_basic_validator import OSBasicValidator
-from agent_c_tools.tools.workspace.executors.local_storage.validators.pytest_validator import PytestCommandValidator
+from .validators.base_validator import BasicCommandValidator, CommandValidator, ValidationResult
+from .validators.dotnet_validator import DotnetCommandValidator
+from .validators.git_validator import GitCommandValidator
+from .validators.node_validator import NodeCommandValidator
+from .validators.npm_validator import NpmCommandValidator
+from .validators.os_basic_validator import OSBasicValidator
+from .validators.pytest_validator import PytestCommandValidator
 
+# ANSI stripping Regex
+ANSI_RE = re.compile(r'\x1b\[[0-9;?]*[ -/]*[@-~]')
 
 @dataclass
 class CommandExecutionResult:
@@ -186,6 +189,7 @@ class SecureCommandExecutor:
     Handles Windows and Unix-like systems with appropriate platform-specific security measures.
     """
 
+
     def __init__(self, show_windows: bool = False,
                  log_output: bool = True,
                  default_timeout: int = 30,
@@ -225,6 +229,14 @@ class SecureCommandExecutor:
             self.log_output = log_output
             logging_manager = LoggingManager(self.__class__.__name__)
             self.logger = logging_manager.get_logger()
+
+    @staticmethod
+    def has_ansi(s: str) -> bool:
+        return bool(ANSI_RE.search(s))
+
+    @staticmethod
+    def strip_ansi(s: str) -> str:
+        return ANSI_RE.sub('', s)
 
     @staticmethod
     def _resolve_base(parts: List[str]) -> str:
@@ -321,6 +333,15 @@ class SecureCommandExecutor:
         if not vres.allowed:
             return self._blocked(command, working_directory, vres.reason or "Validation failed")
 
+        # Override-or-append required flags as per `require_flags`, and normalize verbosity flags. Used by DOTNET validator
+        # In future, we may want to do this prior to validator.validate
+        if hasattr(validator, "adjust_arguments"):
+            try:
+                parts = validator.adjust_arguments(parts, policy)
+            except Exception as e:
+                # (optional) log at debug level; fall back to original parts
+                pass
+
         # Build env
         effective_env = dict(os.environ)
         # Apply policy-provided safe env first
@@ -360,14 +381,13 @@ class SecureCommandExecutor:
             stdout, stderr, rc, truncated_out, truncated_err = await self._run_subprocess_async(
                 parts, cwd=working_directory, env=effective_env, timeout=effective_timeout
             )
-
             duration = int((time.time() - start_ms) * 1000)
             status = "success" if rc == 0 else "error"
             result = CommandExecutionResult(
                 status=status,
                 return_code=rc,
-                stdout=stdout,
-                stderr=stderr,
+                stdout=self.strip_ansi(stdout),
+                stderr=self.strip_ansi(stderr),
                 command=command,
                 working_directory=working_directory,
                 error_message=None if rc == 0 else f"Return code {rc}",

@@ -979,29 +979,36 @@ class WorkspaceTools(Toolset):
         except Exception as e:
             return f"Failed to write metadata to '{key}' in {workspace.name} workspace: {str(e)}"
 
-    @json_schema(
-        'Execute allowlisted, non-interactive commands (git, npm, pytest, etc.) in workspace. '
-        'No shell features (pipes, redirection, globbing). Returns stdout/stderr/exit_code.'
-        'Prefer platform agnostic tools over OS commands for portability: e.g., git ls-files "*.md" instead of platform-specific find/where.',
-        {
-            'path': {
-                "type": "string",
-                'description': 'UNC workspace path (//workspace/subpath) as working directory. Must start with //',
-                'required': True
-            },
-            'command': {
-                'type': 'string',
-                'description': 'Command and arguments (no shell). Examples: "git status", "npm -v", "dotnet build --no-restore"',
-                'required': True
-            },
-            'max_tokens': {
-                'type': 'integer',
-                'description': 'Max output tokens. Default 1000. Large outputs truncated.',
-                'required': False,
-                'default': 1000
-            }
-        }
-    )
+    # @json_schema(
+    #     'Execute allowlisted, non-interactive commands (git, npm, pytest, etc.) in workspace. '
+    #     'No shell features (pipes, redirection, globbing). Returns stdout/stderr/exit_code.'
+    #     'Prefer platform agnostic tools over OS commands for portability: e.g., git ls-files "*.md" instead of platform-specific find/where.',
+    #     {
+    #         'path': {
+    #             "type": "string",
+    #             'description': 'UNC workspace path (//workspace/subpath) as working directory. Must start with //',
+    #             'required': True
+    #         },
+    #         'command': {
+    #             'type': 'string',
+    #             'description': 'Command and arguments (no shell). Examples: "git status", "npm -v", "dotnet build --no-restore"',
+    #             'required': True
+    #         },
+    #         "timeout": {
+    #             "type": "integer",
+    #             "description": "Requested timeout (seconds). May be lowered by policy/validator.",
+    #             "required": False,
+    #         },
+    #         'max_tokens': {
+    #             'type': 'integer',
+    #             'description': 'Max output tokens. Default 1000. Large outputs truncated.',
+    #             'required': False,
+    #             'default': 1000
+    #         }
+    #     }
+    # )
+    # We're moving to dynamically declaring allowed commands as separate tools so we can enable/disable commands at the agent level
+    # Keeping this here for posterity in case we decide to bring it back as a generic command runner
     async def run_command(self, **kwargs: Any) -> str:
         """Run an os level command over files in workspaces using an UNC-style path.
 
@@ -1018,6 +1025,7 @@ class WorkspaceTools(Toolset):
         tool_context = kwargs.get("tool_context", {})
         max_tokens = kwargs.get("max_tokens", 1000)
         command = kwargs.get('command', '').strip()
+        timeout: Optional[int] = kwargs.get('timeout', None)
 
         # validate required fields exist
         success, message = validate_required_fields(kwargs=kwargs, required_fields=['command', 'path'])
@@ -1045,7 +1053,7 @@ class WorkspaceTools(Toolset):
             return f"Failed to resolve path: {e}"
 
         # pass command to underlying workspace run_command method, e.g. LocalWorkspace
-        result: CommandExecutionResult = await workspace.run_command(command=command, working_directory=abs_path)
+        result: CommandExecutionResult = await workspace.run_command(command=command, working_directory=abs_path, timeout=timeout)
 
         # Create UI message
         html_content = await MediaEventHelper.stdout_html(result.to_dict())
@@ -1057,12 +1065,9 @@ class WorkspaceTools(Toolset):
             tool_context=tool_context
         )
 
-        # Trim response to max tokens back to LLM in a smart way
-        counter = tool_context.get("agent_runtime").count_tokens
-        if counter is None:
-            return result.to_yaml()
-        else:
-            return result.to_yaml_capped(max_tokens, counter)
+        # Trim response to max tokens back to LLM in a smart way if agent_runtime and count_token function exists
+        counter = tool_context.get("agent_runtime").count_tokens if tool_context else None
+        return result.to_yaml_capped(max_tokens, counter) if counter else result.to_yaml()
 
 
 Toolset.register(WorkspaceTools)
