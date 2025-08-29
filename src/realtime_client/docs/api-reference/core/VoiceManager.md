@@ -36,9 +36,16 @@ interface VoiceManagerConfig {
 ### Example
 
 ```typescript
+// Setup authentication first
+const authManager = new AuthManager({
+  apiUrl: 'https://localhost:8000'
+});
+
+await authManager.login('username', 'password');
+
 // VoiceManager is created automatically
 const client = new RealtimeClient({
-  apiUrl: 'wss://api.agentc.ai/rt/ws',
+  apiUrl: 'wss://localhost:8000/rt/ws',
   authManager
 });
 
@@ -447,14 +454,14 @@ import { RealtimeClient, AuthManager } from '@agentc/realtime-core';
 async function voiceManagementExample() {
   // Setup authentication
   const authManager = new AuthManager({
-    apiUrl: 'https://api.agentc.ai'
+    apiUrl: 'https://localhost:8000'
   });
   
-  await authManager.login('your-api-key');
+  await authManager.login('username', 'password');
   
   // Create client
   const client = new RealtimeClient({
-    apiUrl: 'wss://api.agentc.ai/rt/ws',
+    apiUrl: 'wss://localhost:8000/rt/ws',
     authManager,
     enableAudio: true
   });

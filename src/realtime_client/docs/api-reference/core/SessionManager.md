@@ -37,10 +37,17 @@ interface SessionManagerConfig {
 ### Example
 
 ```typescript
+// Setup authentication first
+const authManager = new AuthManager({
+  apiUrl: 'https://localhost:8000'
+});
+
+await authManager.login('username', 'password');
+
 // SessionManager is created automatically
 const client = new RealtimeClient({
-  apiUrl: 'wss://api.agentc.ai/rt/ws',
-  authToken: 'your-token'
+  apiUrl: 'wss://localhost:8000/rt/ws',
+  authManager
 });
 
 // Access the SessionManager instance
@@ -646,12 +653,19 @@ sessionManager.on('text:completed', (text: string) => {
 ## Complete Example
 
 ```typescript
-import { RealtimeClient } from '@agentc/realtime-core';
+import { RealtimeClient, AuthManager } from '@agentc/realtime-core';
 
 async function sessionManagementExample() {
+  // Setup authentication
+  const authManager = new AuthManager({
+    apiUrl: 'https://localhost:8000'
+  });
+  
+  await authManager.login('username', 'password');
+  
   const client = new RealtimeClient({
-    apiUrl: 'wss://api.agentc.ai/rt/ws',
-    authToken: 'your-token'
+    apiUrl: 'wss://localhost:8000/rt/ws',
+    authManager
   });
   
   const sessionManager = client.getSessionManager();

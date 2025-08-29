@@ -36,14 +36,27 @@ AGENT_TURN      │
 ### Enable Turn Management
 
 ```typescript
+import { RealtimeClient, AuthManager } from '@agentc/realtime-core';
+
+// First authenticate with Agent C
+const authManager = new AuthManager({
+  apiUrl: 'https://localhost:8000'
+});
+
+// Login with username/password
+const loginResponse = await authManager.login('username', 'password');
+
+// Create client with WebSocket URL from login response
 const client = new RealtimeClient({
-  apiUrl: 'wss://api.agentc.ai/rt/ws',
-  authToken: 'your-token',
+  apiUrl: loginResponse.websocketUrl,  // URL provided by login
+  authManager,
   enableTurnManager: true,  // Enabled by default
   audioConfig: {
     respectTurnState: true   // Audio respects turns
   }
 });
+
+await client.connect();
 
 // Access turn manager
 const turnManager = client.getTurnManager();

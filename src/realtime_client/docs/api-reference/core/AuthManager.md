@@ -24,7 +24,7 @@ Creates a new AuthManager instance.
 
 ```typescript
 interface AuthConfig {
-  apiUrl: string;           // Base API URL (e.g., 'https://api.agentc.ai')
+  apiUrl: string;           // Base API URL (e.g., 'https://localhost:8000')
   tokenRefreshBuffer?: number; // Minutes before expiry to refresh (default: 5)
   enableAutoRefresh?: boolean; // Auto-refresh tokens (default: true)
   debug?: boolean;          // Enable debug logging (default: false)
@@ -35,7 +35,7 @@ interface AuthConfig {
 
 ```typescript
 const authManager = new AuthManager({
-  apiUrl: 'https://api.agentc.ai',
+  apiUrl: 'https://localhost:8000',
   tokenRefreshBuffer: 5,
   enableAutoRefresh: true,
   debug: true
@@ -46,29 +46,52 @@ const authManager = new AuthManager({
 
 ### login()
 
-Authenticates with the Agent C platform using an API key.
+Authenticates with the Agent C platform using username and password credentials.
 
 ```typescript
-async login(apiKey: string): Promise<LoginResponse>
+async login(credentials: LoginCredentials): Promise<LoginResponse>
 ```
 
 **Parameters:**
-- `apiKey` (string) - Your Agent C API key
+- `credentials` (LoginCredentials) - User credentials
+
+```typescript
+interface LoginCredentials {
+  username: string;
+  password: string;
+}
+```
 
 **Returns:** Promise resolving to LoginResponse
 
 ```typescript
 interface LoginResponse {
-  agentc_token: string;     // JWT for WebSocket connection
+  agent_c_token: string;    // JWT for WebSocket connection
   heygen_token?: string;    // HeyGen access token (if available)
+  websocket_url: string;    // WebSocket endpoint URL
   ui_session_id: string;    // UI session identifier
+  user: User;               // User information
+  agents: Agent[];          // Available agents
   voices: Voice[];          // Available TTS voices
   avatars?: Avatar[];       // Available avatars (if configured)
+  toolsets: Toolset[];      // Available toolsets
   expires_at: number;       // Token expiration timestamp
 }
 
+interface User {
+  user_id: string;
+  username: string;
+  email?: string;
+}
+
+interface Agent {
+  agent_id: string;
+  name: string;
+  description?: string;
+}
+
 interface Voice {
-  voice_id: string;         // Voice identifier (e.g., 'nova', 'echo')
+  voice_id: string;         // Voice identifier (e.g., 'nova', 'echo', 'avatar', 'none')
   name: string;             // Display name
   vendor: string;           // Provider (e.g., 'openai')
   description?: string;     // Voice description
@@ -80,14 +103,27 @@ interface Avatar {
   name: string;             // Display name
   preview_url?: string;     // Preview image URL
 }
+
+interface Toolset {
+  toolset_id: string;
+  name: string;
+  description?: string;
+}
 ```
+
+**Endpoint:** `POST /rt/login`
 
 **Example:**
 ```typescript
 try {
-  const response = await authManager.login('sk-abc123...');
-  console.log('Authenticated! Token:', response.agentc_token);
+  const response = await authManager.login({
+    username: 'myuser',
+    password: 'mypassword'
+  });
+  console.log('Authenticated! Token:', response.agent_c_token);
+  console.log('WebSocket URL:', response.websocket_url);
   console.log('Available voices:', response.voices);
+  console.log('Available agents:', response.agents);
 } catch (error) {
   console.error('Login failed:', error);
 }
@@ -100,6 +136,8 @@ Manually refreshes the authentication tokens.
 ```typescript
 async refreshTokens(): Promise<TokenPair>
 ```
+
+**Endpoint:** `GET /rt/refresh_token` with Bearer token
 
 **Returns:** Promise resolving to new token pair
 
@@ -175,6 +213,7 @@ getAgentCToken(): string | null
 const token = authManager.getAgentCToken();
 if (token) {
   // Use token for API calls
+  headers['Authorization'] = `Bearer ${token}`;
 }
 ```
 
@@ -212,7 +251,10 @@ if (authManager.isAuthenticated()) {
   // Proceed with authenticated operations
 } else {
   // Need to login
-  await authManager.login(apiKey);
+  await authManager.login({
+    username: 'myuser',
+    password: 'mypassword'
+  });
 }
 ```
 
@@ -248,6 +290,11 @@ getVoices(): Voice[]
 
 **Returns:** Array of available voices
 
+**Special Voice IDs:**
+- `none` - Text-only mode, no audio output
+- `avatar` - Audio handled by HeyGen avatar
+- Other IDs - Specific TTS voices (e.g., 'nova', 'echo')
+
 **Example:**
 ```typescript
 const voices = authManager.getVoices();
@@ -257,6 +304,10 @@ voices.forEach(voice => {
 
 // Find specific voice
 const nova = voices.find(v => v.voice_id === 'nova');
+
+// Check for special modes
+const textOnly = voices.find(v => v.voice_id === 'none');
+const avatarMode = voices.find(v => v.voice_id === 'avatar');
 ```
 
 ### getAvatars()
@@ -278,6 +329,43 @@ avatars.forEach(avatar => {
     console.log('Preview:', avatar.preview_url);
   }
 });
+```
+
+### getAgents()
+
+Gets the list of available agents.
+
+```typescript
+getAgents(): Agent[]
+```
+
+**Returns:** Array of available agents
+
+**Example:**
+```typescript
+const agents = authManager.getAgents();
+agents.forEach(agent => {
+  console.log(`${agent.name} (${agent.agent_id}): ${agent.description}`);
+});
+```
+
+### getWebSocketUrl()
+
+Gets the WebSocket URL for realtime connections.
+
+```typescript
+getWebSocketUrl(): string | null
+```
+
+**Returns:** WebSocket URL or null
+
+**Example:**
+```typescript
+const wsUrl = authManager.getWebSocketUrl();
+if (wsUrl) {
+  console.log('WebSocket endpoint:', wsUrl);
+  // Use for RealtimeClient connection
+}
 ```
 
 ### getUiSessionId()
@@ -310,7 +398,9 @@ getLoginResponse(): LoginResponse | null
 ```typescript
 const loginData = authManager.getLoginResponse();
 if (loginData) {
-  console.log('Full login data:', loginData);
+  console.log('User:', loginData.user);
+  console.log('Available agents:', loginData.agents.length);
+  console.log('Available toolsets:', loginData.toolsets.length);
 }
 ```
 
@@ -390,7 +480,9 @@ on(event: string, handler: Function): void
 ```typescript
 authManager.on('auth:login', (response: LoginResponse) => {
   console.log('Logged in successfully');
+  console.log('User:', response.user.username);
   console.log('Available voices:', response.voices.length);
+  console.log('Available agents:', response.agents.length);
 });
 
 authManager.on('auth:tokens-refreshed', (tokens: TokenPair) => {
@@ -430,7 +522,7 @@ import { AuthManager, RealtimeClient } from '@agentc/realtime-core';
 async function setupAuthentication() {
   // Create auth manager
   const authManager = new AuthManager({
-    apiUrl: 'https://api.agentc.ai',
+    apiUrl: 'https://localhost:8000',
     tokenRefreshBuffer: 5,
     enableAutoRefresh: true,
     debug: true
@@ -439,6 +531,8 @@ async function setupAuthentication() {
   // Subscribe to events
   authManager.on('auth:login', (response) => {
     console.log('✅ Authenticated successfully');
+    console.log(`👤 Logged in as: ${response.user.username}`);
+    console.log(`🤖 ${response.agents.length} agents available`);
     console.log(`📢 ${response.voices.length} voices available`);
     if (response.avatars) {
       console.log(`🎭 ${response.avatars.length} avatars available`);
@@ -454,7 +548,10 @@ async function setupAuthentication() {
   authManager.on('auth:token-expired', () => {
     console.log('⚠️ Token expired - re-authenticating...');
     // Re-authenticate
-    authManager.login(process.env.AGENTC_API_KEY!);
+    authManager.login({
+      username: process.env.AGENTC_USERNAME!,
+      password: process.env.AGENTC_PASSWORD!
+    });
   });
   
   authManager.on('auth:error', (error) => {
@@ -463,9 +560,26 @@ async function setupAuthentication() {
   
   // Perform login
   try {
-    const response = await authManager.login(process.env.AGENTC_API_KEY!);
+    const response = await authManager.login({
+      username: process.env.AGENTC_USERNAME!,
+      password: process.env.AGENTC_PASSWORD!
+    });
     
-    // Display available resources
+    // Display user info
+    console.log('\nAuthenticated User:');
+    console.log(`  Username: ${response.user.username}`);
+    console.log(`  User ID: ${response.user.user_id}`);
+    
+    // Display available agents
+    console.log('\nAvailable Agents:');
+    response.agents.forEach(agent => {
+      console.log(`  - ${agent.name} (${agent.agent_id})`);
+      if (agent.description) {
+        console.log(`    ${agent.description}`);
+      }
+    });
+    
+    // Display available voices
     console.log('\nAvailable Voices:');
     response.voices.forEach(voice => {
       console.log(`  - ${voice.name} (${voice.voice_id})`);
@@ -484,11 +598,12 @@ async function setupAuthentication() {
     console.log('\nAuthentication Status:');
     console.log('Authenticated:', authManager.isAuthenticated());
     console.log('Token expires:', authManager.getTokenExpiry());
+    console.log('WebSocket URL:', authManager.getWebSocketUrl());
     console.log('UI Session:', authManager.getUiSessionId());
     
     // Create realtime client with auth manager
     const client = new RealtimeClient({
-      apiUrl: 'wss://api.agentc.ai/rt/ws',
+      apiUrl: response.websocket_url, // Use the WebSocket URL from login
       authManager,  // Pass auth manager to client
       enableAudio: true
     });
@@ -527,8 +642,10 @@ The AuthManager automatically handles token refresh:
 
 Time 0:    Login successful, token expires at Time 60
 Time 55:   Auto-refresh triggered (5 minutes before expiry)
+Time 55:   GET /rt/refresh_token with Bearer token
 Time 55:   New token obtained, expires at Time 115
 Time 110:  Auto-refresh triggered again
+Time 110:  GET /rt/refresh_token with Bearer token
 Time 110:  New token obtained, expires at Time 170
 ...continues until logout or error
 ```
@@ -542,7 +659,7 @@ The AuthManager can throw or emit errors for:
    - Timeout errors
 
 2. **Authentication Errors**
-   - Invalid API key
+   - Invalid credentials
    - Expired tokens
    - Permission denied
 
@@ -555,10 +672,13 @@ Example error handling:
 ```typescript
 // Handle login errors
 try {
-  await authManager.login(apiKey);
+  await authManager.login({
+    username: 'myuser',
+    password: 'mypassword'
+  });
 } catch (error) {
   if (error.response?.status === 401) {
-    console.error('Invalid API key');
+    console.error('Invalid username or password');
   } else if (error.code === 'ECONNREFUSED') {
     console.error('Cannot connect to API');
   } else {
@@ -571,7 +691,10 @@ authManager.on('auth:error', (error) => {
   if (error.message.includes('refresh')) {
     console.error('Token refresh failed, need to re-login');
     // Attempt re-login
-    authManager.login(apiKey);
+    authManager.login({
+      username: process.env.AGENTC_USERNAME!,
+      password: process.env.AGENTC_PASSWORD!
+    });
   }
 });
 ```
@@ -581,25 +704,31 @@ authManager.on('auth:error', (error) => {
 1. **Always check authentication before operations:**
 ```typescript
 if (!authManager.isAuthenticated()) {
-  await authManager.login(apiKey);
+  await authManager.login({
+    username: process.env.AGENTC_USERNAME!,
+    password: process.env.AGENTC_PASSWORD!
+  });
 }
 ```
 
-2. **Store API keys securely:**
+2. **Store credentials securely:**
 ```typescript
 // Use environment variables
-const apiKey = process.env.AGENTC_API_KEY;
+const credentials = {
+  username: process.env.AGENTC_USERNAME!,
+  password: process.env.AGENTC_PASSWORD!
+};
 
-// Never hardcode keys
-// BAD: authManager.login('sk-abc123...')
-// GOOD: authManager.login(apiKey)
+// Never hardcode credentials
+// BAD: authManager.login({ username: 'user', password: 'pass123' })
+// GOOD: authManager.login(credentials)
 ```
 
 3. **Handle token expiration gracefully:**
 ```typescript
 authManager.on('auth:token-expired', async () => {
   try {
-    await authManager.login(apiKey);
+    await authManager.login(credentials);
     // Reconnect client if needed
   } catch (error) {
     // Handle re-auth failure
@@ -624,16 +753,39 @@ process.on('SIGINT', () => {
 });
 ```
 
+## Authentication Flow
+
+```
+1. Client calls authManager.login({ username, password })
+2. POST /rt/login with credentials
+3. Server validates and returns:
+   - agent_c_token (JWT)
+   - heygen_token
+   - websocket_url
+   - user info
+   - available agents, voices, avatars, toolsets
+4. AuthManager stores tokens and metadata
+5. Before token expiry (based on buffer):
+   - GET /rt/refresh_token with Bearer token
+   - Server returns new tokens
+   - AuthManager updates stored tokens
+6. On logout, tokens are cleared
+```
+
 ## TypeScript Types
 
 ```typescript
 import {
   AuthManager,
   AuthConfig,
+  LoginCredentials,
   LoginResponse,
   TokenPair,
   Voice,
-  Avatar
+  Avatar,
+  Agent,
+  User,
+  Toolset
 } from '@agentc/realtime-core';
 ```
 

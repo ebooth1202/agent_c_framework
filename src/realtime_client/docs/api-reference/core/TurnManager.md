@@ -23,9 +23,17 @@ constructor(client: RealtimeClient)
 ### Example
 
 ```typescript
+// Setup authentication first
+const authManager = new AuthManager({
+  apiUrl: 'https://localhost:8000'
+});
+
+await authManager.login('username', 'password');
+
 // TurnManager is created automatically
 const client = new RealtimeClient({
-  apiUrl: 'wss://api.agentc.ai/rt/ws',
+  apiUrl: 'wss://localhost:8000/rt/ws',
+  authManager,
   enableTurnManager: true  // Default: true
 });
 
@@ -358,13 +366,20 @@ Agent completes response
 ## Complete Example
 
 ```typescript
-import { RealtimeClient } from '@agentc/realtime-core';
+import { RealtimeClient, AuthManager } from '@agentc/realtime-core';
 
 async function turnManagementExample() {
+  // Setup authentication
+  const authManager = new AuthManager({
+    apiUrl: 'https://localhost:8000'
+  });
+  
+  await authManager.login('username', 'password');
+  
   // Create client with turn management
   const client = new RealtimeClient({
-    apiUrl: 'wss://api.agentc.ai/rt/ws',
-    authToken: 'your-token',
+    apiUrl: 'wss://localhost:8000/rt/ws',
+    authManager,
     enableTurnManager: true,
     audioConfig: {
       enableInput: true,

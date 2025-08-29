@@ -17,14 +17,18 @@ import { RealtimeClient, AuthManager } from '@agentc/realtime-core';
 
 // Initialize with authentication
 const authManager = new AuthManager({
-  apiUrl: 'https://api.agentc.ai'
+  apiUrl: 'https://localhost:8000'  // Or your Agent C server URL
 });
 
-await authManager.login('username', 'password');
+// Login with ChatUser credentials
+await authManager.login({ 
+  username: 'your-username', 
+  password: 'your-password' 
+});
 
-// Create and connect client
+// Create and connect client using the WebSocket URL from login
 const client = new RealtimeClient({
-  apiUrl: 'wss://api.agentc.ai/rt/ws',
+  apiUrl: authManager.getWebSocketUrl(),  // URL from login response
   authManager,
   enableAudio: true
 });
@@ -47,8 +51,11 @@ import { AgentCProvider, useRealtimeClient, useChat } from '@agentc/realtime-rea
 function App() {
   return (
     <AgentCProvider config={{ 
-      apiUrl: 'wss://api.agentc.ai/rt/ws',
-      apiKey: 'your-api-key'
+      apiUrl: 'https://localhost:8000',  // Your Agent C server URL
+      credentials: {
+        username: 'your-username',
+        password: 'your-password'
+      }
     }}>
       <ChatComponent />
     </AgentCProvider>
@@ -90,7 +97,7 @@ function ChatComponent() {
 - **[React Examples](./api-reference/react/examples.md)** - Complete React usage examples
 
 ### Guides
-- **[Authentication Guide](./guides/authentication.md)** - Handling API keys and tokens
+- **[Authentication Guide](./guides/authentication.md)** - ChatUser login and JWT token management
 - **[Audio Streaming Guide](./guides/audio-streaming.md)** - Binary audio streaming setup
 - **[Turn Management Guide](./guides/turn-management.md)** - Understanding conversation flow
 - **[Voice Models Guide](./guides/voice-models.md)** - Working with different TTS voices
@@ -157,13 +164,24 @@ The SDK can be configured through environment variables or directly in code:
 
 ```typescript
 // Environment variables
-AGENTC_API_URL=wss://api.agentc.ai/rt/ws
-AGENTC_API_KEY=your-api-key
+AGENTC_API_URL=https://localhost:8000  # Your Agent C server URL
+AGENTC_USERNAME=your-username
+AGENTC_PASSWORD=your-password
 
 // Direct configuration
+const authManager = new AuthManager({
+  apiUrl: process.env.AGENTC_API_URL || 'https://localhost:8000'
+});
+
+// Login to get JWT token and WebSocket URL
+await authManager.login({
+  username: process.env.AGENTC_USERNAME,
+  password: process.env.AGENTC_PASSWORD
+});
+
 const client = new RealtimeClient({
-  apiUrl: process.env.AGENTC_API_URL,
-  authToken: 'jwt-token',
+  apiUrl: authManager.getWebSocketUrl(),  // WebSocket URL from login
+  authManager,  // Handles JWT token automatically
   enableAudio: true,
   audioConfig: {
     enableInput: true,
@@ -243,14 +261,14 @@ This SDK is licensed under the MIT License. See [LICENSE](../LICENSE) for detail
 ## 🆘 Support
 
 - **Documentation**: You are here!
-- **GitHub Issues**: [Report bugs or request features](https://github.com/agentc-ai/realtime-sdk/issues)
-- **Discord**: [Join our community](https://discord.gg/agentc)
-- **Email**: support@agentc.ai
+- **GitHub Issues**: Report bugs or request features
+- **Discord**: Join our community
+- **Email**: Contact support
 
 ## 🔗 Related Resources
 
-- [Agent C Platform Documentation](https://docs.agentc.ai)
-- [API Reference](https://api.agentc.ai/docs)
+- [Agent C Platform Documentation](https://localhost:8000/docs)
+- [API Reference](https://localhost:8000/api/docs)
 - [HeyGen Documentation](https://docs.heygen.com)
 - [Web Audio API Reference](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)
 

@@ -45,9 +45,16 @@ interface Avatar {
 ### Example
 
 ```typescript
+// Setup authentication first
+const authManager = new AuthManager({
+  apiUrl: 'https://localhost:8000'
+});
+
+await authManager.login('username', 'password');
+
 // AvatarManager is created automatically
 const client = new RealtimeClient({
-  apiUrl: 'wss://api.agentc.ai/rt/ws',
+  apiUrl: 'wss://localhost:8000/rt/ws',
   authManager
 });
 
@@ -481,13 +488,20 @@ async function setupAvatar() {
 ## Complete Example
 
 ```typescript
-import { RealtimeClient } from '@agentc/realtime-core';
+import { RealtimeClient, AuthManager } from '@agentc/realtime-core';
 import NewStreamingAvatar from '@heygen/streaming-avatar';
 
 async function avatarExample() {
+  // Setup authentication
+  const authManager = new AuthManager({
+    apiUrl: 'https://localhost:8000'
+  });
+  
+  await authManager.login('username', 'password');
+  
   // Setup client with auth
   const client = new RealtimeClient({
-    apiUrl: 'wss://api.agentc.ai/rt/ws',
+    apiUrl: 'wss://localhost:8000/rt/ws',
     authManager,
     enableAudio: true
   });

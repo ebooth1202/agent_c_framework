@@ -1,6 +1,6 @@
 # AgentCProvider API Reference
 
-The `AgentCProvider` component provides the Agent C Realtime SDK context to React applications, managing client lifecycle and configuration.
+The `AgentCProvider` component provides the Agent C Realtime SDK context to React applications, managing client lifecycle and authentication.
 
 ## Import
 
@@ -10,67 +10,97 @@ import { AgentCProvider } from '@agentc/realtime-react';
 
 ## Overview
 
-AgentCProvider is a React context provider that creates and manages a RealtimeClient instance, making it available to child components through React hooks.
+AgentCProvider is a React context provider that creates and manages a RealtimeClient instance, making it available to child components through React hooks. Agent C uses username/password authentication, not API keys.
 
 ## Props
 
 ```typescript
 interface AgentCProviderProps {
-  config: AgentCConfig;
+  /** Child components that will have access to the RealtimeClient */
   children: React.ReactNode;
-  onError?: (error: Error) => void;
+  
+  /** WebSocket API URL (e.g., wss://localhost:8000/rt/ws) */
+  apiUrl?: string;
+  
+  /** JWT authentication token (if already authenticated) */
+  authToken?: string;
+  
+  /** Optional AuthManager instance for automatic token management */
+  authManager?: AuthManager;
+  
+  /** Complete configuration object (overrides individual props) */
+  config?: RealtimeClientConfig;
+  
+  /** Whether to automatically connect on mount (default: false) */
   autoConnect?: boolean;
+  
+  /** Callback when client is successfully initialized */
+  onInitialized?: (client: RealtimeClient) => void;
+  
+  /** Callback when initialization fails */
+  onError?: (error: Error) => void;
+  
+  /** Enable debug logging */
   debug?: boolean;
 }
 ```
 
-### Configuration
+### Important: Environment Variables in React/Next.js
+
+**Environment variables in React and Next.js are replaced at BUILD TIME, not runtime:**
+
+- **Create React App**: Variables prefixed with `REACT_APP_` are replaced during the build process
+- **Next.js**: Variables prefixed with `NEXT_PUBLIC_` are replaced during the build process
+- These become hardcoded strings in the compiled JavaScript bundle
+- They are NOT read from `process.env` at runtime in the browser
 
 ```typescript
-interface AgentCConfig {
-  // Required
-  apiUrl: string;           // WebSocket URL
-  
-  // Authentication (one required)
-  apiKey?: string;          // API key for authentication
-  authToken?: string;       // JWT token (if already authenticated)
-  
-  // Optional
-  authApiUrl?: string;      // Auth API URL (defaults to apiUrl base)
-  enableAudio?: boolean;    // Enable audio features (default: false)
-  audioConfig?: AudioConfig; // Audio configuration
-  reconnection?: ReconnectionConfig; // Reconnection settings
-  enableTurnManager?: boolean; // Turn management (default: true)
-}
+// This is replaced at BUILD TIME with the actual value:
+const apiUrl = process.env.REACT_APP_AGENTC_API_URL;
+// After build, it becomes: const apiUrl = "wss://localhost:8000/rt/ws";
 
-interface AudioConfig {
-  enableInput?: boolean;    // Enable microphone (default: true)
-  enableOutput?: boolean;   // Enable TTS (default: true)
-  sampleRate?: number;      // Sample rate (default: 16000)
-  respectTurnState?: boolean; // Respect turns (default: true)
-  initialVolume?: number;   // Initial volume 0-1 (default: 1)
-}
-
-interface ReconnectionConfig {
-  maxAttempts?: number;     // Max reconnection attempts (default: 5)
-  initialDelay?: number;    // Initial delay in ms (default: 1000)
-  maxDelay?: number;        // Max delay in ms (default: 30000)
-}
+// The value is baked into your bundle - changing the env var after build has no effect
 ```
 
 ## Basic Usage
 
 ```tsx
-import { AgentCProvider } from '@agentc/realtime-react';
+import { AgentCProvider, AuthManager } from '@agentc/realtime-react';
 
 function App() {
+  const [authManager, setAuthManager] = useState<AuthManager | null>(null);
+  
+  // Authenticate before rendering the provider
+  useEffect(() => {
+    const authenticate = async () => {
+      const manager = new AuthManager({
+        apiUrl: 'https://localhost:8000'  // REST API base URL
+      });
+      
+      try {
+        // Login with username and password
+        await manager.login({
+          username: 'your-username',
+          password: 'your-password'
+        });
+        
+        setAuthManager(manager);
+      } catch (error) {
+        console.error('Authentication failed:', error);
+      }
+    };
+    
+    authenticate();
+  }, []);
+  
+  if (!authManager) {
+    return <div>Authenticating...</div>;
+  }
+  
   return (
     <AgentCProvider 
-      config={{
-        apiUrl: 'wss://api.agentc.ai/rt/ws',
-        apiKey: 'your-api-key',
-        enableAudio: true
-      }}
+      apiUrl="wss://localhost:8000/rt/ws"  // WebSocket URL
+      authManager={authManager}  // Pass authenticated manager
       autoConnect={true}
       debug={true}
     >
@@ -82,28 +112,60 @@ function App() {
 
 ## Props Details
 
-### config (required)
+### apiUrl (optional)
 
-The configuration object for the RealtimeClient.
+The WebSocket URL for the realtime connection. Can be provided directly or via environment variable.
+
+**Development example:**
+```tsx
+<AgentCProvider 
+  apiUrl="wss://localhost:8000/rt/ws"
+  authManager={authManager}
+>
+```
+
+**Production with environment variable (replaced at build time):**
+```tsx
+// .env file
+REACT_APP_AGENTC_WS_URL=wss://api.example.com/rt/ws
+
+// Component
+<AgentCProvider 
+  apiUrl={process.env.REACT_APP_AGENTC_WS_URL}  // Replaced at build time
+  authManager={authManager}
+>
+```
+
+### authManager (recommended)
+
+An authenticated AuthManager instance that handles token management.
+
+**Example:**
+```tsx
+const authManager = new AuthManager({
+  apiUrl: 'https://localhost:8000',  // REST API base URL
+  autoRefresh: true,  // Automatically refresh tokens
+  refreshBufferMs: 60000  // Refresh 1 minute before expiry
+});
+
+// Login with credentials
+await authManager.login({
+  username: 'user@example.com',
+  password: 'secure-password'
+});
+
+<AgentCProvider authManager={authManager}>
+```
+
+### authToken (optional)
+
+A JWT token if you've already authenticated elsewhere. Use this if you're managing authentication outside of the SDK.
 
 **Example:**
 ```tsx
 <AgentCProvider 
-  config={{
-    apiUrl: 'wss://api.agentc.ai/rt/ws',
-    apiKey: process.env.REACT_APP_AGENTC_KEY,
-    enableAudio: true,
-    audioConfig: {
-      enableInput: true,
-      enableOutput: true,
-      respectTurnState: true,
-      initialVolume: 0.8
-    },
-    reconnection: {
-      maxAttempts: 5,
-      initialDelay: 1000
-    }
-  }}
+  apiUrl="wss://localhost:8000/rt/ws"
+  authToken={jwtToken}  // Previously obtained JWT
 >
 ```
 
@@ -168,106 +230,218 @@ interface AgentCContextValue {
 
 ## Environment Variables
 
-The provider can read configuration from environment variables:
+### Understanding Build-Time Replacement
+
+Environment variables in React/Next.js are **replaced at build time**, not read at runtime:
 
 ```bash
-# .env
-REACT_APP_AGENTC_API_URL=wss://api.agentc.ai/rt/ws
-REACT_APP_AGENTC_API_KEY=your-api-key
-REACT_APP_AGENTC_DEBUG=true
+# .env file (Create React App)
+REACT_APP_AGENTC_WS_URL=wss://localhost:8000/rt/ws
+REACT_APP_AGENTC_API_URL=https://localhost:8000
+REACT_APP_DEBUG=true
+
+# .env.local file (Next.js)
+NEXT_PUBLIC_AGENTC_WS_URL=wss://localhost:8000/rt/ws
+NEXT_PUBLIC_AGENTC_API_URL=https://localhost:8000
+NEXT_PUBLIC_DEBUG=true
 ```
 
 ```tsx
-// Will use env vars as defaults
-<AgentCProvider 
-  config={{
-    apiUrl: process.env.REACT_APP_AGENTC_API_URL!,
-    apiKey: process.env.REACT_APP_AGENTC_API_KEY!
-  }}
-  debug={process.env.REACT_APP_AGENTC_DEBUG === 'true'}
->
+// During build, this code:
+const wsUrl = process.env.REACT_APP_AGENTC_WS_URL;
+
+// Gets compiled to:
+const wsUrl = "wss://localhost:8000/rt/ws";
+
+// The actual string value is embedded in your JavaScript bundle
 ```
+
+### Using Environment Variables Correctly
+
+```tsx
+function App() {
+  // Environment variables are strings baked in at build time
+  const wsUrl = process.env.REACT_APP_AGENTC_WS_URL || 'wss://localhost:8000/rt/ws';
+  const apiUrl = process.env.REACT_APP_AGENTC_API_URL || 'https://localhost:8000';
+  const debug = process.env.REACT_APP_DEBUG === 'true';
+  
+  const [authManager, setAuthManager] = useState<AuthManager | null>(null);
+  
+  useEffect(() => {
+    const manager = new AuthManager({ apiUrl });
+    // In production, get credentials securely (not from env vars!)
+    manager.login({
+      username: getUsername(),  // Get from secure source
+      password: getPassword()   // Get from secure source
+    }).then(() => setAuthManager(manager));
+  }, [apiUrl]);
+  
+  if (!authManager) return <div>Loading...</div>;
+  
+  return (
+    <AgentCProvider 
+      apiUrl={wsUrl}
+      authManager={authManager}
+      debug={debug}
+    >
+      <YourComponents />
+    </AgentCProvider>
+  );
+}
+```
+
+**⚠️ Security Warning:** Never put passwords or sensitive credentials in environment variables that get bundled into client-side code!
 
 ## Authentication Methods
 
-### Method 1: API Key
+### Method 1: AuthManager with Credentials (Recommended)
 
 ```tsx
-<AgentCProvider 
-  config={{
-    apiUrl: 'wss://api.agentc.ai/rt/ws',
-    apiKey: 'sk-abc123...'  // Provider handles auth
-  }}
->
+import { AuthManager } from '@agentc/realtime-core';
+
+function App() {
+  const [authManager, setAuthManager] = useState<AuthManager | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  
+  const handleLogin = async (username: string, password: string) => {
+    const manager = new AuthManager({
+      apiUrl: 'https://localhost:8000',  // REST API base URL
+      autoRefresh: true,  // Auto-refresh tokens before expiry
+      refreshBufferMs: 60000  // Refresh 1 minute before expiry
+    });
+    
+    try {
+      // Login returns user info, available agents, voices, avatars, etc.
+      const loginResponse = await manager.login({ username, password });
+      console.log('Logged in as:', loginResponse.user);
+      console.log('Available agents:', loginResponse.agents);
+      console.log('WebSocket URL:', loginResponse.ws_url);
+      
+      setAuthManager(manager);
+    } catch (error) {
+      setError(error.message);
+    }
+  };
+  
+  if (!authManager) {
+    return <LoginForm onLogin={handleLogin} error={error} />;
+  }
+  
+  return (
+    <AgentCProvider 
+      apiUrl="wss://localhost:8000/rt/ws"
+      authManager={authManager}
+      autoConnect={true}
+    >
+      <YourApp />
+    </AgentCProvider>
+  );
+}
 ```
 
 ### Method 2: Pre-authenticated Token
 
 ```tsx
+// If you already have a JWT token from another source
 <AgentCProvider 
-  config={{
-    apiUrl: 'wss://api.agentc.ai/rt/ws',
-    authToken: 'jwt-token-here'  // Already have token
-  }}
+  apiUrl="wss://localhost:8000/rt/ws"
+  authToken={jwtToken}  // Previously obtained JWT
+  autoConnect={true}
 >
 ```
 
-### Method 3: Custom Auth Manager
+### Method 3: External Authentication
 
 ```tsx
-import { AuthManager } from '@agentc/realtime-core';
-
-// Create auth manager separately
-const authManager = new AuthManager({
-  apiUrl: 'https://api.agentc.ai'
-});
-
-// Login before rendering
-await authManager.login('api-key');
-
-// Pass authenticated manager
-<AgentCProvider 
-  config={{
-    apiUrl: 'wss://api.agentc.ai/rt/ws',
-    authManager  // Use existing auth
-  }}
->
+function App() {
+  const [config, setConfig] = useState<any>(null);
+  
+  useEffect(() => {
+    // Authenticate via your own backend
+    fetch('/api/agentc-auth', {
+      method: 'POST',
+      credentials: 'include'  // Include cookies
+    })
+    .then(res => res.json())
+    .then(data => {
+      setConfig({
+        apiUrl: data.wsUrl,  // From your backend
+        authToken: data.token  // JWT from your backend
+      });
+    });
+  }, []);
+  
+  if (!config) return <div>Authenticating...</div>;
+  
+  return (
+    <AgentCProvider {...config} autoConnect={true}>
+      <YourApp />
+    </AgentCProvider>
+  );
+}
 ```
 
 ## Complete Example
 
 ```tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  AgentCProvider, 
+  AgentCProvider,
+  AuthManager,
   useConnection, 
   useChat 
 } from '@agentc/realtime-react';
 
 function App() {
+  const [authManager, setAuthManager] = useState<AuthManager | null>(null);
   const [error, setError] = useState<Error | null>(null);
   
-  const config = {
-    apiUrl: process.env.REACT_APP_AGENTC_URL!,
-    apiKey: process.env.REACT_APP_AGENTC_KEY!,
-    enableAudio: true,
-    audioConfig: {
-      enableInput: true,
-      enableOutput: true,
-      respectTurnState: true,
-      initialVolume: 0.8
-    },
-    reconnection: {
-      maxAttempts: 5,
-      initialDelay: 1000,
-      maxDelay: 30000
-    },
-    enableTurnManager: true
-  };
+  // Build-time environment variable replacement
+  const wsUrl = process.env.REACT_APP_AGENTC_WS_URL || 'wss://localhost:8000/rt/ws';
+  const apiUrl = process.env.REACT_APP_AGENTC_API_URL || 'https://localhost:8000';
+  
+  useEffect(() => {
+    const authenticate = async () => {
+      const manager = new AuthManager({
+        apiUrl,  // REST API for authentication
+        autoRefresh: true,
+        refreshBufferMs: 60000
+      });
+      
+      try {
+        // In production, get credentials from a secure source
+        // Never hardcode credentials!
+        const credentials = await getCredentials();  // Your implementation
+        
+        const loginResponse = await manager.login(credentials);
+        console.log('Authenticated:', loginResponse.user);
+        
+        setAuthManager(manager);
+      } catch (err) {
+        setError(err as Error);
+      }
+    };
+    
+    authenticate();
+  }, [apiUrl]);
+  
+  if (error) {
+    return (
+      <div className="error">
+        Authentication failed: {error.message}
+        <button onClick={() => window.location.reload()}>Retry</button>
+      </div>
+    );
+  }
+  
+  if (!authManager) {
+    return <div>Authenticating...</div>;
+  }
   
   return (
     <AgentCProvider 
-      config={config}
+      apiUrl={wsUrl}
+      authManager={authManager}
       autoConnect={false}  // Manual connection
       debug={true}
       onError={(err) => {
@@ -285,6 +459,20 @@ function App() {
       <ChatInterface />
     </AgentCProvider>
   );
+}
+
+// Helper function to get credentials securely
+async function getCredentials() {
+  // In development, you might use env vars (NOT for production!)
+  if (process.env.NODE_ENV === 'development') {
+    return {
+      username: process.env.REACT_APP_DEV_USERNAME || '',
+      password: process.env.REACT_APP_DEV_PASSWORD || ''
+    };
+  }
+  
+  // In production, get from a login form or secure backend
+  return await showLoginDialog();  // Your implementation
 }
 
 function ChatInterface() {
@@ -350,6 +538,8 @@ export default App;
 ### Custom Client Configuration
 
 ```tsx
+import { RealtimeClient, AuthManager, AgentCContext } from '@agentc/realtime-react';
+
 function CustomProvider({ children }) {
   const [client, setClient] = useState<RealtimeClient | null>(null);
   
@@ -357,16 +547,29 @@ function CustomProvider({ children }) {
     // Create custom client with advanced config
     const initClient = async () => {
       const authManager = new AuthManager({
-        apiUrl: 'https://api.agentc.ai',
-        tokenRefreshBuffer: 10,
-        enableAutoRefresh: true
+        apiUrl: 'https://localhost:8000',  // REST API
+        refreshBufferMs: 60000,  // Refresh 1 minute before expiry
+        autoRefresh: true,
+        storage: new LocalStorageTokenStorage(),  // Persist tokens
+        onTokensRefreshed: (tokens) => {
+          console.log('Tokens refreshed, expires at:', new Date(tokens.expiresAt));
+        },
+        onAuthError: (error) => {
+          console.error('Auth error:', error);
+          // Redirect to login or show error
+        }
       });
       
-      await authManager.login(process.env.REACT_APP_API_KEY!);
+      // Get credentials securely (not from env vars in production!)
+      const { username, password } = await getCredentials();
+      const loginResponse = await authManager.login({ username, password });
+      
+      // Use the WebSocket URL from login response if available
+      const wsUrl = loginResponse.ws_url || 'wss://localhost:8000/rt/ws';
       
       const realtimeClient = new RealtimeClient({
-        apiUrl: 'wss://api.agentc.ai/rt/ws',
-        authManager,
+        apiUrl: wsUrl,
+        authManager,  // Pass the authenticated manager
         enableAudio: true,
         audioConfig: {
           enableInput: true,
@@ -385,7 +588,9 @@ function CustomProvider({ children }) {
       setClient(realtimeClient);
     };
     
-    initClient();
+    initClient().catch(error => {
+      console.error('Failed to initialize client:', error);
+    });
     
     return () => {
       client?.destroy();
@@ -397,7 +602,11 @@ function CustomProvider({ children }) {
   }
   
   return (
-    <AgentCContext.Provider value={{ client, isInitialized: true, error: null }}>
+    <AgentCContext.Provider value={{ 
+      client, 
+      isInitializing: false, 
+      error: null 
+    }}>
       {children}
     </AgentCContext.Provider>
   );
@@ -407,37 +616,67 @@ function CustomProvider({ children }) {
 ### Multi-Environment Support
 
 ```tsx
-const getConfig = () => {
+const getEnvironmentConfig = () => {
+  // Environment variable is replaced at BUILD TIME
   const env = process.env.REACT_APP_ENV || 'development';
   
   const configs = {
     development: {
-      apiUrl: 'ws://localhost:8080/rt/ws',
-      authApiUrl: 'http://localhost:8080',
+      wsUrl: 'wss://localhost:8000/rt/ws',
+      apiUrl: 'https://localhost:8000',
       debug: true
     },
     staging: {
-      apiUrl: 'wss://staging.agentc.ai/rt/ws',
-      authApiUrl: 'https://staging.agentc.ai',
+      wsUrl: 'wss://staging.example.com/rt/ws',
+      apiUrl: 'https://staging.example.com',
       debug: true
     },
     production: {
-      apiUrl: 'wss://api.agentc.ai/rt/ws',
-      authApiUrl: 'https://api.agentc.ai',
+      wsUrl: 'wss://api.example.com/rt/ws',
+      apiUrl: 'https://api.example.com',
       debug: false
     }
   };
   
-  return {
-    ...configs[env],
-    apiKey: process.env.REACT_APP_AGENTC_KEY!,
-    enableAudio: true
-  };
+  return configs[env as keyof typeof configs];
 };
 
 function App() {
+  const config = getEnvironmentConfig();
+  const [authManager, setAuthManager] = useState<AuthManager | null>(null);
+  
+  useEffect(() => {
+    const authenticate = async () => {
+      const manager = new AuthManager({
+        apiUrl: config.apiUrl,
+        autoRefresh: true
+      });
+      
+      // Get credentials based on environment
+      const credentials = await getCredentialsForEnvironment();
+      
+      try {
+        await manager.login(credentials);
+        setAuthManager(manager);
+      } catch (error) {
+        console.error('Authentication failed:', error);
+      }
+    };
+    
+    authenticate();
+  }, [config.apiUrl]);
+  
+  if (!authManager) {
+    return <div>Authenticating...</div>;
+  }
+  
   return (
-    <AgentCProvider config={getConfig()}>
+    <AgentCProvider 
+      apiUrl={config.wsUrl}
+      authManager={authManager}
+      debug={config.debug}
+      autoConnect={true}
+    >
       <YourApp />
     </AgentCProvider>
   );
@@ -485,14 +724,17 @@ class ErrorBoundary extends React.Component {
 
 ## Best Practices
 
-1. **Use environment variables for configuration:**
+1. **Understand environment variable behavior:**
 ```tsx
-<AgentCProvider 
-  config={{
-    apiUrl: process.env.REACT_APP_AGENTC_URL!,
-    apiKey: process.env.REACT_APP_AGENTC_KEY!
-  }}
->
+// ✅ Good: Environment URLs (non-sensitive)
+const wsUrl = process.env.REACT_APP_AGENTC_WS_URL || 'wss://localhost:8000/rt/ws';
+
+// ❌ Bad: Never put credentials in client-side env vars
+// These get bundled into your JavaScript!
+const password = process.env.REACT_APP_PASSWORD;  // NEVER DO THIS!
+
+// ✅ Good: Get credentials securely at runtime
+const credentials = await getUserCredentials();  // From login form or secure API
 ```
 
 2. **Handle errors appropriately:**
@@ -529,18 +771,34 @@ useEffect(() => {
 
 5. **Use one provider per app:**
 ```tsx
-// Good - single provider at root
-<AgentCProvider config={config}>
-  <Router>
-    <App />
-  </Router>
-</AgentCProvider>
+// ✅ Good - single provider at root with authentication
+const App = () => {
+  const [authManager, setAuthManager] = useState(null);
+  
+  // Authenticate once at the app level
+  useEffect(() => {
+    authenticateUser().then(setAuthManager);
+  }, []);
+  
+  if (!authManager) return <LoginScreen />;
+  
+  return (
+    <AgentCProvider 
+      apiUrl="wss://localhost:8000/rt/ws"
+      authManager={authManager}
+    >
+      <Router>
+        <AppContent />
+      </Router>
+    </AgentCProvider>
+  );
+};
 
-// Bad - multiple providers
-<AgentCProvider config={config1}>
+// ❌ Bad - multiple providers
+<AgentCProvider authManager={authManager1}>
   <Component1 />
 </AgentCProvider>
-<AgentCProvider config={config2}>
+<AgentCProvider authManager={authManager2}>
   <Component2 />
 </AgentCProvider>
 ```
@@ -551,28 +809,53 @@ useEffect(() => {
 import { 
   AgentCProvider, 
   AgentCProviderProps,
-  AgentCConfig 
+  AuthManager,
+  LoginCredentials
 } from '@agentc/realtime-react';
 
-const config: AgentCConfig = {
-  apiUrl: 'wss://api.agentc.ai/rt/ws',
-  apiKey: 'your-key',
-  enableAudio: true,
-  audioConfig: {
-    enableInput: true,
-    enableOutput: true
-  }
-};
-
 const App: React.FC = () => {
+  const [authManager, setAuthManager] = useState<AuthManager | null>(null);
+  
+  useEffect(() => {
+    const initAuth = async () => {
+      const manager = new AuthManager({
+        apiUrl: 'https://localhost:8000'
+      });
+      
+      const credentials: LoginCredentials = {
+        username: 'user@example.com',
+        password: 'secure-password'
+      };
+      
+      try {
+        await manager.login(credentials);
+        setAuthManager(manager);
+      } catch (error) {
+        console.error('Login failed:', error);
+      }
+    };
+    
+    initAuth();
+  }, []);
+  
   const handleError = (error: Error): void => {
-    console.error(error);
+    console.error('AgentC Error:', error);
   };
+  
+  const handleInitialized = (client: RealtimeClient): void => {
+    console.log('Client initialized:', client);
+  };
+  
+  if (!authManager) {
+    return <div>Authenticating...</div>;
+  }
   
   return (
     <AgentCProvider 
-      config={config}
+      apiUrl="wss://localhost:8000/rt/ws"
+      authManager={authManager}
       onError={handleError}
+      onInitialized={handleInitialized}
       autoConnect={true}
       debug={false}
     >
@@ -586,20 +869,41 @@ const App: React.FC = () => {
 
 ### Provider not connecting
 
-- Check API URL is correct
-- Verify API key is valid
+- Check WebSocket URL is correct (ws:// or wss://)
+- Verify authentication succeeded (check authManager.isAuthenticated())
+- Ensure credentials are valid
 - Check network connectivity
 - Look for errors in console
+- Verify the server is running (for localhost development)
 
 ### Context is null in child components
 
 - Ensure components are inside provider
-- Check that provider is properly initialized
-- Verify no errors during initialization
+- Check that authentication completed before rendering provider
+- Verify authManager is set before passing to provider
+- Check for initialization errors in console
+
+### Authentication issues
+
+- Verify username/password are correct
+- Check REST API URL (different from WebSocket URL)
+- Ensure login endpoint is accessible
+- Check for CORS issues in development
+- Look for detailed error messages in network tab
+
+### Environment variable issues
+
+- Remember env vars are replaced at BUILD time, not runtime
+- After changing .env file, restart the development server
+- In production, rebuild the app after changing env vars
+- Use REACT_APP_ prefix for Create React App
+- Use NEXT_PUBLIC_ prefix for Next.js
+- Never put sensitive data in client-side env vars
 
 ### Memory leaks
 
 - Provider handles cleanup automatically
+- AuthManager cleanup happens in provider unmount
 - Ensure custom hooks clean up subscriptions
 - Check for circular references
 

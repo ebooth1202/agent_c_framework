@@ -7,7 +7,7 @@ This guide will help you get up and running with the Agent C Realtime SDK in min
 Before you begin, ensure you have:
 
 - **Node.js** version 16.0 or later
-- **An Agent C API key** (get one at [agentc.ai](https://agentc.ai))
+- **Agent C login credentials** (username and password)
 - **A modern web browser** (Chrome 66+, Firefox 76+, or Safari 14.1+)
 - **Basic knowledge** of JavaScript/TypeScript
 
@@ -66,17 +66,20 @@ Create a simple HTML file with the SDK:
     <script type="module">
         import { RealtimeClient, AuthManager } from '@agentc/realtime-core';
         
-        // Initialize authentication
+        // Initialize authentication with REST API URL
         const authManager = new AuthManager({
-            apiUrl: 'https://api.agentc.ai'
+            apiUrl: 'https://localhost:8000'  // Agent C REST API endpoint
         });
         
-        // Login with your API key
-        await authManager.login('your-api-key');
+        // Login with username and password
+        const loginResponse = await authManager.login({
+            username: 'your-username',
+            password: 'your-password'
+        });
         
-        // Create the client
+        // Create the client using WebSocket URL from login response
         const client = new RealtimeClient({
-            apiUrl: 'wss://api.agentc.ai/rt/ws',
+            apiUrl: loginResponse.websocketUrl,  // WebSocket URL from login
             authManager,
             debug: true // Enable debug logging
         });
@@ -117,17 +120,20 @@ Create a simple HTML file with the SDK:
 import { RealtimeClient, AuthManager } from '@agentc/realtime-core';
 
 async function main() {
-    // Initialize authentication
+    // Initialize authentication with REST API URL
     const authManager = new AuthManager({
-        apiUrl: 'https://api.agentc.ai'
+        apiUrl: 'https://localhost:8000'  // Agent C REST API endpoint
     });
     
-    // Login with API key
-    await authManager.login(process.env.AGENTC_API_KEY!);
+    // Login with username and password
+    const loginResponse = await authManager.login({
+        username: process.env.AGENTC_USERNAME!,
+        password: process.env.AGENTC_PASSWORD!
+    });
     
-    // Create and configure client
+    // Create and configure client using WebSocket URL from login
     const client = new RealtimeClient({
-        apiUrl: 'wss://api.agentc.ai/rt/ws',
+        apiUrl: loginResponse.websocketUrl,  // WebSocket URL from login response
         authManager,
         enableAudio: false, // Audio not supported in Node.js
         debug: true
@@ -177,8 +183,9 @@ function App() {
     return (
         <AgentCProvider 
             config={{
-                apiUrl: 'wss://api.agentc.ai/rt/ws',
-                apiKey: process.env.REACT_APP_AGENTC_API_KEY,
+                restApiUrl: 'https://localhost:8000',  // Agent C REST API
+                username: process.env.REACT_APP_AGENTC_USERNAME,
+                password: process.env.REACT_APP_AGENTC_PASSWORD,
                 enableAudio: true,
                 debug: true
             }}
@@ -258,17 +265,21 @@ Let's establish your first connection and send a message:
 import { RealtimeClient, AuthManager } from '@agentc/realtime-core';
 
 async function quickStart() {
-    // Step 1: Authenticate
+    // Step 1: Authenticate with username/password
     const authManager = new AuthManager({
-        apiUrl: 'https://api.agentc.ai'
+        apiUrl: 'https://localhost:8000'  // Agent C REST API endpoint
     });
     
-    const loginResponse = await authManager.login('your-api-key');
+    const loginResponse = await authManager.login({
+        username: 'your-username',
+        password: 'your-password'
+    });
     console.log('Logged in! Available voices:', loginResponse.voices);
+    console.log('WebSocket URL:', loginResponse.websocketUrl);
     
-    // Step 2: Create client
+    // Step 2: Create client using WebSocket URL from login
     const client = new RealtimeClient({
-        apiUrl: 'wss://api.agentc.ai/rt/ws',
+        apiUrl: loginResponse.websocketUrl,  // Dynamic WebSocket URL from login
         authManager,
         enableAudio: true,
         audioConfig: {
@@ -320,12 +331,13 @@ For production applications, use environment variables:
 ### .env file
 ```bash
 # Agent C Configuration
-AGENTC_API_URL=wss://api.agentc.ai/rt/ws
-AGENTC_API_KEY=your-api-key-here
+AGENTC_REST_API_URL=https://localhost:8000  # REST API for authentication
+AGENTC_USERNAME=your-username
+AGENTC_PASSWORD=your-password
 AGENTC_DEBUG=true
 
-# Optional: HeyGen Configuration for Avatars
-HEYGEN_API_KEY=your-heygen-key
+# Note: WebSocket URL is obtained dynamically from login response
+# HeyGen token is also provided in the login response
 ```
 
 ### Loading configuration
@@ -336,13 +348,17 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const authManager = new AuthManager({
-    apiUrl: process.env.AGENTC_API_URL!
+    apiUrl: process.env.AGENTC_REST_API_URL!  // REST API endpoint
 });
 
-await authManager.login(process.env.AGENTC_API_KEY!);
+// Login returns JWT token, WebSocket URL, and HeyGen token
+const loginResponse = await authManager.login({
+    username: process.env.AGENTC_USERNAME!,
+    password: process.env.AGENTC_PASSWORD!
+});
 
 const client = new RealtimeClient({
-    apiUrl: process.env.AGENTC_API_URL!,
+    apiUrl: loginResponse.websocketUrl,  // Use WebSocket URL from login
     authManager,
     debug: process.env.AGENTC_DEBUG === 'true'
 });
@@ -353,8 +369,14 @@ const client = new RealtimeClient({
 To enable voice interactions:
 
 ```typescript
+// Note: Assumes authManager.login() was already called
+const loginResponse = await authManager.login({
+    username: 'your-username',
+    password: 'your-password'
+});
+
 const client = new RealtimeClient({
-    apiUrl: 'wss://api.agentc.ai/rt/ws',
+    apiUrl: loginResponse.websocketUrl,  // WebSocket URL from login
     authManager,
     enableAudio: true,
     audioConfig: {
@@ -421,7 +443,7 @@ try {
     await client.connect();
 } catch (error) {
     if (error.message.includes('Authentication')) {
-        console.error('Invalid API key');
+        console.error('Invalid credentials or expired token');
     } else if (error.message.includes('timeout')) {
         console.error('Connection timeout - check your network');
     } else {
@@ -464,8 +486,13 @@ client.on('text_delta', (event: TextDeltaEvent) => {
 });
 
 // Configuration is fully typed
+const loginResponse = await authManager.login({
+    username: 'your-username',
+    password: 'your-password'
+});
+
 const config: RealtimeClientConfig = {
-    apiUrl: 'wss://api.agentc.ai/rt/ws',
+    apiUrl: loginResponse.websocketUrl,  // Dynamic WebSocket URL
     authManager,
     enableAudio: true,
     reconnection: {
@@ -503,9 +530,10 @@ Now that you have the basics working:
 ### Common Issues
 
 **Connection fails immediately**
-- Check your API key is valid
-- Verify the API URL is correct
-- Ensure you're calling `authManager.login()` before connecting
+- Check your username and password are valid
+- Verify the REST API URL is correct (https://localhost:8000 for development)
+- Ensure you're calling `authManager.login()` and using the returned WebSocket URL
+- Check that the JWT token hasn't expired
 
 **No audio output**
 - Check browser supports Web Audio API

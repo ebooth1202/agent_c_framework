@@ -2,10 +2,50 @@
 
 The Agent C Realtime React SDK provides a comprehensive set of hooks for building real-time applications.
 
+## Authentication with Agent C
+
+Agent C uses username/password authentication, not API keys. The authentication flow:
+
+1. **REST API Login** - Authenticate with credentials at `https://localhost:8000/rt/login` (or your server URL)
+2. **Receive Tokens** - Get JWT token and WebSocket URL from login response
+3. **WebSocket Connection** - Connect to the WebSocket URL with the JWT token
+
+### AgentCProvider Configuration
+
+```typescript
+// Development configuration
+<AgentCProvider
+  config={{
+    // REST API endpoint for authentication
+    restApiUrl: 'https://localhost:8000',
+    // Optional: provide credentials for auto-connect
+    credentials: {
+      username: 'demo_user',
+      password: 'demo_pass'
+    },
+    // WebSocket URL is obtained from login response
+    autoConnect: false,
+    enableAudio: true
+  }}
+>
+
+// Production configuration with environment variables
+<AgentCProvider
+  config={{
+    restApiUrl: process.env.REACT_APP_AGENTC_API_URL,
+    credentials: {
+      username: process.env.REACT_APP_AGENTC_USERNAME,
+      password: process.env.REACT_APP_AGENTC_PASSWORD
+    },
+    autoConnect: true
+  }}
+>
+```
+
 ## Available Hooks
 
 - [`useRealtimeClient`](#userealtimeclient) - Direct client access
-- [`useConnection`](#useconnection) - Connection management
+- [`useConnection`](#useconnection) - Connection management with authentication
 - [`useChat`](#usechat) - Chat messaging
 - [`useAudio`](#useaudio) - Audio control
 - [`useTurnState`](#useturnstate) - Turn management
@@ -30,7 +70,7 @@ import {
 
 ## useRealtimeClient
 
-Direct access to the RealtimeClient instance.
+Direct access to the RealtimeClient instance. The client is automatically configured with authentication details from the AgentCProvider.
 
 ### Signature
 
@@ -42,14 +82,22 @@ function useRealtimeClient(): RealtimeClient | null
 
 - `RealtimeClient | null` - The client instance or null if not initialized
 
+### Important Notes
+
+- The client instance is managed by the AgentCProvider
+- WebSocket URL is automatically obtained from the authentication process
+- JWT tokens are handled internally by the AuthManager
+- Do not manually configure WebSocket URLs
+
 ### Example
 
 ```tsx
 function CustomComponent() {
   const client = useRealtimeClient();
+  const { isAuthenticated } = useConnection();
   
   useEffect(() => {
-    if (!client) return;
+    if (!client || !isAuthenticated) return;
     
     const handler = (event) => {
       console.log('Custom event:', event);
@@ -60,13 +108,21 @@ function CustomComponent() {
     return () => {
       client.off('custom_event', handler);
     };
-  }, [client]);
+  }, [client, isAuthenticated]);
   
   const sendCustomCommand = () => {
+    if (!isAuthenticated) {
+      console.error('Not authenticated');
+      return;
+    }
     client?.sendText('Custom command');
   };
   
-  return <button onClick={sendCustomCommand}>Send</button>;
+  return (
+    <button onClick={sendCustomCommand} disabled={!isAuthenticated}>
+      Send Custom Command
+    </button>
+  );
 }
 ```
 
@@ -74,15 +130,16 @@ function CustomComponent() {
 
 ## useConnection
 
-Manages WebSocket connection state and control.
+Manages WebSocket connection state and control with Agent C authentication.
 
 ### Signature
 
 ```typescript
 interface UseConnectionReturn {
-  connect: () => Promise<void>;
+  connect: (credentials?: { username: string; password: string }) => Promise<void>;
   disconnect: () => void;
   isConnected: boolean;
+  isAuthenticated: boolean;
   connectionState: ConnectionState;
   error: Error | null;
   reconnectAttempt: number;
@@ -93,12 +150,20 @@ function useConnection(): UseConnectionReturn
 
 ### Returns
 
-- `connect` - Async function to establish connection
+- `connect` - Async function to authenticate and establish connection
 - `disconnect` - Function to close connection
-- `isConnected` - Boolean connection status
+- `isConnected` - Boolean WebSocket connection status
+- `isAuthenticated` - Boolean authentication status
 - `connectionState` - Current ConnectionState enum value
-- `error` - Connection error if any
+- `error` - Connection or authentication error if any
 - `reconnectAttempt` - Current reconnection attempt number
+
+### Authentication Flow
+
+The connection process handles Agent C authentication:
+1. Authenticates with username/password via REST API
+2. Receives WebSocket URL from login response
+3. Establishes WebSocket connection with JWT token
 
 ### Example
 
@@ -107,15 +172,20 @@ function ConnectionManager() {
   const { 
     connect, 
     disconnect, 
-    isConnected, 
+    isConnected,
+    isAuthenticated,
     connectionState, 
     error,
     reconnectAttempt 
   } = useConnection();
   
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  
   const handleConnect = async () => {
     try {
-      await connect();
+      // Authenticate and connect
+      await connect({ username, password });
       console.log('Connected successfully');
     } catch (err) {
       console.error('Connection failed:', err);
@@ -125,14 +195,53 @@ function ConnectionManager() {
   return (
     <div>
       <div>Status: {ConnectionState[connectionState]}</div>
+      <div>Authenticated: {isAuthenticated ? 'Yes' : 'No'}</div>
       {error && <div>Error: {error.message}</div>}
       {reconnectAttempt > 0 && <div>Reconnecting... Attempt {reconnectAttempt}</div>}
       
-      <button onClick={isConnected ? disconnect : handleConnect}>
-        {isConnected ? 'Disconnect' : 'Connect'}
-      </button>
+      {!isConnected ? (
+        <div>
+          <input
+            type="text"
+            placeholder="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <button onClick={handleConnect} disabled={!username || !password}>
+            Connect
+          </button>
+        </div>
+      ) : (
+        <button onClick={disconnect}>Disconnect</button>
+      )}
     </div>
   );
+}
+```
+
+### With Environment Variables
+
+```tsx
+function AutoConnectionManager() {
+  const { connect, isConnected } = useConnection();
+  
+  useEffect(() => {
+    // Auto-connect using environment credentials
+    if (!isConnected) {
+      connect({
+        username: process.env.REACT_APP_AGENTC_USERNAME || 'demo',
+        password: process.env.REACT_APP_AGENTC_PASSWORD || 'demo'
+      });
+    }
+  }, []);
+  
+  return <div>Connection status: {isConnected ? 'Connected' : 'Connecting...'}</div>;
 }
 ```
 
@@ -483,7 +592,7 @@ function VoiceSelector() {
 
 ## useAvatar
 
-Manages HeyGen avatar integration.
+Manages HeyGen avatar integration. HeyGen access tokens and available avatars are provided by Agent C during authentication.
 
 ### Signature
 
@@ -503,6 +612,7 @@ interface UseAvatarReturn {
   endAvatarSession: () => void;
   sessionId: string | null;
   error: Error | null;
+  hasHeyGenAccess: boolean;
 }
 
 function useAvatar(): UseAvatarReturn
@@ -511,6 +621,15 @@ function useAvatar(): UseAvatarReturn
 ### Returns
 
 Avatar management functions and state
+
+### Authentication Note
+
+HeyGen integration requires:
+1. Valid Agent C authentication
+2. HeyGen access token (provided in login response)
+3. Available avatars list (provided in login response)
+
+The SDK automatically handles HeyGen token management after Agent C authentication.
 
 ### Example
 
@@ -589,9 +708,16 @@ function App() {
   return (
     <AgentCProvider 
       config={{
-        apiUrl: 'wss://api.agentc.ai/rt/ws',
-        apiKey: process.env.REACT_APP_API_KEY,
-        enableAudio: true
+        // REST API endpoint for authentication
+        restApiUrl: process.env.REACT_APP_AGENTC_API_URL || 'https://localhost:8000',
+        // Optional: provide default credentials
+        credentials: {
+          username: process.env.REACT_APP_AGENTC_USERNAME,
+          password: process.env.REACT_APP_AGENTC_PASSWORD
+        },
+        enableAudio: true,
+        // WebSocket URL will be obtained from login response
+        autoConnect: false
       }}
     >
       <CompleteInterface />
@@ -600,28 +726,68 @@ function App() {
 }
 
 function CompleteInterface() {
-  const { connect, disconnect, isConnected } = useConnection();
+  const { connect, disconnect, isConnected, isAuthenticated } = useConnection();
   const { messages, sendMessage, isStreaming, streamingText } = useChat();
   const { startRecording, stopRecording, isRecording, audioLevel } = useAudio();
   const { currentTurn, isUserTurn } = useTurnState();
   const { currentVoice, setVoice, availableVoices } = useVoiceModel();
   
   const [input, setInput] = useState('');
+  const [credentials, setCredentials] = useState({ username: '', password: '' });
+  const [showLogin, setShowLogin] = useState(true);
+  
+  // Handle authentication and connection
+  const handleConnect = async () => {
+    try {
+      await connect(credentials);
+      setShowLogin(false);
+    } catch (error) {
+      console.error('Authentication failed:', error);
+      alert('Failed to connect. Please check your credentials.');
+    }
+  };
   
   // Auto-start recording on user turn
   React.useEffect(() => {
-    if (isUserTurn && !isRecording) {
+    if (isUserTurn && !isRecording && isConnected) {
       startRecording().catch(console.error);
     } else if (!isUserTurn && isRecording) {
       stopRecording();
     }
-  }, [isUserTurn, isRecording]);
+  }, [isUserTurn, isRecording, isConnected]);
+  
+  // Show login form if not authenticated
+  if (!isAuthenticated && showLogin) {
+    return (
+      <div className="login-form">
+        <h2>Connect to Agent C</h2>
+        <input
+          type="text"
+          placeholder="Username"
+          value={credentials.username}
+          onChange={(e) => setCredentials({...credentials, username: e.target.value})}
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={credentials.password}
+          onChange={(e) => setCredentials({...credentials, password: e.target.value})}
+        />
+        <button 
+          onClick={handleConnect}
+          disabled={!credentials.username || !credentials.password}
+        >
+          Connect
+        </button>
+      </div>
+    );
+  }
   
   return (
     <div className="app">
       <header>
-        <button onClick={isConnected ? disconnect : connect}>
-          {isConnected ? 'Disconnect' : 'Connect'}
+        <button onClick={disconnect}>
+          Disconnect
         </button>
         
         <select 
@@ -699,19 +865,20 @@ function CompleteInterface() {
 You can create custom hooks that combine the base hooks:
 
 ```tsx
-// Custom hook for voice chat
+// Custom hook for authenticated voice chat
 function useVoiceChat() {
-  const { isConnected } = useConnection();
+  const { isConnected, isAuthenticated } = useConnection();
   const { sendMessage } = useChat();
   const { startRecording, stopRecording, isRecording } = useAudio();
   const { isUserTurn } = useTurnState();
   
   const startVoiceChat = useCallback(async () => {
+    if (!isAuthenticated) throw new Error('Not authenticated');
     if (!isConnected) throw new Error('Not connected');
     if (!isUserTurn) throw new Error('Not your turn');
     
     await startRecording();
-  }, [isConnected, isUserTurn, startRecording]);
+  }, [isAuthenticated, isConnected, isUserTurn, startRecording]);
   
   const stopVoiceChat = useCallback(() => {
     stopRecording();
@@ -720,7 +887,8 @@ function useVoiceChat() {
   return {
     startVoiceChat,
     stopVoiceChat,
-    isVoiceChatActive: isRecording && isUserTurn
+    isVoiceChatActive: isRecording && isUserTurn,
+    canStartChat: isAuthenticated && isConnected && isUserTurn
   };
 }
 
@@ -771,18 +939,63 @@ import {
 
 ## Best Practices
 
-1. **Always check connection state before operations:**
+1. **Always check authentication and connection state before operations:**
 ```tsx
-const { isConnected } = useConnection();
+const { isConnected, isAuthenticated } = useConnection();
 const { sendMessage } = useChat();
 
 const handleSend = (text: string) => {
+  if (!isAuthenticated) {
+    showError('Please authenticate first');
+    return;
+  }
   if (!isConnected) {
-    showError('Please connect first');
+    showError('WebSocket not connected');
     return;
   }
   sendMessage(text);
 };
+```
+
+### Authentication Best Practices
+
+1. **Never hardcode credentials:**
+```tsx
+// ❌ Bad - hardcoded credentials
+const credentials = { username: 'admin', password: 'password123' };
+
+// ✅ Good - use environment variables or user input
+const credentials = {
+  username: process.env.REACT_APP_USERNAME || userInput.username,
+  password: process.env.REACT_APP_PASSWORD || userInput.password
+};
+```
+
+2. **Handle authentication errors gracefully:**
+```tsx
+const handleConnect = async () => {
+  try {
+    await connect({ username, password });
+  } catch (error) {
+    if (error.code === 'AUTH_FAILED') {
+      showError('Invalid credentials');
+    } else if (error.code === 'NETWORK_ERROR') {
+      showError('Cannot reach authentication server');
+    } else {
+      showError('Connection failed: ' + error.message);
+    }
+  }
+};
+```
+
+3. **Store authentication state properly:**
+```tsx
+// The SDK handles token storage internally
+// Access authentication state through hooks
+const { isAuthenticated } = useConnection();
+
+// The WebSocket URL is obtained automatically from login
+// No need to configure it manually
 ```
 
 2. **Handle async operations properly:**

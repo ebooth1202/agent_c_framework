@@ -4,7 +4,9 @@ This document provides a comprehensive overview of the Agent C Realtime SDK arch
 
 ## Design Philosophy
 
-The Agent C Realtime SDK is built on several core principles:
+The Agent C Realtime SDK is built on several core principles.
+
+**Note:** For development, the Agent C REST API runs at `https://localhost:8000`. WebSocket URLs are provided dynamically in the login response.
 
 ### 1. **Separation of Concerns**
 Each module has a single, well-defined responsibility. Audio handling doesn't know about WebSocket details, and authentication doesn't depend on UI components.
@@ -98,17 +100,18 @@ Handles the low-level WebSocket connection with automatic reconnection:
 
 ### Authentication System
 
-Manages API keys, JWT tokens, and HeyGen credentials:
+Manages username/password authentication, JWT tokens, and HeyGen credentials:
 
 ```
 ┌──────────────────────────────────────┐
 │           AuthManager                │
 ├──────────────────────────────────────┤
-│ • API key validation                 │
+│ • Username/password login            │
 │ • JWT token management               │
 │ • Token refresh scheduling           │
 │ • HeyGen token storage              │
 │ • Available voices/avatars          │
+│ • WebSocket URL from login response │
 └──────────────────────────────────────┘
                    │
                    ▼
@@ -351,6 +354,31 @@ The SDK uses a type-safe event emitter pattern:
    - `chat_session_name_changed` - Session renamed
    - `session_metadata_changed` - Metadata updated
 
+### Authentication Flow
+
+```typescript
+// 1. Login with username/password to REST API
+AuthManager.login({ username, password })
+    ↓
+POST https://localhost:8000/rt/login
+    ↓
+Receive LoginResponse {
+    agent_c_token: "jwt...",
+    heygen_token: "hg_...",
+    websocketUrl: "wss://localhost:8000/rt/ws",
+    voices: [...],
+    avatars: [...],
+    agents: [...]
+}
+    ↓
+// 2. Connect to WebSocket using URL from login
+RealtimeClient.connect()
+    ↓
+WebSocket.connect(loginResponse.websocketUrl + "?token=jwt...")
+    ↓
+Connection established
+```
+
 ### Event Flow Example
 
 ```typescript
@@ -459,9 +487,10 @@ function useChat() {
 ## Security Considerations
 
 ### Authentication
-- JWT tokens with automatic refresh
+- Username/password authentication
+- JWT tokens with automatic refresh  
 - Secure token storage abstractions
-- API key validation
+- WebSocket URL provided by login response
 
 ### Data Transmission
 - WSS (WebSocket Secure) for encryption
@@ -523,15 +552,25 @@ try {
 ### 3. **State Synchronization**
 Keep UI state synchronized with SDK state:
 ```typescript
-client.on('connection_state_changed', updateUI);
+// Listen for connection state changes
+client.on('connected', () => updateUI('connected'));
+client.on('disconnected', ({ reason }) => updateUI('disconnected', reason));
+client.on('reconnecting', ({ attempt }) => updateUI('reconnecting', attempt));
 ```
 
 ### 4. **Performance Monitoring**
-Track key metrics:
+Implement your own metrics tracking:
 ```typescript
-client.on('metrics', (data) => {
-    analytics.track('sdk_performance', data);
+// Track connection performance
+const startTime = Date.now();
+client.on('connected', () => {
+    const connectionTime = Date.now() - startTime;
+    console.log('Connection established in', connectionTime, 'ms');
 });
+
+// Monitor audio status
+const audioStatus = client.getAudioStatus();
+console.log('Audio buffer size:', audioStatus.bufferSize);
 ```
 
 ## Future Architecture Considerations

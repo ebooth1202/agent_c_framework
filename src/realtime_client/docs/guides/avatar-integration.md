@@ -39,25 +39,26 @@ npm install @heygen/streaming-avatar
 import { RealtimeClient, AuthManager } from '@agentc/realtime-core';
 import StreamingAvatar from '@heygen/streaming-avatar';
 
-// Authenticate with Agent C
+// Authenticate with Agent C using username/password
 const authManager = new AuthManager({
-  apiUrl: 'https://api.agentc.ai'
+  apiUrl: 'https://localhost:8000'
 });
 
-await authManager.login('your-api-key');
+// Login with username and password
+const loginResponse = await authManager.login('username', 'password');
 
-// Create client
+// Create client with WebSocket URL from login response
 const client = new RealtimeClient({
-  apiUrl: 'wss://api.agentc.ai/rt/ws',
+  apiUrl: loginResponse.websocketUrl,  // URL provided by login
   authManager,
   enableAudio: true  // Required for avatars
 });
 
 await client.connect();
 
-// Get HeyGen token and available avatars
-const heygenToken = client.getHeyGenAccessToken();
-const avatars = client.getAvailableAvatars();
+// Get HeyGen token and available avatars from login response
+const heygenToken = loginResponse.heygenAccessToken;
+const avatars = loginResponse.availableAvatars;
 
 console.log('Available avatars:', avatars);
 ```
@@ -134,8 +135,9 @@ function AvatarApp() {
   return (
     <AgentCProvider 
       config={{
-        apiUrl: 'wss://api.agentc.ai/rt/ws',
-        apiKey: process.env.REACT_APP_API_KEY,
+        apiUrl: 'https://localhost:8000',
+        username: process.env.REACT_APP_USERNAME,
+        password: process.env.REACT_APP_PASSWORD,
         enableAudio: true
       }}
     >

@@ -1,442 +1,692 @@
-# Authentication Guide
+# Agent C Authentication Guide
 
-This guide covers authentication with the Agent C Realtime API, including API keys, JWT tokens, token refresh, and security best practices.
+This guide covers authentication with the Agent C Realtime API using the ChatUser system, including login flows, token management, and how to build application-specific user systems on top of Agent C's platform authentication.
 
-## Overview
+## Overview: The ChatUser Concept
 
-The Agent C Realtime SDK uses a two-step authentication process:
+Agent C uses a **ChatUser** authentication system that represents platform-level users, not application end-users. This is a critical distinction:
 
-1. **API Key Authentication** - Exchange your API key for JWT tokens
-2. **JWT Token Usage** - Use JWT tokens for WebSocket connections
+- **ChatUsers** are Agent C platform accounts with credentials (username/password)
+- **ChatUsers** have access to agents, voices, avatars, and toolsets
+- **Applications** can implement their own user system while sharing ChatUsers
+- **NO API KEYS** - Agent C uses username/password authentication exclusively
 
-## Authentication Flow
+### Authentication Architecture
 
 ```
-API Key
-   │
-   ▼
-Login Endpoint (/auth/login)
-   │
-   ▼
-JWT Tokens (Agent C + HeyGen)
-   │
-   ▼
-WebSocket Connection
-   │
-   ▼
-Auto-refresh before expiry
+Application End-User (optional, your implementation)
+           │
+           ▼
+    Your Application
+           │
+           ▼
+ChatUser Credentials (username/password)
+           │
+           ▼
+Agent C Login Endpoint (/rt/login)
+           │
+           ▼
+    JWT Token + Config
+           │
+           ▼
+   WebSocket Connection
 ```
 
 ## Getting Started
 
-### 1. Obtain a HeyGen Access Token
+### Development Setup
 
-Get your HeyGen Access Token from the Agent C dashboard:
+Agent C runs locally on port 8000 during development:
 
-1. Log into [Agent C Platform](https://agentc.ai)
-2. Navigate to Settings → API Keys
-3. Create a new API key
-4. Copy and store securely
+```typescript
+// Development configuration
+const AUTH_CONFIG = {
+  apiUrl: 'https://localhost:8000',  // HTTPS required for Agent C
+  loginEndpoint: '/rt/login',
+  refreshEndpoint: '/rt/refresh_token'
+};
+```
 
-### 2. Basic Authentication
+### Basic Login Flow
 
 ```typescript
 import { AuthManager, RealtimeClient } from '@agentc/realtime-core';
 
-// Create auth manager
+// Create auth manager pointing to local Agent C
 const authManager = new AuthManager({
-  apiUrl: 'https://api.agentc.ai'
+  apiUrl: 'https://localhost:8000'
 });
 
-// Login with API key
-const loginResponse = await authManager.login('sk-your-api-key');
-
-// Create client with auth manager
-const client = new RealtimeClient({
-  apiUrl: 'wss://api.agentc.ai/rt/ws',
-  authManager
+// Login with ChatUser credentials (NOT API keys!)
+const loginResponse = await authManager.login({
+  username: 'your_chatuser_username',
+  password: 'your_chatuser_password'
 });
 
-// Connect (uses JWT from auth manager)
-await client.connect();
+// The login response contains everything needed
+console.log('JWT Token:', loginResponse.agent_c_token);
+console.log('WebSocket URL:', loginResponse.websocket_url);
+console.log('Available Agents:', loginResponse.agents);
+console.log('Available Voices:', loginResponse.voices);
 ```
 
-## Authentication Methods
+## Complete Login Implementation
 
-### Method 1: Using AuthManager (Recommended)
-
-The AuthManager handles token lifecycle automatically:
+### 1. The Login Request
 
 ```typescript
-const authManager = new AuthManager({
-  apiUrl: 'https://api.agentc.ai',
-  tokenRefreshBuffer: 5,    // Refresh 5 minutes before expiry
-  enableAutoRefresh: true   // Auto-refresh tokens
-});
+interface LoginRequest {
+  username: string;
+  password: string;
+}
 
-// Login once
-await authManager.login(process.env.AGENTC_API_KEY);
+async function loginToChatUser(credentials: LoginRequest) {
+  const response = await fetch('https://localhost:8000/rt/login', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(credentials)
+  });
 
-// Tokens are managed automatically
-const client = new RealtimeClient({
-  apiUrl: 'wss://api.agentc.ai/rt/ws',
-  authManager  // Pass manager, not token
-});
+  if (!response.ok) {
+    throw new Error(`Login failed: ${response.statusText}`);
+  }
+
+  return response.json();
+}
 ```
 
-### Method 2: Direct Token Usage
+### 2. Understanding the Login Response
 
-If you already have a JWT token:
+The login response contains comprehensive configuration data:
 
 ```typescript
-const client = new RealtimeClient({
-  apiUrl: 'wss://api.agentc.ai/rt/ws',
-  authToken: 'eyJhbGciOiJIUzI1NiIs...'  // Your JWT token
-});
-
-await client.connect();
+interface LoginResponse {
+  // Authentication tokens
+  agent_c_token: string;        // JWT for Agent C API
+  heygen_token?: string;        // Token for HeyGen avatar sessions
+  
+  // Dynamic WebSocket URL (use this, not hardcoded URLs!)
+  websocket_url: string;        // e.g., "wss://localhost:8000/rt/ws"
+  
+  // User information
+  user: {
+    id: string;
+    username: string;
+    name: string;
+    email?: string;
+  };
+  
+  // Available resources
+  agents: Agent[];              // Agents this ChatUser can access
+  voices: Voice[];              // TTS voices available
+  avatars?: Avatar[];           // HeyGen avatars if configured
+  toolsets: Toolset[];          // Available tool configurations
+  
+  // Session info
+  ui_session_id: string;        // Unique session identifier
+  expires_at: number;           // Token expiry timestamp
+}
 ```
 
-### Method 3: React with AgentCProvider
+### 3. Using the Login Response
 
-For React applications:
-
-```tsx
-<AgentCProvider 
-  config={{
-    apiUrl: 'wss://api.agentc.ai/rt/ws',
-    apiKey: process.env.REACT_APP_AGENTC_KEY  // Provider handles auth
-  }}
->
-  <App />
-</AgentCProvider>
+```typescript
+class AgentCAuthManager {
+  private loginData: LoginResponse | null = null;
+  private websocketUrl: string | null = null;
+  
+  async authenticate(username: string, password: string): Promise<void> {
+    // Login to Agent C
+    const response = await fetch('https://localhost:8000/rt/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    
+    if (!response.ok) {
+      throw new Error('Authentication failed');
+    }
+    
+    this.loginData = await response.json();
+    
+    // IMPORTANT: Use the dynamic WebSocket URL from the response
+    this.websocketUrl = this.loginData.websocket_url;
+    
+    // Schedule token refresh
+    this.scheduleTokenRefresh();
+  }
+  
+  getWebSocketUrl(): string {
+    if (!this.websocketUrl) {
+      throw new Error('Not authenticated');
+    }
+    return this.websocketUrl;
+  }
+  
+  getToken(): string {
+    if (!this.loginData) {
+      throw new Error('Not authenticated');
+    }
+    return this.loginData.agent_c_token;
+  }
+  
+  getAvailableAgents(): Agent[] {
+    return this.loginData?.agents || [];
+  }
+  
+  getAvailableVoices(): Voice[] {
+    return this.loginData?.voices || [];
+  }
+}
 ```
 
 ## Token Management
 
-### Understanding Token Lifecycle
+### Automatic Token Refresh
+
+JWT tokens expire and need to be refreshed. The refresh endpoint uses the existing token:
 
 ```typescript
-// Login response structure
-interface LoginResponse {
-  agentc_token: string;      // JWT for Agent C API
-  heygen_token?: string;     // Token for HeyGen avatars
-  ui_session_id: string;     // Session identifier
-  expires_at: number;        // Unix timestamp
-  voices: Voice[];           // Available TTS voices
-  avatars?: Avatar[];        // Available avatars
+class TokenManager {
+  private token: string;
+  private expiresAt: number;
+  private refreshTimer?: NodeJS.Timeout;
+  
+  constructor(initialToken: string, expiresAt: number) {
+    this.token = initialToken;
+    this.expiresAt = expiresAt;
+    this.scheduleRefresh();
+  }
+  
+  private scheduleRefresh(): void {
+    // Clear any existing timer
+    if (this.refreshTimer) {
+      clearTimeout(this.refreshTimer);
+    }
+    
+    // Calculate when to refresh (5 minutes before expiry)
+    const now = Date.now();
+    const expiryTime = this.expiresAt * 1000; // Convert to milliseconds
+    const refreshTime = expiryTime - (5 * 60 * 1000); // 5 minutes before
+    const delay = refreshTime - now;
+    
+    if (delay > 0) {
+      this.refreshTimer = setTimeout(() => {
+        this.refreshToken();
+      }, delay);
+    } else {
+      // Token expired or about to expire, refresh immediately
+      this.refreshToken();
+    }
+  }
+  
+  private async refreshToken(): Promise<void> {
+    try {
+      const response = await fetch('https://localhost:8000/rt/refresh_token', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Token refresh failed');
+      }
+      
+      const data = await response.json();
+      this.token = data.agent_c_token;
+      this.expiresAt = data.expires_at;
+      
+      // Schedule next refresh
+      this.scheduleRefresh();
+      
+      console.log('Token refreshed successfully');
+    } catch (error) {
+      console.error('Failed to refresh token:', error);
+      // Emit event for re-authentication
+      this.emit('token-refresh-failed');
+    }
+  }
+  
+  getToken(): string {
+    return this.token;
+  }
+  
+  isExpired(): boolean {
+    return Date.now() >= this.expiresAt * 1000;
+  }
 }
 ```
 
-### Token Expiration
+## Implementing Application-Level Users
 
-Tokens typically expire after 1 hour:
+While Agent C uses ChatUsers for platform authentication, your application can implement its own user system on top:
+
+### Strategy 1: Shared ChatUser with App Users
+
+Multiple application users share a single ChatUser account:
 
 ```typescript
-// Check if token is expired
-const isExpired = authManager.getTokenExpiry() < new Date();
-
-// Get time until expiry
-const expiry = authManager.getTokenExpiry();
-const minutesRemaining = (expiry - Date.now()) / 60000;
+class ApplicationAuthService {
+  private chatUserAuth: AgentCAuthManager;
+  private appUsers: Map<string, AppUser> = new Map();
+  
+  constructor() {
+    // Single shared ChatUser for all app users
+    this.chatUserAuth = new AgentCAuthManager();
+  }
+  
+  async initializePlatform(): Promise<void> {
+    // Authenticate with shared ChatUser credentials
+    // These could be stored in environment variables
+    await this.chatUserAuth.authenticate(
+      process.env.SHARED_CHATUSER_USERNAME!,
+      process.env.SHARED_CHATUSER_PASSWORD!
+    );
+  }
+  
+  async loginAppUser(email: string, password: string): Promise<AppUser> {
+    // Authenticate against YOUR user database
+    const user = await this.validateAppUser(email, password);
+    
+    if (!user) {
+      throw new Error('Invalid credentials');
+    }
+    
+    // App user is authenticated, they'll use the shared ChatUser connection
+    this.appUsers.set(user.id, user);
+    
+    return {
+      ...user,
+      // Provide the shared Agent C connection details
+      agentCToken: this.chatUserAuth.getToken(),
+      websocketUrl: this.chatUserAuth.getWebSocketUrl()
+    };
+  }
+  
+  private async validateAppUser(email: string, password: string): Promise<AppUser | null> {
+    // Your application's user authentication logic
+    // This could be against your own database, OAuth, etc.
+    return yourDatabaseQuery(email, password);
+  }
+}
 ```
 
-### Automatic Token Refresh
+### Strategy 2: ChatUser Per Application User
 
-The AuthManager refreshes tokens automatically:
+Each application user has their own ChatUser account:
 
 ```typescript
-authManager.on('auth:tokens-refreshed', (tokens) => {
-  console.log('Tokens refreshed, expires:', new Date(tokens.expiresAt));
-});
-
-authManager.on('auth:token-expired', () => {
-  console.log('Token expired, re-authenticating...');
-  authManager.login(apiKey);
-});
+class DedicatedUserAuthService {
+  private userSessions: Map<string, ChatUserSession> = new Map();
+  
+  async loginUser(appUserId: string, appUserPassword: string): Promise<UserSession> {
+    // First authenticate the app user
+    const appUser = await this.authenticateAppUser(appUserId, appUserPassword);
+    
+    // Map app user to their ChatUser credentials
+    const chatUserCreds = await this.getChatUserCredentials(appUser.id);
+    
+    // Login to Agent C with user-specific ChatUser
+    const authManager = new AgentCAuthManager();
+    await authManager.authenticate(
+      chatUserCreds.username,
+      chatUserCreds.password
+    );
+    
+    // Store session
+    const session = {
+      appUser,
+      authManager,
+      token: authManager.getToken(),
+      websocketUrl: authManager.getWebSocketUrl()
+    };
+    
+    this.userSessions.set(appUser.id, session);
+    return session;
+  }
+  
+  private async getChatUserCredentials(appUserId: string): Promise<ChatUserCredentials> {
+    // Your logic to map app users to ChatUsers
+    // This could be 1:1 mapping stored in your database
+    return {
+      username: `chatuser_${appUserId}`,
+      password: await this.getChatUserPassword(appUserId)
+    };
+  }
+}
 ```
 
-### Manual Token Refresh
+### Strategy 3: Multi-Tenant with Pooled ChatUsers
+
+For multi-tenant applications with ChatUser pooling:
 
 ```typescript
-// Manually refresh tokens
-const newTokens = await authManager.refreshTokens();
+class MultiTenantAuthService {
+  private tenantPools: Map<string, ChatUserPool> = new Map();
+  
+  async authenticateTenant(tenantId: string, userCredentials: any): Promise<TenantSession> {
+    // Get or create pool for tenant
+    let pool = this.tenantPools.get(tenantId);
+    if (!pool) {
+      pool = await this.createTenantPool(tenantId);
+      this.tenantPools.set(tenantId, pool);
+    }
+    
+    // Authenticate the tenant's user
+    const user = await this.authenticateTenantUser(tenantId, userCredentials);
+    
+    // Assign a ChatUser from the pool
+    const chatUserSession = await pool.assignChatUser(user.id);
+    
+    return {
+      tenant: tenantId,
+      user,
+      agentCToken: chatUserSession.token,
+      websocketUrl: chatUserSession.websocketUrl,
+      agents: chatUserSession.agents,
+      voices: chatUserSession.voices
+    };
+  }
+  
+  private async createTenantPool(tenantId: string): Promise<ChatUserPool> {
+    // Create a pool of ChatUsers for this tenant
+    const poolSize = this.getPoolSizeForTenant(tenantId);
+    const pool = new ChatUserPool();
+    
+    for (let i = 0; i < poolSize; i++) {
+      const creds = await this.getTenantChatUserCreds(tenantId, i);
+      await pool.addChatUser(creds.username, creds.password);
+    }
+    
+    return pool;
+  }
+}
 
-// Update client with new token
-client.setAuthToken(newTokens.agentCToken);
+class ChatUserPool {
+  private availableUsers: ChatUserSession[] = [];
+  private assignedUsers: Map<string, ChatUserSession> = new Map();
+  
+  async addChatUser(username: string, password: string): Promise<void> {
+    const auth = new AgentCAuthManager();
+    await auth.authenticate(username, password);
+    
+    this.availableUsers.push({
+      auth,
+      token: auth.getToken(),
+      websocketUrl: auth.getWebSocketUrl(),
+      inUse: false
+    });
+  }
+  
+  async assignChatUser(appUserId: string): Promise<ChatUserSession> {
+    // Find available ChatUser or wait for one
+    const session = this.availableUsers.find(u => !u.inUse);
+    if (!session) {
+      throw new Error('No available ChatUsers in pool');
+    }
+    
+    session.inUse = true;
+    this.assignedUsers.set(appUserId, session);
+    return session;
+  }
+  
+  releaseChatUser(appUserId: string): void {
+    const session = this.assignedUsers.get(appUserId);
+    if (session) {
+      session.inUse = false;
+      this.assignedUsers.delete(appUserId);
+    }
+  }
+}
+```
+
+## Complete Client Integration
+
+### Creating a Realtime Client with Authentication
+
+```typescript
+import { RealtimeClient } from '@agentc/realtime-core';
+
+class AgentCClient {
+  private client?: RealtimeClient;
+  private authManager: AgentCAuthManager;
+  
+  constructor() {
+    this.authManager = new AgentCAuthManager();
+  }
+  
+  async connect(username: string, password: string): Promise<void> {
+    // Step 1: Authenticate with Agent C
+    await this.authManager.authenticate(username, password);
+    
+    // Step 2: Create client with dynamic WebSocket URL from login
+    this.client = new RealtimeClient({
+      apiUrl: this.authManager.getWebSocketUrl(), // Use URL from login response!
+      authManager: this.authManager,  // Pass the auth manager instance
+      autoReconnect: true
+    });
+    
+    // Step 3: Set up event handlers
+    this.client.on('connection_established', () => {
+      console.log('Connected to Agent C');
+    });
+    
+    this.client.on('text_delta', (event) => {
+      console.log('Received text:', event.content);
+    });
+    
+    // Step 4: Connect
+    await this.client.connect();
+  }
+  
+  async selectAgent(agentId: string): Promise<void> {
+    // Use agents from login response
+    const availableAgents = this.authManager.getAvailableAgents();
+    const agent = availableAgents.find(a => a.id === agentId);
+    
+    if (!agent) {
+      throw new Error(`Agent ${agentId} not available for this ChatUser`);
+    }
+    
+    // Send agent selection event
+    await this.client?.sendEvent({
+      type: 'set_agent',
+      agent_id: agentId
+    });
+  }
+  
+  async selectVoice(voiceId: string): Promise<void> {
+    // Use voices from login response
+    const availableVoices = this.authManager.getAvailableVoices();
+    const voice = availableVoices.find(v => v.voice_id === voiceId);
+    
+    if (!voice) {
+      throw new Error(`Voice ${voiceId} not available`);
+    }
+    
+    await this.client?.sendEvent({
+      type: 'set_voice',
+      voice_id: voiceId
+    });
+  }
+}
 ```
 
 ## Environment Configuration
 
-### Development Setup
+### Development Environment
 
 ```bash
 # .env.development
-AGENTC_API_URL=http://localhost:8080
-AGENTC_WS_URL=ws://localhost:8080/rt/ws
-AGENTC_API_KEY=sk-dev-...
+AGENTC_API_URL=https://localhost:8000
+AGENTC_CHATUSER_USERNAME=dev_user
+AGENTC_CHATUSER_PASSWORD=dev_password
 AGENTC_DEBUG=true
 ```
 
-### Production Setup
+### Production Environment
 
 ```bash
 # .env.production
-AGENTC_API_URL=https://api.agentc.ai
-AGENTC_WS_URL=wss://api.agentc.ai/rt/ws
-AGENTC_API_KEY=sk-prod-...
+AGENTC_API_URL=https://agentc-api.yourdomain.com
+AGENTC_CHATUSER_USERNAME=prod_user
+AGENTC_CHATUSER_PASSWORD=prod_secure_password
 AGENTC_DEBUG=false
 ```
 
-### Loading Environment Variables
+### Using Environment Variables
 
 ```typescript
 import dotenv from 'dotenv';
 
-// Load environment-specific config
-dotenv.config({ 
+// Load environment configuration
+dotenv.config({
   path: process.env.NODE_ENV === 'production' 
     ? '.env.production' 
-    : '.env.development' 
+    : '.env.development'
 });
 
-const authManager = new AuthManager({
-  apiUrl: process.env.AGENTC_API_URL!
-});
+// Create auth manager with environment config
+const authManager = new AgentCAuthManager();
 
-await authManager.login(process.env.AGENTC_API_KEY!);
+// Login with environment credentials
+await authManager.authenticate(
+  process.env.AGENTC_CHATUSER_USERNAME!,
+  process.env.AGENTC_CHATUSER_PASSWORD!
+);
 ```
 
-## Security Best Practices
+## Error Handling
 
-### 1. Never Expose API Keys
-
-```typescript
-// ❌ BAD - Never hardcode keys
-const apiKey = 'sk-abc123...';
-
-// ✅ GOOD - Use environment variables
-const apiKey = process.env.AGENTC_API_KEY;
-
-// ✅ GOOD - Use secure key management
-const apiKey = await secretManager.getSecret('agentc-api-key');
-```
-
-### 2. Secure Storage
+### Authentication Errors
 
 ```typescript
-// Browser - Use secure storage abstraction
-class SecureStorage {
-  private encrypt(data: string): string {
-    // Implement encryption
-    return encrypted;
-  }
-  
-  private decrypt(data: string): string {
-    // Implement decryption
-    return decrypted;
-  }
-  
-  setToken(token: string): void {
-    const encrypted = this.encrypt(token);
-    sessionStorage.setItem('auth_token', encrypted);
-  }
-  
-  getToken(): string | null {
-    const encrypted = sessionStorage.getItem('auth_token');
-    return encrypted ? this.decrypt(encrypted) : null;
-  }
-}
-```
-
-### 3. Token Rotation
-
-```typescript
-// Implement token rotation
-class TokenRotation {
-  private rotationInterval = 30 * 60 * 1000; // 30 minutes
-  
-  startRotation(authManager: AuthManager): void {
-    setInterval(async () => {
-      try {
-        await authManager.refreshTokens();
-        console.log('Tokens rotated successfully');
-      } catch (error) {
-        console.error('Token rotation failed:', error);
-      }
-    }, this.rotationInterval);
-  }
-}
-```
-
-### 4. HTTPS Only
-
-```typescript
-// Ensure HTTPS in production
-if (process.env.NODE_ENV === 'production' && !window.location.protocol.includes('https')) {
-  throw new Error('HTTPS is required in production');
-}
-```
-
-### 5. API Key Restrictions
-
-Configure API key restrictions in Agent C dashboard:
-
-- **IP Whitelist**: Restrict to specific IPs
-- **Domain Whitelist**: Restrict to your domains
-- **Rate Limiting**: Set appropriate limits
-- **Scope Limitations**: Limit key permissions
-
-## Handling Authentication Errors
-
-### Common Error Scenarios
-
-```typescript
-try {
-  await authManager.login(apiKey);
-} catch (error) {
-  if (error.response?.status === 401) {
-    // Invalid API key
-    console.error('Invalid API key');
-  } else if (error.response?.status === 403) {
-    // Key doesn't have required permissions
-    console.error('Insufficient permissions');
-  } else if (error.response?.status === 429) {
-    // Rate limited
-    console.error('Rate limited, retry after:', error.response.headers['retry-after']);
-  } else if (error.code === 'ECONNREFUSED') {
-    // Cannot connect to auth server
-    console.error('Cannot connect to authentication server');
-  } else {
-    // Unknown error
-    console.error('Authentication failed:', error.message);
-  }
-}
-```
-
-### Retry Logic
-
-```typescript
-class AuthRetry {
-  async loginWithRetry(
-    authManager: AuthManager, 
-    apiKey: string, 
-    maxRetries = 3
-  ): Promise<LoginResponse> {
-    let lastError: Error;
+async function handleLogin(username: string, password: string) {
+  try {
+    const response = await fetch('https://localhost:8000/rt/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
     
-    for (let i = 0; i < maxRetries; i++) {
+    if (!response.ok) {
+      switch (response.status) {
+        case 401:
+          throw new Error('Invalid username or password');
+        case 403:
+          throw new Error('Account locked or insufficient permissions');
+        case 429:
+          const retryAfter = response.headers.get('Retry-After');
+          throw new Error(`Rate limited. Retry after ${retryAfter} seconds`);
+        case 500:
+          throw new Error('Server error. Please try again later');
+        default:
+          throw new Error(`Login failed: ${response.statusText}`);
+      }
+    }
+    
+    return response.json();
+  } catch (error) {
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      throw new Error('Cannot connect to Agent C server. Check if it\'s running on localhost:8000');
+    }
+    throw error;
+  }
+}
+```
+
+### Token Refresh Errors
+
+```typescript
+class ResilientTokenManager {
+  private retryCount = 0;
+  private maxRetries = 3;
+  
+  async refreshWithRetry(): Promise<void> {
+    while (this.retryCount < this.maxRetries) {
       try {
-        return await authManager.login(apiKey);
+        await this.refreshToken();
+        this.retryCount = 0; // Reset on success
+        return;
       } catch (error) {
-        lastError = error;
+        this.retryCount++;
         
-        // Don't retry on auth errors
-        if (error.response?.status === 401 || error.response?.status === 403) {
+        if (this.retryCount >= this.maxRetries) {
+          // Max retries reached, need to re-authenticate
+          console.error('Token refresh failed after retries. Re-authentication required.');
+          this.emit('reauthentication-required');
           throw error;
         }
         
         // Exponential backoff
-        const delay = Math.pow(2, i) * 1000;
-        console.log(`Retry ${i + 1}/${maxRetries} after ${delay}ms`);
+        const delay = Math.pow(2, this.retryCount) * 1000;
+        console.log(`Refresh retry ${this.retryCount}/${this.maxRetries} in ${delay}ms`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
-    
-    throw lastError!;
   }
 }
 ```
 
-## Multi-Tenant Authentication
+## Security Best Practices
 
-For applications serving multiple tenants:
+### 1. Secure Credential Storage
 
 ```typescript
-class MultiTenantAuth {
-  private authManagers = new Map<string, AuthManager>();
+// Never hardcode credentials
+// ❌ BAD
+const username = 'admin';
+const password = 'password123';
+
+// ✅ GOOD - Use environment variables
+const username = process.env.CHATUSER_USERNAME;
+const password = process.env.CHATUSER_PASSWORD;
+
+// ✅ BETTER - Use secret management service
+const credentials = await secretManager.getChatUserCredentials();
+```
+
+### 2. HTTPS for All Environments
+
+Agent C requires HTTPS even for local development (for microphone access and security):
+
+```typescript
+// Development uses HTTPS (required for microphone and secure API)
+if (process.env.NODE_ENV === 'development') {
+  // Use HTTPS for localhost
+  const apiUrl = 'https://localhost:8000';
   
-  async authenticateTenant(tenantId: string, apiKey: string): Promise<AuthManager> {
-    // Create tenant-specific auth manager
-    const authManager = new AuthManager({
-      apiUrl: `https://${tenantId}.api.agentc.ai`
-    });
-    
-    await authManager.login(apiKey);
-    this.authManagers.set(tenantId, authManager);
-    
-    return authManager;
-  }
-  
-  getAuthManager(tenantId: string): AuthManager | undefined {
-    return this.authManagers.get(tenantId);
-  }
-  
-  async refreshAllTenants(): Promise<void> {
-    const promises = Array.from(this.authManagers.values()).map(
-      manager => manager.refreshTokens()
-    );
-    
-    await Promise.all(promises);
-  }
+  // Both development and production use HTTPS
+  console.log('Development mode: Using HTTPS for local connections');
 }
 ```
 
-## OAuth Integration (Future)
-
-Planned OAuth support:
+### 3. Token Security
 
 ```typescript
-// Future OAuth flow
-const oauth = new AgentCOAuth({
-  clientId: 'your-client-id',
-  redirectUri: 'https://yourapp.com/callback',
-  scopes: ['realtime', 'avatars']
-});
-
-// Initiate OAuth flow
-const authUrl = oauth.getAuthorizationUrl();
-window.location.href = authUrl;
-
-// Handle callback
-const tokens = await oauth.handleCallback(callbackUrl);
-```
-
-## Session Management
-
-### UI Session Persistence
-
-```typescript
-// Save session for reconnection
-const sessionId = authManager.getUiSessionId();
-localStorage.setItem('ui_session_id', sessionId);
-
-// Restore session on page reload
-const savedSessionId = localStorage.getItem('ui_session_id');
-if (savedSessionId) {
-  const client = new RealtimeClient({
-    apiUrl: 'wss://api.agentc.ai/rt/ws',
-    authManager,
-    sessionId: savedSessionId  // Reconnect to same session
-  });
-}
-```
-
-### Session Validation
-
-```typescript
-// Validate session is still active
-async function validateSession(sessionId: string): Promise<boolean> {
-  try {
-    const response = await fetch(`/api/sessions/${sessionId}/validate`, {
-      headers: {
-        'Authorization': `Bearer ${authManager.getAgentCToken()}`
-      }
-    });
+class SecureTokenStorage {
+  private token?: string;
+  
+  setToken(token: string): void {
+    // In-memory storage only, never localStorage for sensitive tokens
+    this.token = token;
     
-    return response.ok;
-  } catch {
-    return false;
+    // Optional: Use sessionStorage for browser (cleared on tab close)
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('agent_c_token', token);
+    }
+  }
+  
+  getToken(): string | null {
+    return this.token || sessionStorage?.getItem('agent_c_token') || null;
+  }
+  
+  clearToken(): void {
+    this.token = undefined;
+    sessionStorage?.removeItem('agent_c_token');
   }
 }
 ```
@@ -446,90 +696,113 @@ async function validateSession(sessionId: string): Promise<boolean> {
 ### Mock Authentication for Tests
 
 ```typescript
-// Mock auth manager for testing
-class MockAuthManager extends AuthManager {
-  async login(apiKey: string): Promise<LoginResponse> {
+class MockAuthManager {
+  async authenticate(username: string, password: string): Promise<LoginResponse> {
+    // Mock successful authentication
     return {
-      agentc_token: 'mock-jwt-token',
+      agent_c_token: 'mock-jwt-token',
+      websocket_url: 'ws://localhost:8000/rt/ws',
       heygen_token: 'mock-heygen-token',
-      ui_session_id: 'mock-session-id',
-      expires_at: Date.now() + 3600000,
+      user: {
+        id: 'user-123',
+        username: username,
+        name: 'Test User'
+      },
+      agents: [
+        { id: 'agent-1', name: 'Test Agent', model: 'gpt-4' }
+      ],
       voices: [
         { voice_id: 'nova', name: 'Nova', vendor: 'openai' }
-      ]
-    };
-  }
-  
-  async refreshTokens(): Promise<TokenPair> {
-    return {
-      agentCToken: 'refreshed-mock-token',
-      heygenToken: 'refreshed-heygen-token',
-      expiresAt: Date.now() + 3600000
+      ],
+      avatars: [],
+      toolsets: [],
+      ui_session_id: 'session-123',
+      expires_at: Date.now() / 1000 + 3600
     };
   }
 }
 
 // Use in tests
-const mockAuth = new MockAuthManager({ apiUrl: 'http://test' });
-const client = new RealtimeClient({ 
-  apiUrl: 'ws://test',
-  authManager: mockAuth 
+describe('Authentication', () => {
+  it('should connect to Agent C', async () => {
+    const mockAuth = new MockAuthManager();
+    const client = new RealtimeClient({
+      apiUrl: 'ws://localhost:8000/rt/ws',
+      authManager: mockAuth
+    });
+    
+    await mockAuth.authenticate('test', 'test');
+    await client.connect();
+    
+    expect(client.isConnected()).toBe(true);
+  });
 });
 ```
 
 ## Troubleshooting
 
-### Common Issues
+### Common Issues and Solutions
 
-**"Invalid API key" error:**
-- Verify key is correct and active
-- Check for extra whitespace
-- Ensure using correct environment
+**"Cannot connect to localhost:8000"**
+- Ensure Agent C server is running locally
+- Verify using HTTPS (required) for localhost: https://localhost:8000
+- Verify port 8000 is not blocked by firewall
 
-**"Token expired" during connection:**
-- Enable auto-refresh in AuthManager
-- Check tokenRefreshBuffer setting
-- Verify system time is correct
+**"Invalid username or password"**
+- Verify ChatUser credentials are correct
+- Check for trailing spaces in credentials
+- Ensure you're using ChatUser credentials, not application user credentials
 
-**"Cannot connect to auth server":**
-- Check network connectivity
-- Verify API URL is correct
-- Check firewall/proxy settings
+**"Token expired during connection"**
+- Implement automatic token refresh
+- Check system clock synchronization
+- Reduce token refresh buffer time
 
-**"Rate limited" errors:**
-- Implement exponential backoff
-- Cache tokens appropriately
-- Check API key rate limits
+**"WebSocket connection fails"**
+- Use the `websocket_url` from login response
+- Don't hardcode WebSocket URLs
+- Check for proxy/firewall blocking WebSocket
+
+**"No agents/voices available"**
+- Check ChatUser permissions in Agent C
+- Verify the ChatUser has been assigned resources
+- Review login response for available resources
 
 ### Debug Logging
 
-Enable debug logging for troubleshooting:
+Enable detailed logging for troubleshooting:
 
 ```typescript
-const authManager = new AuthManager({
-  apiUrl: 'https://api.agentc.ai',
-  debug: true  // Enable debug logging
-});
-
-// Monitor auth events
-authManager.on('auth:login', (response) => {
-  console.log('Login successful:', response);
-});
-
-authManager.on('auth:error', (error) => {
-  console.error('Auth error:', error);
-});
+class DebugAuthManager extends AgentCAuthManager {
+  async authenticate(username: string, password: string): Promise<void> {
+    console.log(`[Auth] Attempting login for user: ${username}`);
+    console.log(`[Auth] API URL: ${this.apiUrl}`);
+    
+    try {
+      await super.authenticate(username, password);
+      console.log('[Auth] Login successful');
+      console.log('[Auth] Token expires at:', new Date(this.loginData.expires_at * 1000));
+      console.log('[Auth] WebSocket URL:', this.websocketUrl);
+      console.log('[Auth] Available agents:', this.loginData.agents.length);
+      console.log('[Auth] Available voices:', this.loginData.voices.length);
+    } catch (error) {
+      console.error('[Auth] Login failed:', error);
+      throw error;
+    }
+  }
+}
 ```
 
-## Best Practices Summary
+## Summary
 
-1. **Use AuthManager** for automatic token management
-2. **Store keys securely** in environment variables
-3. **Implement retry logic** for network failures
-4. **Monitor token expiry** and refresh proactively
-5. **Use HTTPS** in production
-6. **Restrict API keys** by IP/domain
-7. **Rotate tokens** regularly
-8. **Handle errors** gracefully
-9. **Log auth events** for debugging
-10. **Test auth flows** thoroughly
+Key points about Agent C authentication:
+
+1. **NO API KEYS** - Agent C uses username/password authentication only
+2. **ChatUsers** are platform accounts, not your application's end users
+3. **Login endpoint** returns JWT token and dynamic WebSocket URL
+4. **Use the WebSocket URL** from login response, don't hardcode it
+5. **Implement token refresh** to maintain long-running connections
+6. **Applications can build** their own user systems on top of ChatUsers
+7. **Development uses** https://localhost:8000 (HTTPS required)
+
+Remember: ChatUsers are the foundation of Agent C authentication, but your application can implement any user model on top of this platform authentication layer.

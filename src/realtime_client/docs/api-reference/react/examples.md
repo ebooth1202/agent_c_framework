@@ -2,8 +2,18 @@
 
 Complete examples demonstrating how to build applications with the Agent C Realtime React SDK.
 
+## Authentication
+
+Agent C uses username/password authentication, not API keys. All examples below demonstrate proper authentication patterns:
+
+- Login with credentials using `AuthManager`
+- WebSocket URL is provided by the login response
+- Use `localhost:8000` for development or environment variables for production
+- Token refresh is handled automatically
+
 ## Table of Contents
 
+- [Authentication Setup](#authentication-setup)
 - [Basic Chat Application](#basic-chat-application)
 - [Voice Assistant](#voice-assistant)
 - [Avatar Integration](#avatar-integration)
@@ -13,26 +23,143 @@ Complete examples demonstrating how to build applications with the Agent C Realt
 
 ---
 
+## Authentication Setup
+
+Proper authentication flow with Agent C:
+
+```tsx
+// AuthenticationExample.tsx
+import React, { useState, useEffect } from 'react';
+import { AgentCProvider, useAuth, useConnection } from '@agentc/realtime-react';
+
+function App() {
+  const [credentials, setCredentials] = useState({
+    username: '',
+    password: ''
+  });
+  const [authConfig, setAuthConfig] = useState<any>(null);
+
+  const handleLogin = async () => {
+    try {
+      // Use AuthManager to login
+      const authManager = new AuthManager({
+        apiUrl: process.env.REACT_APP_API_URL || 'https://localhost:8000'
+      });
+      
+      const loginResponse = await authManager.login({
+        username: credentials.username,
+        password: credentials.password
+      });
+      
+      // Extract WebSocket URL and token from login response
+      setAuthConfig({
+        wsUrl: loginResponse.ws_url,
+        authToken: loginResponse.access_token,
+        refreshToken: loginResponse.refresh_token,
+        heygenToken: loginResponse.heygen_access_token
+      });
+    } catch (error) {
+      console.error('Login failed:', error);
+      alert('Login failed. Please check your credentials.');
+    }
+  };
+
+  // Render login form if not authenticated
+  if (!authConfig) {
+    return (
+      <div className="login-form">
+        <h2>Login to Agent C</h2>
+        <input
+          type="text"
+          placeholder="Username"
+          value={credentials.username}
+          onChange={(e) => setCredentials({...credentials, username: e.target.value})}
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={credentials.password}
+          onChange={(e) => setCredentials({...credentials, password: e.target.value})}
+        />
+        <button onClick={handleLogin}>Login</button>
+      </div>
+    );
+  }
+
+  // Render app with authentication
+  return (
+    <AgentCProvider 
+      config={{
+        wsUrl: authConfig.wsUrl,
+        authToken: authConfig.authToken,
+        refreshToken: authConfig.refreshToken,
+        heygenToken: authConfig.heygenToken,
+        autoConnect: true
+      }}
+    >
+      <YourApplication />
+    </AgentCProvider>
+  );
+}
+```
+
+---
+
 ## Basic Chat Application
 
 A simple text chat interface with Agent C.
 
 ```tsx
 // BasicChat.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   AgentCProvider,
   useConnection,
-  useChat
+  useChat,
+  AuthManager
 } from '@agentc/realtime-react';
 
 function BasicChatApp() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [config, setConfig] = useState<any>(null);
+
+  useEffect(() => {
+    // Initialize authentication
+    const authenticate = async () => {
+      const authManager = new AuthManager({
+        apiUrl: process.env.REACT_APP_API_URL || 'https://localhost:8000'
+      });
+
+      try {
+        // Try to restore session or login with stored credentials
+        const credentials = {
+          username: process.env.REACT_APP_USERNAME || 'demo_user',
+          password: process.env.REACT_APP_PASSWORD || 'demo_password'
+        };
+        
+        const loginResponse = await authManager.login(credentials);
+        
+        setConfig({
+          wsUrl: loginResponse.ws_url,
+          authToken: loginResponse.access_token,
+          refreshToken: loginResponse.refresh_token
+        });
+        setIsAuthenticated(true);
+      } catch (error) {
+        console.error('Authentication failed:', error);
+      }
+    };
+
+    authenticate();
+  }, []);
+
+  if (!isAuthenticated || !config) {
+    return <div>Authenticating...</div>;
+  }
+
   return (
     <AgentCProvider 
-      config={{
-        apiUrl: process.env.REACT_APP_AGENTC_URL!,
-        apiKey: process.env.REACT_APP_AGENTC_KEY!
-      }}
+      config={config}
       autoConnect={true}
     >
       <ChatInterface />
@@ -120,15 +247,28 @@ import {
   useChat,
   useAudio,
   useTurnState,
-  useVoiceModel
+  useVoiceModel,
+  AuthManager
 } from '@agentc/realtime-react';
 
 function VoiceAssistantApp() {
-  return (
-    <AgentCProvider 
-      config={{
-        apiUrl: process.env.REACT_APP_AGENTC_URL!,
-        apiKey: process.env.REACT_APP_AGENTC_KEY!,
+  const [authConfig, setAuthConfig] = useState<any>(null);
+
+  useEffect(() => {
+    const login = async () => {
+      const authManager = new AuthManager({
+        apiUrl: process.env.REACT_APP_API_URL || 'https://localhost:8000'
+      });
+
+      const response = await authManager.login({
+        username: process.env.REACT_APP_USERNAME!,
+        password: process.env.REACT_APP_PASSWORD!
+      });
+
+      setAuthConfig({
+        wsUrl: response.ws_url,
+        authToken: response.access_token,
+        refreshToken: response.refresh_token,
         enableAudio: true,
         audioConfig: {
           enableInput: true,
@@ -136,8 +276,18 @@ function VoiceAssistantApp() {
           respectTurnState: true,
           initialVolume: 0.8
         }
-      }}
-    >
+      });
+    };
+
+    login().catch(console.error);
+  }, []);
+
+  if (!authConfig) {
+    return <div>Authenticating...</div>;
+  }
+
+  return (
+    <AgentCProvider config={authConfig}>
       <VoiceInterface />
     </AgentCProvider>
   );
@@ -315,19 +465,43 @@ import {
   useConnection,
   useChat,
   useAvatar,
-  useVoiceModel
+  useVoiceModel,
+  AuthManager
 } from '@agentc/realtime-react';
 import NewStreamingAvatar, { StreamingEvents } from '@heygen/streaming-avatar';
 
 function AvatarChatApp() {
-  return (
-    <AgentCProvider 
-      config={{
-        apiUrl: process.env.REACT_APP_AGENTC_URL!,
-        apiKey: process.env.REACT_APP_AGENTC_KEY!,
+  const [authConfig, setAuthConfig] = useState<any>(null);
+
+  useEffect(() => {
+    const authenticate = async () => {
+      const authManager = new AuthManager({
+        apiUrl: process.env.REACT_APP_API_URL || 'https://localhost:8000'
+      });
+
+      const loginResponse = await authManager.login({
+        username: process.env.REACT_APP_USERNAME!,
+        password: process.env.REACT_APP_PASSWORD!
+      });
+
+      setAuthConfig({
+        wsUrl: loginResponse.ws_url,
+        authToken: loginResponse.access_token,
+        refreshToken: loginResponse.refresh_token,
+        heygenToken: loginResponse.heygen_access_token, // HeyGen token from login
         enableAudio: true
-      }}
-    >
+      });
+    };
+
+    authenticate().catch(console.error);
+  }, []);
+
+  if (!authConfig) {
+    return <div>Authenticating...</div>;
+  }
+
+  return (
+    <AgentCProvider config={authConfig}>
       <AvatarInterface />
     </AgentCProvider>
   );
@@ -362,12 +536,11 @@ function AvatarInterface() {
     setIsInitializing(true);
     
     try {
-      // Get HeyGen token from client
-      const client = (window as any).__agentc_client;
-      const heygenToken = client?.getHeyGenAccessToken();
+      // Get HeyGen token from authentication config
+      const { heygenToken } = useAuth();
       
       if (!heygenToken) {
-        throw new Error('HeyGen token not available');
+        throw new Error('HeyGen token not available. Please re-authenticate.');
       }
       
       // Create HeyGen instance
@@ -515,20 +688,54 @@ Manage multiple chat sessions with history.
 
 ```tsx
 // MultiSessionManager.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   AgentCProvider,
   useConnection,
-  useChat
+  useChat,
+  AuthManager
 } from '@agentc/realtime-react';
 
 function MultiSessionApp() {
+  const [authConfig, setAuthConfig] = useState<any>(null);
+  const [loginError, setLoginError] = useState<string>('');
+
+  useEffect(() => {
+    const authenticate = async () => {
+      const authManager = new AuthManager({
+        apiUrl: process.env.REACT_APP_API_URL || 'https://localhost:8000'
+      });
+
+      try {
+        const loginResponse = await authManager.login({
+          username: process.env.REACT_APP_USERNAME!,
+          password: process.env.REACT_APP_PASSWORD!
+        });
+
+        setAuthConfig({
+          wsUrl: loginResponse.ws_url,
+          authToken: loginResponse.access_token,
+          refreshToken: loginResponse.refresh_token
+        });
+      } catch (error: any) {
+        setLoginError(error.message || 'Authentication failed');
+      }
+    };
+
+    authenticate();
+  }, []);
+
+  if (loginError) {
+    return <div className="error">Login Error: {loginError}</div>;
+  }
+
+  if (!authConfig) {
+    return <div>Authenticating...</div>;
+  }
+
   return (
     <AgentCProvider 
-      config={{
-        apiUrl: process.env.REACT_APP_AGENTC_URL!,
-        apiKey: process.env.REACT_APP_AGENTC_KEY!
-      }}
+      config={authConfig}
       autoConnect={true}
     >
       <SessionManager />
@@ -888,7 +1095,9 @@ import {
   useAudio,
   useTurnState,
   useVoiceModel,
-  useAvatar
+  useAvatar,
+  AuthManager,
+  useAuth
 } from '@agentc/realtime-react';
 
 // Import custom components
@@ -901,18 +1110,102 @@ import {
 } from './CustomComponents';
 
 function AdvancedApp() {
-  const [config] = useState({
-    apiUrl: process.env.REACT_APP_AGENTC_URL!,
-    apiKey: process.env.REACT_APP_AGENTC_KEY!,
-    enableAudio: true,
-    audioConfig: {
-      enableInput: true,
-      enableOutput: true,
-      respectTurnState: true,
-      initialVolume: 0.8
-    }
+  const [config, setConfig] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [credentials, setCredentials] = useState({
+    username: '',
+    password: ''
   });
+  const [showLoginForm, setShowLoginForm] = useState(false);
+
+  useEffect(() => {
+    // Try to authenticate with environment variables first
+    const tryAutoLogin = async () => {
+      const username = process.env.REACT_APP_USERNAME;
+      const password = process.env.REACT_APP_PASSWORD;
+      
+      if (!username || !password) {
+        setShowLoginForm(true);
+        setIsLoading(false);
+        return;
+      }
+
+      await authenticate(username, password);
+    };
+
+    tryAutoLogin();
+  }, []);
+
+  const authenticate = async (username: string, password: string) => {
+    setIsLoading(true);
+    
+    const authManager = new AuthManager({
+      apiUrl: process.env.REACT_APP_API_URL || 'https://localhost:8000'
+    });
+
+    try {
+      const loginResponse = await authManager.login({ username, password });
+      
+      setConfig({
+        wsUrl: loginResponse.ws_url,
+        authToken: loginResponse.access_token,
+        refreshToken: loginResponse.refresh_token,
+        heygenToken: loginResponse.heygen_access_token,
+        enableAudio: true,
+        audioConfig: {
+          enableInput: true,
+          enableOutput: true,
+          respectTurnState: true,
+          initialVolume: 0.8
+        }
+      });
+      
+      setShowLoginForm(false);
+    } catch (error) {
+      console.error('Authentication failed:', error);
+      alert('Login failed. Please check your credentials.');
+      setShowLoginForm(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLogin = () => {
+    if (credentials.username && credentials.password) {
+      authenticate(credentials.username, credentials.password);
+    }
+  };
+
+  if (isLoading) {
+    return <div className="loading">Loading...</div>;
+  }
+
+  if (showLoginForm) {
+    return (
+      <div className="login-container">
+        <h2>Login to Agent C</h2>
+        <input
+          type="text"
+          placeholder="Username"
+          value={credentials.username}
+          onChange={(e) => setCredentials({...credentials, username: e.target.value})}
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={credentials.password}
+          onChange={(e) => setCredentials({...credentials, password: e.target.value})}
+          onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+        />
+        <button onClick={handleLogin}>Login</button>
+      </div>
+    );
+  }
   
+  if (!config) {
+    return null;
+  }
+
   return (
     <AgentCProvider config={config}>
       <AdvancedInterface />
@@ -1315,13 +1608,27 @@ export default AdvancedApp;
 ```tsx
 // ComponentTests.tsx
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { AgentCProvider } from '@agentc/realtime-react';
+import { AgentCProvider, AuthManager } from '@agentc/realtime-react';
 import { ChatInterface } from './ChatInterface';
+
+// Mock AuthManager for testing
+jest.mock('@agentc/realtime-react', () => ({
+  ...jest.requireActual('@agentc/realtime-react'),
+  AuthManager: jest.fn().mockImplementation(() => ({
+    login: jest.fn().mockResolvedValue({
+      ws_url: 'wss://test.api.com/rt/ws',
+      access_token: 'test-token',
+      refresh_token: 'test-refresh-token',
+      heygen_access_token: 'test-heygen-token'
+    })
+  }))
+}));
 
 describe('ChatInterface', () => {
   const mockConfig = {
-    apiUrl: 'wss://test.api.com',
-    apiKey: 'test-key'
+    wsUrl: 'wss://test.api.com/rt/ws',
+    authToken: 'test-token',
+    refreshToken: 'test-refresh-token'
   };
   
   it('renders without crashing', () => {
@@ -1356,35 +1663,304 @@ describe('ChatInterface', () => {
 
 ## Deployment
 
+### Environment Variables
+
+Create a `.env` file for development:
+
+```bash
+# Development environment
+REACT_APP_API_URL=https://localhost:8000
+REACT_APP_USERNAME=your_username
+REACT_APP_PASSWORD=your_password
+```
+
+For production:
+
+```bash
+# Production environment
+REACT_APP_API_URL=https://api.agentc.com
+REACT_APP_USERNAME=prod_username
+REACT_APP_PASSWORD=prod_password
+```
+
+### Production Configuration
+
 ```tsx
-// Production configuration
-const productionConfig = {
-  apiUrl: process.env.REACT_APP_AGENTC_URL!,
-  apiKey: process.env.REACT_APP_AGENTC_KEY!,
-  enableAudio: true,
-  audioConfig: {
-    enableInput: true,
-    enableOutput: true,
-    respectTurnState: true
-  },
-  reconnection: {
-    maxAttempts: 10,
-    initialDelay: 1000,
-    maxDelay: 30000
-  },
-  debug: false
-};
+// productionConfig.ts
+import { AuthManager } from '@agentc/realtime-react';
+
+export async function getProductionConfig() {
+  const authManager = new AuthManager({
+    apiUrl: process.env.REACT_APP_API_URL!,
+    // Optional: Configure retry and timeout settings
+    requestTimeout: 30000,
+    maxRetries: 3
+  });
+
+  try {
+    // Authenticate with credentials
+    const loginResponse = await authManager.login({
+      username: process.env.REACT_APP_USERNAME!,
+      password: process.env.REACT_APP_PASSWORD!
+    });
+
+    return {
+      wsUrl: loginResponse.ws_url,
+      authToken: loginResponse.access_token,
+      refreshToken: loginResponse.refresh_token,
+      heygenToken: loginResponse.heygen_access_token,
+      enableAudio: true,
+      audioConfig: {
+        enableInput: true,
+        enableOutput: true,
+        respectTurnState: true
+      },
+      reconnection: {
+        maxAttempts: 10,
+        initialDelay: 1000,
+        maxDelay: 30000
+      },
+      debug: process.env.NODE_ENV !== 'production'
+    };
+  } catch (error) {
+    console.error('Failed to authenticate:', error);
+    throw error;
+  }
+}
+
+// Usage in your app
+import { getProductionConfig } from './productionConfig';
+
+function App() {
+  const [config, setConfig] = useState<any>(null);
+
+  useEffect(() => {
+    getProductionConfig()
+      .then(setConfig)
+      .catch(error => {
+        // Handle authentication failure
+        console.error('Setup failed:', error);
+      });
+  }, []);
+
+  if (!config) {
+    return <div>Initializing...</div>;
+  }
+
+  return (
+    <AgentCProvider config={config}>
+      <YourApp />
+    </AgentCProvider>
+  );
+}
+```
+
+### Docker Deployment
+
+```dockerfile
+# Dockerfile
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+RUN npm ci --only=production
+
+# Copy application files
+COPY . .
+
+# Build the app
+RUN npm run build
+
+# Serve with nginx
+FROM nginx:alpine
+COPY --from=0 /app/build /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+### Security Best Practices
+
+1. **Never commit credentials** - Use environment variables
+2. **Use HTTPS in production** - Ensure all API calls are encrypted
+3. **Implement token refresh** - AuthManager handles this automatically
+4. **Store tokens securely** - Use httpOnly cookies or secure storage
+5. **Validate input** - Always validate user input before sending
+
+```tsx
+// Secure token storage example
+import { SecureStorage } from '@agentc/realtime-react';
+
+const storage = new SecureStorage({
+  encryptionKey: process.env.REACT_APP_ENCRYPTION_KEY,
+  storageType: 'sessionStorage' // or 'localStorage' for persistence
+});
+
+// Store tokens securely
+storage.setItem('auth_token', loginResponse.access_token);
+storage.setItem('refresh_token', loginResponse.refresh_token);
+
+// Retrieve tokens
+const authToken = storage.getItem('auth_token');
 ```
 
 ## Best Practices Summary
 
-1. **Always handle connection state**
-2. **Provide visual feedback for all states**
-3. **Handle errors gracefully**
-4. **Respect turn management in voice apps**
-5. **Clean up resources on unmount**
-6. **Use TypeScript for type safety**
-7. **Test components thoroughly**
-8. **Optimize for performance**
-9. **Provide keyboard shortcuts**
-10. **Make UI accessible**
+### Authentication
+1. **Use environment variables** for credentials, never hardcode them
+2. **Implement proper login flow** with username/password
+3. **Handle authentication errors** gracefully with user feedback
+4. **Store tokens securely** using appropriate storage mechanisms
+5. **Let AuthManager handle token refresh** automatically
+
+### Connection Management
+1. **Always handle connection state** and show status to users
+2. **Implement reconnection logic** for network failures
+3. **Use the WebSocket URL from login response**, not hardcoded values
+4. **Clean up connections** on component unmount
+
+### Development
+1. **Use localhost:8000** for local development
+2. **Provide visual feedback** for all states
+3. **Handle errors gracefully** with informative messages
+4. **Respect turn management** in voice applications
+5. **Use TypeScript** for type safety throughout
+
+### Testing
+1. **Mock AuthManager** in tests
+2. **Test authentication flows** including failure cases
+3. **Verify token refresh** behavior
+4. **Test connection handling** and reconnection
+
+### Security
+1. **Never expose credentials** in client-side code
+2. **Use HTTPS** in production environments
+3. **Implement proper logout** to clear tokens
+4. **Validate all user input** before sending to server
+5. **Monitor for authentication failures** and handle appropriately
+
+### Performance
+1. **Lazy load authentication** when needed
+2. **Cache authentication state** appropriately
+3. **Optimize WebSocket message handling**
+4. **Clean up event listeners** to prevent memory leaks
+5. **Use React.memo** for expensive components
+
+## Common Authentication Patterns
+
+### Login with Redirect
+
+```tsx
+function LoginRedirect() {
+  const navigate = useNavigate();
+  const [credentials, setCredentials] = useState({ username: '', password: '' });
+  
+  const handleLogin = async () => {
+    const authManager = new AuthManager({
+      apiUrl: process.env.REACT_APP_API_URL || 'https://localhost:8000'
+    });
+    
+    try {
+      const response = await authManager.login(credentials);
+      
+      // Store auth data in context or state management
+      sessionStorage.setItem('auth_config', JSON.stringify({
+        wsUrl: response.ws_url,
+        authToken: response.access_token,
+        refreshToken: response.refresh_token
+      }));
+      
+      navigate('/chat');
+    } catch (error) {
+      alert('Login failed');
+    }
+  };
+  
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }}>
+      <input
+        type="text"
+        value={credentials.username}
+        onChange={(e) => setCredentials({...credentials, username: e.target.value})}
+        placeholder="Username"
+        required
+      />
+      <input
+        type="password"
+        value={credentials.password}
+        onChange={(e) => setCredentials({...credentials, password: e.target.value})}
+        placeholder="Password"
+        required
+      />
+      <button type="submit">Login</button>
+    </form>
+  );
+}
+```
+
+### Protected Route Pattern
+
+```tsx
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const [authConfig, setAuthConfig] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  useEffect(() => {
+    // Check for stored auth config
+    const stored = sessionStorage.getItem('auth_config');
+    
+    if (stored) {
+      setAuthConfig(JSON.parse(stored));
+    }
+    setIsLoading(false);
+  }, []);
+  
+  if (isLoading) return <div>Loading...</div>;
+  if (!authConfig) return <Navigate to="/login" />;
+  
+  return (
+    <AgentCProvider config={authConfig}>
+      {children}
+    </AgentCProvider>
+  );
+}
+
+// Usage
+<Routes>
+  <Route path="/login" element={<LoginPage />} />
+  <Route path="/chat" element={
+    <ProtectedRoute>
+      <ChatInterface />
+    </ProtectedRoute>
+  } />
+</Routes>
+```
+
+### Logout Pattern
+
+```tsx
+function LogoutButton() {
+  const { disconnect } = useConnection();
+  const navigate = useNavigate();
+  
+  const handleLogout = async () => {
+    // Disconnect WebSocket
+    await disconnect();
+    
+    // Clear stored tokens
+    sessionStorage.removeItem('auth_config');
+    localStorage.removeItem('refresh_token');
+    
+    // Clear any other auth state
+    // ...
+    
+    // Redirect to login
+    navigate('/login');
+  };
+  
+  return <button onClick={handleLogout}>Logout</button>;
+}
+```

@@ -364,16 +364,24 @@ WebSocket (binary transmission)
 
 ```typescript
 import { 
-  RealtimeClient, 
+  RealtimeClient,
+  AuthManager, 
   AudioService, 
   AudioAgentCBridge 
 } from '@agentc/realtime-core';
 
 async function audioInputExample() {
+  // Setup authentication
+  const authManager = new AuthManager({
+    apiUrl: 'https://localhost:8000'
+  });
+  
+  await authManager.login('username', 'password');
+  
   // Create client with audio enabled
   const client = new RealtimeClient({
-    apiUrl: 'wss://api.agentc.ai/rt/ws',
-    authToken: 'your-token',
+    apiUrl: 'wss://localhost:8000/rt/ws',
+    authManager,
     enableAudio: true,
     audioConfig: {
       enableInput: true,

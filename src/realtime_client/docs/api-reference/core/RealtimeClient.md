@@ -25,7 +25,7 @@ Creates a new RealtimeClient instance.
 ```typescript
 interface RealtimeClientConfig {
   // Required
-  apiUrl: string;                    // WebSocket URL (e.g., 'wss://api.agentc.ai/rt/ws')
+  apiUrl: string;                    // WebSocket URL from login response or provided
   
   // Authentication (one required)
   authToken?: string;                // JWT token for authentication
@@ -66,15 +66,32 @@ interface ReconnectionConfig {
 ### Example
 
 ```typescript
+// Using AuthManager (recommended)
+const authManager = new AuthManager({ 
+  apiUrl: 'https://localhost:8000' 
+});
+const loginResponse = await authManager.login({ 
+  username: 'your-username',
+  password: 'your-password' 
+});
+
 const client = new RealtimeClient({
-  apiUrl: 'wss://api.agentc.ai/rt/ws',
-  authToken: 'jwt-token-here',
+  apiUrl: loginResponse.wsUrl, // WebSocket URL from login response
+  authManager,
   enableAudio: true,
   audioConfig: {
     enableInput: true,
     enableOutput: true,
     respectTurnState: true
   },
+  debug: true
+});
+
+// Or with JWT token directly
+const client = new RealtimeClient({
+  apiUrl: wsUrl, // WebSocket URL from login or environment
+  authToken: jwtToken, // JWT token from login
+  enableAudio: true,
   debug: true
 });
 ```
@@ -693,8 +710,11 @@ setAuthManager(authManager: AuthManager): void
 
 **Example:**
 ```typescript
-const authManager = new AuthManager({ apiUrl: 'https://api.agentc.ai' });
-await authManager.login('api-key');
+const authManager = new AuthManager({ apiUrl: 'https://localhost:8000' });
+await authManager.login({ 
+  username: 'your-username',
+  password: 'your-password' 
+});
 client.setAuthManager(authManager);
 ```
 
@@ -771,14 +791,18 @@ import { RealtimeClient, AuthManager, ConnectionState } from '@agentc/realtime-c
 async function main() {
   // Initialize authentication
   const authManager = new AuthManager({
-    apiUrl: 'https://api.agentc.ai'
+    apiUrl: 'https://localhost:8000' // or process.env.API_URL
   });
   
-  await authManager.login('your-api-key');
+  // Login with username and password
+  const loginResponse = await authManager.login({
+    username: 'your-username',
+    password: 'your-password'
+  });
   
-  // Create client with full configuration
+  // Create client with WebSocket URL from login response
   const client = new RealtimeClient({
-    apiUrl: 'wss://api.agentc.ai/rt/ws',
+    apiUrl: loginResponse.wsUrl, // WebSocket URL from login
     authManager,
     enableAudio: true,
     audioConfig: {
