@@ -86,7 +86,8 @@ export interface ServerEventMap {
  */
 export interface RealtimeEventMap extends ClientEventMap, ServerEventMap {
   // Special events for binary data and connection management
-  'binary_audio': ArrayBuffer;
+  'binary_audio': ArrayBuffer;  // Legacy event for backward compatibility
+  'audio:output': ArrayBuffer;   // Binary audio output from server (TTS audio)
   'connected': void;
   'disconnected': { code: number; reason: string };
   'reconnecting': { attempt: number; delay: number };
@@ -172,7 +173,7 @@ export class EventRegistry {
   static isValidEventType(type: string): type is EventType {
     return this.isClientEventType(type) || 
            this.isServerEventType(type) ||
-           ['binary_audio', 'connected', 'disconnected', 'reconnecting', 'reconnected'].includes(type);
+           ['binary_audio', 'audio:output', 'connected', 'disconnected', 'reconnecting', 'reconnected'].includes(type);
   }
 
   /**

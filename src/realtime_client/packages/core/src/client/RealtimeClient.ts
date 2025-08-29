@@ -119,7 +119,8 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
                     {
                         url: wsUrl,
                         protocols: this.config.protocols,
-                        binaryType: this.config.binaryType,
+                        // Ensure binaryType is always 'arraybuffer' for proper audio handling
+                        binaryType: 'arraybuffer',
                         pingInterval: this.config.pingInterval,
                         pongTimeout: this.config.pongTimeout
                     },
@@ -194,13 +195,34 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
 
     /**
      * Send binary audio data to the server
+     * @deprecated Use sendBinaryFrame instead
      */
     sendAudio(audioData: ArrayBuffer | ArrayBufferView): void {
+        this.sendBinaryFrame(audioData);
+    }
+
+    /**
+     * Send raw binary frame to the server
+     * This sends audio data directly as binary, NOT wrapped in JSON events
+     * @param data Raw binary audio data (PCM16 format)
+     */
+    sendBinaryFrame(data: ArrayBuffer | ArrayBufferView): void {
         if (!this.wsManager || !this.wsManager.isConnected()) {
             throw new Error('Not connected to server');
         }
 
-        this.wsManager.send(audioData);
+        if (!this.wsManager.supportsBinary()) {
+            throw new Error('WebSocket connection does not support binary frames');
+        }
+
+        // Send the raw binary data directly over the WebSocket
+        // This is NOT wrapped in an AudioInputDelta event - it's raw PCM16 audio
+        this.wsManager.sendBinary(data);
+        
+        if (this.config.debug) {
+            const byteLength = data instanceof ArrayBuffer ? data.byteLength : data.byteLength;
+            console.debug('Sent binary audio frame:', byteLength, 'bytes');
+        }
     }
 
     // Client command methods
@@ -398,6 +420,7 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
 
     /**
      * Handle incoming messages from WebSocket
+     * Supports both JSON events and binary audio frames
      */
     private handleMessage(data: string | ArrayBuffer): void {
         if (typeof data === 'string') {
@@ -423,11 +446,15 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
                 });
             }
         } else if (data instanceof ArrayBuffer) {
-            // Binary message - assume it's audio data
+            // Binary message - this is raw audio data from the server
+            // Emit as 'audio:output' for consistency with the audio system
+            this.emit('audio:output', data);
+            
+            // Also emit the legacy event for backward compatibility
             this.emit('binary_audio', data);
             
             if (this.config.debug) {
-                console.debug('Received binary audio:', data.byteLength, 'bytes');
+                console.debug('Received binary audio frame:', data.byteLength, 'bytes');
             }
         } else {
             console.warn('Unknown message type:', typeof data);

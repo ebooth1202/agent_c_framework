@@ -29,7 +29,11 @@ export class WebSocketManager {
   private isAlive = false;
 
   constructor(options: WebSocketManagerOptions, callbacks: WebSocketManagerCallbacks = {}) {
-    this.options = options;
+    this.options = {
+      ...options,
+      // Ensure binaryType is set to 'arraybuffer' for proper binary handling
+      binaryType: options.binaryType || 'arraybuffer'
+    };
     this.callbacks = callbacks;
   }
 
@@ -44,9 +48,8 @@ export class WebSocketManager {
     try {
       this.ws = new WebSocket(this.options.url, this.options.protocols);
       
-      if (this.options.binaryType) {
-        this.ws.binaryType = this.options.binaryType;
-      }
+      // Always set binaryType to ensure proper binary handling
+      this.ws.binaryType = this.options.binaryType || 'arraybuffer';
 
       this.setupEventHandlers();
     } catch (error) {
@@ -92,6 +95,17 @@ export class WebSocketManager {
   }
 
   /**
+   * Send binary data through the WebSocket
+   * This is a convenience method that ensures the data is sent as binary
+   */
+  sendBinary(data: ArrayBuffer | ArrayBufferView): void {
+    if (!this.supportsBinary()) {
+      throw new Error('WebSocket does not support binary data');
+    }
+    this.send(data);
+  }
+
+  /**
    * Send JSON data through the WebSocket
    */
   sendJSON(data: any): void {
@@ -110,6 +124,13 @@ export class WebSocketManager {
    */
   isConnected(): boolean {
     return this.ws !== null && this.ws.readyState === WebSocket.OPEN;
+  }
+
+  /**
+   * Check if the WebSocket connection supports binary data
+   */
+  supportsBinary(): boolean {
+    return this.ws !== null && this.ws.binaryType === 'arraybuffer';
   }
 
   /**
