@@ -8,6 +8,8 @@
 // Export hooks
 export * from './hooks';
 
-// Note: Provider and other components will be added later
-// export * from './providers';
+// Export providers and context
+export * from './providers';
+
+// Note: Components will be added later
 // export * from './components';
