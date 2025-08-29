@@ -8,12 +8,20 @@
     "build": "lerna run build",
     "test": "lerna run test",
     "clean": "lerna run clean && rimraf node_modules",
-    "dev": "lerna run --parallel dev"
+    "dev": "lerna run --parallel dev",
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix"
   },
   "devDependencies": {
+    "@eslint/js": "^9.34.0",
+    "concurrently": "^8.0.0",
+    "eslint": "^9.34.0",
+    "eslint-plugin-react": "^7.37.5",
+    "globals": "^16.3.0",
+    "jiti": "^2.5.1",
     "lerna": "^8.2.3",
-    "typescript": "^5.3.0",
     "rimraf": "^5.0.0",
-    "concurrently": "^8.0.0"
+    "typescript": "^5.3.0",
+    "typescript-eslint": "^8.41.0"
   }
 }
