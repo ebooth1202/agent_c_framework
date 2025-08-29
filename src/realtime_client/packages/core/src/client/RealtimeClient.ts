@@ -15,23 +15,46 @@ import {
 } from './ClientConfig';
 import { WebSocketManager } from './WebSocketManager';
 import { ReconnectionManager } from './ReconnectionManager';
+import { AuthManager, TokenPair } from '../auth';
+import { TurnManager } from '../session';
 
 /**
  * Main client class for connecting to Agent C Realtime API
  */
 export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
-    private config: Required<Omit<RealtimeClientConfig, 'sessionId' | 'headers' | 'protocols'>> & Pick<RealtimeClientConfig, 'sessionId' | 'headers' | 'protocols'>;
+    private config: Required<Omit<RealtimeClientConfig, 'sessionId' | 'headers' | 'protocols' | 'authToken' | 'authManager'>> & Pick<RealtimeClientConfig, 'sessionId' | 'headers' | 'protocols' | 'authToken' | 'authManager'>;
     private wsManager: WebSocketManager | null = null;
     private reconnectionManager: ReconnectionManager;
     private connectionState: ConnectionState = ConnectionState.DISCONNECTED;
     private authToken: string | null = null;
     private sessionId: string | null = null;
+    private authManager: AuthManager | null = null;
+    private turnManager: TurnManager | null = null;
 
     constructor(config: RealtimeClientConfig) {
         super();
         this.config = mergeConfig(config);
         this.authToken = config.authToken || null;
         this.sessionId = config.sessionId || null;
+
+        // Initialize auth manager if provided
+        if (config.authManager) {
+            this.authManager = config.authManager;
+            // Subscribe to token refresh events
+            this.authManager.on('auth:tokens-refreshed', (tokens: TokenPair) => {
+                this.authToken = tokens.agentCToken;
+                // If connected, reconnect with new token
+                if (this.isConnected()) {
+                    this.disconnect();
+                    this.connect();
+                }
+            });
+            // Get initial token if available
+            const tokens = this.authManager.getTokens();
+            if (tokens) {
+                this.authToken = tokens.agentCToken;
+            }
+        }
 
         // Initialize reconnection manager - cast is safe because mergeConfig ensures it's defined
         this.reconnectionManager = new ReconnectionManager(this.config.reconnection as ReconnectionConfig);
@@ -51,6 +74,11 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
             this.setConnectionState(ConnectionState.DISCONNECTED);
             this.emit('disconnected', { code: 1006, reason });
         });
+        
+        // Initialize turn manager if enabled
+        if (this.config.enableTurnManager) {
+            this.turnManager = new TurnManager(this);
+        }
     }
 
     /**
@@ -63,6 +91,22 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
 
         if (this.connectionState === ConnectionState.CONNECTING) {
             throw new Error('Already connecting');
+        }
+
+        // Get auth token from manager if available
+        if (this.authManager && !this.authToken) {
+            const tokens = this.authManager.getTokens();
+            if (tokens) {
+                this.authToken = tokens.agentCToken;
+            }
+        }
+
+        // Get UI session ID from auth manager if available
+        if (this.authManager && !this.sessionId) {
+            const uiSessionId = this.authManager.getUiSessionId();
+            if (uiSessionId) {
+                this.sessionId = uiSessionId;
+            }
         }
 
         this.setConnectionState(ConnectionState.CONNECTING);
@@ -267,11 +311,53 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
     }
 
     /**
+     * Get the auth manager instance
+     */
+    getAuthManager(): AuthManager | null {
+        return this.authManager;
+    }
+
+    /**
+     * Get the turn manager instance
+     */
+    getTurnManager(): TurnManager | null {
+        return this.turnManager;
+    }
+
+    /**
+     * Set the auth manager instance
+     */
+    setAuthManager(authManager: AuthManager): void {
+        // Unsubscribe from previous manager
+        if (this.authManager) {
+            this.authManager.removeAllListeners();
+        }
+
+        this.authManager = authManager;
+        
+        // Subscribe to token refresh events
+        this.authManager.on('auth:tokens-refreshed', (tokens: TokenPair) => {
+            this.authToken = tokens.agentCToken;
+            // If connected, reconnect with new token
+            if (this.isConnected()) {
+                this.disconnect();
+                this.connect();
+            }
+        });
+        
+        // Get initial token if available
+        const tokens = this.authManager.getTokens();
+        if (tokens) {
+            this.authToken = tokens.agentCToken;
+        }
+    }
+
+    /**
      * Update authentication token
      */
     setAuthToken(token: string): void {
         this.authToken = token;
-                // If connected, we need to reconnect with new token
+        // If connected, we need to reconnect with new token
         if (this.isConnected()) {
             this.disconnect();
             this.connect();
@@ -394,6 +480,13 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
      */
     destroy(): void {
         this.disconnect();
+        if (this.authManager) {
+            this.authManager.removeAllListeners();
+        }
+        if (this.turnManager) {
+            this.turnManager.destroy();
+            this.turnManager = null;
+        }
         this.removeAllListeners();
     }
 }

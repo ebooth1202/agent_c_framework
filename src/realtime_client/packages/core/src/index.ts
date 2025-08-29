@@ -12,11 +12,13 @@ export * from './client';
 // Re-export event types and utilities
 export * from './events';
 
+// Export authentication module
+export * from './auth';
+
 // Future exports - to be implemented in subsequent tasks
 // export * from './audio';
-// export * from './session';
+export * from './session';
 // export * from './voice';
-// export * from './auth';
 // export * from './avatar';
 // export * from './types';
 // export * from './utils';

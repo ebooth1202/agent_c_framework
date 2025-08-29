@@ -2,6 +2,8 @@
  * Configuration types and defaults for the Realtime Client
  */
 
+import type { AuthManager } from '../auth';
+
 /**
  * Connection state enum representing the WebSocket connection lifecycle
  */
@@ -41,8 +43,11 @@ export interface RealtimeClientConfig {
   /** WebSocket API URL (e.g., wss://api.example.com/rt/ws) */
   apiUrl: string;
   
-  /** JWT authentication token */
-  authToken: string;
+  /** JWT authentication token (optional if using AuthManager) */
+  authToken?: string;
+  
+  /** Optional AuthManager instance for automatic token management */
+  authManager?: AuthManager;
   
   /** Optional session ID to resume */
   sessionId?: string;
@@ -76,6 +81,9 @@ export interface RealtimeClientConfig {
   
   /** Binary type for WebSocket ('blob' or 'arraybuffer') */
   binaryType?: 'blob' | 'arraybuffer';
+  
+  /** Enable turn management (default: true) */
+  enableTurnManager?: boolean;
 }
 
 /**
@@ -101,7 +109,8 @@ export const defaultConfig: Partial<RealtimeClientConfig> = {
   pongTimeout: 10000,        // 10 seconds
   maxMessageSize: 10 * 1024 * 1024, // 10MB
   debug: false,
-  binaryType: 'arraybuffer'
+  binaryType: 'arraybuffer',
+  enableTurnManager: true     // Enable turn management by default
 };
 
 /**
@@ -109,8 +118,8 @@ export const defaultConfig: Partial<RealtimeClientConfig> = {
  */
 export function mergeConfig(
   userConfig: RealtimeClientConfig
-): Required<Omit<RealtimeClientConfig, 'sessionId' | 'headers' | 'protocols'>> & 
-  Pick<RealtimeClientConfig, 'sessionId' | 'headers' | 'protocols'> {
+): Required<Omit<RealtimeClientConfig, 'sessionId' | 'headers' | 'protocols' | 'authToken' | 'authManager'>> & 
+  Pick<RealtimeClientConfig, 'sessionId' | 'headers' | 'protocols' | 'authToken' | 'authManager'> {
   
   const config = {
     ...defaultConfig,
@@ -128,10 +137,11 @@ export function mergeConfig(
     throw new Error('apiUrl is required in RealtimeClientConfig');
   }
   
-  if (!config.authToken) {
-    throw new Error('authToken is required in RealtimeClientConfig');
+  // Either authToken or authManager must be provided
+  if (!config.authToken && !config.authManager) {
+    throw new Error('Either authToken or authManager is required in RealtimeClientConfig');
   }
 
-  return config as Required<Omit<RealtimeClientConfig, 'sessionId' | 'headers' | 'protocols'>> & 
-    Pick<RealtimeClientConfig, 'sessionId' | 'headers' | 'protocols'>;
+  return config as Required<Omit<RealtimeClientConfig, 'sessionId' | 'headers' | 'protocols' | 'authToken' | 'authManager'>> & 
+    Pick<RealtimeClientConfig, 'sessionId' | 'headers' | 'protocols' | 'authToken' | 'authManager'>;
 }
