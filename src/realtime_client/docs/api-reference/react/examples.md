@@ -2,98 +2,144 @@
 
 Complete examples demonstrating how to build applications with the Agent C Realtime React SDK.
 
-## Authentication
+## Authentication Patterns
 
-Agent C uses username/password authentication, not API keys. All examples below demonstrate proper authentication patterns:
+**IMPORTANT**: Production applications should NEVER include Agent C credentials in frontend code. The correct pattern is:
 
-- Login with credentials using `AuthManager`
-- WebSocket URL is provided by the login response
-- Use `localhost:8000` for development or environment variables for production
-- Token refresh is handled automatically
+### Production Pattern (Recommended)
+Your application backend handles authentication:
+1. **Your backend** manages user authentication (login, sessions, etc.)
+2. **Your backend** calls Agent C library functions to create ChatUsers and generate tokens
+3. **Your frontend** receives a payload from YOUR backend containing:
+   - JWT token (`agent_c_token`)
+   - WebSocket URL (`ws_url`)
+   - HeyGen token if needed (`heygen_access_token`)
+   - Other configuration
+4. **Your frontend** initializes the SDK with this payload
+
+### Development Pattern (Testing Only)
+Direct login is ONLY for development/testing:
+- Uses username/password directly in frontend (NEVER do this in production!)
+- Suitable only for local development and prototypes
+- Must be replaced with proper backend integration before deployment
 
 ## Table of Contents
 
-- [Authentication Setup](#authentication-setup)
+- [Production Authentication](#production-authentication)
 - [Basic Chat Application](#basic-chat-application)
 - [Voice Assistant](#voice-assistant)
 - [Avatar Integration](#avatar-integration)
 - [Multi-Session Manager](#multi-session-manager)
 - [Custom UI Components](#custom-ui-components)
 - [Advanced Features](#advanced-features)
+- [Development-Only Examples](#development-only-examples)
 
 ---
 
-## Authentication Setup
+## Production Authentication
 
-Proper authentication flow with Agent C:
+**This is the correct pattern for production applications.** Your backend handles Agent C authentication and passes tokens to your frontend.
+
+### Backend Integration (Your Server)
+
+```javascript
+// YOUR BACKEND CODE (Node.js example)
+// This runs on YOUR server, not in the browser!
+import { ChatUser } from '@agentc/server-sdk'; // Agent C server library
+
+// Your login endpoint
+app.post('/api/login', async (req, res) => {
+  // 1. Authenticate YOUR user however you want
+  const user = await authenticateUser(req.body.email, req.body.password);
+  
+  // 2. Create or get Agent C ChatUser for your user
+  const chatUser = await ChatUser.createOrGet({
+    username: `user_${user.id}`, // Your internal user ID
+    metadata: { 
+      email: user.email,
+      name: user.name 
+    }
+  });
+  
+  // 3. Generate Agent C tokens for this user
+  const agentCTokens = await chatUser.generateTokens();
+  
+  // 4. Return the payload to YOUR frontend
+  res.json({
+    // Your app's auth data
+    userId: user.id,
+    userToken: generateYourAppToken(user),
+    
+    // Agent C configuration for the frontend
+    agentC: {
+      wsUrl: agentCTokens.ws_url,
+      authToken: agentCTokens.access_token,
+      refreshToken: agentCTokens.refresh_token,
+      heygenToken: agentCTokens.heygen_access_token
+    }
+  });
+});
+```
+
+### Frontend Integration (React)
 
 ```tsx
-// AuthenticationExample.tsx
+// ProductionApp.tsx
 import React, { useState, useEffect } from 'react';
-import { AgentCProvider, useAuth, useConnection } from '@agentc/realtime-react';
+import { AgentCProvider, AuthManager } from '@agentc/realtime-react';
 
 function App() {
-  const [credentials, setCredentials] = useState({
-    username: '',
-    password: ''
-  });
-  const [authConfig, setAuthConfig] = useState<any>(null);
+  const [authPayload, setAuthPayload] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleLogin = async () => {
+  useEffect(() => {
+    // Fetch auth payload from YOUR backend
+    fetchAuthFromYourBackend();
+  }, []);
+
+  const fetchAuthFromYourBackend = async () => {
     try {
-      // Use AuthManager to login
-      const authManager = new AuthManager({
-        apiUrl: process.env.REACT_APP_API_URL || 'https://localhost:8000'
+      // Call YOUR backend's login endpoint
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: 'user@example.com',
+          password: 'user_password'
+        })
       });
       
-      const loginResponse = await authManager.login({
-        username: credentials.username,
-        password: credentials.password
-      });
+      const data = await response.json();
       
-      // Extract WebSocket URL and token from login response
-      setAuthConfig({
-        wsUrl: loginResponse.ws_url,
-        authToken: loginResponse.access_token,
-        refreshToken: loginResponse.refresh_token,
-        heygenToken: loginResponse.heygen_access_token
-      });
+      // Initialize AuthManager with the payload from YOUR backend
+      // No username/password needed - just the tokens!
+      const authManager = new AuthManager();
+      authManager.initializeFromPayload(data.agentC);
+      
+      setAuthPayload(data.agentC);
     } catch (error) {
-      console.error('Login failed:', error);
-      alert('Login failed. Please check your credentials.');
+      console.error('Authentication failed:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Render login form if not authenticated
-  if (!authConfig) {
-    return (
-      <div className="login-form">
-        <h2>Login to Agent C</h2>
-        <input
-          type="text"
-          placeholder="Username"
-          value={credentials.username}
-          onChange={(e) => setCredentials({...credentials, username: e.target.value})}
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={credentials.password}
-          onChange={(e) => setCredentials({...credentials, password: e.target.value})}
-        />
-        <button onClick={handleLogin}>Login</button>
-      </div>
-    );
+  if (isLoading) {
+    return <div>Loading...</div>;
   }
 
-  // Render app with authentication
+  if (!authPayload) {
+    return <div>Authentication required</div>;
+  }
+
+  // Initialize the SDK with tokens from YOUR backend
   return (
     <AgentCProvider 
       config={{
-        wsUrl: authConfig.wsUrl,
-        authToken: authConfig.authToken,
-        refreshToken: authConfig.refreshToken,
-        heygenToken: authConfig.heygenToken,
+        wsUrl: authPayload.wsUrl,
+        authToken: authPayload.authToken,
+        refreshToken: authPayload.refreshToken,
+        heygenToken: authPayload.heygenToken,
         autoConnect: true
       }}
     >
@@ -103,11 +149,86 @@ function App() {
 }
 ```
 
+### Using Pre-Authenticated Payload
+
+If your backend provides the Agent C configuration on page load (e.g., via server-side rendering or initial API call):
+
+```tsx
+// Initialize with payload already available
+import React from 'react';
+import { AgentCProvider, AuthManager } from '@agentc/realtime-react';
+
+function App({ agentCConfig }: { agentCConfig: any }) {
+  // agentCConfig comes from your backend via:
+  // - Server-side rendering
+  // - Initial API call
+  // - Global window variable
+  // - React context from parent component
+  
+  // Initialize AuthManager without login - just use the payload
+  const authManager = new AuthManager();
+  authManager.initializeFromPayload(agentCConfig);
+  
+  return (
+    <AgentCProvider 
+      config={{
+        wsUrl: agentCConfig.wsUrl,
+        authToken: agentCConfig.authToken,
+        refreshToken: agentCConfig.refreshToken,
+        heygenToken: agentCConfig.heygenToken,
+        autoConnect: true
+      }}
+    >
+      <YourApplication />
+    </AgentCProvider>
+  );
+}
+
+// Example: Getting config from window object (set by your backend)
+function AppWithGlobalConfig() {
+  // Your backend might inject this into the HTML
+  const config = (window as any).AGENT_C_CONFIG;
+  
+  if (!config) {
+    return <div>Configuration not found</div>;
+  }
+  
+  return <App agentCConfig={config} />;
+}
+```
+
+### Token Refresh Pattern
+
+Your backend should handle token refresh:
+
+```typescript
+// YOUR BACKEND CODE
+app.post('/api/refresh-agent-c-token', async (req, res) => {
+  // Verify YOUR user's session
+  const user = await verifyUserSession(req.headers.authorization);
+  
+  // Get the ChatUser
+  const chatUser = await ChatUser.get(`user_${user.id}`);
+  
+  // Refresh Agent C tokens
+  const newTokens = await chatUser.refreshTokens();
+  
+  res.json({
+    agentC: {
+      wsUrl: newTokens.ws_url,
+      authToken: newTokens.access_token,
+      refreshToken: newTokens.refresh_token,
+      heygenToken: newTokens.heygen_access_token
+    }
+  });
+});
+```
+
 ---
 
 ## Basic Chat Application
 
-A simple text chat interface with Agent C.
+A simple text chat interface with Agent C using the production authentication pattern.
 
 ```tsx
 // BasicChat.tsx
@@ -120,47 +241,63 @@ import {
 } from '@agentc/realtime-react';
 
 function BasicChatApp() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [config, setConfig] = useState<any>(null);
+  const [agentCConfig, setAgentCConfig] = useState<any>(null);
+  const [error, setError] = useState<string>('');
 
   useEffect(() => {
-    // Initialize authentication
-    const authenticate = async () => {
-      const authManager = new AuthManager({
-        apiUrl: process.env.REACT_APP_API_URL || 'https://localhost:8000'
-      });
-
-      try {
-        // Try to restore session or login with stored credentials
-        const credentials = {
-          username: process.env.REACT_APP_USERNAME || 'demo_user',
-          password: process.env.REACT_APP_PASSWORD || 'demo_password'
-        };
-        
-        const loginResponse = await authManager.login(credentials);
-        
-        setConfig({
-          wsUrl: loginResponse.ws_url,
-          authToken: loginResponse.access_token,
-          refreshToken: loginResponse.refresh_token
-        });
-        setIsAuthenticated(true);
-      } catch (error) {
-        console.error('Authentication failed:', error);
-      }
-    };
-
-    authenticate();
+    // Fetch Agent C configuration from YOUR backend
+    fetchConfigFromYourBackend();
   }, []);
 
-  if (!isAuthenticated || !config) {
-    return <div>Authenticating...</div>;
+  const fetchConfigFromYourBackend = async () => {
+    try {
+      // This calls YOUR backend, which handles Agent C authentication
+      const response = await fetch('/api/agent-c/config', {
+        method: 'GET',
+        headers: {
+          // Include YOUR app's auth token
+          'Authorization': `Bearer ${localStorage.getItem('your_app_token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get Agent C configuration');
+      }
+
+      const data = await response.json();
+      
+      // Initialize AuthManager with the payload from YOUR backend
+      const authManager = new AuthManager();
+      authManager.initializeFromPayload(data.agentC);
+      
+      setAgentCConfig(data.agentC);
+    } catch (error) {
+      console.error('Failed to get Agent C config:', error);
+      setError('Unable to initialize chat. Please try again.');
+    }
+  };
+
+  if (error) {
+    return (
+      <div className="error-container">
+        <p>{error}</p>
+        <button onClick={fetchConfigFromYourBackend}>Retry</button>
+      </div>
+    );
+  }
+
+  if (!agentCConfig) {
+    return <div>Loading chat configuration...</div>;
   }
 
   return (
     <AgentCProvider 
-      config={config}
-      autoConnect={true}
+      config={{
+        wsUrl: agentCConfig.wsUrl,
+        authToken: agentCConfig.authToken,
+        refreshToken: agentCConfig.refreshToken,
+        autoConnect: true
+      }}
     >
       <ChatInterface />
     </AgentCProvider>
@@ -236,7 +373,7 @@ export default BasicChatApp;
 
 ## Voice Assistant
 
-Voice-enabled assistant with turn management.
+Voice-enabled assistant with turn management using production authentication.
 
 ```tsx
 // VoiceAssistant.tsx
@@ -252,23 +389,33 @@ import {
 } from '@agentc/realtime-react';
 
 function VoiceAssistantApp() {
-  const [authConfig, setAuthConfig] = useState<any>(null);
+  const [agentCConfig, setAgentCConfig] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const login = async () => {
-      const authManager = new AuthManager({
-        apiUrl: process.env.REACT_APP_API_URL || 'https://localhost:8000'
-      });
+    initializeFromBackend();
+  }, []);
 
-      const response = await authManager.login({
-        username: process.env.REACT_APP_USERNAME!,
-        password: process.env.REACT_APP_PASSWORD!
+  const initializeFromBackend = async () => {
+    try {
+      // Get Agent C config from YOUR backend
+      const response = await fetch('/api/agent-c/voice-config', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('your_app_token')}`
+        }
       });
-
-      setAuthConfig({
-        wsUrl: response.ws_url,
-        authToken: response.access_token,
-        refreshToken: response.refresh_token,
+      
+      const data = await response.json();
+      
+      // Initialize AuthManager with backend payload
+      const authManager = new AuthManager();
+      authManager.initializeFromPayload(data.agentC);
+      
+      // Set config with audio enabled
+      setAgentCConfig({
+        wsUrl: data.agentC.wsUrl,
+        authToken: data.agentC.authToken,
+        refreshToken: data.agentC.refreshToken,
         enableAudio: true,
         audioConfig: {
           enableInput: true,
@@ -277,17 +424,23 @@ function VoiceAssistantApp() {
           initialVolume: 0.8
         }
       });
-    };
+    } catch (error) {
+      console.error('Failed to initialize:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    login().catch(console.error);
-  }, []);
+  if (isLoading) {
+    return <div>Loading voice assistant...</div>;
+  }
 
-  if (!authConfig) {
-    return <div>Authenticating...</div>;
+  if (!agentCConfig) {
+    return <div>Failed to load configuration</div>;
   }
 
   return (
-    <AgentCProvider config={authConfig}>
+    <AgentCProvider config={agentCConfig}>
       <VoiceInterface />
     </AgentCProvider>
   );
@@ -455,7 +608,7 @@ export default VoiceAssistantApp;
 
 ## Avatar Integration
 
-HeyGen avatar with synchronized audio.
+HeyGen avatar with synchronized audio using production authentication.
 
 ```tsx
 // AvatarChat.tsx
@@ -466,42 +619,58 @@ import {
   useChat,
   useAvatar,
   useVoiceModel,
+  useAuth,
   AuthManager
 } from '@agentc/realtime-react';
 import NewStreamingAvatar, { StreamingEvents } from '@heygen/streaming-avatar';
 
 function AvatarChatApp() {
-  const [authConfig, setAuthConfig] = useState<any>(null);
+  const [agentCConfig, setAgentCConfig] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const authenticate = async () => {
-      const authManager = new AuthManager({
-        apiUrl: process.env.REACT_APP_API_URL || 'https://localhost:8000'
-      });
-
-      const loginResponse = await authManager.login({
-        username: process.env.REACT_APP_USERNAME!,
-        password: process.env.REACT_APP_PASSWORD!
-      });
-
-      setAuthConfig({
-        wsUrl: loginResponse.ws_url,
-        authToken: loginResponse.access_token,
-        refreshToken: loginResponse.refresh_token,
-        heygenToken: loginResponse.heygen_access_token, // HeyGen token from login
-        enableAudio: true
-      });
-    };
-
-    authenticate().catch(console.error);
+    loadAvatarConfig();
   }, []);
 
-  if (!authConfig) {
-    return <div>Authenticating...</div>;
+  const loadAvatarConfig = async () => {
+    try {
+      // YOUR backend provides Agent C config including HeyGen token
+      const response = await fetch('/api/agent-c/avatar-config', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('your_app_token')}`
+        }
+      });
+      
+      const data = await response.json();
+      
+      // Initialize AuthManager with backend payload
+      const authManager = new AuthManager();
+      authManager.initializeFromPayload(data.agentC);
+      
+      setAgentCConfig({
+        wsUrl: data.agentC.wsUrl,
+        authToken: data.agentC.authToken,
+        refreshToken: data.agentC.refreshToken,
+        heygenToken: data.agentC.heygenToken, // HeyGen token from YOUR backend
+        enableAudio: true
+      });
+    } catch (error) {
+      console.error('Failed to load avatar config:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return <div>Loading avatar configuration...</div>;
+  }
+
+  if (!agentCConfig) {
+    return <div>Avatar configuration not available</div>;
   }
 
   return (
-    <AgentCProvider config={authConfig}>
+    <AgentCProvider config={agentCConfig}>
       <AvatarInterface />
     </AgentCProvider>
   );
@@ -536,11 +705,12 @@ function AvatarInterface() {
     setIsInitializing(true);
     
     try {
-      // Get HeyGen token from authentication config
-      const { heygenToken } = useAuth();
+      // Get HeyGen token from provider config
+      const client = useRealtimeClient();
+      const heygenToken = client?.config?.heygenToken;
       
       if (!heygenToken) {
-        throw new Error('HeyGen token not available. Please re-authenticate.');
+        throw new Error('HeyGen token not available in configuration.');
       }
       
       // Create HeyGen instance
@@ -684,7 +854,7 @@ export default AvatarChatApp;
 
 ## Multi-Session Manager
 
-Manage multiple chat sessions with history.
+Manage multiple chat sessions with history using production authentication.
 
 ```tsx
 // MultiSessionManager.tsx
@@ -697,45 +867,58 @@ import {
 } from '@agentc/realtime-react';
 
 function MultiSessionApp() {
-  const [authConfig, setAuthConfig] = useState<any>(null);
-  const [loginError, setLoginError] = useState<string>('');
+  const [agentCConfig, setAgentCConfig] = useState<any>(null);
+  const [loadError, setLoadError] = useState<string>('');
 
   useEffect(() => {
-    const authenticate = async () => {
-      const authManager = new AuthManager({
-        apiUrl: process.env.REACT_APP_API_URL || 'https://localhost:8000'
-      });
-
-      try {
-        const loginResponse = await authManager.login({
-          username: process.env.REACT_APP_USERNAME!,
-          password: process.env.REACT_APP_PASSWORD!
-        });
-
-        setAuthConfig({
-          wsUrl: loginResponse.ws_url,
-          authToken: loginResponse.access_token,
-          refreshToken: loginResponse.refresh_token
-        });
-      } catch (error: any) {
-        setLoginError(error.message || 'Authentication failed');
-      }
-    };
-
-    authenticate();
+    loadConfiguration();
   }, []);
 
-  if (loginError) {
-    return <div className="error">Login Error: {loginError}</div>;
+  const loadConfiguration = async () => {
+    try {
+      // Get Agent C config from YOUR backend
+      const response = await fetch('/api/agent-c/session-config', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('your_app_token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load configuration');
+      }
+
+      const data = await response.json();
+      
+      // Initialize AuthManager with backend payload
+      const authManager = new AuthManager();
+      authManager.initializeFromPayload(data.agentC);
+      
+      setAgentCConfig({
+        wsUrl: data.agentC.wsUrl,
+        authToken: data.agentC.authToken,
+        refreshToken: data.agentC.refreshToken
+      });
+    } catch (error: any) {
+      setLoadError(error.message || 'Configuration failed');
+    }
+  };
+
+  if (loadError) {
+    return (
+      <div className="error">
+        <p>Error: {loadError}</p>
+        <button onClick={loadConfiguration}>Retry</button>
+      </div>
+    );
   }
 
-  if (!authConfig) {
-    return <div>Authenticating...</div>;
+  if (!agentCConfig) {
+    return <div>Loading configuration...</div>;
   }
 
   return (
     <AgentCProvider 
-      config={authConfig}
+      config={agentCConfig}
       autoConnect={true}
     >
       <SessionManager />
@@ -1096,8 +1279,7 @@ import {
   useTurnState,
   useVoiceModel,
   useAvatar,
-  AuthManager,
-  useAuth
+  AuthManager
 } from '@agentc/realtime-react';
 
 // Import custom components
@@ -1110,47 +1292,43 @@ import {
 } from './CustomComponents';
 
 function AdvancedApp() {
-  const [config, setConfig] = useState<any>(null);
+  const [agentCConfig, setAgentCConfig] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [credentials, setCredentials] = useState({
-    username: '',
-    password: ''
-  });
-  const [showLoginForm, setShowLoginForm] = useState(false);
+  const [error, setError] = useState<string>('');
 
   useEffect(() => {
-    // Try to authenticate with environment variables first
-    const tryAutoLogin = async () => {
-      const username = process.env.REACT_APP_USERNAME;
-      const password = process.env.REACT_APP_PASSWORD;
-      
-      if (!username || !password) {
-        setShowLoginForm(true);
-        setIsLoading(false);
-        return;
-      }
-
-      await authenticate(username, password);
-    };
-
-    tryAutoLogin();
+    loadAdvancedConfig();
   }, []);
 
-  const authenticate = async (username: string, password: string) => {
-    setIsLoading(true);
-    
-    const authManager = new AuthManager({
-      apiUrl: process.env.REACT_APP_API_URL || 'https://localhost:8000'
-    });
-
+  const loadAdvancedConfig = async () => {
     try {
-      const loginResponse = await authManager.login({ username, password });
+      // Get comprehensive config from YOUR backend
+      const response = await fetch('/api/agent-c/advanced-config', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('your_app_token')}`
+        }
+      });
+
+      if (!response.ok) {
+        // If user not authenticated with YOUR app, redirect to YOUR login
+        if (response.status === 401) {
+          window.location.href = '/login'; // YOUR app's login page
+          return;
+        }
+        throw new Error('Failed to load configuration');
+      }
+
+      const data = await response.json();
       
-      setConfig({
-        wsUrl: loginResponse.ws_url,
-        authToken: loginResponse.access_token,
-        refreshToken: loginResponse.refresh_token,
-        heygenToken: loginResponse.heygen_access_token,
+      // Initialize AuthManager with backend payload
+      const authManager = new AuthManager();
+      authManager.initializeFromPayload(data.agentC);
+      
+      setAgentCConfig({
+        wsUrl: data.agentC.wsUrl,
+        authToken: data.agentC.authToken,
+        refreshToken: data.agentC.refreshToken,
+        heygenToken: data.agentC.heygenToken,
         enableAudio: true,
         audioConfig: {
           enableInput: true,
@@ -1159,55 +1337,34 @@ function AdvancedApp() {
           initialVolume: 0.8
         }
       });
-      
-      setShowLoginForm(false);
-    } catch (error) {
-      console.error('Authentication failed:', error);
-      alert('Login failed. Please check your credentials.');
-      setShowLoginForm(true);
+    } catch (error: any) {
+      console.error('Configuration failed:', error);
+      setError(error.message || 'Failed to load configuration');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleLogin = () => {
-    if (credentials.username && credentials.password) {
-      authenticate(credentials.username, credentials.password);
-    }
-  };
-
   if (isLoading) {
-    return <div className="loading">Loading...</div>;
+    return <div className="loading">Loading configuration...</div>;
   }
 
-  if (showLoginForm) {
+  if (error) {
     return (
-      <div className="login-container">
-        <h2>Login to Agent C</h2>
-        <input
-          type="text"
-          placeholder="Username"
-          value={credentials.username}
-          onChange={(e) => setCredentials({...credentials, username: e.target.value})}
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={credentials.password}
-          onChange={(e) => setCredentials({...credentials, password: e.target.value})}
-          onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
-        />
-        <button onClick={handleLogin}>Login</button>
+      <div className="error-container">
+        <h2>Configuration Error</h2>
+        <p>{error}</p>
+        <button onClick={loadAdvancedConfig}>Retry</button>
       </div>
     );
   }
   
-  if (!config) {
+  if (!agentCConfig) {
     return null;
   }
 
   return (
-    <AgentCProvider config={config}>
+    <AgentCProvider config={agentCConfig}>
       <AdvancedInterface />
     </AgentCProvider>
   );
@@ -1665,22 +1822,23 @@ describe('ChatInterface', () => {
 
 ### Environment Variables
 
-Create a `.env` file for development:
+**NEVER store Agent C credentials in environment variables!** Your backend should handle Agent C authentication.
+
+For your React app:
 
 ```bash
-# Development environment
-REACT_APP_API_URL=https://localhost:8000
-REACT_APP_USERNAME=your_username
-REACT_APP_PASSWORD=your_password
+# .env.production
+REACT_APP_API_URL=https://your-backend.com  # YOUR backend, not Agent C!
+REACT_APP_PUBLIC_URL=https://your-app.com
 ```
 
-For production:
+For your backend (Node.js example):
 
 ```bash
-# Production environment
-REACT_APP_API_URL=https://api.agentc.com
-REACT_APP_USERNAME=prod_username
-REACT_APP_PASSWORD=prod_password
+# Backend .env (NEVER exposed to frontend)
+AGENT_C_API_URL=https://api.agentc.com
+AGENT_C_API_KEY=your_api_key  # If using API keys
+AGENT_C_SECRET=your_secret    # Server-side only!
 ```
 
 ### Production Configuration
@@ -1690,25 +1848,34 @@ REACT_APP_PASSWORD=prod_password
 import { AuthManager } from '@agentc/realtime-react';
 
 export async function getProductionConfig() {
-  const authManager = new AuthManager({
-    apiUrl: process.env.REACT_APP_API_URL!,
-    // Optional: Configure retry and timeout settings
-    requestTimeout: 30000,
-    maxRetries: 3
-  });
-
   try {
-    // Authenticate with credentials
-    const loginResponse = await authManager.login({
-      username: process.env.REACT_APP_USERNAME!,
-      password: process.env.REACT_APP_PASSWORD!
+    // Get Agent C config from YOUR backend (not Agent C directly!)
+    const response = await fetch('/api/agent-c/config', {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('your_app_token')}`
+      }
     });
 
+    if (!response.ok) {
+      if (response.status === 401) {
+        // User not authenticated with YOUR app
+        window.location.href = '/login';
+        return null;
+      }
+      throw new Error('Failed to get configuration');
+    }
+
+    const data = await response.json();
+    
+    // Initialize AuthManager with the payload from YOUR backend
+    const authManager = new AuthManager();
+    authManager.initializeFromPayload(data.agentC);
+
     return {
-      wsUrl: loginResponse.ws_url,
-      authToken: loginResponse.access_token,
-      refreshToken: loginResponse.refresh_token,
-      heygenToken: loginResponse.heygen_access_token,
+      wsUrl: data.agentC.wsUrl,
+      authToken: data.agentC.authToken,
+      refreshToken: data.agentC.refreshToken,
+      heygenToken: data.agentC.heygenToken,
       enableAudio: true,
       audioConfig: {
         enableInput: true,
@@ -1723,7 +1890,7 @@ export async function getProductionConfig() {
       debug: process.env.NODE_ENV !== 'production'
     };
   } catch (error) {
-    console.error('Failed to authenticate:', error);
+    console.error('Failed to get configuration:', error);
     throw error;
   }
 }
@@ -1733,18 +1900,28 @@ import { getProductionConfig } from './productionConfig';
 
 function App() {
   const [config, setConfig] = useState<any>(null);
+  const [error, setError] = useState<string>('');
 
   useEffect(() => {
     getProductionConfig()
       .then(setConfig)
       .catch(error => {
-        // Handle authentication failure
+        setError('Unable to load chat configuration');
         console.error('Setup failed:', error);
       });
   }, []);
 
+  if (error) {
+    return (
+      <div className="error">
+        <p>{error}</p>
+        <a href="/login">Please login</a>
+      </div>
+    );
+  }
+
   if (!config) {
-    return <div>Initializing...</div>;
+    return <div>Loading...</div>;
   }
 
   return (
@@ -1753,6 +1930,43 @@ function App() {
     </AgentCProvider>
   );
 }
+```
+
+### Your Backend Implementation
+
+Your backend is responsible for managing Agent C authentication:
+
+```javascript
+// YOUR BACKEND CODE (Node.js example)
+import { ChatUser } from '@agentc/server-sdk';
+
+// Endpoint to provide Agent C config to YOUR frontend
+app.get('/api/agent-c/config', authenticateUser, async (req, res) => {
+  try {
+    // req.user is YOUR authenticated user
+    const chatUser = await ChatUser.createOrGet({
+      username: `user_${req.user.id}`,
+      metadata: {
+        email: req.user.email,
+        name: req.user.name
+      }
+    });
+    
+    const tokens = await chatUser.generateTokens();
+    
+    res.json({
+      agentC: {
+        wsUrl: tokens.ws_url,
+        authToken: tokens.access_token,
+        refreshToken: tokens.refresh_token,
+        heygenToken: tokens.heygen_access_token
+      }
+    });
+  } catch (error) {
+    console.error('Failed to get Agent C tokens:', error);
+    res.status(500).json({ error: 'Configuration error' });
+  }
+});
 ```
 
 ### Docker Deployment
@@ -1784,11 +1998,12 @@ CMD ["nginx", "-g", "daemon off;"]
 
 ### Security Best Practices
 
-1. **Never commit credentials** - Use environment variables
-2. **Use HTTPS in production** - Ensure all API calls are encrypted
-3. **Implement token refresh** - AuthManager handles this automatically
-4. **Store tokens securely** - Use httpOnly cookies or secure storage
-5. **Validate input** - Always validate user input before sending
+1. **Never expose Agent C credentials** - Frontend should NEVER have username/password
+2. **Backend handles authentication** - YOUR backend manages Agent C tokens
+3. **Use HTTPS in production** - Ensure all API calls are encrypted
+4. **Implement token refresh** - YOUR backend refreshes Agent C tokens
+5. **Store tokens securely** - Use httpOnly cookies or secure storage
+6. **Validate input** - Always validate user input before sending
 
 ```tsx
 // Secure token storage example
@@ -1810,11 +2025,13 @@ const authToken = storage.getItem('auth_token');
 ## Best Practices Summary
 
 ### Authentication
-1. **Use environment variables** for credentials, never hardcode them
-2. **Implement proper login flow** with username/password
-3. **Handle authentication errors** gracefully with user feedback
-4. **Store tokens securely** using appropriate storage mechanisms
-5. **Let AuthManager handle token refresh** automatically
+1. **Frontend gets tokens from YOUR backend**, never calls Agent C directly
+2. **YOUR backend manages Agent C authentication** and user mapping
+3. **Never put Agent C credentials in frontend code** or environment variables
+4. **Initialize SDK with payload from YOUR backend** using `initializeFromPayload`
+5. **Handle authentication errors** gracefully with user feedback
+6. **Store tokens securely** using appropriate storage mechanisms
+7. **YOUR backend handles token refresh** with Agent C
 
 ### Connection Management
 1. **Always handle connection state** and show status to users
@@ -1851,27 +2068,33 @@ const authToken = storage.getItem('auth_token');
 
 ## Common Authentication Patterns
 
-### Login with Redirect
+### Login Flow with Your Backend
 
 ```tsx
-function LoginRedirect() {
+function LoginPage() {
   const navigate = useNavigate();
-  const [credentials, setCredentials] = useState({ username: '', password: '' });
+  const [credentials, setCredentials] = useState({ email: '', password: '' });
   
   const handleLogin = async () => {
-    const authManager = new AuthManager({
-      apiUrl: process.env.REACT_APP_API_URL || 'https://localhost:8000'
-    });
-    
     try {
-      const response = await authManager.login(credentials);
+      // Authenticate with YOUR backend (not Agent C!)
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credentials)
+      });
       
-      // Store auth data in context or state management
-      sessionStorage.setItem('auth_config', JSON.stringify({
-        wsUrl: response.ws_url,
-        authToken: response.access_token,
-        refreshToken: response.refresh_token
-      }));
+      if (!response.ok) {
+        throw new Error('Login failed');
+      }
+      
+      const data = await response.json();
+      
+      // Store YOUR app token
+      localStorage.setItem('your_app_token', data.userToken);
+      
+      // Store Agent C config for the app
+      sessionStorage.setItem('agent_c_config', JSON.stringify(data.agentC));
       
       navigate('/chat');
     } catch (error) {
@@ -1882,10 +2105,10 @@ function LoginRedirect() {
   return (
     <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }}>
       <input
-        type="text"
-        value={credentials.username}
-        onChange={(e) => setCredentials({...credentials, username: e.target.value})}
-        placeholder="Username"
+        type="email"
+        value={credentials.email}
+        onChange={(e) => setCredentials({...credentials, email: e.target.value})}
+        placeholder="Email"
         required
       />
       <input
@@ -1905,24 +2128,65 @@ function LoginRedirect() {
 
 ```tsx
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const [authConfig, setAuthConfig] = useState<any>(null);
+  const [agentCConfig, setAgentCConfig] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
-    // Check for stored auth config
-    const stored = sessionStorage.getItem('auth_config');
+    // Check if user is authenticated with YOUR app
+    const yourAppToken = localStorage.getItem('your_app_token');
+    
+    if (!yourAppToken) {
+      // Not authenticated with YOUR app
+      setIsLoading(false);
+      return;
+    }
+    
+    // Check for stored Agent C config or fetch it
+    const stored = sessionStorage.getItem('agent_c_config');
     
     if (stored) {
-      setAuthConfig(JSON.parse(stored));
+      const config = JSON.parse(stored);
+      
+      // Initialize AuthManager with stored payload
+      const authManager = new AuthManager();
+      authManager.initializeFromPayload(config);
+      
+      setAgentCConfig(config);
+      setIsLoading(false);
+    } else {
+      // Fetch from YOUR backend
+      fetchAgentCConfig(yourAppToken);
     }
-    setIsLoading(false);
   }, []);
   
+  const fetchAgentCConfig = async (token: string) => {
+    try {
+      const response = await fetch('/api/agent-c/config', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Initialize AuthManager
+        const authManager = new AuthManager();
+        authManager.initializeFromPayload(data.agentC);
+        
+        sessionStorage.setItem('agent_c_config', JSON.stringify(data.agentC));
+        setAgentCConfig(data.agentC);
+      }
+    } catch (error) {
+      console.error('Failed to get Agent C config:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   if (isLoading) return <div>Loading...</div>;
-  if (!authConfig) return <Navigate to="/login" />;
+  if (!agentCConfig) return <Navigate to="/login" />;
   
   return (
-    <AgentCProvider config={authConfig}>
+    <AgentCProvider config={agentCConfig}>
       {children}
     </AgentCProvider>
   );
@@ -1950,12 +2214,23 @@ function LogoutButton() {
     // Disconnect WebSocket
     await disconnect();
     
-    // Clear stored tokens
-    sessionStorage.removeItem('auth_config');
-    localStorage.removeItem('refresh_token');
+    // Clear YOUR app's authentication
+    localStorage.removeItem('your_app_token');
     
-    // Clear any other auth state
-    // ...
+    // Clear Agent C config
+    sessionStorage.removeItem('agent_c_config');
+    
+    // Optional: Notify YOUR backend about logout
+    try {
+      await fetch('/api/logout', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('your_app_token')}`
+        }
+      });
+    } catch (error) {
+      console.error('Logout notification failed:', error);
+    }
     
     // Redirect to login
     navigate('/login');
@@ -1964,3 +2239,199 @@ function LogoutButton() {
   return <button onClick={handleLogout}>Logout</button>;
 }
 ```
+
+---
+
+## Development-Only Examples
+
+⚠️ **WARNING**: The following patterns are for DEVELOPMENT AND TESTING ONLY. Never use these patterns in production!
+
+### Direct Login (Development Only)
+
+**NEVER USE THIS IN PRODUCTION!** This pattern exposes credentials in frontend code.
+
+```tsx
+// DEV-ONLY-LoginExample.tsx
+// ⚠️ DEVELOPMENT ONLY - DO NOT USE IN PRODUCTION ⚠️
+import React, { useState } from 'react';
+import { AgentCProvider, AuthManager } from '@agentc/realtime-react';
+
+function DevOnlyApp() {
+  const [config, setConfig] = useState<any>(null);
+  const [credentials, setCredentials] = useState({
+    username: '',
+    password: ''
+  });
+
+  // ⚠️ BAD PATTERN - Direct login from frontend
+  // Only use this for local development!
+  const handleDirectLogin = async () => {
+    console.warn('Using development-only direct login!');
+    
+    const authManager = new AuthManager({
+      apiUrl: 'https://localhost:8000' // Local dev server
+    });
+    
+    try {
+      // ⚠️ NEVER do this in production!
+      const loginResponse = await authManager.login({
+        username: credentials.username,
+        password: credentials.password
+      });
+      
+      setConfig({
+        wsUrl: loginResponse.ws_url,
+        authToken: loginResponse.access_token,
+        refreshToken: loginResponse.refresh_token,
+        heygenToken: loginResponse.heygen_access_token
+      });
+    } catch (error) {
+      console.error('Dev login failed:', error);
+      alert('Login failed. Check your dev credentials.');
+    }
+  };
+
+  if (!config) {
+    return (
+      <div className="dev-login">
+        <h2>⚠️ Development Login</h2>
+        <p style={{color: 'red'}}>This is for development only!</p>
+        <input
+          type="text"
+          placeholder="Dev Username"
+          value={credentials.username}
+          onChange={(e) => setCredentials({...credentials, username: e.target.value})}
+        />
+        <input
+          type="password"
+          placeholder="Dev Password"
+          value={credentials.password}
+          onChange={(e) => setCredentials({...credentials, password: e.target.value})}
+        />
+        <button onClick={handleDirectLogin}>Dev Login</button>
+      </div>
+    );
+  }
+
+  return (
+    <AgentCProvider config={config}>
+      <YourDevApp />
+    </AgentCProvider>
+  );
+}
+```
+
+### Environment Variables (Development Only)
+
+**NEVER store real credentials in environment variables!** Use this only for local development with test accounts.
+
+```bash
+# .env.development.local
+# ⚠️ DEVELOPMENT ONLY - NEVER commit this file!
+REACT_APP_DEV_AGENT_C_URL=https://localhost:8000
+REACT_APP_DEV_USERNAME=test_user  # Test account only!
+REACT_APP_DEV_PASSWORD=test_pass  # Test account only!
+```
+
+```tsx
+// DevOnlyAutoLogin.tsx
+// ⚠️ DEVELOPMENT ONLY - DO NOT USE IN PRODUCTION ⚠️
+function DevOnlyAutoLogin() {
+  const [config, setConfig] = useState<any>(null);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'development') {
+      throw new Error('This component is for development only!');
+    }
+
+    const devLogin = async () => {
+      const authManager = new AuthManager({
+        apiUrl: process.env.REACT_APP_DEV_AGENT_C_URL
+      });
+
+      try {
+        // ⚠️ Only for development with test accounts!
+        const response = await authManager.login({
+          username: process.env.REACT_APP_DEV_USERNAME!,
+          password: process.env.REACT_APP_DEV_PASSWORD!
+        });
+
+        setConfig({
+          wsUrl: response.ws_url,
+          authToken: response.access_token,
+          refreshToken: response.refresh_token
+        });
+      } catch (error) {
+        console.error('Dev auto-login failed:', error);
+      }
+    };
+
+    devLogin();
+  }, []);
+
+  if (!config) {
+    return <div>Dev: Auto-authenticating...</div>;
+  }
+
+  return (
+    <AgentCProvider config={config}>
+      <YourDevApp />
+    </AgentCProvider>
+  );
+}
+```
+
+### Local Development Script
+
+For local development, you might create a script that generates tokens:
+
+```javascript
+// scripts/dev-tokens.js
+// Run this locally to generate dev tokens
+const { ChatUser } = require('@agentc/server-sdk');
+
+async function generateDevTokens() {
+  // This runs locally, not in production
+  const chatUser = await ChatUser.createOrGet({
+    username: 'dev_user',
+    metadata: { dev: true }
+  });
+  
+  const tokens = await chatUser.generateTokens();
+  
+  console.log('Dev tokens for frontend testing:');
+  console.log(JSON.stringify(tokens, null, 2));
+  console.log('\nPaste this into your dev app for testing.');
+}
+
+generateDevTokens();
+```
+
+### Why These Patterns Are Dangerous in Production
+
+1. **Security Risk**: Credentials in frontend code can be extracted by anyone
+2. **No User Management**: Can't map Agent C users to your app's users
+3. **No Access Control**: Can't control who accesses Agent C
+4. **No Audit Trail**: Can't track usage per user
+5. **Token Leakage**: Tokens visible in browser DevTools
+6. **Credential Rotation**: Can't rotate credentials without updating all clients
+
+### Migrating from Development to Production
+
+When moving from development to production:
+
+1. **Remove all direct login code**
+2. **Implement backend authentication endpoint**
+3. **Map your users to Agent C ChatUsers**
+4. **Never expose Agent C credentials**
+5. **Use the production pattern shown above**
+
+Example migration checklist:
+- [ ] Backend endpoint for Agent C token generation
+- [ ] User authentication in YOUR backend
+- [ ] Remove all `authManager.login()` calls from frontend
+- [ ] Replace with `authManager.initializeFromPayload()`
+- [ ] Remove Agent C credentials from environment variables
+- [ ] Update all components to use backend-provided tokens
+- [ ] Test token refresh through YOUR backend
+- [ ] Verify no credentials in frontend bundle

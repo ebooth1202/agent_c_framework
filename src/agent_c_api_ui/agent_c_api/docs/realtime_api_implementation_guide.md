@@ -151,6 +151,7 @@ Refresh JWT and HeyGen tokens.
 The system uses two types of session identifiers:
 
 #### UI Session IDs
+
 - **Purpose:** Represent a client connection to the server
 - **Scope:** Each unique WebSocket connection gets one UI session ID
 - **Usage:** Used for internal caching and session resumption after network issues
@@ -158,6 +159,7 @@ The system uses two types of session identifiers:
 - **Format:** Three-word mnemonic slug (e.g., "tiger-castle-moon")
 
 #### Chat Session IDs
+
 - **Purpose:** Represent persistent chat conversations between user and agent
 - **Scope:** Multiple UI sessions can access the same chat session
 - **Usage:** Used for chat history persistence, session switching, and resumption
@@ -165,6 +167,7 @@ The system uses two types of session identifiers:
 - **Format:** Mnemonic slug format
 
 **Example Workflow:**
+
 1. Client connects → receives `ui_session_id: "tiger-castle-moon"`
 2. Client starts chat → receives `chat_session_id: "purple-river-sky"`
 3. Network drops → client reconnects with same `ui_session_id`
