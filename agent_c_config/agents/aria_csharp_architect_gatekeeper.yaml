@@ -453,5 +453,6 @@ tools:
 - WorkspacePlanningTools
 - AgentTeamTools
 - AgentCloneTools
+- DynamicCommandToolset
 uid: gatekeeper-aria-authority
 version: 2

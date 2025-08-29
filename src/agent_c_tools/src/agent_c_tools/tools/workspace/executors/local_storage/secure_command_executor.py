@@ -16,6 +16,8 @@ from .validators.dotnet_validator import DotnetCommandValidator
 from .validators.git_validator import GitCommandValidator
 from .validators.node_validator import NodeCommandValidator
 from .validators.npm_validator import NpmCommandValidator
+from .validators.npx_validator import NpxCommandValidator
+from .validators.lerna_validator import LernaCommandValidator
 from .validators.os_basic_validator import OSBasicValidator
 from .validators.pytest_validator import PytestCommandValidator
 
@@ -221,6 +223,8 @@ class SecureCommandExecutor:
             "os_basic": OSBasicValidator(),
             "node": NodeCommandValidator(),
             "npm": NpmCommandValidator(),
+            "npx": NpxCommandValidator(),
+            "lerna": LernaCommandValidator(),
             "dotnet": DotnetCommandValidator(),
         }
 
