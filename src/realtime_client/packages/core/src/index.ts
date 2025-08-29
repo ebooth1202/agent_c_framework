@@ -15,8 +15,8 @@ export * from './events';
 // Export authentication module
 export * from './auth';
 
-// Future exports - to be implemented in subsequent tasks
-// export * from './audio';
+// Export audio module
+export * from './audio';
 export * from './session';
 // export * from './voice';
 // export * from './avatar';
