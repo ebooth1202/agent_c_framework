@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { RealtimeClient } from '@agentc/realtime-core';
+import { useRealtimeClientSafe } from '../providers/AgentCContext';
 
 /**
  * Turn state event for history tracking
@@ -24,9 +24,6 @@ export interface TurnStateEvent {
  * Options for the useTurnState hook
  */
 export interface UseTurnStateOptions {
-  /** RealtimeClient instance (temporary until we have context provider) */
-  client?: RealtimeClient | null;
-  
   /** Whether to track turn state history */
   trackHistory?: boolean;
   
@@ -57,10 +54,10 @@ export interface UseTurnStateReturn {
  */
 export function useTurnState(options: UseTurnStateOptions = {}): UseTurnStateReturn {
   const { 
-    client, 
     trackHistory = false, 
     maxHistorySize = 100 
   } = options;
+  const client = useRealtimeClientSafe();
   
   // State
   const [canSendInput, setCanSendInput] = useState(false);

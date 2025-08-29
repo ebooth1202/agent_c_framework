@@ -4,8 +4,8 @@
  */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { RealtimeClient } from '@agentc/realtime-core';
 import type { AudioStatus } from '@agentc/realtime-core';
+import { useRealtimeClientSafe } from '../providers/AgentCContext';
 
 /**
  * Options for the useAudio hook
@@ -16,9 +16,6 @@ export interface UseAudioOptions {
   
   /** Whether to respect turn state when streaming audio */
   respectTurnState?: boolean;
-  
-  /** RealtimeClient instance (temporary until we have context provider) */
-  client?: RealtimeClient | null;
 }
 
 /**
@@ -102,7 +99,8 @@ const DEFAULT_AUDIO_STATUS: AudioStatus = {
  * Provides a clean interface to the RealtimeClient's audio functionality
  */
 export function useAudio(options: UseAudioOptions = {}): UseAudioReturn {
-  const { autoStart = false, respectTurnState = true, client } = options;
+  const { autoStart = false, respectTurnState = true } = options;
+  const client = useRealtimeClientSafe();
   
   // State for audio status
   const [status, setStatus] = useState<AudioStatus>(DEFAULT_AUDIO_STATUS);
