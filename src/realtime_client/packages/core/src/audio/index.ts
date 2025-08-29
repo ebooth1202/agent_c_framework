@@ -26,6 +26,7 @@ export {
   
   // Output types
   AudioOutputStatus,
+  AudioStatus,
   VoiceModel,
   
   // Worklet message types
