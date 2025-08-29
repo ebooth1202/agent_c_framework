@@ -43,7 +43,7 @@ export class AudioProcessor {
     this.config = { ...DEFAULT_AUDIO_CONFIG, ...config };
     
     if (this.config.debug) {
-      console.log('[AudioProcessor] Initialized with config:', this.config);
+      // console.log('[AudioProcessor] Initialized with config:', this.config);
     }
   }
   
@@ -74,7 +74,10 @@ export class AudioProcessor {
       }
       
       // Create audio context
-      const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
+      const AudioContextClass = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioContextClass) {
+        throw new Error('AudioContext not supported');
+      }
       this.audioContext = new AudioContextClass({
         sampleRate: this.config.sampleRate
       });
@@ -95,7 +98,7 @@ export class AudioProcessor {
       });
       
       if (this.config.debug) {
-        console.log('[AudioProcessor] Initialization complete');
+        console.warn('[AudioProcessor] Initialization complete');
       }
     } catch (error) {
       this.handleError(error as Error);
@@ -118,7 +121,7 @@ export class AudioProcessor {
       await this.audioContext.audioWorklet.addModule(this.config.workletPath);
       
       if (this.config.debug) {
-        console.log('[AudioProcessor] Worklet loaded from:', this.config.workletPath);
+        // console.log('[AudioProcessor] Worklet loaded from:', this.config.workletPath);
       }
     } catch (error) {
       throw new AudioProcessorError(
@@ -146,7 +149,7 @@ export class AudioProcessor {
       
       if (this.config.debug) {
         const tracks = this.mediaStream.getAudioTracks();
-        console.log('[AudioProcessor] Microphone access granted:', {
+        console.warn('[AudioProcessor] Microphone access granted:', {
           tracks: tracks.length,
           settings: tracks[0]?.getSettings()
         });
@@ -197,7 +200,7 @@ export class AudioProcessor {
     // Note: Not connecting to destination to avoid feedback
     
     if (this.config.debug) {
-      console.log('[AudioProcessor] Audio nodes connected');
+      // console.log('[AudioProcessor] Audio nodes connected');
     }
   }
   
@@ -243,7 +246,7 @@ export class AudioProcessor {
    */
   private handleWorkletStatus(message: WorkletStatusMessage): void {
     if (this.config.debug) {
-      console.log('[AudioProcessor] Worklet status:', message.type, message.message);
+      // console.log('[AudioProcessor] Worklet status:', message.type, message.message);
     }
     
     switch (message.type) {
@@ -295,7 +298,7 @@ export class AudioProcessor {
     });
     
     if (this.config.debug) {
-      console.log('[AudioProcessor] Started processing');
+      console.warn('[AudioProcessor] Started processing');
     }
   }
   
@@ -318,7 +321,7 @@ export class AudioProcessor {
     });
     
     if (this.config.debug) {
-      console.log('[AudioProcessor] Stopped processing');
+      console.warn('[AudioProcessor] Stopped processing');
     }
   }
   
@@ -366,7 +369,7 @@ export class AudioProcessor {
     this.listeners.clear();
     
     if (this.config.debug) {
-      console.log('[AudioProcessor] Cleanup complete');
+      // console.log('[AudioProcessor] Cleanup complete');
     }
   }
   
@@ -425,7 +428,7 @@ export class AudioProcessor {
     };
   }
   
-  private emit(event: string, ...args: any[]): void {
+  private emit(event: string, ...args: unknown[]): void {
     const listeners = this.listeners.get(event);
     if (listeners) {
       listeners.forEach(listener => {

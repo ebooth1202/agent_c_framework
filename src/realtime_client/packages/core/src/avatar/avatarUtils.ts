@@ -10,7 +10,7 @@ import { Avatar } from '../events/types/CommonTypes';
 /**
  * Check if avatar data is valid
  */
-export function isValidAvatar(avatar: any): avatar is Avatar {
+export function isValidAvatar(avatar: unknown): avatar is Avatar {
   return (
     avatar &&
     typeof avatar === 'object' &&

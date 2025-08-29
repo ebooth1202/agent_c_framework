@@ -54,7 +54,7 @@ export class AudioAgentCBridge {
     this.audioService = AudioService.getInstance();
     
     if (this.config.debug) {
-      console.log('[AudioAgentCBridge] Initialized singleton instance', this.config);
+      // console.log('[AudioAgentCBridge] Initialized singleton instance', this.config);
     }
   }
   
@@ -84,7 +84,7 @@ export class AudioAgentCBridge {
    */
   setClient(client: RealtimeClient | null): void {
     if (this.config.debug) {
-      console.log('[AudioAgentCBridge] Setting client:', client ? 'connected' : 'disconnected');
+      console.warn('[AudioAgentCBridge] Setting client:', client ? 'connected' : 'disconnected');
     }
     
     // Clean up existing client connections
@@ -107,7 +107,7 @@ export class AudioAgentCBridge {
           this.currentUserHasTurn = canSendInput;
           
           if (this.config.debug) {
-            console.log('[AudioAgentCBridge] Turn state changed:', canSendInput);
+            // console.log('[AudioAgentCBridge] Turn state changed:', canSendInput);
           }
           
           // Emit status change when turn state changes
@@ -137,7 +137,7 @@ export class AudioAgentCBridge {
   async startStreaming(): Promise<void> {
     if (this.isStreaming) {
       if (this.config.debug) {
-        console.log('[AudioAgentCBridge] Already streaming');
+        // console.log('[AudioAgentCBridge] Already streaming');
       }
       return;
     }
@@ -147,7 +147,7 @@ export class AudioAgentCBridge {
     }
     
     if (this.config.debug) {
-      console.log('[AudioAgentCBridge] Starting audio streaming');
+      console.warn('[AudioAgentCBridge] Starting audio streaming');
     }
     
     // Subscribe to audio chunks from AudioService
@@ -161,7 +161,7 @@ export class AudioAgentCBridge {
     this.emitStatusChange();
     
     if (this.config.debug) {
-      console.log('[AudioAgentCBridge] Audio streaming started');
+      // console.log('[AudioAgentCBridge] Audio streaming started');
     }
   }
   
@@ -171,13 +171,13 @@ export class AudioAgentCBridge {
   stopStreaming(): void {
     if (!this.isStreaming) {
       if (this.config.debug) {
-        console.log('[AudioAgentCBridge] Not currently streaming');
+        // console.log('[AudioAgentCBridge] Not currently streaming');
       }
       return;
     }
     
     if (this.config.debug) {
-      console.log('[AudioAgentCBridge] Stopping audio streaming');
+      console.warn('[AudioAgentCBridge] Stopping audio streaming');
     }
     
     // Unsubscribe from audio chunks
@@ -192,8 +192,8 @@ export class AudioAgentCBridge {
     this.emitStatusChange();
     
     if (this.config.debug) {
-      console.log('[AudioAgentCBridge] Audio streaming stopped');
-      console.log(`[AudioAgentCBridge] Stats - Streamed: ${this.chunksStreamed}, Suppressed: ${this.chunksSuppressed}`);
+      console.warn('[AudioAgentCBridge] Audio streaming stopped');
+      // console.log(`[AudioAgentCBridge] Stats - Streamed: ${this.chunksStreamed}, Suppressed: ${this.chunksSuppressed}`);
     }
   }
   
@@ -209,20 +209,20 @@ export class AudioAgentCBridge {
       this.chunksStreamed++;
       
       if (this.config.logAudioChunks) {
-        console.log('[AudioAgentCBridge] Sent audio chunk:', {
-          frameCount: chunk.frame_count,
-          bytes: chunk.content.byteLength,
-          level: chunk.audio_level.toFixed(3)
-        });
+        // console.log('[AudioAgentCBridge] Sent audio chunk:', {
+        //   frameCount: chunk.frame_count,
+        //   bytes: chunk.content.byteLength,
+        //   level: chunk.audio_level.toFixed(3)
+        // });
       }
     } else {
       this.chunksSuppressed++;
       
       if (this.config.logAudioChunks) {
-        console.log('[AudioAgentCBridge] Suppressed audio chunk (no turn):', {
-          frameCount: chunk.frame_count,
-          bytes: chunk.content.byteLength
-        });
+        // console.log('[AudioAgentCBridge] Suppressed audio chunk (no turn):', {
+        //   frameCount: chunk.frame_count,
+        //   bytes: chunk.content.byteLength
+        // });
       }
     }
   }
@@ -302,7 +302,7 @@ export class AudioAgentCBridge {
     this.chunksSuppressed = 0;
     
     if (this.config.debug) {
-      console.log('[AudioAgentCBridge] Stats reset');
+      // console.log('[AudioAgentCBridge] Stats reset');
     }
     
     this.emitStatusChange();
@@ -318,7 +318,7 @@ export class AudioAgentCBridge {
     };
     
     if (this.config.debug) {
-      console.log('[AudioAgentCBridge] Configuration updated:', this.config);
+      // console.log('[AudioAgentCBridge] Configuration updated:', this.config);
     }
     
     this.emitStatusChange();
@@ -352,7 +352,7 @@ export class AudioAgentCBridge {
   /**
    * Emit an event to all listeners
    */
-  private emit(event: string, ...args: any[]): void {
+  private emit(event: string, ...args: unknown[]): void {
     const listeners = this.listeners.get(event);
     if (listeners) {
       listeners.forEach(listener => {
@@ -370,7 +370,7 @@ export class AudioAgentCBridge {
    */
   private cleanup(): void {
     if (this.config.debug) {
-      console.log('[AudioAgentCBridge] Cleaning up');
+      // console.log('[AudioAgentCBridge] Cleaning up');
     }
     
     // Stop streaming
@@ -388,7 +388,7 @@ export class AudioAgentCBridge {
     this.currentUserHasTurn = false;
     
     if (this.config.debug) {
-      console.log('[AudioAgentCBridge] Cleanup complete');
+      // console.log('[AudioAgentCBridge] Cleanup complete');
     }
   }
 }

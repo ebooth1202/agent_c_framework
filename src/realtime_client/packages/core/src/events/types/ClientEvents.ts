@@ -128,7 +128,7 @@ export type ClientEvent =
 /**
  * Type guard to check if an object is a client event
  */
-export function isClientEvent(obj: any): obj is ClientEvent {
+export function isClientEvent(obj: unknown): obj is ClientEvent {
   return obj && typeof obj.type === 'string' && [
     'get_agents',
     'set_agent',

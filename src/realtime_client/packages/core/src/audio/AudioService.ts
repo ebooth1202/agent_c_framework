@@ -52,7 +52,7 @@ export class AudioService {
     this.setupProcessorListeners();
     
     if (this.debug) {
-      console.log('[AudioService] Initialized singleton instance');
+      // Singleton instance initialized
     }
   }
   
@@ -194,7 +194,7 @@ export class AudioService {
       }
       
       if (this.debug) {
-        console.log('[AudioService] Requesting microphone permission');
+        // Requesting microphone permission
       }
       
       // Try to get user media to trigger permission prompt
@@ -214,7 +214,7 @@ export class AudioService {
       this.permissionGranted = true;
       
       if (this.debug) {
-        console.log('[AudioService] Microphone permission granted');
+        // Microphone permission granted
       }
       
       return true;
@@ -250,13 +250,13 @@ export class AudioService {
     try {
       if (this.status.isRecording) {
         if (this.debug) {
-          console.log('[AudioService] Already recording');
+          // Already recording
         }
         return;
       }
       
       if (this.debug) {
-        console.log('[AudioService] Starting recording');
+        // Starting recording
       }
       
       this.updateStatus({ state: 'initializing' });
@@ -277,7 +277,7 @@ export class AudioService {
       });
       
       if (this.debug) {
-        console.log('[AudioService] Recording started');
+        // Recording started
       }
     } catch (error) {
       this.handleProcessorError(error as Error);
@@ -291,13 +291,13 @@ export class AudioService {
   stopRecording(): void {
     if (!this.status.isRecording) {
       if (this.debug) {
-        console.log('[AudioService] Not currently recording');
+        // Not currently recording
       }
       return;
     }
     
     if (this.debug) {
-      console.log('[AudioService] Stopping recording');
+      // Stopping recording
     }
     
     // Stop processor
@@ -310,7 +310,7 @@ export class AudioService {
     });
     
     if (this.debug) {
-      console.log('[AudioService] Recording stopped');
+      // Recording stopped
     }
   }
   
@@ -349,7 +349,7 @@ export class AudioService {
     
     // Log state transitions if debug enabled
     if (this.debug && oldState !== this.status.state) {
-      console.log(`[AudioService] State transition: ${oldState} -> ${this.status.state}`);
+      // State transition: ${oldState} -> ${this.status.state}
     }
   }
   
@@ -373,7 +373,7 @@ export class AudioService {
   /**
    * Emit an event to all listeners
    */
-  private emit(event: string, ...args: any[]): void {
+  private emit(event: string, ...args: unknown[]): void {
     const listeners = this.listeners.get(event);
     if (listeners) {
       listeners.forEach(listener => {
@@ -391,7 +391,7 @@ export class AudioService {
    */
   private async cleanup(): Promise<void> {
     if (this.debug) {
-      console.log('[AudioService] Cleaning up');
+      // Cleaning up
     }
     
     // Stop recording if active
@@ -421,7 +421,7 @@ export class AudioService {
     this.permissionGranted = false;
     
     if (this.debug) {
-      console.log('[AudioService] Cleanup complete');
+      // Cleanup complete
     }
   }
 }

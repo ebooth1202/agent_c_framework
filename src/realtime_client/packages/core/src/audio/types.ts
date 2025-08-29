@@ -82,7 +82,7 @@ export interface AudioProcessorStatus {
  */
 export interface WorkletMessage {
   type: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**
@@ -160,7 +160,7 @@ export class AudioProcessorError extends Error {
   constructor(
     message: string,
     public code: AudioProcessorErrorCode,
-    public details?: any
+    public details?: unknown
   ) {
     super(message);
     this.name = 'AudioProcessorError';

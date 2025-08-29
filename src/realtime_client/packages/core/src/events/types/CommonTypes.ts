@@ -89,8 +89,8 @@ export interface AvatarSession {
   is_paid: boolean;
   realtime_endpoint: string;
   sdp: string | null;
-  ice_servers: any[] | null;
-  ice_servers2: any[] | null;
+  ice_servers: unknown[] | null;
+  ice_servers2: unknown[] | null;
 }
 
 /**
@@ -179,7 +179,7 @@ export interface ToolResult {
  * Completion options from various vendors
  */
 export interface CompletionOptions {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**

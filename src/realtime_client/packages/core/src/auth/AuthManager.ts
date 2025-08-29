@@ -182,7 +182,7 @@ export class AuthManager extends EventEmitter<AuthManagerEvents> {
         // Clear expired tokens
         await this.config.storage.clearTokens();
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to load stored tokens:', error);
     }
   }
@@ -247,7 +247,7 @@ export class AuthManager extends EventEmitter<AuthManagerEvents> {
       this.emit('auth:login', data);
 
       return data;
-    } catch (error) {
+    } catch (error: unknown) {
       const authError = error instanceof Error ? error : new Error('Authentication failed');
       this.updateState({
         isAuthenticating: false,
@@ -317,7 +317,7 @@ export class AuthManager extends EventEmitter<AuthManagerEvents> {
       this.config.onTokensRefreshed?.(tokens);
 
       return tokens;
-    } catch (error) {
+    } catch (error: unknown) {
       const refreshError = error instanceof Error ? error : new Error('Token refresh failed');
       this.updateState({
         isRefreshing: false,
@@ -412,7 +412,7 @@ export class AuthManager extends EventEmitter<AuthManagerEvents> {
       // Emit login event with the payload
       this.emit('auth:login', payload);
       
-    } catch (error) {
+    } catch (error: unknown) {
       const authError = error instanceof Error ? error : new Error('Failed to initialize from payload');
       this.updateState({
         isAuthenticating: false,
@@ -465,11 +465,11 @@ export class AuthManager extends EventEmitter<AuthManagerEvents> {
         return undefined;
       }
       const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
-      const parsed: JWTPayload = JSON.parse(decoded);
+      const parsed = JSON.parse(decoded) as JWTPayload;
 
       // Convert exp (seconds) to milliseconds
       return parsed.exp ? parsed.exp * 1000 : undefined;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to parse JWT expiry:', error);
       return undefined;
     }
@@ -509,7 +509,7 @@ export class AuthManager extends EventEmitter<AuthManagerEvents> {
     // Don't schedule if token is already expired
     if (delay === 0 && this.isTokenExpired(tokens)) {
       // Token is already expired, try to refresh immediately
-      this.refreshTokens().catch((error) => {
+      this.refreshTokens().catch((error: unknown) => {
         console.error('Failed to refresh expired token:', error);
       });
       return;
@@ -517,7 +517,7 @@ export class AuthManager extends EventEmitter<AuthManagerEvents> {
 
     // Schedule refresh
     this.refreshTimer = setTimeout(() => {
-      this.refreshTokens().catch((error) => {
+      this.refreshTokens().catch((error: unknown) => {
         console.error('Scheduled token refresh failed:', error);
       });
     }, delay);

@@ -300,26 +300,34 @@ export function findDefaultVoice(voices: Voice[], preferredVendor?: string): Voi
  * @param voice - Voice to validate
  * @returns Object with validation result and errors
  */
-export function validateVoice(voice: any): { valid: boolean; errors: string[] } {
+export function validateVoice(voice: unknown): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
   
   if (!voice || typeof voice !== 'object') {
     return { valid: false, errors: ['Voice must be an object'] };
   }
   
-  if (!voice.voice_id || typeof voice.voice_id !== 'string') {
+  // Type assertion for voice properties
+  const voiceObj = voice as {
+    voice_id?: unknown;
+    vendor?: unknown;
+    output_format?: unknown;
+    description?: unknown;
+  };
+  
+  if (!voiceObj.voice_id || typeof voiceObj.voice_id !== 'string') {
     errors.push('Voice must have a valid voice_id string');
   }
   
-  if (voice.vendor !== undefined && typeof voice.vendor !== 'string') {
+  if (voiceObj.vendor !== undefined && typeof voiceObj.vendor !== 'string') {
     errors.push('Voice vendor must be a string if provided');
   }
   
-  if (voice.output_format !== undefined && typeof voice.output_format !== 'string') {
+  if (voiceObj.output_format !== undefined && typeof voiceObj.output_format !== 'string') {
     errors.push('Voice output_format must be a string if provided');
   }
   
-  if (voice.description !== undefined && typeof voice.description !== 'string') {
+  if (voiceObj.description !== undefined && typeof voiceObj.description !== 'string') {
     errors.push('Voice description must be a string if provided');
   }
   

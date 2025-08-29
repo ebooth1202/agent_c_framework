@@ -67,7 +67,11 @@ export class AudioOutputService {
     
     try {
       // Create audio context
-      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({
+      const AudioContextClass = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioContextClass) {
+        throw new Error('AudioContext not supported');
+      }
+      this.audioContext = new AudioContextClass({
         sampleRate: this.SAMPLE_RATE
       });
       
@@ -80,7 +84,7 @@ export class AudioOutputService {
       this.nextPlayTime = 0;
       
       this.isInitialized = true;
-      console.log('[AudioOutputService] Initialized with sample rate:', this.SAMPLE_RATE);
+      console.warn('[AudioOutputService] Initialized with sample rate:', this.SAMPLE_RATE);
     } catch (error) {
       console.error('[AudioOutputService] Failed to initialize:', error);
       throw error;
@@ -214,7 +218,7 @@ export class AudioOutputService {
     const channelData = audioBuffer.getChannelData(0);
     for (let i = 0; i < length; i++) {
       // Convert from Int16 range (-32768 to 32767) to Float32 range (-1 to 1)
-      // @ts-ignore - getChannelData always returns Float32Array
+      // @ts-expect-error - getChannelData always returns Float32Array
       channelData[i] = int16Array[i] / 32768.0;
     }
     
@@ -256,7 +260,7 @@ export class AudioOutputService {
         this.currentSource.stop();
         this.currentSource.disconnect();
         this.currentSource = null;
-      } catch (error) {
+      } catch (_error) {
         // Ignore errors when stopping
       }
     }
@@ -270,7 +274,7 @@ export class AudioOutputService {
     this.isPlaying = false;
     this.notifyStatusChange();
     
-    console.log('[AudioOutputService] Playback stopped');
+    console.warn('[AudioOutputService] Playback stopped');
   }
   
   /**
@@ -279,7 +283,7 @@ export class AudioOutputService {
   public clearBuffers(): void {
     this.audioQueue = [];
     this.notifyStatusChange();
-    console.log('[AudioOutputService] Buffers cleared');
+    // console.log('[AudioOutputService] Buffers cleared');
   }
   
   /**
@@ -293,7 +297,7 @@ export class AudioOutputService {
     }
     
     this.notifyStatusChange();
-    console.log('[AudioOutputService] Volume set to:', this.volume);
+    // console.log('[AudioOutputService] Volume set to:', this.volume);
   }
   
   /**
@@ -313,7 +317,7 @@ export class AudioOutputService {
     }
     
     this.notifyStatusChange();
-    console.log('[AudioOutputService] Voice model set to:', voiceModel?.voice_id || 'null');
+    console.warn('[AudioOutputService] Voice model set to:', voiceModel?.voice_id || 'null');
   }
   
   /**
@@ -327,7 +331,7 @@ export class AudioOutputService {
     }
     
     this.notifyStatusChange();
-    console.log('[AudioOutputService] Enabled:', enabled);
+    // console.log('[AudioOutputService] Enabled:', enabled);
   }
   
   /**
@@ -405,6 +409,6 @@ export class AudioOutputService {
     this.isInitialized = false;
     this.statusListeners = [];
     
-    console.log('[AudioOutputService] Cleaned up');
+    // console.log('[AudioOutputService] Cleaned up');
   }
 }

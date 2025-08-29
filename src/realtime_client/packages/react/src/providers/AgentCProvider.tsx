@@ -122,7 +122,7 @@ export function AgentCProvider({
     
     try {
       if (debug) {
-        console.log('AgentCProvider: Initializing RealtimeClient with config:', {
+        console.warn('AgentCProvider: Initializing RealtimeClient with config:', {
           ...clientConfig,
           authToken: clientConfig.authToken ? '[REDACTED]' : undefined
         });
@@ -134,11 +134,11 @@ export function AgentCProvider({
       // Set up connection state listener for debugging
       if (debug) {
         newClient.on('connected', () => {
-          console.log('AgentCProvider: Client connected');
+          console.warn('AgentCProvider: Client connected');
         });
         
         newClient.on('disconnected', ({ code, reason }) => {
-          console.log('AgentCProvider: Client disconnected', { code, reason });
+          console.warn('AgentCProvider: Client disconnected', { code, reason });
         });
         
         newClient.on('error', (error) => {
@@ -174,7 +174,7 @@ export function AgentCProvider({
     return () => {
       if (clientRef.current) {
         if (debug) {
-          console.log('AgentCProvider: Cleaning up RealtimeClient');
+          // console.log('AgentCProvider: Cleaning up RealtimeClient');
         }
         
         // Disconnect if connected
@@ -199,7 +199,7 @@ export function AgentCProvider({
       client.setAuthToken(authToken);
       
       if (debug) {
-        console.log('AgentCProvider: Auth token updated');
+        // console.log('AgentCProvider: Auth token updated');
       }
     }
   }, [client, authToken, authManager, debug]);
@@ -210,7 +210,7 @@ export function AgentCProvider({
       client.setAuthManager(authManager);
       
       if (debug) {
-        console.log('AgentCProvider: AuthManager updated');
+        // console.log('AgentCProvider: AuthManager updated');
       }
     }
   }, [client, authManager, debug]);

@@ -104,7 +104,7 @@ export interface JWTPayload {
   permissions?: string[];
   exp: number; // Unix timestamp in seconds
   iat: number; // Unix timestamp in seconds
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**

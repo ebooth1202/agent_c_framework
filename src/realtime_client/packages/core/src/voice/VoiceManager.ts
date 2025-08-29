@@ -377,9 +377,9 @@ export class VoiceManager extends EventEmitter<VoiceManagerEvents> {
    * @param message - Message to log
    * @param data - Optional data to log
    */
-  private log(message: string, data?: any): void {
+  private log(message: string, data?: unknown): void {
     if (this.enableLogging) {
-      console.log(`[VoiceManager] ${message}`, data || '');
+      console.warn(`[VoiceManager] ${message}`, data || '');
     }
   }
 
@@ -388,7 +388,7 @@ export class VoiceManager extends EventEmitter<VoiceManagerEvents> {
    * @param message - Warning message
    * @param data - Optional data to log
    */
-  private warn(message: string, data?: any): void {
+  private warn(message: string, data?: unknown): void {
     if (this.enableLogging) {
       console.warn(`[VoiceManager] ${message}`, data || '');
     }
@@ -399,7 +399,7 @@ export class VoiceManager extends EventEmitter<VoiceManagerEvents> {
    * @param message - Error message
    * @param data - Optional data to log
    */
-  private error(message: string, data?: any): void {
+  private error(message: string, data?: unknown): void {
     console.error(`[VoiceManager] ${message}`, data || '');
   }
 }

@@ -224,8 +224,10 @@ export function useConnection(): UseConnectionReturn {
       setReconnectAttempt(attempt);
     };
     
-    const handleError = (error: any) => {
-      const err = error instanceof Error ? error : new Error(error.message || 'Unknown error');
+    const handleError = (error: unknown) => {
+      const err = error instanceof Error ? error : new Error(
+        (error as { message?: string })?.message || 'Unknown error'
+      );
       setError(err);
       
       setStats(prev => ({

@@ -5,7 +5,14 @@
 import { EventEmitter } from '../events/EventEmitter';
 import {
     RealtimeEventMap,
-    ClientEventMap
+    ClientEventMap,
+    ChatSessionChangedEvent,
+    TextDeltaEvent,
+    CompletionEvent,
+    ChatSessionNameChangedEvent,
+    AgentVoiceChangedEvent,
+    TextInputEvent,
+    NewChatSessionEvent
 } from '../events';
 import {
     RealtimeClientConfig,
@@ -21,7 +28,7 @@ import { TurnManager, SessionManager } from '../session';
 import { AudioService, AudioAgentCBridge, AudioOutputService } from '../audio';
 import type { AudioStatus, VoiceModel } from '../audio/types';
 import { VoiceManager } from '../voice';
-import type { Voice } from '../events/types/CommonTypes';
+import type { Voice, Message } from '../events/types/CommonTypes';
 import { AvatarManager } from '../avatar';
 
 /**
@@ -133,25 +140,25 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
         if (!this.sessionManager) return;
         
         // Handle chat session changes from server
-        this.on('chat_session_changed', (event: any) => {
+        this.on('chat_session_changed', (event: ChatSessionChangedEvent) => {
             if (event.chat_session) {
                 this.sessionManager!.setCurrentSession(event.chat_session);
                 
                 if (this.config.debug) {
-                    console.debug('Session changed:', event.chat_session.session_id);
+                    // console.debug('Session changed:', event.chat_session.session_id);
                 }
             }
         });
         
         // Handle text delta events for accumulation
-        this.on('text_delta', (event: any) => {
+        this.on('text_delta', (event: TextDeltaEvent) => {
             if (event.content) {
                 this.sessionManager!.handleTextDelta(event.content);
             }
         });
         
         // Handle completion events to finalize text
-        this.on('completion', (event: any) => {
+        this.on('completion', (event: CompletionEvent) => {
             // When completion.running becomes false, the text is done
             if (event.running === false) {
                 this.sessionManager!.handleTextDone();
@@ -159,14 +166,14 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
         });
         
         // Handle session name changes
-        this.on('chat_session_name_changed', (event: any) => {
+        this.on('chat_session_name_changed', (event: ChatSessionNameChangedEvent) => {
             if (event.session_name) {
                 const currentSessionId = this.sessionManager!.getCurrentSessionId();
                 if (currentSessionId) {
                     this.sessionManager!.updateSessionName(currentSessionId, event.session_name);
                     
                     if (this.config.debug) {
-                        console.debug('Session name updated:', event.session_name);
+                        // console.debug('Session name updated:', event.session_name);
                     }
                 }
             }
@@ -187,7 +194,7 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
                 this.audioOutputService.setVoiceModel(voiceModel);
                 
                 if (this.config.debug) {
-                    console.debug('Voice model updated in AudioOutputService:', voiceModel?.voice_id || 'null');
+                    // console.debug('Voice model updated in AudioOutputService:', voiceModel?.voice_id || 'null');
                 }
             }
         });
@@ -239,15 +246,15 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
             });
             
             // Subscribe to voice model changes from server
-            this.on('agent_voice_changed', (event: any) => {
-                if (this.voiceManager && event.voice_id) {
+            this.on('agent_voice_changed', (event: AgentVoiceChangedEvent) => {
+                if (this.voiceManager && event.voice) {
                     // Let voice manager handle the server voice change
-                    this.voiceManager.handleServerVoiceChange(event.voice_id);
+                    this.voiceManager.handleServerVoiceChange(event.voice.voice_id);
                 }
             });
             
             if (this.config.debug) {
-                console.log('Audio system initialized');
+                console.warn('Audio system initialized');
             }
         } catch (error) {
             console.error('Failed to initialize audio system:', error);
@@ -428,7 +435,7 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
         
         if (this.config.debug) {
             const byteLength = data instanceof ArrayBuffer ? data.byteLength : data.byteLength;
-            console.debug('Sent binary audio frame:', byteLength, 'bytes');
+            // console.debug('Sent binary audio frame:', byteLength, 'bytes');
         }
     }
 
@@ -477,7 +484,7 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
         
         // Voice manager will automatically switch to avatar voice when server responds
         if (this.config.debug) {
-            console.debug('Avatar session set:', { sessionId, avatarId });
+            // console.debug('Avatar session set:', { sessionId, avatarId });
         }
     }
     
@@ -521,7 +528,7 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
             this.sessionManager.addUserMessage(text);
         }
         
-        const event: any = { type: 'text_input', text };
+        const event: TextInputEvent = { type: 'text_input', text };
         if (fileIds && fileIds.length > 0) {
             event.file_ids = fileIds;
         }
@@ -537,7 +544,7 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
             this.sessionManager.resetAccumulator();
         }
         
-        const event: any = { type: 'new_chat_session' };
+        const event: NewChatSessionEvent = { type: 'new_chat_session' };
         if (agentKey) {
             event.agent_key = agentKey;
         }
@@ -574,14 +581,14 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
     /**
      * Set session metadata
      */
-    setSessionMetadata(meta: Record<string, any>): void {
+    setSessionMetadata(meta: Record<string, unknown>): void {
         this.sendEvent({ type: 'set_session_metadata', meta });
     }
 
     /**
      * Set session messages
      */
-    setSessionMessages(messages: any[]): void {
+    setSessionMessages(messages: Message[]): void {
         this.sendEvent({ type: 'set_session_messages', messages });
     }
 
@@ -844,10 +851,10 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
                 const event = JSON.parse(data);
                 if (event && typeof event.type === 'string') {
                     // Emit the specific event
-                    this.emit(event.type as any, event);
+                    this.emit(event.type as keyof RealtimeEventMap, event as RealtimeEventMap[keyof RealtimeEventMap]);
                     
                     if (this.config.debug) {
-                        console.debug('Received event:', event.type, event);
+                        // console.debug('Received event:', event.type, event);
                     }
                 } else {
                     console.warn('Invalid event structure:', event);
@@ -869,7 +876,7 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
             this.emit('binary_audio', data);
             
             if (this.config.debug) {
-                console.debug('Received binary audio frame:', data.byteLength, 'bytes');
+                // console.debug('Received binary audio frame:', data.byteLength, 'bytes');
             }
         } else {
             console.warn('Unknown message type:', typeof data);
@@ -912,7 +919,7 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
             this.connectionState = state;
             
             if (this.config.debug) {
-                console.debug('Connection state changed:', ConnectionState[state]);
+                // console.debug('Connection state changed:', ConnectionState[state]);
             }
         }
     }

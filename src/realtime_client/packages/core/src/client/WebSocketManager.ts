@@ -108,7 +108,7 @@ export class WebSocketManager {
   /**
    * Send JSON data through the WebSocket
    */
-  sendJSON(data: any): void {
+  sendJSON(data: unknown): void {
     this.send(JSON.stringify(data));
   }
 

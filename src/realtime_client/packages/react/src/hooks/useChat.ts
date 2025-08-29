@@ -174,22 +174,28 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     updateChatInfo();
     
     // Handle text delta events (streaming text from agent)
-    const handleTextDelta = (event: any) => {
+    const handleTextDelta = (event: unknown) => {
       setIsAgentTyping(true);
       
+      // Type guard for event properties
+      const textEvent = event as { text?: string; item_id?: string };
+      
       // Update partial message
-      messageBufferRef.current += event.text || '';
+      messageBufferRef.current += textEvent.text || '';
       setPartialMessage(messageBufferRef.current);
       
       // Store message ID for completion
-      if (event.item_id) {
-        currentMessageIdRef.current = event.item_id;
+      if (textEvent.item_id) {
+        currentMessageIdRef.current = textEvent.item_id;
       }
     };
     
     // Handle completion events (when agent is done)
-    const handleCompletion = (event: any) => {
-      if (event.running === false && messageBufferRef.current) {
+    const handleCompletion = (event: unknown) => {
+      // Type guard for event properties
+      const completionEvent = event as { running?: boolean };
+      
+      if (completionEvent.running === false && messageBufferRef.current) {
         setIsAgentTyping(false);
         
         // Create complete message

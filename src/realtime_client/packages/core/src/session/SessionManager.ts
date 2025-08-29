@@ -343,7 +343,7 @@ export class SessionManager extends EventEmitter<SessionManagerEventMap> {
    * @param metadata - Metadata to merge with existing metadata
    * @returns True if updated, false if session not found
    */
-  updateSessionMetadata(sessionId: string, metadata: Record<string, any>): boolean {
+  updateSessionMetadata(sessionId: string, metadata: Record<string, unknown>): boolean {
     const session = this.sessions.get(sessionId);
     if (!session) {
       this.logger.warn(`Cannot update metadata: session ${sessionId} not found`);

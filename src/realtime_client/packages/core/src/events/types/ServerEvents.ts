@@ -223,7 +223,7 @@ export type ServerEvent =
 /**
  * Type guard to check if an object is a server event
  */
-export function isServerEvent(obj: any): obj is ServerEvent {
+export function isServerEvent(obj: unknown): obj is ServerEvent {
   return obj && typeof obj.type === 'string' && [
     'agent_list',
     'agent_configuration_changed',
