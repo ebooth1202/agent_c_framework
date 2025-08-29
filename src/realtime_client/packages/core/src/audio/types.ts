@@ -288,3 +288,55 @@ export interface AudioAgentCBridgeStatus {
   /** Current client connection state */
   clientState?: 'connected' | 'disconnected' | 'connecting';
 }
+
+/**
+ * Voice model configuration for audio output
+ */
+export interface VoiceModel {
+  /** Voice identifier (e.g., 'openai_tts_nova', 'avatar', 'none') */
+  voice_id: string;
+  
+  /** Audio format (e.g., 'pcm16') */
+  format: string;
+  
+  /** Vendor of the voice model */
+  vendor?: string;
+  
+  /** Description of the voice */
+  description?: string;
+  
+  /** Sample rate in Hz (typically 16000 for PCM16) */
+  sampleRate?: number;
+}
+
+/**
+ * Status of the AudioOutputService
+ */
+export interface AudioOutputStatus {
+  /** Whether audio is currently playing */
+  isPlaying: boolean;
+  
+  /** Whether the service is enabled for playback */
+  isEnabled: boolean;
+  
+  /** Total number of audio chunks received */
+  chunksReceived: number;
+  
+  /** Total number of audio chunks played */
+  chunksPlayed: number;
+  
+  /** Total number of audio chunks skipped (avatar/none mode) */
+  chunksSkipped: number;
+  
+  /** Current length of the playback queue */
+  queueLength: number;
+  
+  /** Current volume level (0.0 to 1.0) */
+  volume: number;
+  
+  /** Current voice model */
+  voiceModel: VoiceModel | null;
+  
+  /** Whether playback is being skipped due to voice mode */
+  skipPlayback: boolean;
+}
