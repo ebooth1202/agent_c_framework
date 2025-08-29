@@ -1,5 +1,6 @@
 # Byte-compiled / optimized / DLL files
 *.pem
+*_auth.db
 .agent_c.meta.yaml
 agent_c_config/saved_sessions
 agent_c_config/*cache*
