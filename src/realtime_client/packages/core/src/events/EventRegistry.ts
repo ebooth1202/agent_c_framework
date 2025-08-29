@@ -8,6 +8,7 @@ import {
   SetAgentEvent,
   GetAvatarsEvent,
   SetAvatarSessionEvent,
+  ClearAvatarSessionEvent,
   SetAgentVoiceEvent,
   TextInputEvent,
   NewChatSessionEvent,
@@ -48,6 +49,7 @@ export interface ClientEventMap {
   'set_agent': SetAgentEvent;
   'get_avatars': GetAvatarsEvent;
   'set_avatar_session': SetAvatarSessionEvent;
+  'clear_avatar_session': ClearAvatarSessionEvent;
   'set_agent_voice': SetAgentVoiceEvent;
   'text_input': TextInputEvent;
   'new_chat_session': NewChatSessionEvent;
@@ -123,6 +125,7 @@ export class EventRegistry {
     'set_agent',
     'get_avatars',
     'set_avatar_session',
+    'clear_avatar_session',
     'set_agent_voice',
     'text_input',
     'new_chat_session',

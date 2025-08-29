@@ -39,8 +39,16 @@ export interface GetAvatarsEvent extends BaseClientEvent {
  */
 export interface SetAvatarSessionEvent extends BaseClientEvent {
   type: 'set_avatar_session';
-  access_token: string;
-  avatar_session_id: string;
+  session_id: string;  // HeyGen session ID
+  avatar_id: string;   // Avatar ID used to create the session
+}
+
+/**
+ * Clear avatar session when HeyGen session ends
+ */
+export interface ClearAvatarSessionEvent extends BaseClientEvent {
+  type: 'clear_avatar_session';
+  session_id: string;
 }
 
 /**
@@ -108,6 +116,7 @@ export type ClientEvent =
   | SetAgentEvent
   | GetAvatarsEvent
   | SetAvatarSessionEvent
+  | ClearAvatarSessionEvent
   | SetAgentVoiceEvent
   | TextInputEvent
   | NewChatSessionEvent
@@ -125,6 +134,7 @@ export function isClientEvent(obj: any): obj is ClientEvent {
     'set_agent',
     'get_avatars',
     'set_avatar_session',
+    'clear_avatar_session',
     'set_agent_voice',
     'text_input',
     'new_chat_session',

@@ -22,6 +22,7 @@ import { AudioService, AudioAgentCBridge, AudioOutputService } from '../audio';
 import type { AudioStatus, VoiceModel } from '../audio/types';
 import { VoiceManager } from '../voice';
 import type { Voice } from '../events/types/CommonTypes';
+import { AvatarManager } from '../avatar';
 
 /**
  * Main client class for connecting to Agent C Realtime API
@@ -37,6 +38,7 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
     private turnManager: TurnManager | null = null;
     private voiceManager: VoiceManager | null = null;
     private sessionManager: SessionManager | null = null;
+    private avatarManager: AvatarManager | null = null;
     
     // Audio system components
     private audioService: AudioService | null = null;
@@ -75,6 +77,10 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
                 this.voiceManager.setAvailableVoices(voices);
                 this.setupVoiceManagerHandlers();
             }
+            
+            // Initialize avatar manager with available avatars from auth
+            const avatars = this.authManager.getAvatars();
+            this.avatarManager = new AvatarManager({ availableAvatars: avatars });
         }
         
         // Initialize voice manager if not already created
@@ -450,14 +456,48 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
     }
 
     /**
-     * Set avatar session
+     * Set avatar session after HeyGen STREAM_READY event.
+     * This notifies Agent C that an avatar session is active.
+     * 
+     * @param sessionId - HeyGen session ID from StreamingEvents.STREAM_READY
+     * @param avatarId - Avatar ID that was used to create the session
      */
-    setAvatarSession(accessToken: string, avatarSessionId: string): void {
+    setAvatarSession(sessionId: string, avatarId: string): void {
+        // Update avatar manager state
+        if (this.avatarManager) {
+            this.avatarManager.setAvatarSession(sessionId, avatarId);
+        }
+        
+        // Send event to Agent C with avatar_id included
         this.sendEvent({
             type: 'set_avatar_session',
-            access_token: accessToken,
-            avatar_session_id: avatarSessionId
+            session_id: sessionId,
+            avatar_id: avatarId
         });
+        
+        // Voice manager will automatically switch to avatar voice when server responds
+        if (this.config.debug) {
+            console.debug('Avatar session set:', { sessionId, avatarId });
+        }
+    }
+    
+    /**
+     * Clear avatar session when HeyGen session ends
+     */
+    clearAvatarSession(): void {
+        if (this.avatarManager) {
+            const sessionId = this.avatarManager.getSessionId();
+            this.avatarManager.clearAvatarSession();
+            
+            // Optionally send clear event to server
+            // The server should detect this from HeyGen webhooks but we can be explicit
+            if (sessionId) {
+                this.sendEvent({
+                    type: 'clear_avatar_session',
+                    session_id: sessionId
+                });
+            }
+        }
     }
 
     /**
@@ -587,6 +627,34 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
      */
     getSessionManager(): SessionManager | null {
         return this.sessionManager;
+    }
+    
+    /**
+     * Get the avatar manager instance
+     */
+    getAvatarManager(): AvatarManager | null {
+        return this.avatarManager;
+    }
+    
+    /**
+     * Get available avatars from auth response
+     */
+    getAvailableAvatars() {
+        if (this.authManager) {
+            return this.authManager.getAvatars();
+        }
+        return this.avatarManager?.getAvailableAvatars() || [];
+    }
+    
+    /**
+     * Get HeyGen access token for avatar session creation
+     */
+    getHeyGenAccessToken(): string | null {
+        if (this.authManager) {
+            const tokens = this.authManager.getTokens();
+            return tokens?.heygenToken || null;
+        }
+        return null;
     }
     
     // Audio control methods
@@ -894,6 +962,11 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
         if (this.sessionManager) {
             this.sessionManager.destroy();
             this.sessionManager = null;
+        }
+        
+        if (this.avatarManager) {
+            this.avatarManager.dispose();
+            this.avatarManager = null;
         }
         
         this.removeAllListeners();

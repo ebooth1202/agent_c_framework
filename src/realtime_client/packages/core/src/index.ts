@@ -19,7 +19,7 @@ export * from './auth';
 export * from './audio';
 export * from './session';
 export * from './voice';
-// export * from './avatar';
+export * from './avatar';
 // export * from './types';
 export * from './utils';
 
