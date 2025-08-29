@@ -19,7 +19,9 @@ import { ReconnectionManager } from './ReconnectionManager';
 import { AuthManager, TokenPair } from '../auth';
 import { TurnManager } from '../session';
 import { AudioService, AudioAgentCBridge, AudioOutputService } from '../audio';
-import type { AudioStatus } from '../audio/types';
+import type { AudioStatus, VoiceModel } from '../audio/types';
+import { VoiceManager } from '../voice';
+import type { Voice } from '../events/types/CommonTypes';
 
 /**
  * Main client class for connecting to Agent C Realtime API
@@ -33,6 +35,7 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
     private sessionId: string | null = null;
     private authManager: AuthManager | null = null;
     private turnManager: TurnManager | null = null;
+    private voiceManager: VoiceManager | null = null;
     
     // Audio system components
     private audioService: AudioService | null = null;
@@ -63,6 +66,20 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
             if (tokens) {
                 this.authToken = tokens.agentCToken;
             }
+            
+            // Initialize voice manager with available voices from auth
+            const voices = this.authManager.getVoices();
+            if (voices && voices.length > 0) {
+                this.voiceManager = new VoiceManager({ enableLogging: this.config.debug });
+                this.voiceManager.setAvailableVoices(voices);
+                this.setupVoiceManagerHandlers();
+            }
+        }
+        
+        // Initialize voice manager if not already created
+        if (!this.voiceManager) {
+            this.voiceManager = new VoiceManager({ enableLogging: this.config.debug });
+            this.setupVoiceManagerHandlers();
         }
 
         // Initialize reconnection manager - cast is safe because mergeConfig ensures it's defined
@@ -97,6 +114,41 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
     }
     
     /**
+     * Setup voice manager event handlers
+     */
+    private setupVoiceManagerHandlers(): void {
+        if (!this.voiceManager) return;
+        
+        // Subscribe to voice changes from the voice manager
+        this.voiceManager.on('voice-changed', (event) => {
+            if (this.audioOutputService) {
+                // Convert Voice to VoiceModel for AudioOutputService
+                const voiceModel = this.convertVoiceToVoiceModel(event.currentVoice);
+                this.audioOutputService.setVoiceModel(voiceModel);
+                
+                if (this.config.debug) {
+                    console.debug('Voice model updated in AudioOutputService:', voiceModel?.voice_id || 'null');
+                }
+            }
+        });
+    }
+    
+    /**
+     * Convert Voice to VoiceModel format for AudioOutputService
+     */
+    private convertVoiceToVoiceModel(voice: Voice | null): VoiceModel | null {
+        if (!voice) return null;
+        
+        return {
+            voice_id: voice.voice_id,
+            format: voice.output_format || 'pcm16',
+            vendor: voice.vendor,
+            description: voice.description,
+            sampleRate: 16000 // Default sample rate for PCM16
+        };
+    }
+    
+    /**
      * Initialize the audio system components
      */
     private initializeAudioSystem(): void {
@@ -126,14 +178,11 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
                 }
             });
             
-            // Subscribe to voice model changes
+            // Subscribe to voice model changes from server
             this.on('agent_voice_changed', (event: any) => {
-                if (this.audioOutputService && event.voice_id) {
-                    // Update the voice model in the output service
-                    // The output service will adapt its behavior based on the voice
-                    if (this.config.debug) {
-                        console.debug('Voice model changed to:', event.voice_id);
-                    }
+                if (this.voiceManager && event.voice_id) {
+                    // Let voice manager handle the server voice change
+                    this.voiceManager.handleServerVoiceChange(event.voice_id);
                 }
             });
             
@@ -353,6 +402,11 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
      * Set agent voice
      */
     setAgentVoice(voiceId: string): void {
+        // Update voice manager locally
+        if (this.voiceManager) {
+            this.voiceManager.setCurrentVoice(voiceId, 'client');
+        }
+        // Send to server
         this.sendEvent({ type: 'set_agent_voice', voice_id: voiceId });
     }
 
@@ -434,6 +488,13 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
      */
     getTurnManager(): TurnManager | null {
         return this.turnManager;
+    }
+    
+    /**
+     * Get the voice manager instance
+     */
+    getVoiceManager(): VoiceManager | null {
+        return this.voiceManager;
     }
     
     // Audio control methods
@@ -548,10 +609,23 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
             }
         });
         
+        // Subscribe to login event to get voices
+        this.authManager.on('auth:login', (loginResponse) => {
+            if (this.voiceManager && loginResponse.voices) {
+                this.voiceManager.setAvailableVoices(loginResponse.voices);
+            }
+        });
+        
         // Get initial token if available
         const tokens = this.authManager.getTokens();
         if (tokens) {
             this.authToken = tokens.agentCToken;
+        }
+        
+        // Get available voices if auth manager has them
+        const voices = this.authManager.getVoices();
+        if (this.voiceManager && voices && voices.length > 0) {
+            this.voiceManager.setAvailableVoices(voices);
         }
     }
 
@@ -718,6 +792,11 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
         if (this.turnManager) {
             this.turnManager.destroy();
             this.turnManager = null;
+        }
+        
+        if (this.voiceManager) {
+            this.voiceManager.removeAllListeners();
+            this.voiceManager = null;
         }
         
         this.removeAllListeners();
