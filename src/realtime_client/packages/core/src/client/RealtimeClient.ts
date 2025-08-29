@@ -17,7 +17,7 @@ import {
 import { WebSocketManager } from './WebSocketManager';
 import { ReconnectionManager } from './ReconnectionManager';
 import { AuthManager, TokenPair } from '../auth';
-import { TurnManager } from '../session';
+import { TurnManager, SessionManager } from '../session';
 import { AudioService, AudioAgentCBridge, AudioOutputService } from '../audio';
 import type { AudioStatus, VoiceModel } from '../audio/types';
 import { VoiceManager } from '../voice';
@@ -36,6 +36,7 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
     private authManager: AuthManager | null = null;
     private turnManager: TurnManager | null = null;
     private voiceManager: VoiceManager | null = null;
+    private sessionManager: SessionManager | null = null;
     
     // Audio system components
     private audioService: AudioService | null = null;
@@ -106,11 +107,64 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
             this.turnManager = new TurnManager(this);
         }
         
+        // Initialize session manager
+        this.sessionManager = new SessionManager({
+            maxSessions: 50,
+            persistSessions: false
+        });
+        
         // Initialize audio system if enabled
         if (this.config.enableAudio && this.config.audioConfig) {
             this.audioConfig = this.config.audioConfig;
             this.initializeAudioSystem();
         }
+    }
+    
+    /**
+     * Setup session manager event handlers
+     */
+    private setupSessionManagerHandlers(): void {
+        if (!this.sessionManager) return;
+        
+        // Handle chat session changes from server
+        this.on('chat_session_changed', (event: any) => {
+            if (event.chat_session) {
+                this.sessionManager!.setCurrentSession(event.chat_session);
+                
+                if (this.config.debug) {
+                    console.debug('Session changed:', event.chat_session.session_id);
+                }
+            }
+        });
+        
+        // Handle text delta events for accumulation
+        this.on('text_delta', (event: any) => {
+            if (event.content) {
+                this.sessionManager!.handleTextDelta(event.content);
+            }
+        });
+        
+        // Handle completion events to finalize text
+        this.on('completion', (event: any) => {
+            // When completion.running becomes false, the text is done
+            if (event.running === false) {
+                this.sessionManager!.handleTextDone();
+            }
+        });
+        
+        // Handle session name changes
+        this.on('chat_session_name_changed', (event: any) => {
+            if (event.session_name) {
+                const currentSessionId = this.sessionManager!.getCurrentSessionId();
+                if (currentSessionId) {
+                    this.sessionManager!.updateSessionName(currentSessionId, event.session_name);
+                    
+                    if (this.config.debug) {
+                        console.debug('Session name updated:', event.session_name);
+                    }
+                }
+            }
+        });
     }
     
     /**
@@ -248,6 +302,9 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
                             this.reconnectionManager.reset();
                             this.emit('connected', undefined);
                             
+                            // Setup session manager handlers when connected
+                            this.setupSessionManagerHandlers();
+                            
                             // Reconnect audio bridge if audio is enabled
                             if (this.audioBridge && this.audioConfig?.enableInput) {
                                 this.audioBridge.setClient(this);
@@ -311,6 +368,11 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
         // Clear audio output buffers
         if (this.audioOutputService) {
             this.audioOutputService.clearBuffers();
+        }
+        
+        // Clear session manager accumulator
+        if (this.sessionManager) {
+            this.sessionManager.resetAccumulator();
         }
 
         if (this.wsManager) {
@@ -414,6 +476,11 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
      * Send text input to the agent
      */
     sendText(text: string, fileIds?: string[]): void {
+        // Add user message to session history
+        if (this.sessionManager) {
+            this.sessionManager.addUserMessage(text);
+        }
+        
         const event: any = { type: 'text_input', text };
         if (fileIds && fileIds.length > 0) {
             event.file_ids = fileIds;
@@ -425,6 +492,11 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
      * Create a new chat session
      */
     newChatSession(agentKey?: string): void {
+        // Reset accumulator when creating new session
+        if (this.sessionManager) {
+            this.sessionManager.resetAccumulator();
+        }
+        
         const event: any = { type: 'new_chat_session' };
         if (agentKey) {
             event.agent_key = agentKey;
@@ -436,6 +508,11 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
      * Resume an existing chat session
      */
     resumeChatSession(sessionId: string): void {
+        // Reset accumulator when switching sessions
+        if (this.sessionManager) {
+            this.sessionManager.resetAccumulator();
+        }
+        
         this.sendEvent({ type: 'resume_chat_session', session_id: sessionId });
     }
 
@@ -443,6 +520,14 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
      * Set chat session name
      */
     setChatSessionName(sessionName: string): void {
+        // Update local session name immediately for better UX
+        if (this.sessionManager) {
+            const currentSessionId = this.sessionManager.getCurrentSessionId();
+            if (currentSessionId) {
+                this.sessionManager.updateSessionName(currentSessionId, sessionName);
+            }
+        }
+        
         this.sendEvent({ type: 'set_chat_session_name', session_name: sessionName });
     }
 
@@ -495,6 +580,13 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
      */
     getVoiceManager(): VoiceManager | null {
         return this.voiceManager;
+    }
+    
+    /**
+     * Get the session manager instance
+     */
+    getSessionManager(): SessionManager | null {
+        return this.sessionManager;
     }
     
     // Audio control methods
@@ -797,6 +889,11 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
         if (this.voiceManager) {
             this.voiceManager.removeAllListeners();
             this.voiceManager = null;
+        }
+        
+        if (this.sessionManager) {
+            this.sessionManager.destroy();
+            this.sessionManager = null;
         }
         
         this.removeAllListeners();

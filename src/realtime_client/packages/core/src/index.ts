@@ -21,7 +21,7 @@ export * from './session';
 export * from './voice';
 // export * from './avatar';
 // export * from './types';
-// export * from './utils';
+export * from './utils';
 
 // Package version
 export const VERSION = '0.1.0';
