@@ -4,12 +4,13 @@ import mimetypes
 from pathlib import Path
 
 from typing import Optional, Dict
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from agent_c.util.logging_utils import LoggingManager
 from agent_c.util.uncish_path import UNCishPath
 
 from fastapi.responses import FileResponse
 
+from agent_c_api.core.util.jwt import validate_request_jwt
 from agent_c_tools.tools.workspace.local_project import LocalProjectWorkspace
 
 router = APIRouter()
@@ -49,9 +50,14 @@ class WSResolver:
 
 @router.get("/file/{workspace_path:path}")
 async def get_workspace_file(
+        request: Request,
         workspace_path: str,
-        download: bool = Query(False, description="Force download vs inline viewing")
+        download: bool = Query(False, description="Force download vs inline viewing"),
 ):
+    user_info = await validate_request_jwt(request)
+    if not user_info:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
     actual_path = WSResolver.resolve_workspace_path(f"//{workspace_path}")
 
     if not os.path.exists(actual_path) or not os.path.isfile(actual_path):
