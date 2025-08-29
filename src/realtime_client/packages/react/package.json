@@ -17,6 +17,11 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:watch": "vitest watch",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui"
   }
 }
