@@ -1,5 +1,8 @@
 # Byte-compiled / optimized / DLL files
+*.pem
+.agent_c.meta.yaml
 agent_c_config/saved_sessions
+agent_c_config/*cache*
 agent_c_config/users
 centric_tools
 __pycache__/
