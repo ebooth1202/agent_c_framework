@@ -2,6 +2,7 @@ from .base_validator import ValidationResult, CommandValidator, BasicCommandVali
 from .git_validator import GitCommandValidator
 from .npm_validator import NpmCommandValidator
 from .npx_validator import NpxCommandValidator
+from .pnpm_validator import PnpmCommandValidator
 from .lerna_validator import LernaCommandValidator
 from .node_validator import NodeCommandValidator
 from .dotnet_validator import DotnetCommandValidator
@@ -14,7 +15,8 @@ __all__ = [
     'BasicCommandValidator',
     'GitCommandValidator',
     'NpmCommandValidator',
-    'NpxCommandValidator', 
+    'NpxCommandValidator',
+    'PnpmCommandValidator', 
     'LernaCommandValidator',
     'NodeCommandValidator',
     'DotnetCommandValidator',

@@ -8,7 +8,7 @@
     "react-dom": "^18.0.0"
   },
   "dependencies": {
-    "@agentc/realtime-core": "^0.1.0"
+    "@agentc/realtime-core": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

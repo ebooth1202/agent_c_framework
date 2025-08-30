@@ -73,7 +73,7 @@ echo:
 
 # ---- Language-specific ----
 
-node_common: &node_common
+node:
   validator: node
   flags: ["-v","--version","--help"]
   deny_global_flags: ["-e","--eval","-p","--print"]
@@ -82,8 +82,15 @@ node_common: &node_common
     NODE_DISABLE_COLORS: "1"
     NO_COLOR: "1"
     FORCE_COLOR: "0"
-node:    *node_common
-nodejs:  *node_common
+nodejs:
+  validator: node
+  flags: [ "-v","--version","--help" ]
+  deny_global_flags: [ "-e","--eval","-p","--print" ]
+  default_timeout: 5
+  env_overrides:
+    NODE_DISABLE_COLORS: "1"
+    NO_COLOR: "1"
+    FORCE_COLOR: "0"
 
 npm:
   validator: npm
@@ -102,7 +109,7 @@ npm:
 
       # --- Scripts (ALLOWLIST) ---
       run:
-        allowed_scripts: ["build","test","lint","format","typecheck"]
+        allowed_scripts: ["build","test","lint","format","typecheck", 'lint:fix']
         deny_args: true         # no extra args (incl. after --)
 
       # --- Safe, lockfile-based install ---
@@ -135,6 +142,53 @@ npm:
     NPM_CONFIG_UPDATE_NOTIFIER: "false"
     NPM_CONFIG_PREFIX: ".npm-prefix"
     NPM_CONFIG_CACHE: ".npm-cache"
+    # ensure Windows can resolve .cmd if the parent env omitted it
+    PATHEXT: ".COM;.EXE;.BAT;.CMD"
+
+pnpm:
+  validator: pnpm
+  root_flags: ["-v","--version","--help"]
+  subcommands:
+      view:   { allowed_flags: ["--json"] }
+      list:   { allowed_flags: ["--depth","--json","--long"] }
+      ping:   { allowed_flags: [] }
+      outdated: { allowed_flags: [] }
+      test:   { allowed_flags: [] }
+      why:    { allowed_flags: ["--json","--long"] }
+      licenses: { allowed_flags: ["--json","--long"] }
+
+      # Only allow "pnpm config get <key>"
+      config:
+        get_only: true
+        allowed_flags: []       # keep empty; we gate on 'get'
+
+      # --- Scripts (ALLOWLIST) ---
+      run:
+        allowed_scripts: ["build","test","lint", "lint:fix", "format","typecheck"]
+        deny_args: true         # no extra args (incl. after --)
+
+      # --- Safe, lockfile-based install ---
+      install:
+        enabled: true
+        require_no_packages: true
+        require_flags: ["--ignore-scripts"]
+        allowed_flags: ["--ignore-scripts","--prefer-offline","--frozen-lockfile","--reporter","--dev","--prod"]
+
+  # pnpm doesn't have ci command like npm, but has similar restrictions
+  # keep 'i' and 'add' denied unless you want them—the validator aliases them to 'install'
+  deny_subcommands: ["exec","publish","update","audit","login","adduser","whoami","pack","link","unlink","patch","patch-commit"]
+
+  default_timeout: 120
+  env_overrides:
+    PNPM_CONFIG_COLOR: "false"      # pnpm itself: no color
+    PNPM_CONFIG_PROGRESS: "false"   # no progress bars
+    PNPM_CONFIG_LOGLEVEL: "warn"    # or "error" to be even quieter
+    NO_COLOR: "1"                   # many tools respect this
+    FORCE_COLOR: "0"                # chalk/colorette/etc. honor this
+    NODE_DISABLE_COLORS: "1"        # belt-and-suspenders for some libs
+    CI: "1"                         # many CLIs reduce interactivity/spinners
+    PNPM_CONFIG_FUND: "false"
+    PNPM_CONFIG_UPDATE_NOTIFIER: "false"
     # ensure Windows can resolve .cmd if the parent env omitted it
     PATHEXT: ".COM;.EXE;.BAT;.CMD"
 

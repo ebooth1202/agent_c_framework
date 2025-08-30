@@ -50,6 +50,22 @@ _plans:
         implementation. This led to completely incorrect authentication documentation,
         made-up API keys, and fake service URLs. Always verify documentation against
         actual code.
+    - created_at: '2025-08-30T09:21:10.601254'
+      id: 279a4023-3d00-4ecf-aae2-b391656420f9
+      learned_task_id: 85638294-e219-4669-b688-9d8e5eecda65
+      lesson: When completing complex tasks through separate focused plans (like test_fix_plan),
+        remember to update the main plan with detailed completion reports. We created
+        156+ comprehensive tests but initially only briefly noted "Unit Tests for
+        Core SDK" as complete without documenting the extensive work done.
+    - created_at: '2025-08-30T09:24:16.961784'
+      id: 4bcbce3f-8c44-4b20-8673-f3c18b7fb1ae
+      learned_task_id: bedc11e0-9e12-4a45-b14d-db25b931b1f8
+      lesson: Building a clean SDK from scratch was the right decision over refactoring
+        the Virtual Joe spike. The methodical approach - starting with TypeScript
+        config, then event system, then incrementally adding features with proper
+        separation of concerns - resulted in a production-ready SDK with 178+ tests.
+        The combination of strategic planning, clone delegation for complex tasks,
+        and immediate test feedback created an efficient development workflow.
     tasks:
       083a0e53-e8c3-41db-a947-c88bb77b772f:
         child_tasks: []
@@ -484,8 +500,22 @@ _plans:
         updated_at: '2025-08-28T22:22:50.896289'
       85638294-e219-4669-b688-9d8e5eecda65:
         child_tasks: []
-        completed: false
-        completion_report: null
+        completed: true
+        completion_report: "Comprehensive unit test suite implemented through dedicated\
+          \ test_fix_plan:\n\n**Test Files Created/Fixed:**\n- packages/core/test/auth/AuthManager.test.ts\
+          \ - 33 tests\n- packages/core/test/audio/AudioService.test.ts - 30 tests\
+          \  \n- packages/core/test/session/TurnManager.test.ts - 24 tests\n- packages/core/test/session/SessionManager.test.ts\
+          \ - 47 tests\n- packages/core/test/session/SessionManager.simple.test.ts\
+          \ - 12 tests\n- packages/core/test/client/RealtimeClient.test.ts - 11 tests\n\
+          - packages/core/test/client/RealtimeClient.simple.test.ts - 3 tests\n- Setup\
+          \ and verification tests - 5 tests\n\n**Test Coverage Achieved:**\n- WebSocket\
+          \ connection management and reconnection\n- Authentication with JWT tokens\
+          \ and automatic refresh\n- Turn state management for conversation flow\n\
+          - Audio recording, processing, and playback\n- Session management with message\
+          \ history\n- Event emission and subscription patterns\n- Error handling\
+          \ and edge cases\n- Browser API mocking (WebSocket, AudioContext, getUserMedia)\n\
+          \n**Total:** 165+ tests in Core package, 13 tests in React package\n**Status:**\
+          \ All 178+ tests passing\n**Test Runner:** Vitest with MSW for API mocking"
         completion_signoff_by: null
         context: ''
         created_at: '2025-08-28T19:38:57.422080'
@@ -496,7 +526,7 @@ _plans:
         requires_completion_signoff: 'true'
         sequence: 15
         title: 'Testing: Unit Tests for Core SDK'
-        updated_at: '2025-08-28T19:38:57.422080'
+        updated_at: '2025-08-30T09:21:25.558695'
       8eb9b7c2-7f6f-4b1c-b1d2-ce940c4ca64b:
         child_tasks: []
         completed: true
@@ -759,8 +789,10 @@ _plans:
         updated_at: '2025-08-29T09:59:53.360876'
       cba769c0-1aa5-48c3-88d8-5003ff39a10b:
         child_tasks: []
-        completed: false
-        completion_report: null
+        completed: true
+        completion_report: Skipped by design decision. Will plan proper demos in a
+          future session that align with actual use cases and requirements rather
+          than creating a generic vanilla JS demo.
         completion_signoff_by: null
         context: ''
         created_at: '2025-08-28T19:38:51.741148'
@@ -772,7 +804,7 @@ _plans:
         requires_completion_signoff: 'true'
         sequence: 14
         title: 'Example: Vanilla JavaScript Demo'
-        updated_at: '2025-08-28T19:38:51.741149'
+        updated_at: '2025-08-30T09:24:06.815365'
       dea9def9-351b-445c-88fe-6a45f86c0bc9:
         child_tasks: []
         completed: false
@@ -845,7 +877,74 @@ _plans:
         title: 'Core SDK: Avatar Integration'
         updated_at: '2025-08-29T12:12:06.247212'
     title: Agent C Realtime Client SDK Development
-    updated_at: '2025-08-29T15:24:22.091859'
+    updated_at: '2025-08-30T09:24:16.961805'
+  realtime_ui_components:
+    created_at: '2025-08-30T10:57:06.667598'
+    description: Build shadcn/ui and CenSuite-compatible UI components for the Agent
+      C Realtime SDK, starting with essential components for Virtual Joe
+    id: ed927175-5df3-4b81-8f63-ef36e5c1a033
+    lessons_learned: []
+    tasks:
+      bde873d8-71be-4265-99a0-353ff942478b:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: 'User needs to:
+
+          1. Remove node_modules and package-lock.json
+
+          2. Run pnpm install
+
+          3. Verify build works
+
+          4. Test that the monorepo structure is intact'
+        created_at: '2025-08-30T11:13:26.303504'
+        description: Complete the pnpm conversion and verify everything builds correctly
+        id: bde873d8-71be-4265-99a0-353ff942478b
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 2
+        title: Convert to pnpm and verify build
+        updated_at: '2025-08-30T11:13:26.303504'
+      ed7a5ef6-441b-4dcb-9497-3fd2c9ab0059:
+        child_tasks: []
+        completed: true
+        completion_report: 'Successfully set up @agentc/realtime-ui package structure
+          with:
+
+          - package.json with proper dependencies (Radix UI, CVA, clsx, tailwind-merge)
+
+          - TypeScript configuration for React components
+
+          - Tailwind and PostCSS configs matching CenSuite patterns
+
+          - tsup build configuration for dual CJS/ESM output
+
+          - cn() utility function from CenSuite
+
+          - README with setup instructions
+
+          - Integrated into monorepo references
+
+
+          Package is ready for component development.'
+        completion_signoff_by: null
+        context: Create package.json, tsconfig, tailwind config, and essential utilities
+          matching CenSuite patterns
+        created_at: '2025-08-30T10:57:14.310778'
+        description: Set up @agentc/realtime-ui package with proper TypeScript, Tailwind,
+          and build configuration
+        id: ed7a5ef6-441b-4dcb-9497-3fd2c9ab0059
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 1
+        title: Package Setup and Configuration
+        updated_at: '2025-08-30T10:59:57.891349'
+    title: Agent C Realtime UI Components
+    updated_at: '2025-08-30T11:13:26.303523'
   test_fix_plan:
     created_at: '2025-08-29T20:59:22.787330'
     description: Systematically fix all disabled tests using clone delegation to maintain

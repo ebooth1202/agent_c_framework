@@ -1913,6 +1913,168 @@ _plans:
         updated_at: '2025-06-09T10:32:48.640443'
     title: BOKF Design Team Coordination Framework
     updated_at: '2025-06-09T10:32:48.640443'
+  domo_instruction_update:
+    created_at: '2025-08-29T21:19:11.367810'
+    description: Replace outdated "Target SDK Architecture Components" with accurate
+      documentation of the current Agent C Framework architecture to prevent inappropriate
+      tool usage and testing approaches.
+    id: 973d2b74-db2d-4300-b0f1-061264dcdbf5
+    lessons_learned: []
+    tasks:
+      1063b2ec-d019-4d38-9c0d-1f20a74c81b4:
+        child_tasks: []
+        completed: true
+        completion_report: "Successfully analyzed the actual Agent C Framework architecture\
+          \ and documented key findings:\n\n**Core Technology Stack Identified:**\n\
+          - Backend: Python 3.12+ with FastAPI (NOT Node.js/Express)\n- Frontend:\
+          \ React with Vite bundler (npm only for frontend)\n- Testing: pytest for\
+          \ backend, Vitest for frontend\n- Deployment: Docker compose with Redis\n\
+          \n**Key Architecture Components:**\n1. agent_c_core: Python-based agent\
+          \ runtime and orchestration\n2. agent_c_tools: Python toolset with workspace/coordination\
+          \ capabilities  \n3. agent_c_api: FastAPI web service layer\n4. agent_c_react_client:\
+          \ React/TypeScript frontend\n\n**Critical Errors Identified:**\n- I was\
+          \ incorrectly assuming Node.js/npm patterns for backend operations\n- Attempting\
+          \ to use npx/node commands on Python codebase\n- Misunderstanding testing\
+          \ frameworks (should use pytest, not npm test)\n\n**Correct Development\
+          \ Patterns:**\n- Use pip and Python virtual environments, not npm for backend\n\
+          - Execute tests with pytest, not npm scripts\n- Use Python-based build/deployment\
+          \ processes\n- Docker compose for multi-service development\n\nAnalysis\
+          \ saved to //project/.scratch/actual_architecture_analysis.md for reference."
+        completion_signoff_by: null
+        context: "Key areas to investigate:\n1. Python-based core architecture (agent_c_core,\
+          \ agent_c_tools)\n2. Web API and React frontend structure (agent_c_api_ui)\
+          \  \n3. Build and deployment systems (Docker, Python, requirements.txt)\n\
+          4. Testing frameworks and patterns used\n5. Development workflow and toolchain\n\
+          6. Key differences from Node.js/npm patterns that led to my errors"
+        created_at: '2025-08-29T21:19:17.761617'
+        description: Examine the current project structure, build systems, technology
+          stack, and testing frameworks to understand the actual architecture rather
+          than target goals.
+        id: 1063b2ec-d019-4d38-9c0d-1f20a74c81b4
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: Analyze Actual Agent C Framework Architecture
+        updated_at: '2025-08-29T21:21:53.801436'
+      5eb3ebe6-622c-4fd3-b846-483ccc1a66df:
+        child_tasks: []
+        completed: false
+        completion_report: "Task ready for collaboration with Hank. I've completed\
+          \ the analysis and documentation of the actual Agent C Framework architecture.\
+          \ The updated architecture section is ready for integration into my agent\
+          \ configuration.\n\n**Ready for Implementation:**\n1. Architecture analysis\
+          \ complete (//project/.scratch/actual_architecture_analysis.md)\n2. Updated\
+          \ instruction section ready (//project/.scratch/updated_domo_architecture_section.md)\n\
+          \n**What Needs to Be Done:**\n- Replace the \"Target SDK Architecture Components\"\
+          \ section in my persona with the new \"SDK Architecture Components\" \n\
+          - Update any other references to aspirational/target language with current\
+          \ reality\n- Ensure I understand the Python-based development patterns vs\
+          \ Node.js assumptions\n\n**Key Change Summary:**\nReplace outdated target\
+          \ architecture information with accurate descriptions of:\n- Python 3.12+/FastAPI\
+          \ backend architecture (not Node.js)\n- Correct testing approaches (pytest,\
+          \ not npm scripts)\n- Proper development workflows and tool usage\n- Reality-based\
+          \ component capabilities and responsibilities\n\nThis should prevent future\
+          \ errors like attempting to use npx/node commands on the Python codebase."
+        completion_signoff_by: null
+        context: 'Update the agent configuration to include:
+
+          1. Accurate understanding of Python-based architecture
+
+          2. Correct testing approaches (not npx/node based)
+
+          3. Proper development workflow understanding
+
+          4. Reality-based component descriptions
+
+          5. Remove any target/aspirational language that doesn''t match current state'
+        created_at: '2025-08-29T21:19:31.182757'
+        description: Update my persona and instruction set with the corrected architecture
+          information to prevent future errors with inappropriate tooling.
+        id: 5eb3ebe6-622c-4fd3-b846-483ccc1a66df
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: Update Domo Agent Configuration
+        updated_at: '2025-08-29T21:23:12.359680'
+      7e864a2e-dca9-476b-9170-88e60a71634f:
+        child_tasks: []
+        completed: true
+        completion_report: 'Successfully created updated architecture documentation
+          that replaces "Target SDK Architecture Components" with "SDK Architecture
+          Components" reflecting current reality:
+
+
+          **Key Updates Made:**
+
+          1. **Accurate Technology Stack**: Documented Python 3.12+/FastAPI backend
+          (not Node.js)
+
+          2. **Real Component Descriptions**: Actual capabilities of agent_c_core,
+          agent_c_tools, agent_c_api, agent_c_react_client
+
+          3. **Correct Development Workflows**: pytest for backend testing, proper
+          Python package management
+
+          4. **Accurate Deployment**: Docker compose architecture with Redis, FastAPI,
+          React services
+
+          5. **Production-Ready Language**: Removed aspirational/target language,
+          focused on current capabilities
+
+
+          **Architecture Highlights:**
+
+          - Python-based agent runtime with AsyncIO
+
+          - FastAPI web service layer (not Express/Node.js)
+
+          - React/TypeScript frontend with Vite (npm only for frontend)
+
+          - Docker containerization with multi-service orchestration
+
+          - Comprehensive testing with pytest (backend) and Vitest (frontend)
+
+
+          **Critical Corrections:**
+
+          - Emphasized Python development patterns vs Node.js assumptions
+
+          - Clarified correct testing approaches (pytest, not npm scripts)
+
+          - Documented actual build/deployment processes
+
+          - Specified proper tool usage for this architecture
+
+
+          Documentation saved to //project/.scratch/updated_domo_architecture_section.md
+          ready for integration into agent configuration.'
+        completion_signoff_by: null
+        context: 'Replace "Target SDK Architecture Components" with "SDK Architecture
+          Components" that accurately describes:
+
+          1. Current component structure and responsibilities
+
+          2. Technology stack (Python, FastAPI, React, Docker)
+
+          3. Build and testing systems in use
+
+          4. Development workflows and patterns
+
+          5. Correct tool usage for this architecture'
+        created_at: '2025-08-29T21:19:23.133255'
+        description: Document the actual SDK architecture components, replacing any
+          target/aspirational content with current reality-based information.
+        id: 7e864a2e-dca9-476b-9170-88e60a71634f
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: Create Updated Architecture Documentation
+        updated_at: '2025-08-29T21:22:59.098145'
+    title: Update Domo Instructions to Reflect Actual Architecture
+    updated_at: '2025-08-29T21:23:12.359701'
 agents:
   hank_agent:
     agent_key: hank_agent
