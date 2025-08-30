@@ -1,0 +1,16 @@
+/**
+ * Basic test to verify test setup
+ */
+
+import { describe, it, expect } from 'vitest';
+
+describe('Basic Test Setup', () => {
+  it('should run a simple test', () => {
+    expect(1 + 1).toBe(2);
+  });
+
+  it('should have access to globals', () => {
+    expect(typeof WebSocket).toBeDefined();
+    expect(typeof AudioContext).toBeDefined();
+  });
+});

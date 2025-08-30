@@ -1,0 +1,15 @@
+/**
+ * Test setup for @agentc/realtime-react package
+ */
+
+import { afterEach, vi } from 'vitest';
+import '@testing-library/jest-dom';
+
+// Re-export testing utilities
+export * from '@testing-library/react';
+export { default as userEvent } from '@testing-library/user-event';
+
+// Clean up after each test
+afterEach(() => {
+  vi.clearAllMocks();
+});
