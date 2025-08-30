@@ -20,8 +20,30 @@ export class MockWebSocket extends EventEmitter {
   readyState: number = MockWebSocket.CONNECTING;
   binaryType: 'blob' | 'arraybuffer' = 'blob';
   
-  send = vi.fn();
-  close = vi.fn();
+  // Event handler properties that WebSocketManager uses
+  onopen: ((event: Event) => void) | null = null;
+  onclose: ((event: CloseEvent) => void) | null = null;
+  onerror: ((event: Event) => void) | null = null;
+  onmessage: ((event: MessageEvent) => void) | null = null;
+  
+  send = vi.fn((data: any) => {
+    // Simulate successful send
+    if (this.readyState !== MockWebSocket.OPEN) {
+      throw new Error('WebSocket is not open');
+    }
+  });
+  
+  close = vi.fn((code?: number, reason?: string) => {
+    if (this.readyState === MockWebSocket.OPEN || this.readyState === MockWebSocket.CONNECTING) {
+      this.readyState = MockWebSocket.CLOSED;
+      this.isConnected = false;
+      const closeEvent = { type: 'close', target: this, code: code || 1000, reason: reason || 'Normal closure' } as CloseEvent;
+      if (this.onclose) {
+        this.onclose(closeEvent);
+      }
+      this.emit('close', closeEvent);
+    }
+  });
 
   private messageQueue: any[] = [];
   private isConnected = false;
@@ -41,7 +63,11 @@ export class MockWebSocket extends EventEmitter {
   connect() {
     this.readyState = MockWebSocket.OPEN;
     this.isConnected = true;
-    this.emit('open', { type: 'open', target: this });
+    const openEvent = { type: 'open', target: this } as Event;
+    if (this.onopen) {
+      this.onopen(openEvent);
+    }
+    this.emit('open', openEvent);
     
     // Process any queued messages
     while (this.messageQueue.length > 0) {
@@ -54,17 +80,28 @@ export class MockWebSocket extends EventEmitter {
     if (this.readyState === MockWebSocket.OPEN) {
       this.readyState = MockWebSocket.CLOSED;
       this.isConnected = false;
-      this.emit('close', { type: 'close', target: this, code: 1000, reason: 'Normal closure' });
+      const closeEvent = { type: 'close', target: this, code: 1000, reason: 'Normal closure' } as CloseEvent;
+      if (this.onclose) {
+        this.onclose(closeEvent);
+      }
+      this.emit('close', closeEvent);
     }
   }
 
   simulateError(error: Error) {
-    this.emit('error', { type: 'error', target: this, error });
+    const errorEvent = { type: 'error', target: this, error } as Event;
+    if (this.onerror) {
+      this.onerror(errorEvent);
+    }
+    this.emit('error', errorEvent);
   }
 
   receiveMessage(data: any) {
     if (this.isConnected) {
-      const event = { type: 'message', target: this, data };
+      const event = { type: 'message', target: this, data } as MessageEvent;
+      if (this.onmessage) {
+        this.onmessage(event);
+      }
       this.emit('message', event);
     } else {
       this.messageQueue.push(data);
@@ -73,7 +110,10 @@ export class MockWebSocket extends EventEmitter {
 
   receiveBinaryMessage(data: ArrayBuffer) {
     if (this.isConnected) {
-      const event = { type: 'message', target: this, data };
+      const event = { type: 'message', target: this, data } as MessageEvent;
+      if (this.onmessage) {
+        this.onmessage(event);
+      }
       this.emit('message', event);
     } else {
       this.messageQueue.push(data);

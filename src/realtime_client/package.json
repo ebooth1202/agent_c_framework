@@ -6,11 +6,12 @@
   ],
   "scripts": {
     "build": "lerna run build",
-    "test": "lerna run test",
+    "test": "lerna run test --concurrency=1",
     "test:run": "lerna run test:run",
     "test:watch": "lerna run test:watch",
     "test:coverage": "lerna run test:coverage",
     "test:ui": "lerna run test:ui",
+    "test:debug": "lerna run test:debug --concurrency=1",
     "clean": "lerna run clean && rimraf node_modules",
     "dev": "lerna run --parallel dev",
     "lint": "eslint .",
