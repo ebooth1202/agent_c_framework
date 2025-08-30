@@ -354,14 +354,13 @@ class SecureCommandExecutor:
         safe_env = policy.get("safe_env") or {}
         effective_env.update({k: str(v) for (k, v) in safe_env.items()})
 
+        if override_env:
+            effective_env.update(override_env)
+
         # Let validator override / adjust environment
         if hasattr(validator, "adjust_environment"):
             # type: ignore[attr-defined]
             effective_env = validator.adjust_environment(effective_env, parts, policy)  # noqa
-
-        # Finally apply user-supplied env (last writer wins)
-        if override_env:
-            effective_env.update(override_env)
 
         # Ensure Windows can resolve .cmd/.bat if caller didn't supply PATHEXT
         if self.is_windows:

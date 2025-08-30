@@ -94,4 +94,17 @@ class LernaCommandValidator(CommandValidator):
         env_overrides = policy.get("env_overrides", {})
         env.update(env_overrides)
         
+        # Prepend node_modules/.bin to PATH if workspace root is available
+        workspace_root = base_env.get("WORKSPACE_ROOT")
+        if workspace_root:
+            node_modules_bin = os.path.join(workspace_root, "node_modules", ".bin")
+            print(f"DEBUG: Lerna validator - workspace_root: {workspace_root}")
+            print(f"DEBUG: Lerna validator - node_modules_bin: {node_modules_bin}")
+            print(f"DEBUG: Lerna validator - path exists: {os.path.exists(node_modules_bin)}")
+            if os.path.exists(node_modules_bin):
+                env["PATH_PREPEND"] = node_modules_bin
+                print(f"DEBUG: Lerna validator - Set PATH_PREPEND to: {node_modules_bin}")
+            else:
+                print(f"DEBUG: Lerna validator - node_modules/.bin does not exist")
+        
         return env

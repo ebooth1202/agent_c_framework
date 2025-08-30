@@ -69,4 +69,11 @@ class NpxCommandValidator(CommandValidator):
         env_overrides = policy.get("env_overrides", {})
         env.update(env_overrides)
         
+        # Prepend node_modules/.bin to PATH if workspace root is available
+        workspace_root = base_env.get("WORKSPACE_ROOT")
+        if workspace_root:
+            node_modules_bin = os.path.join(workspace_root, "node_modules", ".bin")
+            if os.path.exists(node_modules_bin):
+                env["PATH_PREPEND"] = node_modules_bin
+        
         return env

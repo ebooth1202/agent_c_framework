@@ -608,7 +608,10 @@ class LocalStorageWorkspace(BaseWorkspace):
                 )
             working_directory = str(full_path)
 
-        # currently only dynamic toolset can pass in a timeout
-        # currently override_env is not being used
-        return await self.executor.execute_command(command=command, working_directory=working_directory, override_env=None, timeout=timeout)
+        # Provide workspace root to validators and any executed processes
+        override_env = {
+            "WORKSPACE_ROOT": str(self.workspace_root)
+        }
+        
+        return await self.executor.execute_command(command=command, working_directory=working_directory, override_env=override_env, timeout=timeout)
 from agent_c_tools.tools.workspace.local_project import LocalProjectWorkspace  # noqa

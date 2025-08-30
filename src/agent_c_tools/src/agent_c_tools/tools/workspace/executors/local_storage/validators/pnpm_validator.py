@@ -167,4 +167,12 @@ class PnpmCommandValidator(CommandValidator):
     def adjust_environment(self, base_env: Dict[str, str], parts: List[str], policy: Mapping[str, Any]) -> Dict[str, str]:
         env = dict(base_env)
         env.update(policy.get("env_overrides") or {})
+        
+        # Prepend node_modules/.bin to PATH if workspace root is available
+        workspace_root = base_env.get("WORKSPACE_ROOT")
+        if workspace_root:
+            node_modules_bin = os.path.join(workspace_root, "node_modules", ".bin")
+            if os.path.exists(node_modules_bin):
+                env["PATH_PREPEND"] = node_modules_bin
+                
         return env
