@@ -11,13 +11,12 @@ tools:
   - AgentCloneTools
   - AgentTeamTools
   - DynamicCommandToolset
+  - WebTools
 agent_params:
   budget_tokens: 20000
   max_tokens: 64000
 prompt_metadata:
-  specialization: "avatar_integration_development"
-  primary_workspace: "virt_joe"
-  reference_workspace: "avatar_demo"
+  primary_workspace: "realtime_client"
 category:
   - "domo"
 persona: |
