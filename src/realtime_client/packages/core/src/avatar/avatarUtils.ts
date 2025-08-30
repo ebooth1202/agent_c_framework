@@ -12,10 +12,12 @@ import { Avatar } from '../events/types/CommonTypes';
  */
 export function isValidAvatar(avatar: unknown): avatar is Avatar {
   return (
-    avatar &&
+    !!avatar &&
     typeof avatar === 'object' &&
-    typeof avatar.avatar_id === 'string' &&
-    typeof avatar.status === 'string'
+    'avatar_id' in avatar &&
+    typeof (avatar as any).avatar_id === 'string' &&
+    'status' in avatar &&
+    typeof (avatar as any).status === 'string'
   );
 }
 

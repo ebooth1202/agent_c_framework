@@ -23,7 +23,7 @@ export class Logger {
     Logger.level = level;
   }
 
-  debug(...args: unknown[]): void {
+  debug(..._args: unknown[]): void {
     if (Logger.level <= LogLevel.DEBUG) {
       // console.debug(this.prefix, ...args);
     }

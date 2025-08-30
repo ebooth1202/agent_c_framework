@@ -16,15 +16,15 @@ async function traditionalLogin() {
   });
 
   // Login with credentials
-  const response = await authManager.login({
+  await authManager.login({
     username: 'user@example.com',
     password: 'password123',
   });
 
   // Access resources
-  const agents = authManager.getAgents();
-  const voices = authManager.getVoices();
-  const token = authManager.getAgentCToken();
+  // const agents = authManager.getAgents();
+  // const voices = authManager.getVoices();
+  // const token = authManager.getAgentCToken();
 }
 
 // Example 2: Initialize from backend payload (NEW METHOD)
@@ -40,50 +40,49 @@ async function initializeFromBackend() {
     agent_c_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
     heygen_token: 'hg_token_123...',
     user: {
-      id: 'user123',
-      username: 'user@example.com',
+      user_id: 'user123',
+      user_name: 'user@example.com',
       email: 'user@example.com',
-      full_name: 'John Doe',
+      first_name: 'John',
+      last_name: 'Doe',
+      is_active: true,
+      roles: ['user'],
+      groups: [],
       created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z',
+      last_login: '2024-01-01T00:00:00Z',
     },
     agents: [
       {
-        id: 'agent1',
+        key: 'agent1',
         name: 'Assistant',
-        description: 'AI Assistant',
-        model: 'gpt-4',
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z',
+        agent_description: 'AI Assistant',
+        category: ['assistant'],
       },
     ],
     avatars: [
       {
-        id: 'avatar1',
-        name: 'Professional Avatar',
-        preview_url: 'https://example.com/avatar.jpg',
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z',
+        avatar_id: 'avatar1',
+        created_at: 1704067200,
+        default_voice: 'en-US-1',
+        is_public: false,
+        normal_preview: 'https://example.com/avatar.jpg',
+        pose_name: 'default',
+        status: 'active',
       },
     ],
     voices: [
       {
-        id: 'voice1',
-        name: 'Alloy',
-        voice_provider: 'openai',
-        preview_url: 'https://example.com/voice.mp3',
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z',
+        voice_id: 'voice1',
+        vendor: 'openai',
+        description: 'Alloy voice',
+        output_format: 'pcm16',
       },
     ],
     toolsets: [
       {
-        id: 'toolset1',
         name: 'Default Tools',
         description: 'Standard toolset',
-        tools: ['web_search', 'calculator'],
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z',
+        schemas: {},
       },
     ],
     ui_session_id: 'session_abc123',
@@ -98,15 +97,15 @@ async function initializeFromBackend() {
   // Now you can access all resources immediately
   const agents = authManager.getAgents();
   const voices = authManager.getVoices();
-  const avatars = authManager.getAvatars();
-  const toolsets = authManager.getToolsets();
-  const token = authManager.getAgentCToken();
-  const heygenToken = authManager.getHeygenToken();
+  // const avatars = authManager.getAvatars();
+  // const toolsets = authManager.getToolsets();
+  // const token = authManager.getAgentCToken();
+  // const heygenToken = authManager.getHeygenToken();
   const user = authManager.getUser();
-  const sessionId = authManager.getUiSessionId();
+  // const sessionId = authManager.getUiSessionId();
 
   // AuthManager is fully initialized and ready to use
-  console.log('Authenticated user:', user?.username);
+  console.log('Authenticated user:', user?.user_name);
   console.log('Available agents:', agents.length);
   console.log('Available voices:', voices.length);
   

@@ -434,7 +434,7 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
         this.wsManager.sendBinary(data);
         
         if (this.config.debug) {
-            const byteLength = data instanceof ArrayBuffer ? data.byteLength : data.byteLength;
+            // const byteLength = data instanceof ArrayBuffer ? data.byteLength : data.byteLength;
             // console.debug('Sent binary audio frame:', byteLength, 'bytes');
         }
     }

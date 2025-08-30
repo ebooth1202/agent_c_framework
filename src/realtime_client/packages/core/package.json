@@ -11,6 +11,7 @@
     "test:run": "vitest run",
     "test:watch": "vitest watch",
     "test:coverage": "vitest run --coverage",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "test:simple": "vitest run --config vitest.simple.config.ts"
   }
 }

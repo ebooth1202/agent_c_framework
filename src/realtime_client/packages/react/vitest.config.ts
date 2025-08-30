@@ -26,7 +26,7 @@ export default defineConfig({
     alias: {
       '@': resolve(__dirname, './src'),
       '@agentc/realtime-core': resolve(__dirname, '../core/src'),
-      '@test': resolve(__dirname, './test')
+      '@test': resolve(__dirname, '../../test')
     }
   }
 });

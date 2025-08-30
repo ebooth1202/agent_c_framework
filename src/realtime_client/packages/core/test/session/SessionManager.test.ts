@@ -5,7 +5,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { SessionManager } from '../../src/session/SessionManager';
 import { EventEmitter } from '../../src/events/EventEmitter';
-import { createMockAgentCEvent } from '@test/utils/test-helpers';
+import { createMockAgentCEvent } from '../../../../test/utils/test-helpers';
 
 describe('SessionManager', () => {
   let sessionManager: SessionManager;

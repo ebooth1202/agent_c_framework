@@ -129,7 +129,7 @@ export type ClientEvent =
  * Type guard to check if an object is a client event
  */
 export function isClientEvent(obj: unknown): obj is ClientEvent {
-  return obj && typeof obj.type === 'string' && [
+  return !!obj && typeof obj === 'object' && 'type' in obj && typeof (obj as any).type === 'string' && [
     'get_agents',
     'set_agent',
     'get_avatars',
@@ -142,5 +142,5 @@ export function isClientEvent(obj: unknown): obj is ClientEvent {
     'set_chat_session_name',
     'set_session_metadata',
     'set_session_messages'
-  ].includes(obj.type);
+  ].includes((obj as any).type);
 }

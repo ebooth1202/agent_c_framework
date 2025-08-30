@@ -14,13 +14,13 @@ async function testAudioServiceAPI() {
   
   // Test 1: Permission handling
   // console.log('1. Testing permission request:');
-  const hasPermission = await audioService.requestPermission();
+  // const hasPermission = await audioService.requestPermission();
   // console.log(`   Permission granted: ${hasPermission}`);
   // console.log(`   Has permission check: ${audioService.hasPermission()}`);
   
   // Test 2: Status monitoring
   // console.log('\n2. Setting up status monitoring:');
-  const unsubscribeStatus = audioService.onStatusChange((status: AudioServiceStatus) => {
+  const unsubscribeStatus = audioService.onStatusChange((_status: AudioServiceStatus) => {
     // console.log(`   Status changed:`, {
     //   state: status.state,
     //   isRecording: status.isRecording,
@@ -32,7 +32,7 @@ async function testAudioServiceAPI() {
   // Test 3: Audio chunk subscription
   // console.log('\n3. Setting up audio chunk subscription:');
   let chunkCount = 0;
-  const unsubscribeChunks = audioService.onAudioChunk((chunk: AudioChunkData) => {
+  const unsubscribeChunks = audioService.onAudioChunk((_chunk: AudioChunkData) => {
     chunkCount++;
     if (chunkCount <= 3) {
       // console.log(`   Received chunk #${chunk.frame_count}:`, {
@@ -52,7 +52,7 @@ async function testAudioServiceAPI() {
     await audioService.startRecording();
     
     // Check current status
-    const status = audioService.getStatus();
+    // const status = audioService.getStatus();
     // console.log('   Current status:', {
     //   state: status.state,
     //   isRecording: status.isRecording
@@ -66,7 +66,7 @@ async function testAudioServiceAPI() {
     audioService.stopRecording();
     
     // Check final status
-    const finalStatus = audioService.getStatus();
+    // const finalStatus = audioService.getStatus();
     // console.log('   Final status:', {
     //   state: finalStatus.state,
     //   isRecording: finalStatus.isRecording,
@@ -85,7 +85,7 @@ async function testAudioServiceAPI() {
   
   // Test 6: Singleton behavior
   // console.log('\n6. Testing singleton behavior:');
-  const instance2 = AudioService.getInstance();
+  // const instance2 = AudioService.getInstance();
   // console.log(`   Same instance: ${audioService === instance2}`);
   
   // console.log('\nAudioService API test complete!');
@@ -149,7 +149,7 @@ function recordingWithStatusMonitoring() {
 function processAudioChunks() {
   const audioService = AudioService.getInstance();
   
-  const unsubscribe = audioService.onAudioChunk((chunk) => {
+  const unsubscribe = audioService.onAudioChunk((_chunk) => {
     // chunk.content is ArrayBuffer with PCM16 audio data
     // console.log('Audio chunk received:', {
     //   size: chunk.content.byteLength,

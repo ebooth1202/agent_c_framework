@@ -4,8 +4,8 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { RealtimeClient } from '../../src/client/RealtimeClient';
-import { MockWebSocket, mockWebSocketConstructor } from '@test/utils/mock-websocket';
-import { sleep, waitFor, createMockAgentCEvent } from '@test/utils/test-helpers';
+import { MockWebSocket, mockWebSocketConstructor } from '../../../../test/utils/mock-websocket';
+import { sleep, waitFor, createMockAgentCEvent } from '../../../../test/utils/test-helpers';
 
 describe('RealtimeClient', () => {
   let client: RealtimeClient;

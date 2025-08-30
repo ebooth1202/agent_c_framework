@@ -224,7 +224,7 @@ export type ServerEvent =
  * Type guard to check if an object is a server event
  */
 export function isServerEvent(obj: unknown): obj is ServerEvent {
-  return obj && typeof obj.type === 'string' && [
+  return !!obj && typeof obj === 'object' && 'type' in obj && typeof (obj as any).type === 'string' && [
     'agent_list',
     'agent_configuration_changed',
     'avatar_list',
@@ -243,5 +243,5 @@ export function isServerEvent(obj: unknown): obj is ServerEvent {
     'user_turn_end',
     'agent_voice_changed',
     'error'
-  ].includes(obj.type);
+  ].includes((obj as any).type);
 }

@@ -5,18 +5,19 @@
 import { beforeAll, afterEach, afterAll, vi } from 'vitest';
 
 // Mock console methods to reduce noise in tests
-beforeAll(() => {
-  // Only mock in test environment
-  if (process.env.NODE_ENV === 'test') {
-    global.console = {
-      ...console,
-      error: vi.fn(),
-      warn: vi.fn(),
-      log: vi.fn(),
-      debug: vi.fn(),
-    };
-  }
-});
+// Commented out for now as it may cause issues
+// beforeAll(() => {
+//   // Only mock in test environment
+//   if (process.env.NODE_ENV === 'test') {
+//     global.console = {
+//       ...console,
+//       error: vi.fn(),
+//       warn: vi.fn(),
+//       log: vi.fn(),
+//       debug: vi.fn(),
+//     };
+//   }
+// });
 
 // Clean up after each test
 afterEach(() => {
