@@ -13,8 +13,8 @@ The demo app is configured to run with HTTPS using Next.js's built-in experiment
 
 ### Certificate Paths
 The development server uses self-signed certificates located at (relative to demo directory):
-- **Certificate**: `../../agent_c_config/local_host_self_signed.pem`
-- **Private Key**: `../../agent_c_config/local_host_self_signed-key.pem`
+- **Certificate**: `../../agent_c_config/localhost_self_signed.pem`
+- **Private Key**: `../../agent_c_config/localhost_self_signed-key.pem`
 
 ### Scripts (in package.json)
 - `pnpm dev` - Starts the HTTPS development server using Next.js experimental HTTPS
@@ -52,7 +52,7 @@ The demo uses Next.js's built-in HTTPS support instead of a custom server:
 ```json
 {
   "scripts": {
-    "dev": "next dev --experimental-https --experimental-https-key ../../agent_c_config/local_host_self_signed-key.pem --experimental-https-cert ../../agent_c_config/local_host_self_signed.pem"
+    "dev": "next dev --experimental-https --experimental-https-key ../../agent_c_config/localhost_self_signed-key.pem --experimental-https-cert ../../agent_c_config/localhost_self_signed.pem"
   }
 }
 ```
@@ -74,8 +74,8 @@ The authentication service (`src/lib/auth.ts`) is configured to:
 If you see an error about missing certificates, ensure:
 1. The `agent_c_config` directory exists at `../../agent_c_config/` relative to the demo directory
 2. The certificate files have the correct names:
-   - `local_host_self_signed.pem`
-   - `local_host_self_signed-key.pem`
+   - `localhost_self_signed.pem`
+   - `localhost_self_signed-key.pem`
 
 ### Port Already in Use
 If port 3000 is already in use, you can specify a different port:
