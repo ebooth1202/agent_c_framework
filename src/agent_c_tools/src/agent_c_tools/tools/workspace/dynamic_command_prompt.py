@@ -86,4 +86,4 @@ class DynamicCommandPromptSection(PromptSection):
 - Check package existence with `list`/`ls` commands before running scripts
 """
 
-        super().__init__(template=TEMPLATE, required=True, name="DynamicCommands", render_section_header=True, **data)
+        super().__init__(template=TEMPLATE, required=True, name="Dynamic Commands", render_section_header=True, **data)
