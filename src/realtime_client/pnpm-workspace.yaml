@@ -5,3 +5,5 @@ onlyBuiltDependencies:
   - esbuild
   - msw
   - nx
+  - table
+  - unrs-resolver
