@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --experimental-https --experimental-https-key ../../agent_c_config/localhost_self_signed-key.pem --experimental-https-cert ../../agent_c_config/localhost_self_signed.pem",
+    "dev": "next dev --experimental-https --experimental-https-key ../../../../agent_c_config/localhost_self_signed-key.pem --experimental-https-cert ../../../../agent_c_config/localhost_self_signed.pem",
     "dev:http": "next dev",
     "build": "next build",
     "start": "next start",
