@@ -17,8 +17,6 @@ class DynamicCommandPromptSection(PromptSection):
 - `add`, `restore` (with `--staged`), `reset` (with `--hard/--soft/--mixed`)
 - `checkout`, `switch`, `branch`, `stash`, `commit`, `rev-parse`, `ls-files`
 
-**Examples:** `git status -s`, `git log --oneline -n 10`, `git diff --name-only`
-
 ### Node.js Package Managers
 
 #### NPM Commands (`run_npm`)
@@ -29,8 +27,6 @@ class DynamicCommandPromptSection(PromptSection):
 - `run <script>` - allowed scripts: `build`, `test`, `lint`, `format`, `typecheck`, `lint:fix`
 - `ci` - lockfile install with `--ignore-scripts` (automatically added)
 
-**Examples:** `npm run build`, `npm list --depth=0`, `npm config get registry`
-
 #### PNPM Commands (`run_pnpm`)
 **Root flags:** `-v`, `--version`, `--help`
 **Allowed subcommands:**
@@ -39,13 +35,10 @@ class DynamicCommandPromptSection(PromptSection):
 - `run <script>` - allowed scripts: `build`, `test`, `lint`, `lint:fix`, `format`, `typecheck`
 - `install` - lockfile install with `--ignore-scripts` (automatically added)
 
-**Examples:** `pnpm run test`, `pnpm list --long`, `pnpm why typescript`
-
 #### NPX Commands (`run_npx`)
 **Allowed packages:** `@angular/cli`, `create-react-app`, `typescript`, `eslint`, `prettier`, `jest`, etc.
 **Flags:** `--yes`, `-y`, `--package`, `-p`, `--quiet`, `-q`
 
-**Examples:** `npx typescript --version`, `npx eslint --help`
 
 #### Lerna Commands (`run_lerna`)
 **Global flags:** `--version`, `--help`, `--loglevel`, `--concurrency`, `--scope`
@@ -58,8 +51,6 @@ class DynamicCommandPromptSection(PromptSection):
 - `diff` - show package diffs
 - `run` - run scripts with `--parallel`, `--stream`
 
-**Examples:** `lerna list --json`, `lerna run build --parallel`
-
 ### .NET Commands (`run_dotnet`)
 **Info commands:** `--info`, `--list-sdks`, `--list-runtimes`
 **Build commands:**
@@ -67,12 +58,9 @@ class DynamicCommandPromptSection(PromptSection):
 - `build` - with `--nologo`, `--verbosity minimal` (automatically added)
 - `test` - with `--no-build`, `--nologo` (automatically added)
 
-**Examples:** `dotnet build -c Release`, `dotnet test --filter TestCategory=Unit`
 
 ### Python Testing (`run_pytest`)
 **Flags:** `-q`, `--maxfail`, `--disable-warnings`, `--color`
-
-**Examples:** `pytest -q`, `pytest --maxfail=1`
 
 ### Node.js Runtime (`run_node`)
 **Flags:** `-v`, `--version`, `--help` (script execution blocked)

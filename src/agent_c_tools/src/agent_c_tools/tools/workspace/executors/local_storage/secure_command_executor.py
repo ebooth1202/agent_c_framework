@@ -311,15 +311,15 @@ class SecureCommandExecutor:
         try:
             parts = shlex.split(command, posix=not self.is_windows)
         except ValueError as e:
-            return self._blocked(command, working_directory, f"Parse error: {e}")
+            return self._error(command, working_directory, f"Parse error: {e}")
 
         if not parts:
-            return self._blocked(command, working_directory, "Empty command")
+            return self._error(command, working_directory, "Empty command")
 
         # get the base of the command - return an error if we cannot get the main command
         base = self._resolve_base(parts)
         if not base:
-            return self._blocked(command, working_directory, "Unable to resolve base command")
+            return self._error(command, working_directory, "Unable to resolve base command")
 
         # Must be in the allowlist of base commands - meaning if they submit a command that we don't have a policy for, it's blocked
         policy = self.policy_provider.get_policy(base, parts)
@@ -332,7 +332,7 @@ class SecureCommandExecutor:
         validator_key = (policy.get("validator") or base).lower()
         validator = self.validators.get(validator_key)
         if validator is None:
-            return self._blocked(command, working_directory, f"No validator registered for '{base}'")
+            return self._error(command, working_directory, f"No validator registered for '{base}'")
 
         # validate the command and its args against the policy. If not allowed, block it.
         vres: ValidationResult = validator.validate(parts, policy)
@@ -382,7 +382,7 @@ class SecureCommandExecutor:
 
 
         if not resolved:
-            return self._blocked(command, working_directory, f"Executable not found: {parts[0]}")
+            return self._failed(command, working_directory, f"Executable not found: {parts[0]}")
         parts[0] = resolved
 
         # Execute the command (async, shell=False)
@@ -391,7 +391,7 @@ class SecureCommandExecutor:
                 parts, cwd=working_directory, env=effective_env, timeout=effective_timeout
             )
             duration = int((time.time() - start_ms) * 1000)
-            status = "success" if rc == 0 else "error"
+            status = "success" if rc == 0 else "failed"
             result = CommandExecutionResult(
                 status=status,
                 return_code=rc,
@@ -421,7 +421,7 @@ class SecureCommandExecutor:
             self._log_command_execution(command, result)
             return result
         except FileNotFoundError:
-            return self._blocked(command, working_directory, f"Executable not found: {parts[0]}")
+            return self._failed(command, working_directory, f"Executable not found: {parts[0]}")
         except Exception as e:
             duration = int((time.time() - start_ms) * 1000)
             result = CommandExecutionResult(
@@ -440,6 +440,32 @@ class SecureCommandExecutor:
     def _blocked(self, command: str, working_dir: Optional[str], reason: str) -> CommandExecutionResult:
         result = CommandExecutionResult(
             status="blocked",
+            return_code=None,
+            stdout="",
+            stderr="",
+            command=command,
+            working_directory=working_dir or os.getcwd(),
+            error_message=reason
+        )
+        self._log_command_execution(command, result)
+        return result
+
+    def _error(self, command: str, working_dir: Optional[str], reason: str) -> CommandExecutionResult:
+        result = CommandExecutionResult(
+            status="error",
+            return_code=None,
+            stdout="",
+            stderr="",
+            command=command,
+            working_directory=working_dir or os.getcwd(),
+            error_message=reason
+        )
+        self._log_command_execution(command, result)
+        return result
+
+    def _failed(self, command: str, working_dir: Optional[str], reason: str) -> CommandExecutionResult:
+        result = CommandExecutionResult(
+            status="failed",
             return_code=None,
             stdout="",
             stderr="",
