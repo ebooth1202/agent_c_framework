@@ -1,3 +1,4 @@
+import os
 import time
 import uvicorn
 import logging
@@ -60,6 +61,7 @@ def run():
     """Entrypoint for the API"""
     logger.info(f"FastAPI Reload Setting is: {settings.RELOAD}. Starting Uvicorn")
     logger.info(f"Agent_C API server running on {settings.HOST}:{settings.PORT}")
+    logger.info(f"Working Directory: {os.getcwd()}")
     
     # If reload is enabled, we must use the import string
     if settings.RELOAD:
@@ -67,8 +69,8 @@ def run():
             "agent_c_api.main:app",
             host=settings.HOST,
             port=settings.PORT,
-            ssl_keyfile="./localhost+3-key.pem",
-            ssl_certfile="./localhost+3.pem",
+            ssl_keyfile="./agent_c_config/localhost_self_signed-key.pem",
+            ssl_certfile="./agent_c_config/localhost_self_signed.pem",
             reload=settings.RELOAD,
             log_level=LoggingManager.LOG_LEVEL.lower() if hasattr(LoggingManager, 'LOG_LEVEL') else "info"
         )
@@ -78,8 +80,8 @@ def run():
             app,
             host=settings.HOST,
             port=settings.PORT,
-            ssl_keyfile="./localhost+3-key.pem",
-            ssl_certfile="./localhost+3.pem",
+            ssl_keyfile="agent_c_config/localhost_self_signed-key.pem",
+            ssl_certfile="agent_c_config/localhost_self_signed.pem",
             log_level=LoggingManager.LOG_LEVEL.lower() if hasattr(LoggingManager, 'LOG_LEVEL') else "info"
         )
     logger.info(f"Exiting Run Loop: {time.time()}")

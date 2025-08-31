@@ -17,8 +17,8 @@ export default defineConfig({
   server: {
     host: true,
     https: {
-      key: fs.readFileSync('./localhost+3-key.pem'),
-      cert: fs.readFileSync('./localhost+3.pem'),
+      key: fs.readFileSync('../../../agent_c_config/localhost_self_signed-key.pem'),
+      cert: fs.readFileSync('../../../agent_c_config/localhost_self_signed.pem'),
     },
     strictPort: true,
     allowedHosts: process.env.VITE_ALLOWED_HOSTS
