@@ -10,21 +10,51 @@ export interface LoginCredentials {
 }
 
 /**
- * Login response from the /rt/login endpoint
+ * Login response from the /api/rt/login endpoint
  */
 export interface LoginResponse {
-  token: string;
-  heyGenToken?: string;
-  voices?: Array<{
-    id: string;
-    name?: string;
-    format: string;
-    sampleRate: number;
-  }>;
-  avatars?: Array<{
-    id: string;
+  agent_c_token: string;
+  heygen_token: string;
+  user: {
+    user_id: string;
+    user_name: string;
+    email: string | null;
+    first_name: string | null;
+    last_name: string | null;
+    is_active: boolean;
+    roles: string[];
+    groups: string[];
+    created_at: string | null;
+    last_login: string | null;
+  };
+  agents: Array<{
     name: string;
+    key: string;
+    agent_description: string | null;
+    category: string[];
   }>;
+  avatars: Array<{
+    avatar_id: string;
+    created_at: number;
+    default_voice: string;
+    is_public: boolean;
+    normal_preview: string;
+    pose_name: string;
+    status: string;
+  }>;
+  toolsets: Array<{
+    name: string;
+    key: string;
+    description: string | null;
+    category: string[];
+  }>;
+  voices: Array<{
+    voice_id: string;
+    vendor: string;
+    description: string;
+    output_format: string;
+  }>;
+  ui_session_id: string;
 }
 
 /**
@@ -160,16 +190,16 @@ export async function login(credentials: LoginCredentials): Promise<LoginRespons
 
     const data: LoginResponse = await response.json();
     
-    if (!data.token) {
-      throw new Error('No token received from login endpoint');
+    if (!data.agent_c_token) {
+      throw new Error('No agent_c_token received from login endpoint');
     }
 
-    // Store token in secure cookie
-    setCookie(AUTH_CONFIG.tokenCookieName, data.token);
+    // Store agent_c_token in secure cookie
+    setCookie(AUTH_CONFIG.tokenCookieName, data.agent_c_token);
 
     // Store HeyGen token if provided
-    if (data.heyGenToken) {
-      setCookie('agentc-heygen-token', data.heyGenToken, {
+    if (data.heygen_token) {
+      setCookie('agentc-heygen-token', data.heygen_token, {
         ...AUTH_CONFIG.tokenCookieOptions,
         maxAge: 60 * 60, // 1 hour for HeyGen token
       });

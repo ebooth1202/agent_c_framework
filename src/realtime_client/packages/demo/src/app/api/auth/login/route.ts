@@ -16,18 +16,48 @@ interface LoginCredentials {
  * Login response from the Agent C API
  */
 interface LoginResponse {
-  token: string;
-  heyGenToken?: string;
-  voices?: Array<{
-    id: string;
-    name?: string;
-    format: string;
-    sampleRate: number;
-  }>;
-  avatars?: Array<{
-    id: string;
+  agent_c_token: string;
+  heygen_token: string;
+  user: {
+    user_id: string;
+    user_name: string;
+    email: string | null;
+    first_name: string | null;
+    last_name: string | null;
+    is_active: boolean;
+    roles: string[];
+    groups: string[];
+    created_at: string | null;
+    last_login: string | null;
+  };
+  agents: Array<{
     name: string;
+    key: string;
+    agent_description: string | null;
+    category: string[];
   }>;
+  avatars: Array<{
+    avatar_id: string;
+    created_at: number;
+    default_voice: string;
+    is_public: boolean;
+    normal_preview: string;
+    pose_name: string;
+    status: string;
+  }>;
+  toolsets: Array<{
+    name: string;
+    key: string;
+    description: string | null;
+    category: string[];
+  }>;
+  voices: Array<{
+    voice_id: string;
+    vendor: string;
+    description: string;
+    output_format: string;
+  }>;
+  ui_session_id: string;
 }
 
 /**
@@ -96,11 +126,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate the response has a token
+    // Validate the response has an agent_c_token
     const loginResponse = responseData as LoginResponse;
-    if (!loginResponse.token) {
+    if (!loginResponse.agent_c_token) {
       return NextResponse.json(
-        { error: 'No token received from authentication server' },
+        { error: 'No agent_c_token received from authentication server' },
         { status: 500 }
       );
     }
