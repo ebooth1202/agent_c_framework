@@ -1,5 +1,5 @@
 {
-  "name": "next-shadcn-starter",
+  "name": "@agentc/demo-app",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -12,6 +12,9 @@
     "format:check": "pnpm prettier ./src --check"
   },
   "dependencies": {
+    "@agentc/realtime-core": "workspace:*",
+    "@agentc/realtime-react": "workspace:*",
+    "@agentc/realtime-ui": "workspace:*",
     "@hookform/resolvers": "^5.0.1",
     "axios": "^1.7.9",
     "js-cookie": "^3.0.5",
