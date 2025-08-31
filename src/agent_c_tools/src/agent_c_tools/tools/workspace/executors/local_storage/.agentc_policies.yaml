@@ -75,7 +75,7 @@ echo:
 
 node:
   validator: node
-  flags: ["-v","--version","--help"]
+  flags: ["-v","--version","--help", "-c""]
   deny_global_flags: ["-e","--eval","-p","--print"]
   default_timeout: 5
   env_overrides:
@@ -101,6 +101,7 @@ npm:
       ping:   { allowed_flags: [] }
       outdated: { allowed_flags: [] }
       test:   { allowed_flags: [] }
+      ls:    { allowed_flags: ["--depth","--json","--long"] }
 
       # Only allow "npm config get <key>"
       config:
@@ -109,8 +110,8 @@ npm:
 
       # --- Scripts (ALLOWLIST) ---
       run:
-        allowed_scripts: ["build","test","lint","format","typecheck", 'lint:fix']
-        deny_args: true         # no extra args (incl. after --)
+        allowed_scripts: ["build","test","lint","format","typecheck", 'lint:fix', 'test:run']
+        deny_args: false
 
       # --- Safe, lockfile-based install ---
       ci:
@@ -164,7 +165,7 @@ pnpm:
 
       # --- Scripts (ALLOWLIST) ---
       run:
-        allowed_scripts: ["build","test","lint", "lint:fix", "format","typecheck"]
+        allowed_scripts: ["build","test","lint", "lint:fix", "format","typecheck", "test:run"]
         deny_args: true         # no extra args (incl. after --)
 
       # --- Safe, lockfile-based install ---
@@ -367,6 +368,10 @@ lerna:
         - "--bail"
         - "--no-bail"
         - "--no-prefix"
+        - "--concurrency"
+        - "--concurrency=1"
+      allowed_scripts: [ "build","test","lint","format","typecheck", 'lint:fix', 'test:run' ]
+      deny_args: false
       timeout: 300
     version:
       flags:

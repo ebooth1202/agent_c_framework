@@ -15,9 +15,9 @@ class DynamicCommandToolset(Toolset):
     """
 
     def __init__(self, **kwargs: Any):
-        super().__init__(**kwargs, name="commands", use_prefix=False)
+        super().__init__(**kwargs, name="commands", use_prefix=False, section=DynamicCommandPromptSection())
         self.workspace_tool: Optional[WorkspaceTools] = None
-        self.section = DynamicCommandPromptSection()
+
 
         # Current MVP, hardcode your current allowlist
         self.whitelisted_commands: Dict[str, Dict[str, Any]] = {
@@ -136,6 +136,8 @@ class DynamicCommandToolset(Toolset):
                 working_directory=abs_path,
                 timeout=timeout,
             )
+            if result.status == "error":
+                self.logger.warning(f"Agent run command blocked: {full_command}")
 
             # 6) Optional UI: reuse the WorkspaceTools media helper so stdout shows in the panel.
             try:
