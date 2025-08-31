@@ -7,9 +7,9 @@ build-backend = "setuptools.build_meta"
 name = "agent_c-core"
 version = "0.1.3"
 dependencies = [
-    "pydantic==2.11.7",
-    "openai==1.86.0",
-    "tiktoken==0.9.0",
+    "pydantic>=2.9.2",
+    "openai>=1.101.0",
+    "tiktoken==0.11.0",
     "anthropic[bedrock]==0.54.0",
     "diskcache==5.6.3",
     "observable==1.0.3",
@@ -19,7 +19,8 @@ dependencies = [
     "soundfile",
     "pyyaml",
     "mcp>=1.6.0",
-    "structlog>=25.3.0"
+    "structlog>=25.3.0",
+    "httpx>=0.27",
 ]
 requires-python = ">=3.10"
 authors = [

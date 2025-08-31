@@ -13,12 +13,9 @@ from agent_c_tools.tools.web.util.expires_header import expires_header_to_cache_
 
 class WebTools(Toolset):
     """
-    WebTools class to fetch and format web page content.
-
-    Attributes:
-        default_formatter (ContentFormatter): Default formatter to use when no specific formatter is found.
-        formatters (List[ContentFormatter]): List of custom formatters for specific URL patterns.
-        cache (Cache): Cache object for storing responses.
+    Allows your agent to browse the web and retrieve content from websites. Your agent can fetch web pages,
+    extract readable content, handle different formats, and save web content to your workspace for later use.
+    This enables your agent to research topics, gather information, and stay updated with online content.
     """
 
     def __init__(self, **kwargs):
@@ -77,7 +74,7 @@ class WebTools(Toolset):
     async def _fetch_content(self, url: str, expire_secs: int, headers: Dict[str, str]) -> Tuple[Optional[str], Optional[str]]:
         if self.tool_cache.get(f"{url}_RAW") is not None:
             self.logger.debug(f'URL found in cache: {url}_RAW')
-            return self.tool_cache.get(f"{url}_RAW")
+            return None, self.tool_cache.get(f"{url}_RAW")
 
         async with httpx.AsyncClient() as client:
             try:
@@ -158,22 +155,15 @@ class WebTools(Toolset):
         tool_context = kwargs.get('tool_context')
         additional_headers: Dict[str, str] = kwargs.get('additional_headers', {})
         workspace: Optional[BaseWorkspace] = None
+        file_path = None
 
         if url is None:
             return "Error: URL is required."
 
         if save_to_path is not None:
-            error, workspace_name, file_path = self.workspace_tool.validate_and_get_workspace_path(save_to_path)
+            error, workspace, file_path = self.workspace_tool.validate_and_get_workspace_path(save_to_path)
             if error:
                 return f"Invalid save path: {error}"
-            try:
-                workspace: BaseWorkspace = self.workspace_tool.workspaces[workspace_name] if workspace_name else None
-            except KeyError:
-                self.logger.error(f"Workspace {workspace_name} not found in available workspaces.")
-                return f"Error: Workspace {workspace_name} not found."
-
-            if workspace is None:
-                return f"Error: No workspace found with the name: {workspace_name}"
 
 
         if save_only and save_to_path is None:
@@ -189,7 +179,7 @@ class WebTools(Toolset):
 
         token_count = tool_context['agent_runtime'].count_tokens(content)
 
-        if workspace is not None:
+        if workspace is not None and file_path is not None:
             await workspace.write(file_path, mode='write', data=content)
             if save_only:
                 return f"{url} content saved to {save_to_path}. There are {token_count} tokens in the content."

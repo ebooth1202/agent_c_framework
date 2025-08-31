@@ -16,6 +16,9 @@ from .validators.dotnet_validator import DotnetCommandValidator
 from .validators.git_validator import GitCommandValidator
 from .validators.node_validator import NodeCommandValidator
 from .validators.npm_validator import NpmCommandValidator
+from .validators.npx_validator import NpxCommandValidator
+from .validators.pnpm_validator import PnpmCommandValidator
+from .validators.lerna_validator import LernaCommandValidator
 from .validators.os_basic_validator import OSBasicValidator
 from .validators.pytest_validator import PytestCommandValidator
 
@@ -221,6 +224,9 @@ class SecureCommandExecutor:
             "os_basic": OSBasicValidator(),
             "node": NodeCommandValidator(),
             "npm": NpmCommandValidator(),
+            "npx": NpxCommandValidator(),
+            "pnpm": PnpmCommandValidator(),
+            "lerna": LernaCommandValidator(),
             "dotnet": DotnetCommandValidator(),
         }
 
@@ -348,14 +354,13 @@ class SecureCommandExecutor:
         safe_env = policy.get("safe_env") or {}
         effective_env.update({k: str(v) for (k, v) in safe_env.items()})
 
+        if override_env:
+            effective_env.update(override_env)
+
         # Let validator override / adjust environment
         if hasattr(validator, "adjust_environment"):
             # type: ignore[attr-defined]
             effective_env = validator.adjust_environment(effective_env, parts, policy)  # noqa
-
-        # Finally apply user-supplied env (last writer wins)
-        if override_env:
-            effective_env.update(override_env)
 
         # Ensure Windows can resolve .cmd/.bat if caller didn't supply PATHEXT
         if self.is_windows:
@@ -372,6 +377,10 @@ class SecureCommandExecutor:
 
         # Resolve the executable using the effective PATH/PATHEXT
         resolved = self._resolve_executable(parts[0], effective_env)
+        if parts[0] == 'npm':
+            parts.append('--no-color')
+
+
         if not resolved:
             return self._blocked(command, working_directory, f"Executable not found: {parts[0]}")
         parts[0] = resolved

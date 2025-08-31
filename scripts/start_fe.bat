@@ -19,8 +19,8 @@ IF "%3"=="" (
     SET RAG_PORT=%2
 )
 
-SET VITE_API_URL=http://localhost:%API_PORT%/api/v1
-SET VITE_RAG_API_URL=http://localhost:%RAG_PORT%/api/v1
+SET VITE_API_URL=https://localhost:%API_PORT%/api/v1
+SET VITE_RAG_API_URL=https://localhost:%RAG_PORT%/api/v1
 cd src\agent_c_api_ui\agent_c_react_client
 
 :: Run vite with the specified port

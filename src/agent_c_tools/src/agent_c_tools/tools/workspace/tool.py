@@ -18,10 +18,9 @@ from agent_c_tools.tools.workspace.context import WorkspaceToolsContext
 
 class WorkspaceTools(Toolset):
     """
-    WorkspaceTools allows the model to read / write data to one or more workspaces.
-    This allows us to abstract things like S3, Azure Storage and the like.
-
-    Uses UNC-style paths (//WORKSPACE/path) to reference files and directories.
+    Gives your agent comprehensive file management capabilities across multiple workspaces and storage systems.
+    Your agent can read, write, search, organize files and folders, manage projects, and work with both local
+    and cloud storage seamlessly using simple path-based commands.
     """
 
     UNC_PATH_PATTERN = r'^//([^/]+)(?:/(.*))?$'

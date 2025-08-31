@@ -14,6 +14,7 @@ from agent_c.models.input.file_input import FileInput
 from agent_c.util.logging_utils import LoggingManager
 
 
+
 class AudioInput(FileInput):
     """
     A model to handle audio input for completion calls

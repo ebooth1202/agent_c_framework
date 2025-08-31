@@ -38,10 +38,9 @@ class Constants:
 
 class MarkdownToHtmlReportTools(Toolset):
     """
-    Toolset for generating interactive HTML viewers from markdown files in a workspace.
-
-    Now uses the new registry-based architecture for improved link handling
-    and maintainability.
+    Transforms your markdown documents into beautiful, interactive HTML reports and Word documents.
+    Your agent can create professional presentations, documentation, and reports that are easy to share,
+    navigate, and read across different platforms and devices.
     """
 
     def __init__(self, **kwargs):

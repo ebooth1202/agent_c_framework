@@ -4,10 +4,112 @@
       "vendor": "openai",
       "models": [
         {
+          "id": "gpt-5",
+          "model_type": "chat",
+          "ui_name": "GPT-5",
+          "description": "Latest OpenAI flagship model for complex tasks. It is well suited for problem solving across domains.",
+          "parameters": {
+            "reasoning_effort": {
+              "default": "medium",
+              "values": [
+                "low",
+                "medium",
+                "high"
+              ],
+              "required": true
+            },
+            "max_completion_tokens": {
+              "min": 1000,
+              "max": 100000,
+              "default": 100000,
+              "required": false
+            }
+          },
+          "context_window": 400000,
+          "capabilities": {
+            "supports_tools": true,
+            "multi_modal": true
+          },
+          "allowed_inputs": {
+            "image": true,
+            "video": false,
+            "audio": false,
+            "file": false
+          }
+        },
+        {
+          "id": "gpt-5-mini",
+          "model_type": "chat",
+          "ui_name": "GPT-5 Mini",
+          "description": "Mini version of the latest OpenAI flagship model for complex tasks. It is well suited for problem solving across domains.",
+          "parameters": {
+            "reasoning_effort": {
+              "default": "medium",
+              "values": [
+                "low",
+                "medium",
+                "high"
+              ],
+              "required": true
+            },
+            "max_completion_tokens": {
+              "min": 1000,
+              "max": 100000,
+              "default": 100000,
+              "required": false
+            }
+          },
+          "context_window": 400000,
+          "capabilities": {
+            "supports_tools": true,
+            "multi_modal": true
+          },
+          "allowed_inputs": {
+            "image": true,
+            "video": false,
+            "audio": false,
+            "file": false
+          }
+        },
+        {
+          "id": "gpt-5-nano",
+          "model_type": "chat",
+          "ui_name": "GPT-5 Nano",
+          "description": "Nano version of the latest OpenAI flagship model for complex tasks. It is well suited for problem solving across domains.",
+          "parameters": {
+            "reasoning_effort": {
+              "default": "medium",
+              "values": [
+                "low",
+                "medium",
+                "high"
+              ],
+              "required": true
+            },
+            "max_completion_tokens": {
+              "min": 1000,
+              "max": 100000,
+              "default": 100000,
+              "required": false
+            }
+          },
+          "context_window": 400000,
+          "capabilities": {
+            "supports_tools": true,
+            "multi_modal": true
+          },
+          "allowed_inputs": {
+            "image": true,
+            "video": false,
+            "audio": false,
+            "file": false
+          }
+        },
+        {
           "id": "gpt-4.1",
           "model_type": "chat",
           "ui_name": "GPT-4.1",
-          "description": "Latest GPT-4 OpenAI flagship model for complex tasks. It is well suited for problem solving across domains.",
+          "description": "Last GPT-4 OpenAI  model for complex tasks. It is well suited for problem solving across domains.",
           "parameters": {
             "temperature": {
               "default": 0.5,
@@ -38,7 +140,7 @@
           "id": "gpt-4.1-mini",
           "model_type": "chat",
           "ui_name": "GPT-4.1-mini",
-          "description": "Mini version of the latest GPT-4 OpenAI flagship model for complex tasks. It is well suited for problem solving across domains.",
+          "description": "Mini version of the last GPT-4 OpenAI model for complex tasks. It is well suited for problem solving across domains.",
           "parameters": {
             "temperature": {
               "default": 0.5,
@@ -69,7 +171,7 @@
           "id": "gpt-4.1-nano",
           "model_type": "chat",
           "ui_name": "GPT-4.1-Nano",
-          "description": "Nano version of the latest GPT-4 OpenAI flagship model for complex tasks. It is well suited for problem solving across domains.",
+          "description": "Nano version of the last GPT-4 OpenAI model for complex tasks. It is well suited for problem solving across domains.",
           "parameters": {
             "temperature": {
               "default": 0.5,
@@ -278,11 +380,11 @@
               "required": true
             },
             "max_tokens": {
-              "default": 8192,
+              "default": 64000,
               "limits": {
                 "min": 1000,
                 "max": {
-                  "standard": 8192,
+                  "standard": 64000,
                   "with_extended_thinking": 64000
                 }
               },
@@ -302,9 +404,9 @@
           }
         },
         {
-          "id": "claude-opus-4-20250514",
+          "id": "claude-opus-4-1-20250805",
           "model_type": "chat",
-          "ui_name": "Claude 4 Opus",
+          "ui_name": "Claude 4.1 Opus",
           "description": "Powerful, large model for complex challenges",
           "parameters": {
             "extended_thinking": {
@@ -317,11 +419,11 @@
               "required": true
             },
             "max_tokens": {
-              "default": 8192,
+              "default": 64000,
               "limits": {
                 "min": 1000,
                 "max": {
-                  "standard": 8192,
+                  "standard": 64000,
                   "with_extended_thinking": 64000
                 }
               },

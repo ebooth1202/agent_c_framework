@@ -23,14 +23,7 @@ class WorkspaceSection(PromptSection):
                     "  - This supports nested dictionaries\n"
                     "- **File Management**: Use `cp` to copy and `mv` to move files or directories\n"
                     "  - Both source and destination must be in the same workspace\n"    
-                    "- Workspace text files are UTF-8 encoded\n"
-                    "- **Command Execution**: Use `run_command` to execute allowlisted commands only\n"
-                    "  - Only specific pre-approved commands are allowed (git, pytest, npm, dotnet, node, etc.)\n"
-                    "  - Each command has restricted subcommands and flags for security\n"
-                    "  - Arbitrary shell commands, pipes, redirection, and scripting are NOT supported\n"
-                    "  - Examples of allowed commands: 'git status', 'npm test', 'pytest --help'\n"
-                    "  - Use platform-agnostic tools when possible (e.g., 'git ls-files \"*.md\"' instead of find/where)\n"
-                    "  - Prefer optimized outputs, e.g., 'git status -s' for concise status or 'git log --oneline -n 50' (and avoid -p unless truly needed)\n"
+                    "- Workspace text files are UTF-8 encoded by default\n"                    
                     "\n## CRITICAL: Workspace Efficiency Rules:\n"
                     "- Prefer `inspect_code` over reading entire code files in Python, or C# code.\n" 
                     "   - This will give you the signatures and doc strings for code files"
@@ -39,9 +32,7 @@ class WorkspaceSection(PromptSection):
                     "- You can use the strings you get from `read_lines` to call `replace_strings`"
                     "- Small changes to existing files should be made using the `replace_strings` methods. If possible\n"
                     "  - Make ALL changes to the same file at once.\n"
-                    "  - Batching saves money and time!.\n"
-                    "- If you *must* write and entire file use the `write` tool.\n")
-
+                    "  - Batching saves money and time!.\n")
         super().__init__(template=TEMPLATE, required=True, name="Workspaces", render_section_header=True, **data)
 
     @property_bag_item

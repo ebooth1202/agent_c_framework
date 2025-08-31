@@ -8,6 +8,11 @@ from .base import AgentAssistToolBase
 from .prompt import AgentAssistSection
 
 class AgentAssistTools(AgentAssistToolBase):
+    """
+    Enables your agent to collaborate with other specialized AI agents and assistants to solve complex problems.
+    Your agent can delegate specific tasks to expert agents, have ongoing conversations with them, or get one-time
+    assistance with particular challenges that require specialized knowledge or capabilities.
+    """
     def __init__(self, **kwargs: Any):
         if not 'name' in kwargs:
             kwargs['name'] = 'aa'

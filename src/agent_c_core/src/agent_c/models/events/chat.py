@@ -1,6 +1,7 @@
 from pydantic import Field
 from typing import Optional, List, Dict, Any
 
+from agent_c.models.events import BaseEvent
 from agent_c.models.events.session_event import SessionEvent
 
 class SystemPromptEvent(SessionEvent):
@@ -95,6 +96,10 @@ class CompleteThoughtEvent(TextDeltaEvent):
     def __init__(self, **data):
         super().__init__(type = "complete_thought", **data)
         self.role = self.role + " (thought)"
+
+class AudioInputDeltaEvent(BaseEvent):
+    content: str = Field(..., description="A base64s encoded chunk of audio data")
+    content_type: str = Field("audio/L16", description="The type of audio data")
 
 class ReceivedAudioDeltaEvent(SessionEvent):
     """

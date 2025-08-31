@@ -10,6 +10,7 @@ from fastapi_cache.backends.inmemory import InMemoryBackend
 
 
 from agent_c_api.config.env_config import settings
+from agent_c_api.core.realtime_session_manager import RealtimeSessionManager
 from agent_c_api.core.util.logging_utils import LoggingManager
 from agent_c_api.core.agent_manager import UItoAgentBridgeManager
 from agent_c_api.core.util.middleware_logging import APILoggingMiddleware
@@ -101,14 +102,31 @@ def create_application(router: APIRouter, **kwargs) -> FastAPI:
             logger.warning(f"   Or check connection settings in environment configuration")
         
         # Shared AgentManager instance.
-        logger.info("🤖 Initializing Agent Manager...")
+        logger.info("🤖 Initializing Chat Manager...")
         lifespan_app.state.agent_manager = UItoAgentBridgeManager()
-        logger.info("✅ Agent Manager initialized successfully")
+        logger.info("✅ Chat Manager initialized successfully")
+
+        logger.info("🤖 Initializing Realtime Manager...")
+        lifespan_app.state.realtime_manager = RealtimeSessionManager()
+        logger.info("✅ Realtime Manager initialized successfully")
         
         # Initialize FastAPICache with InMemoryBackend
         logger.info("💾 Initializing FastAPI Cache...")
         FastAPICache.init(InMemoryBackend(), prefix="agent_c_api_cache")
         logger.info("✅ FastAPICache initialized with InMemoryBackend")
+        
+        # Initialize authentication database
+        logger.info("🗄️ Initializing authentication database...")
+        from agent_c_api.config.database import initialize_database
+        await initialize_database()
+        logger.info("✅ Authentication database initialized")
+        
+        # Initialize authentication service
+        logger.info("🔐 Initializing Authentication Service...")
+        from agent_c_api.core.services.auth_service import AuthService
+        lifespan_app.state.auth_service = AuthService()
+        await lifespan_app.state.auth_service.initialize()
+        logger.info("✅ Authentication Service initialized successfully")
         
         # Log startup completion
         logger.info("🎉 Application startup completed successfully")
@@ -116,8 +134,28 @@ def create_application(router: APIRouter, **kwargs) -> FastAPI:
 
         yield
 
-        # Shutdown: Close Redis client connections
+        # Shutdown: Close authentication service, database and Redis connections
         logger.info("🔄 Application shutdown initiated...")
+        
+        # Close authentication service
+        logger.info("🔐 Closing Authentication Service...")
+        try:
+            if hasattr(lifespan_app.state, 'auth_service'):
+                await lifespan_app.state.auth_service.close()
+            logger.info("✅ Authentication Service closed successfully")
+        except Exception as e:
+            logger.error(f"❌ Error during Authentication Service cleanup: {e}")
+        
+        # Close database connections
+        logger.info("🗄️ Closing database connections...")
+        try:
+            from agent_c_api.config.database import close_database
+            await close_database()
+            logger.info("✅ Database connections closed successfully")
+        except Exception as e:
+            logger.error(f"❌ Error during database cleanup: {e}")
+        
+        # Close Redis connections
         logger.info("🔌 Closing Redis connections...")
         try:
             await RedisConfig.close_client()
@@ -172,11 +210,25 @@ def create_application(router: APIRouter, **kwargs) -> FastAPI:
     kwargs.update(openapi_metadata)
     app = FastAPI(lifespan=lifespan, **kwargs)
 
-    origin_regex = get_origins_regex()
-    logger.info(f"CORS allowed host regex: {origin_regex}")
+    #origin_regex = get_origins_regex()
+    allowlist = [
+        "http://localhost:5173",
+        "https://localhost:5173",
+        "http://localhost:3000",
+        "https://localhost:3000",
+        "http://127.0.0.1:5173",
+        "https://127.0.0.1:5173",
+        "http://127.0.0.1:3000",
+        "https://127.0.0.1:3000",
+        "http://[::1]:5173",
+        "https://[::1]:5173",
+        "http://[::1]:3000",
+        "https://[::1]:3000",
+    ]
+    #logger.info(f"CORS allowed host regex: {origin_regex}")
     app.add_middleware(
         CORSMiddleware,
-        allow_origin_regex=origin_regex,
+        allow_origins=allowlist,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

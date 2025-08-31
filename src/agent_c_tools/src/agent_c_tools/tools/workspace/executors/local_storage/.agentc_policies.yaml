@@ -73,7 +73,7 @@ echo:
 
 # ---- Language-specific ----
 
-node_common: &node_common
+node:
   validator: node
   flags: ["-v","--version","--help"]
   deny_global_flags: ["-e","--eval","-p","--print"]
@@ -82,8 +82,15 @@ node_common: &node_common
     NODE_DISABLE_COLORS: "1"
     NO_COLOR: "1"
     FORCE_COLOR: "0"
-node:    *node_common
-nodejs:  *node_common
+nodejs:
+  validator: node
+  flags: [ "-v","--version","--help" ]
+  deny_global_flags: [ "-e","--eval","-p","--print" ]
+  default_timeout: 5
+  env_overrides:
+    NODE_DISABLE_COLORS: "1"
+    NO_COLOR: "1"
+    FORCE_COLOR: "0"
 
 npm:
   validator: npm
@@ -93,6 +100,7 @@ npm:
       list:   { allowed_flags: ["--depth","--json"] }
       ping:   { allowed_flags: [] }
       outdated: { allowed_flags: [] }
+      test:   { allowed_flags: [] }
 
       # Only allow "npm config get <key>"
       config:
@@ -101,7 +109,7 @@ npm:
 
       # --- Scripts (ALLOWLIST) ---
       run:
-        allowed_scripts: ["build","test","lint","format","typecheck"]
+        allowed_scripts: ["build","test","lint","format","typecheck", 'lint:fix']
         deny_args: true         # no extra args (incl. after --)
 
       # --- Safe, lockfile-based install ---
@@ -134,6 +142,53 @@ npm:
     NPM_CONFIG_UPDATE_NOTIFIER: "false"
     NPM_CONFIG_PREFIX: ".npm-prefix"
     NPM_CONFIG_CACHE: ".npm-cache"
+    # ensure Windows can resolve .cmd if the parent env omitted it
+    PATHEXT: ".COM;.EXE;.BAT;.CMD"
+
+pnpm:
+  validator: pnpm
+  root_flags: ["-v","--version","--help"]
+  subcommands:
+      view:   { allowed_flags: ["--json"] }
+      list:   { allowed_flags: ["--depth","--json","--long"] }
+      ping:   { allowed_flags: [] }
+      outdated: { allowed_flags: [] }
+      test:   { allowed_flags: [] }
+      why:    { allowed_flags: ["--json","--long"] }
+      licenses: { allowed_flags: ["--json","--long"] }
+
+      # Only allow "pnpm config get <key>"
+      config:
+        get_only: true
+        allowed_flags: []       # keep empty; we gate on 'get'
+
+      # --- Scripts (ALLOWLIST) ---
+      run:
+        allowed_scripts: ["build","test","lint", "lint:fix", "format","typecheck"]
+        deny_args: true         # no extra args (incl. after --)
+
+      # --- Safe, lockfile-based install ---
+      install:
+        enabled: true
+        require_no_packages: true
+        require_flags: ["--ignore-scripts"]
+        allowed_flags: ["--ignore-scripts","--prefer-offline","--frozen-lockfile","--reporter","--dev","--prod"]
+
+  # pnpm doesn't have ci command like npm, but has similar restrictions
+  # keep 'i' and 'add' denied unless you want them—the validator aliases them to 'install'
+  deny_subcommands: ["exec","publish","update","audit","login","adduser","whoami","pack","link","unlink","patch","patch-commit"]
+
+  default_timeout: 120
+  env_overrides:
+    PNPM_CONFIG_COLOR: "false"      # pnpm itself: no color
+    PNPM_CONFIG_PROGRESS: "false"   # no progress bars
+    PNPM_CONFIG_LOGLEVEL: "warn"    # or "error" to be even quieter
+    NO_COLOR: "1"                   # many tools respect this
+    FORCE_COLOR: "0"                # chalk/colorette/etc. honor this
+    NODE_DISABLE_COLORS: "1"        # belt-and-suspenders for some libs
+    CI: "1"                         # many CLIs reduce interactivity/spinners
+    PNPM_CONFIG_FUND: "false"
+    PNPM_CONFIG_UPDATE_NOTIFIER: "false"
     # ensure Windows can resolve .cmd if the parent env omitted it
     PATHEXT: ".COM;.EXE;.BAT;.CMD"
 
@@ -180,3 +235,174 @@ dotnet:
     TERM: "dumb"
     # Stable, English output (helps tokenization & parsing):
     DOTNET_CLI_UI_LANGUAGE: "en-US"
+
+npx:
+  allowed_packages:
+    - "@angular/cli"
+    - "create-react-app"
+    - "create-next-app"
+    - "@vue/cli"
+    - "typescript"
+    - "ts-node"
+    - "eslint"
+    - "prettier"
+    - "jest"
+    - "mocha"
+    - "webpack"
+    - "vite"
+    - "rollup"
+    - "parcel"
+    - "serve"
+    - "http-server"
+  flags:
+    - "--yes"
+    - "-y"
+    - "--package"
+    - "-p"
+    - "--call"
+    - "-c"
+    - "--shell"
+    - "-s"
+    - "--shell-auto-fallback"
+    - "--ignore-existing"
+    - "--quiet"
+    - "-q"
+    - "--npm"
+    - "--node-options"
+  default_timeout: 120
+  env_overrides:
+    NPM_CONFIG_COLOR: "false"
+    NPM_CONFIG_PROGRESS: "false"
+    NO_COLOR: "1"
+    FORCE_COLOR: "0"
+    NODE_DISABLE_COLORS: "1"
+    CI: "1"
+    NPM_CONFIG_FUND: "false"
+    NPM_CONFIG_AUDIT: "false"
+    NPM_CONFIG_UPDATE_NOTIFIER: "false"
+
+lerna:
+  flags:
+    - "--version"
+    - "-v"
+    - "--help"
+    - "-h"
+    - "--loglevel"
+    - "--concurrency"
+    - "--scope"
+    - "--ignore"
+    - "--include-dependencies"
+    - "--include-dependents"
+    - "--since"
+  subcommands:
+    list:
+      flags:
+        - "--json"
+        - "--ndjson"
+        - "--parseable"
+        - "-p"
+        - "--long"
+        - "-l"
+        - "--all"
+        - "-a"
+        - "--graph"
+        - "--toposort"
+      timeout: 30
+    info:
+      flags:
+        - "--json"
+      timeout: 15
+    bootstrap:
+      flags:
+        - "--hoist"
+        - "--strict"
+        - "--nohoist"
+        - "--ignore-scripts"
+        - "--ignore-prepublish"
+        - "--ignore-engines"
+        - "--npm-client"
+        - "--use-workspaces"
+      timeout: 300
+    clean:
+      flags:
+        - "--yes"
+        - "-y"
+      timeout: 60
+    ls:
+      flags:
+        - "--json"
+        - "--ndjson"
+        - "--parseable"
+        - "-p"
+        - "--long"
+        - "-l"
+        - "--all"
+        - "-a"
+        - "--graph"
+        - "--toposort"
+      timeout: 30
+    changed:
+      flags:
+        - "--json"
+        - "--ndjson"
+        - "--parseable"
+        - "-p"
+        - "--long"
+        - "-l"
+        - "--all"
+        - "-a"
+        - "--graph"
+        - "--toposort"
+        - "--include-merged-tags"
+      timeout: 30
+    diff:
+      flags:
+        - "--ignore-changes"
+      timeout: 45
+    run:
+      flags:
+        - "--npm-client"
+        - "--stream"
+        - "--parallel"
+        - "--bail"
+        - "--no-bail"
+        - "--no-prefix"
+      timeout: 300
+    version:
+      flags:
+        - "--conventional-commits"
+        - "--changelog-preset"
+        - "--exact"
+        - "--force-publish"
+        - "--git-remote"
+        - "--create-release"
+        - "--dry-run"
+        - "--json"
+        - "--loglevel"
+        - "--no-changelog"
+        - "--no-commit-hooks"
+        - "--no-git-tag-version"
+        - "--no-push"
+        - "--preid"
+        - "--sign-git-commit"
+        - "--sign-git-tag"
+        - "--tag-version-prefix"
+        - "--yes"
+        - "-y"
+      timeout: 120
+  deny_subcommands:
+    - "publish"
+    - "exec"
+    - "import"
+    - "create"
+    - "add"
+    - "link"
+  default_timeout: 180
+  env_overrides:
+    LERNA_DISABLE_PROGRESS: "1"
+    NPM_CONFIG_COLOR: "false"
+    NPM_CONFIG_PROGRESS: "false"
+    NO_COLOR: "1"
+    FORCE_COLOR: "0"
+    NODE_DISABLE_COLORS: "1"
+    CI: "1"

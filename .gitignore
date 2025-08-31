@@ -1,4 +1,9 @@
 # Byte-compiled / optimized / DLL files
+*_auth.db
+.agent_c.meta.yaml
+agent_c_config/saved_sessions
+agent_c_config/*cache*
+agent_c_config/users
 centric_tools
 __pycache__/
 *.py[cod]
@@ -178,7 +183,7 @@ src/agent_c_api_ui/agent_c_react_client/node_modules/
 
 node_modules
 package-lock.json 
-package.json
+
 
 # Ignore all log files
 logs/

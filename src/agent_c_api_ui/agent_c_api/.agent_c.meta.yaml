@@ -1,0 +1,541 @@
+_plans:
+  auth_service_lifecycle_integration:
+    created_at: '2025-08-23T23:27:39.432885'
+    description: Refactor auth service and repository to follow the established app
+      lifecycle pattern used by other services. Initialize once during app startup
+      and store in app.state for dependency injection, replacing per-request instantiation.
+    id: fc82c7be-8427-49c6-b641-162a888546c4
+    lessons_learned:
+    - created_at: '2025-08-23T23:39:10.794983'
+      id: 9dbefe90-48aa-4c41-bab8-273653467e71
+      learned_task_id: 0c95fa3e-d8dc-4e73-ab7f-8f71d589de9a
+      lesson: When adding imports to establish dependency injection, be mindful of
+        circular dependencies. Use TYPE_CHECKING imports for type hints when the import
+        would create a circular dependency chain. This maintains IDE support and type
+        safety while preventing runtime import cycles.
+    tasks:
+      0c95fa3e-d8dc-4e73-ab7f-8f71d589de9a:
+        child_tasks: []
+        completed: true
+        completion_report: "Successfully updated avatar auth endpoints to use dependency\
+          \ injection and resolved circular dependency:\n\n**Endpoints Updated:**\n\
+          ✅ POST /login in `src/agent_c_api/api/rt/session.py`\n  - Replaced manual\
+          \ AuthService(db_session) instantiation \n  - Updated to use `auth_service:\
+          \ AuthService = Depends(get_auth_service)`\n  - Removed unnecessary database\
+          \ session dependency\n  - Cleaned up imports\n\n**Circular Dependency Resolution:**\n\
+          ✅ Moved AuthService import to TYPE_CHECKING block\n  - Import only executes\
+          \ during type checking (mypy, IDEs)\n  - Breaks circular dependency chain\
+          \ at runtime\n  - Maintains full type safety for development\n  - Dependency\
+          \ injection still works perfectly\n\n**Import Chain Fixed:**\n- core.agent_manager\
+          \ → api.rt → core.services → core.repositories → api.v2 → core.agent_manager\n\
+          - TYPE_CHECKING import breaks the chain while preserving type hints\n\n\
+          **Changes Made:**\n- Added TYPE_CHECKING import from typing\n- Moved AuthService\
+          \ import inside TYPE_CHECKING block\n- Updated imports to include get_auth_service\
+          \ dependency\n- Removed database session parameter from login endpoint\n\
+          - Maintained all existing functionality\n\n**Files Modified:**\n- `src/agent_c_api/api/rt/session.py`\n\
+          \nThe auth service integration is now complete with no circular dependencies\
+          \ and follows best practices for type safety."
+        completion_signoff_by: null
+        context: '- Update all endpoints in api/rt/auth.py or wherever avatar auth
+          endpoints are located
+
+          - Replace manual AuthService(db_session) instantiation with Depends(get_auth_service)
+
+          - Remove database session dependencies that are no longer needed
+
+          - Test that endpoints still work correctly'
+        created_at: '2025-08-23T23:28:07.071716'
+        description: Update existing avatar auth endpoints to use the new get_auth_service
+          dependency instead of manual AuthService instantiation
+        id: 0c95fa3e-d8dc-4e73-ab7f-8f71d589de9a
+        parent_id: null
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: 4. Update avatar auth endpoints to use dependency injection
+        updated_at: '2025-08-23T23:39:03.866949'
+      656aafeb-4f85-41ad-b6e6-3ff4e4eb2736:
+        child_tasks: []
+        completed: true
+        completion_report: "Successfully added auth service dependency injection:\n\
+          \n**Implementation:**\n✅ Added get_auth_service() function to api/dependencies.py\n\
+          ✅ Follows exact same pattern as existing get_agent_manager() function\n\
+          ✅ Retrieves AuthService from request.app.state.auth_service\n✅ Proper type\
+          \ hints for IDE support and documentation\n✅ Clean, simple implementation\
+          \ without unnecessary complexity\n\n**Integration:**\n- Function placed\
+          \ alongside other app state dependencies\n- Consistent naming and documentation\
+          \ style\n- No additional error handling needed (handled at app lifecycle\
+          \ level)\n- Ready for use in FastAPI endpoints via Depends()\n\n**Usage\
+          \ Example:**\n```python\nasync def endpoint(auth_service: AuthService =\
+          \ Depends(get_auth_service)):\n    return await auth_service.login(username,\
+          \ password)\n```\n\n**Files Modified:**\n- `src/agent_c_api/api/dependencies.py`\n\
+          \nReady for Task 4 to update existing avatar auth endpoints."
+        completion_signoff_by: null
+        context: '- Add get_auth_service() function to api/dependencies.py
+
+          - Follow same pattern as existing get_agent_manager() function
+
+          - Return AuthService from request.app.state.auth_service
+
+          - Add proper type hints'
+        created_at: '2025-08-23T23:27:59.983908'
+        description: Create get_auth_service dependency function that retrieves AuthService
+          from app.state, following the same pattern as get_agent_manager
+        id: 656aafeb-4f85-41ad-b6e6-3ff4e4eb2736
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: 3. Add auth service dependency injection
+        updated_at: '2025-08-23T23:30:30.388994'
+      e0f42e48-c6e3-40a0-b132-6884ae91d87b:
+        child_tasks: []
+        completed: true
+        completion_report: "Successfully refactored AuthService for singleton lifecycle:\n\
+          \n**Changes Made:**\n✅ Updated constructor to not require db_session parameter\n\
+          ✅ Added async initialize() method for startup initialization\n✅ Added async\
+          \ close() method for shutdown cleanup  \n✅ Added _ensure_initialized() validation\
+          \ method\n✅ Added initialization checks to all public methods\n✅ Service\
+          \ now manages its own database session lifecycle\n\n**Key Features:**\n\
+          - Service creates its own database session during initialize()\n- Proper\
+          \ error handling and logging throughout initialization/cleanup\n- Runtime\
+          \ validation ensures service is initialized before use\n- Compatible with\
+          \ app lifecycle pattern used by other services\n- Thread-safe singleton\
+          \ design\n\n**Files Modified:**\n- `src/agent_c_api/core/services/auth_service.py`\n\
+          \nReady for integration into app lifecycle in setup.py."
+        completion_signoff_by: null
+        context: '- Add session management to AuthService constructor
+
+          - Add close() method for proper cleanup during app shutdown
+
+          - Ensure thread-safety for singleton usage
+
+          - Keep existing method signatures compatible'
+        created_at: '2025-08-23T23:27:47.073353'
+        description: Update AuthService class to manage its own database session lifecycle
+          and add proper cleanup methods for app shutdown
+        id: e0f42e48-c6e3-40a0-b132-6884ae91d87b
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: 1. Modify AuthService for singleton lifecycle
+        updated_at: '2025-08-23T23:29:20.226739'
+      f9aa989c-5d60-4e34-974d-d808c41afe7a:
+        child_tasks: []
+        completed: true
+        completion_report: 'Successfully integrated AuthService into app lifecycle
+          in setup.py:
+
+
+          **Startup Integration:**
+
+          ✅ Added AuthService initialization after database initialization
+
+          ✅ Creates AuthService instance and calls initialize() method
+
+          ✅ Stores in app.state.auth_service for dependency injection
+
+          ✅ Proper error handling and logging
+
+
+          **Shutdown Integration:**
+
+          ✅ Added AuthService cleanup in shutdown section
+
+          ✅ Calls close() method to properly cleanup resources
+
+          ✅ Handles case where service may not exist
+
+          ✅ Proper error handling and logging
+
+
+          **Integration Pattern:**
+
+          - Follows same pattern as agent_manager and realtime_manager
+
+          - Initialized once during app startup
+
+          - Stored in app.state for access via dependencies
+
+          - Proper cleanup during app shutdown
+
+          - Comprehensive logging for monitoring
+
+
+          **Files Modified:**
+
+          - `src/agent_c_api/core/setup.py`
+
+
+          **Order of Operations:**
+
+          1. Database initialization (creates tables)
+
+          2. AuthService initialization (creates service with database session)
+
+          3. Service stored in app.state for dependency injection
+
+
+          Ready for dependency injection implementation in Task 3.'
+        completion_signoff_by: null
+        context: '- Initialize AuthService in lifespan startup section
+
+          - Store in app.state.auth_service
+
+          - Add cleanup in shutdown section
+
+          - Follow same pattern as agent_manager and realtime_manager
+
+          - Add proper logging for startup/shutdown'
+        created_at: '2025-08-23T23:27:53.221832'
+        description: Initialize AuthService once during app startup and store in app.state,
+          with proper cleanup during shutdown
+        id: f9aa989c-5d60-4e34-974d-d808c41afe7a
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: 2. Add AuthService to app lifecycle in setup.py
+        updated_at: '2025-08-23T23:29:59.356663'
+    title: Auth Service App Lifecycle Integration
+    updated_at: '2025-08-23T23:39:10.795008'
+  realtime_api_update:
+    created_at: '2025-08-26T11:47:01.389252'
+    description: Update the realtime API implementation guide to reflect recent changes
+      including new RealtimeLoginResponse fields, HTTPS requirement, new client events,
+      audio streaming, turn management, voice models, and session handling improvements.
+    id: d7bfef32-4ea1-49b4-b6d6-153b5345da0f
+    lessons_learned: []
+    tasks:
+      5f4689da-02c3-405e-8d29-cde41802a24c:
+        child_tasks: []
+        completed: true
+        completion_report: Added comprehensive Binary Audio Streaming section explaining
+          PCM input format, TTS output streaming, implementation examples, and the
+          complete audio processing pipeline from client to server and back.
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-08-26T11:47:22.582259'
+        description: Add section explaining binary WebSocket audio packet support,
+          including PCM input and TTS output streaming capabilities.
+        id: 5f4689da-02c3-405e-8d29-cde41802a24c
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 4
+        title: Document Binary Audio Streaming
+        updated_at: '2025-08-26T11:50:02.700353'
+      7ad0f4ad-87fe-448f-9137-bbd90f566b1b:
+        child_tasks: []
+        completed: true
+        completion_report: Added documentation for special voice models including
+          the 'avatar' voice model for HeyGen integration and the 'none' voice model
+          for text-only mode. Explained their purpose, behavior, and usage patterns
+          with JSON examples.
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-08-26T11:47:27.793894'
+        description: Explain the special voice models including 'avatar' for HeyGen
+          integration and 'none' for text-only mode.
+        id: 7ad0f4ad-87fe-448f-9137-bbd90f566b1b
+        parent_id: null
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 5
+        title: Document Special Voice Models
+        updated_at: '2025-08-26T11:50:20.034455'
+      7cd72992-4d2f-44a5-ba71-4006e989d173:
+        child_tasks: []
+        completed: true
+        completion_report: Updated implementation patterns with HTTPS WebSocket connections,
+          binary audio sending examples, and comprehensive event handling including
+          turn management and voice events. Added additional references section with
+          key component file paths for developers.
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-08-26T11:47:38.503790'
+        description: Update implementation patterns and add references to new voice
+          management and realtime bridge components.
+        id: 7cd72992-4d2f-44a5-ba71-4006e989d173
+        parent_id: null
+        priority: low
+        requires_completion_signoff: 'true'
+        sequence: 7
+        title: Update Reference Links and Implementation Patterns
+        updated_at: '2025-08-26T11:52:50.432207'
+      a365075a-9355-4e92-9465-384ad7bcb13d:
+        child_tasks: []
+        completed: true
+        completion_report: Added documentation for new client events including voice
+          management (set_agent_voice), turn management events (user_turn_start, user_turn_end),
+          and voice response events (agent_voice_changed). Added proper sections with
+          JSON examples and descriptions.
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-08-26T11:47:17.237913'
+        description: Add documentation for new client events including user turn events,
+          voice management events, and other new events from client_events.py.
+        id: a365075a-9355-4e92-9465-384ad7bcb13d
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 3
+        title: Document New Client Events
+        updated_at: '2025-08-26T11:49:41.018540'
+      a37e970e-8701-4a27-99a0-f3fed27b069a:
+        child_tasks: []
+        completed: true
+        completion_report: Added comprehensive Session Management section explaining
+          the distinction between UI session IDs (for client connections) and Chat
+          session IDs (for persistent conversations). Included purpose, scope, usage
+          patterns, and example workflow showing how the two session types work together.
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-08-26T11:47:33.210878'
+        description: Clarify the distinction between UI session IDs (client connection)
+          and Chat session IDs (persistent chat sessions).
+        id: a37e970e-8701-4a27-99a0-f3fed27b069a
+        parent_id: null
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 6
+        title: Update Session Management Section
+        updated_at: '2025-08-26T11:50:50.030906'
+      c1550787-6457-41a1-ba85-28af1e2a823d:
+        child_tasks: []
+        completed: true
+        completion_report: Added HTTPS requirement documentation explaining that the
+          API runs on HTTPS even in development to support proper audio functionality
+          for web clients. Updated WebSocket connection example to use wss:// instead
+          of ws://.
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-08-26T11:47:11.912638'
+        description: Document that HTTPS is required for proper audio support and
+          that the API runs on HTTPS even in development.
+        id: c1550787-6457-41a1-ba85-28af1e2a823d
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 2
+        title: Add HTTPS Requirement Documentation
+        updated_at: '2025-08-26T11:48:43.971229'
+      c6fea842-a8ea-4e1d-878b-bd890eba8c5c:
+        child_tasks: []
+        completed: true
+        completion_report: Updated the RealtimeLoginResponse JSON documentation to
+          include the new toolsets and voices fields. Added examples showing the structure
+          of ClientToolInfo objects with tool schemas and AvailableVoiceModel objects
+          with different voice types including special voice models.
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-08-26T11:47:06.782584'
+        description: Update the RealtimeLoginResponse section to include the new toolsets
+          and voices fields, explaining their purpose and structure.
+        id: c6fea842-a8ea-4e1d-878b-bd890eba8c5c
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 1
+        title: Update Login Response Documentation
+        updated_at: '2025-08-26T11:48:30.199328'
+    title: Update Realtime API Implementation Guide
+    updated_at: '2025-08-26T11:52:50.432229'
+  transport_abstraction:
+    created_at: '2025-08-27T11:18:01.106521'
+    description: Abstract away WebSocket transport in RealtimeBridge to support multiple
+      transport protocols. This will enable future support for HTTP/SSE, gRPC, and
+      easier testing with mock transports.
+    id: 9ff39a6b-b3be-4297-9ffd-9ada10abcfc5
+    lessons_learned: []
+    tasks: {}
+    title: Transport Abstraction for RealtimeBridge
+    updated_at: '2025-08-27T11:19:40.653096'
+  websocket_auth_implementation:
+    created_at: '2025-08-22T16:19:53.573464'
+    description: Implement comprehensive authentication system for the new realtime
+      WebSocket API using ChatUser model, SQLite persistence, and JWT tokens. This
+      includes user registration, login, password management, and WebSocket authentication
+      middleware.
+    id: 3a7af232-10cd-448f-b5ed-23aecee624ee
+    lessons_learned: []
+    tasks:
+      0b9d5e45-dc13-4b2e-aff5-9dfed23b7f21:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: '- Unit tests for auth service and repository
+
+          - Integration tests for auth endpoints
+
+          - WebSocket authentication tests
+
+          - API documentation updates
+
+          - Example client code for WebSocket auth
+
+          - Security testing and validation'
+        created_at: '2025-08-22T16:20:24.943790'
+        description: Create comprehensive tests for authentication system and update
+          API documentation
+        id: 0b9d5e45-dc13-4b2e-aff5-9dfed23b7f21
+        parent_id: null
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 5
+        title: 5. Testing and Documentation
+        updated_at: '2025-08-22T16:20:24.943791'
+      6517b7ae-a197-430e-8d52-c980b5e9ea60:
+        child_tasks: []
+        completed: true
+        completion_report: "Successfully implemented Avatar API authentication endpoints\
+          \ for Virtual Joe integration:\n\n**Endpoints Created:**\n✅ POST /api/avatar/auth/login\
+          \ - User authentication with JWT + config payload\n✅ GET /api/avatar/auth/config\
+          \ - Configuration retrieval for authenticated users  \n✅ GET /api/avatar/auth/me\
+          \ - User profile endpoint (placeholder for JWT validation)\n\n**Key Features:**\n\
+          - Complete Virtual Joe integration flow: login → JWT token + config → WebSocket\
+          \ connect\n- Enhanced config payload includes:\n  - Available agents from\
+          \ AgentConfigLoader\n  - Available avatars from HeyGenStreamingClient  \n\
+          \  - User profile information\n  - WebSocket connection details (/api/avatar/ws)\n\
+          \  - Feature flags and session settings\n- Proper error handling and logging\
+          \ throughout\n- Graceful fallback if external services (HeyGen) fail\n-\
+          \ Database session management via dependency injection\n\n**Virtual Joe\
+          \ Integration Ready:**\n1. NextJS client shows login form\n2. POST to /api/avatar/auth/login\
+          \ with username/password\n3. Receives JWT token + complete config payload\n\
+          4. Uses token for WebSocket authentication at /api/avatar/ws\n5. Multiple\
+          \ users can connect simultaneously (existing WebSocket design supports this)\n\
+          \n**Files Created:**\n- `/api/avatar/auth.py` - Authentication endpoints\n\
+          - Updated `/api/avatar/__init__.py` - Router registration\n- Test script\
+          \ for validation\n\n**Ready for testing:** API restart required to load\
+          \ new endpoints."
+        completion_signoff_by: null
+        context: '**Virtual Joe Integration Endpoints:**
+
+          - POST /api/avatar/auth/login - Authenticate user and return JWT + config
+
+          - GET /api/avatar/auth/config - Get user-specific configuration payload
+
+          - Enhanced /api/avatar/config endpoint to include user context
+
+          - Return config payload includes: agents, avatars, user permissions, session
+          settings
+
+          - Support for demo user accounts'
+        created_at: '2025-08-22T16:20:14.015376'
+        description: Create auth endpoints for Virtual Joe client login with config
+          payload
+        id: 6517b7ae-a197-430e-8d52-c980b5e9ea60
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 3
+        title: 3. Avatar API Authentication Endpoints
+        updated_at: '2025-08-22T18:59:54.697573'
+      bf46b783-bde9-449c-ba43-d8064d36308e:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: '- Password hashing using bcrypt via passlib
+
+          - User registration with email validation
+
+          - Login authentication with rate limiting
+
+          - JWT token generation and refresh
+
+          - Password reset functionality
+
+          - User session management'
+        created_at: '2025-08-22T16:20:08.624347'
+        description: Create authentication service with user registration, login,
+          password hashing, and token management
+        id: bf46b783-bde9-449c-ba43-d8064d36308e
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 2
+        title: 2. Authentication Service Layer
+        updated_at: '2025-08-22T16:20:08.624349'
+      ec68d30a-13d3-4b3b-a67d-70e3cd73c9c6:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: '**Multi-User WebSocket Architecture:**
+
+          - Connection manager for tracking multiple user WebSocket connections
+
+          - User isolation - ensure messages route to correct user sessions
+
+          - Session cleanup when users disconnect
+
+          - Rate limiting per user to prevent abuse
+
+          - User context in avatar_bridge sessions
+
+          - Proper error handling for concurrent connections
+
+          - Integration with existing agent_manager.create_avatar_session()'
+        created_at: '2025-08-22T16:20:19.444131'
+        description: Enhance WebSocket handling to support multiple concurrent user
+          sessions properly
+        id: ec68d30a-13d3-4b3b-a67d-70e3cd73c9c6
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 4
+        title: 4. Multi-User WebSocket Connection Management
+        updated_at: '2025-08-22T16:43:39.251376'
+      f36bd35c-4ff4-49fe-a5b2-151bd1d262ed:
+        child_tasks: []
+        completed: true
+        completion_report: "Successfully implemented multi-user authentication database\
+          \ setup with:\n\n**Core Components:**\n✅ Extended authentication models\
+          \ (User SQLAlchemy model + Pydantic request/response models)\n✅ SQLite database\
+          \ configuration with async SQLAlchemy \n✅ Authentication repository with\
+          \ full CRUD operations\n✅ Authentication service with bcrypt password hashing\
+          \ and JWT integration\n✅ CLI tool for user management (create, list, delete,\
+          \ demo users)\n✅ Database initialization integrated into app startup/shutdown\n\
+          \n**Key Features:**\n- SQLite database with User table (user_id, username,\
+          \ password_hash, roles, etc.)\n- Compatibility with existing ChatUser model\
+          \ via conversion methods  \n- Async database operations with proper error\
+          \ handling and logging\n- CLI management: `agent_c-users create username`\
+          \ / `agent_c-users list` / etc.\n- JWT token generation integrated with\
+          \ existing jwt.py utilities\n- Automatic database initialization on app\
+          \ startup\n\n**Files Created/Modified:**\n- `src/agent_c_api/models/auth_models.py`\
+          \ - Authentication models\n- `src/agent_c_api/config/database.py` - Database\
+          \ configuration  \n- `src/agent_c_api/core/repositories/auth_repository.py`\
+          \ - Database operations\n- `src/agent_c_api/core/services/auth_service.py`\
+          \ - Authentication business logic\n- `src/agent_c_api/cli/users.py` - CLI\
+          \ user management tool\n- `src/agent_c_api/core/setup.py` - Added database\
+          \ initialization\n- `pyproject.toml` - Added SQLAlchemy dependencies and\
+          \ CLI script\n\n**Testing Ready:** Database setup can be tested with provided\
+          \ verification script."
+        completion_signoff_by: null
+        context: '**For Virtual Joe Demo Client Integration:**
+
+          - Simple SQLite setup for user credentials (username/password)
+
+          - Extend existing ChatUser model with auth fields
+
+          - User session tracking for multiple concurrent WebSocket connections
+
+          - Integration with existing agent_manager session handling
+
+          - Database initialization script for demo users'
+        created_at: '2025-08-22T16:20:00.097682'
+        description: Set up SQLite database with user authentication for Virtual Joe
+          demo client integration
+        id: f36bd35c-4ff4-49fe-a5b2-151bd1d262ed
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 1
+        title: 1. Multi-User Authentication Database Setup
+        updated_at: '2025-08-22T16:59:15.783053'
+    title: WebSocket API Authentication Implementation
+    updated_at: '2025-08-22T18:59:54.697596'
+current_plan: structured_logging_api_integration

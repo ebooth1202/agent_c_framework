@@ -5,10 +5,10 @@ from agent_c_tools.tools.agent_assist.tool import AgentAssistTools
 from .prompt import AgentTeamSection
 
 class AgentTeamTools(AgentAssistTools):
-    """Agent Team Tools for managing and interacting with a team of agents.
-       This is essentially the AgentAssistTools with a more restrictive list
-       in order available to an agent as a part of a team the ID of the agent
-       must be in the categories of the agent configuration.
+    """
+    Enables your agent to collaborate as part of a structured team of AI agents, each with specific roles
+    and expertise. Your agent can coordinate with team members, delegate tasks to specialists, and work
+    together on complex multi-faceted projects that require diverse skills and perspectives.
     """
     def __init__(self, **kwargs: Any):
         if not 'name' in kwargs:

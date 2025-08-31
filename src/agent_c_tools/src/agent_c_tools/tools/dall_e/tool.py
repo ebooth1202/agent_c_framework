@@ -16,6 +16,11 @@ from agent_c_tools.tools.dall_e.prompt import DallESection
 
 
 class DallETools(Toolset):
+    """
+    Enables your agent to create custom images and artwork using DALL-E 3 AI image generation.
+    Your agent can generate high-quality images from text descriptions, helping you create visual content,
+    illustrations, concept art, and custom graphics for any purpose.
+    """
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs, name='dalle', tool_role="DALL-E 3")

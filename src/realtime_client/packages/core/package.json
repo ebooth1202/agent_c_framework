@@ -1,0 +1,18 @@
+{
+  "name": "@agentc/realtime-core",
+  "version": "0.1.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rimraf dist",
+    "test": "vitest run --reporter=verbose",
+    "test:run": "vitest run",
+    "test:watch": "vitest watch",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui",
+    "test:simple": "vitest run --config vitest.simple.config.ts",
+    "test:debug": "vitest run --reporter=verbose --no-threads"
+  }
+}

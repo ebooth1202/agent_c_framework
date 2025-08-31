@@ -23,6 +23,9 @@ class DynamicCommandToolset(Toolset):
         self.whitelisted_commands: Dict[str, Dict[str, Any]] = {
             "git":    {"description": "Run safe, non-destructive git subcommands and flags."},
             "npm":    {"description": "Run safe, non-destructive npm commands."},
+            "npx":    {"description": "Run safe, non-destructive npx commands."},
+            "pnpm":   {"description": "Run safe, non-destructive pnpm commands."},
+            "lerna":  {"description": "Run safe, non-destructive lerna commands."},
             "node":   {"description": "Run safe, non-destructive node commands."},
             "pytest": {"description": "Run safe, non-destructive pytest invocations."},
             "dotnet": {"description": "Run safe, non-destructive dotnet commands."},

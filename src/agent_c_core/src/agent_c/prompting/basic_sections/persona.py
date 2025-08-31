@@ -5,7 +5,8 @@ import platform
 from string import Template
 from typing import Any, Optional, Dict
 from agent_c.prompting.prompt_section import PromptSection, property_bag_item
-
+from agent_c.util.logging_utils import LoggingManager
+logger = LoggingManager(__name__).get_logger()
 
 class PersonaSection(PromptSection):
     """
@@ -39,6 +40,7 @@ class PersonaSection(PromptSection):
         super().__init__(name="Your Persona", render_section_header=True, **data)
 
 
+
 class DynamicPersonaSection(PromptSection):
     """
     The DynamicPersonaSection class allows for dynamic persona customization based on external factors.
@@ -67,6 +69,7 @@ class DynamicPersonaSection(PromptSection):
 
         # Initialize the base PromptSection with specific attributes
         super().__init__(name="Agent Persona, RULES and Task Context", render_section_header=True, **data)
+
 
     @staticmethod
     def timestamp() -> str:
@@ -103,7 +106,7 @@ class DynamicPersonaSection(PromptSection):
             template: Template = Template(base_prompt, )
             result = template.substitute(context)
         except Exception as e:
-            self.logger.error(f"Error rendering persona prompt: {e}")
+            logger.error(f"Error rendering persona prompt: {e}")
             return base_prompt
         return result
 

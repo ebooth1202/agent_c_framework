@@ -206,6 +206,22 @@ npm:
     npm_config_audit: "false"
   
   default_timeout: 45
+
+pnpm:
+  subcommands:
+    list:
+      flags: ["--depth", "--json", "--long"]
+      timeout: 30
+    why:
+      flags: ["--json", "--long"]
+      timeout: 30
+  
+  # Secure pnpm execution
+  safe_env:
+    PNPM_CONFIG_FUND: "false"
+    PNPM_CONFIG_PROGRESS: "false"
+  
+  default_timeout: 45
 ```
 
 ## Adding Policy Entries

@@ -18,14 +18,20 @@ dependencies = [
     "spectree>=1.4.7",
     "fastapi-utils>=0.8.0",
     "uvicorn==0.34.0",
-    "pydantic==2.11.7",
+    "pydantic>=2.9.2",
     "pydantic-settings==2.6.0",
-    "weaviate-client==4.8.1", # Also used by agent_c-rag
+    "weaviate-client>=4.16.1", # Also used by agent_c-rag
     "python-multipart",
     "markitdown==0.0.2",
     "aiofiles",
     "fastapi-cache2>=0.2.2",
-    "redis>=5.0.0"
+    "redis>=5.0.0",
+    "sqlalchemy==2.0.43",
+    "aiosqlite==0.19.0",
+    "python-jose[cryptography]",
+    "python-multipart",
+    "passlib[bcrypt]",
+    "openai-agents[voice]"
 ]
 
 requires-python = ">=3.12"
@@ -69,3 +75,4 @@ Homepage = "https://github.com/centricconsulting/agent_c_framework"
 
 [project.scripts]
 agent_c-api = "agent_c_api.main:run"
+agent_c-users = "agent_c_api.cli.users:main"

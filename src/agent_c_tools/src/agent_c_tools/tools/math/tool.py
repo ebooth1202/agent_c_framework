@@ -19,14 +19,10 @@ from agent_c_tools.tools.math.prompt import MathSection
 
 class MathTools(Toolset):
     """
-    MathTools provides advanced mathematical calculation capabilities including:
-    - Basic arithmetic
-    - Calculus (differentiation, integration)
-    - Algebra (solving equations, simplifying expressions)
-    - Matrices and linear algebra
-    - Statistics and probability
-    - Function visualization
-    - Numerical optimization
+    Empowers your agent with comprehensive mathematical capabilities to solve complex problems, perform
+    calculations, create visualizations, and analyze data. Your agent can handle everything from basic
+    arithmetic to advanced calculus, statistics, and create visual graphs to help you understand
+    mathematical concepts and results.
     """
     
     def __init__(self, **kwargs):

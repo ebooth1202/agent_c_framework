@@ -1,0 +1,267 @@
+/**
+ * useChat - React hook for chat functionality
+ * Provides interface for sending messages and accessing chat history
+ */
+
+import { useEffect, useState, useCallback, useRef } from 'react';
+import type { ChatSession, Message } from '@agentc/realtime-core';
+
+// Define ChatMessage as alias for Message for consistency
+type ChatMessage = Message;
+import { useRealtimeClientSafe } from '../providers/AgentCContext';
+
+/**
+ * Options for the useChat hook
+ */
+export interface UseChatOptions {
+  /** Maximum number of messages to keep in memory */
+  maxMessages?: number;
+  
+  /** Whether to auto-scroll to new messages */
+  autoScroll?: boolean;
+}
+
+/**
+ * Return type for the useChat hook
+ */
+export interface UseChatReturn {
+  /** Current chat messages */
+  messages: ChatMessage[];
+  
+  /** Current session information */
+  currentSession: ChatSession | null;
+  
+  /** Send a text message */
+  sendMessage: (text: string) => Promise<void>;
+  
+  /** Clear chat history (client-side only) */
+  clearMessages: () => void;
+  
+  /** Whether a message is currently being sent */
+  isSending: boolean;
+  
+  /** Whether the agent is currently typing/processing */
+  isAgentTyping: boolean;
+  
+  /** Current partial message from agent (if streaming) */
+  partialMessage: string;
+  
+  /** Error state */
+  error: string | null;
+  
+  /** Get the last message */
+  lastMessage: ChatMessage | null;
+  
+  /** Get messages from a specific role */
+  getMessagesByRole: (role: 'user' | 'assistant' | 'system') => ChatMessage[];
+}
+
+/**
+ * React hook for chat functionality
+ * Provides interface to SessionManager and text messaging
+ */
+export function useChat(options: UseChatOptions = {}): UseChatReturn {
+  const { maxMessages = 100 } = options;
+  const client = useRealtimeClientSafe();
+  
+  // State
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
+  const [isSending, setIsSending] = useState(false);
+  const [isAgentTyping, setIsAgentTyping] = useState(false);
+  const [partialMessage, setPartialMessage] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  
+  // Refs for tracking message assembly
+  const messageBufferRef = useRef<string>('');
+  const currentMessageIdRef = useRef<string | null>(null);
+  
+  // Update session and messages from client
+  const updateChatInfo = useCallback(() => {
+    if (!client) {
+      setCurrentSession(null);
+      setMessages([]);
+      return;
+    }
+    
+    const sessionManager = client.getSessionManager();
+    if (!sessionManager) {
+      setCurrentSession(null);
+      setMessages([]);
+      return;
+    }
+    
+    try {
+      const session = sessionManager.getCurrentSession();
+      setCurrentSession(session);
+      
+      if (session) {
+        // SessionManager doesn't have getMessageHistory, we'll track messages ourselves
+        // Messages are accumulated from events
+      }
+      
+      setError(null);
+    } catch (err) {
+      console.error('Failed to get chat information:', err);
+      setError(err instanceof Error ? err.message : 'Failed to get chat information');
+    }
+  }, [client, maxMessages]);
+  
+  // Send message
+  const sendMessage = useCallback(async (text: string): Promise<void> => {
+    if (!client) {
+      throw new Error('Client not available');
+    }
+    
+    if (!client.isConnected()) {
+      throw new Error('Not connected to server');
+    }
+    
+    if (!text.trim()) {
+      throw new Error('Message cannot be empty');
+    }
+    
+    setIsSending(true);
+    setError(null);
+    
+    try {
+      // Use sendText method instead of textInput
+      client.sendText(text);
+      
+      // Add user message to local state immediately for responsiveness
+      const userMessage: ChatMessage = {
+        role: 'user',
+        content: text,
+        timestamp: new Date().toISOString(),
+        format: 'text'
+      };
+      
+      setMessages(prev => {
+        const newMessages = [...prev, userMessage];
+        // Limit messages if needed
+        if (maxMessages && newMessages.length > maxMessages) {
+          return newMessages.slice(-maxMessages);
+        }
+        return newMessages;
+      });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to send message';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setIsSending(false);
+    }
+  }, [client, maxMessages]);
+  
+  // Clear messages (client-side only)
+  const clearMessages = useCallback(() => {
+    setMessages([]);
+    setPartialMessage('');
+    messageBufferRef.current = '';
+    currentMessageIdRef.current = null;
+  }, []);
+  
+  // Get messages by role
+  const getMessagesByRole = useCallback((role: 'user' | 'assistant' | 'system'): ChatMessage[] => {
+    return messages.filter(msg => msg.role === role);
+  }, [messages]);
+  
+  // Subscribe to chat events
+  useEffect(() => {
+    if (!client) return;
+    
+    // Initial update
+    updateChatInfo();
+    
+    // Handle text delta events (streaming text from agent)
+    const handleTextDelta = (event: unknown) => {
+      setIsAgentTyping(true);
+      
+      // Type guard for event properties
+      const textEvent = event as { text?: string; item_id?: string };
+      
+      // Update partial message
+      messageBufferRef.current += textEvent.text || '';
+      setPartialMessage(messageBufferRef.current);
+      
+      // Store message ID for completion
+      if (textEvent.item_id) {
+        currentMessageIdRef.current = textEvent.item_id;
+      }
+    };
+    
+    // Handle completion events (when agent is done)
+    const handleCompletion = (event: unknown) => {
+      // Type guard for event properties
+      const completionEvent = event as { running?: boolean };
+      
+      if (completionEvent.running === false && messageBufferRef.current) {
+        setIsAgentTyping(false);
+        
+        // Create complete message
+        const agentMessage: ChatMessage = {
+          role: 'assistant',
+          content: messageBufferRef.current,
+          timestamp: new Date().toISOString(),
+          format: 'text'
+        };
+        
+        setMessages(prev => {
+          const newMessages = [...prev, agentMessage];
+          // Limit messages if needed
+          if (maxMessages && newMessages.length > maxMessages) {
+            return newMessages.slice(-maxMessages);
+          }
+          return newMessages;
+        });
+        
+        // Clear partial message
+        setPartialMessage('');
+        messageBufferRef.current = '';
+        currentMessageIdRef.current = null;
+      }
+    };
+    
+    // Handle turn events from server
+    const handleUserTurnStart = () => {
+      setIsAgentTyping(false);
+    };
+    
+    const handleUserTurnEnd = () => {
+      setIsAgentTyping(true);
+      
+      // Agent is now typing
+    };
+    
+    // Subscribe to events
+    client.on('text_delta', handleTextDelta);
+    client.on('completion', handleCompletion);
+    client.on('user_turn_start', handleUserTurnStart);
+    client.on('user_turn_end', handleUserTurnEnd);
+    // Remove agent_message handler as it doesn't exist
+    
+    return () => {
+      client.off('text_delta', handleTextDelta);
+      client.off('completion', handleCompletion);
+      client.off('user_turn_start', handleUserTurnStart);
+      client.off('user_turn_end', handleUserTurnEnd);
+      // Remove agent_message handler as it doesn't exist
+    };
+  }, [client, maxMessages, updateChatInfo]);
+  
+  // Computed properties
+  const lastMessage: ChatMessage | null = messages.length > 0 ? messages[messages.length - 1]! : null;
+  
+  return {
+    messages,
+    currentSession,
+    sendMessage,
+    clearMessages,
+    isSending,
+    isAgentTyping,
+    partialMessage,
+    error,
+    lastMessage,
+    getMessagesByRole
+  };
+}

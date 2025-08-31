@@ -4,6 +4,12 @@ from pydantic import Field, ConfigDict
 from agent_c.models.base import BaseModel
 from agent_c.models.completion import CompletionParams
 
+class AgentCatalogEntry(BaseModel):
+    """A catalog entry for an agent configuration"""
+    name: str = Field(..., description="Name of the agent configuration")
+    key: str = Field(..., description="Key for the agent configuration, used for identification")
+    agent_description: Optional[str] = Field(None, description="A description of the agent's purpose and capabilities")
+    category: List[str] = Field(default_factory=list, description="A list of categories this agent belongs to from most to least general")
 
 class AgentConfigurationV1(BaseModel):
     """Version 1 of the Agent Configuration"""
@@ -32,6 +38,15 @@ class AgentConfigurationV2(BaseModel):
     uid: Optional[str] = Field(None, description="Unique identifier for the configuration")
 
     category: List[str] = Field(default_factory=list, description="A list of categories this agent belongs to from most to least general" )
+
+    def as_catalog_entry(self) -> AgentCatalogEntry:
+        """Convert this configuration to a catalog entry"""
+        return AgentCatalogEntry(
+            name=self.name,
+            key=self.key,
+            agent_description=self.agent_description,
+            category=self.category
+        )
 
     def __init__(self, **data) -> None:
         # Ensure the key is set if not provided
