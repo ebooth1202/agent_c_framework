@@ -28,8 +28,8 @@ if (fs.existsSync(packageJsonPath)) {
 // Check certificate paths (relative to demo)
 console.log('\n🔑 Checking certificate paths:');
 const certPaths = [
-  '../../agent_c_config/local_host_self_signed.pem',
-  '../../agent_c_config/local_host_self_signed-key.pem'
+  '../../agent_c_config/localhost_self_signed.pem',
+  '../../agent_c_config/localhost_self_signed-key.pem'
 ];
 
 certPaths.forEach(certPath => {

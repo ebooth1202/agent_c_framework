@@ -1,7 +1,34 @@
 // Utility exports
 export { cn } from './lib/utils';
 
-// Component exports will be added here as we build them
-// export { ConnectionButton } from './components/ConnectionButton';
-// export { MicrophoneButton } from './components/MicrophoneButton';
-// etc...
+// Editor component exports (legacy - use input/MarkdownEditor instead)
+export { MarkdownEditor as LegacyMarkdownEditor } from './components/editor';
+export type { MarkdownEditorProps as LegacyMarkdownEditorProps } from './components/editor';
+
+// Input component exports
+export { 
+  // Main integrated component
+  InputArea,
+  // Individual components
+  InputContainer, 
+  RichTextEditor,
+  MarkdownEditor,
+  InputToolbar,
+  MicrophoneButton,
+  AgentSelector,
+  OutputSelector
+} from './components/input';
+
+export type { 
+  InputAreaProps,
+  InputContainerProps, 
+  RichTextEditorProps,
+  MarkdownEditorProps,
+  InputToolbarProps,
+  MicrophoneButtonProps,
+  AgentSelectorProps,
+  OutputSelectorProps,
+  Agent,
+  OutputMode,
+  OutputOption
+} from './components/input';
