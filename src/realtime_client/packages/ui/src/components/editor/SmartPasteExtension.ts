@@ -1,6 +1,6 @@
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
-import { Decoration, DecorationSet } from '@tiptap/pm/view';
+import { Decoration, DecorationSet, EditorView } from '@tiptap/pm/view';
 
 /**
  * Upload states for tracking image uploads
@@ -198,7 +198,7 @@ export const SmartPasteExtension = Extension.create<SmartPasteOptions>({
     /**
      * Handle image upload process
      */
-    function handleImageUpload(view: any, file: File, pos?: number) {
+    function handleImageUpload(view: EditorView, file: File, pos?: number) {
       const { maxFileSize, uploadImage, onUploadStart, onUploadComplete, onUploadError } = extensionOptions;
       
       // Validate file size

@@ -30,7 +30,7 @@ export const SmartPasteExample: React.FC = () => {
    * Simulates uploading to a server with a 2 second delay
    */
   const handleImageUpload = React.useCallback(async (file: File): Promise<string> => {
-    console.log(`📤 Starting upload for: ${file.name}`);
+    // Track upload start internally
     
     // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -59,36 +59,38 @@ export const SmartPasteExample: React.FC = () => {
       status: 'success'
     }]);
     
-    console.log(`✅ Upload complete: ${mockUrl}`);
+    // Upload complete
     return mockUrl;
   }, []);
 
   /**
    * Handle upload start
    */
-  const handleUploadStart = React.useCallback((file: File) => {
-    console.log(`🚀 Upload started for: ${file.name} (${(file.size / 1024).toFixed(1)}KB)`);
+  const handleUploadStart = React.useCallback((_file: File) => {
+    // Upload started - could update UI state here if needed
+    // File: ${file.name} (${(file.size / 1024).toFixed(1)}KB)
   }, []);
 
   /**
    * Handle upload complete
    */
-  const handleUploadComplete = React.useCallback((url: string) => {
-    console.log(`🎉 Image inserted with URL: ${url}`);
+  const handleUploadComplete = React.useCallback((_url: string) => {
+    // Image successfully inserted with URL
   }, []);
 
   /**
    * Handle upload error
    */
-  const handleUploadError = React.useCallback((error: Error) => {
-    console.error(`❌ Upload failed: ${error.message}`);
+  const handleUploadError = React.useCallback((_error: Error) => {
+    // Handle upload error - error already tracked in uploadHistory
+    // Error message: ${error.message}
   }, []);
 
   /**
    * Submit handler
    */
   const handleSubmit = React.useCallback((text: string) => {
-    console.log('📝 Submitted content:', text);
+    // Submit the content
     alert(`Content submitted!\n\nWord count: ${text.split(/\s+/).length}\nCharacter count: ${text.length}`);
   }, []);
 

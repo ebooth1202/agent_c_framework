@@ -56,8 +56,8 @@ const MarkdownInputRules = Extension.create({
       // Bold: **text** → bold text
       new InputRule({
         find: /(?:^|\s)(\*\*|__)([^*_]+)(\*\*|__)$/,
-        handler: ({ state, range, match }) => {
-          const attributes = {};
+        handler: ({ state: _state, range, match }) => {
+          const _attributes = {};
           const start = range.from;
           const end = range.to;
           
@@ -76,7 +76,7 @@ const MarkdownInputRules = Extension.create({
       // Italic: *text* or _text_ → italic text
       new InputRule({
         find: /(?:^|\s)(\*|_)([^*_]+)(\*|_)$/,
-        handler: ({ state, range, match }) => {
+        handler: ({ state: _state, range, match }) => {
           const start = range.from;
           const end = range.to;
           
@@ -95,7 +95,7 @@ const MarkdownInputRules = Extension.create({
       // Strikethrough: ~~text~~ → strikethrough text
       new InputRule({
         find: /(?:^|\s)(~~)([^~]+)(~~)$/,
-        handler: ({ state, range, match }) => {
+        handler: ({ state: _state, range, match }) => {
           const start = range.from;
           const end = range.to;
           
@@ -114,7 +114,7 @@ const MarkdownInputRules = Extension.create({
       // Inline code: `text` → inline code
       new InputRule({
         find: /(?:^|\s)(`([^`]+)`)$/,
-        handler: ({ state, range, match }) => {
+        handler: ({ state: _state, range, match }) => {
           const start = range.from;
           const end = range.to;
           
@@ -133,7 +133,7 @@ const MarkdownInputRules = Extension.create({
       // Heading 1: # text → Heading 1
       new InputRule({
         find: /^# $/,
-        handler: ({ state, range }) => {
+        handler: ({ state: _state, range }) => {
           this.editor
             .chain()
             .deleteRange(range)
@@ -145,7 +145,7 @@ const MarkdownInputRules = Extension.create({
       // Heading 2: ## text → Heading 2
       new InputRule({
         find: /^## $/,
-        handler: ({ state, range }) => {
+        handler: ({ state: _state, range }) => {
           this.editor
             .chain()
             .deleteRange(range)
@@ -157,7 +157,7 @@ const MarkdownInputRules = Extension.create({
       // Heading 3: ### text → Heading 3
       new InputRule({
         find: /^### $/,
-        handler: ({ state, range }) => {
+        handler: ({ state: _state, range }) => {
           this.editor
             .chain()
             .deleteRange(range)
@@ -169,7 +169,7 @@ const MarkdownInputRules = Extension.create({
       // Bullet list: - or * → bullet list
       new InputRule({
         find: /^(\*|-) $/,
-        handler: ({ state, range }) => {
+        handler: ({ state: _state, range }) => {
           this.editor
             .chain()
             .deleteRange(range)
@@ -181,7 +181,7 @@ const MarkdownInputRules = Extension.create({
       // Ordered list: 1. → numbered list
       new InputRule({
         find: /^(\d+)\. $/,
-        handler: ({ state, range }) => {
+        handler: ({ state: _state, range }) => {
           this.editor
             .chain()
             .deleteRange(range)
@@ -193,7 +193,7 @@ const MarkdownInputRules = Extension.create({
       // Blockquote: > → blockquote
       new InputRule({
         find: /^> $/,
-        handler: ({ state, range }) => {
+        handler: ({ state: _state, range }) => {
           this.editor
             .chain()
             .deleteRange(range)
@@ -205,7 +205,7 @@ const MarkdownInputRules = Extension.create({
       // Horizontal rule: --- → horizontal rule
       new InputRule({
         find: /^---$/,
-        handler: ({ state, range }) => {
+        handler: ({ state: _state, range }) => {
           this.editor
             .chain()
             .deleteRange(range)
@@ -217,7 +217,7 @@ const MarkdownInputRules = Extension.create({
       // Code block: ```language → code block with language
       new InputRule({
         find: /^```([a-z]*)\s$/,
-        handler: ({ state, range, match }) => {
+        handler: ({ state: _state, range, match }) => {
           const language = match[1] || 'plaintext';
           
           this.editor
