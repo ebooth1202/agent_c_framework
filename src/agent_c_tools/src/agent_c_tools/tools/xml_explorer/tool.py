@@ -10,7 +10,9 @@ from agent_c_tools.tools.workspace.tool import WorkspaceTools
 
 class XmlExplorerTools(Toolset):
     """
-    XMLExplorerTools provides methods for working with XML files in workspaces.
+    Enables your agent to explore, navigate, and extract data from complex XML files efficiently.
+    Your agent can analyze XML structure, execute XPath queries, extract specific data sections,
+    and work with large XML documents without loading them entirely into memory.
     """
 
     def __init__(self, **kwargs: Any):

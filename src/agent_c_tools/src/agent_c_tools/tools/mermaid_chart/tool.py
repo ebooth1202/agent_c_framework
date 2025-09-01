@@ -6,6 +6,11 @@ from agent_c.util.string import to_snake_case
 
 
 class MermaidChartTools(Toolset):
+    """
+    Enables your agent to create professional diagrams, flowcharts, network diagrams, and other visual
+    representations using Mermaid syntax. Your agent can generate process flows, organizational charts,
+    system architectures, and other structured diagrams to help visualize complex information.
+    """
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs, name='mermaid', tool_role='mermaid_chart', section=MermaidChatSection())

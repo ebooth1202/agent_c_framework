@@ -21,6 +21,8 @@ class BaseWorkspace:
                                   A value of -1 indicates no specific limit.
     """
 
+    supports_run_command: bool = False
+
     def __init__(self, type_name: str, **kwargs):
         """
         The initializer for the BaseWorkspace class.
@@ -326,3 +328,10 @@ class BaseWorkspace:
             self.logger.exception(f"Failed to load metadata from //{self.name}/{meta_file_path}: {e}", exc_info=True)
 
         return self._metadata
+
+    async def run_command(self, command: str, working_directory: Optional[str] = None, timeout: Optional[int] = None):
+        """
+        Override in subclasses that support commands.
+        Having this on the base class satisfies static type checkers/IDEs.
+        """
+        raise NotImplementedError(f"{self.__class__.__name__} does not support run_command")

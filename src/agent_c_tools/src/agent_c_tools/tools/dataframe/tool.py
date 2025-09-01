@@ -22,6 +22,11 @@ from .prompt import DataframeToolsSection
 from ...helpers.dataframe_in_memory import create_excel_in_memory
 
 class DataframeTools(Toolset):
+    """
+    Gives your agent powerful data analysis capabilities to work with spreadsheets, CSV files, and databases.
+    Your agent can load, clean, transform, analyze data, create statistical summaries, perform correlations,
+    and generate detailed reports to help you understand and extract insights from your data.
+    """
     DEFAULT_DATA_FOLDER = 'dataframe_data'
     MAX_DATAFRAME_TOKEN_SIZE = 35000
     def __init__(self, **kwargs):

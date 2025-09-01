@@ -8,6 +8,7 @@ import logging
 import functools
 import glob
 
+
 from pathlib import Path
 from typing import Optional, Union, Tuple, Callable, TypeVar, List, Dict
 
@@ -15,11 +16,15 @@ from agent_c.util.token_counter import TokenCounter
 from agent_c_tools.tools.workspace.base import BaseWorkspace
 from agent_c_tools.tools.workspace.util.trees.renderers.minimal import MinimalTreeRenderer
 from agent_c_tools.tools.workspace.util.trees.builders.local_file_system import LocalFileSystemTreeBuilder
+from .executors.local_storage.secure_command_executor import SecureCommandExecutor, CommandExecutionResult
+from .executors.local_storage.yaml_policy_provider import YamlPolicyProvider
 
 # Type variable for function return types
 T = TypeVar('T')
 
 class LocalStorageWorkspace(BaseWorkspace):
+    supports_run_command = True # Enable command execution support
+
     def __init__(self, **kwargs):
         super().__init__("local_storage", **kwargs)
         workspace_path: Optional[str] = kwargs.get('workspace_path')
@@ -39,6 +44,15 @@ class LocalStorageWorkspace(BaseWorkspace):
             self.logger.info("Symlink paths are allowed in workspace")
 
         self.max_filename_length = 200
+
+        # For OS level secure command execution
+        policy_provider = YamlPolicyProvider(".agentc_policies.yaml")
+        self.executor = SecureCommandExecutor(
+            log_output=True,  # keep your logging
+            default_timeout=30,
+            max_output_size=1024 * 1024,  # byte size limits for truncating output
+            policy_provider=policy_provider
+        )
 
     @staticmethod
     def _normalize_input_path(path: str) -> str:
@@ -579,4 +593,25 @@ class LocalStorageWorkspace(BaseWorkspace):
         except Exception as e:
             return f"Exception occurred: {str(e)}"
 
+    async def run_command(self, command: str, working_directory: Optional[str] = None, timeout: Optional[int]=None) -> CommandExecutionResult:
+        """Run a shell command in the workspace with secure execution."""
+        if working_directory:
+            valid, error_msg, full_path = self._validate_path(working_directory, "working directory")
+            if not valid:
+                return CommandExecutionResult(
+                    status="error",
+                    command=command,
+                    stdout="",
+                    stderr=error_msg,
+                    return_code=1,
+                    working_directory=working_directory
+                )
+            working_directory = str(full_path)
+
+        # Provide workspace root to validators and any executed processes
+        override_env = {
+            "WORKSPACE_ROOT": str(self.workspace_root)
+        }
+        
+        return await self.executor.execute_command(command=command, working_directory=working_directory, override_env=override_env, timeout=timeout)
 from agent_c_tools.tools.workspace.local_project import LocalProjectWorkspace  # noqa

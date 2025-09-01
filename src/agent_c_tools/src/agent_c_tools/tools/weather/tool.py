@@ -7,6 +7,11 @@ from ...helpers.validate_kwargs import validate_required_fields
 
 # Simple demonstration tool that grabs a weather forecast for a location.
 class WeatherTools(Toolset):
+    """
+    Provides your agent with current weather information and forecasts for any location worldwide.
+    Your agent can check current conditions, temperature, humidity, and weather patterns to help you
+    plan activities, make travel decisions, or simply stay informed about the weather.
+    """
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs, name='weather', use_prefix=False)

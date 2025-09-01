@@ -7,9 +7,9 @@ from .prompt import UserPrefSection, UserPrefSectionNoToolUse
 
 class UserPreferencesTools(Toolset):
     """
-    UserPreferencesTools class provides methods to manage and interact with user preferences.
-    This includes finding, getting, resetting or listing user preferences and their values.
-
+    Allows your agent to learn and manage your personal preferences for how you like to interact and work.
+    Your agent can remember your preferred formats, communication styles, work patterns, and other settings
+    to provide a more customized and efficient experience tailored to your needs.
     """
 
     def __init__(self, **kwargs: Any) -> None:

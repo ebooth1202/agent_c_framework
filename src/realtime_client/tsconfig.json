@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@agentc/realtime-core": ["packages/core/src"],
+      "@agentc/realtime-react": ["packages/react/src"],
+      "@agentc/realtime-ui": ["packages/ui/src"]
+    }
+  },
+  "references": [
+    { "path": "./packages/core" },
+    { "path": "./packages/react" },
+    { "path": "./packages/ui" }
+  ]
+}

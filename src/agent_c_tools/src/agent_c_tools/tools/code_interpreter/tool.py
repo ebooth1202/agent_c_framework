@@ -12,9 +12,9 @@ from agent_c.toolsets import Toolset, json_schema
 
 class CodeInterpreterTools(Toolset):
     """
-    A toolset for executing Python code in a Docker container with file I/O support.
-    Provides safe execution of arbitrary Python code with library installation support
-    and the ability to read/write files between the host and container.
+    Allows your agent to write and execute Python code safely in an isolated environment. Your agent can
+    analyze data, create visualizations, perform calculations, install libraries, and work with files
+    while keeping your system secure through containerized execution.
     """
 
     def __init__(self, **kwargs):

@@ -18,7 +18,9 @@ from . import workspace_planning  # Workspace Planning toolset
 from . import workspace_knowledge  # Workspace Knowledge toolset
 from . import workspace_sequential_thinking  # Workspace Sequential Thinking toolset
 from . import browser_playwright  # Browser Playwright toolset
-from . import health  # Health toolset
+from . import insurance_demo  # Insurance Demo toolset
+from . import sars  # SARS toolset
+
 __all__ = [
     'workspace',
     'web', 
@@ -38,5 +40,6 @@ __all__ = [
     'workspace_knowledge',
     'workspace_sequential_thinking',
     'browser_playwright',
-    'health'
+    'sars',
+    'insurance_demo',
 ]

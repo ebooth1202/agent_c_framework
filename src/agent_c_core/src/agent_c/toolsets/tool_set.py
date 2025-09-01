@@ -338,3 +338,25 @@ class Toolset:
                 continue
 
         return self._schemas
+
+    @classmethod
+    def get_tool_schemas(cls) -> List[Dict[str, Any]]:
+        """
+        Generate OpenAI-compatible JSON schemas for this toolset class.
+        Returns schemas without prefixes for discovery purposes.
+
+        Returns:
+            List[Dict[str, Any]]: A list of JSON schemas for the registered methods.
+        """
+        schemas = []
+
+        # Use class-level introspection instead of instance
+        for name, method in inspect.getmembers(cls, predicate=inspect.isfunction):
+            if name.startswith('_') or name == 'tool_schemas':
+                continue
+
+            if hasattr(method, 'schema'):
+                schema = copy.deepcopy(method.schema)
+                schemas.append(schema)
+
+        return schemas

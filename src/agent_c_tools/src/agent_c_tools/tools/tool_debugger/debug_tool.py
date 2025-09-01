@@ -40,6 +40,14 @@ class MockTokenCounter:
         # This avoids the "NoneType has no attribute 'count_tokens'" error when using Workspaces without an agent
         return len(text) // 10  # Rough approximation (10 chars per token)
 
+# Add a mock AgentRuntime for tool_context
+class MockAgentRuntime:
+    @staticmethod
+    def count_tokens(text):
+        # Simple mock that returns a token count based on text length
+        # This provides the agent_runtime.count_tokens() method expected by tools
+        return len(text) // 10  # Rough approximation (10 chars per token)
+
 # Add the mock to sys.modules so it can be imported by local_storage.py
 mock_module = types.ModuleType('agent_c.util.token_counter')
 mock_module.TokenCounter = MockTokenCounter
@@ -313,20 +321,25 @@ class ToolDebugger:
         """
         test_id = f"test_{int(time.time())}"
 
+        if tool_context is None:
+            tool_context = {
+                "session_id": f"debug_session_{test_id}",
+                "user_id": "debug_user",
+                "workspace_id": "debug_workspace",
+                "debug_mode": True,
+                "agent_runtime": MockAgentRuntime()
+            }
+
+        # Add tool_context to tool_params if not already present
+        if 'tool_context' not in tool_params:
+            tool_params['tool_context'] = tool_context
+
         # Format the tool call
         tool_call = [{
             "id": test_id,
             "name": tool_name,
             "input": tool_params
         }]
-
-        if tool_context is None:
-            tool_context = {
-                "session_id": f"debug_session_{test_id}",
-                "user_id": "debug_user",
-                "workspace_id": "debug_workspace",
-                "debug_mode": True
-            }
 
         try:
             self.logger.info(f"Executing tool call: {tool_name}")

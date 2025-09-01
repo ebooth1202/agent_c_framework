@@ -6,7 +6,9 @@ from agent_c.toolsets import Toolset, json_schema
 
 class RandomNumberTools(Toolset):
     """
-    A simple toolset that provides random number generation capabilities.
+    Provides your agent with random number generation capabilities for games, simulations, sampling,
+    and any situation where you need unpredictable values. Your agent can generate random numbers
+    within specified ranges and use seeds for reproducible results.
     """
 
     def __init__(self, **kwargs):

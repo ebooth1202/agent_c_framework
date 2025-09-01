@@ -2,7 +2,9 @@ from agent_c.toolsets import Toolset, json_schema
 
 class ThinkTools(Toolset):
     """
-    A simple toolset that allows Claude to think about something.
+    Provides your agent with a dedicated space for reflection and complex reasoning. The agent can use this
+    to work through difficult problems step-by-step, organize its thoughts, and maintain context for
+    multi-step tasks without cluttering the main conversation.
     """
     def __init__(self, **kwargs):
         super().__init__(**kwargs, name='think', use_prefix=False)

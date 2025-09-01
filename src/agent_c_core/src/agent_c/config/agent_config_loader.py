@@ -13,7 +13,7 @@ from agent_c.models.agent_config import (
     AgentConfigurationV2,
     AgentConfiguration,  # Union type
     CurrentAgentConfiguration,  # Latest version alias
-    current_agent_configuration_version # integer for latest version
+    current_agent_configuration_version, AgentCatalogEntry  # integer for latest version
 )
 from agent_c.util import MnemonicSlugs
 from agent_c.util.logging_utils import LoggingManager
@@ -242,13 +242,21 @@ class AgentConfigLoader(ConfigLoader, metaclass=SingletonCacheMeta):
         return AgentConfigurationV2(**original_config.model_dump(exclude_none=True))
 
     @property
-    def catalog(self) -> Dict[str, AgentConfiguration]:
+    def catalog(self) -> Dict[str, CurrentAgentConfiguration]:
         """Returns a catalog of all agent configurations."""
         if not self._agent_config_cache:
             for agent_name in self.agent_names:
                 self._fetch_agent_config(agent_name)
 
         return self._agent_config_cache
+
+    @property
+    def client_catalog(self) -> List[AgentCatalogEntry]:
+        """Returns a catalog of all agent configurations as the latest version."""
+        agents = self.catalog.values()
+        domo_agents  = [agent for agent in agents if 'domo' in (agent.category or [])]
+        return sorted([config.as_catalog_entry() for config in domo_agents],
+                      key=lambda x: x.name.lower())
 
     @property
     def agent_names(self) -> List[str]:

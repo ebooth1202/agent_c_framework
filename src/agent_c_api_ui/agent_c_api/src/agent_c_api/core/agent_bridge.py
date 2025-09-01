@@ -70,8 +70,7 @@ class AgentBridge:
         self,
         chat_session: ChatSession,
         session_manager: ChatSessionManager,
-        file_handler: Optional[FileHandler] = None,
-        **kwargs: Any
+        file_handler: Optional[FileHandler] = None
     ) -> None:
         """
         Initialize the AgentBridge instance.
@@ -104,9 +103,7 @@ class AgentBridge:
         self.__init_events()
 
         self.chat_session = chat_session
-        self.logger.info(f"Using provided agent config : {self.chat_session.agent_config.key}...")
-
-        self.sections = kwargs.get('sections', None)  # Sections for the prompt builder, if any
+        self.sections = None
 
         self.model_config_loader = ModelConfigurationLoader()
         self.model_configs: Dict[str, Any] = self.model_config_loader.flattened_config()
@@ -122,7 +119,7 @@ class AgentBridge:
         # - Tool Cache: A cache for storing tool data, set to a default directory.
         # - Output Tool Arguments: A placeholder for tool argument output preference.
         self.tool_chest: Union[ToolChest, None] = None
-        self.tool_cache_dir = kwargs.get("tool_cache_dir", DEFAULT_TOOL_CACHE_DIR)
+        self.tool_cache_dir = DEFAULT_TOOL_CACHE_DIR
         self.tool_cache = ToolCache(cache_dir=self.tool_cache_dir)
         self.output_tool_arguments = True  # Placeholder for tool argument output preference
 
@@ -178,10 +175,6 @@ class AgentBridge:
         """
         local_project = LocalProjectWorkspace()
         self.workspaces = [local_project]
-        self.logger.info(
-            f"Agent {self.chat_session.agent_config.key} initialized workspaces "
-            f"{local_project.workspace_root}"
-        )
         # TODO: ALLOWED / DISALLOWED WORKSPACES from agent config
         try:
             with open(LOCAL_WORKSPACES_FILE, 'r', encoding='utf-8') as json_file:
@@ -232,7 +225,7 @@ class AgentBridge:
             f"{list(self.tool_chest.active_tools.keys())}"
         )
 
-    async def __init_tool_chest(self) -> None:
+    async def _init_tool_chest(self) -> None:
         """
         Initialize the agent's tool chest with selected tools and configurations.
 
@@ -366,7 +359,7 @@ class AgentBridge:
         )
         self._stream_queue = asyncio.Queue()
 
-    async def __build_prompt_metadata(self) -> Dict[str, Any]:
+    async def _build_prompt_metadata(self) -> Dict[str, Any]:
         """
         Build metadata for prompts including user and session information.
 
@@ -842,7 +835,7 @@ class AgentBridge:
         Raises:
             Exception: If initialization of tools or agent parameters fails.
         """
-        await self.__init_tool_chest()
+        await self._init_tool_chest()
         await self.initialize_agent_parameters()
 
 
@@ -963,7 +956,7 @@ class AgentBridge:
             agent_runtime = self.runtime_for_agent(self.chat_session.agent_config)
             file_inputs = []
             if file_ids and self.file_handler:
-                file_inputs = await self.process_files_for_message(file_ids, self.chat_session.user_id)
+                file_inputs = await self.process_files_for_message(file_ids, self.chat_session.session_id)
 
                 # Log information about processed files
                 if file_inputs:
@@ -972,7 +965,7 @@ class AgentBridge:
                         input_types[type(input_obj).__name__] += 1
                     self.logger.info(f"Processing {len(file_inputs)} files: {input_types}")
 
-            prompt_metadata = await self.__build_prompt_metadata()
+            prompt_metadata = await self._build_prompt_metadata()
             # Prepare chat parameters
             tool_params = {}
             if len(self.chat_session.agent_config.tools):

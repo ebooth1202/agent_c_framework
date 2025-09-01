@@ -1,4 +1,5 @@
 from .workspace import WorkspaceTools, LocalStorageWorkspace, WorkspaceSection
+from .web_search import WebSearchTools
 from .web_search import WikipediaTools, HackerNewsTools, SeekingAlphaTools, TavilyResearchTools
 from .web_search import GoogleSerpTools, GoogleTrendsTools, HackerNewsTools, NewsApiTools
 from .user_preferences import UserPreference, AddressMeAsPreference, AssistantPersonalityPreference, \
@@ -31,6 +32,9 @@ from .health import FDANDCTools, ClinicalTrialsTools, PubMedTools
 from .salesforce import SalesforceTools
 from .linked_in import LinkedInTools
 from .youtube import YoutubeTranscriptTools, YoutubeCommentsTools, YoutubeSearchViaApiTools, YoutubeSearchViaWebTools
+from .sars import SarsTools
+from .insurance_demo import InsuranceDemoTools
+from .workspace import DynamicCommandToolset
 
 __all__ = [
     # Essential Tools for good agents
@@ -53,6 +57,7 @@ __all__ = [
     'WorkspaceSequentialThinkingTools',
 
     # Web tools
+    'WebSearchTools',  # Unified web search interface
     'WikipediaTools',
     'HackerNewsTools',
     'SeekingAlphaTools',
@@ -102,5 +107,12 @@ __all__ = [
     'FDANDCTools',
     'ClinicalTrialsTools',
     'PubMedTools',
+
+    # Client Demo Only
+    'SarsTools',
+    'InsuranceDemoTools',
+
+    # Whitelisted Dynamic Command Toolset
+    'DynamicCommandToolset',
 
 ]
