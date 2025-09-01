@@ -1,9 +1,9 @@
 {
-  "name": "next-shadcn-starter",
+  "name": "@agentc/demo-app",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --experimental-https --experimental-https-key ../../agent_c_config/localhost_self_signed-key.pem --experimental-https-cert ../../agent_c_config/localhost_self_signed.pem",
+    "dev": "next dev --experimental-https --experimental-https-key ../../../../agent_c_config/localhost_self_signed-key.pem --experimental-https-cert ../../../../agent_c_config/localhost_self_signed.pem",
     "dev:http": "next dev",
     "build": "next build",
     "start": "next start",
@@ -12,6 +12,9 @@
     "format:check": "pnpm prettier ./src --check"
   },
   "dependencies": {
+    "@agentc/realtime-core": "workspace:*",
+    "@agentc/realtime-react": "workspace:*",
+    "@agentc/realtime-ui": "workspace:*",
     "@hookform/resolvers": "^5.0.1",
     "axios": "^1.7.9",
     "js-cookie": "^3.0.5",

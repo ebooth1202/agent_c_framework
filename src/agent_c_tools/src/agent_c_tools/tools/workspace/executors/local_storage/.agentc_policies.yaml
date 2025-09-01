@@ -75,7 +75,7 @@ echo:
 
 node:
   validator: node
-  flags: ["-v","--version","--help", "-c""]
+  flags: ["-v","--version","--help", "-c"]
   deny_global_flags: ["-e","--eval","-p","--print"]
   default_timeout: 5
   env_overrides:
@@ -155,6 +155,7 @@ pnpm:
       ping:   { allowed_flags: [] }
       outdated: { allowed_flags: [] }
       test:   { allowed_flags: [] }
+      type_check:   { allowed_flags: [] }
       why:    { allowed_flags: ["--json","--long"] }
       licenses: { allowed_flags: ["--json","--long"] }
 

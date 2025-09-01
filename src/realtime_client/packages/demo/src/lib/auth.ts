@@ -1,4 +1,4 @@
-import { env } from '@/env.mjs';
+// API endpoints are now proxied through Next.js API routes for security
 
 /**
  * Authentication credentials for login
@@ -10,21 +10,51 @@ export interface LoginCredentials {
 }
 
 /**
- * Login response from the /rt/login endpoint
+ * Login response from the /api/rt/login endpoint
  */
 export interface LoginResponse {
-  token: string;
-  heyGenToken?: string;
-  voices?: Array<{
-    id: string;
-    name?: string;
-    format: string;
-    sampleRate: number;
-  }>;
-  avatars?: Array<{
-    id: string;
+  agent_c_token: string;
+  heygen_token: string;
+  user: {
+    user_id: string;
+    user_name: string;
+    email: string | null;
+    first_name: string | null;
+    last_name: string | null;
+    is_active: boolean;
+    roles: string[];
+    groups: string[];
+    created_at: string | null;
+    last_login: string | null;
+  };
+  agents: Array<{
     name: string;
+    key: string;
+    agent_description: string | null;
+    category: string[];
   }>;
+  avatars: Array<{
+    avatar_id: string;
+    created_at: number;
+    default_voice: string;
+    is_public: boolean;
+    normal_preview: string;
+    pose_name: string;
+    status: string;
+  }>;
+  toolsets: Array<{
+    name: string;
+    key: string;
+    description: string | null;
+    category: string[];
+  }>;
+  voices: Array<{
+    voice_id: string;
+    vendor: string;
+    description: string;
+    output_format: string;
+  }>;
+  ui_session_id: string;
 }
 
 /**
@@ -50,40 +80,22 @@ const AUTH_CONFIG = {
     maxAge: 60 * 60 * 24 * 7, // 7 days
   },
   apiEndpoints: {
-    login: '/rt/login',
-    logout: '/rt/logout',
+    login: '/api/auth/login',
+    session: '/api/auth/session',
   },
 };
 
 /**
- * Creates a fetch instance that handles self-signed certificates in development
+ * Session information returned from the API
  */
-function createSecureFetch() {
-  // In development, we need to handle self-signed certificates
-  const isDevelopment = process.env.NODE_ENV === 'development';
-  
-  return async (url: string, options?: RequestInit): Promise<Response> => {
-    const fetchOptions: RequestInit = {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options?.headers,
-      },
-    };
-
-    // In development with HTTPS, we may need to handle self-signed certificates
-    // Note: Browsers handle this at a different level, so we focus on proper error handling
-    if (isDevelopment && url.startsWith('https://')) {
-      // Add any development-specific headers if needed
-      fetchOptions.mode = 'cors';
-      fetchOptions.credentials = 'include';
-    }
-
-    return fetch(url, fetchOptions);
+export interface SessionInfo {
+  websocketUrl: string;
+  user: {
+    id: string;
+    [key: string]: any;
   };
+  expiresAt: number;
 }
-
-const secureFetch = createSecureFetch();
 
 /**
  * Parse JWT token without verification (client-side only)
@@ -159,34 +171,35 @@ function deleteCookie(name: string, path = '/') {
 
 /**
  * Login with credentials
- * Calls the /rt/login endpoint and stores the JWT token in a secure cookie
+ * Calls the Next.js API route that proxies to the Agent C backend
  */
 export async function login(credentials: LoginCredentials): Promise<LoginResponse> {
   try {
-    const loginUrl = `${env.NEXT_PUBLIC_API_URL}${AUTH_CONFIG.apiEndpoints.login}`;
-    
-    const response = await secureFetch(loginUrl, {
+    const response = await fetch(AUTH_CONFIG.apiEndpoints.login, {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(credentials),
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `Login failed: ${response.statusText}`);
+      throw new Error(errorData.error || errorData.message || `Login failed: ${response.statusText}`);
     }
 
     const data: LoginResponse = await response.json();
     
-    if (!data.token) {
-      throw new Error('No token received from login endpoint');
+    if (!data.agent_c_token) {
+      throw new Error('No agent_c_token received from login endpoint');
     }
 
-    // Store token in secure cookie
-    setCookie(AUTH_CONFIG.tokenCookieName, data.token);
+    // Store agent_c_token in secure cookie
+    setCookie(AUTH_CONFIG.tokenCookieName, data.agent_c_token);
 
     // Store HeyGen token if provided
-    if (data.heyGenToken) {
-      setCookie('agentc-heygen-token', data.heyGenToken, {
+    if (data.heygen_token) {
+      setCookie('agentc-heygen-token', data.heygen_token, {
         ...AUTH_CONFIG.tokenCookieOptions,
         maxAge: 60 * 60, // 1 hour for HeyGen token
       });
@@ -201,32 +214,12 @@ export async function login(credentials: LoginCredentials): Promise<LoginRespons
 
 /**
  * Logout the current user
- * Clears the authentication tokens
+ * Logout is handled purely client-side by clearing tokens from cookies
  */
-export async function logout(): Promise<void> {
-  try {
-    const token = getToken();
-    
-    // If we have a token, try to call the logout endpoint
-    if (token) {
-      const logoutUrl = `${env.NEXT_PUBLIC_API_URL}${AUTH_CONFIG.apiEndpoints.logout}`;
-      
-      // Best effort logout call to server
-      await secureFetch(logoutUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      }).catch(error => {
-        console.warn('Server logout failed:', error);
-        // Continue with local cleanup even if server logout fails
-      });
-    }
-  } finally {
-    // Always clear local tokens
-    deleteCookie(AUTH_CONFIG.tokenCookieName);
-    deleteCookie('agentc-heygen-token');
-  }
+export function logout(): void {
+  // Clear all authentication tokens from cookies
+  deleteCookie(AUTH_CONFIG.tokenCookieName);
+  deleteCookie('agentc-heygen-token');
 }
 
 /**
@@ -312,6 +305,38 @@ export function getAuthHeader(): { Authorization: string } | {} {
   return {
     Authorization: `Bearer ${token}`,
   };
+}
+
+/**
+ * Get session information including WebSocket URL
+ * Requires a valid authentication token
+ */
+export async function getSessionInfo(): Promise<SessionInfo> {
+  const token = getToken();
+  
+  if (!token) {
+    throw new Error('No authentication token available');
+  }
+
+  try {
+    const response = await fetch(AUTH_CONFIG.apiEndpoints.session, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Failed to get session info: ${response.statusText}`);
+    }
+
+    const data: SessionInfo = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Get session info error:', error);
+    throw error;
+  }
 }
 
 /**
