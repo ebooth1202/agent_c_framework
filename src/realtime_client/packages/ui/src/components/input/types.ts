@@ -21,6 +21,5 @@ export interface OutputOption {
     voiceId?: string
     avatarId?: string
     previewUrl?: string
-    [key: string]: any
   }
 }

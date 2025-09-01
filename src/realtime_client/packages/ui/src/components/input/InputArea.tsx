@@ -8,6 +8,7 @@ import {
   useVoiceModel, 
   useAvatar 
 } from "@agentc/realtime-react"
+import type { Voice } from "@agentc/realtime-core"
 import { InputContainer } from "./InputContainer"
 import { RichTextEditor } from "./RichTextEditor"
 import { InputToolbar } from "./InputToolbar"
@@ -107,13 +108,13 @@ const InputArea: React.FC<InputAreaProps> = ({
     }
     
     return availableVoices
-      .filter((v: any) => v.id !== 'none' && v.id !== 'avatar')
-      .map((v: any) => ({
-        id: v.id,
-        name: v.name,
+      .filter((v: Voice) => v.voice_id !== 'none' && v.voice_id !== 'avatar')
+      .map((v: Voice) => ({
+        id: v.voice_id,
+        name: v.description,
         type: 'voice' as const,
         available: true,
-        metadata: { voiceId: v.id }
+        metadata: { voiceId: v.voice_id }
       }))
   }, [availableVoices, propVoiceOptions])
 
