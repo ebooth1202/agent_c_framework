@@ -2075,6 +2075,32 @@ _plans:
         updated_at: '2025-08-29T21:22:59.098145'
     title: Update Domo Instructions to Reflect Actual Architecture
     updated_at: '2025-08-29T21:23:12.359701'
+  realtime_agent_team_fixes:
+    created_at: '2025-08-30T16:47:34.556326'
+    description: Comprehensive plan to fix the identity, role clarity, team structure,
+      and coordination issues in the Agent C Realtime team consisting of Hank (lead),
+      Levi (dev), and another agent for UI specialization.
+    id: 179301e4-1a40-4d56-ae4f-94b10c7b4cd4
+    lessons_learned: []
+    tasks:
+      c6d66044-e622-4228-ace4-cc0c660826a1:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-08-30T16:47:38.897183'
+        description: Thoroughly analyze the three existing realtime agents to identify
+          all structural, role, and coordination issues that need to be addressed.
+        id: c6d66044-e622-4228-ace4-cc0c660826a1
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 1
+        title: 1. Analyze Current Team Structure & Issues
+        updated_at: '2025-08-30T16:47:38.897184'
+    title: Agent C Realtime Team Restructuring & Enhancement
+    updated_at: '2025-08-30T16:47:38.897212'
 agents:
   hank_agent:
     agent_key: hank_agent
