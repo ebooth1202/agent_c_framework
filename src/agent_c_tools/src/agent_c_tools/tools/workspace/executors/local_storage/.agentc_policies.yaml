@@ -75,7 +75,7 @@ echo:
 
 node:
   validator: node
-  flags: ["-v","--version","--help", "-c""]
+  flags: ["-v","--version","--help", "-c"]
   deny_global_flags: ["-e","--eval","-p","--print"]
   default_timeout: 5
   env_overrides:
