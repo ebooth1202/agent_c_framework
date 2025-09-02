@@ -1066,7 +1066,7 @@ class AgentBridge:
                     break
 
             await chat_task
-            await self.session_manager.flush(self.chat_session.session_id)
+            await self.session_manager.flush(self.chat_session.session_id, self.chat_session.user_id)
 
         except Exception as e:
             self.logger.exception (f"Error in stream_chat: {e}", exc_info=True)
