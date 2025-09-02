@@ -1,4 +1,5 @@
 git:
+  description: "Read-only/metadata git operations (no mutations)."
   subcommands:
     status:  { flags: ["--porcelain", "-s", "-b", "--no-color"], timeout: 20 }
     log:     { flags: ["--oneline","--graph","--decorate","-n","-p", "--no-color"] }
@@ -198,6 +199,7 @@ pnpm:
     PATHEXT: ".COM;.EXE;.BAT;.CMD"
 
 npx:
+  validator: npx
   allowed_packages:
     - "@angular/cli"
     - "create-react-app"
@@ -215,6 +217,8 @@ npx:
     - "parcel"
     - "serve"
     - "http-server"
+  command_aliases:
+    typescript: [ "tsc" ]
   flags:
     - "--yes"
     - "-y"
