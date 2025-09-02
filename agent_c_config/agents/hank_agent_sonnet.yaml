@@ -10,7 +10,7 @@ tools:
   - WorkspacePlanningTools
   - AgentCloneTools
   - AgentTeamTools
-  - DynamicCommandToolset
+  - DynamicCommandTools
   - WebTools
 agent_params:
   budget_tokens: 20000
