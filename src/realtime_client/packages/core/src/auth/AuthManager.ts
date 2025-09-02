@@ -11,7 +11,9 @@ import {
   Agent,
   Avatar,
   Voice,
-  Toolset
+  Toolset,
+  ChatSessionIndexEntry,
+  ChatSessionQueryResponse
 } from '../events/types/CommonTypes';
 import {
   AuthConfig,
@@ -157,6 +159,22 @@ export class AuthManager extends EventEmitter<AuthManagerEvents> {
    */
   getToolsets(): Toolset[] {
     return this.loginData?.toolsets || [];
+  }
+
+  /**
+   * Get chat sessions from login data
+   * Returns the array of session index entries from the paginated response
+   */
+  getSessions(): ChatSessionIndexEntry[] {
+    return this.loginData?.sessions?.chat_sessions || [];
+  }
+
+  /**
+   * Get full sessions metadata including pagination info
+   * Returns the complete ChatSessionQueryResponse with total_sessions and offset
+   */
+  getSessionsMetadata(): ChatSessionQueryResponse | null {
+    return this.loginData?.sessions || null;
   }
 
   /**

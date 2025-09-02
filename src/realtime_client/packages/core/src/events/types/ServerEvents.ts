@@ -10,6 +10,7 @@ import {
   AvatarSessionRequest,
   AvatarSession,
   ChatSession,
+  ChatSessionQueryResponse,
   Voice,
   Message,
   ToolCall,
@@ -198,6 +199,14 @@ export interface ErrorEvent extends BaseServerEvent {
 }
 
 /**
+ * Response to get_user_sessions request with paginated session list
+ */
+export interface GetUserSessionsResponseEvent extends BaseServerEvent {
+  type: 'get_user_sessions_response';
+  sessions: ChatSessionQueryResponse;
+}
+
+/**
  * Union type of all server events
  */
 export type ServerEvent =
@@ -218,7 +227,8 @@ export type ServerEvent =
   | UserTurnStartEvent
   | UserTurnEndEvent
   | AgentVoiceChangedEvent
-  | ErrorEvent;
+  | ErrorEvent
+  | GetUserSessionsResponseEvent;
 
 /**
  * Type guard to check if an object is a server event
@@ -242,6 +252,7 @@ export function isServerEvent(obj: unknown): obj is ServerEvent {
     'user_turn_start',
     'user_turn_end',
     'agent_voice_changed',
-    'error'
+    'error',
+    'get_user_sessions_response'
   ].includes((obj as any).type);
 }

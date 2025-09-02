@@ -4,6 +4,7 @@ from pydantic import Field
 
 from agent_c.models import ChatSession
 from agent_c.models.agent_config import CurrentAgentConfiguration, AgentCatalogEntry
+from agent_c.models.chat_history.chat_session import ChatSessionQueryResponse
 from agent_c.models.events import BaseEvent
 from agent_c.models.heygen import Avatar, HeygenAvatarSessionData, NewSessionRequest
 from agent_c_api.core.voice.models import AvailableVoiceModel
@@ -141,6 +142,25 @@ class ChatSessionNameChangedEvent(BaseEvent):
         session_name (str): The updated name of the chat session.
     """
     session_name: str
+
+class GetUserSessionsEvent(BaseEvent):
+    """
+    Event to request a list of user chat sessions.
+
+    This event does not require any additional data.
+    """
+    offset: int = 0
+    limit: int = 50
+
+class GetUserSessionsResponseEvent(BaseEvent):
+    """
+    Event to send a list of user chat sessions.
+
+    Attributes:
+        sessions (ChatSessionQueryResponse): A model with a list of user chat session, total count, offset
+    """
+    sessions: ChatSessionQueryResponse
+
 
 class SetSessionMetadataEvent(BaseEvent):
     """

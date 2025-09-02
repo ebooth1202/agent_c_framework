@@ -18,7 +18,7 @@ class RealtimeSessionManager:
     Maintains the connection between client UI
     """
 
-    def __init__(self):
+    def __init__(self, session_manager: ChatSessionManager):
         logging_manager = LoggingManager(__name__)
         self.logger = logging_manager.get_logger()
 
@@ -27,7 +27,7 @@ class RealtimeSessionManager:
         self._locks: Dict[str, asyncio.Lock] = {}
         self._cancel_events: Dict[str, threading.Event] = {}
         self.agent_config_loader: AgentConfigLoader = AgentConfigLoader()
-        self.chat_session_manager: ChatSessionManager = ChatSessionManager()
+        self.chat_session_manager: ChatSessionManager = session_manager
 
     def get_session_data(self, ui_session_id: str) -> Optional[RealtimeSession]:
         """

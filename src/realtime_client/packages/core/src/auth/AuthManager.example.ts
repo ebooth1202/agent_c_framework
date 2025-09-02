@@ -86,6 +86,26 @@ async function initializeFromBackend() {
       },
     ],
     ui_session_id: 'session_abc123',
+    sessions: {
+      chat_sessions: [
+        {
+          session_id: 'session_001',
+          session_name: 'Morning Chat',
+          created_at: '2024-01-01T09:00:00Z',
+          updated_at: '2024-01-01T09:30:00Z',
+          user_id: 'user123',
+        },
+        {
+          session_id: 'session_002',
+          session_name: 'Technical Discussion',
+          created_at: '2024-01-01T14:00:00Z',
+          updated_at: '2024-01-01T14:45:00Z',
+          user_id: 'user123',
+        },
+      ],
+      total_sessions: 2,
+      offset: 0,
+    },
   };
 
   // WebSocket URL (might also come from your backend)
@@ -97,6 +117,8 @@ async function initializeFromBackend() {
   // Now you can access all resources immediately
   const agents = authManager.getAgents();
   const voices = authManager.getVoices();
+  const sessions = authManager.getSessions(); // Returns ChatSessionIndexEntry[]
+  const sessionsMetadata = authManager.getSessionsMetadata(); // Returns full ChatSessionQueryResponse
   // const avatars = authManager.getAvatars();
   // const toolsets = authManager.getToolsets();
   // const token = authManager.getAgentCToken();
@@ -108,6 +130,18 @@ async function initializeFromBackend() {
   console.log('Authenticated user:', user?.user_name);
   console.log('Available agents:', agents.length);
   console.log('Available voices:', voices.length);
+  console.log('Previous sessions:', sessions.length);
+  console.log('Total sessions available:', sessionsMetadata?.total_sessions);
+  
+  // Access session index details (lightweight session entries)
+  sessions.forEach(session => {
+    console.log(`  Session: ${session.session_name || session.session_id}`);
+    console.log(`  - Created: ${session.created_at}`);
+    console.log(`  - Last updated: ${session.updated_at}`);
+  });
+  
+  // Note: Full session details with messages are now fetched when resuming a specific session
+  // The initial login only provides the session index for performance
   
   // The auth tokens will auto-refresh if autoRefresh is enabled
   // The authManager will emit the same events as if you had logged in normally

@@ -92,22 +92,34 @@ onClick={() => {
 }}
 ```
 
-##### 2. ChatSessionList (STUB Component)
+##### 2. ChatSessionList (Full Design Available)
 
 ```tsx
 className="flex-grow overflow-y-auto px-2"
 
-// Placeholder Implementation:
-<div className="space-y-1">
-  <div className="sticky top-0 z-10 bg-gradient-to-b from-background to-transparent pb-2">
-    <span className="text-xs font-medium text-muted-foreground">Recent Chats</span>
-  </div>
-  <div className="text-sm text-muted-foreground p-4 text-center">
-    Chat history will appear here
-  </div>
-</div>
+// Full component specification available in:
+// .scratch/design_docs/chat_session_list_design.md
 
-// Note: API support for conversation history coming later
+// Key Features:
+- Session grouping by time (Today, Yesterday, This Week, etc.)
+- Rich session information display
+- Message previews and token counts
+- Active session highlighting
+- Search and filtering
+- Empty state handling
+- Mobile-optimized interactions
+
+// Integration with API:
+// Uses sessions array from login response:
+interface ChatSession {
+  session_id: string
+  session_name: string | null
+  created_at: string | null
+  updated_at: string | null
+  token_count: number
+  messages: Message[]
+  agent_config: AgentConfiguration
+}
 ```
 
 ##### 3. UserDisplay (Functional NOW)
@@ -469,13 +481,13 @@ disabled:opacity-50 disabled:pointer-events-none
 
 - `InputArea` - Existing component handles all input
 
-### Phase 2: Stub Components (UI Only)
+### Phase 2: Enhanced Components
 
-⚡ **Create placeholders:**
+⚡ **Now Ready for Implementation:**
 
+- `ChatSessionList` - Full design complete with API integration
 - `ChatMessagesView` - Placeholder for complex chat UI
 - `VoiceVisualizerView` - Placeholder for Three.js visualizer
-- `ChatSessionList` content - Awaiting API support
 
 ### Phase 3: Future Enhancements (Not in scope)
 

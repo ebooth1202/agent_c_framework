@@ -717,7 +717,7 @@ class AgentBridge:
             Exception: If session flushing fails.
         """
         self.chat_session.messages = event.messages
-        await self.session_manager.flush(self.chat_session.session_id)
+        await self.session_manager.flush(self.chat_session.session_id, self.chat_session.user_id)
         
         payload = json.dumps({
             "type": "history",

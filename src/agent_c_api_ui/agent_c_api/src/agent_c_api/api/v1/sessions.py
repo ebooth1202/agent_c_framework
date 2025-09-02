@@ -1,11 +1,18 @@
+import os
+from typing import TYPE_CHECKING
+
 from fastapi import APIRouter, HTTPException, Depends
-import logging
-# from agent_c_api.core.agent_manager import UItoAgentBridgeManager
+
+from agent_c.util.logging_utils import LoggingManager
 from agent_c_api.api.dependencies import get_agent_manager
 from agent_c_api.api.v1.llm_models.agent_params import AgentInitializationParams
 
+if TYPE_CHECKING:
+    from agent_c.models.chat_history.chat_session import ChatSessionQueryResponse
+
+
 router = APIRouter()
-logger = logging.getLogger(__name__)
+logger =  LoggingManager(__name__).get_logger()
 
 
 @router.post("/initialize")
@@ -17,7 +24,7 @@ async def initialize_user_session(params: AgentInitializationParams,
     """
     try:
         # Create a new session with both model and backend parameters
-        logging.debug(f"Creating new session with model: {params.model_name}, backend: {params.backend}")
+        logger.debug(f"Creating new session with model: {params.model_name}, backend: {params.backend}")
 
         # Use ui_session_id if provided (for model changes) - this allows us to transfer chat history
         session_params = {}
@@ -61,8 +68,10 @@ async def get_sessions(agent_manager=Depends(get_agent_manager)):
         HTTPException: If there's an error retrieving sessions
     """
     try:
-        sessions = agent_manager.chat_session_manager.session_id_list
-        return {"session_ids": sessions}
+        user_id = os.environ.get("AGENT_C_USER_ID", "Agent C User")
+        sessions: ChatSessionQueryResponse = await agent_manager.chat_session_manager.get_user_sessions(user_id)  # Assuming single user for now
+        session_ids = [s.session_id for s in sessions.chat_sessions]
+        return {"session_ids": session_ids}
 
     except Exception as e:
         logger.error(f"Error retrieving sessions: {str(e)}")

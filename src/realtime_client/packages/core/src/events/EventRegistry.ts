@@ -16,6 +16,7 @@ import {
   SetChatSessionNameEvent,
   SetSessionMetadataEvent,
   SetSessionMessagesEvent,
+  GetUserSessionsEvent,
   ClientEvent
 } from './types/ClientEvents';
 
@@ -38,6 +39,7 @@ import {
   UserTurnEndEvent,
   AgentVoiceChangedEvent,
   ErrorEvent,
+  GetUserSessionsResponseEvent,
   ServerEvent
 } from './types/ServerEvents';
 
@@ -57,6 +59,7 @@ export interface ClientEventMap {
   'set_chat_session_name': SetChatSessionNameEvent;
   'set_session_metadata': SetSessionMetadataEvent;
   'set_session_messages': SetSessionMessagesEvent;
+  'get_user_sessions': GetUserSessionsEvent;
 }
 
 /**
@@ -81,6 +84,7 @@ export interface ServerEventMap {
   'user_turn_end': UserTurnEndEvent;
   'agent_voice_changed': AgentVoiceChangedEvent;
   'error': ErrorEvent;
+  'get_user_sessions_response': GetUserSessionsResponseEvent;
 }
 
 /**
@@ -132,7 +136,8 @@ export class EventRegistry {
     'resume_chat_session',
     'set_chat_session_name',
     'set_session_metadata',
-    'set_session_messages'
+    'set_session_messages',
+    'get_user_sessions'
   ]);
 
   private static readonly serverEventTypes = new Set<string>([
@@ -153,7 +158,8 @@ export class EventRegistry {
     'user_turn_start',
     'user_turn_end',
     'agent_voice_changed',
-    'error'
+    'error',
+    'get_user_sessions_response'
   ]);
 
   /**

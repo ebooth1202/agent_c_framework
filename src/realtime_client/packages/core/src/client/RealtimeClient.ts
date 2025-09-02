@@ -12,7 +12,9 @@ import {
     ChatSessionNameChangedEvent,
     AgentVoiceChangedEvent,
     TextInputEvent,
-    NewChatSessionEvent
+    NewChatSessionEvent,
+    GetUserSessionsEvent,
+    GetUserSessionsResponseEvent
 } from '../events';
 import {
     RealtimeClientConfig,
@@ -126,10 +128,49 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
             persistSessions: false
         });
         
+        // Setup session manager handlers for fetching sessions
+        this.setupSessionFetchingHandlers();
+        
         // Initialize audio system if enabled
         if (this.config.enableAudio && this.config.audioConfig) {
             this.audioConfig = this.config.audioConfig;
             this.initializeAudioSystem();
+        }
+    }
+    
+    /**
+     * Setup session fetching handlers
+     */
+    private setupSessionFetchingHandlers(): void {
+        if (!this.sessionManager) return;
+        
+        // Listen for session fetch requests from SessionManager
+        this.sessionManager.on('request-user-sessions', ({ offset, limit }) => {
+            this.fetchUserSessions(offset, limit);
+        });
+        
+        // Handle the response from server
+        this.on('get_user_sessions_response', (event: GetUserSessionsResponseEvent) => {
+            if (this.sessionManager && event.sessions) {
+                // Append new sessions to the index
+                this.sessionManager.setSessionIndex(event.sessions, true);
+                
+                if (this.config.debug) {
+                    console.debug('Received user sessions:', {
+                        count: event.sessions.chat_sessions.length,
+                        total: event.sessions.total_sessions,
+                        offset: event.sessions.offset
+                    });
+                }
+            }
+        });
+        
+        // Initialize session index from auth data if available
+        if (this.authManager) {
+            const sessionsMetadata = this.authManager.getSessionsMetadata();
+            if (sessionsMetadata && this.sessionManager) {
+                this.sessionManager.setSessionIndex(sessionsMetadata, false);
+            }
         }
     }
     
@@ -590,6 +631,24 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
      */
     setSessionMessages(messages: Message[]): void {
         this.sendEvent({ type: 'set_session_messages', messages });
+    }
+    
+    /**
+     * Fetch paginated list of user sessions
+     * @param offset Starting offset for pagination (default 0)
+     * @param limit Number of sessions to fetch (default 50)
+     */
+    fetchUserSessions(offset: number = 0, limit: number = 50): void {
+        const event: GetUserSessionsEvent = {
+            type: 'get_user_sessions',
+            offset,
+            limit
+        };
+        this.sendEvent(event);
+        
+        if (this.config.debug) {
+            console.debug('Requesting user sessions:', { offset, limit });
+        }
     }
 
     // Getters

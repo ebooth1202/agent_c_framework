@@ -30,9 +30,8 @@ class UItoAgentBridgeManager:
         _locks (Dict[str, asyncio.Lock]): Session operation locks
     """
     ESSENTIAL_TOOLS = []
-    # ESSENTIAL_TOOLS = ['WorkspaceTools', 'ThinkTools', 'RandomNumberTools', 'MarkdownToHtmlReportTools']
 
-    def __init__(self):
+    def __init__(self, session_manager: ChatSessionManager):
         logging_manager = LoggingManager(__name__)
         self.logger = logging_manager.get_logger()
         # self.debug_event = LoggingManager.get_debug_event()
@@ -41,7 +40,7 @@ class UItoAgentBridgeManager:
         self._locks: Dict[str, asyncio.Lock] = {}
         self._cancel_events: Dict[str, threading.Event] = {}
         self.agent_config_loader: AgentConfigLoader = AgentConfigLoader()
-        self.chat_session_manager: ChatSessionManager = ChatSessionManager()
+        self.chat_session_manager: ChatSessionManager = session_manager
 
 
 
@@ -80,12 +79,9 @@ class UItoAgentBridgeManager:
                 chat_session.agent_config = agent_config
                 chat_session.touch()
         else:
-            if ui_session_id in self.chat_session_manager.session_id_list:
-                # If session already exists in chat session manager, load it
-                chat_session = await self.chat_session_manager.get_session(ui_session_id)
-                if chat_session.agent_config.key == agent_key or agent_key == "default":
-                    agent_config = chat_session.agent_config
-                else:
+            chat_session = await self.chat_session_manager.get_session(ui_session_id, user_id)
+            if chat_session is not None:
+                if chat_session.agent_config.key != agent_key:
                     agent_config = self.agent_config_loader.duplicate(agent_key)
                     chat_session.agent_config = agent_config
                     chat_session.touch()

@@ -18,7 +18,7 @@ from agent_c.util.heygen_streaming_avatar_client import HeyGenStreamingClient
 from agent_c.util.registries.event import EventRegistry
 from agent_c_api.api.rt.models.client_events import GetAgentsEvent, ErrorEvent, AgentListEvent, GetAvatarsEvent, AvatarListEvent, TextInputEvent, SetAvatarEvent, AvatarConnectionChangedEvent, \
     SetAgentEvent, AgentConfigurationChangedEvent, SetAvatarSessionEvent, ChatSessionChangedEvent, SessionMetadataChangedEvent, ChatSessionNameChangedEvent, ResumeChatSessionEvent, \
-    NewChatSessionEvent, SetAgentVoiceEvent, AgentVoiceChangedEvent, UserTurnStartEvent, UserTurnEndEvent
+    NewChatSessionEvent, SetAgentVoiceEvent, AgentVoiceChangedEvent, UserTurnStartEvent, UserTurnEndEvent, GetUserSessionsEvent, GetUserSessionsResponseEvent
 from agent_c_api.api.rt.models.client_events import SetChatSessionNameEvent, SetSessionMessagesEvent, ChatSessionNameChangedEvent, SetSessionMetadataEvent, SessionMetadataChangedEvent
 from agent_c_api.core.agent_bridge import AgentBridge
 from agent_c.models.input import AudioInput
@@ -62,7 +62,7 @@ class RealtimeBridge(AgentBridge):
     async def flush_session(self):
         """Flush the current chat session to persistent storage"""
         if self.chat_session:
-            await self.session_manager.flush(self.chat_session.session_id)
+            await self.session_manager.flush(self.chat_session.session_id, self.chat_session.user_id)
 
     # Handlers for events coming from the client websocket
     @singledispatchmethod
@@ -159,7 +159,7 @@ class RealtimeBridge(AgentBridge):
         await self.resume_chat_session(event.session_id)
 
     async def resume_chat_session(self, session_id: str) -> None:
-        session_info = await self.chat_session_manager.get_session(session_id)
+        session_info = await self.chat_session_manager.get_session(session_id, self.chat_user.user_id)
         if not session_info or session_info.user_id != self.chat_user.user_id:
             await self.send_error(f"Session '{session_id}' not found", source="resume_chat_session")
             return
@@ -178,6 +178,14 @@ class RealtimeBridge(AgentBridge):
         self.chat_session.session_name = session_name
         self.logger.info(f"RealtimeBridge {self.chat_session.session_id}: Session name set to '{session_name}'")
         await self.send_chat_session_name()
+
+    @handle_client_event.register
+    async def _(self, event: GetUserSessionsEvent) -> None:
+        await self.send_user_sessions(event.offset, event.limit)
+
+    async def send_user_sessions(self, offset: int, limit: int = 50) -> None:
+        sessions = await self.chat_session_manager.get_user_sessions(self.chat_user.user_id, offset, limit)
+        await self.send_event(GetUserSessionsResponseEvent(sessions=sessions))
 
     @handle_client_event.register
     async def _(self, event: SetSessionMetadataEvent) -> None:
@@ -536,7 +544,7 @@ class RealtimeBridge(AgentBridge):
             return
 
         try:
-            await self.session_manager.flush(self.chat_session.session_id)
+            await self.session_manager.flush(self.chat_session.session_id, self.chat_session.user_id)
             await self.send_user_turn_start()
 
         except Exception as e:
@@ -548,7 +556,7 @@ class RealtimeBridge(AgentBridge):
 
     async def _get_or_create_chat_session(self, session_id: Optional[str] = None, user_id: Optional[str] = None, agent_key: str = 'default_realtime') -> ChatSession:
         session_id = session_id or self.ui_session_id
-        chat_session = await self.chat_session_manager.get_session(session_id)
+        chat_session = await self.chat_session_manager.get_session(session_id, user_id)
 
         if chat_session is None:
             agent_config = self.agent_config_loader.duplicate(agent_key)
