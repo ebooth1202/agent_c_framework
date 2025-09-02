@@ -134,7 +134,7 @@ class CommandExecutionResult:
     @property
     def is_error(self) -> bool:
         """Check if command failed"""
-        return self.status in ["error", "timeout", "blocked"]
+        return self.status in ["error", "timeout", "blocked", "failed"]
 
     def to_friendly_string(self, success_prefix: str = "OK") -> str:
         """
@@ -350,23 +350,28 @@ class SecureCommandExecutor:
 
         # Build env
         effective_env = dict(os.environ)
-        # Apply policy-provided safe env first
+
+        # 1) policy "safe_env" (static, lowest precedence)
         safe_env = policy.get("safe_env") or {}
         effective_env.update({k: str(v) for (k, v) in safe_env.items()})
 
+        # 2) workspace-provided overrides (e.g., WORKSPACE_ROOT, CWD) — make these visible to validators
         if override_env:
             effective_env.update(override_env)
 
-        # Let validator override / adjust environment
+        # 3) let the validator add/adjust (may set PATH_PREPEND using WORKSPACE_ROOT/CWD, etc.)
         if hasattr(validator, "adjust_environment"):
-            # type: ignore[attr-defined]
             effective_env = validator.adjust_environment(effective_env, parts, policy)  # noqa
 
-        # Ensure Windows can resolve .cmd/.bat if caller didn't supply PATHEXT
+        # (optional) if you want "caller wins" semantics for most keys without clobbering PATH:
+        if override_env:
+            for k, v in override_env.items():
+                if k not in ("PATH", "PATH_PREPEND"):  # don't stomp what validator composed
+                    effective_env[k] = v
+
+        # Windows helpers + PATH_PREPEND handling (unchanged)
         if self.is_windows:
             effective_env.setdefault("PATHEXT", ".COM;.EXE;.BAT;.CMD")
-
-        # Optional: allow PATH_PREPEND if a validator/policy wants to inject it
         path_prepend = effective_env.pop("PATH_PREPEND", None)
         if path_prepend:
             sep = ";" if self.is_windows else ":"
