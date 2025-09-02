@@ -610,7 +610,8 @@ class LocalStorageWorkspace(BaseWorkspace):
 
         # Provide workspace root to validators and any executed processes
         override_env = {
-            "WORKSPACE_ROOT": str(self.workspace_root)
+            "WORKSPACE_ROOT": str(self.workspace_root),
+            "CWD": str(working_directory or self.workspace_root)
         }
         
         return await self.executor.execute_command(command=command, working_directory=working_directory, override_env=override_env, timeout=timeout)
