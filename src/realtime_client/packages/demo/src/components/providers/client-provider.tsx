@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { RealtimeClient, type RealtimeClientConfig } from '@agentc/realtime-core';
+import type { RealtimeClientConfig } from '@agentc/realtime-core';
 import { AgentCProvider } from '@agentc/realtime-react';
 import { useAuth } from '@/contexts/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -34,7 +34,7 @@ export function ClientProvider({
   const { isAuthenticated, isLoading: authLoading, getAuthToken, getUiSessionId, loginResponse } = useAuth();
   const [isInitializing, setIsInitializing] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const clientRef = useRef<RealtimeClient | null>(null);
+  const clientRef = useRef<any>(null); // Using any to avoid SSR type issues
   const initializationRef = useRef(false);
 
   // Redirect to login if not authenticated
@@ -106,6 +106,9 @@ export function ClientProvider({
       try {
         setIsInitializing(true);
         setError(null);
+        
+        // Dynamically import RealtimeClient to avoid SSR issues
+        const { RealtimeClient } = await import('@agentc/realtime-core');
         
         // Create and connect client
         const client = new RealtimeClient(clientConfig);

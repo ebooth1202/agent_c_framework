@@ -1,5 +1,9 @@
 "use client"
 
+// Force dynamic rendering to prevent static generation issues
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { LogOut, Mic } from "lucide-react"
