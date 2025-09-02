@@ -62,7 +62,7 @@ class RealtimeBridge(AgentBridge):
     async def flush_session(self):
         """Flush the current chat session to persistent storage"""
         if self.chat_session:
-            await self.session_manager.flush(self.chat_session.session_id)
+            await self.session_manager.flush(self.chat_session.session_id, self.chat_session.user_id)
 
     # Handlers for events coming from the client websocket
     @singledispatchmethod
@@ -544,7 +544,7 @@ class RealtimeBridge(AgentBridge):
             return
 
         try:
-            await self.session_manager.flush(self.chat_session.session_id)
+            await self.session_manager.flush(self.chat_session.session_id, self.chat_session.user_id)
             await self.send_user_turn_start()
 
         except Exception as e:

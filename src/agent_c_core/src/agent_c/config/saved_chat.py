@@ -7,7 +7,7 @@ of model configurations from JSON files.
 import datetime
 import json
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 from sqlalchemy import String, Text, Index, select, delete, func
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
@@ -113,7 +113,7 @@ class SavedChatLoader(ConfigLoader):
         Returns:
             Path object for the user's session folder
         """
-        sanitized_user_id = to_snake_case(user_id or "default_user")
+        sanitized_user_id = to_snake_case(user_id)
         return self.save_file_folder / sanitized_user_id
 
     def _session_to_index_entry(self, session: ChatSession) -> ChatSessionIndexEntry:

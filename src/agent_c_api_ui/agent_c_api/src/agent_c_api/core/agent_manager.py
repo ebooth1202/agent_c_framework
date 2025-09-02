@@ -79,12 +79,9 @@ class UItoAgentBridgeManager:
                 chat_session.agent_config = agent_config
                 chat_session.touch()
         else:
-            if ui_session_id in self.chat_session_manager.session_id_list:
-                # If session already exists in chat session manager, load it
-                chat_session = await self.chat_session_manager.get_session(ui_session_id)
-                if chat_session.agent_config.key == agent_key or agent_key == "default":
-                    agent_config = chat_session.agent_config
-                else:
+            chat_session = await self.chat_session_manager.get_session(ui_session_id, user_id)
+            if chat_session is not None:
+                if chat_session.agent_config.key != agent_key:
                     agent_config = self.agent_config_loader.duplicate(agent_key)
                     chat_session.agent_config = agent_config
                     chat_session.touch()
