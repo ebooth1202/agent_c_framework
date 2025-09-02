@@ -1,7 +1,7 @@
 import os
 import yaml
 from pathlib import Path
-from typing import List, Dict, Optional, Mapping
+from typing import List, Dict, Optional, Mapping, Any
 from agent_c.config.config_loader import ConfigLoader
 
 class YamlPolicyProvider(ConfigLoader):
@@ -173,3 +173,99 @@ class YamlPolicyProvider(ConfigLoader):
     def policy_file_path(self) -> Path:
         """Get the resolved policy file path."""
         return self._policy_file_path
+
+    @staticmethod
+    def build_command_instructions(
+            base_cmd: str,
+            spec: Mapping[str, Any],
+            *,
+            max_examples: int = 6,
+            max_chars: int = 1400
+    ) -> str:
+        import textwrap
+
+        def _fmt_list(items):
+            return ", ".join(items) if items else "—"
+
+        def _coerce_flags(entry):
+            # Accept either "flags" or "allowed_flags"
+            if not isinstance(entry, dict):
+                return []
+            flags = entry.get("allowed_flags")
+            if flags is None:
+                flags = entry.get("flags")
+            return list(flags or [])
+
+        desc = (spec.get("description") or f"Run safe, policy-constrained {base_cmd} commands.").strip()
+        root_flags = spec.get("root_flags") or spec.get("flags") or []
+        sub = spec.get("subcommands") or {}
+        deny = spec.get("deny_subcommands") or []
+        lines = [desc, "", "Use only the items below. Anything not listed is rejected.", ""]
+
+        if root_flags:
+            lines.append("Allowed root flags: " + ", ".join(root_flags))
+
+        # Special-case: npx (no subcommands; allowed_packages + flags)
+        if base_cmd == "npx" and spec.get("allowed_packages"):
+            lines.append("Allowed packages: " + ", ".join(spec["allowed_packages"]))
+            if spec.get("flags"):
+                lines.append("Allowed flags: " + ", ".join(spec["flags"]))
+
+        if sub:
+            lines.append("Allowed subcommands:")
+            for name, info in sub.items():
+                info = info or {}
+                flags = info.get("allowed_flags") or info.get("flags") or []
+                bits = []
+                if flags:
+                    bits.append("flags: " + ", ".join(flags))
+                if "allowed_scripts" in info:
+                    bits.append("scripts: " + ", ".join(info["allowed_scripts"]))
+                if info.get("get_only"):
+                    bits.append("only: get")
+                if "require_flags" in info:
+                    # render auto-required flags succinctly
+                    req = info["require_flags"]
+                    if isinstance(req, dict):
+                        req_list = []
+                        for k, v in req.items():
+                            if v is True:
+                                req_list.append(k)
+                            elif isinstance(v, list):
+                                req_list.append(f"{k}={{{{ {', '.join(v)} }}}}")
+                            else:
+                                req_list.append(f"{k}={v}")
+                        bits.append("auto-added: " + ", ".join(req_list))
+                    elif isinstance(req, list):
+                        bits.append("auto-added: " + ", ".join(req))
+                if info.get("require_no_packages"):
+                    bits.append("no package names allowed")
+                if info.get("enabled") is False:
+                    bits.append("DISABLED")
+                line = f"  • {name}" + (": " + "; ".join(bits) if bits else "")
+                lines.append(line)
+
+        if deny:
+            lines.append("Disallowed subcommands: " + ", ".join(deny))
+
+        # A few short, safe examples
+        examples = []
+        if root_flags:
+            examples.append(f"{base_cmd} {root_flags[0]}")
+        if sub:
+            for s in list(sub)[:3]:
+                if "allowed_scripts" in sub[s]:
+                    examples.append(f"{base_cmd} {s} {sub[s]['allowed_scripts'][0]}")
+                elif (sub[s].get("require_flags")):
+                    examples.append(f"{base_cmd} {s}  # required flags auto-added")
+                else:
+                    examples.append(f"{base_cmd} {s}")
+        if base_cmd == "npx" and spec.get("allowed_packages"):
+            examples.append(f"npx --yes {spec['allowed_packages'][0]} --version")
+        if examples:
+            lines += ["", "Examples:", *[f"  • {e}" for e in examples]]
+
+        text = "\n".join(lines).strip()
+        if max_chars and len(text) > max_chars:
+            text = textwrap.shorten(text, width=max_chars, placeholder="…")
+        return text
