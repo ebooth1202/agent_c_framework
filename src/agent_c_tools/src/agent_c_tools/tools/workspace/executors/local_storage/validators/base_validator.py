@@ -76,15 +76,17 @@ class BasicCommandValidator:
         env = dict(base_env)
         env.update(policy.get("env_overrides") or {})
 
-        # Platform PATH separator
+        # Platform PATH separator and a normalizer for duplicate detection
         sep = ";" if os.name == "nt" else ":"
+        norm = os.path.normcase if os.name == "nt" else (lambda p: p)
 
         # For de-duplication across both PATH and any existing PATH_PREPEND
-        existing_path = env.get("PATH", "")
-        prior_prepend = env.get("PATH_PREPEND")
-        already = set(filter(None, existing_path.split(sep))) | (
-            set(filter(None, prior_prepend.split(sep))) if prior_prepend else set()
-        )
+        existing_path = env.get("PATH", "") or ""
+        prior_prepend = env.get("PATH_PREPEND", "") or ""
+
+        already = {norm(p) for p in filter(None, existing_path.split(sep))}
+        if prior_prepend:
+            already |= {norm(p) for p in filter(None, prior_prepend.split(sep))}
 
         candidates: list[str] = []
 
@@ -99,8 +101,10 @@ class BasicCommandValidator:
                 candidates.append(os.path.join(ws, "node_modules", ".bin"))
 
         # Optional: allow policies to specify additional dirs to prepend
-        # Relative paths are resolved against CWD (or WORKSPACE_ROOT if no CWD)
+        # Accept string or list; resolve relative to CWD (or WORKSPACE_ROOT if no CWD)
         extra = policy.get("extra_path_prepend") or []
+        if isinstance(extra, str):
+            extra = [extra]
         base_dir = env.get("CWD") or env.get("WORKSPACE_ROOT") or ""
         for p in extra:
             p = str(p)
@@ -110,10 +114,14 @@ class BasicCommandValidator:
 
         # Build new PATH_PREPEND in order, skipping non-existent dirs and duplicates
         prepend_parts: list[str] = []
+        seen = set(already)  # local copy so we can update as we add
         for p in candidates:
             try:
-                if os.path.isdir(p) and p not in already:
-                    prepend_parts.append(p)
+                if os.path.isdir(p):
+                    pn = norm(p)
+                    if pn not in seen:
+                        prepend_parts.append(p)
+                        seen.add(pn)
             except Exception:
                 # Be defensive: bad path/permissions shouldn't break env setup
                 pass
@@ -122,3 +130,4 @@ class BasicCommandValidator:
             env["PATH_PREPEND"] = sep.join(prepend_parts) + (sep + prior_prepend if prior_prepend else "")
 
         return env
+
