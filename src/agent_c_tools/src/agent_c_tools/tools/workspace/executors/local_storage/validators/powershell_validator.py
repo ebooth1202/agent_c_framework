@@ -4,7 +4,7 @@ import re
 from .base_validator import ValidationResult, CommandValidator
 
 
-class PowerShellCommandValidator:
+class PowershellValidator:
     """
     Policy-driven PowerShell validator that enforces security restrictions based on YAML configuration.
 
