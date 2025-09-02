@@ -46,4 +46,3 @@ class NodeCommandValidator:
                 env["PATH_PREPEND"] = node_modules_bin
                 
         return env
-
