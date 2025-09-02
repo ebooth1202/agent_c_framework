@@ -230,11 +230,13 @@ class SecureCommandExecutor:
             "lerna": LernaCommandValidator(),
         }
 
+        if self.policy_provider:
+            self._prime_validators_from_policy()
+
         # Logging setup
-        if log_output:
-            self.log_output = log_output
-            logging_manager = LoggingManager(self.__class__.__name__)
-            self.logger = logging_manager.get_logger()
+        self.log_output = bool(log_output)
+        logging_manager = LoggingManager(self.__class__.__name__)
+        self.logger = logging_manager.get_logger()
 
     @staticmethod
     def has_ansi(s: str) -> bool:
@@ -260,6 +262,19 @@ class SecureCommandExecutor:
             if module == "pytest":
                 return "pytest"
         return base
+
+    def _prime_validators_from_policy(self) -> None:
+        """For each policy key, ensure we have *some* validator registered.
+        If a specific one isn't known, fall back to BasicCommandValidator."""
+        try:
+            all_policies = self.policy_provider.get_all_policies() or {}
+        except Exception:
+            all_policies = {}
+
+        for base_cmd, spec in all_policies.items():
+            key = (spec.get("validator") or base_cmd).lower()
+            # If a custom validator wasn’t registered, use the generic safe validator
+            self.validators.setdefault(key, self.basic_validator)
 
     def _resolve_executable(self, cmd: str, env: Dict[str, str]) -> Optional[str]:
         """Resolve an executable using PATH/PATHEXT from the provided environment."""
@@ -361,7 +376,14 @@ class SecureCommandExecutor:
 
         # 3) let the validator add/adjust (may set PATH_PREPEND using WORKSPACE_ROOT/CWD, etc.)
         if hasattr(validator, "adjust_environment"):
-            effective_env = validator.adjust_environment(effective_env, parts, policy)  # noqa
+            pre_env = effective_env
+            try:
+                adjusted = validator.adjust_environment(pre_env, parts, policy)
+            except Exception:
+                adjusted = None
+            effective_env = adjusted if isinstance(adjusted, dict) else pre_env
+
+        effective_env = {str(k): str(v) for k, v in (effective_env or {}).items() if v is not None}
 
         # (optional) if you want "caller wins" semantics for most keys without clobbering PATH:
         if override_env:
@@ -382,9 +404,6 @@ class SecureCommandExecutor:
 
         # Resolve the executable using the effective PATH/PATHEXT
         resolved = self._resolve_executable(parts[0], effective_env)
-        if parts[0] == 'npm':
-            parts.append('--no-color')
-
 
         if not resolved:
             return self._failed(command, working_directory, f"Executable not found: {parts[0]}")
