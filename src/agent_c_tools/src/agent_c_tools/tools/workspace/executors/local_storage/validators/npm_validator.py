@@ -138,34 +138,47 @@ class NpmCommandValidator(CommandValidator):
     def adjust_arguments(self, parts: List[str], policy: Mapping[str, Any]) -> List[str]:
         """
         Auto-inject required flags for subcommands like 'ci'/'install'
-        (e.g., --ignore-scripts) if they're missing.
-        Called AFTER validate() by the executor.
+        (e.g., --ignore-scripts) if they're missing, and ensure npm runs
+        with no color for cleaner output. Called AFTER validate() by the executor.
         """
-        if len(parts) < 2:
+        # Be defensive if someone uses this validator generically
+        if self._basename_noext(parts[0]) != "npm":
             return parts
 
+        # ----- 1) Inject required flags for specific subcommands -----
         subs: Mapping[str, Any] = policy.get("subcommands", {}) or {}
-        raw_sub = parts[1].lower()
+        raw_sub = parts[1].lower() if len(parts) > 1 else ""
         alias_map = {"i": "install"}
         sub = alias_map.get(raw_sub, raw_sub)
         spec = subs.get(sub) or {}
 
         req = list(spec.get("require_flags") or [])
-        if not req:
-            return parts
+        if req and len(parts) >= 2:
+            # Collect existing flag bases after the subcommand token
+            existing = set()
+            for p in parts[2:]:
+                if p.startswith("-"):
+                    existing.add(self._flag_base(p))
 
-        existing = set()
-        for p in parts[2:]:
-            if p.startswith("-"):
-                existing.add(self._flag_base(p))
+            # Insert missing required flags right after the subcommand token
+            insert_at = 2
+            for needed in req:
+                base = self._flag_base(needed)
+                if base not in existing:
+                    parts.insert(insert_at, needed)
+                    insert_at += 1
 
-        # Insert missing required flags right after the subcommand token
-        insert_at = 2
-        for needed in req:
-            base = self._flag_base(needed)
-            if base not in existing:
-                parts.insert(insert_at, needed)
-                insert_at += 1
+        # ----- 2) Ensure npm itself runs without color -----
+        # Insert --no-color BEFORE any "--" so it doesn't get forwarded to the script
+        try:
+            dashdash_idx = parts.index("--")
+        except ValueError:
+            dashdash_idx = len(parts)
+
+        head = parts[:dashdash_idx]  # args consumed by npm itself
+        # Avoid duplicates and accept either spelling already present
+        if ("--no-color" not in head) and ("--color=false" not in head):
+            parts.insert(dashdash_idx, "--no-color")
 
         return parts
 
