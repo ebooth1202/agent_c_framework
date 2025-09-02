@@ -61,19 +61,6 @@ class NpxCommandValidator(CommandValidator):
         
         return ValidationResult(True, "OK", timeout=policy.get("default_timeout"))
 
-    def adjust_environment(self, base_env: Dict[str, str], parts: List[str], policy: Mapping[str, Any]) -> Dict[str, str]:
-        """Configure safe environment for npx execution."""
-        env = dict(base_env)
-        
-        # Apply environment overrides from policy
-        env_overrides = policy.get("env_overrides", {})
-        env.update(env_overrides)
-        
-        # Prepend node_modules/.bin to PATH if workspace root is available
-        workspace_root = base_env.get("WORKSPACE_ROOT")
-        if workspace_root:
-            node_modules_bin = os.path.join(workspace_root, "node_modules", ".bin")
-            if os.path.exists(node_modules_bin):
-                env["PATH_PREPEND"] = node_modules_bin
-        
+    def adjust_environment(self, base_env, parts, policy):
+        env = super().adjust_environment(base_env, parts, policy)
         return env
