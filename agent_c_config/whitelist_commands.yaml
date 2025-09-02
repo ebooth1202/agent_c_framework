@@ -243,125 +243,39 @@ npx:
     NPM_CONFIG_UPDATE_NOTIFIER: "false"
 
 lerna:
-  flags:
-    - "--version"
-    - "-v"
-    - "--help"
-    - "-h"
-    - "--loglevel"
-    - "--concurrency"
-    - "--scope"
-    - "--ignore"
-    - "--include-dependencies"
-    - "--include-dependents"
-    - "--since"
+  flags: ["--version", "-v", "--help", "-h", "--loglevel", "--concurrency", "--scope", "--ignore", "--include-dependencies", "--include-dependents", "--since"]
   subcommands:
     list:
-      flags:
-        - "--json"
-        - "--ndjson"
-        - "--parseable"
-        - "-p"
-        - "--long"
-        - "-l"
-        - "--all"
-        - "-a"
-        - "--graph"
-        - "--toposort"
+      flags: ["--json", "--ndjson", "--parseable", "-p", "--long", "-l", "--all", "-a", "--graph", "--toposort"]
       timeout: 30
     info:
-      flags:
-        - "--json"
+      flags: ["--json"]
       timeout: 15
     bootstrap:
-      flags:
-        - "--hoist"
-        - "--strict"
-        - "--nohoist"
-        - "--ignore-scripts"
-        - "--ignore-prepublish"
-        - "--ignore-engines"
-        - "--npm-client"
-        - "--use-workspaces"
+      flags: ["--hoist", "--strict", "--nohoist", "--ignore-scripts", "--ignore-prepublish", "--ignore-engines", "--npm-client", "--use-workspaces"]
       timeout: 300
     clean:
-      flags:
-        - "--yes"
-        - "-y"
+      flags: ["--yes", "-y"]
       timeout: 60
     ls:
-      flags:
-        - "--json"
-        - "--ndjson"
-        - "--parseable"
-        - "-p"
-        - "--long"
-        - "-l"
-        - "--all"
-        - "-a"
-        - "--graph"
-        - "--toposort"
+      flags: ["--json", "--ndjson", "--parseable", "-p", "--long", "-l", "--all", "-a", "--graph", "--toposort"]
       timeout: 30
     changed:
-      flags:
-        - "--json"
-        - "--ndjson"
-        - "--parseable"
-        - "-p"
-        - "--long"
-        - "-l"
-        - "--all"
-        - "-a"
-        - "--graph"
-        - "--toposort"
-        - "--include-merged-tags"
+      flags: ["--json", "--ndjson", "--parseable", "-p", "--long", "-l", "--all", "-a", "--graph", "--toposort", "--include-merged-tags"]
       timeout: 30
     diff:
       flags:
         - "--ignore-changes"
       timeout: 45
     run:
-      flags:
-        - "--npm-client"
-        - "--stream"
-        - "--parallel"
-        - "--bail"
-        - "--no-bail"
-        - "--no-prefix"
-        - "--concurrency"
-        - "--concurrency=1"
+      flags: ["--npm-client", "--stream", "--parallel", "--bail", "--no-bail", "--no-prefix", "--concurrency", "--concurrency=1"]
       allowed_scripts: [ "build","test","lint","format","typecheck", 'lint:fix', 'test:run' ]
       deny_args: false
       timeout: 300
     version:
-      flags:
-        - "--conventional-commits"
-        - "--changelog-preset"
-        - "--exact"
-        - "--force-publish"
-        - "--git-remote"
-        - "--create-release"
-        - "--dry-run"
-        - "--json"
-        - "--loglevel"
-        - "--no-changelog"
-        - "--no-commit-hooks"
-        - "--no-git-tag-version"
-        - "--no-push"
-        - "--preid"
-        - "--sign-git-commit"
-        - "--sign-git-tag"
-        - "--tag-version-prefix"
-        - "--yes"
-        - "-y"
+      flags: ["--conventional-commits", "--changelog-preset", "--exact", "--force-publish", "--git-remote", "--create-release", "--dry-run", "--json", "--loglevel", "--no-changelog", "--no-commit-hooks", "--no-git-tag-version", "--no-push", "--preid", "--sign-git-commit", "--sign-git-tag", "--tag-version-prefix", "--yes", "-y"]
       timeout: 120
-  deny_subcommands:
-    - "publish"
-    - "exec"
-    - "import"
-    - "create"
-    - "add"
-    - "link"
+  deny_subcommands: ["publish", "exec", "import", "create", "add", "link"]
   default_timeout: 180
   env_overrides:
     LERNA_DISABLE_PROGRESS: "1"
