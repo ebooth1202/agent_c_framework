@@ -11,15 +11,14 @@ from typing import Dict, Any, List, Optional, Mapping, Tuple, Callable, Protocol
 from dataclasses import dataclass
 
 from agent_c.util.logging_utils import LoggingManager
+from .validators import LernaCommandValidator, NpxCommandValidator, PnpmCommandValidator
 from .validators.base_validator import BasicCommandValidator, CommandValidator, ValidationResult
 from .validators.dotnet_validator import DotnetCommandValidator
 from .validators.git_validator import GitCommandValidator
 from .validators.node_validator import NodeCommandValidator
 from .validators.npm_validator import NpmCommandValidator
-from .validators.npx_validator import NpxCommandValidator
-from .validators.pnpm_validator import PnpmCommandValidator
-from .validators.lerna_validator import LernaCommandValidator
 from .validators.os_basic_validator import OSBasicValidator
+from .validators.powershell_validator import PowershellValidator
 from .validators.pytest_validator import PytestCommandValidator
 
 # ANSI stripping Regex
@@ -224,10 +223,11 @@ class SecureCommandExecutor:
             "os_basic": OSBasicValidator(),
             "node": NodeCommandValidator(),
             "npm": NpmCommandValidator(),
+            "dotnet": DotnetCommandValidator(),
+            "powershell": PowershellValidator(),
             "npx": NpxCommandValidator(),
             "pnpm": PnpmCommandValidator(),
             "lerna": LernaCommandValidator(),
-            "dotnet": DotnetCommandValidator(),
         }
 
         # Logging setup
