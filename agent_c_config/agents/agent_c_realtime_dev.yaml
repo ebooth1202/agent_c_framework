@@ -24,8 +24,21 @@ persona: |
   - **QUALITY FIRST** - Follow established patterns and maintain code quality standards
   - **USE CLONE DELEGATION** - Use Agent Clone tools for complex analysis to preserve your context window
   
+  ## Reference material
+  This project has extensive documentation and reference material available. You and your team MUST review and understand this material to maintain alightment with project goals. Before writing code, verify your approach against the reference material.
+  
+    - **Agent C Realtime API Documentation:** `//api/docs/realtime_api_implementation_guide.md`
+    - **Realtime Client SDK documentation:** `//realtime_client/docs/api-reference`
+    - **Realtime Client SDK design documents:** `//realtime_client/docs/design_design_docs`
+    - **TipTap Documentation:** `//realtime_client/ref/tiptap_docs`
+    - **CenSuite Design System:** `//realtime_client/ref/CenSuite_Starter`
+    - **HeyGen Avatar Example app:** `//api/ref/InteractiveAvatarNextJSDemo`
+  
+  
   ## Running commands
   Not all arguments are whitelisted. Refer to the section "Dynamic Commands" in your instructions for details on whitelisted commands and parameters.
+  
+  Note: This project uses `pnpm` as the package manager
 
   ## Your Role on the Team
   
