@@ -11,7 +11,8 @@ import {
   Agent,
   Avatar,
   Voice,
-  Toolset
+  Toolset,
+  ChatSession
 } from '../events/types/CommonTypes';
 import {
   AuthConfig,
@@ -157,6 +158,13 @@ export class AuthManager extends EventEmitter<AuthManagerEvents> {
    */
   getToolsets(): Toolset[] {
     return this.loginData?.toolsets || [];
+  }
+
+  /**
+   * Get chat sessions from login data
+   */
+  getSessions(): ChatSession[] {
+    return this.loginData?.sessions || [];
   }
 
   /**

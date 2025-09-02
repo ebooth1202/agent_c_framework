@@ -209,6 +209,7 @@ export interface LoginResponse {
   toolsets: Toolset[];
   voices: Voice[];
   ui_session_id: string;
+  sessions: ChatSession[];
 }
 
 /**

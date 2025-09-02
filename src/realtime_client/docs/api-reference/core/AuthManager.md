@@ -75,6 +75,7 @@ interface LoginResponse {
   voices: Voice[];          // Available TTS voices
   avatars?: Avatar[];       // Available avatars (if configured)
   toolsets: Toolset[];      // Available toolsets
+  sessions: ChatSession[];  // User's chat sessions
   expires_at: number;       // Token expiration timestamp
 }
 
@@ -108,6 +109,20 @@ interface Toolset {
   toolset_id: string;
   name: string;
   description?: string;
+}
+
+interface ChatSession {
+  session_id: string;           // Unique session identifier
+  token_count: number;          // Total tokens used in session
+  context_window_size: number;  // Maximum context window size
+  session_name: string | null;  // Optional user-friendly session name
+  created_at: string | null;    // ISO timestamp of creation
+  updated_at: string | null;    // ISO timestamp of last update
+  deleted_at: string | null;    // ISO timestamp of deletion (if soft-deleted)
+  user_id: string | null;       // User who owns the session
+  metadata: Record<string, any>; // Additional session metadata
+  messages: Message[];          // Chat history messages
+  agent_config: AgentConfiguration; // Agent configuration for this session
 }
 ```
 
@@ -349,6 +364,44 @@ agents.forEach(agent => {
 });
 ```
 
+### getSessions()
+
+Gets the list of user's chat sessions.
+
+```typescript
+getSessions(): ChatSession[]
+```
+
+**Returns:** Array of user's chat sessions
+
+**Example:**
+```typescript
+const sessions = authManager.getSessions();
+console.log(`Found ${sessions.length} sessions`);
+
+sessions.forEach(session => {
+  console.log(`Session: ${session.session_name || session.session_id}`);
+  console.log(`  Created: ${session.created_at}`);
+  console.log(`  Messages: ${session.messages.length}`);
+  console.log(`  Tokens used: ${session.token_count}`);
+});
+
+// Find recent sessions
+const recentSessions = sessions
+  .filter(s => !s.deleted_at)
+  .sort((a, b) => {
+    const dateA = new Date(a.updated_at || a.created_at || 0);
+    const dateB = new Date(b.updated_at || b.created_at || 0);
+    return dateB.getTime() - dateA.getTime();
+  })
+  .slice(0, 10);
+
+console.log(`Most recent ${recentSessions.length} sessions:`);
+recentSessions.forEach(session => {
+  console.log(`- ${session.session_name || 'Untitled'} (${session.session_id})`);
+});
+```
+
 ### getWebSocketUrl()
 
 Gets the WebSocket URL for realtime connections.
@@ -537,6 +590,7 @@ async function setupAuthentication() {
     if (response.avatars) {
       console.log(`🎭 ${response.avatars.length} avatars available`);
     }
+    console.log(`💬 ${response.sessions.length} previous sessions`);
   });
   
   authManager.on('auth:tokens-refreshed', (tokens) => {
@@ -591,6 +645,18 @@ async function setupAuthentication() {
       console.log('\nAvailable Avatars:');
       response.avatars.forEach(avatar => {
         console.log(`  - ${avatar.name} (${avatar.avatar_id})`);
+      });
+    }
+    
+    // Display user's chat sessions
+    if (response.sessions && response.sessions.length > 0) {
+      console.log('\nPrevious Chat Sessions:');
+      const recentSessions = response.sessions
+        .filter(s => !s.deleted_at)
+        .slice(0, 5);
+      recentSessions.forEach(session => {
+        console.log(`  - ${session.session_name || 'Untitled'} (${session.session_id})`);
+        console.log(`    Messages: ${session.messages.length}, Tokens: ${session.token_count}`);
       });
     }
     
