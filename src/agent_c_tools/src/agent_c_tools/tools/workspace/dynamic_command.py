@@ -4,6 +4,7 @@ from agent_c.toolsets.tool_set import Toolset
 from agent_c.toolsets.json_schema import json_schema
 from .executors.local_storage.secure_command_executor import CommandExecutionResult
 from .executors.local_storage.media_event_helper.media_helper import MediaEventHelper
+from .executors.local_storage.yaml_policy_provider import YamlPolicyProvider
 from ..workspace.tool import WorkspaceTools
 from ...helpers.validate_kwargs import validate_required_fields
 from .dynamic_command_prompt import DynamicCommandPromptSection
@@ -15,30 +16,18 @@ class DynamicCommandTools(Toolset):
     """
 
     def __init__(self, **kwargs: Any):
-        super().__init__(**kwargs, name="commands", use_prefix=False, section=DynamicCommandPromptSection())
+        super().__init__(**kwargs, name="commands", use_prefix=False)
+        # super().__init__(**kwargs, name="commands", use_prefix=False, section=DynamicCommandPromptSection())
         self.workspace_tool: Optional[WorkspaceTools] = None
 
+        self.policy_provider = YamlPolicyProvider()
+        policies: Dict[str, Dict[str, Any]] = self.policy_provider.get_all_policies() or {}
 
-        # Current MVP, hardcode your current allowlist
-        self.whitelisted_commands: Dict[str, Dict[str, Any]] = {
-            "git":    {"description": "Run safe, non-destructive git subcommands and flags."},
-            "npm":    {"description": "Run safe, non-destructive npm commands."},
-            "npx":    {"description": "Run safe, non-destructive npx commands."},
-            "pnpm":   {"description": "Run safe, non-destructive pnpm commands."},
-            "lerna":  {"description": "Run safe, non-destructive lerna commands."},
-            "node":   {"description": "Run safe, non-destructive node commands."},
-            "pytest": {"description": "Run safe, non-destructive pytest invocations."},
-            "dotnet": {"description": "Run safe, non-destructive dotnet commands."},
-            "which": {"description": "Run safe, non-destructive which commands."},
-            "where": {"description": "Run safe, non-destructive where commands."},
-            "whoami": {"description": "Run safe, non-destructive whoami commands."},
-            "echo": {"description": "Run safe, non-destructive echo commands."},
-            "powershell": {"description": "Run safe, read-only PowerShell cmdlets for information gathering only."},
-            "pwsh": {"description": "Run safe, read-only PowerShell Core cmdlets for information gathering only."},
-            # Add more as policies/validators exist
+        # Build a command→description map from policy (fallback to a sensible default)
+        self.whitelisted_commands = {
+            base: {"description": self.policy_provider.build_command_instructions(base, spec)}
+            for base, spec in sorted(policies.items())
         }
-
-        # (future): read YAML policy to auto-generate this list.
 
         self._create_dynamic_tools()
 
