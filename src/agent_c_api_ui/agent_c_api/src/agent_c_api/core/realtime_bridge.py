@@ -159,7 +159,7 @@ class RealtimeBridge(AgentBridge):
         await self.resume_chat_session(event.session_id)
 
     async def resume_chat_session(self, session_id: str) -> None:
-        session_info = await self.chat_session_manager.get_session(session_id)
+        session_info = await self.chat_session_manager.get_session(session_id, self.chat_user.user_id)
         if not session_info or session_info.user_id != self.chat_user.user_id:
             await self.send_error(f"Session '{session_id}' not found", source="resume_chat_session")
             return
@@ -548,7 +548,7 @@ class RealtimeBridge(AgentBridge):
 
     async def _get_or_create_chat_session(self, session_id: Optional[str] = None, user_id: Optional[str] = None, agent_key: str = 'default_realtime') -> ChatSession:
         session_id = session_id or self.ui_session_id
-        chat_session = await self.chat_session_manager.get_session(session_id)
+        chat_session = await self.chat_session_manager.get_session(session_id, user_id)
 
         if chat_session is None:
             agent_config = self.agent_config_loader.duplicate(agent_key)

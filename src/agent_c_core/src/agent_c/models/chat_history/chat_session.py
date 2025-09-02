@@ -18,6 +18,14 @@ class ChatSessionIndexEntry(BaseModel):
     user_id: Optional[str] = Field("Agent C user", description="The user ID associated with the session")
 
 
+class ChatSessionQueryResponse(BaseModel):
+    """
+    Response model for paginated chat session queries.
+    """
+    chat_sessions: List[ChatSessionIndexEntry] = Field(default_factory=list, description="List of chat session index entries")
+    total_sessions: int = Field(0, description="Total number of sessions available for the query")
+
+
 class ChatSession(BaseModel):
     """
     Represents a session object with a unique identifier, metadata,

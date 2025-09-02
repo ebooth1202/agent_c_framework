@@ -306,27 +306,6 @@ class SessionService:
             self.logger.error("update_session_failed", session_id=session_id, error=str(e))
             raise HTTPException(status_code=500, detail=f"Failed to update session: {str(e)}")
 
-    async def delete_session(self, session_id: str) -> bool:
-        """Delete a specific session
-        
-        Args:
-            session_id: ID of the session to delete
-            
-        Returns:
-            bool: True if successful, False if session not found
-        """
-        # Delete from Redis first
-        if not await self.session_repository.delete_session(session_id):
-            return False
-            
-        # Then clean up in agent manager
-        try:
-            await self.agent_manager.cleanup_session(session_id)
-            return True
-        except Exception as e:
-            self.logger.error("delete_session_failed", session_id=session_id, error=str(e))
-            return False
-
     async def get_agent_config(self, session_id: str) -> Optional[AgentConfig]:
         """Get agent configuration for a session
         

@@ -8,7 +8,8 @@ from starlette.middleware.cors import CORSMiddleware
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.inmemory import InMemoryBackend
 
-
+from agent_c.chat import ChatSessionManager
+from agent_c.config.saved_chat import SavedChatLoader
 from agent_c_api.config.env_config import settings
 from agent_c_api.core.realtime_session_manager import RealtimeSessionManager
 from agent_c_api.core.util.logging_utils import LoggingManager
@@ -100,14 +101,21 @@ def create_application(router: APIRouter, **kwargs) -> FastAPI:
             logger.warning("💡 To resolve: Ensure Redis server is running and accessible")
             logger.warning(f"   Command: redis-server --port {redis_status['port']}")
             logger.warning(f"   Or check connection settings in environment configuration")
-        
+
+        # Initialize the chat session manager
+        logger.info(f"🔧 Initializing chat session index and migrating old chat sessions (this may take a while):")
+        loader = SavedChatLoader()
+        await loader.initialize_with_migration()
+        lifespan_app.state.chat_session_manager = ChatSessionManager(loader=loader)
+        logger.info("✅ Chat session manager initialized successfully")
+
         # Shared AgentManager instance.
-        logger.info("🤖 Initializing Chat Manager...")
-        lifespan_app.state.agent_manager = UItoAgentBridgeManager()
-        logger.info("✅ Chat Manager initialized successfully")
+        logger.info("🤖 Initializing HTTP Chat Manager...")
+        lifespan_app.state.agent_manager = UItoAgentBridgeManager(lifespan_app.state.chat_session_manager)
+        logger.info("✅ HTTP Chat Manager initialized successfully")
 
         logger.info("🤖 Initializing Realtime Manager...")
-        lifespan_app.state.realtime_manager = RealtimeSessionManager()
+        lifespan_app.state.realtime_manager = RealtimeSessionManager(lifespan_app.state.chat_session_manager)
         logger.info("✅ Realtime Manager initialized successfully")
         
         # Initialize FastAPICache with InMemoryBackend
@@ -127,7 +135,7 @@ def create_application(router: APIRouter, **kwargs) -> FastAPI:
         lifespan_app.state.auth_service = AuthService()
         await lifespan_app.state.auth_service.initialize()
         logger.info("✅ Authentication Service initialized successfully")
-        
+
         # Log startup completion
         logger.info("🎉 Application startup completed successfully")
         logger.info(f"📍 Redis Status: {'Connected' if redis_status['connected'] else 'Disconnected'}")

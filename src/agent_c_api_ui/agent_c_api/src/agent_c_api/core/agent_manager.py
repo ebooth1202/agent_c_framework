@@ -30,9 +30,8 @@ class UItoAgentBridgeManager:
         _locks (Dict[str, asyncio.Lock]): Session operation locks
     """
     ESSENTIAL_TOOLS = []
-    # ESSENTIAL_TOOLS = ['WorkspaceTools', 'ThinkTools', 'RandomNumberTools', 'MarkdownToHtmlReportTools']
 
-    def __init__(self):
+    def __init__(self, session_manager: ChatSessionManager):
         logging_manager = LoggingManager(__name__)
         self.logger = logging_manager.get_logger()
         # self.debug_event = LoggingManager.get_debug_event()
@@ -41,7 +40,7 @@ class UItoAgentBridgeManager:
         self._locks: Dict[str, asyncio.Lock] = {}
         self._cancel_events: Dict[str, threading.Event] = {}
         self.agent_config_loader: AgentConfigLoader = AgentConfigLoader()
-        self.chat_session_manager: ChatSessionManager = ChatSessionManager()
+        self.chat_session_manager: ChatSessionManager = session_manager
 
 
 
