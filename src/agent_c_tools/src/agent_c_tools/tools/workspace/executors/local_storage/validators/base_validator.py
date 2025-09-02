@@ -64,8 +64,61 @@ class BasicCommandValidator:
 
         return ValidationResult(True, "OK", timeout=policy.get("default_timeout"))
 
-    def adjust_environment(self, base_env: Dict[str, str], parts: List[str], policy: Mapping[str, Any]) -> Dict[str, str]:
-        overrides = policy.get("env_overrides") or {}
-        new_env = dict(base_env)
-        new_env.update(overrides)
-        return new_env
+    def adjust_environment(
+            self,
+            base_env: Dict[str, str],
+            parts: List[str],
+            policy: Mapping[str, Any]
+    ) -> Dict[str, str]:
+        import os
+
+        # Start from caller/env + policy overrides
+        env = dict(base_env)
+        env.update(policy.get("env_overrides") or {})
+
+        # Platform PATH separator
+        sep = ";" if os.name == "nt" else ":"
+
+        # For de-duplication across both PATH and any existing PATH_PREPEND
+        existing_path = env.get("PATH", "")
+        prior_prepend = env.get("PATH_PREPEND")
+        already = set(filter(None, existing_path.split(sep))) | (
+            set(filter(None, prior_prepend.split(sep))) if prior_prepend else set()
+        )
+
+        candidates: list[str] = []
+
+        # Optional, default-on: project-local node binaries
+        # Disable by setting prepend_node_modules_bin: false in policy for a command
+        if policy.get("prepend_node_modules_bin", True):
+            cwd = env.get("CWD")
+            if cwd:
+                candidates.append(os.path.join(cwd, "node_modules", ".bin"))
+            ws = env.get("WORKSPACE_ROOT")
+            if ws and ws != cwd:
+                candidates.append(os.path.join(ws, "node_modules", ".bin"))
+
+        # Optional: allow policies to specify additional dirs to prepend
+        # Relative paths are resolved against CWD (or WORKSPACE_ROOT if no CWD)
+        extra = policy.get("extra_path_prepend") or []
+        base_dir = env.get("CWD") or env.get("WORKSPACE_ROOT") or ""
+        for p in extra:
+            p = str(p)
+            if not os.path.isabs(p) and base_dir:
+                p = os.path.join(base_dir, p)
+            candidates.append(p)
+
+        # Build new PATH_PREPEND in order, skipping non-existent dirs and duplicates
+        prepend_parts: list[str] = []
+        for p in candidates:
+            try:
+                if os.path.isdir(p) and p not in already:
+                    prepend_parts.append(p)
+            except Exception:
+                # Be defensive: bad path/permissions shouldn't break env setup
+                pass
+
+        if prepend_parts:
+            env["PATH_PREPEND"] = sep.join(prepend_parts) + (sep + prior_prepend if prior_prepend else "")
+
+        return env
