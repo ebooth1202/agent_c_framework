@@ -86,71 +86,26 @@ async function initializeFromBackend() {
       },
     ],
     ui_session_id: 'session_abc123',
-    sessions: [
-      {
-        session_id: 'session_001',
-        token_count: 245,
-        context_window_size: 128000,
-        session_name: 'Morning Chat',
-        created_at: '2024-01-01T09:00:00Z',
-        updated_at: '2024-01-01T09:30:00Z',
-        deleted_at: null,
-        user_id: 'user123',
-        metadata: { tags: ['casual', 'morning'] },
-        messages: [
-          {
-            role: 'user' as const,
-            content: 'Good morning!',
-            timestamp: '2024-01-01T09:00:00Z',
-            format: 'text' as const,
-          },
-          {
-            role: 'assistant' as const,
-            content: 'Good morning! How can I help you today?',
-            timestamp: '2024-01-01T09:00:01Z',
-            format: 'text' as const,
-          },
-        ],
-        agent_config: {
-          version: 1,
-          name: 'Assistant',
-          key: 'agent1',
-          model_id: 'gpt-4',
-          agent_description: 'AI Assistant',
-          tools: [],
-          agent_params: { stream: true, voice_id: 'voice1' },
-          prompt_metadata: {},
-          persona: 'Helpful AI assistant',
-          uid: null,
-          category: ['assistant'],
+    sessions: {
+      chat_sessions: [
+        {
+          session_id: 'session_001',
+          session_name: 'Morning Chat',
+          created_at: '2024-01-01T09:00:00Z',
+          updated_at: '2024-01-01T09:30:00Z',
+          user_id: 'user123',
         },
-      },
-      {
-        session_id: 'session_002',
-        token_count: 512,
-        context_window_size: 128000,
-        session_name: 'Technical Discussion',
-        created_at: '2024-01-01T14:00:00Z',
-        updated_at: '2024-01-01T14:45:00Z',
-        deleted_at: null,
-        user_id: 'user123',
-        metadata: { tags: ['technical', 'development'] },
-        messages: [],
-        agent_config: {
-          version: 1,
-          name: 'Assistant',
-          key: 'agent1',
-          model_id: 'gpt-4',
-          agent_description: 'AI Assistant',
-          tools: [],
-          agent_params: { stream: true, voice_id: 'voice1' },
-          prompt_metadata: {},
-          persona: 'Helpful AI assistant',
-          uid: null,
-          category: ['assistant'],
+        {
+          session_id: 'session_002',
+          session_name: 'Technical Discussion',
+          created_at: '2024-01-01T14:00:00Z',
+          updated_at: '2024-01-01T14:45:00Z',
+          user_id: 'user123',
         },
-      },
-    ],
+      ],
+      total_sessions: 2,
+      offset: 0,
+    },
   };
 
   // WebSocket URL (might also come from your backend)
@@ -162,7 +117,8 @@ async function initializeFromBackend() {
   // Now you can access all resources immediately
   const agents = authManager.getAgents();
   const voices = authManager.getVoices();
-  const sessions = authManager.getSessions();
+  const sessions = authManager.getSessions(); // Returns ChatSessionIndexEntry[]
+  const sessionsMetadata = authManager.getSessionsMetadata(); // Returns full ChatSessionQueryResponse
   // const avatars = authManager.getAvatars();
   // const toolsets = authManager.getToolsets();
   // const token = authManager.getAgentCToken();
@@ -175,14 +131,17 @@ async function initializeFromBackend() {
   console.log('Available agents:', agents.length);
   console.log('Available voices:', voices.length);
   console.log('Previous sessions:', sessions.length);
+  console.log('Total sessions available:', sessionsMetadata?.total_sessions);
   
-  // Access session details
+  // Access session index details (lightweight session entries)
   sessions.forEach(session => {
     console.log(`  Session: ${session.session_name || session.session_id}`);
-    console.log(`  - Messages: ${session.messages.length}`);
-    console.log(`  - Tokens used: ${session.token_count}`);
+    console.log(`  - Created: ${session.created_at}`);
     console.log(`  - Last updated: ${session.updated_at}`);
   });
+  
+  // Note: Full session details with messages are now fetched when resuming a specific session
+  // The initial login only provides the session index for performance
   
   // The auth tokens will auto-refresh if autoRefresh is enabled
   // The authManager will emit the same events as if you had logged in normally

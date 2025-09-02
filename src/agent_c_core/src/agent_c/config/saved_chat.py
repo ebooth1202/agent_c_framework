@@ -245,7 +245,8 @@ class SavedChatLoader(ConfigLoader):
             
             return ChatSessionQueryResponse(
                 chat_sessions=chat_sessions,
-                total_sessions=total_sessions
+                total_sessions=total_sessions,
+                offset=offset
             )
 
     def get_user_session_ids(self, user_id: str) -> List[str]:

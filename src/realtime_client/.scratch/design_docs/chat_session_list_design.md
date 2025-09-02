@@ -27,13 +27,26 @@ interface Message {
 
 ## Component Architecture
 
-### Main Component Structure
+### Main Component Structure with Pagination
 
 ```tsx
 const ChatSessionList: React.FC = () => {
-  const { sessions, currentSessionId, loadSession } = useChatSessions()
+  const { 
+    sessions, 
+    currentSessionId, 
+    loadSession,
+    hasMoreSessions,
+    totalSessionCount,
+    fetchMoreSessions,
+    isInitialLoading,
+    isPaginationLoading,
+    paginationError
+  } = useChatSessions()
+  
   const [searchQuery, setSearchQuery] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const loadMoreTriggerRef = useRef<HTMLDivElement>(null)
   
   // Group sessions by time periods
   const groupedSessions = useMemo(() => 
@@ -41,21 +54,86 @@ const ChatSessionList: React.FC = () => {
     [sessions, searchQuery]
   )
   
+  // Intersection Observer for infinite scrolling
+  useEffect(() => {
+    if (!loadMoreTriggerRef.current || !hasMoreSessions || isPaginationLoading) return
+    
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && hasMoreSessions && !isPaginationLoading) {
+          fetchMoreSessions()
+        }
+      },
+      {
+        root: scrollContainerRef.current,
+        rootMargin: '100px', // Start loading 100px before reaching bottom
+        threshold: 0.1
+      }
+    )
+    
+    observer.observe(loadMoreTriggerRef.current)
+    
+    return () => observer.disconnect()
+  }, [hasMoreSessions, isPaginationLoading, fetchMoreSessions])
+  
   return (
     <div className="flex-1 flex flex-col min-h-0">
+      {/* Session Count Indicator */}
+      {totalSessionCount > 0 && (
+        <div className="px-2 py-1 text-xs text-muted-foreground/70">
+          Showing {sessions.length} of {totalSessionCount} conversations
+        </div>
+      )}
+      
       {/* Search Bar */}
       <SessionSearch />
       
-      {/* Session Groups */}
-      <SessionGroups 
-        groups={groupedSessions}
-        currentSessionId={currentSessionId}
-        onSessionClick={loadSession}
-        isLoading={isLoading}
-      />
-      
-      {/* Empty State */}
-      {sessions.length === 0 && <EmptyState />}
+      {/* Scrollable Container */}
+      <div 
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto overflow-x-hidden 
+                   scrollbar-thin scrollbar-thumb-border 
+                   scrollbar-track-transparent"
+      >
+        {/* Initial Loading State */}
+        {isInitialLoading && <InitialLoadingState />}
+        
+        {/* Session Groups */}
+        {!isInitialLoading && (
+          <SessionGroups 
+            groups={groupedSessions}
+            currentSessionId={currentSessionId}
+            onSessionClick={loadSession}
+            isLoading={isLoading}
+          />
+        )}
+        
+        {/* Pagination Loading Indicator */}
+        {isPaginationLoading && <PaginationLoadingIndicator />}
+        
+        {/* Load More Trigger (invisible) */}
+        {hasMoreSessions && !isPaginationLoading && (
+          <div ref={loadMoreTriggerRef} className="h-1" aria-hidden="true" />
+        )}
+        
+        {/* Pagination Error State */}
+        {paginationError && (
+          <PaginationErrorState 
+            onRetry={fetchMoreSessions}
+            error={paginationError}
+          />
+        )}
+        
+        {/* No More Sessions Indicator */}
+        {!hasMoreSessions && sessions.length > 0 && (
+          <div className="py-4 text-center text-xs text-muted-foreground/50">
+            You've reached the end of your conversations
+          </div>
+        )}
+        
+        {/* Empty State */}
+        {!isInitialLoading && sessions.length === 0 && <EmptyState />}
+      </div>
     </div>
   )
 }
@@ -245,12 +323,13 @@ const EmptyState: React.FC = () => (
 )
 ```
 
-### Loading State
+### Loading States
 
 ```tsx
-const LoadingState: React.FC = () => (
+// Initial load skeleton (shows more items)
+const InitialLoadingState: React.FC = () => (
   <div className="space-y-2 px-2 py-4">
-    {[...Array(3)].map((_, i) => (
+    {[...Array(8)].map((_, i) => (
       <div key={i} className="animate-pulse">
         <div className="rounded-lg bg-muted/30 p-2.5">
           <div className="h-4 bg-muted/50 rounded w-3/4 mb-2" />
@@ -262,6 +341,69 @@ const LoadingState: React.FC = () => (
         </div>
       </div>
     ))}
+  </div>
+)
+
+// Pagination loading indicator (bottom of list)
+const PaginationLoadingIndicator: React.FC = () => (
+  <div className="flex items-center justify-center py-4 px-2">
+    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <div className="h-4 w-4 border-2 border-muted-foreground/30 
+                      border-t-muted-foreground rounded-full animate-spin" />
+      <span>Loading more conversations...</span>
+    </div>
+  </div>
+)
+
+// Pagination error state with retry
+const PaginationErrorState: React.FC<{
+  onRetry: () => void
+  error: Error
+}> = ({ onRetry, error }) => (
+  <div className="flex flex-col items-center py-4 px-2 gap-2">
+    <div className="flex items-center gap-2 text-sm text-destructive">
+      <AlertCircle className="h-4 w-4" />
+      <span>Failed to load more sessions</span>
+    </div>
+    <button
+      onClick={onRetry}
+      className="px-3 py-1 text-xs font-medium rounded-md
+                 bg-primary text-primary-foreground
+                 hover:bg-primary/90 transition-colors
+                 focus-visible:outline-none focus-visible:ring-2
+                 focus-visible:ring-ring focus-visible:ring-offset-2"
+    >
+      Try Again
+    </button>
+  </div>
+)
+
+// Manual load more button (fallback)
+const LoadMoreButton: React.FC<{
+  onClick: () => void
+  isLoading: boolean
+}> = ({ onClick, isLoading }) => (
+  <div className="flex justify-center py-4">
+    <button
+      onClick={onClick}
+      disabled={isLoading}
+      className="px-4 py-2 text-sm font-medium rounded-md
+                 border border-border bg-background
+                 hover:bg-muted transition-colors
+                 disabled:opacity-50 disabled:cursor-not-allowed
+                 focus-visible:outline-none focus-visible:ring-2
+                 focus-visible:ring-ring focus-visible:ring-offset-2"
+    >
+      {isLoading ? (
+        <span className="flex items-center gap-2">
+          <div className="h-3 w-3 border-2 border-muted-foreground/30 
+                          border-t-muted-foreground rounded-full animate-spin" />
+          Loading...
+        </span>
+      ) : (
+        'Load More Conversations'
+      )}
+    </button>
   </div>
 )
 ```
@@ -514,60 +656,253 @@ const handleTouchEnd = () => {
 
 ## Performance Optimizations
 
-### Virtualization
+### Virtual Scrolling for Large Lists
 
 ```typescript
-// Use react-window for large session lists
-import { FixedSizeList } from 'react-window'
+// Use react-window for lists > 100 items
+import { VariableSizeList } from 'react-window'
+import AutoSizer from 'react-virtualized-auto-sizer'
 
-const VirtualizedSessionList = ({ sessions, height }) => (
-  <FixedSizeList
-    height={height}
-    itemCount={sessions.length}
-    itemSize={64} // Height of each session item
-    width="100%"
-  >
-    {({ index, style }) => (
-      <div style={style}>
-        <SessionItem session={sessions[index]} />
-      </div>
-    )}
-  </FixedSizeList>
-)
+const VirtualizedSessionList: React.FC<{
+  sessions: ChatSession[]
+  groupedSessions: GroupedSessions
+}> = ({ sessions, groupedSessions }) => {
+  const listRef = useRef<VariableSizeList>(null)
+  const rowHeights = useRef<{ [key: number]: number }>({})
+  
+  // Calculate item heights (group headers vs sessions)
+  const getItemSize = (index: number) => {
+    return rowHeights.current[index] || 64 // Default height
+  }
+  
+  // Reset cache when sessions change
+  useEffect(() => {
+    listRef.current?.resetAfterIndex(0)
+  }, [sessions])
+  
+  return (
+    <AutoSizer>
+      {({ height, width }) => (
+        <VariableSizeList
+          ref={listRef}
+          height={height}
+          itemCount={sessions.length}
+          itemSize={getItemSize}
+          width={width}
+          overscanCount={5} // Render 5 items outside visible area
+        >
+          {({ index, style }) => (
+            <div style={style}>
+              <SessionItem 
+                session={sessions[index]}
+                onHeightChange={(height) => {
+                  rowHeights.current[index] = height
+                  listRef.current?.resetAfterIndex(index)
+                }}
+              />
+            </div>
+          )}
+        </VariableSizeList>
+      )}
+    </AutoSizer>
+  )
+}
 ```
 
-### Memoization
+### Scroll Position Preservation
 
 ```typescript
-// Memoize expensive computations
-const SessionItem = React.memo(({ session, ...props }) => {
-  // Component implementation
-}, (prevProps, nextProps) => {
-  // Custom comparison
-  return prevProps.session.session_id === nextProps.session.session_id &&
-         prevProps.isActive === nextProps.isActive &&
-         prevProps.session.updated_at === nextProps.session.updated_at
-})
+const useScrollPreservation = (containerRef: RefObject<HTMLDivElement>) => {
+  const scrollPositionRef = useRef(0)
+  const isLoadingMoreRef = useRef(false)
+  
+  // Save scroll position before loading more
+  const saveScrollPosition = useCallback(() => {
+    if (containerRef.current) {
+      scrollPositionRef.current = containerRef.current.scrollTop
+      isLoadingMoreRef.current = true
+    }
+  }, [])
+  
+  // Restore scroll position after new items load
+  const restoreScrollPosition = useCallback(() => {
+    if (containerRef.current && isLoadingMoreRef.current) {
+      // Calculate height difference and adjust
+      const currentHeight = containerRef.current.scrollHeight
+      const scrollDiff = currentHeight - scrollPositionRef.current
+      
+      // Maintain visual position
+      containerRef.current.scrollTop = scrollPositionRef.current
+      isLoadingMoreRef.current = false
+    }
+  }, [])
+  
+  return { saveScrollPosition, restoreScrollPosition }
+}
+```
+
+### Debounced Scroll Events
+
+```typescript
+// Debounce scroll detection for performance
+const useDebounce = <T extends (...args: any[]) => any>(
+  callback: T,
+  delay: number
+): T => {
+  const timeoutRef = useRef<NodeJS.Timeout>()
+  
+  return useCallback(
+    ((...args) => {
+      clearTimeout(timeoutRef.current)
+      timeoutRef.current = setTimeout(() => callback(...args), delay)
+    }) as T,
+    [callback, delay]
+  )
+}
+
+// Usage in scroll detection
+const handleScroll = useDebounce((e: Event) => {
+  const container = e.target as HTMLDivElement
+  const { scrollTop, scrollHeight, clientHeight } = container
+  
+  // Check if near bottom (80% threshold)
+  const scrollPercentage = (scrollTop + clientHeight) / scrollHeight
+  
+  if (scrollPercentage > 0.8 && hasMoreSessions && !isPaginationLoading) {
+    fetchMoreSessions()
+  }
+}, 150) // 150ms debounce
+```
+
+### Memoization with Pagination
+
+```typescript
+// Memoize session items to prevent re-renders
+const SessionItem = React.memo<SessionItemProps>(
+  ({ session, isActive, onClick }) => {
+    // Component implementation
+  },
+  (prevProps, nextProps) => {
+    // Only re-render if these specific props change
+    return (
+      prevProps.session.session_id === nextProps.session.session_id &&
+      prevProps.session.updated_at === nextProps.session.updated_at &&
+      prevProps.isActive === nextProps.isActive
+    )
+  }
+)
+
+// Memoize grouped sessions computation
+const groupedSessions = useMemo(() => {
+  // Only recompute when sessions array or search changes
+  return groupSessionsByTime(sessions, searchQuery)
+}, [sessions, searchQuery])
+```
+
+### Batch Size Optimization
+
+```typescript
+const OPTIMAL_BATCH_SIZE = 50 // Default, adjustable based on performance
+
+const useChatSessions = () => {
+  const [batchSize, setBatchSize] = useState(OPTIMAL_BATCH_SIZE)
+  
+  // Adjust batch size based on device performance
+  useEffect(() => {
+    // Check device memory if available
+    const memory = (navigator as any).deviceMemory
+    if (memory) {
+      if (memory < 4) setBatchSize(25)      // Low-end devices
+      else if (memory >= 8) setBatchSize(75) // High-end devices
+    }
+    
+    // Check connection speed
+    const connection = (navigator as any).connection
+    if (connection?.effectiveType === 'slow-2g' || connection?.effectiveType === '2g') {
+      setBatchSize(25) // Smaller batches for slow connections
+    }
+  }, [])
+  
+  return { batchSize }
+}
 ```
 
 ## Integration with SDK
 
-### Hook Integration
+### Enhanced Hook with Pagination Support
 
 ```typescript
-// Custom hook for session management
+// Custom hook for session management with pagination
 const useChatSessions = () => {
-  const { user } = useAuth()
+  const { authManager } = useAuth()
+  const { sessionManager, client } = useAgentC()
   const { setMessages } = useChat()
+  
   const [sessions, setSessions] = useState<ChatSession[]>([])
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
+  const [isInitialLoading, setIsInitialLoading] = useState(true)
+  const [isPaginationLoading, setIsPaginationLoading] = useState(false)
+  const [paginationError, setPaginationError] = useState<Error | null>(null)
+  const [offset, setOffset] = useState(0)
+  const [hasMoreSessions, setHasMoreSessions] = useState(true)
+  const [totalSessionCount, setTotalSessionCount] = useState(0)
   
-  // Load sessions from auth context or API
+  const BATCH_SIZE = 50
+  
+  // Initial session load
   useEffect(() => {
-    if (user?.sessions) {
-      setSessions(user.sessions)
+    const loadInitialSessions = async () => {
+      try {
+        setIsInitialLoading(true)
+        setPaginationError(null)
+        
+        // Get initial batch from auth manager
+        const initialSessions = await authManager.getSessions()
+        const metadata = await authManager.getSessionsMetadata()
+        
+        setSessions(initialSessions)
+        setTotalSessionCount(metadata.total_sessions)
+        setOffset(initialSessions.length)
+        setHasMoreSessions(initialSessions.length < metadata.total_sessions)
+      } catch (error) {
+        console.error('Failed to load initial sessions:', error)
+        setPaginationError(error as Error)
+      } finally {
+        setIsInitialLoading(false)
+      }
     }
-  }, [user])
+    
+    loadInitialSessions()
+  }, [authManager])
+  
+  // Fetch more sessions (pagination)
+  const fetchMoreSessions = useCallback(async () => {
+    if (isPaginationLoading || !hasMoreSessions) return
+    
+    try {
+      setIsPaginationLoading(true)
+      setPaginationError(null)
+      
+      // Fetch next batch
+      const moreSessions = await client.fetchUserSessions(offset, BATCH_SIZE)
+      
+      if (moreSessions && moreSessions.length > 0) {
+        setSessions(prev => [...prev, ...moreSessions])
+        setOffset(prev => prev + moreSessions.length)
+        
+        // Check if we've loaded all sessions
+        const newTotal = offset + moreSessions.length
+        setHasMoreSessions(newTotal < totalSessionCount)
+      } else {
+        setHasMoreSessions(false)
+      }
+    } catch (error) {
+      console.error('Failed to load more sessions:', error)
+      setPaginationError(error as Error)
+    } finally {
+      setIsPaginationLoading(false)
+    }
+  }, [client, offset, BATCH_SIZE, totalSessionCount, isPaginationLoading, hasMoreSessions])
   
   // Load a specific session
   const loadSession = useCallback(async (sessionId: string) => {
@@ -582,19 +917,90 @@ const useChatSessions = () => {
     // updateAgentConfig(session.agent_config)
   }, [sessions, setMessages])
   
+  // Refresh all sessions (pull-to-refresh, manual refresh)
+  const refreshSessions = useCallback(async () => {
+    setSessions([])
+    setOffset(0)
+    setHasMoreSessions(true)
+    await loadInitialSessions()
+  }, [])
+  
   return {
     sessions,
     currentSessionId,
     loadSession,
-    refreshSessions: () => {/* Refresh from API */}
+    refreshSessions,
+    fetchMoreSessions,
+    isInitialLoading,
+    isPaginationLoading,
+    paginationError,
+    hasMoreSessions,
+    totalSessionCount
+  }
+}
+```
+
+### Search with Pagination
+
+```typescript
+// Handle search with paginated data
+const useSearchSessions = (sessions: ChatSession[], hasMore: boolean) => {
+  const [searchQuery, setSearchQuery] = useState('')
+  const [isSearching, setIsSearching] = useState(false)
+  const [searchResults, setSearchResults] = useState<ChatSession[]>([])
+  const [showLoadAllPrompt, setShowLoadAllPrompt] = useState(false)
+  
+  // Debounced search
+  const debouncedSearch = useDebounce((query: string) => {
+    if (!query.trim()) {
+      setSearchResults([])
+      setShowLoadAllPrompt(false)
+      return
+    }
+    
+    setIsSearching(true)
+    
+    // Search through loaded sessions
+    const results = sessions.filter(session => {
+      const name = deriveSessionName(session).toLowerCase()
+      const preview = getMessagePreview(session.messages).toLowerCase()
+      const searchLower = query.toLowerCase()
+      
+      return name.includes(searchLower) || preview.includes(searchLower)
+    })
+    
+    setSearchResults(results)
+    
+    // Show prompt if there might be more results
+    if (results.length < 5 && hasMore) {
+      setShowLoadAllPrompt(true)
+    }
+    
+    setIsSearching(false)
+  }, 300)
+  
+  useEffect(() => {
+    debouncedSearch(searchQuery)
+  }, [searchQuery, sessions])
+  
+  return {
+    searchQuery,
+    setSearchQuery,
+    searchResults,
+    isSearching,
+    showLoadAllPrompt
   }
 }
 ```
 
 ## ASCII Visual Mockup
 
+### Standard View with Pagination
+
 ```
 ┌─────────────────────────────────┐
+│ Showing 50 of 237 conversations │  <- Session count indicator
+├─────────────────────────────────┤
 │ 🔍 Search conversations...       │
 ├─────────────────────────────────┤
 │ TODAY                            │
@@ -618,46 +1024,245 @@ const useChatSessions = () => {
 │ │   💬 23  # 4.5k              │ │
 │ └─────────────────────────────┘ │
 ├─────────────────────────────────┤
-│ THIS WEEK                        │
+│ THIS WEEK                        │  <- User scrolls down
 ├─────────────────────────────────┤
 │ ┌─────────────────────────────┐ │
 │ │   Initial setup help      3d │ │
 │ │   Agent: Welcome! Let's...   │ │
 │ │   💬 42  # 8.1k              │ │
 │ └─────────────────────────────┘ │
+│                                  │
+│  ⟲ Loading more conversations... │  <- Auto-loads at 80% scroll
+│                                  │
+└─────────────────────────────────┘
+```
+
+### Loading More Sessions
+
+```
+┌─────────────────────────────────┐
+│ Showing 100 of 237 conversations│  <- Count updates
+├─────────────────────────────────┤
+│ THIS MONTH                       │
+├─────────────────────────────────┤
+│ ┌─────────────────────────────┐ │
+│ │   React patterns help     2w │ │
+│ │   You: What's the best way...│ │
+│ │   💬 31  # 5.2k              │ │
+│ └─────────────────────────────┘ │
+│ ┌─────────────────────────────┐ │
+│ │   Database optimization   2w │ │
+│ │   Agent: For better perf...  │ │
+│ │   💬 18  # 3.1k              │ │
+│ └─────────────────────────────┘ │
+├─────────────────────────────────┤
+│ OLDER                            │  <- Newly loaded group
+├─────────────────────────────────┤
+│ ┌─────────────────────────────┐ │
+│ │   Project kickoff         1mo│ │
+│ │   You: Starting a new...     │ │
+│ │   💬 67  # 12.3k             │ │
+│ └─────────────────────────────┘ │
+│                                  │
+│  ⟲ Loading more conversations... │  <- Continues loading
+│                                  │
+└─────────────────────────────────┘
+```
+
+### End of List
+
+```
+┌─────────────────────────────────┐
+│ Showing 237 of 237 conversations│  <- All loaded
+├─────────────────────────────────┤
+│ OLDER                            │
+├─────────────────────────────────┤
+│ ┌─────────────────────────────┐ │
+│ │   First conversation      6mo│ │
+│ │   You: Hello, I need help... │ │
+│ │   💬 12  # 1.8k              │ │
+│ └─────────────────────────────┘ │
+│                                  │
+│   You've reached the end of     │  <- End indicator
+│   your conversations            │
+│                                  │
+└─────────────────────────────────┘
+```
+
+### Error State During Pagination
+
+```
+┌─────────────────────────────────┐
+│ Showing 50 of 237 conversations │
+├─────────────────────────────────┤
+│ THIS WEEK                        │
+├─────────────────────────────────┤
 │ ┌─────────────────────────────┐ │
 │ │   API integration test    5d │ │
 │ │   You: Testing the new...    │ │
 │ │   💬 5   # 0.9k              │ │
 │ └─────────────────────────────┘ │
+│                                  │
+│   ⚠️ Failed to load more        │  <- Error message
+│      sessions                    │
+│                                  │
+│     [ Try Again ]                │  <- Retry button
+│                                  │
+└─────────────────────────────────┘
+```
+
+### Search with Pagination Prompt
+
+```
+┌─────────────────────────────────┐
+│ Showing 50 of 237 conversations │
+├─────────────────────────────────┤
+│ 🔍 "authentication"              │  <- Active search
+├─────────────────────────────────┤
+│ SEARCH RESULTS (3 found)         │
+├─────────────────────────────────┤
+│ ┌─────────────────────────────┐ │
+│ │   Authentication flow     23h│ │
+│ │   You: Can you explain the...│ │
+│ │   💬 23  # 4.5k              │ │
+│ └─────────────────────────────┘ │
+│ ┌─────────────────────────────┐ │
+│ │   OAuth setup issues      3d │ │
+│ │   You: Having trouble with...│ │
+│ │   💬 15  # 2.8k              │ │
+│ └─────────────────────────────┘ │
+│ ┌─────────────────────────────┐ │
+│ │   JWT token handling      1w │ │
+│ │   Agent: For JWT tokens...   │ │
+│ │   💬 28  # 4.2k              │ │
+│ └─────────────────────────────┘ │
+│                                  │
+│   ℹ️ Only searching loaded       │  <- Search limitation notice
+│      sessions. Load all?         │
+│                                  │
+│     [ Load All Sessions ]        │  <- Option to load all
+│                                  │
 └─────────────────────────────────┘
 ```
 
 ## Implementation Notes
 
-### Phase 1: Core Functionality
-1. Basic session list rendering
+### Phase 1: Core Functionality with Pagination
+1. Basic session list rendering with initial batch (50 sessions)
 2. Time grouping (Today, Yesterday, etc.)
 3. Session name derivation
 4. Active session highlighting
 5. Click to load session
+6. Infinite scrolling with intersection observer
+7. Loading states (initial, pagination, error)
 
-### Phase 2: Enhancements
-1. Search functionality
-2. Virtual scrolling for performance
-3. Swipe actions on mobile
-4. Keyboard navigation
-5. Session actions (archive, delete)
+### Phase 2: Pagination Enhancements
+1. Virtual scrolling for lists > 100 items
+2. Scroll position preservation during pagination
+3. Debounced scroll detection
+4. Adaptive batch sizing based on device
+5. Search with pagination awareness
+6. Manual "Load More" fallback button
 
 ### Phase 3: Advanced Features
-1. Session pinning
-2. Custom labels/tags
-3. Export conversation
-4. Bulk operations
-5. Advanced filtering
+1. Session pinning (prioritized in display)
+2. Pull-to-refresh on mobile
+3. Optimistic updates for new sessions
+4. Background session prefetching
+5. Smart caching with IndexedDB
+6. Export full conversation history
+
+## Pagination Edge Cases
+
+### Handling Edge Cases
+
+```typescript
+const handleEdgeCases = {
+  // No sessions at all
+  noSessions: () => {
+    if (totalSessionCount === 0 && !isInitialLoading) {
+      return <EmptyState />
+    }
+  },
+  
+  // Single batch (all sessions loaded at once)
+  singleBatch: () => {
+    if (sessions.length === totalSessionCount && totalSessionCount <= BATCH_SIZE) {
+      // Don't show pagination indicators
+      return null
+    }
+  },
+  
+  // Thousands of sessions
+  manySessionsOptimization: () => {
+    if (totalSessionCount > 1000) {
+      // Force virtual scrolling
+      // Increase batch size for better performance
+      // Consider implementing search-first UI
+      return <VirtualizedSessionList sessions={sessions} />
+    }
+  },
+  
+  // Session deleted while paginating
+  sessionDeleted: (deletedId: string) => {
+    // Remove from local state
+    setSessions(prev => prev.filter(s => s.session_id !== deletedId))
+    // Adjust total count
+    setTotalSessionCount(prev => prev - 1)
+    // Adjust offset if needed
+    if (sessions.length < offset) {
+      setOffset(sessions.length)
+    }
+  },
+  
+  // New session created
+  sessionCreated: (newSession: ChatSession) => {
+    // Add to beginning of list
+    setSessions(prev => [newSession, ...prev])
+    // Adjust total count
+    setTotalSessionCount(prev => prev + 1)
+  },
+  
+  // Network failure during pagination
+  networkFailure: () => {
+    // Show retry UI
+    // Keep existing sessions visible
+    // Don't reset scroll position
+    return <PaginationErrorState onRetry={fetchMoreSessions} />
+  }
+}
+```
+
+### Session State Management During Pagination
+
+```typescript
+const maintainSessionState = {
+  // Preserve selected session during pagination
+  preserveSelection: () => {
+    // Keep currentSessionId in state
+    // Highlight even if session moves position
+    // Don't auto-scroll to selected when paginating
+  },
+  
+  // Handle session updates
+  handleSessionUpdate: (updatedSession: ChatSession) => {
+    setSessions(prev => prev.map(s => 
+      s.session_id === updatedSession.session_id ? updatedSession : s
+    ))
+  },
+  
+  // Optimistic updates
+  optimisticUpdate: (tempSession: Partial<ChatSession>) => {
+    // Add temporary session immediately
+    // Replace with real data when available
+    // Handle failure gracefully
+  }
+}
+```
 
 ## Testing Checklist
 
+### Core Functionality
 - [ ] Sessions display correctly with all fields
 - [ ] Time grouping works accurately
 - [ ] Active session is visually distinct
@@ -667,11 +1272,44 @@ const useChatSessions = () => {
 - [ ] Mobile touch targets are adequate (44px min)
 - [ ] Keyboard navigation works
 - [ ] Screen reader announces session details
-- [ ] Performance with 100+ sessions
 - [ ] Relative timestamps update appropriately
 - [ ] Token counts format correctly
 - [ ] Message previews truncate properly
 - [ ] Session names derive correctly from data
+
+### Pagination Testing
+- [ ] Initial batch loads correctly (50 sessions)
+- [ ] Infinite scroll triggers at 80% scroll depth
+- [ ] Loading indicator appears while fetching
+- [ ] New sessions append seamlessly
+- [ ] "No more sessions" message shows at end
+- [ ] Error state displays on fetch failure
+- [ ] Retry mechanism works after error
+- [ ] Session count indicator updates correctly
+- [ ] Scroll position preserved during pagination
+- [ ] Search works with partial session list
+- [ ] Manual "Load More" button works as fallback
+
+### Performance Testing
+- [ ] Performance with 100+ sessions (virtual scrolling)
+- [ ] Performance with 500+ sessions
+- [ ] Performance with 1000+ sessions
+- [ ] Scroll remains smooth during pagination
+- [ ] Memory usage stays reasonable with large lists
+- [ ] No unnecessary re-renders during pagination
+- [ ] Debounced scroll events working
+- [ ] Batch size adjusts for device capabilities
+
+### Edge Case Testing
+- [ ] Handles 0 sessions gracefully
+- [ ] Handles single batch (< 50 sessions)
+- [ ] Handles exactly 50, 100, 150 sessions
+- [ ] Session deletion updates pagination state
+- [ ] New session creation updates list
+- [ ] Network timeout handled gracefully
+- [ ] Rapid scrolling doesn't cause issues
+- [ ] Search with pagination prompt appears
+- [ ] Selected session persists during pagination
 
 ## Accessibility Compliance
 

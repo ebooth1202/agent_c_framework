@@ -4,7 +4,7 @@
  */
 
 import { EventEmitter } from '../events/EventEmitter';
-import { ChatSession, Message } from '../events/types/CommonTypes';
+import { ChatSession, Message, ChatSessionIndexEntry, ChatSessionQueryResponse } from '../events/types/CommonTypes';
 import { Logger } from '../utils/logger';
 
 /**
@@ -26,6 +26,14 @@ export interface SessionManagerEventMap {
     sessionId: string; 
   };
   'all-sessions-cleared': void;
+  'sessions-index-updated': {
+    sessionIndex: ChatSessionIndexEntry[];
+    totalSessions: number;
+  };
+  'request-user-sessions': {
+    offset: number;
+    limit: number;
+  };
 }
 
 /**
@@ -47,6 +55,9 @@ export class SessionManager extends EventEmitter<SessionManagerEventMap> {
   private isAccumulating: boolean;
   private config: SessionManagerConfig;
   private logger: Logger;
+  private sessionIndex: ChatSessionIndexEntry[];
+  private totalSessionCount: number;
+  private lastFetchOffset: number;
 
   /**
    * Create a new SessionManager instance
@@ -59,6 +70,9 @@ export class SessionManager extends EventEmitter<SessionManagerEventMap> {
     this.currentSessionId = null;
     this.textAccumulator = '';
     this.isAccumulating = false;
+    this.sessionIndex = [];
+    this.totalSessionCount = 0;
+    this.lastFetchOffset = 0;
     
     this.config = {
       maxSessions: config.maxSessions || 100,
@@ -413,6 +427,89 @@ export class SessionManager extends EventEmitter<SessionManagerEventMap> {
   }
 
   /**
+   * Set the session index from a paginated query response
+   * Used when receiving initial sessions from login or when fetching additional sessions
+   * @param response - ChatSessionQueryResponse from server
+   * @param append - Whether to append to existing index or replace it
+   */
+  setSessionIndex(response: ChatSessionQueryResponse, append: boolean = false): void {
+    if (!response) {
+      this.logger.error('Invalid session query response provided to setSessionIndex');
+      return;
+    }
+
+    if (append) {
+      // Append new sessions to existing index, avoiding duplicates
+      const existingIds = new Set(this.sessionIndex.map(s => s.session_id));
+      const newSessions = response.chat_sessions.filter(s => !existingIds.has(s.session_id));
+      this.sessionIndex = [...this.sessionIndex, ...newSessions];
+    } else {
+      // Replace the entire index
+      this.sessionIndex = response.chat_sessions || [];
+    }
+
+    this.totalSessionCount = response.total_sessions;
+    this.lastFetchOffset = response.offset;
+
+    this.logger.info(`Session index updated`, {
+      sessionCount: this.sessionIndex.length,
+      totalSessions: this.totalSessionCount,
+      offset: this.lastFetchOffset,
+      appended: append
+    });
+
+    this.emit('sessions-index-updated', {
+      sessionIndex: this.sessionIndex,
+      totalSessions: this.totalSessionCount
+    });
+  }
+
+  /**
+   * Get the current session index
+   * @returns Array of ChatSessionIndexEntry
+   */
+  getSessionIndex(): ChatSessionIndexEntry[] {
+    return [...this.sessionIndex];
+  }
+
+  /**
+   * Get total number of sessions available on the server
+   * @returns Total session count from last query
+   */
+  getTotalSessionCount(): number {
+    return this.totalSessionCount;
+  }
+
+  /**
+   * Check if there are more sessions to fetch
+   * @returns True if there are unfetched sessions
+   */
+  hasMoreSessions(): boolean {
+    return this.sessionIndex.length < this.totalSessionCount;
+  }
+
+  /**
+   * Request more sessions from the server
+   * Emits an event that should be handled by RealtimeClient to send the request
+   * @param limit - Number of sessions to fetch (default 50)
+   */
+  requestMoreSessions(limit: number = 50): void {
+    const offset = this.sessionIndex.length;
+    
+    this.logger.info(`Requesting more sessions`, {
+      offset,
+      limit,
+      currentCount: this.sessionIndex.length,
+      totalAvailable: this.totalSessionCount
+    });
+
+    this.emit('request-user-sessions', {
+      offset,
+      limit
+    });
+  }
+
+  /**
    * Get session statistics
    * @returns Statistics about current sessions
    */
@@ -422,6 +519,8 @@ export class SessionManager extends EventEmitter<SessionManagerEventMap> {
     totalTokens: number;
     currentSessionId: string | null;
     hasActiveAccumulation: boolean;
+    sessionIndexCount: number;
+    totalSessionsAvailable: number;
   } {
     let totalMessages = 0;
     let totalTokens = 0;
@@ -436,7 +535,9 @@ export class SessionManager extends EventEmitter<SessionManagerEventMap> {
       totalMessages,
       totalTokens,
       currentSessionId: this.currentSessionId,
-      hasActiveAccumulation: this.isAccumulating
+      hasActiveAccumulation: this.isAccumulating,
+      sessionIndexCount: this.sessionIndex.length,
+      totalSessionsAvailable: this.totalSessionCount
     };
   }
 
@@ -445,6 +546,9 @@ export class SessionManager extends EventEmitter<SessionManagerEventMap> {
    */
   cleanup(): void {
     this.reset();
+    this.sessionIndex = [];
+    this.totalSessionCount = 0;
+    this.lastFetchOffset = 0;
     this.removeAllListeners();
     this.logger.info('SessionManager cleaned up');
   }
