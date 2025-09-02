@@ -298,9 +298,11 @@ class SecureCommandExecutor:
             'working_directory': result.working_directory
         }
 
-        # Only log output if explicitly enabled and not too large
+        # Always include the key; populate only if small enough AND logging enabled
+        stdout_preview = ""
         if self.log_output and len(result.stdout) < 1024:
-            log_entry['stdout_preview'] = result.stdout[:500]
+            stdout_preview = result.stdout[:500]
+        log_entry['stdout_preview'] = stdout_preview
 
         self.logger.info(json.dumps(log_entry))
 
@@ -336,16 +338,23 @@ class SecureCommandExecutor:
         if not base:
             return self._error(command, working_directory, "Unable to resolve base command")
 
-        # Must be in the allowlist of base commands - meaning if they submit a command that we don't have a policy for, it's blocked
-        policy = self.policy_provider.get_policy(base, parts)
+        # Try to get policy if provider exists
+        policy = self.policy_provider.get_policy(base, parts) if self.policy_provider else None
+
+        # Work out validator key even if policy is missing (fallback to base)
+        validator_key = (policy.get("validator") if (policy and policy.get("validator")) else base).lower()
+        validator = self.validators.get(validator_key)
+
+        # If there is NO policy but there IS a registered validator, fall back to a minimal safe policy.
+        # This treats "explicit validator registration" as an allow-list action, but still keeps defaults constrained.
+        if policy is None and validator is not None:
+            policy = {"default_timeout": self.default_timeout, "safe_env": {}}
+
+        # If we still don't have a policy, block (no allowlisting at all)
         if not policy:
             return self._blocked(command, working_directory, f"No policy for '{base}'")
 
-        # Now get the validator for that command - if we don't have a validator, block it.
-        # We can create a validator that inherits from BasicCommandValidator if we want to have a generic validator for commands without a custom handler.
-        # by forcing us to create one, we ensure we don't just allow arbitrary commands through without review.
-        validator_key = (policy.get("validator") or base).lower()
-        validator = self.validators.get(validator_key)
+        # If we have a policy but no validator, it's a configuration error
         if validator is None:
             return self._error(command, working_directory, f"No validator registered for '{base}'")
 
@@ -400,7 +409,12 @@ class SecureCommandExecutor:
             effective_env["PATH"] = f"{path_prepend}{sep}{effective_env.get('PATH', '')}"
 
         # Final timeout: arg > per-command > executor default
-        effective_timeout = int(vres.timeout or timeout or policy.get("default_timeout", self.default_timeout))
+        if timeout is not None:
+            effective_timeout = int(timeout)
+        elif vres.timeout is not None:
+            effective_timeout = int(vres.timeout)
+        else:
+            effective_timeout = int(policy.get("default_timeout", self.default_timeout))
 
         # Resolve the executable using the effective PATH/PATHEXT
         resolved = self._resolve_executable(parts[0], effective_env)

@@ -247,6 +247,7 @@ npx:
     NPM_CONFIG_UPDATE_NOTIFIER: "false"
 
 lerna:
+  validator: lerna
   flags: ["--version", "-v", "--help", "-h", "--loglevel", "--concurrency", "--scope", "--ignore", "--include-dependencies", "--include-dependents", "--since"]
   subcommands:
     list:
