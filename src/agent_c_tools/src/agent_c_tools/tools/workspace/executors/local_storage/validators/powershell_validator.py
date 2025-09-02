@@ -102,6 +102,11 @@ class PowershellValidator:
         env_overrides = policy.get("env_overrides") or {}
         env.update(env_overrides)
 
+        # Apply safe environment variables from policy (only if not already set)
+        safe_env = policy.get("safe_env") or {}
+        for k, v in safe_env.items():
+            env.setdefault(k, v)
+
         # Add any additional security environment variables that aren't already set
         # These are common PowerShell security settings that should always be applied
         security_defaults = {
