@@ -187,7 +187,8 @@ pnpm:
       # --- Scripts (ALLOWLIST) ---
       run:
         allowed_scripts: ["build","test", "test:run",  "test:coverage", "test:ui", "test:debug", "type-check",  "clan", "install:clean", "lint", "lint:fix", "format","typecheck", "test:run"]
-        deny_args: false         # no extra args (incl. after --)
+        deny_args: false        # allow extra args with path safety validation
+        allow_test_paths: true  # enable workspace-relative test paths
 
       # --- Safe, lockfile-based install ---
       install:
@@ -216,8 +217,6 @@ pnpm:
 
 npx:
   validator: npx
-  subcommands:
-    tsc: { allowed_flags: [ "--noEmit" ] }
   allowed_packages:
     - "@angular/cli"
     - "create-react-app"

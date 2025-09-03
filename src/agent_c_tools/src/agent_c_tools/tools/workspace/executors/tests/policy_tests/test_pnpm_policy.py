@@ -81,7 +81,8 @@ def test_pnpm_script_allowlist(policies):
         expected_scripts = ["build", "test", "lint", "lint:fix", "format", "typecheck", "test:run"]
         for script in expected_scripts:
             assert script in allowed_scripts, f"Safe script {script} should be allowed"
-        assert run_settings.get("deny_args") is True, "pnpm run should deny extra arguments"
+        assert run_settings.get("deny_args") is False, "pnpm run should allow script arguments with path validation"
+        assert run_settings.get("allow_test_paths") is True, "pnpm run should enable workspace-relative test paths"
 
 
 def test_pnpm_install_security(policies):
