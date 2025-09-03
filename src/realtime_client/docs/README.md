@@ -99,6 +99,8 @@ function ChatComponent() {
 ### Guides
 - **[Authentication Guide](./guides/authentication.md)** - ChatUser login and JWT token management
 - **[Audio Streaming Guide](./guides/audio-streaming.md)** - Binary audio streaming setup
+- **[Audio Troubleshooting Guide](./guides/audio-troubleshooting.md)** - Solutions for common audio issues
+- **[Deployment Guide](./guides/deployment.md)** - Production deployment with AudioWorklet setup
 - **[Turn Management Guide](./guides/turn-management.md)** - Understanding conversation flow
 - **[Voice Models Guide](./guides/voice-models.md)** - Working with different TTS voices
 - **[Avatar Integration Guide](./guides/avatar-integration.md)** - Setting up HeyGen avatars
@@ -113,9 +115,12 @@ function ChatComponent() {
 
 ### 🎤 Advanced Audio
 - **Web Audio API** with AudioWorklet for optimal performance
+- **Automatic resampling** from browser native rate to 16kHz
 - **Turn-aware streaming** prevents talk-over conflicts
 - **Multiple voice models** including OpenAI TTS
 - **Binary PCM16** transmission without base64 overhead
+
+**⚠️ Important:** AudioWorklet file must be deployed to `/worklets/audio-processor.worklet.js`. See [Deployment Guide](./guides/deployment.md) for details.
 
 ### 🤖 Avatar Support
 - **HeyGen integration** for virtual avatars

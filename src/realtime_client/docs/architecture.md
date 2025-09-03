@@ -41,7 +41,11 @@ Start with text chat, add voice when needed, integrate avatars if desired. Each 
 │       ├── providers/       # Context providers
 │       ├── hooks/           # React hooks
 │       └── components/      # Optional UI components
-└── worklets/                # Audio worklet scripts
+└── dist/
+    └── worklets/            # Audio worklet scripts (must be deployed)
+        └── audio-processor.worklet.js
+
+⚠️ Note: The audio-processor.worklet.js file must be deployed to your app's public directory
 ```
 
 ## Core Components
@@ -241,7 +245,7 @@ UI Update
 ### Audio Input Flow
 
 ```
-Microphone
+Microphone (Browser Native Rate: 44.1/48kHz)
     │
     ▼
 getUserMedia()
@@ -250,10 +254,10 @@ getUserMedia()
 AudioContext
     │
     ▼
-AudioWorklet
+AudioWorklet (Off-thread processing)
     │
-    ▼
-Float32 → PCM16
+    ├─► Resample to 16kHz
+    ├─► Float32 → PCM16
     │
     ▼
 AudioAgentCBridge
@@ -261,7 +265,7 @@ AudioAgentCBridge
     ├─► Turn Check
     │
     ▼
-WebSocket (Binary)
+WebSocket (Binary PCM16 @ 16kHz)
     │
     ▼
 Agent C Server
