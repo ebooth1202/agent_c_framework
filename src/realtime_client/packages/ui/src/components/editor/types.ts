@@ -72,4 +72,10 @@ export interface MarkdownEditorProps {
    * Callback when image upload fails
    */
   onImageUploadError?: (error: Error) => void;
+  
+  /**
+   * Custom key handler for the editor
+   * Return true to prevent default behavior
+   */
+  onKeyDown?: (event: KeyboardEvent) => boolean;
 }

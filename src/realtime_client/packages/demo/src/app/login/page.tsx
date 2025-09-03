@@ -66,8 +66,8 @@ export default function LoginPage() {
         password: values.password,
       })
 
-      // Redirect to dashboard on successful login
-      router.push("/dashboard")
+      // Redirect to chat on successful login
+      router.push("/chat")
     } catch (error) {
       // Display error message
       const errorMessage = error instanceof Error 

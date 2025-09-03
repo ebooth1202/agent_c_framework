@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { MarkdownEditor } from './MarkdownEditor';
+import { MarkdownEditorClient } from './MarkdownEditorClient';
 
 /**
  * Smart Paste Example Component
@@ -135,7 +135,7 @@ export const SmartPasteExample: React.FC = () => {
         <label className="text-sm font-medium">
           Editor with Smart Paste enabled:
         </label>
-        <MarkdownEditor
+        <MarkdownEditorClient
           value={content}
           onChange={setContent}
           onSubmit={handleSubmit}

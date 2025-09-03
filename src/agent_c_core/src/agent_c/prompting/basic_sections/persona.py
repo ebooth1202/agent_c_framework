@@ -3,9 +3,12 @@ import datetime
 import platform
 
 from string import Template
-from typing import Any, Optional, Dict
+from typing import Any, Optional
+
 from agent_c.prompting.prompt_section import PromptSection, property_bag_item
 from agent_c.util.logging_utils import LoggingManager
+
+
 logger = LoggingManager(__name__).get_logger()
 
 class PersonaSection(PromptSection):
@@ -100,7 +103,7 @@ class DynamicPersonaSection(PromptSection):
             if ws_name:
                 ws_tool = context['tool_chest'].active_tools.get('WorkspaceTools')
 
-                tree = await ws_tool.tree(path=f"//{ws_name}/", folder_depth=7, file_depth=5, tool_context=context)
+                tree = await ws_tool.tree(path=f"//{ws_name}/", folder_depth=10, file_depth=7, tool_context=context)
                 context['workspace_tree'] = f"Generated: {self.timestamp()}\n{tree}"
 
             template: Template = Template(base_prompt, )

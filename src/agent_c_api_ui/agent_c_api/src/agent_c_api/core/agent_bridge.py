@@ -384,7 +384,7 @@ class AgentBridge:
             "agent_config": self.chat_session.agent_config,
             "timestamp": datetime.now().isoformat(),
             "env_name": os.getenv('ENV_NAME', DEFAULT_ENV_NAME)
-        }
+        } | self.chat_session.agent_config.prompt_metadata
 
     @staticmethod
     def _current_timestamp() -> str:
@@ -1066,7 +1066,7 @@ class AgentBridge:
                     break
 
             await chat_task
-            await self.session_manager.flush(self.chat_session.session_id)
+            await self.session_manager.flush(self.chat_session.session_id, self.chat_session.user_id)
 
         except Exception as e:
             self.logger.exception (f"Error in stream_chat: {e}", exc_info=True)

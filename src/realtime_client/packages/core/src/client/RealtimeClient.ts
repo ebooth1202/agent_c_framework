@@ -889,7 +889,11 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
             throw new Error('Authentication token is required');
         }
 
-        const url = new URL(this.config.apiUrl);
+        // Build the WebSocket URL with the correct endpoint path
+        const baseUrl = this.config.apiUrl;
+        const wsUrl = baseUrl.endsWith('/') ? baseUrl + 'api/rt/ws' : baseUrl + '/api/rt/ws';
+        
+        const url = new URL(wsUrl);
         url.searchParams.set('token', this.authToken);
         
         if (this.sessionId) {

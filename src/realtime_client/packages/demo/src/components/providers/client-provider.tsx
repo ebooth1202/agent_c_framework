@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { RealtimeClient, type RealtimeClientConfig } from '@agentc/realtime-core';
+import type { RealtimeClientConfig } from '@agentc/realtime-core';
 import { AgentCProvider } from '@agentc/realtime-react';
 import { useAuth } from '@/contexts/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -21,7 +21,7 @@ export interface ClientProviderProps {
 
 /**
  * Client provider component
- * Initializes the RealtimeClient with auth tokens and manages SDK lifecycle
+ * Configures and wraps AgentCProvider with auth tokens
  */
 export function ClientProvider({ 
   children, 
@@ -31,11 +31,9 @@ export function ClientProvider({
   respectTurnState = true
 }: ClientProviderProps) {
   const router = useRouter();
-  const { isAuthenticated, isLoading: authLoading, getAuthToken, getUiSessionId, loginResponse } = useAuth();
-  const [isInitializing, setIsInitializing] = useState(true);
+  const { isAuthenticated, isLoading: authLoading, getAuthToken, loginResponse } = useAuth();
+  const [configReady, setConfigReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const clientRef = useRef<RealtimeClient | null>(null);
-  const initializationRef = useRef(false);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -47,9 +45,8 @@ export function ClientProvider({
   // Create client configuration
   const clientConfig = useMemo<RealtimeClientConfig | null>(() => {
     const token = getAuthToken();
-    const uiSessionId = getUiSessionId();
     
-    if (!token || !uiSessionId) {
+    if (!token) {
       return null;
     }
 
@@ -58,10 +55,8 @@ export function ClientProvider({
     return {
       apiUrl: baseUrl,
       authToken: token,
-      ui_session_id: uiSessionId,
       enableAudio,
-      enableTurnManagement,
-      respectTurnState,
+      autoReconnect: true,
       
       // Additional configuration from login response
       voices: loginResponse?.voices,
@@ -87,59 +82,20 @@ export function ClientProvider({
     };
   }, [
     getAuthToken,
-    getUiSessionId,
     loginResponse,
     apiUrl,
-    enableAudio,
-    enableTurnManagement,
-    respectTurnState
+    enableAudio
   ]);
 
-  // Initialize client
+  // Mark config as ready when we have a valid config
   useEffect(() => {
-    // Skip if already initialized or no config
-    if (initializationRef.current || !clientConfig) {
-      return;
+    if (clientConfig && !authLoading) {
+      setConfigReady(true);
     }
-
-    const initializeClient = async () => {
-      try {
-        setIsInitializing(true);
-        setError(null);
-        
-        // Create and connect client
-        const client = new RealtimeClient(clientConfig);
-        clientRef.current = client;
-        
-        // Connect to the WebSocket
-        await client.connect();
-        
-        initializationRef.current = true;
-        setIsInitializing(false);
-      } catch (err) {
-        console.error('Failed to initialize RealtimeClient:', err);
-        setError(err instanceof Error ? err.message : 'Failed to initialize client');
-        setIsInitializing(false);
-      }
-    };
-
-    initializeClient();
-
-    // Cleanup on unmount
-    return () => {
-      if (clientRef.current) {
-        if (clientRef.current.isConnected()) {
-          clientRef.current.disconnect();
-        }
-        clientRef.current.destroy();
-        clientRef.current = null;
-      }
-      initializationRef.current = false;
-    };
-  }, [clientConfig]);
+  }, [clientConfig, authLoading]);
 
   // Show loading state
-  if (authLoading || isInitializing) {
+  if (authLoading || !configReady) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen space-y-4">
         <div className="space-y-2">
@@ -147,7 +103,7 @@ export function ClientProvider({
           <Skeleton className="h-4 w-36" />
         </div>
         <p className="text-sm text-muted-foreground">
-          {authLoading ? 'Checking authentication...' : 'Initializing chat client...'}
+          {authLoading ? 'Checking authentication...' : 'Preparing chat client...'}
         </p>
       </div>
     );
@@ -182,9 +138,13 @@ export function ClientProvider({
     );
   }
 
-  // Render with AgentCProvider
+  // Render with AgentCProvider which will handle client creation and connection
   return (
-    <AgentCProvider config={clientConfig}>
+    <AgentCProvider 
+      config={clientConfig}
+      autoConnect={true}
+      debug={true}
+    >
       {children}
     </AgentCProvider>
   );
