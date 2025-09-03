@@ -1,8 +1,8 @@
 import { Extension, InputRule } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
-import Link from '@tiptap/extension-link';
+import { Link } from '@tiptap/extension-link';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
-import { createLowlight } from 'lowlight';
+import { common, createLowlight } from 'lowlight';
 import { SmartPasteExtension, type SmartPasteOptions } from './SmartPasteExtension';
 
 // Import language modules from highlight.js
@@ -19,28 +19,10 @@ import yaml from 'highlight.js/lib/languages/yaml';
 import sql from 'highlight.js/lib/languages/sql';
 import dockerfile from 'highlight.js/lib/languages/dockerfile';
 
-// Create lowlight instance and register languages
-const lowlight = createLowlight();
+// Create lowlight instance with common languages (includes JS, TS, Python, JSON, etc.)
+const lowlight = createLowlight(common);
 
-// Register all the languages we want to support
-lowlight.register('javascript', javascript);
-lowlight.register('js', javascript); // Alias
-lowlight.register('typescript', typescript);
-lowlight.register('ts', typescript); // Alias
-lowlight.register('python', python);
-lowlight.register('py', python); // Alias
-lowlight.register('json', json);
-lowlight.register('html', html);
-lowlight.register('xml', html); // XML uses the same highlighter
-lowlight.register('css', css);
-lowlight.register('markdown', markdown);
-lowlight.register('md', markdown); // Alias
-lowlight.register('bash', bash);
-lowlight.register('sh', shell);
-lowlight.register('shell', shell);
-lowlight.register('yaml', yaml);
-lowlight.register('yml', yaml); // Alias
-lowlight.register('sql', sql);
+// Register additional languages not in 'common'
 lowlight.register('dockerfile', dockerfile);
 lowlight.register('docker', dockerfile); // Alias
 

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
-import Placeholder from '@tiptap/extension-placeholder';
-import Typography from '@tiptap/extension-typography';
+import { Placeholder } from '@tiptap/extension-placeholder';
+import { Typography } from '@tiptap/extension-typography';
 import { cn } from '../../lib/utils';
 import type { MarkdownEditorProps } from './types';
 import { getMarkdownExtensions, keyboardShortcuts } from './markdownExtensions';
@@ -88,6 +88,7 @@ const MarkdownEditor = React.forwardRef<HTMLDivElement, MarkdownEditorProps>(
       ],
       content: value,
       editable: !disabled,
+      immediatelyRender: false, // Prevent SSR issues
       onUpdate: ({ editor }) => {
         // Get plain text content and notify parent component
         const text = editor.getText();
