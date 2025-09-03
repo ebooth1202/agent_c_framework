@@ -3,7 +3,7 @@ set -e
 
 # Function to open URL in the default browser
 open_browser() {
-    URL="http://localhost:5173/chat"
+    URL="https://localhost:5173/chat"
 
     # Try different commands based on the platform
     if command -v open &>/dev/null; then
