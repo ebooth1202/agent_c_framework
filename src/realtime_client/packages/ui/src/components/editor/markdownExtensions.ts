@@ -1,6 +1,14 @@
+/**
+ * TipTap v2 Compatible Version of markdownExtensions.ts
+ * 
+ * Key changes from v3:
+ * - Import statements are simpler (no module resolution issues)
+ * - All extensions work with standard imports
+ * - Better Next.js compatibility
+ */
 import { Extension, InputRule } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
-import { Link } from '@tiptap/extension-link';
+import Link from '@tiptap/extension-link';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 import { common, createLowlight } from 'lowlight';
 import { SmartPasteExtension, type SmartPasteOptions } from './SmartPasteExtension';
@@ -19,16 +27,15 @@ import yaml from 'highlight.js/lib/languages/yaml';
 import sql from 'highlight.js/lib/languages/sql';
 import dockerfile from 'highlight.js/lib/languages/dockerfile';
 
-// Create lowlight instance with common languages (includes JS, TS, Python, JSON, etc.)
+// Create lowlight instance with common languages
 const lowlight = createLowlight(common);
 
-// Register additional languages not in 'common'
+// Register additional languages
 lowlight.register('dockerfile', dockerfile);
 lowlight.register('docker', dockerfile); // Alias
 
 /**
- * Custom Markdown InputRules Extension
- * Provides automatic markdown syntax conversion as users type
+ * Custom Markdown InputRules Extension - v2 Compatible
  */
 const MarkdownInputRules = Extension.create({
   name: 'markdownInputRules',
@@ -39,7 +46,6 @@ const MarkdownInputRules = Extension.create({
       new InputRule({
         find: /(?:^|\s)(\*\*|__)([^*_]+)(\*\*|__)$/,
         handler: ({ state: _state, range, match }) => {
-          const _attributes = {};
           const start = range.from;
           const end = range.to;
           
@@ -214,8 +220,7 @@ const MarkdownInputRules = Extension.create({
 });
 
 /**
- * Custom Keyboard Shortcuts Extension
- * Adds our custom keyboard shortcuts on top of the defaults
+ * Custom Keyboard Shortcuts Extension - v2 Compatible
  */
 const KeyboardShortcuts = Extension.create({
   name: 'customKeyboardShortcuts',
@@ -247,12 +252,10 @@ const KeyboardShortcuts = Extension.create({
         const previousUrl = this.editor.getAttributes('link').href;
         const url = window.prompt('URL', previousUrl);
 
-        // Cancelled
         if (url === null) {
           return false;
         }
 
-        // Empty
         if (url === '') {
           this.editor
             .chain()
@@ -263,7 +266,6 @@ const KeyboardShortcuts = Extension.create({
           return true;
         }
 
-        // Update link
         this.editor
           .chain()
           .focus()
@@ -274,19 +276,18 @@ const KeyboardShortcuts = Extension.create({
         return true;
       },
       
-      // Cmd/Ctrl+Z → Undo (StarterKit already includes this)
+      // Cmd/Ctrl+Z → Undo
       'Mod-z': () => this.editor.commands.undo(),
       
       // Cmd/Ctrl+Shift+Z → Redo
       'Mod-Shift-z': () => this.editor.commands.redo(),
-      'Mod-y': () => this.editor.commands.redo(), // Alternative redo shortcut
+      'Mod-y': () => this.editor.commands.redo(),
     };
   },
 });
 
 /**
- * Get configured markdown extensions with keyboard shortcuts
- * @param options - Configuration options for extensions
+ * Get configured markdown extensions - v2 Compatible
  */
 export function getMarkdownExtensions(options: {
   placeholder?: string;
@@ -302,7 +303,6 @@ export function getMarkdownExtensions(options: {
   return [
     // StarterKit bundles most of what we need
     StarterKit.configure({
-      // Configure individual extensions within StarterKit
       bold: {
         HTMLAttributes: {
           class: 'font-bold',
@@ -361,7 +361,7 @@ export function getMarkdownExtensions(options: {
           class: 'leading-relaxed',
         },
       },
-      // Disable codeBlock from StarterKit as we'll use CodeBlockLowlight
+      // Disable default codeBlock as we use CodeBlockLowlight
       codeBlock: false,
     }),
 
@@ -402,7 +402,7 @@ export function getMarkdownExtensions(options: {
 }
 
 /**
- * Get keyboard shortcut reference for documentation
+ * Keyboard shortcut reference (same as v3)
  */
 export const keyboardShortcuts = {
   formatting: [

@@ -1,50 +1,25 @@
+/**
+ * TipTap v2 Compatible Version of MarkdownEditor.tsx
+ * 
+ * Key changes from v3:
+ * - Import statements are cleaner
+ * - No immediatelyRender prop (v2 doesn't have it)
+ * - Better Next.js compatibility out of the box
+ */
 import * as React from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
-import { Placeholder } from '@tiptap/extension-placeholder';
-import { Typography } from '@tiptap/extension-typography';
+import Placeholder from '@tiptap/extension-placeholder';
+import Typography from '@tiptap/extension-typography';
 import { cn } from '../../lib/utils';
 import type { MarkdownEditorProps } from './types';
 import { getMarkdownExtensions, keyboardShortcuts } from './markdownExtensions';
 import { codeHighlightStyles } from './codeHighlightTheme';
 
 /**
- * MarkdownEditor component
+ * MarkdownEditor component - v2 Compatible
  * 
- * A Tiptap-based markdown editor with live markdown rendering and keyboard shortcuts.
- * 
- * Features:
- * - Automatic markdown syntax conversion as you type
- * - Keyboard shortcuts for formatting (Cmd/Ctrl+B for bold, etc.)
- * - Controlled component with value/onChange props
- * - Plain text output despite rich formatting display
- * 
- * Markdown patterns:
- * - **text** → bold
- * - *text* or _text_ → italic
- * - `text` → inline code
- * - ~~text~~ → strikethrough
- * - # Heading 1, ## Heading 2, ### Heading 3
- * - -, * for bullet lists, 1. for numbered lists
- * - > for blockquotes
- * - --- for horizontal rules
- * - ```language → code block with syntax highlighting
- * 
- * Image handling:
- * - Paste images from clipboard (Ctrl/Cmd+V)
- * - Drag and drop image files
- * - Shows upload progress placeholder
- * - Automatic markdown image syntax insertion
- * 
- * Keyboard shortcuts:
- * - Cmd/Ctrl+B: Bold
- * - Cmd/Ctrl+I: Italic
- * - Cmd/Ctrl+E: Inline code
- * - Cmd/Ctrl+Alt+C: Code block
- * - Cmd/Ctrl+Shift+S: Strikethrough
- * - Cmd/Ctrl+K: Add/edit link
- * - Cmd/Ctrl+Z: Undo
- * - Cmd/Ctrl+Shift+Z: Redo
- * - Cmd/Ctrl+Enter: Submit
+ * This version works with TipTap v2 which has better Next.js compatibility
+ * and doesn't have the module resolution issues of v3.
  */
 const MarkdownEditor = React.forwardRef<HTMLDivElement, MarkdownEditorProps>(
   ({ 
@@ -88,7 +63,7 @@ const MarkdownEditor = React.forwardRef<HTMLDivElement, MarkdownEditorProps>(
       ],
       content: value,
       editable: !disabled,
-      immediatelyRender: false, // Prevent SSR issues
+      // Note: v2 doesn't have immediatelyRender prop
       onUpdate: ({ editor }) => {
         // Get plain text content and notify parent component
         const text = editor.getText();
