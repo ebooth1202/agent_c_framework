@@ -556,6 +556,7 @@ class RealtimeBridge(AgentBridge):
 
     async def _get_or_create_chat_session(self, session_id: Optional[str] = None, user_id: Optional[str] = None, agent_key: str = 'default_realtime') -> ChatSession:
         session_id = session_id or self.ui_session_id
+        user_id = user_id or self.chat_user.user_id
         chat_session = await self.chat_session_manager.get_session(session_id, user_id)
 
         if chat_session is None:

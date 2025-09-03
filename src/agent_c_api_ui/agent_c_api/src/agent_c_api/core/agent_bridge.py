@@ -384,7 +384,7 @@ class AgentBridge:
             "agent_config": self.chat_session.agent_config,
             "timestamp": datetime.now().isoformat(),
             "env_name": os.getenv('ENV_NAME', DEFAULT_ENV_NAME)
-        }
+        } | self.chat_session.agent_config.prompt_metadata
 
     @staticmethod
     def _current_timestamp() -> str:

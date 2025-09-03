@@ -83,7 +83,10 @@ class AgentAssistSection(PromptSection):
         if len(agent_sessions):
             for ses in agent_sessions:
                 agent: AgentConfigurationV2 = self.tool.agent_loader.catalog.get(ses['agent_key'])
-                sess_list.append(f"- `{ses['session_id']}` with {agent.name}. {len(ses['messages'])} messages")
+                try:
+                    sess_list.append(f"- `{ses['session_id']}` with {agent.name}. {len(ses['messages'])} messages")
+                except Exception:
+                    pass
 
             return f"\n\n## Active Agent Sessions:\n{"\n".join(sess_list)}\n\n"
 
