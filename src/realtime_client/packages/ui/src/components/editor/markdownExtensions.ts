@@ -6,7 +6,7 @@
  * - All extensions work with standard imports
  * - Better Next.js compatibility
  */
-import { Extension, InputRule } from '@tiptap/core';
+import { Extension, markInputRule, InputRule } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
@@ -36,6 +36,7 @@ lowlight.register('docker', dockerfile); // Alias
 
 /**
  * Custom Markdown InputRules Extension - v2 Compatible
+ * Uses proper TipTap v2 InputRule patterns with transaction handling
  */
 const MarkdownInputRules = Extension.create({
   name: 'markdownInputRules',
@@ -43,176 +44,108 @@ const MarkdownInputRules = Extension.create({
   addInputRules() {
     return [
       // Bold: **text** → bold text
-      new InputRule({
-        find: /(?:^|\s)(\*\*|__)([^*_]+)(\*\*|__)$/,
-        handler: ({ state: _state, range, match }) => {
-          const start = range.from;
-          const end = range.to;
-          
-          this.editor
-            .chain()
-            .deleteRange({ from: start, to: end })
-            .insertContentAt(start, {
-              type: 'text',
-              text: match[2],
-              marks: [{ type: 'bold' }]
-            })
-            .run();
-        },
+      markInputRule({
+        find: /(\*\*|__)([^*_]+)(\*\*|__)$/,
+        type: this.editor.schema.marks.bold,
       }),
 
       // Italic: *text* or _text_ → italic text
-      new InputRule({
-        find: /(?:^|\s)(\*|_)([^*_]+)(\*|_)$/,
-        handler: ({ state: _state, range, match }) => {
-          const start = range.from;
-          const end = range.to;
-          
-          this.editor
-            .chain()
-            .deleteRange({ from: start, to: end })
-            .insertContentAt(start, {
-              type: 'text',
-              text: match[2],
-              marks: [{ type: 'italic' }]
-            })
-            .run();
-        },
+      // Fixed to properly capture single asterisk/underscore
+      markInputRule({
+        find: /(^|[^*_])([*_])([^*_]+?)\2$/,
+        type: this.editor.schema.marks.italic,
       }),
 
       // Strikethrough: ~~text~~ → strikethrough text
-      new InputRule({
-        find: /(?:^|\s)(~~)([^~]+)(~~)$/,
-        handler: ({ state: _state, range, match }) => {
-          const start = range.from;
-          const end = range.to;
-          
-          this.editor
-            .chain()
-            .deleteRange({ from: start, to: end })
-            .insertContentAt(start, {
-              type: 'text',
-              text: match[2],
-              marks: [{ type: 'strike' }]
-            })
-            .run();
-        },
+      markInputRule({
+        find: /~~([^~]+)~~$/,
+        type: this.editor.schema.marks.strike,
       }),
 
       // Inline code: `text` → inline code
-      new InputRule({
-        find: /(?:^|\s)(`([^`]+)`)$/,
-        handler: ({ state: _state, range, match }) => {
-          const start = range.from;
-          const end = range.to;
-          
-          this.editor
-            .chain()
-            .deleteRange({ from: start, to: end })
-            .insertContentAt(start, {
-              type: 'text',
-              text: match[2],
-              marks: [{ type: 'code' }]
-            })
-            .run();
-        },
+      markInputRule({
+        find: /`([^`]+)`$/,
+        type: this.editor.schema.marks.code,
       }),
 
       // Heading 1: # text → Heading 1
       new InputRule({
-        find: /^# $/,
-        handler: ({ state: _state, range }) => {
-          this.editor
-            .chain()
-            .deleteRange(range)
-            .setHeading({ level: 1 })
-            .run();
+        find: /^#\s$/,
+        handler: ({ state, range, commands }) => {
+          commands.deleteRange(range);
+          commands.setHeading({ level: 1 });
+          return;
         },
       }),
 
-      // Heading 2: ## text → Heading 2
+      // Heading 2: ## text → Heading 2  
       new InputRule({
-        find: /^## $/,
-        handler: ({ state: _state, range }) => {
-          this.editor
-            .chain()
-            .deleteRange(range)
-            .setHeading({ level: 2 })
-            .run();
+        find: /^##\s$/,
+        handler: ({ state, range, commands }) => {
+          commands.deleteRange(range);
+          commands.setHeading({ level: 2 });
+          return;
         },
       }),
 
       // Heading 3: ### text → Heading 3
       new InputRule({
-        find: /^### $/,
-        handler: ({ state: _state, range }) => {
-          this.editor
-            .chain()
-            .deleteRange(range)
-            .setHeading({ level: 3 })
-            .run();
+        find: /^###\s$/,
+        handler: ({ state, range, commands }) => {
+          commands.deleteRange(range);
+          commands.setHeading({ level: 3 });
+          return;
         },
       }),
 
       // Bullet list: - or * → bullet list
       new InputRule({
-        find: /^(\*|-) $/,
-        handler: ({ state: _state, range }) => {
-          this.editor
-            .chain()
-            .deleteRange(range)
-            .toggleBulletList()
-            .run();
+        find: /^[-*]\s$/,
+        handler: ({ commands, range }) => {
+          commands.deleteRange(range);
+          commands.toggleBulletList();
+          return;
         },
       }),
 
       // Ordered list: 1. → numbered list
       new InputRule({
-        find: /^(\d+)\. $/,
-        handler: ({ state: _state, range }) => {
-          this.editor
-            .chain()
-            .deleteRange(range)
-            .toggleOrderedList()
-            .run();
+        find: /^(\d+)\.\s$/,
+        handler: ({ commands, range }) => {
+          commands.deleteRange(range);
+          commands.toggleOrderedList();
+          return;
         },
       }),
 
       // Blockquote: > → blockquote
       new InputRule({
-        find: /^> $/,
-        handler: ({ state: _state, range }) => {
-          this.editor
-            .chain()
-            .deleteRange(range)
-            .toggleBlockquote()
-            .run();
+        find: /^>\s$/,
+        handler: ({ commands, range }) => {
+          commands.deleteRange(range);
+          commands.toggleBlockquote();
+          return;
         },
       }),
 
       // Horizontal rule: --- → horizontal rule
       new InputRule({
-        find: /^---$/,
-        handler: ({ state: _state, range }) => {
-          this.editor
-            .chain()
-            .deleteRange(range)
-            .setHorizontalRule()
-            .run();
+        find: /^(-{3,})$/,
+        handler: ({ commands, range }) => {
+          commands.deleteRange(range);
+          commands.setHorizontalRule();
+          return;
         },
       }),
 
       // Code block: ```language → code block with language
       new InputRule({
         find: /^```([a-z]*)\s$/,
-        handler: ({ state: _state, range, match }) => {
+        handler: ({ commands, range, match }) => {
           const language = match[1] || 'plaintext';
-          
-          this.editor
-            .chain()
-            .deleteRange(range)
-            .setCodeBlock({ language })
-            .run();
+          commands.deleteRange(range);
+          commands.setCodeBlock({ language });
+          return;
         },
       }),
     ];
