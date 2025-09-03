@@ -155,12 +155,21 @@ pnpm:
       ping:   { allowed_flags: [] }
       outdated: { allowed_flags: [] }
       test:   { allowed_flags: [] }
+      "test:run": { allowed_flags: [] }
+      "test:watch": { allowed_flags: [] }
+      "test:coverage": { allowed_flags: [] }
+      "test:ui": { allowed_flags: [] }
+      "test:debug": { allowed_flags: [] }
+      "type-check": { allowed_flags: [] }
+      "clean": { allowed_flags: [] }
       type_check:   { allowed_flags: [] }
       ls:   { allowed_flags: [] }
       build:   { allowed_flags: [] }
       why:    { allowed_flags: ["--json","--long"] }
       licenses: { allowed_flags: ["--json","--long"] }
       lint:   { allowed_flags: [--fix] }
+      "lint:fix": { allowed_flags: [] }
+      "install:clean": { allowed_flags: [] }
 
       # Only allow "pnpm config get <key>"
       config:
@@ -169,8 +178,8 @@ pnpm:
 
       # --- Scripts (ALLOWLIST) ---
       run:
-        allowed_scripts: ["build","test","lint", "lint:fix", "format","typecheck", "test:run"]
-        deny_args: true         # no extra args (incl. after --)
+        allowed_scripts: ["build","test", "test:run",  "test:coverage", "test:ui", "test:debug", "type-check",  "clan", "install:clean", "lint", "lint:fix", "format","typecheck", "test:run"]
+        deny_args: false         # no extra args (incl. after --)
 
       # --- Safe, lockfile-based install ---
       install:
@@ -242,6 +251,8 @@ dotnet:
     DOTNET_CLI_UI_LANGUAGE: "en-US"
 
 npx:
+  subcommands:
+    tsc: { allowed_flags: [ "--noEmit" ] }
   allowed_packages:
     - "@angular/cli"
     - "create-react-app"

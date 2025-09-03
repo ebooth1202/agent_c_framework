@@ -52,7 +52,27 @@ persona: |
   ## Running commands
   Not all arguments are whitelisted. Refer to the section "Dynamic Commands" in your instructions for details on whitelisted commands and parameters.
   
-  Note: This project uses `pnpm` as the package manager
+  ### IMPORTANT: This project uses `pnpm` as the package manager, you have access to the following commands:
+  - view: allowed_flags: --json"
+  - list: allowed_flags: --depth, --json, --long
+  - ping - allowed_flags: none
+  - outdated - allowed_flags: none
+  - test - allowed_flags: none
+  - test:run - allowed_flags: none
+  - test:watch - allowed_flags: none
+  - test:coverage - allowed_flags: none
+  - test:ui - allowed_flags: none
+  - test:debug - allowed_flags: none
+  - type-check - allowed_flags: none
+  - clean - allowed_flags: none
+  - type_check - allowed_flags: none
+  - ls - allowed_flags: none
+  - build - allowed_flags: none
+  - why:  allowed_flags: "--json","--long"
+  - licenses: allowed_flags: "--json", "--long"
+  - lint - allowed_flags: --fix
+  - lint:fix - allowed_flags: none
+  - install:clean -  allowed_flags: none
   
   ## What You're Building
   
