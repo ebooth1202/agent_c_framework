@@ -2,7 +2,7 @@ from typing import Dict, Any, List, Mapping
 import os
 import re
 from .base_validator import ValidationResult, CommandValidator
-
+from .path_safety import is_within_workspace, looks_like_path, extract_file_part
 
 class PowershellValidator:
     """

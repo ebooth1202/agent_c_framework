@@ -1,6 +1,7 @@
 from typing import Dict, Any, List, Mapping, Optional
 import os
 from .base_validator import ValidationResult, CommandValidator
+from .path_safety import is_within_workspace, looks_like_path, extract_file_part
 
 class NpxCommandValidator(CommandValidator):
     """
@@ -49,8 +50,14 @@ class NpxCommandValidator(CommandValidator):
 
         allowed_packages = set(policy.get("allowed_packages", []))
         allowed_flags = set(policy.get("flags", []))
-        # Optional: map package -> list of allowed command aliases (e.g., typescript -> ["tsc"])
         cmd_aliases = policy.get("command_aliases") or {}
+
+        # NEW: workspace root for path fencing
+        workspace_root = (
+                policy.get("workspace_root")
+                or os.environ.get("WORKSPACE_ROOT")
+                or os.getcwd()
+        )
 
         args = parts[1:]
         i = 0
@@ -96,19 +103,32 @@ class NpxCommandValidator(CommandValidator):
 
         invoked = args[i]
         invoked_name = self._split_pkg_name(invoked)
+        package_args = args[i + 1:]  # everything after the invoked token goes to the package
 
-        # Accept if the invoked token itself is an allowed package
+        # 3) Check if the invoked token is allowed (package or alias of allowed/preinstalled)
+        allowed = False
         if invoked_name in allowed_packages:
-            return ValidationResult(True, "OK", timeout=policy.get("default_timeout"))
+            allowed = True
+        else:
+            for pkg, aliases in cmd_aliases.items():
+                if pkg in allowed_packages or pkg in preinstall_pkgs:
+                    if invoked in aliases or invoked_name in aliases:
+                        allowed = True
+                        break
 
-        # Or accept if it’s an alias of any allowed (or preinstalled) package
-        # e.g., 'tsc' allowed because 'typescript' is allowed/preinstalled
-        for pkg, aliases in cmd_aliases.items():
-            if pkg in allowed_packages or pkg in preinstall_pkgs:
-                if invoked in aliases or invoked_name in aliases:
-                    return ValidationResult(True, "OK", timeout=policy.get("default_timeout"))
+        if not allowed:
+            return ValidationResult(False, f"Command not allowed: {invoked}")
 
-        return ValidationResult(False, f"Command not allowed: {invoked}")
+        # 4) FENCE package args to workspace (this is the path_safety integration)
+        bad = next(
+            (a for a in package_args
+             if looks_like_path(a) and not is_within_workspace(workspace_root, extract_file_part(a))),
+            None
+        )
+        if bad:
+            return ValidationResult(False, f"Unsafe path outside workspace in npx package args: {bad}")
+
+        return ValidationResult(True, "OK", timeout=policy.get("default_timeout"))
 
     def adjust_environment(self, base_env, parts, policy):
         env = super().adjust_environment(base_env, parts, policy)

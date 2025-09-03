@@ -1,6 +1,7 @@
 from typing import Dict, Any, List, Mapping, Optional
 import os
 from .base_validator import ValidationResult, CommandValidator
+from .path_safety import is_within_workspace, looks_like_path, extract_file_part
 
 class LernaCommandValidator(CommandValidator):
     """
@@ -66,32 +67,32 @@ class LernaCommandValidator(CommandValidator):
 
         # Handle subcommand mode
         subcommand = parts[1].lower()
-        
+
         # Check if subcommand is explicitly denied
         if subcommand in deny_subcommands:
             return ValidationResult(False, f"Subcommand not allowed: {subcommand}")
-        
+
         # Check if subcommand is in allowed list
         if subcommand not in subcommands:
             return ValidationResult(False, f"Subcommand not configured: {subcommand}")
-        
+
         subcommand_spec = subcommands[subcommand]
         allowed_flags = set(self._get_allowed_flags(subcommand_spec))
-        
+
         # Combine global flags with subcommand-specific flags
         all_allowed_flags = global_flags.union(allowed_flags)
-        
+
         # Helper views over tokens
         after = parts[2:]  # everything after the subcommand
         used_flags = [arg for arg in after if arg.startswith("-")]
         positionals = [arg for arg in after if not arg.startswith("-")]
-        
+
         # Validate flags used with this subcommand
         for flag in used_flags:
             base_flag = self._flag_base(flag)
             if base_flag not in all_allowed_flags and flag not in all_allowed_flags:
                 return ValidationResult(False, f"Flag not allowed for {subcommand}: {flag}")
-        
+
         # Special handling for run subcommand
         if subcommand == "run":
             allowed_scripts = set(subcommand_spec.get("allowed_scripts", []))
@@ -101,15 +102,47 @@ class LernaCommandValidator(CommandValidator):
             if allowed_scripts and script not in allowed_scripts:
                 return ValidationResult(False, f"Script not allowed: {script}")
 
+            # Workspace root
+            workspace_root = (
+                    policy.get("workspace_root")
+                    or os.environ.get("WORKSPACE_ROOT")
+                    or os.environ.get("CWD")
+                    or os.getcwd()
+            )
+
+            # tokens after the script name
+            try:
+                script_pos = after.index(script)
+            except ValueError:
+                script_pos = 0  # defensive; script should be the first positional
+            rest = after[script_pos + 1:]
+
+            # only args meant for the package script (after `--`, if present)
+            runner_args = rest[rest.index("--") + 1:] if "--" in rest else rest
+
+            if subcommand_spec.get("deny_args"):
+                # disallow anything after the script (and also a bare `--`)
+                if runner_args or ("--" in rest):
+                    return ValidationResult(False, "Extra args not allowed after script")
+            elif subcommand_spec.get("allow_test_paths", False):
+                bad = next(
+                    (a for a in runner_args
+                     if looks_like_path(a)
+                     and not is_within_workspace(workspace_root, extract_file_part(a))),
+                    None
+                )
+                if bad:
+                    return ValidationResult(False, f"Unsafe path outside workspace in lerna run args: {bad}")
+
             if subcommand_spec.get("deny_args"):
                 # forbid anything beyond the script, including '--' passthrough
                 extra = after[after.index(script) + 1:] if script in after else after[1:]
                 if extra:
                     return ValidationResult(False, f"Extra args not allowed after script: {' '.join(extra[:3])}")
-        
+
         # Get timeout from subcommand spec or fall back to default
         timeout = subcommand_spec.get("timeout") or policy.get("default_timeout")
-        
+
         return ValidationResult(True, "OK", timeout=timeout)
 
     def adjust_arguments(self, parts: List[str], policy: Mapping[str, Any]) -> List[str]:

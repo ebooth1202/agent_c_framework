@@ -1,6 +1,7 @@
 from typing import Dict, Any, List, Mapping
 import os
 from .base_validator import ValidationResult, CommandValidator
+from .path_safety import is_within_workspace, looks_like_path, extract_file_part
 
 class PnpmCommandValidator(CommandValidator):
     """
@@ -59,7 +60,6 @@ class PnpmCommandValidator(CommandValidator):
                 base = self._flag_base(f)
                 if base not in root_flags and f not in root_flags:
                     return ValidationResult(False, f"Root flag not allowed: {f}")
-            # Disallow any stray non-flags in flags-only mode
             non_flags = [p for p in parts[1:] if not p.startswith("-")]
             if non_flags:
                 return ValidationResult(False, f"Unexpected args: {' '.join(non_flags[:3])}")
@@ -67,8 +67,7 @@ class PnpmCommandValidator(CommandValidator):
 
         # Case B: subcommand mode
         raw_sub = parts[1].lower()
-        # normalize aliases (e.g., pnpm i == pnpm install, pnpm add == pnpm install)
-        alias_map = {"i": "install", "add": "install"}
+        alias_map = {"i": "install", "add": "install"}  # pnpm i/add -> install
         sub = alias_map.get(raw_sub, raw_sub)
 
         if sub in deny_subs:
@@ -78,12 +77,10 @@ class PnpmCommandValidator(CommandValidator):
         if spec is None:
             return ValidationResult(False, f"Subcommand not allowed: {sub}")
 
-        # Helper views over tokens
         after = parts[2:]
         used_flags = [p for p in after if p.startswith("-")]
         positionals = [p for p in after if not p.startswith("-")]
 
-        # Common: check allowed flags (if provided)
         allowed_flags = set(self._get_allowed_flags(spec))
         if allowed_flags:
             for f in used_flags:
@@ -91,7 +88,13 @@ class PnpmCommandValidator(CommandValidator):
                 if base not in allowed_flags and f not in allowed_flags:
                     return ValidationResult(False, f"Flag not allowed for {sub}: {f}")
 
-        # Special handling per subcommand
+        # NEW: workspace root for path fencing
+        workspace_root = (
+                policy.get("workspace_root")
+                or os.environ.get("WORKSPACE_ROOT")
+                or os.getcwd()
+        )
+
         if sub == "run":
             allowed_scripts = set(spec.get("allowed_scripts") or [])
             if not positionals:
@@ -100,34 +103,44 @@ class PnpmCommandValidator(CommandValidator):
             if script not in allowed_scripts:
                 return ValidationResult(False, f"Script not allowed: {script}")
 
+            # Determine args destined for the script, respecting `--`
+            # parts: ["pnpm","run","test", ...]
+            # after: ["test", <maybe flags/args>]
+            try:
+                script_pos = after.index(script)
+            except ValueError:
+                script_pos = 0  # defensive; script should be first positional
+            rest = after[script_pos + 1:]  # tokens after script name
+            runner_args = rest[rest.index("--") + 1:] if "--" in rest else rest
+
             if spec.get("deny_args"):
-                # forbid anything beyond the script, including '--' passthrough
-                extra = after[after.index(script) + 1:] if script in after else after[1:]
-                if extra:
-                    return ValidationResult(False, f"Extra args not allowed after script: {' '.join(extra[:3])}")
+                # disallow anything after the script (and also a bare `--`)
+                if runner_args or ("--" in rest):
+                    return ValidationResult(False, "Extra args not allowed after script")
+            elif spec.get("allow_test_paths", False):
+                # Fence file/node-id selectors to the workspace
+                bad = next(
+                    (a for a in runner_args
+                     if looks_like_path(a)
+                     and not is_within_workspace(workspace_root, extract_file_part(a))),
+                    None
+                )
+                if bad:
+                    return ValidationResult(False, f"Unsafe path outside workspace in pnpm run args: {bad}")
 
         elif sub == "install":
             if not spec.get("enabled", False):
                 return ValidationResult(False, f"Subcommand disabled by policy: {sub}")
-
             if spec.get("require_no_packages"):
-                # Any positional arg means they tried to install a package name
                 if positionals:
                     return ValidationResult(False, f"{sub} with package names is not allowed")
 
-            # NOTE: require_flags will be auto-injected in adjust_arguments.
-            # We do not fail validation here if they're missing, so injection can occur.
-
         elif sub == "config":
-            # Only allow: pnpm config get <key>
             if spec.get("get_only"):
-                # find the first non-flag token
                 first_nonflag = positionals[0].lower() if positionals else None
                 if first_nonflag != "get":
                     return ValidationResult(False, "Only 'pnpm config get <key>' is allowed")
-                # no further checks; keys are read-only
 
-        # All good
         return ValidationResult(True, "OK", timeout=spec.get("timeout") or policy.get("default_timeout"))
 
     def adjust_arguments(self, parts: List[str], policy: Mapping[str, Any]) -> List[str]:
