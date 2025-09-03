@@ -322,7 +322,7 @@ dotnet:
         --verbosity: [ "quiet","minimal" ] # enforce quiet, no-logo builds
 
     test:
-      flags: [ "--configuration","-c","--no-build","--nologo","--verbosity","-v","--filter", "--list-tests", "--settings", "--results-directory", "--test-adapter-path", "--diag" ]
+      flags: [ "--configuration","-c","--no-build","--nologo","--verbosity","-v","--filter", "--list-tests", "--settings", "--results-directory", "--test-adapter-path", "--diag", "--logger" ]
       allow_project_paths: true # allow typical csproj/sln positionals without enabling arbitrary file selectors
       allow_test_paths: false  # Can enable workspace-relative test paths for dotnet test - prefer using --filter instead
       require_flags:

@@ -27,9 +27,15 @@ def _load_validator(policy_name: str):
     """
     # Map policy name -> 'module_path:ClassName'
     mapping = {
-        # Example: "git": "yourpkg.validators.git_validator:GitCommandValidator",
-        # Example: "npm": "yourpkg.validators.npm_validator:NpmCommandValidator",
-        # We DO have Powershell locally in this workspace:
+        # Testing validators
+        "pytest": "agent_c_tools.tools.workspace.executors.local_storage.validators.pytest_validator:PytestCommandValidator",
+        "dotnet": "agent_c_tools.tools.workspace.executors.local_storage.validators.dotnet_validator:DotnetCommandValidator",
+        "npm": "agent_c_tools.tools.workspace.executors.local_storage.validators.npm_validator:NpmCommandValidator",
+        "pnpm": "agent_c_tools.tools.workspace.executors.local_storage.validators.pnpm_validator:PnpmCommandValidator",
+        "node": "agent_c_tools.tools.workspace.executors.local_storage.validators.node_validator:NodeCommandValidator",
+        "lerna": "agent_c_tools.tools.workspace.executors.local_storage.validators.lerna_validator:LernaCommandValidator",
+        # Other validators
+        "git": "agent_c_tools.tools.workspace.executors.local_storage.validators.git_validator:GitCommandValidator",
         "powershell": "agent_c_tools.tools.workspace.executors.local_storage.validators.powershell_validator:PowershellValidator",
         "pwsh": "agent_c_tools.tools.workspace.executors.local_storage.validators.powershell_validator:PowershellValidator",
         # Add others here once their modules are available.
