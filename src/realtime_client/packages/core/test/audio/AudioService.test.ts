@@ -477,7 +477,7 @@ describe('AudioService', () => {
       
       const error = new AudioProcessorError(
         'Worklet failed',
-        AudioProcessorErrorCode.WORKLET_CREATION_ERROR
+        AudioProcessorErrorCode.WORKLET_LOAD_ERROR
       );
       
       mockProcessor.emit('error', error);

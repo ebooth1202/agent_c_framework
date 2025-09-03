@@ -151,8 +151,8 @@ class PCM16Processor extends AudioWorkletProcessor {
       audioBuffer: audioBuffer,
       audioLevel: audioLevel,
       sampleCount: this.bufferIndex,
-      timestamp: currentTime, // AudioWorkletGlobalScope.currentTime
-      sampleRate: sampleRate  // AudioWorkletGlobalScope.sampleRate
+      timestamp: globalThis.currentTime, // AudioWorkletGlobalScope.currentTime
+      sampleRate: globalThis.sampleRate  // AudioWorkletGlobalScope.sampleRate
     }, [audioBuffer]); // Transfer ownership of ArrayBuffer
     
     // Reset buffer
