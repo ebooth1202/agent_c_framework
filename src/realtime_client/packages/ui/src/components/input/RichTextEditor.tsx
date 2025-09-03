@@ -157,18 +157,15 @@ const RichTextEditor = React.forwardRef<HTMLDivElement, RichTextEditorProps>(
         // Error state styling
         (error || submitError) && "border-destructive",
         className
-      ),
-      // Pass through keyboard handler for custom Enter behavior
-      editorProps: {
-        handleKeyDown
-      }
-    }), [value, onChange, placeholder, isDisabled, handleSubmit, maxHeight, className, error, submitError, handleKeyDown])
+      )
+    }), [value, onChange, placeholder, isDisabled, handleSubmit, maxHeight, className, error, submitError])
     
     return (
       <div className="relative w-full">
         <MarkdownEditorClient
           ref={ref}
           {...editorProps}
+          onKeyDown={handleKeyDown}
           {...props}
         />
         

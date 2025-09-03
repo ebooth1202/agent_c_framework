@@ -35,6 +35,7 @@ const MarkdownEditor = React.forwardRef<HTMLDivElement, MarkdownEditorProps>(
     onImageUploadStart,
     onImageUploadComplete,
     onImageUploadError,
+    onKeyDown,
     ...props 
   }, ref) => {
     
@@ -88,6 +89,14 @@ const MarkdownEditor = React.forwardRef<HTMLDivElement, MarkdownEditorProps>(
           ),
         },
         handleKeyDown: (view, event) => {
+          // Custom key handler takes precedence
+          if (onKeyDown) {
+            const handled = onKeyDown(event);
+            if (handled) {
+              return true;
+            }
+          }
+          
           // Handle Cmd/Ctrl+Enter for submit
           if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
             event.preventDefault();
