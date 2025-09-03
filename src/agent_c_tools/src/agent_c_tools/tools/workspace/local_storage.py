@@ -46,7 +46,7 @@ class LocalStorageWorkspace(BaseWorkspace):
         self.max_filename_length = 200
 
         # For OS level secure command execution
-        policy_provider = YamlPolicyProvider(".agentc_policies.yaml")
+        policy_provider = YamlPolicyProvider(policy_filename="whitelist_commands.yaml")
         self.executor = SecureCommandExecutor(
             log_output=True,  # keep your logging
             default_timeout=30,
@@ -610,7 +610,8 @@ class LocalStorageWorkspace(BaseWorkspace):
 
         # Provide workspace root to validators and any executed processes
         override_env = {
-            "WORKSPACE_ROOT": str(self.workspace_root)
+            "WORKSPACE_ROOT": str(self.workspace_root),
+            "CWD": str(working_directory or self.workspace_root)
         }
         
         return await self.executor.execute_command(command=command, working_directory=working_directory, override_env=override_env, timeout=timeout)

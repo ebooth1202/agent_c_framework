@@ -1,6 +1,7 @@
 from typing import Dict, Any, List, Mapping, Optional
 import os
 from .base_validator import ValidationResult, CommandValidator
+from .path_safety import is_within_workspace, looks_like_path, extract_file_part
 
 class DotnetCommandValidator:
     """
@@ -11,14 +12,19 @@ class DotnetCommandValidator:
           --info:         { flags: [] }
           --list-sdks:    { flags: [] }
           --list-runtimes:{ flags: [] }
+          test:           { flags: ["--filter", "--no-build"], allow_test_paths: true }
           nuget:          { flags: ["list","--help"] }   # read-only metadata
           new:            { flags: ["--list"] }          # list templates only
-        deny_subcommands: ["build","run","test","restore","publish","tool"]
+        deny_subcommands: ["build","run","restore","publish","tool"]
         default_timeout: 20
         env_overrides:
           DOTNET_CLI_TELEMETRY_OPTOUT: "1"
     """
+
     def validate(self, parts: List[str], policy: Mapping[str, Any]) -> ValidationResult:
+        import os
+        from .path_safety import is_within_workspace, looks_like_path, extract_file_part
+
         name = os.path.splitext(os.path.basename(parts[0]))[0].lower()
         if name != "dotnet":
             return ValidationResult(False, "Not a dotnet command")
@@ -31,7 +37,7 @@ class DotnetCommandValidator:
 
         sub = parts[1]
 
-        # dotnet supports flag-like "subcommands" (e.g., --info)
+        # flag-like subcommands (e.g., --info)
         if sub.startswith("-"):
             if sub in deny_subs:
                 return ValidationResult(False, f"Subcommand not allowed: {sub}")
@@ -40,13 +46,12 @@ class DotnetCommandValidator:
                 return ValidationResult(False, f"Subcommand not allowed: {sub}")
             allowed_flags = _collect_allowed_flags(spec)
             used_flags = _collect_used_flags(parts[2:])
-            # Each used flag must be allowed (consider canonical mapping for -v → --verbosity)
             for raw in used_flags:
                 if not _is_flag_allowed(raw, allowed_flags):
                     return ValidationResult(False, f"Flag not allowed for {sub}: {raw}")
             return ValidationResult(True, "OK", timeout=spec.get("timeout") or policy.get("default_timeout"))
 
-        # Regular subcommand (restore/build/test/etc.)
+        # regular subcommands
         if sub in deny_subs:
             return ValidationResult(False, f"Subcommand not allowed: {sub}")
 
@@ -55,20 +60,104 @@ class DotnetCommandValidator:
             return ValidationResult(False, f"Subcommand not allowed: {sub}")
 
         allowed_flags = _collect_allowed_flags(spec)
-        used_flags = _collect_used_flags(parts[2:])
+        argv = parts[2:]
+        used_flags = _collect_used_flags(argv)
         for raw in used_flags:
             if not _is_flag_allowed(raw, allowed_flags):
                 return ValidationResult(False, f"Flag not allowed for {sub}: {raw}")
 
+        # --- path-safety integration for `dotnet test`
+        if sub == "test":
+            workspace_root = (
+                    policy.get("workspace_root")
+                    or os.environ.get("WORKSPACE_ROOT")
+                    or os.environ.get("CWD")
+                    or os.getcwd()
+            )
+
+            # Split argv around `--` (adapter receives everything after)
+            if "--" in argv:
+                ddx = argv.index("--")
+                before_dd = argv[:ddx]
+                after_dd = argv[ddx + 1:]
+            else:
+                before_dd = argv
+                after_dd = []
+
+            # Positionals BEFORE `--` (project/solution/dir paths)
+            positionals = [t for t in before_dd if not t.startswith("-")]
+
+            allow_test_paths = bool(spec.get("allow_test_paths", False))
+            # Optional: allow typical project/solution path even when test paths disabled
+            allow_proj_paths = bool(spec.get("allow_project_paths", True))
+
+            def is_proj_or_sln(tok: str) -> bool:
+                tl = tok.lower()
+                return tl.endswith(".sln") or tl.endswith(".csproj")
+
+            # If test paths are not allowed, block path-like positionals except csproj/sln (if allowed)
+            if not allow_test_paths:
+                bad = next(
+                    (p for p in positionals
+                     if looks_like_path(p)
+                     and not (allow_proj_paths and is_proj_or_sln(p))),
+                    None
+                )
+                if bad:
+                    return ValidationResult(False, "Test paths not permitted; use --filter")
+
+            # If allowed, fence all path-like positionals to workspace
+            else:
+                bad = next(
+                    (p for p in positionals
+                     if looks_like_path(p)
+                     and not is_within_workspace(workspace_root, extract_file_part(p))),
+                    None
+                )
+                if bad:
+                    return ValidationResult(False, f"Unsafe path outside workspace in dotnet test args: {bad}")
+
+            # Also fence adapter args after `--` (e.g., framework-specific selectors)
+            if after_dd:
+                bad = next(
+                    (p for p in after_dd
+                     if looks_like_path(p)
+                     and not is_within_workspace(workspace_root, extract_file_part(p))),
+                    None
+                )
+                if bad:
+                    return ValidationResult(False, f"Unsafe path outside workspace after --: {bad}")
+
+            # (Optional) fence values of known path flags (inline or next token)
+            path_flags = {"--settings", "--results-directory", "--test-adapter-path", "--artifacts", "--output",
+                          "--diag"}
+            i = 0
+            while i < len(before_dd):
+                t = before_dd[i]
+                if t.startswith("-"):
+                    base = t.split("=", 1)[0]
+                    val = None
+                    if "=" in t:
+                        val = t.split("=", 1)[1]
+                    elif base in path_flags and (i + 1) < len(before_dd) and not before_dd[i + 1].startswith("-"):
+                        val = before_dd[i + 1]
+                        i += 1
+                    if base in path_flags and val:
+                        if looks_like_path(val) and not is_within_workspace(workspace_root, extract_file_part(val)):
+                            return ValidationResult(False, f"Unsafe path for {base}: {val}")
+                i += 1
+
         return ValidationResult(True, "OK", timeout=spec.get("timeout") or policy.get("default_timeout"))
 
-    def adjust_environment(self, base_env: Dict[str, str], parts: List[str], policy: Mapping[str, Any]) -> Dict[
+    @staticmethod
+    def adjust_environment(base_env: Dict[str, str], parts: List[str], policy: Mapping[str, Any]) -> Dict[
         str, str]:
         env = dict(base_env)
         env.update(policy.get("env_overrides") or {})
         return env
 
-    def adjust_arguments(self, parts: List[str], policy: Mapping[str, Any]) -> List[str]:
+    @staticmethod
+    def adjust_arguments(parts: List[str], policy: Mapping[str, Any]) -> List[str]:
         """
         Override-or-append required flags as per `require_flags`, and normalize verbosity flags.
         - Canonicalizes -v / --verbosity forms to `--verbosity <value>`.
