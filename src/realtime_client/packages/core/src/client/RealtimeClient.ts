@@ -913,6 +913,24 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
             try {
                 const event = JSON.parse(data);
                 if (event && typeof event.type === 'string') {
+                    // Handle ping events with pong response
+                    if (event.type === 'ping') {
+                        // Send pong directly via WebSocket, not through sendEvent
+                        this.wsManager?.sendJSON({ type: 'pong' });
+                        if (this.config.debug) {
+                            // console.debug('Received ping, sent pong');
+                        }
+                        return;
+                    }
+                    
+                    // Handle pong events (no action needed, just acknowledge)
+                    if (event.type === 'pong') {
+                        if (this.config.debug) {
+                            // console.debug('Received pong');
+                        }
+                        return;
+                    }
+                    
                     // Emit the specific event
                     this.emit(event.type as keyof RealtimeEventMap, event as RealtimeEventMap[keyof RealtimeEventMap]);
                     

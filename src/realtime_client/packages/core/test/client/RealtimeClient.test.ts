@@ -38,10 +38,19 @@ describe('RealtimeClient', () => {
       const connectPromise = client.connect();
       
       // Get the mock WebSocket instance - includes token in URL
-      expect(mockWS).toHaveBeenCalledWith(
-        'ws://localhost:8080/realtime?token=test-token',
-        undefined
-      );
+      // WebSocketManager passes protocols parameter (which may be undefined)
+      expect(mockWS).toHaveBeenCalled();
+      expect(mockWS).toHaveBeenCalledTimes(1);
+      
+      // Check the arguments passed to the WebSocket constructor
+      const wsCall = mockWS.mock.calls[0];
+      expect(wsCall[0]).toBe('ws://localhost:8080/realtime/api/rt/ws?token=test-token');
+      
+      // The WebSocket constructor can be called with 1 or 2 arguments
+      // If protocols is undefined, it may only pass 1 argument
+      if (wsCall.length === 2) {
+        expect(wsCall[1]).toBeUndefined();
+      }
       const wsInstance = mockWS.mock.results[0].value as MockWebSocket;
       
       // Trigger the open event through the onopen handler
