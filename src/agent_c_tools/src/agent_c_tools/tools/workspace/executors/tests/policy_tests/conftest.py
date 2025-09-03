@@ -39,6 +39,10 @@ def _load_validator(policy_name: str):
         "powershell": "agent_c_tools.tools.workspace.executors.local_storage.validators.powershell_validator:PowershellValidator",
         "pwsh": "agent_c_tools.tools.workspace.executors.local_storage.validators.powershell_validator:PowershellValidator",
         # Add others here once their modules are available.
+        "which": "agent_c_tools.tools.workspace.executors.local_storage.validators.os_validator:OSCommandValidator",
+        "where": "agent_c_tools.tools.workspace.executors.local_storage.validators.os_validator:OSCommandValidator",
+        "whoami": "agent_c_tools.tools.workspace.executors.local_storage.validators.os_validator:OSCommandValidator",
+        "echo": "agent_c_tools.tools.workspace.executors.local_storage.validators.os_validator:OSCommandValidator",
     }
     target = mapping.get(policy_name)
     if not target:
