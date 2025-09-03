@@ -6,7 +6,7 @@
  */
 
 import * as React from 'react';
-import { MarkdownEditor } from './MarkdownEditor';
+import { MarkdownEditorClient } from './MarkdownEditorClient';
 
 const exampleContent = `# Code Syntax Highlighting Example
 
@@ -160,7 +160,7 @@ export const CodeHighlightExample: React.FC = () => {
         Try editing the content below or adding your own code blocks!
       </p>
       
-      <MarkdownEditor
+      <MarkdownEditorClient
         value={content}
         onChange={setContent}
         placeholder="Start typing... Use ```language to create code blocks"

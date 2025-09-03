@@ -5,7 +5,9 @@ import { cn } from "@/lib/utils"
 import { ChatSidebar } from "../sidebar/ChatSidebar"
 import { ChatHeader } from "./ChatHeader"
 import { MainContentArea, OutputMode } from "../content/MainContentArea"
-import { InputArea } from "@agentc/realtime-ui"
+// Import the SSR-safe wrapper instead of the UI package directly
+// This prevents TipTap v3 from breaking the Next.js build
+import { InputAreaWrapper } from "../input/InputAreaWrapper"
 
 export interface ChatLayoutProps {
   outputMode?: OutputMode
@@ -52,9 +54,9 @@ export const ChatLayout = React.forwardRef<HTMLDivElement, ChatLayoutProps>(
           {/* Dynamic Content Area */}
           <MainContentArea outputMode={currentOutputMode} />
 
-          {/* Input Area - Using existing component */}
+          {/* Input Area - Using SSR-safe wrapper to prevent TipTap build issues */}
           <div className="border-t border-border">
-            <InputArea 
+            <InputAreaWrapper 
               className="max-w-4xl mx-auto"
             />
           </div>

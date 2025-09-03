@@ -1,6 +1,6 @@
 import * as React from "react"
 import { cn } from "../../lib/utils"
-import { MarkdownEditor } from "../editor/MarkdownEditor"
+import { MarkdownEditorClient } from "../editor/MarkdownEditorClient"
 import { useChat, useTurnState } from "@agentc/realtime-react"
 
 /**
@@ -166,7 +166,7 @@ const RichTextEditor = React.forwardRef<HTMLDivElement, RichTextEditorProps>(
     
     return (
       <div className="relative w-full">
-        <MarkdownEditor
+        <MarkdownEditorClient
           ref={ref}
           {...editorProps}
           {...props}
