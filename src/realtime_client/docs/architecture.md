@@ -6,7 +6,7 @@ This document provides a comprehensive overview of the Agent C Realtime SDK arch
 
 The Agent C Realtime SDK is built on several core principles.
 
-**Note:** For development, the Agent C REST API runs at `https://localhost:8000`. WebSocket URLs are provided dynamically in the login response.
+**Note:** For development, the Agent C REST API runs at `https://localhost:8000`. WebSocket URLs are constructed automatically by the SDK from the base API URL by converting HTTP→WS/HTTPS→WSS and using the path `/rt/ws`.
 
 ### 1. **Separation of Concerns**
 Each module has a single, well-defined responsibility. Audio handling doesn't know about WebSocket details, and authentication doesn't depend on UI components.
@@ -115,7 +115,7 @@ Manages username/password authentication, JWT tokens, and HeyGen credentials:
 │ • Token refresh scheduling           │
 │ • HeyGen token storage              │
 │ • Available voices/avatars          │
-│ • WebSocket URL from login response │
+│ • WebSocket URL construction        │
 └──────────────────────────────────────┘
                    │
                    ▼
@@ -369,16 +369,20 @@ POST https://localhost:8000/rt/login
 Receive LoginResponse {
     agent_c_token: "jwt...",
     heygen_token: "hg_...",
-    websocketUrl: "wss://localhost:8000/rt/ws",
+    // Note: No websocketUrl in response
     voices: [...],
     avatars: [...],
     agents: [...]
 }
     ↓
-// 2. Connect to WebSocket using URL from login
+// 2. SDK constructs WebSocket URL from apiUrl
+AuthManager.getWebSocketUrl()
+    ↓
+// Converts https://localhost:8000 → wss://localhost:8000/rt/ws
+    ↓
 RealtimeClient.connect()
     ↓
-WebSocket.connect(loginResponse.websocketUrl + "?token=jwt...")
+WebSocket.connect("wss://localhost:8000/rt/ws?token=jwt...")
     ↓
 Connection established
 ```

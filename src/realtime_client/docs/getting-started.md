@@ -57,7 +57,7 @@ graph LR
 📘 **Complete Initialization Guide**  
 The login response contains much more than just tokens - it includes agents, voices, avatars, toolsets, and user information. For a comprehensive guide on using ALL the login payload data, see our [Complete Initialization Example](./examples/complete-initialization.md).
 
-**Important:** The WebSocket URL is NOT included in the login response and must be constructed from your API host configuration.
+**Important:** The WebSocket URL is NOT included in the login response. It is constructed automatically from your API URL by converting HTTP(S) to WS(S) and appending `/rt/ws` path.
 
 ## Installation
 
@@ -122,9 +122,10 @@ app.post('/api/agent-c/session', authenticate, async (req, res) => {
     const payload = await agentCResponse.json();
     
     // Return only what the frontend needs
+    // Note: WebSocket URL will be constructed from apiUrl in the SDK
     res.json({
         token: payload.token,
-        websocketUrl: payload.websocketUrl,
+        apiUrl: 'https://api.agentc.ai', // Base API URL
         voices: payload.voices,
         avatars: payload.avatars,
         heygenToken: payload.heygenToken // If using avatars
@@ -157,7 +158,7 @@ async function connectToAgentC() {
     
     // 3. Create the client using the configuration
     const client = new RealtimeClient({
-        apiUrl: payload.websocketUrl,  // Dynamic WebSocket URL
+        apiUrl: 'https://api.agentc.ai',  // Base API URL (SDK converts to WSS)
         authManager,
         enableAudio: true,
         debug: false // Production shouldn't have debug on
@@ -207,7 +208,7 @@ async function connectToAgentC() {
     
     // 3. Create and connect the client
     const client = new RealtimeClient({
-        apiUrl: websocketUrl,  // From your backend
+        apiUrl: 'https://api.agentc.ai',  // Base API URL (SDK converts to WSS)
         authManager,
         enableAudio: true
     });
@@ -255,7 +256,7 @@ function App() {
     return (
         <AgentCProvider 
             config={{
-                websocketUrl: agentConfig.websocketUrl,
+                apiUrl: agentConfig.apiUrl,  // Base API URL
                 authToken: agentConfig.token,
                 heygenToken: agentConfig.heygenToken,
                 voices: agentConfig.voices,
@@ -369,6 +370,8 @@ async function quickDevelopmentSetup() {
         password: 'test-pass'   // NEVER hardcode in production
     });
     
+    // Note: WebSocket URL is constructed from apiUrl automatically
+    
     // Create the client
     const client = new RealtimeClient({
         apiUrl: loginResponse.websocketUrl,
@@ -468,7 +471,7 @@ router.post('/agent-c/session', authenticateUser, async (req, res) => {
         // Return only what frontend needs (no API keys!)
         res.json({
             token: agentCPayload.token,
-            websocketUrl: agentCPayload.websocketUrl,
+            apiUrl: 'https://api.agentc.ai', // Base API URL for SDK to construct WebSocket
             voices: agentCPayload.voices,
             avatars: agentCPayload.avatars,
             heygenToken: agentCPayload.heygenToken
@@ -517,7 +520,7 @@ export class AgentCService {
         
         // 3. Create the client
         this.client = new RealtimeClient({
-            apiUrl: payload.websocketUrl,  // Dynamic URL from your backend
+            apiUrl: payload.apiUrl,  // Base API URL (SDK converts to WSS automatically)
             authManager: this.authManager,
             enableAudio: true,
             audioConfig: {

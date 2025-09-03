@@ -81,12 +81,13 @@ interface CompleteLoginResponse {
 
 ### Important: WebSocket URL is NOT in the Response!
 
-**Critical Detail**: The WebSocket URL is **NOT** included in the login response. You must construct it yourself:
+**Critical Detail**: The WebSocket URL is **NOT** included in the login response. The SDK automatically constructs it from your API URL:
 
 ```typescript
-// The response does NOT include websocket_url
-// You must build it from your API URL configuration
-const wsUrl = `wss://${API_HOST}/rt/ws`;
+// The SDK's AuthManager handles URL construction internally:
+// HTTP → WS, HTTPS → WSS
+// Path is always /rt/ws
+// Example: https://api.example.com becomes wss://api.example.com/rt/ws
 ```
 
 ## Complete Initialization Example - Using EVERYTHING
@@ -141,12 +142,10 @@ class CompleteSDKInitializer {
     this.authManager['state'].user = loginResponse.user;
     this.authManager['state'].uiSessionId = loginResponse.ui_session_id;
     
-    // 3. Construct the WebSocket URL (NOT in response!)
-    const wsUrl = this.buildWebSocketUrl();
-    
-    // 4. Create RealtimeClient with AuthManager
+    // 3. Create RealtimeClient with AuthManager
+    // The SDK will construct the WebSocket URL from apiUrl automatically
     this.client = new RealtimeClient({
-      apiUrl: wsUrl,
+      apiUrl: 'https://api.agentc.example.com',  // Base API URL (SDK converts to WSS)
       authManager: this.authManager,
       sessionId: loginResponse.ui_session_id,  // Use for reconnection
       autoReconnect: true,
@@ -174,20 +173,12 @@ class CompleteSDKInitializer {
   }
   
   /**
-   * Build the WebSocket URL - NOT provided in response!
+   * The SDK's AuthManager constructs the WebSocket URL internally
+   * from the apiUrl configuration using this pattern:
+   * - HTTP → WS, HTTPS → WSS
+   * - Appends /rt/ws path
+   * - Example: https://api.example.com → wss://api.example.com/rt/ws
    */
-  private buildWebSocketUrl(): string {
-    // You must construct this yourself from your API configuration
-    const apiHost = 'api.agentc.example.com';
-    const wsProtocol = 'wss';  // Always use secure WebSocket
-    
-    // Build the base URL
-    const wsUrl = `${wsProtocol}://${apiHost}/rt/ws`;
-    
-    // Token is added as query parameter by the client
-    // Session ID is also added if available
-    return wsUrl;
-  }
   
   /**
    * Parse JWT to extract expiry time
@@ -449,10 +440,10 @@ export class AgentCAuthService {
     
     const loginData: CompleteLoginResponse = await response.json();
     
-    // Add the WebSocket URL since it's not in the response
+    // Add the base API URL for SDK to construct WebSocket URL
     const enhancedPayload = {
       ...loginData,
-      websocket_url: `wss://${process.env.AGENTC_HOST}/rt/ws`,
+      apiUrl: `https://${process.env.AGENTC_HOST}`,  // Base API URL
       
       // Add any additional configuration
       api_host: process.env.AGENTC_HOST,
@@ -543,7 +534,7 @@ export class AgentCProductionInitializer {
     
     // 4. Create RealtimeClient with all features
     this.client = new RealtimeClient({
-      apiUrl: agentCPayload.websocket_url,
+      apiUrl: agentCPayload.apiUrl,  // Base API URL (SDK converts to WSS)
       authManager: this.authManager,
       sessionId: agentCPayload.ui_session_id,
       autoReconnect: true,
@@ -648,11 +639,9 @@ export class DevelopmentInitializer {
     // - Updates user and uiSessionId in state
     // - Schedules token refresh
     
-    // 3. Create client - WebSocket URL must be constructed
-    const wsUrl = 'wss://localhost:8000/rt/ws';
-    
+    // 3. Create client - SDK constructs WebSocket URL from apiUrl
     this.client = new RealtimeClient({
-      apiUrl: wsUrl,
+      apiUrl: 'https://localhost:8000',  // Base API URL (SDK converts to WSS)
       authManager: this.authManager,
       sessionId: loginResponse.ui_session_id,
       autoReconnect: true,
@@ -758,8 +747,11 @@ const client = new RealtimeClient({
 // ❌ WRONG - There's no websocket_url in the response
 const wsUrl = loginResponse.websocket_url;  // undefined!
 
-// ✅ CORRECT - Build it yourself
-const wsUrl = `wss://${API_HOST}/rt/ws`;
+// ✅ CORRECT - Pass base API URL and let SDK construct it
+const client = new RealtimeClient({
+  apiUrl: 'https://api.example.com',  // SDK converts to wss://api.example.com/rt/ws
+  authManager
+});
 ```
 
 ### Mistake 3: Not Using Available Resources
@@ -845,7 +837,7 @@ The Agent C login response contains **much more** than just authentication token
 6. **Toolsets** with complete schemas
 7. **UI session ID** for reconnection
 
-The WebSocket URL is **NOT** included and must be constructed from your API configuration.
+The WebSocket URL is **NOT** included in the response. The SDK automatically constructs it from your API URL configuration (HTTP→WS, HTTPS→WSS, path: /rt/ws).
 
 To properly use the SDK:
 
