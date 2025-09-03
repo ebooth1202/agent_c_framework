@@ -161,6 +161,22 @@ class GetUserSessionsResponseEvent(BaseEvent):
     """
     sessions: ChatSessionQueryResponse
 
+class PingEvent(BaseEvent):
+    """
+    Event to check if the connection is alive.
+
+    This event does not require any additional data.
+    """
+    pass
+
+class PongEvent(BaseEvent):
+    """
+    Event to respond to a ping event.
+
+    This event does not require any additional data.
+    """
+    pass
+
 
 class SetSessionMetadataEvent(BaseEvent):
     """
