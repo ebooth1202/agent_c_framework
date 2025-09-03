@@ -13,6 +13,15 @@ class PCM16Processor extends AudioWorkletProcessor {
     this.sampleBuffer = new Float32Array(this.bufferSize);
     this.bufferIndex = 0;
     
+    // Sample rate configuration
+    this.nativeSampleRate = globalThis.sampleRate || 48000; // Browser's native rate
+    this.targetSampleRate = 16000; // Target rate for transmission
+    this.resampleRatio = this.targetSampleRate / this.nativeSampleRate;
+    
+    // Resampling buffer
+    this.resampleBuffer = [];
+    this.resampleIndex = 0;
+    
     // State
     this.isProcessing = false;
     
@@ -48,6 +57,15 @@ class PCM16Processor extends AudioWorkletProcessor {
           this.sampleBuffer = new Float32Array(this.bufferSize);
           this.bufferIndex = 0;
         }
+        if (data.nativeSampleRate) {
+          this.nativeSampleRate = data.nativeSampleRate;
+        }
+        if (data.targetSampleRate) {
+          this.targetSampleRate = data.targetSampleRate;
+        }
+        // Recalculate resample ratio
+        this.resampleRatio = this.targetSampleRate / this.nativeSampleRate;
+        console.log(`[AudioWorklet] Configured - Native: ${this.nativeSampleRate}Hz, Target: ${this.targetSampleRate}Hz, Ratio: ${this.resampleRatio}`);
         break;
         
       default:
@@ -114,18 +132,60 @@ class PCM16Processor extends AudioWorkletProcessor {
       output[0].set(inputChannel);
     }
     
-    // Accumulate samples in buffer
-    for (let i = 0; i < inputChannel.length; i++) {
-      this.sampleBuffer[this.bufferIndex++] = inputChannel[i];
+    // Apply simple downsampling if needed
+    if (Math.abs(this.resampleRatio - 1.0) > 0.01) {
+      // Need to resample
+      this.resampleAndAccumulate(inputChannel);
+    } else {
+      // No resampling needed, accumulate directly
+      for (let i = 0; i < inputChannel.length; i++) {
+        this.sampleBuffer[this.bufferIndex++] = inputChannel[i];
+        
+        // When buffer is full, convert and send
+        if (this.bufferIndex >= this.bufferSize) {
+          this.sendAudioChunk();
+        }
+      }
+    }
+    
+    // Keep processor alive
+    return true;
+  }
+  
+  /**
+   * Resample and accumulate audio samples
+   * Uses linear interpolation for downsampling
+   * @param {Float32Array} inputChannel - Input samples at native rate
+   */
+  resampleAndAccumulate(inputChannel) {
+    // Simple linear interpolation resampling
+    // This works well for downsampling from 48000 to 16000 (3:1 ratio)
+    const inputLength = inputChannel.length;
+    const outputLength = Math.floor(inputLength * this.resampleRatio);
+    
+    for (let i = 0; i < outputLength; i++) {
+      // Calculate the corresponding position in the input buffer
+      const inputPos = i / this.resampleRatio;
+      const inputIndex = Math.floor(inputPos);
+      const fraction = inputPos - inputIndex;
+      
+      // Linear interpolation between samples
+      let sample;
+      if (inputIndex < inputLength - 1) {
+        sample = inputChannel[inputIndex] * (1 - fraction) + 
+                 inputChannel[inputIndex + 1] * fraction;
+      } else {
+        sample = inputChannel[inputIndex];
+      }
+      
+      // Add to buffer
+      this.sampleBuffer[this.bufferIndex++] = sample;
       
       // When buffer is full, convert and send
       if (this.bufferIndex >= this.bufferSize) {
         this.sendAudioChunk();
       }
     }
-    
-    // Keep processor alive
-    return true;
   }
   
   /**
@@ -144,7 +204,7 @@ class PCM16Processor extends AudioWorkletProcessor {
     // Create ArrayBuffer from PCM16 data
     const audioBuffer = pcm16Data.buffer;
     
-    // Send to main thread
+    // Send to main thread with the target sample rate
     // Note: ArrayBuffer is transferred (zero-copy), not cloned
     this.port.postMessage({
       type: 'audio_chunk',
@@ -152,7 +212,7 @@ class PCM16Processor extends AudioWorkletProcessor {
       audioLevel: audioLevel,
       sampleCount: this.bufferIndex,
       timestamp: globalThis.currentTime, // AudioWorkletGlobalScope.currentTime
-      sampleRate: globalThis.sampleRate  // AudioWorkletGlobalScope.sampleRate
+      sampleRate: this.targetSampleRate   // Send target sample rate, not native
     }, [audioBuffer]); // Transfer ownership of ArrayBuffer
     
     // Reset buffer

@@ -74,9 +74,9 @@ export class AudioProcessor {
       if (!AudioContextClass) {
         throw new Error('AudioContext not supported');
       }
-      this.audioContext = new AudioContextClass({
-        sampleRate: this.config.sampleRate
-      });
+      // Create AudioContext without forcing sample rate to allow native rate
+      // The AudioWorklet will handle resampling to target rate
+      this.audioContext = new AudioContextClass();
       
       // Check AudioWorklet support AFTER creating the AudioContext
       if (!this.audioContext.audioWorklet) {
@@ -97,6 +97,14 @@ export class AudioProcessor {
         isReady: true,
         contextSampleRate: this.audioContext?.sampleRate
       });
+      
+      if (this.config.debug) {
+        console.warn('[AudioProcessor] Audio system initialized:', {
+          audioContextSampleRate: this.audioContext?.sampleRate,
+          targetOutputRate: this.config.sampleRate,
+          resamplingNeeded: this.audioContext?.sampleRate !== this.config.sampleRate
+        });
+      }
       
       if (this.config.debug) {
         console.warn('[AudioProcessor] Initialization complete');
@@ -160,10 +168,13 @@ export class AudioProcessor {
    */
   private async requestMicrophoneAccess(): Promise<void> {
     try {
+      // Request microphone without forcing sample rate
+      // Browsers often ignore the sampleRate constraint anyway
+      // The AudioWorklet will handle resampling from native rate to target rate
       this.mediaStream = await navigator.mediaDevices.getUserMedia({
         audio: {
           channelCount: this.config.channelCount,
-          sampleRate: this.config.sampleRate,
+          // Don't specify sampleRate - let browser use native rate
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true
@@ -172,9 +183,12 @@ export class AudioProcessor {
       
       if (this.config.debug) {
         const tracks = this.mediaStream.getAudioTracks();
+        const settings = tracks[0]?.getSettings();
         console.warn('[AudioProcessor] Microphone access granted:', {
           tracks: tracks.length,
-          settings: tracks[0]?.getSettings()
+          settings: settings,
+          requestedSampleRate: this.config.sampleRate,
+          actualSampleRate: settings?.sampleRate || 'unknown'
         });
       }
     } catch (error) {
@@ -212,10 +226,12 @@ export class AudioProcessor {
       this.handleWorkletMessage(event.data);
     };
     
-    // Configure the worklet
+    // Configure the worklet with both native and target sample rates
     this.workletNode.port.postMessage({
       type: 'configure',
-      bufferSize: this.config.bufferSize
+      bufferSize: this.config.bufferSize,
+      nativeSampleRate: this.audioContext.sampleRate,  // Browser's native rate (usually 48000)
+      targetSampleRate: this.config.sampleRate          // Our target rate (16000)
     });
     
     // Connect the audio graph: microphone -> worklet -> destination (optional monitoring)
