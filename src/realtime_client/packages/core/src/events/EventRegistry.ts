@@ -98,6 +98,9 @@ export interface RealtimeEventMap extends ClientEventMap, ServerEventMap {
   'disconnected': { code: number; reason: string };
   'reconnecting': { attempt: number; delay: number };
   'reconnected': void;
+  // WebSocket ping/pong events
+  'ping': any;
+  'pong': any;
 }
 
 /**
@@ -182,7 +185,7 @@ export class EventRegistry {
   static isValidEventType(type: string): type is EventType {
     return this.isClientEventType(type) || 
            this.isServerEventType(type) ||
-           ['binary_audio', 'audio:output', 'connected', 'disconnected', 'reconnecting', 'reconnected'].includes(type);
+           ['binary_audio', 'audio:output', 'connected', 'disconnected', 'reconnecting', 'reconnected', 'ping', 'pong'].includes(type);
   }
 
   /**
