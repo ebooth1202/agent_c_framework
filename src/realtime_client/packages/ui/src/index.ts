@@ -32,3 +32,14 @@ export type {
   OutputMode,
   OutputOption
 } from './components/input';
+
+// Control component exports
+export {
+  ConnectionButton,
+  AudioControls
+} from './components/controls';
+
+export type {
+  ConnectionButtonProps,
+  AudioControlsProps
+} from './components/controls';

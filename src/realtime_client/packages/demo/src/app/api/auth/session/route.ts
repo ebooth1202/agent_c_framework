@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { env } from '@/env.mjs';
 
+// Force dynamic rendering for this route since it uses request headers
+export const dynamic = 'force-dynamic';
+
 /**
  * JWT payload structure
  */

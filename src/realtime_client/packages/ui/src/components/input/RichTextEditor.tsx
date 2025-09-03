@@ -1,6 +1,6 @@
 import * as React from "react"
 import { cn } from "../../lib/utils"
-import { MarkdownEditor } from "../editor/MarkdownEditor"
+import { MarkdownEditorClient } from "../editor/MarkdownEditorClient"
 import { useChat, useTurnState } from "@agentc/realtime-react"
 
 /**
@@ -157,18 +157,15 @@ const RichTextEditor = React.forwardRef<HTMLDivElement, RichTextEditorProps>(
         // Error state styling
         (error || submitError) && "border-destructive",
         className
-      ),
-      // Pass through keyboard handler for custom Enter behavior
-      editorProps: {
-        handleKeyDown
-      }
-    }), [value, onChange, placeholder, isDisabled, handleSubmit, maxHeight, className, error, submitError, handleKeyDown])
+      )
+    }), [value, onChange, placeholder, isDisabled, handleSubmit, maxHeight, className, error, submitError])
     
     return (
       <div className="relative w-full">
-        <MarkdownEditor
+        <MarkdownEditorClient
           ref={ref}
           {...editorProps}
+          onKeyDown={handleKeyDown}
           {...props}
         />
         
