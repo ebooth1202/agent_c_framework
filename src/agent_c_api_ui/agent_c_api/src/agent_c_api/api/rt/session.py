@@ -40,10 +40,7 @@ async def login(login_request: UserLoginRequest,
     
     # Get config data
     heygen_token = await heygen_client.create_streaming_access_token()
-    tools = Toolset.get_client_registry()
-    chat_sessions = await chat_session_manager.get_user_sessions(login_response.user.user_id)
-    voices = [no_voice_model, heygen_avatar_voice_model] + open_ai_voice_models
-    
+
     return RealtimeLoginResponse(agent_c_token=login_response.token,
                                  heygen_token=heygen_token,
                                  ui_session_id=MnemonicSlugs.generate_slug(3))
