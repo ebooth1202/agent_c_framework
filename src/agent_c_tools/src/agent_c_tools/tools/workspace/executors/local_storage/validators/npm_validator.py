@@ -70,7 +70,7 @@ class NpmCommandValidator(CommandValidator):
             non_flags = [p for p in parts[1:] if not p.startswith("-")]
             if non_flags:
                 return ValidationResult(False, f"Unexpected args: {' '.join(non_flags[:3])}")
-            return ValidationResult(True, "OK", timeout=policy.get("default_timeout"))
+            return ValidationResult(True, "OK", timeout=policy.get("default_timeout"), policy_spec=None)
 
         # Case B: subcommand mode
         raw_sub = parts[1].lower()
@@ -154,7 +154,7 @@ class NpmCommandValidator(CommandValidator):
                     return ValidationResult(False, "Only 'npm config get <key>' is allowed")
 
         # All good
-        return ValidationResult(True, "OK", timeout=spec.get("timeout") or policy.get("default_timeout"))
+        return ValidationResult(True, "OK", timeout=spec.get("timeout") or policy.get("default_timeout"), policy_spec=spec)
 
     def adjust_arguments(self, parts: List[str], policy: Mapping[str, Any]) -> List[str]:
         """

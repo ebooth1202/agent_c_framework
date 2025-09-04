@@ -593,7 +593,10 @@ class LocalStorageWorkspace(BaseWorkspace):
         except Exception as e:
             return f"Exception occurred: {str(e)}"
 
-    async def run_command(self, command: str, working_directory: Optional[str] = None, timeout: Optional[int]=None) -> CommandExecutionResult:
+    async def run_command(self, command: str,
+                          working_directory: Optional[str] = None,
+                          timeout: Optional[int]=None,
+                          suppress_success_output: Optional[bool] = None) -> CommandExecutionResult:
         """Run a shell command in the workspace with secure execution."""
         if working_directory:
             valid, error_msg, full_path = self._validate_path(working_directory, "working directory")
@@ -604,7 +607,8 @@ class LocalStorageWorkspace(BaseWorkspace):
                     stdout="",
                     stderr=error_msg,
                     return_code=1,
-                    working_directory=working_directory
+                    working_directory=working_directory,
+                    suppress_success_output=suppress_success_output
                 )
             working_directory = str(full_path)
 
@@ -614,5 +618,5 @@ class LocalStorageWorkspace(BaseWorkspace):
             "CWD": str(working_directory or self.workspace_root)
         }
         
-        return await self.executor.execute_command(command=command, working_directory=working_directory, override_env=override_env, timeout=timeout)
+        return await self.executor.execute_command(command=command, working_directory=working_directory, override_env=override_env, timeout=timeout, suppress_success_output=suppress_success_output)
 from agent_c_tools.tools.workspace.local_project import LocalProjectWorkspace  # noqa

@@ -63,7 +63,7 @@ class LernaCommandValidator(CommandValidator):
             non_flags = [p for p in parts[1:] if not p.startswith("-")]
             if non_flags:
                 return ValidationResult(False, f"Unexpected arguments: {' '.join(non_flags[:3])}")
-            return ValidationResult(True, "OK", timeout=policy.get("default_timeout"))
+            return ValidationResult(True, "OK", timeout=policy.get("default_timeout"), policy_spec=None)
 
         # Handle subcommand mode
         subcommand = parts[1].lower()
@@ -143,7 +143,7 @@ class LernaCommandValidator(CommandValidator):
         # Get timeout from subcommand spec or fall back to default
         timeout = subcommand_spec.get("timeout") or policy.get("default_timeout")
 
-        return ValidationResult(True, "OK", timeout=timeout)
+        return ValidationResult(True, "OK", timeout=timeout, policy_spec=subcommand_spec)
 
     def adjust_arguments(self, parts: List[str], policy: Mapping[str, Any]) -> List[str]:
         """

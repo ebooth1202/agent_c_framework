@@ -18,7 +18,7 @@ def test_npx_core_structure(policies):
     pol = policies["npx"]
 
     # Core structure (npx is different from npm/pnpm)
-    assert isinstance(pol.get("allowed_packages", []), list)
+    assert isinstance(pol.get("packages", {}), dict)
     assert isinstance(pol.get("flags", []), list)
     assert isinstance(pol.get("default_timeout", 0), int)
     assert isinstance(pol.get("env_overrides", {}), dict)
@@ -30,7 +30,7 @@ def test_npx_allowed_packages_whitelist(policies):
         pytest.skip("npx policy not present")
 
     pol = policies["npx"]
-    allowed_packages = pol.get("allowed_packages", [])
+    packages = pol.get("packages", {})
 
     # Test that safe packages are whitelisted
     expected_packages = [
@@ -39,7 +39,7 @@ def test_npx_allowed_packages_whitelist(policies):
         "webpack", "vite", "rollup", "parcel", "serve", "http-server"
     ]
     for package in expected_packages:
-        assert package in allowed_packages, f"Safe package {package} should be allowed"
+        assert package in packages, f"Safe package {package} should be allowed"
 
 
 def test_npx_command_aliases(policies):
@@ -113,10 +113,10 @@ def test_npx_security_model(policies):
     pol = policies["npx"]
 
     # npx uses package whitelisting instead of subcommand restrictions
-    assert "allowed_packages" in pol, "npx should use package whitelisting"
+    assert "packages" in pol, "npx should use package whitelisting"
     assert "subcommands" not in pol, "npx should not use subcommand model"
     assert "deny_subcommands" not in pol, "npx should not use deny_subcommands"
 
     # Ensure the whitelist is not empty
-    allowed_packages = pol.get("allowed_packages", [])
-    assert len(allowed_packages) > 0, "npx should have at least some allowed packages"
+    packages = pol.get("packages", {})
+    assert len(packages) > 0, "npx should have at least some allowed packages"

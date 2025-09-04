@@ -103,7 +103,7 @@ class PytestCommandValidator:
             return ValidationResult(False, f"too many selectors ({len(positionals)} > {max_selectors})")
 
         timeout = policy.get("default_timeout")
-        return ValidationResult(True, "OK", timeout=timeout)
+        return ValidationResult(True, "OK", timeout=timeout, policy_spec=policy)
 
     @staticmethod
     def adjust_environment(base_env: Dict[str, str], parts: List[str], policy: Mapping[str, Any]) -> Dict[str, str]:

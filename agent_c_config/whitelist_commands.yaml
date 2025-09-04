@@ -32,6 +32,7 @@ pytest:
   # PytestCommandValidator uses SAFE_FLAGS; this sets defaults/timeouts or env overrides
   flags: [ "-q","--maxfail","--disable-warnings","--color","--no-header","--no-summary","--tb" ]
   allow_test_paths: true  # Enable workspace-relative test paths and file:line references
+  suppress_success_output: true  # Test runs can be verbose, just show success/failure
   default_timeout: 120
   env_overrides:
     PYTHONDONTWRITEBYTECODE: "1"
@@ -59,6 +60,7 @@ echo:
   validator: os_basic
   flags: ["--help","-n","-e"]   # keep minimal; shell redirection is ignored under shell=False
   default_timeout: 5
+  suppress_success_output: true  # For testing suppression feature
 
 # Windows uses find for inside of files, but *nix find is for filesystem searching.  Disabling for now.
 #find:
@@ -77,8 +79,14 @@ echo:
 
 node:
   validator: node
-  flags: ["-v","--version","--help", "-c", "--test","--test-reporter","--test-name-pattern"]
-  allow_test_mode: true
+  flags:
+    "--test": { suppress_success_output: true, allow_test_mode: true }
+    "-v": {}
+    "--version": {}
+    "--help": {}
+    "-c": { suppress_success_output: true, allow_test_mode: true }
+    "--test-reporter": { suppress_success_output: true, allow_test_mode: true }
+    "--test-name-pattern": { suppress_success_output: true, allow_test_mode: true }
   allow_script_paths: false # Enable workspace-relative test paths for `node --test`
 #  allowed_entrypoints: # uncomment and update to restrict allowed script entrypoints
 #    - scripts/maintenance.js
@@ -117,9 +125,16 @@ npm:
 
       # --- Scripts (ALLOWLIST) ---
       run:
-        allowed_scripts: ["build","test","lint","format","typecheck", 'lint:fix', 'test:run']
+        build: { suppress_success_output: true }
+        test: { suppress_success_output: true }
+        "test:run": { suppress_success_output: true }
+        typecheck: { suppress_success_output: true }
+        lint: { }
+        "lint:fix": { }
+        format: { }  # Inherit defaults
         deny_args: false
         allow_test_paths: true  # Enable workspace-relative test paths for npm run scripts
+        suppress_success_output: true  # Build/test scripts can be noisy
 
       # --- Safe, lockfile-based install ---
       ci:
@@ -162,21 +177,21 @@ pnpm:
       list:   { allowed_flags: ["--depth","--json","--long"] }
       ping:   { allowed_flags: [] }
       outdated: { allowed_flags: [] }
-      test:   { allowed_flags: [] }
-      "test:run": { allowed_flags: [] }
-      "test:watch": { allowed_flags: [] }
-      "test:coverage": { allowed_flags: [] }
-      "test:ui": { allowed_flags: [] }
-      "test:debug": { allowed_flags: [] }
+      test:   { allowed_flags: [], deny_args: false, allow_test_paths: true, suppress_success_output: true }
+      "test:run": { allowed_flags: [], deny_args: false, allow_test_paths: true, suppress_success_output: true }
+      "test:watch": { allowed_flags: [], deny_args: false, allow_test_paths: true, suppress_success_output: true }
+      "test:coverage": { allowed_flags: [], deny_args: false, allow_test_paths: true, suppress_success_output: true }
+      "test:ui": { allowed_flags: [], deny_args: false, allow_test_paths: true, suppress_success_output: true }
+      "test:debug": { allowed_flags: [], deny_args: false, allow_test_paths: true, suppress_success_output: true }
       "type-check": { allowed_flags: [] }
       "clean": { allowed_flags: [] }
       type_check:   { allowed_flags: [] }
       ls:   { allowed_flags: [] }
-      build:   { allowed_flags: [] }
+      build:   { allowed_flags: [], suppress_success_output: true }
       why:    { allowed_flags: ["--json","--long"] }
       licenses: { allowed_flags: ["--json","--long"] }
-      lint:   { allowed_flags: [--fix] }
-      "lint:fix": { allowed_flags: [] }
+      lint:   { allowed_flags: ["--fix"], deny_args: false, allow_test_paths: true }
+      "lint:fix": { allowed_flags: [], deny_args: false, allow_test_paths: true }
       "install:clean": { allowed_flags: [] }
 
       # Only allow "pnpm config get <key>"
@@ -184,18 +199,13 @@ pnpm:
         get_only: true
         allowed_flags: []       # keep empty; we gate on 'get'
 
-      # --- Scripts (ALLOWLIST) ---
-      run:
-        allowed_scripts: ["build","test", "test:run",  "test:coverage", "test:ui", "test:debug", "type-check",  "clan", "install:clean", "lint", "lint:fix", "format","typecheck", "test:run"]
-        deny_args: false        # allow extra args with path safety validation
-        allow_test_paths: true  # enable workspace-relative test paths
-
       # --- Safe, lockfile-based install ---
       install:
         enabled: true
         require_no_packages: true
         require_flags: ["--ignore-scripts"]
         allowed_flags: ["--ignore-scripts","--prefer-offline","--frozen-lockfile","--reporter","--dev","--prod"]
+        suppress_success_output: true
 
   # pnpm doesn't have ci command like npm, but has similar restrictions
   # keep 'i' and 'add' denied unless you want them—the validator aliases them to 'install'
@@ -217,23 +227,23 @@ pnpm:
 
 npx:
   validator: npx
-  allowed_packages:
-    - "@angular/cli"
-    - "create-react-app"
-    - "create-next-app"
-    - "@vue/cli"
-    - "typescript"
-    - "ts-node"
-    - "eslint"
-    - "prettier"
-    - "jest"
-    - "mocha"
-    - "webpack"
-    - "vite"
-    - "rollup"
-    - "parcel"
-    - "serve"
-    - "http-server"
+  packages:
+    typescript: { suppress_success_output: true }   # tsc can be verbose
+    "@angular/cli": { suppress_success_output: true }  # ng build is noisy
+    webpack: { suppress_success_output: true }      # webpack output is verbose
+    jest: { suppress_success_output: true }         # test output can be noisy
+    eslint: { }                                     # Keep linter output visible
+    prettier: { }                                   # Keep formatter output visible
+    serve: { }                                      # Keep server startup messages
+    create-react-app: {}
+    create-next-app: {}
+    "@vue/cli": {}
+    ts-node: { suppress_success_output: true }      # ts-node can be verbose
+    mocha: { suppress_success_output: true }        # test output can be noisy
+    vite: { suppress_success_output: true }         # build output can be verbose
+    rollup: { suppress_success_output: true }       # build output can be verbose
+    parcel: { suppress_success_output: true }       # build output can be verbose
+    "http-server": {}                               # Keep server startup messages
   command_aliases:
     typescript: [ "tsc" ]
   flags:
@@ -295,6 +305,7 @@ lerna:
       allow_test_paths: true
       deny_args: false
       timeout: 300
+      suppress_success_output: true  # Build/test scripts through lerna can be very verbose
     version:
       flags: ["--conventional-commits", "--changelog-preset", "--exact", "--force-publish", "--git-remote", "--create-release", "--dry-run", "--json", "--loglevel", "--no-changelog", "--no-commit-hooks", "--no-git-tag-version", "--no-push", "--preid", "--sign-git-commit", "--sign-git-tag", "--tag-version-prefix", "--yes", "-y"]
       timeout: 120
@@ -330,6 +341,7 @@ dotnet:
       require_flags:
         --nologo: true
         --verbosity: [ "quiet","minimal" ] # enforce quiet, no-logo builds
+      suppress_success_output: true  # Build output can be verbose
 
     test:
       flags: [ "--configuration","-c","--no-build","--nologo","--verbosity","-v","--filter", "--list-tests", "--settings", "--results-directory", "--test-adapter-path", "--diag", "--logger" ]
@@ -340,6 +352,7 @@ dotnet:
         --nologo: true
         --verbosity: [ "minimal","quiet" ]
         --logger: "console;verbosity=minimal"
+      suppress_success_output: true  # Test output can be verbose
 
   deny_subcommands: [ "run","publish","tool","new","pack","clean","nuget","workload" ]
   default_timeout: 300
@@ -359,6 +372,7 @@ dotnet:
 # PowerShell is extremely dangerous and powerful. This configuration only allows
 # safe, read-only information gathering cmdlets with maximum security restrictions.
 # All script execution, file operations, and dangerous cmdlets are blocked.
+# This is not set up to suppress output as PowerShell cmdlets are typically used for information gathering.
 powershell: &powershell_common
   validator: powershell
   description: "Execute safe, read-only PowerShell cmdlets for information gathering only"

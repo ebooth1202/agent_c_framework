@@ -49,7 +49,7 @@ class DotnetCommandValidator:
             for raw in used_flags:
                 if not _is_flag_allowed(raw, allowed_flags):
                     return ValidationResult(False, f"Flag not allowed for {sub}: {raw}")
-            return ValidationResult(True, "OK", timeout=spec.get("timeout") or policy.get("default_timeout"))
+            return ValidationResult(True, "OK", timeout=spec.get("timeout") or policy.get("default_timeout"), policy_spec=spec)
 
         # regular subcommands
         if sub in deny_subs:
@@ -147,7 +147,7 @@ class DotnetCommandValidator:
                             return ValidationResult(False, f"Unsafe path for {base}: {val}")
                 i += 1
 
-        return ValidationResult(True, "OK", timeout=spec.get("timeout") or policy.get("default_timeout"))
+        return ValidationResult(True, "OK", timeout=spec.get("timeout") or policy.get("default_timeout"), policy_spec=spec)
 
     @staticmethod
     def adjust_environment(base_env: Dict[str, str], parts: List[str], policy: Mapping[str, Any]) -> Dict[

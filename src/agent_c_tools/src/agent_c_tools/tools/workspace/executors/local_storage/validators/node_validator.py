@@ -8,7 +8,10 @@ class NodeCommandValidator:
     Keep node to version/metadata only. Block '-e/--eval' etc.
     Policy (example):
       node:
-        flags: ["-v","--version","--help"]
+        flags: 
+          "--test": { suppress_success_output: true, allow_test_mode: true }
+          "-v": {}
+          "--version": {}
         deny_global_flags: ["-e","--eval","-p","--print"]
         default_timeout: 5
     """
@@ -21,11 +24,30 @@ class NodeCommandValidator:
         if name not in ("node", "nodejs"):
             return ValidationResult(False, "Not a node command")
 
-        allowed_flags = set(policy.get("flags") or [])
+        # Handle both old (list) and new (dict) flags format
+        flags_config = policy.get("flags")
+        flags_configured = flags_config is not None
+        
+        if isinstance(flags_config, dict):
+            allowed_flags = set(flags_config.keys())
+            flags_settings = flags_config
+        elif isinstance(flags_config, list):
+            # Legacy list format
+            allowed_flags = set(flags_config)
+            flags_settings = {}
+        else:
+            # No flags configuration
+            allowed_flags = set()
+            flags_settings = {}
+            flags_configured = False
+            
         deny_global = set(policy.get("deny_global_flags") or [])
         allow_script_paths = bool(policy.get("allow_script_paths", False))
         allow_test_mode = bool(policy.get("allow_test_mode", False))
         allowed_entrypoints = set(policy.get("allowed_entrypoints") or [])
+
+        # Extract modes configuration
+        modes_config = policy.get("modes", {})
 
         # Workspace root for fencing
         workspace_root = (
@@ -34,10 +56,12 @@ class NodeCommandValidator:
                 or os.getcwd()
         )
 
+        # All the argument parsing logic
         args = parts[1:]
         i = 0
         after_dashdash = False
         used_flags: List[str] = []
+        suppress_success_output = False
 
         def base_flag(tok: str) -> str:
             return tok.split("=", 1)[0]
@@ -57,10 +81,16 @@ class NodeCommandValidator:
                 # deny list first
                 if (b in deny_global) or (a in deny_global):
                     return ValidationResult(False, f"Global flag not allowed: {a}")
-                # allow list (if provided)
-                if allowed_flags and (b not in allowed_flags) and (a not in allowed_flags):
+                # allow list (if flags are configured, enforce strictly)
+                if flags_configured and (b not in allowed_flags) and (a not in allowed_flags):
                     return ValidationResult(False, f"Flag not allowed: {a}")
                 used_flags.append(b)
+                
+                # Check for flag-specific settings
+                flag_spec = flags_settings.get(b, {}) or flags_settings.get(a, {})
+                if flag_spec.get("suppress_success_output", False):
+                    suppress_success_output = True
+                    
                 # consume value for known value-taking flags
                 if b in value_flags and "=" not in a:
                     i += 1
@@ -75,30 +105,45 @@ class NodeCommandValidator:
 
         # Case 0: no positionals ⇒ REPL or flag-only usage
         if not positionals:
-            # Allowed: e.g., `node -v` / `node --help` / `node --trace-warnings` (if whitelisted)
-            return ValidationResult(True, "OK", timeout=policy.get("default_timeout"))
+            # Use modes config instead of hardcoded policy_spec=None
+            mode_spec = modes_config.get("repl", {})
+            return ValidationResult(True, "OK", timeout=policy.get("default_timeout"), 
+                                  suppress_success_output=suppress_success_output, policy_spec=mode_spec)
 
-        # Detect Node’s built-in test runner mode
+        # Detect Node's built-in test runner mode
         is_test_mode = ("--test" in used_flags)
 
         # Case 1: node --test <paths...>
         if is_test_mode:
-            if not allow_test_mode:
+            # Use modes config for test mode settings
+            mode_spec = modes_config.get("test", {})
+
+            # Check allow_test_mode from flag-specific settings first
+            flag_allows_test = any(flags_settings.get(f, {}).get("allow_test_mode", False) for f in used_flags)
+            mode_allows_test = mode_spec.get("allow_test_mode", False)
+            
+            if not (flag_allows_test or mode_allows_test or allow_test_mode):
                 return ValidationResult(False, "Node --test mode is disabled by policy")
+
             # Fence every path-like positional to the workspace
             for tok in positionals:
                 if looks_like_path(tok) and not is_within_workspace(workspace_root, extract_file_part(tok)):
                     return ValidationResult(False, f"Unsafe path outside workspace in node --test args: {tok}")
-            return ValidationResult(True, "OK", timeout=policy.get("default_timeout"))
+
+            return ValidationResult(True, "OK", timeout=policy.get("default_timeout"), 
+                                  suppress_success_output=suppress_success_output, policy_spec=mode_spec)
 
         # Case 2: node <script.js> [args...]  (script execution)
-        if not allow_script_paths:
-            # Your original behavior: disallow running scripts entirely
+        # Use modes config for script mode settings
+        mode_spec = modes_config.get("script", {})
+
+        # Check allow_script_paths from mode spec first, fallback to global policy
+        if not (mode_spec.get("allow_script_paths", False) or allow_script_paths):
             return ValidationResult(False, f"Arguments not allowed for node: {' '.join(positionals[:3])}")
 
         script = positionals[0]
 
-        # Never permit eval/print/STDIN “scripts”
+        # Never permit eval/print/STDIN "scripts"
         if script in ("-e", "--eval", "-p", "--print", "-"):
             return ValidationResult(False, "Eval/print/STDIN execution is not allowed")
 
@@ -118,7 +163,8 @@ class NodeCommandValidator:
             if norm_script not in norm_allow:
                 return ValidationResult(False, f"Script not in allowed entrypoints: {script}")
 
-        return ValidationResult(True, "OK", timeout=policy.get("default_timeout"))
+        return ValidationResult(True, "OK", timeout=policy.get("default_timeout"), 
+                              suppress_success_output=suppress_success_output, policy_spec=mode_spec)
 
     def adjust_environment(self, base_env: Dict[str, str], parts: List[str], policy: Mapping[str, Any]) -> Dict[str, str]:
         env = dict(base_env)

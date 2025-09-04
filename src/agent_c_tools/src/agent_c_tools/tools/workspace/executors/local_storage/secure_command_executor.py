@@ -26,7 +26,7 @@ ANSI_RE = re.compile(r'\x1b\[[0-9;?]*[ -/]*[@-~]')
 
 @dataclass
 class CommandExecutionResult:
-    status: str  # "success", "error", "timeout", "blocked"
+    status: str  # "success", "error", "timeout", "blocked", "failed"
     return_code: Optional[int]
     stdout: str
     stderr: str
@@ -36,6 +36,7 @@ class CommandExecutionResult:
     duration_ms: Optional[int] = None
     truncated_stdout: Optional[bool] = None
     truncated_stderr: Optional[bool] = None
+    suppress_success_output: bool = False
 
     # The class modifications I added (to_dict() and to_yaml() methods) are optional conveniences.
     # The dataclass will work with yaml.dump(asdict(result)) without any modifications.
@@ -289,6 +290,18 @@ class SecureCommandExecutor:
                     return exe
         return None
 
+    @staticmethod
+    def _policy_suppress_flag(
+            policy: Mapping[str, Any],
+            vres: ValidationResult
+    ) -> bool:
+        # command-level default
+        val = bool(policy.get("suppress_success_output", False))
+        # prefer the matched node if provided
+        if vres.policy_spec is not None:
+            return bool(vres.policy_spec.get("suppress_success_output", False) or val)
+        return val
+
     def _log_command_execution(self, command: str, result: CommandExecutionResult):
         log_entry = {
             'timestamp': datetime.now().isoformat(),
@@ -312,7 +325,8 @@ class SecureCommandExecutor:
     async def execute_command(self, command: str,
                               working_directory: str = None,
                               override_env: Optional[Dict[str, str]] = None,
-                              timeout: Optional[int] = None) -> CommandExecutionResult:
+                              timeout: Optional[int] = None,
+                              suppress_success_output: Optional[bool] = None) -> CommandExecutionResult:
         """
         Execute a single command under policy control.
 
@@ -321,6 +335,7 @@ class SecureCommandExecutor:
           working_directory: absolute path; caller owns sandboxing
           override_env: base environment for the process (merged with validator's overrides)
           timeout: fallback timeout if neither per-command nor executor default is provided
+          suppress_success_output: if True, suppress stdout on success (overrides policy). Must be optional and None as a default of False would override policy.
         """
         start_ms = time.time()
 
@@ -362,6 +377,14 @@ class SecureCommandExecutor:
         vres: ValidationResult = validator.validate(parts, policy)
         if not vres.allowed:
             return self._blocked(command, working_directory, vres.reason or "Validation failed")
+
+        # DRY: compute unified suppression once, for every validator
+        policy_suppress = self._policy_suppress_flag(policy, vres)
+        effective_suppress = (
+            suppress_success_output  # per-call override wins if provided
+            if suppress_success_output is not None
+            else (vres.suppress_success_output or policy_suppress)
+        )
 
         # Override-or-append required flags as per `require_flags`, and normalize verbosity flags. Used by DOTNET validator
         # In future, we may want to do this prior to validator.validate
@@ -430,6 +453,8 @@ class SecureCommandExecutor:
             )
             duration = int((time.time() - start_ms) * 1000)
             status = "success" if rc == 0 else "failed"
+
+            # Grab real result for potential logging
             result = CommandExecutionResult(
                 status=status,
                 return_code=rc,
@@ -441,8 +466,15 @@ class SecureCommandExecutor:
                 duration_ms=duration,
                 truncated_stdout=truncated_out,
                 truncated_stderr=truncated_err,
+                suppress_success_output=effective_suppress,
             )
+            # Log actual command and results
             self._log_command_execution(command, result)
+
+            # Now apply output suppression if enabled and command succeeded
+            if result.suppress_success_output and result.status == "success":
+                result.stdout = "Command executed successfully."
+
             return result
         except asyncio.TimeoutError:
             duration = int((time.time() - start_ms) * 1000)
