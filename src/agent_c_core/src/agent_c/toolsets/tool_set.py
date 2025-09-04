@@ -7,6 +7,7 @@ import markdown
 
 from typing import Union, List, Dict, Any, Optional
 
+from agent_c.models.client_tool_info import ClientToolInfo
 from agent_c.toolsets.tool_cache import ToolCache
 from agent_c.models.context.base import BaseContext
 from agent_c.util.logging_utils import LoggingManager
@@ -17,6 +18,7 @@ class Toolset:
     tool_registry: List[Any] = []
     tool_sep: str = "_"
     tool_dependencies: Dict[str, List[str]] = {}
+    client_tool_registry: List[ClientToolInfo] = None
 
     @classmethod
     def register(cls, tool_cls: Any, required_tools: Optional[List[str]] = None) -> None:
@@ -33,6 +35,20 @@ class Toolset:
             # Store the required tools mapping if provided
             if required_tools:
                 cls.tool_dependencies[tool_cls.__name__] = required_tools
+
+    @classmethod
+    def get_client_registry(cls) -> List[ClientToolInfo]:
+        """
+        Get the client tool registry, generating it if not already done.
+
+        Returns:
+            List[ClientToolInfo]: List of client tool information.
+        """
+        if not cls.client_tool_registry:
+            cls.client_tool_registry = [ClientToolInfo.from_toolset(tool_class) for tool_class in cls.tool_registry]
+            cls.client_tool_registry.sort(key=lambda x: x.name.lower())
+
+        return cls.client_tool_registry
 
     @classmethod
     def get_required_tools(cls, toolset_name: str) -> List[str]:

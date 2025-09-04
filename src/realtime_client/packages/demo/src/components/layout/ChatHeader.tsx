@@ -23,13 +23,13 @@ export const ChatHeader = React.forwardRef<HTMLDivElement, ChatHeaderProps>(
       <header
         ref={ref}
         className={cn(
-          "sticky top-0 z-40 border-b border-border",
+          "sticky top-0 z-40",
           "bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
           className
         )}
       >
         <div className="h-14 px-4 flex items-center justify-between">
-          {/* Left side: Menu toggle (mobile) and agent name */}
+          {/* Left side: Menu toggle (mobile) and session name dropdown */}
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
@@ -40,15 +40,11 @@ export const ChatHeader = React.forwardRef<HTMLDivElement, ChatHeaderProps>(
             >
               <Menu className="h-5 w-5" />
             </Button>
-            <span className="text-sm font-medium hidden sm:inline">
-              Agent C Realtime
-            </span>
-          </div>
-
-          {/* Center: Session name dropdown */}
-          <div className="flex-1 flex justify-center">
             <SessionNameDropdown sessionName={sessionName} />
           </div>
+
+          {/* Center: Spacer for layout balance */}
+          <div className="flex-1" />
 
           {/* Right side: Connection status and audio controls */}
           <div className="flex items-center gap-2">

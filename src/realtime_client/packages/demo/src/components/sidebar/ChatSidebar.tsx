@@ -5,12 +5,14 @@ import { cn } from "@/lib/utils"
 import { SidebarTopMenu } from "./SidebarTopMenu"
 import { ChatSessionList } from "./ChatSessionList"
 import { UserDisplay } from "./UserDisplay"
-import { X } from "lucide-react"
+import { X, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 export interface ChatSidebarProps {
   isOpen?: boolean
+  isCollapsed?: boolean
   onClose?: () => void
+  onToggleCollapse?: () => void
   className?: string
 }
 
@@ -20,7 +22,7 @@ export interface ChatSidebarProps {
  * Mobile: Overlay with backdrop
  */
 export const ChatSidebar = React.forwardRef<HTMLDivElement, ChatSidebarProps>(
-  ({ isOpen = true, onClose, className }, ref) => {
+  ({ isOpen = true, isCollapsed = false, onClose, onToggleCollapse, className }, ref) => {
     const [isMobile, setIsMobile] = React.useState(false)
 
     // Detect mobile viewport
@@ -84,15 +86,45 @@ export const ChatSidebar = React.forwardRef<HTMLDivElement, ChatSidebarProps>(
         <div
           ref={ref}
           className={cn(
-            "w-72 border-r border-border bg-muted/30",
+            "border-r border-border bg-muted/30 transition-all duration-300 ease-in-out",
             "lg:sticky lg:top-0 lg:h-screen lg:flex lg:flex-col",
             "hidden lg:flex", // Hide on mobile, show on desktop
+            isCollapsed ? "w-16" : "w-72",
             className
           )}
         >
-          <SidebarTopMenu />
-          <ChatSessionList />
-          <UserDisplay />
+          {/* Sidebar Header with Title and Collapse Button */}
+          <div className="flex items-center justify-between px-2 pt-2 pb-1 border-b border-border mb-4">
+            <span className={cn(
+              "text-sm font-semibold transition-opacity duration-200",
+              isCollapsed ? "opacity-0 w-0" : "opacity-100 px-2"
+            )}>
+              Agent C Realtime
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onToggleCollapse}
+              className="h-8 w-8 flex-shrink-0"
+              aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {isCollapsed ? (
+                <ChevronRight className="h-4 w-4" />
+              ) : (
+                <ChevronLeft className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+          
+          {/* Sidebar Content */}
+          <div className={cn(
+            "flex flex-col flex-1 overflow-hidden",
+            isCollapsed && "items-center"
+          )}>
+            <SidebarTopMenu isCollapsed={isCollapsed} />
+            <ChatSessionList isCollapsed={isCollapsed} />
+            <UserDisplay isCollapsed={isCollapsed} />
+          </div>
         </div>
       )
     }

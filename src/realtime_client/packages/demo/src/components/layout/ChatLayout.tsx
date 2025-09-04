@@ -23,6 +23,7 @@ export interface ChatLayoutProps {
 export const ChatLayout = React.forwardRef<HTMLDivElement, ChatLayoutProps>(
   ({ outputMode = 'chat', sessionName, className, children }, ref) => {
     const [sidebarOpen, setSidebarOpen] = React.useState(false)
+    const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false)
     const [currentOutputMode, setCurrentOutputMode] = React.useState<OutputMode>(outputMode)
 
     // Note: Output mode is controlled by the InputArea component internally
@@ -40,7 +41,9 @@ export const ChatLayout = React.forwardRef<HTMLDivElement, ChatLayoutProps>(
         {/* Sidebar */}
         <ChatSidebar 
           isOpen={sidebarOpen}
+          isCollapsed={sidebarCollapsed}
           onClose={() => setSidebarOpen(false)}
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
 
         {/* Main Content Area */}
@@ -55,10 +58,12 @@ export const ChatLayout = React.forwardRef<HTMLDivElement, ChatLayoutProps>(
           <MainContentArea outputMode={currentOutputMode} />
 
           {/* Input Area - Using SSR-safe wrapper to prevent TipTap build issues */}
-          <div className="border-t border-border">
-            <InputAreaWrapper 
-              className="max-w-4xl mx-auto"
-            />
+          <div className="bg-muted/30">
+            <div className="max-w-4xl mx-auto p-4">
+              <InputAreaWrapper 
+                className="w-full"
+              />
+            </div>
           </div>
         </div>
       </div>

@@ -1,5 +1,5 @@
 from fastapi import Request, Depends, HTTPException
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from pydantic import create_model
 
 from agent_c_api.config.config_loader import get_allowed_params
@@ -28,6 +28,10 @@ def get_agent_config_loader(request: Request) -> 'AgentConfigLoader':
 def get_heygen_client(request: Request) -> 'HeyGenStreamingClient':
     """FastAPI dependency that provides the HeyGenStreamingClient from app state."""
     return request.app.state.heygen_client
+
+def get_heygen_avatar_list(request: Request) -> List:
+    """FastAPI dependency that provides the HeyGenStreamingClient from app state."""
+    return request.app.state.heygen_avatar_list
 
 def build_fields_from_config(config: dict) -> dict:
     """

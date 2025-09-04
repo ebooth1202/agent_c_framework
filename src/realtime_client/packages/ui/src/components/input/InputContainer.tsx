@@ -33,9 +33,9 @@ const InputContainer = React.forwardRef<HTMLDivElement, InputContainerProps>(
         ref={ref}
         className={cn(
           // Base flex container with proper spacing
-          "flex flex-col gap-3.5 m-3.5",
-          // Border and background styling
-          "rounded-lg border border-border bg-background",
+          "flex flex-col gap-3.5 p-3.5",
+          // Rounded corners and background styling (no border)
+          "rounded-xl bg-background",
           // Focus-within state for child focus indication
           "focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
           // Smooth transitions for focus states

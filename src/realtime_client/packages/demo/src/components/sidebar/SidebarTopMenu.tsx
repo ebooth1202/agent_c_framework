@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 
 export interface SidebarTopMenuProps {
   onNewChat?: () => void
+  isCollapsed?: boolean
   className?: string
 }
 
@@ -15,7 +16,7 @@ export interface SidebarTopMenuProps {
  * Provides session management actions at the top of the sidebar
  */
 export const SidebarTopMenu = React.forwardRef<HTMLDivElement, SidebarTopMenuProps>(
-  ({ onNewChat, className }, ref) => {
+  ({ onNewChat, isCollapsed, className }, ref) => {
     const handleNewChat = React.useCallback(() => {
       // Clear current session
       // For now, we'll just refresh - actual implementation will come with session management
@@ -39,14 +40,16 @@ export const SidebarTopMenu = React.forwardRef<HTMLDivElement, SidebarTopMenuPro
         <Button
           onClick={handleNewChat}
           className={cn(
-            "inline-flex items-center justify-center h-9 px-4 py-2 rounded-lg w-full",
+            "inline-flex items-center justify-center h-9 rounded-lg w-full",
             "bg-primary text-primary-foreground hover:bg-primary/90",
-            "transition duration-300"
+            "transition duration-300",
+            isCollapsed ? "px-0" : "px-4 py-2"
           )}
           aria-label="Start a new chat"
+          title={isCollapsed ? "New Chat" : undefined}
         >
-          <Plus className="h-4 w-4 mr-2" />
-          <span>New Chat</span>
+          <Plus className={cn("h-4 w-4", !isCollapsed && "mr-2")} />
+          {!isCollapsed && <span>New Chat</span>}
         </Button>
       </div>
     )
