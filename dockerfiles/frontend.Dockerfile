@@ -16,7 +16,9 @@ RUN npm install
 
 # Then copy the rest of the app
 COPY src/agent_c_api_ui/agent_c_react_client/ ./
+COPY src/agent_c_api_ui/agent_c_react_client/vite.config.js.docker ./vite.config.js
 COPY agent_c_config /app/agent_c_config
+
 # Set environment variables
 ARG NODE_ENV=development
 ENV NODE_ENV=${NODE_ENV}

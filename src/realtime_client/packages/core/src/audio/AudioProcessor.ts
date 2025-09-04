@@ -66,14 +66,10 @@ export class AudioProcessor {
         );
       }
       
-      if (!('AudioWorklet' in AudioContext.prototype)) {
-        throw new AudioProcessorError(
-          'AudioWorklet is not supported in this browser',
-          AudioProcessorErrorCode.NOT_SUPPORTED
-        );
-      }
+      // Request microphone access FIRST to trigger permission prompt
+      await this.requestMicrophoneAccess();
       
-      // Create audio context
+      // Create audio context after we have microphone permission
       const AudioContextClass = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (!AudioContextClass) {
         throw new Error('AudioContext not supported');
@@ -82,11 +78,16 @@ export class AudioProcessor {
         sampleRate: this.config.sampleRate
       });
       
+      // Check AudioWorklet support AFTER creating the AudioContext
+      if (!this.audioContext.audioWorklet) {
+        throw new AudioProcessorError(
+          'AudioWorklet is not supported in this browser',
+          AudioProcessorErrorCode.NOT_SUPPORTED
+        );
+      }
+      
       // Load the audio worklet module
       await this.loadWorklet();
-      
-      // Request microphone access
-      await this.requestMicrophoneAccess();
       
       // Set up audio nodes
       await this.setupAudioNodes();
@@ -118,14 +119,36 @@ export class AudioProcessor {
     }
     
     try {
+      // Check if audioWorklet is available
+      if (!this.audioContext.audioWorklet) {
+        throw new AudioProcessorError(
+          'AudioWorklet API is not available',
+          AudioProcessorErrorCode.NOT_SUPPORTED
+        );
+      }
+      
+      if (this.config.debug) {
+        console.warn('[AudioProcessor] Loading worklet from:', this.config.workletPath);
+        console.warn('[AudioProcessor] AudioContext state:', this.audioContext.state);
+        console.warn('[AudioProcessor] AudioContext sample rate:', this.audioContext.sampleRate);
+      }
+      
       await this.audioContext.audioWorklet.addModule(this.config.workletPath);
       
       if (this.config.debug) {
-        // console.log('[AudioProcessor] Worklet loaded from:', this.config.workletPath);
+        console.warn('[AudioProcessor] Worklet loaded successfully from:', this.config.workletPath);
       }
     } catch (error) {
+      const errorDetails = error instanceof Error ? error.message : String(error);
+      const detailedMessage = `Failed to load audio worklet from ${this.config.workletPath}. Error: ${errorDetails}. ` +
+        `Please ensure the worklet file exists and is accessible. AudioContext state: ${this.audioContext?.state}, ` +
+        `Sample rate: ${this.audioContext?.sampleRate}`;
+      
+      console.error('[AudioProcessor] Worklet load error:', error);
+      console.error('[AudioProcessor] Detailed error:', detailedMessage);
+      
       throw new AudioProcessorError(
-        `Failed to load audio worklet from ${this.config.workletPath}`,
+        detailedMessage,
         AudioProcessorErrorCode.WORKLET_LOAD_ERROR,
         error
       );

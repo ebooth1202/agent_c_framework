@@ -48,7 +48,7 @@ import { getCurrentUser } from '@/lib/auth'; // Not from SDK
 
 const UserDisplay = () => {
   const user = getCurrentUser(); // Parses JWT for user info
-  
+
   return (
     <div className="user-info">
       {/* Display user.sub (username) from JWT */}
@@ -73,7 +73,7 @@ import { getToken, getSessionInfo } from '@/lib/auth';
 
 export function ChatPage() {
   const [client, setClient] = useState<RealtimeClient | null>(null);
-  
+
   useEffect(() => {
     const initializeClient = async () => {
       // Get auth token from cookies
@@ -82,10 +82,10 @@ export function ChatPage() {
         router.push('/login');
         return;
       }
-      
+
       // Get session info from login response
       const sessionInfo = await getSessionInfo();
-      
+
       // Create client with auth
       const realtimeClient = new RealtimeClient({
         apiUrl: process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws/v1',
@@ -99,23 +99,23 @@ export function ChatPage() {
           respectTurnState: true
         }
       });
-      
+
       // Connect to WebSocket
       await realtimeClient.connect();
       setClient(realtimeClient);
     };
-    
+
     initializeClient();
-    
+
     return () => {
       client?.disconnect();
       client?.destroy();
     };
   }, []);
-  
+
   // Wrap app in provider with initialized client
   if (!client) return <LoadingScreen />;
-  
+
   return (
     <AgentCProvider client={client}>
       <ChatInterface />
@@ -187,39 +187,39 @@ const AvatarDisplayView = () => {
     terminateAvatar,
     avatarSession 
   } = useAvatar();
-  
+
   const client = useRealtimeClient();
   const [heygenAvatar, setHeygenAvatar] = useState(null);
-  
+
   // Initialize HeyGen session
   const startAvatarSession = async (avatarId: string) => {
     // 1. Get HeyGen token from auth
     const heygenToken = getHeyGenToken(); // From auth.ts
-    
+
     // 2. Create HeyGen streaming avatar instance
     const avatar = new StreamingAvatar({ token: heygenToken });
-    
+
     // 3. Create session with HeyGen
     await avatar.createStartAvatar({
       avatarName: avatarId,
       quality: 'high',
       voice: { voiceId: 'avatar' } // Special voice mode
     });
-    
+
     // 4. Wait for STREAM_READY event from HeyGen
     avatar.on('stream-ready', (event) => {
       // 5. CRITICAL: Notify Agent C of avatar session
       client.setAvatarSession(event.sessionId, avatarId);
-      
+
       // 6. Attach stream to video element
       if (videoRef.current && event.stream) {
         videoRef.current.srcObject = event.stream;
       }
     });
-    
+
     setHeygenAvatar(avatar);
   };
-  
+
   // Agent C automatically routes audio through avatar when session is set
   // No PCM streaming occurs - HeyGen handles all audio
 };
@@ -238,26 +238,26 @@ const OutputModeManager = () => {
   const { setVoiceModel, availableVoices } = useVoiceModel();
   const { initializeAvatar, terminateAvatar } = useAvatar();
   const [outputMode, setOutputMode] = useState<'chat' | 'avatar' | 'voice'>('chat');
-  
+
   const handleOutputModeChange = async (option: OutputOption) => {
     // Clean up previous mode
     if (outputMode === 'avatar') {
       await terminateAvatar();
     }
-    
+
     switch (option.type) {
       case 'text':
         // Set voice to 'none' - text only mode
         setVoiceModel('none');
         setOutputMode('chat');
         break;
-        
+
       case 'voice':
         // Set specific voice for audio streaming
         setVoiceModel(option.metadata.voiceId);
         setOutputMode('voice');
         break;
-        
+
       case 'avatar':
         // Initialize avatar session
         await initializeAvatar(option.metadata.avatarId);
@@ -266,7 +266,7 @@ const OutputModeManager = () => {
         break;
     }
   };
-  
+
   return (
     <OutputSelector
       selectedOption={currentOption}
@@ -390,6 +390,7 @@ Audio routes through HeyGen (no PCM streaming)
 ### Must Build Now (Core Functionality):
 
 1. **Authentication Integration**
+   
    ```typescript
    // lib/auth-context.tsx
    - Wraps auth.ts functions
@@ -398,6 +399,7 @@ Audio routes through HeyGen (no PCM streaming)
    ```
 
 2. **Client Initialization**
+   
    ```typescript
    // components/ClientProvider.tsx
    - Initializes RealtimeClient with auth
@@ -406,6 +408,7 @@ Audio routes through HeyGen (no PCM streaming)
    ```
 
 3. **Connection Management**
+   
    ```typescript
    // components/ConnectionStatus.tsx
    - Uses useConnection() hook
@@ -440,7 +443,7 @@ const ConnectionStatus = () => {
     stats,
     reconnect 
   } = useConnection();
-  
+
   return (
     <div className="flex items-center gap-2">
       <div className={cn(
@@ -473,7 +476,7 @@ const AudioControls = () => {
     status,
     canSendInput 
   } = useAudio({ respectTurnState: true });
-  
+
   return (
     <div className="flex items-center gap-2">
       <Button
@@ -531,6 +534,7 @@ const AudioControls = () => {
 ### Required Test Scenarios:
 
 1. **Auth Token Expiry**
+   
    ```typescript
    // Test reconnection with refreshed token
    authManager.on('auth:tokens-refreshed', (tokens) => {
@@ -539,18 +543,21 @@ const AudioControls = () => {
    ```
 
 2. **Avatar Session Lifecycle**
+   
    ```typescript
    // Test avatar initialization → session set → termination
    // Ensure voice mode switches correctly
    ```
 
 3. **Turn State Transitions**
+   
    ```typescript
    // Test audio stops when losing turn
    // Test UI updates reflect turn state
    ```
 
 4. **Message Accumulation**
+   
    ```typescript
    // Test partial text updates
    // Test completion creates full message
