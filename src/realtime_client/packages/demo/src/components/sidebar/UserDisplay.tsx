@@ -4,6 +4,7 @@ import * as React from "react"
 import { ChevronUp, LogOut, User } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
+import { useUserData } from "@agentc/realtime-react"
 import { cn } from "@/lib/utils"
 import {
   DropdownMenu,
@@ -19,49 +20,16 @@ export interface UserDisplayProps {
 
 /**
  * UserDisplay component - Shows user info and provides logout functionality
- * Located at the bottom of the sidebar with user avatar and details
+ * 
+ * This component now gets user data from the WebSocket connection via
+ * the useUserData hook, not from the auth context. The auth context only
+ * manages authentication state and tokens.
  */
 export const UserDisplay = React.forwardRef<HTMLDivElement, UserDisplayProps>(
   ({ isCollapsed, className }, ref) => {
     const router = useRouter()
-    const { user, logout } = useAuth()
-
-    // DEBUG: Log what we're receiving from auth context
-    React.useEffect(() => {
-      console.log('%c[UserDisplay] Component mounted/updated', 'color: magenta; font-weight: bold');
-      console.log('[UserDisplay] User object received from auth:', user);
-      
-      if (!user) {
-        console.error('%c[UserDisplay] 🚨 USER IS NULL!', 'color: red; font-size: 14px; font-weight: bold');
-        console.error('[UserDisplay] This will cause fallback values to be displayed!');
-      } else {
-        console.log('[UserDisplay] User data breakdown:', {
-          hasUserId: !!user.user_id,
-          userId: user.user_id,
-          hasEmail: !!user.email,
-          email: user.email,
-          hasUserName: !!user.user_name,
-          userName: user.user_name,
-          hasFirstName: !!user.first_name,
-          firstName: user.first_name,
-          hasLastName: !!user.last_name,
-          lastName: user.last_name,
-          hasId: !!user.id,
-          id: user.id,
-          allKeys: Object.keys(user)
-        });
-        
-        // CRITICAL: Check for missing fields
-        const missingFields = [];
-        if (!user.email) missingFields.push('email');
-        if (!user.user_name) missingFields.push('user_name');
-        if (!user.user_id && !user.id) missingFields.push('user_id/id');
-        
-        if (missingFields.length > 0) {
-          console.error(`%c[UserDisplay] 🚨 MISSING CRITICAL FIELDS: ${missingFields.join(', ')}`, 'color: red; font-weight: bold');
-        }
-      }
-    }, [user]);
+    const { logout } = useAuth()
+    const { user, isLoading: isUserLoading } = useUserData()
 
     const handleLogout = React.useCallback(() => {
       logout()
@@ -78,36 +46,24 @@ export const UserDisplay = React.forwardRef<HTMLDivElement, UserDisplayProps>(
       return name[0].toUpperCase()
     }
 
-    // Display the user_name ONLY - this is what the user wants to see
+    // Display the user_name from WebSocket data
     const getDisplayName = () => {
       if (user?.user_name) {
         return user.user_name;
       }
-      // NO FALLBACK TO "User" - if there's no user_name, that's a critical error
-      console.error('🚨 CRITICAL: No user_name available in user object:', user);
-      return "ERROR: No Username";
+      // Show loading state while waiting for WebSocket data
+      if (isUserLoading) {
+        return "Loading...";
+      }
+      // This should rarely happen - only if WebSocket fails to send user data
+      return "Unknown User";
     }
 
     const displayName = getDisplayName()
     const userId = user?.user_id || "unknown"
-    const displayEmail = user?.email || "user@example.com"
+    const displayEmail = user?.email || (isUserLoading ? "loading..." : "no-email@example.com")
     const initials = getInitials(displayName)
     
-    // Log what will be displayed
-    React.useEffect(() => {
-      console.log('[UserDisplay] Rendering with values:', {
-        displayName,
-        displayEmail,
-        userId,
-        initials,
-        isFallback: displayName === "User" || displayEmail === "user@example.com"
-      });
-      
-      if (displayName === "User" || displayEmail === "user@example.com") {
-        console.error('%c[UserDisplay] 🚨 USING FALLBACK VALUES!', 'color: red; font-size: 14px; font-weight: bold');
-      }
-    }, [displayName, displayEmail, userId, initials]);
-
     // When collapsed, show only avatar
     if (isCollapsed) {
       return (
@@ -129,18 +85,9 @@ export const UserDisplay = React.forwardRef<HTMLDivElement, UserDisplayProps>(
                 title={displayName}
               >
                 <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
-                  {user?.avatar ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img 
-                      src={user.avatar} 
-                      alt={displayName}
-                      className="size-8 rounded-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-xs font-semibold text-primary">
-                      {initials}
-                    </span>
-                  )}
+                  <span className="text-xs font-semibold text-primary">
+                    {initials}
+                  </span>
                 </div>
               </button>
             </DropdownMenuTrigger>
@@ -183,18 +130,9 @@ export const UserDisplay = React.forwardRef<HTMLDivElement, UserDisplayProps>(
               aria-label="User menu"
             >
               <div className="flex-shrink-0 size-8 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
-                {user?.avatar ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img 
-                    src={user.avatar} 
-                    alt={displayName}
-                    className="size-8 rounded-full object-cover"
-                  />
-                ) : (
-                  <span className="text-xs font-semibold text-primary">
-                    {initials}
-                  </span>
-                )}
+                <span className="text-xs font-semibold text-primary">
+                  {initials}
+                </span>
               </div>
               <div className="flex flex-col items-start overflow-hidden pr-4">
                 <span className="truncate text-sm font-medium">

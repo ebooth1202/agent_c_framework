@@ -26,10 +26,7 @@ logger = LoggingManager(__name__).get_logger()
 @router.post("/login", response_model=RealtimeLoginResponse)
 async def login(login_request: UserLoginRequest,
                 auth_service: "AuthService" = Depends(get_auth_service),
-                chat_session_manager: "ChatSessionManager" = Depends(get_chat_session_manager),
-                agent_config_loader: "AgentConfigLoader" = Depends(get_agent_config_loader),
-                heygen_client: "HeyGenStreamingClient" = Depends(get_heygen_client),
-                avatar_list: List = Depends(get_heygen_avatar_list)) -> RealtimeLoginResponse:
+                heygen_client: "HeyGenStreamingClient" = Depends(get_heygen_client)) -> RealtimeLoginResponse:
     """
     Authenticate user and return config with token.
     """

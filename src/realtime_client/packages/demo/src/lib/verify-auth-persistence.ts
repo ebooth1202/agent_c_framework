@@ -1,6 +1,6 @@
 /**
  * Verification script for auth persistence
- * This ensures that full user data is properly stored and retrieved
+ * Updated for the new simplified authentication flow
  */
 
 import type { LoginResponse } from './auth';
@@ -12,75 +12,83 @@ export function verifyAuthPersistence() {
     return false;
   }
 
-  // Try to get stored user data
-  const storedUserData = localStorage.getItem('agentc-user-data');
-  const storedLoginResponse = localStorage.getItem('agentc-login-response');
+  console.log('=== AUTH PERSISTENCE VERIFICATION ===');
+  console.log('Note: User data now comes from WebSocket, not from login response');
 
-  if (!storedUserData && !storedLoginResponse) {
-    console.log('No stored auth data found (user not logged in)');
-    return null;
+  // Check for JWT token
+  const token = localStorage.getItem('agentc-token');
+  const uiSessionId = localStorage.getItem('agentc-ui-session-id');
+  
+  // These should NO LONGER exist in the new flow
+  const oldUserData = localStorage.getItem('agentc-user-data');
+  const oldLoginResponse = localStorage.getItem('agentc-login-response');
+
+  const results: any = {
+    hasToken: !!token,
+    hasUiSessionId: !!uiSessionId,
+    // These should be false in the new flow
+    hasOldUserData: !!oldUserData,
+    hasOldLoginResponse: !!oldLoginResponse
+  };
+
+  // Report findings
+  console.log('\n📋 Current State:');
+  console.log('✅ JWT Token:', results.hasToken ? 'Present' : '❌ Missing');
+  console.log('✅ UI Session ID:', results.hasUiSessionId ? 'Present' : '❌ Missing');
+
+  if (results.hasOldUserData || results.hasOldLoginResponse) {
+    console.warn('\n⚠️ WARNING: Old auth data found!');
+    console.warn('The following keys should be removed:');
+    if (results.hasOldUserData) {
+      console.warn('  - agentc-user-data (no longer used)');
+    }
+    if (results.hasOldLoginResponse) {
+      console.warn('  - agentc-login-response (no longer used)');
+    }
+    console.warn('\nTo clean up, run: localStorage.removeItem("agentc-user-data"); localStorage.removeItem("agentc-login-response");');
   }
 
-  try {
-    const userData = storedUserData ? JSON.parse(storedUserData) : null;
-    const loginResponse = storedLoginResponse ? JSON.parse(storedLoginResponse) as LoginResponse : null;
-
-    console.log('Stored User Data:', userData);
-    console.log('Stored Login Response:', loginResponse);
-
-    // Verify user data has all expected fields
-    if (userData) {
-      const expectedFields = [
-        'id',
-        'user_id',
-        'user_name',
-        'email',
-        'first_name', 
-        'last_name',
-        'is_active',
-        'roles',
-        'groups',
-        'created_at',
-        'last_login'
-      ];
-
-      const missingFields = expectedFields.filter(field => !(field in userData));
-      
-      if (missingFields.length > 0) {
-        console.warn('Missing user fields:', missingFields);
-      } else {
-        console.log('✓ All user fields present');
+  // Parse and display token payload (without exposing sensitive data)
+  if (token) {
+    try {
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(atob(parts[1]));
+        console.log('\n🔐 Token Payload (non-sensitive):');
+        console.log('  Subject:', payload.sub || 'N/A');
+        console.log('  Expires:', payload.exp ? new Date(payload.exp * 1000).toLocaleString() : 'N/A');
+        
+        const now = Math.floor(Date.now() / 1000);
+        const timeLeft = payload.exp ? payload.exp - now : 0;
+        if (timeLeft > 0) {
+          console.log('  Time until expiry:', Math.floor(timeLeft / 60), 'minutes');
+        } else {
+          console.warn('  ⚠️ Token has expired!');
+        }
       }
+    } catch (error) {
+      console.error('Failed to parse token:', error);
     }
-
-    // Verify login response has expected data
-    if (loginResponse) {
-      const hasAllData = !!(
-        loginResponse.agent_c_token &&
-        loginResponse.user &&
-        loginResponse.agents &&
-        loginResponse.avatars &&
-        loginResponse.toolsets &&
-        loginResponse.voices &&
-        loginResponse.ui_session_id
-      );
-
-      if (hasAllData) {
-        console.log('✓ Complete login response data present');
-      } else {
-        console.warn('Login response missing some expected data');
-      }
-    }
-
-    return {
-      userData,
-      loginResponse,
-      isComplete: !!(userData && loginResponse)
-    };
-  } catch (error) {
-    console.error('Error parsing stored auth data:', error);
-    return false;
   }
+
+  if (uiSessionId) {
+    console.log('\n🔗 UI Session ID:', uiSessionId);
+    console.log('  This is used for WebSocket reconnection');
+  }
+
+  console.log('\n📌 Important Notes:');
+  console.log('1. User profile data now comes from the WebSocket chat_user_data event');
+  console.log('2. The auth context only manages tokens and authentication state');
+  console.log('3. Use the useUserData() hook to access user profile information');
+  console.log('4. Login response only contains: agent_c_token, heygen_token, ui_session_id');
+
+  console.log('\n=== END VERIFICATION ===');
+
+  return {
+    isAuthenticated: results.hasToken,
+    hasUiSessionId: results.hasUiSessionId,
+    needsCleanup: results.hasOldUserData || results.hasOldLoginResponse
+  };
 }
 
 // Export for use in browser console

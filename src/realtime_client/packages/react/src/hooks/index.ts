@@ -26,3 +26,7 @@ export type { UseConnectionReturn, ConnectionStats } from './useConnection';
 // Avatar management
 export { useAvatar } from './useAvatar';
 export type { UseAvatarReturn } from './useAvatar';
+
+// User data from WebSocket
+export { useUserData } from './useUserData';
+export type { UseUserDataReturn, User } from './useUserData';

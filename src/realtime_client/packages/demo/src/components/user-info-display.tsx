@@ -1,19 +1,23 @@
 /**
  * User Info Display Component
- * Demonstrates accessing full user data from auth context
+ * Demonstrates accessing full user data from WebSocket
  */
 
 'use client';
 
 import React from 'react';
 import { useAuth } from '@/contexts/auth-context';
+import { useUserData } from '@agentc/realtime-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { User, Mail, Calendar, Shield, Users } from 'lucide-react';
 
 export function UserInfoDisplay() {
-  const { user, isLoading, loginResponse } = useAuth();
+  const { isAuthenticated, getUiSessionId } = useAuth();
+  const { user, isLoading } = useUserData();
+  
+  const uiSessionId = getUiSessionId();
 
   if (isLoading) {
     return (
@@ -31,7 +35,7 @@ export function UserInfoDisplay() {
     );
   }
 
-  if (!user) {
+  if (!isAuthenticated) {
     return (
       <Card className="w-full max-w-2xl">
         <CardHeader>
@@ -42,7 +46,20 @@ export function UserInfoDisplay() {
     );
   }
 
-  const formatDate = (dateString: string | null) => {
+  if (!user) {
+    return (
+      <Card className="w-full max-w-2xl">
+        <CardHeader>
+          <CardTitle>Loading User Data</CardTitle>
+          <CardDescription>
+            Waiting for user data from WebSocket connection...
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  const formatDate = (dateString: string | undefined | null) => {
     if (!dateString) return 'N/A';
     try {
       return new Date(dateString).toLocaleString();
@@ -59,7 +76,7 @@ export function UserInfoDisplay() {
           User Information
         </CardTitle>
         <CardDescription>
-          Complete user profile data from authentication
+          Complete user profile data from WebSocket connection
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -69,7 +86,7 @@ export function UserInfoDisplay() {
           <div className="grid gap-2">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium w-32">User ID:</span>
-              <span className="text-sm text-muted-foreground">{user.user_id || user.id}</span>
+              <span className="text-sm text-muted-foreground">{user.user_id}</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium w-32">Username:</span>
@@ -160,13 +177,13 @@ export function UserInfoDisplay() {
         </div>
 
         {/* Session Information */}
-        {loginResponse?.ui_session_id && (
+        {uiSessionId && (
           <div className="space-y-3">
             <h3 className="text-sm font-semibold text-muted-foreground">Session</h3>
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium w-32">UI Session ID:</span>
               <code className="text-xs bg-muted px-2 py-1 rounded">
-                {loginResponse.ui_session_id}
+                {uiSessionId}
               </code>
             </div>
           </div>
@@ -182,6 +199,14 @@ export function UserInfoDisplay() {
               {JSON.stringify(user, null, 2)}
             </pre>
           </details>
+        </div>
+
+        {/* Note about data source */}
+        <div className="text-xs text-muted-foreground p-3 bg-muted/50 rounded">
+          <strong>Note:</strong> This user data comes from the WebSocket connection&apos;s 
+          <code className="mx-1 px-1 bg-background rounded">chat_user_data</code> event, 
+          not from the login response. The authentication context only manages tokens and 
+          authentication state.
         </div>
       </CardContent>
     </Card>
