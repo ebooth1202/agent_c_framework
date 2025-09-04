@@ -17,8 +17,9 @@ def test_node_core_structure(policies):
 
     pol = policies["node"]
 
-    # Core structure
-    assert isinstance(pol.get("flags", []), list)
+    # Core structure - flags can be either list or dict
+    flags = pol.get("flags", [])
+    assert isinstance(flags, (list, dict)), "flags should be list or dict"
     assert isinstance(pol.get("deny_global_flags", []), list)
     assert isinstance(pol.get("default_timeout", 0), int)
     assert isinstance(pol.get("env_overrides", {}), dict)
@@ -32,9 +33,60 @@ def test_node_allowed_flags(policies):
     pol = policies["node"]
     flags = pol.get("flags", [])
 
-    expected_flags = ["-v", "--version", "--help", "-c"]
+    # Handle both list and dict formats
+    if isinstance(flags, dict):
+        flag_names = set(flags.keys())
+    else:
+        flag_names = set(flags)
+
+    expected_flags = {"-v", "--version", "--help", "-c"}
     for flag in expected_flags:
-        assert flag in flags, f"node should allow {flag} flag"
+        assert flag in flag_names, f"node should allow {flag} flag"
+
+
+def test_node_test_flags(policies):
+    """Test node test-related flags configuration"""
+    if "node" not in policies:
+        pytest.skip("node policy not present")
+
+    pol = policies["node"]
+    flags = pol.get("flags", [])
+
+    # Handle both list and dict formats
+    if isinstance(flags, dict):
+        flag_names = set(flags.keys())
+        # Test --test flag has proper configuration
+        test_flag_config = flags.get("--test", {})
+        assert test_flag_config.get("suppress_success_output", False), "--test should suppress success output"
+        assert test_flag_config.get("allow_test_mode", False), "--test should allow test mode"
+    else:
+        flag_names = set(flags)
+
+    test_flags = {"--test", "--test-reporter", "--test-name-pattern"}
+    for flag in test_flags:
+        assert flag in flag_names, f"node should allow {flag} flag"
+
+
+def test_node_suppress_success_output(policies):
+    """Test node suppress_success_output flag configuration"""
+    if "node" not in policies:
+        pytest.skip("node policy not present")
+
+    pol = policies["node"]
+    flags = pol.get("flags", [])
+
+    # Only test if flags are in dict format
+    if isinstance(flags, dict):
+        suppress_flags = [flag for flag, config in flags.items() 
+                         if config.get("suppress_success_output", False)]
+        
+        # Test that some flags have suppress_success_output enabled
+        expected_suppress_flags = {"--test", "-c", "--test-reporter", "--test-name-pattern"}
+        found_suppress_flags = set(suppress_flags)
+        
+        for flag in expected_suppress_flags:
+            if flag in flags:
+                assert flag in found_suppress_flags, f"{flag} should have suppress_success_output enabled"
 
 
 def test_node_denied_flags(policies):
@@ -90,8 +142,9 @@ def test_nodejs_core_structure(policies):
 
     pol = policies["nodejs"]
 
-    # Core structure
-    assert isinstance(pol.get("flags", []), list)
+    # Core structure - flags can be either list or dict
+    flags = pol.get("flags", [])
+    assert isinstance(flags, (list, dict)), "flags should be list or dict"
     assert isinstance(pol.get("deny_global_flags", []), list)
     assert isinstance(pol.get("default_timeout", 0), int)
     assert isinstance(pol.get("env_overrides", {}), dict)
@@ -105,9 +158,15 @@ def test_nodejs_allowed_flags(policies):
     pol = policies["nodejs"]
     flags = pol.get("flags", [])
 
-    expected_flags = ["-v", "--version", "--help"]
+    # Handle both list and dict formats
+    if isinstance(flags, dict):
+        flag_names = set(flags.keys())
+    else:
+        flag_names = set(flags)
+
+    expected_flags = {"-v", "--version", "--help"}
     for flag in expected_flags:
-        assert flag in flags, f"nodejs should allow {flag} flag"
+        assert flag in flag_names, f"nodejs should allow {flag} flag"
 
 
 def test_nodejs_denied_flags(policies):
