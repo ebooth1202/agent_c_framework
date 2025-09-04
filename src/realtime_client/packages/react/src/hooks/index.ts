@@ -30,3 +30,11 @@ export type { UseAvatarReturn } from './useAvatar';
 // User data from WebSocket
 export { useUserData } from './useUserData';
 export type { UseUserDataReturn, User } from './useUserData';
+
+// All initialization data from WebSocket
+export { useAgentCData } from './useAgentCData';
+export type { UseAgentCDataReturn, AgentCData, Agent, Voice, Avatar, Toolset } from './useAgentCData';
+
+// Initialization status tracking
+export { useInitializationStatus, ConnectionState } from './useInitializationStatus';
+export type { UseInitializationStatusReturn } from './useInitializationStatus';

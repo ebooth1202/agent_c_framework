@@ -99,12 +99,13 @@ const UserDisplay = React.forwardRef<HTMLDivElement, UserDisplayProps>(
     ref
   ) => {
     // Get user data from SDK hooks
-    const { user } = useAgentCData();
-    const { isInitialized, pendingEvents } = useInitializationStatus();
+    const { data } = useAgentCData();
+    const { isInitialized, isLoading: initLoading } = useInitializationStatus();
     const { isConnected, connectionState } = useConnection();
 
     // Determine loading state
-    const isLoading = !isInitialized || pendingEvents.includes('chat_user_data');
+    const isLoading = !isInitialized || initLoading;
+    const user = data.user;
     
     // Calculate display name and initials
     const displayName = React.useMemo(() => {
@@ -422,7 +423,7 @@ const UserDisplay = React.forwardRef<HTMLDivElement, UserDisplayProps>(
               <div className="flex-1">
                 <p className="font-medium mb-1">Roles</p>
                 <div className="flex flex-wrap gap-1">
-                  {user.roles.map((role) => (
+                  {user.roles.map((role: string) => (
                     <Badge key={role} variant="outline" className="text-xs">
                       {role}
                     </Badge>
@@ -439,7 +440,7 @@ const UserDisplay = React.forwardRef<HTMLDivElement, UserDisplayProps>(
               <div className="flex-1">
                 <p className="font-medium mb-1">Groups</p>
                 <div className="flex flex-wrap gap-1">
-                  {user.groups.map((group) => (
+                  {user.groups.map((group: string) => (
                     <Badge key={group} variant="outline" className="text-xs">
                       {group}
                     </Badge>
@@ -488,8 +489,9 @@ export const UserAvatar = React.forwardRef<
     className?: string;
   }
 >(({ size = "md", avatarUrl, className }, ref) => {
-  const { user } = useAgentCData();
+  const { data } = useAgentCData();
   const { isInitialized } = useInitializationStatus();
+  const user = data.user;
   
   const sizeClasses = {
     sm: "h-6 w-6 text-xs",

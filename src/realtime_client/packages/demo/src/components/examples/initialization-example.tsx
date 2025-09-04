@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useAgentCData, useInitializationStatus, useRealtimeClient } from '@agentc/realtime-react';
+import { useAgentCData, useInitializationStatus, useRealtimeClient, ConnectionState } from '@agentc/realtime-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -12,8 +12,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
  */
 export function InitializationExample() {
   const client = useRealtimeClient();
-  const { isInitialized, receivedEvents, pendingEvents } = useInitializationStatus();
-  const { user, agents, avatars, voices, toolsets, currentSession } = useAgentCData();
+  const { isInitialized, isLoading, connectionState } = useInitializationStatus();
+  const { data } = useAgentCData();
+  const { user, agents, avatars, voices, toolsets } = data;
 
   return (
     <div className="space-y-6">
@@ -38,26 +39,21 @@ export function InitializationExample() {
             </div>
             
             <div>
-              <span className="text-sm font-medium">Received Events:</span>
-              <div className="flex flex-wrap gap-1 mt-1">
-                {Array.from(receivedEvents).map((event) => (
-                  <Badge key={event} variant="outline" className="text-xs">
-                    {event}
-                  </Badge>
-                ))}
-              </div>
+              <span className="text-sm font-medium">Connection State:</span>
+              <Badge 
+                variant={connectionState === ConnectionState.CONNECTED ? 'default' : 'secondary'}
+                className="ml-2 text-xs"
+              >
+                {connectionState}
+              </Badge>
             </div>
             
-            {pendingEvents.length > 0 && (
+            {isLoading && (
               <div>
-                <span className="text-sm font-medium">Pending Events:</span>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {pendingEvents.map((event) => (
-                    <Badge key={event} variant="secondary" className="text-xs">
-                      {event}
-                    </Badge>
-                  ))}
-                </div>
+                <span className="text-sm font-medium">Status:</span>
+                <span className="text-sm text-muted-foreground ml-2">
+                  Loading initialization data...
+                </span>
               </div>
             )}
           </div>
@@ -197,25 +193,20 @@ export function InitializationExample() {
         </Card>
       </div>
 
-      {/* Current Session */}
+      {/* Session Information Note */}
       <Card>
         <CardHeader>
-          <CardTitle>Current Session</CardTitle>
+          <CardTitle>Session Information</CardTitle>
           <CardDescription>
-            From chat_session_changed event
+            Session data is managed through the useChat hook
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {currentSession ? (
-            <div className="space-y-2 text-sm">
-              <div><strong>ID:</strong> {currentSession.session_id}</div>
-              <div><strong>Name:</strong> {currentSession.session_name || 'Unnamed'}</div>
-              <div><strong>Agent:</strong> {currentSession.agent_config?.name || currentSession.agent_config?.key}</div>
-              <div><strong>Created:</strong> {new Date(currentSession.created_at || '').toLocaleString()}</div>
-            </div>
-          ) : (
-            <p className="text-muted-foreground">No active session</p>
-          )}
+          <p className="text-sm text-muted-foreground">
+            The current session information is available through the useChat hook.
+            The initialization hooks provide configuration data (users, agents, voices, avatars, toolsets)
+            while session-specific data is managed separately.
+          </p>
         </CardContent>
       </Card>
     </div>

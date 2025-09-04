@@ -19,25 +19,25 @@ export function InitializationWrapper({
   children, 
   showDebug = false 
 }: InitializationWrapperProps) {
-  const { isInitialized, receivedEvents, pendingEvents } = useInitializationStatus();
-  const { user, agents, avatars, voices, toolsets, currentSession } = useAgentCData();
+  const { isInitialized, isLoading, connectionState } = useInitializationStatus();
+  const { data } = useAgentCData();
+  const { user, agents, avatars, voices, toolsets } = data;
   
   // Log initialization state for debugging
   useEffect(() => {
     if (showDebug) {
       console.log('[InitializationWrapper] Status:', {
         isInitialized,
-        receivedEvents: Array.from(receivedEvents),
-        pendingEvents,
+        isLoading,
+        connectionState,
         hasUser: !!user,
         agentsCount: agents.length,
         avatarsCount: avatars.length,
         voicesCount: voices.length,
-        toolsetsCount: toolsets.length,
-        hasSession: !!currentSession
+        toolsetsCount: toolsets.length
       });
     }
-  }, [isInitialized, receivedEvents, pendingEvents, user, agents, avatars, voices, toolsets, currentSession, showDebug]);
+  }, [isInitialized, isLoading, connectionState, user, agents, avatars, voices, toolsets, showDebug]);
   
   // Show loading state while initializing
   if (!isInitialized) {
@@ -56,38 +56,38 @@ export function InitializationWrapper({
             <InitStatusItem 
               name="User Profile" 
               eventKey="chat_user_data"
-              received={receivedEvents.has('chat_user_data')} 
+              received={!!user} 
             />
             <InitStatusItem 
               name="Available Agents" 
               eventKey="agent_list"
-              received={receivedEvents.has('agent_list')} 
+              received={agents.length > 0} 
             />
             <InitStatusItem 
               name="Avatar Library" 
               eventKey="avatar_list"
-              received={receivedEvents.has('avatar_list')} 
+              received={avatars.length > 0} 
             />
             <InitStatusItem 
               name="Voice Models" 
               eventKey="voice_list"
-              received={receivedEvents.has('voice_list')} 
+              received={voices.length > 0} 
             />
             <InitStatusItem 
               name="Tool Catalog" 
               eventKey="tool_catalog"
-              received={receivedEvents.has('tool_catalog')} 
+              received={toolsets.length > 0} 
             />
             <InitStatusItem 
               name="Chat Session" 
               eventKey="chat_session_changed"
-              received={receivedEvents.has('chat_session_changed')} 
+              received={isInitialized} 
             />
           </div>
           
-          {pendingEvents.length > 0 && (
+          {isLoading && (
             <p className="text-sm text-muted-foreground text-center mt-4">
-              Waiting for {pendingEvents.length} more event{pendingEvents.length !== 1 ? 's' : ''}...
+              Loading initialization data...
             </p>
           )}
         </div>
@@ -107,7 +107,6 @@ export function InitializationWrapper({
             <div>Avatars: {avatars.length}</div>
             <div>Voices: {voices.length}</div>
             <div>Toolsets: {toolsets.length}</div>
-            <div>Session: {currentSession?.session_id?.slice(0, 8)}...</div>
           </div>
         </div>
         {children}
