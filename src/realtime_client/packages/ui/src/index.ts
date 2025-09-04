@@ -15,8 +15,9 @@ export {
   MarkdownEditor,
   InputToolbar,
   MicrophoneButton,
-  AgentSelector,
-  OutputSelector
+  // Temporarily rename the old ones to avoid conflicts
+  AgentSelector as LegacyAgentSelector,
+  OutputSelector as LegacyOutputSelector
 } from './components/input';
 
 export type { 
@@ -26,20 +27,25 @@ export type {
   MarkdownEditorProps,
   InputToolbarProps,
   MicrophoneButtonProps,
-  AgentSelectorProps,
-  OutputSelectorProps,
+  // Rename old types too
+  AgentSelectorProps as LegacyAgentSelectorProps,
+  OutputSelectorProps as LegacyOutputSelectorProps,
   Agent,
   OutputMode,
   OutputOption
 } from './components/input';
 
-// Control component exports
+// Control component exports - Include the new selectors here
 export {
   ConnectionButton,
-  AudioControls
+  AudioControls,
+  AgentSelector,
+  OutputSelector
 } from './components/controls';
 
 export type {
   ConnectionButtonProps,
-  AudioControlsProps
+  AudioControlsProps,
+  AgentSelectorProps,
+  OutputSelectorProps
 } from './components/controls';
