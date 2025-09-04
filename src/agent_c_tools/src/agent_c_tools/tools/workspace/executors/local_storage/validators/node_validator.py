@@ -25,14 +25,21 @@ class NodeCommandValidator:
             return ValidationResult(False, "Not a node command")
 
         # Handle both old (list) and new (dict) flags format
-        flags_config = policy.get("flags") or []
+        flags_config = policy.get("flags")
+        flags_configured = flags_config is not None
+        
         if isinstance(flags_config, dict):
             allowed_flags = set(flags_config.keys())
             flags_settings = flags_config
-        else:
+        elif isinstance(flags_config, list):
             # Legacy list format
             allowed_flags = set(flags_config)
             flags_settings = {}
+        else:
+            # No flags configuration
+            allowed_flags = set()
+            flags_settings = {}
+            flags_configured = False
             
         deny_global = set(policy.get("deny_global_flags") or [])
         allow_script_paths = bool(policy.get("allow_script_paths", False))
@@ -74,8 +81,8 @@ class NodeCommandValidator:
                 # deny list first
                 if (b in deny_global) or (a in deny_global):
                     return ValidationResult(False, f"Global flag not allowed: {a}")
-                # allow list (if provided)
-                if allowed_flags and (b not in allowed_flags) and (a not in allowed_flags):
+                # allow list (if flags are configured, enforce strictly)
+                if flags_configured and (b not in allowed_flags) and (a not in allowed_flags):
                     return ValidationResult(False, f"Flag not allowed: {a}")
                 used_flags.append(b)
                 
