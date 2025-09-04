@@ -271,7 +271,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
       const parsed = JSON.parse(stored);
       authLog.info('Successfully retrieved stored login response', {
-        hasToken: !!parsed?.token,
+        hasAgentCToken: !!parsed?.agent_c_token,
+        hasHeygenToken: !!parsed?.heygen_token,
         hasUiSessionId: !!parsed?.ui_session_id,
         hasUser: !!parsed?.user,
         userEmail: parsed?.user?.email

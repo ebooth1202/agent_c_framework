@@ -31,7 +31,7 @@ export function ClientProvider({
   respectTurnState = true
 }: ClientProviderProps) {
   const router = useRouter();
-  const { isAuthenticated, isLoading: authLoading, getAuthToken, loginResponse } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, getAuthToken } = useAuth();
   const [configReady, setConfigReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,9 +58,8 @@ export function ClientProvider({
       enableAudio,
       autoReconnect: true,
       
-      // Additional configuration from login response
-      voices: loginResponse?.voices,
-      avatars: loginResponse?.avatars,
+      // Note: voices and avatars are no longer part of config
+      // They will be received via WebSocket events after connection
       
       // Connection settings
       reconnection: {
@@ -82,7 +81,6 @@ export function ClientProvider({
     };
   }, [
     getAuthToken,
-    loginResponse,
     apiUrl,
     enableAudio
   ]);

@@ -17,6 +17,9 @@ import {
   SetSessionMetadataEvent,
   SetSessionMessagesEvent,
   GetUserSessionsEvent,
+  GetVoicesEvent,
+  GetToolCatalogEvent,
+  PingEvent,
   ClientEvent
 } from './types/ClientEvents';
 
@@ -40,6 +43,10 @@ import {
   AgentVoiceChangedEvent,
   ErrorEvent,
   GetUserSessionsResponseEvent,
+  ChatUserDataEvent,
+  VoiceListEvent,
+  ToolCatalogEvent,
+  PongEvent,
   ServerEvent
 } from './types/ServerEvents';
 
@@ -60,6 +67,9 @@ export interface ClientEventMap {
   'set_session_metadata': SetSessionMetadataEvent;
   'set_session_messages': SetSessionMessagesEvent;
   'get_user_sessions': GetUserSessionsEvent;
+  'get_voices': GetVoicesEvent;
+  'get_tool_catalog': GetToolCatalogEvent;
+  'ping': PingEvent;
 }
 
 /**
@@ -85,6 +95,10 @@ export interface ServerEventMap {
   'agent_voice_changed': AgentVoiceChangedEvent;
   'error': ErrorEvent;
   'get_user_sessions_response': GetUserSessionsResponseEvent;
+  'chat_user_data': ChatUserDataEvent;
+  'voice_list': VoiceListEvent;
+  'tool_catalog': ToolCatalogEvent;
+  'pong': PongEvent;
 }
 
 /**
@@ -140,7 +154,10 @@ export class EventRegistry {
     'set_chat_session_name',
     'set_session_metadata',
     'set_session_messages',
-    'get_user_sessions'
+    'get_user_sessions',
+    'get_voices',
+    'get_tool_catalog',
+    'ping'
   ]);
 
   private static readonly serverEventTypes = new Set<string>([
@@ -162,7 +179,11 @@ export class EventRegistry {
     'user_turn_end',
     'agent_voice_changed',
     'error',
-    'get_user_sessions_response'
+    'get_user_sessions_response',
+    'chat_user_data',
+    'voice_list',
+    'tool_catalog',
+    'pong'
   ]);
 
   /**

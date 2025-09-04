@@ -54,12 +54,7 @@ describe('AuthManager', () => {
   const mockLoginResponse: LoginResponse = {
     agent_c_token: createMockJWT({ sub: 'user-123' }, 3600),
     heygen_token: 'heygen-test-token',
-    ui_session_id: 'session-123',
-    user: mockUser,
-    agents: [mockAgent],
-    avatars: [mockAvatar],
-    voices: [mockVoice],
-    toolsets: [mockToolset]
+    ui_session_id: 'session-123'
   };
 
   const mockRefreshResponse: RefreshTokenResponse = {
@@ -193,7 +188,7 @@ describe('AuthManager', () => {
       expect(state.isAuthenticated).toBe(true);
       expect(state.tokens?.agentCToken).toBe(mockLoginResponse.agent_c_token);
       expect(state.tokens?.heygenToken).toBe(mockLoginResponse.heygen_token);
-      expect(state.user).toEqual(mockUser);
+      expect(state.user).toBeNull(); // User data will come from WebSocket events
       expect(state.uiSessionId).toBe('session-123');
       
       // Check events were emitted
@@ -468,15 +463,8 @@ describe('AuthManager', () => {
     });
 
     it('should return user information', () => {
-      expect(authManager.getUser()).toEqual(mockUser);
+      expect(authManager.getUser()).toBeNull(); // User data will come from WebSocket events
       expect(authManager.getUiSessionId()).toBe('session-123');
-    });
-
-    it('should return agents, avatars, voices, and toolsets', () => {
-      expect(authManager.getAgents()).toEqual([mockAgent]);
-      expect(authManager.getAvatars()).toEqual([mockAvatar]);
-      expect(authManager.getVoices()).toEqual([mockVoice]);
-      expect(authManager.getToolsets()).toEqual([mockToolset]);
     });
 
     it('should construct WebSocket URL from API URL', () => {
@@ -509,18 +497,12 @@ describe('AuthManager', () => {
       expect(state.isAuthenticated).toBe(true);
       expect(state.tokens?.agentCToken).toBe(mockLoginResponse.agent_c_token);
       expect(state.tokens?.heygenToken).toBe(mockLoginResponse.heygen_token);
-      expect(state.user).toEqual(mockUser);
+      expect(state.user).toBeNull(); // User data will come from WebSocket events
       expect(state.uiSessionId).toBe('session-123');
       expect(state.wsUrl).toBe('wss://custom.example.com/ws');
       
       // Check login event was emitted
       expect(loginHandler).toHaveBeenCalledWith(mockLoginResponse);
-      
-      // Check data is accessible
-      expect(authManager.getAgents()).toEqual([mockAgent]);
-      expect(authManager.getAvatars()).toEqual([mockAvatar]);
-      expect(authManager.getVoices()).toEqual([mockVoice]);
-      expect(authManager.getToolsets()).toEqual([mockToolset]);
     });
   });
 
