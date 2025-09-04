@@ -38,86 +38,13 @@ Authenticate user and get initial configuration.
 {
   "agent_c_token": "jwt_token_string",
   "heygen_token": "heygen_access_token",
-  "user": {
-    "user_id": "string",
-    "user_name": "string",
-    "email": "string|null",
-    "first_name": "string|null",
-    "last_name": "string|null", 
-    "is_active": true,
-    "roles": ["array_of_strings"],
-    "groups": ["array_of_strings"],
-    "created_at": "iso_timestamp|null",
-    "last_login": "iso_timestamp|null"
-  },
-  "agents": [
-    {
-      "name": "Agent Name",
-      "key": "agent_key", 
-      "agent_description": "Agent description|null",
-      "category": ["array_of_categories"]
-    }
-  ],
-  "avatars": [
-    {
-      "avatar_id": "string",
-      "created_at": 1234567890,
-      "default_voice": "voice_id",
-      "is_public": true,
-      "normal_preview": "preview_url",
-      "pose_name": "pose_name",
-      "status": "status_string"
-    }
-  ],
-  "toolsets": [
-    {
-      "name": "toolset_name",
-      "description": "Description of the toolset functionality",
-      "schemas": {
-        "tool_name": {
-          "type": "function",
-          "function": {
-            "name": "tool_name",
-            "description": "Tool description",
-            "parameters": {
-              "type": "object",
-              "properties": {
-                "param_name": {
-                  "type": "string",
-                  "description": "Parameter description"
-                }
-              },
-              "required": ["param_name"]
-            }
-          }
-        }
-      }
-    }
-  ],
-  "voices": [
-    {
-      "voice_id": "none",
-      "vendor": "system",
-      "description": "No Voice (text only)",
-      "output_format": "none"
-    },
-    {
-      "voice_id": "avatar",
-      "vendor": "heygen",
-      "description": "HeyGen Avatar Voice Model",
-      "output_format": "special"
-    },
-    {
-      "voice_id": "alloy",
-      "vendor": "openai",
-      "description": "OpenAI Alloy voice",
-      "output_format": "pcm16"
-    }
-  ],
   "ui_session_id": "three-word-slug"
 }
 ```
 
+**Note:** User data, agents, avatars, tools, and voices are provided via the WebSocket initialization events after connection, not in the login response.
+
+```
 #### `GET /rt/refresh_token`
 
 Refresh JWT and HeyGen tokens.
