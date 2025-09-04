@@ -396,7 +396,7 @@ class RealtimeBridge(AgentBridge):
         self.websocket=websocket
         self.is_running = True
         self.logger.info (f"RealtimeBridge started for session {self.chat_session.session_id}")
-
+        await self.send_client_initial_data()
         await self.send_user_turn_start()
 
         try:

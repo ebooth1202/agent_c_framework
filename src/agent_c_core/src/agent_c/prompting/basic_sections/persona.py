@@ -100,10 +100,12 @@ class DynamicPersonaSection(PromptSection):
         base_prompt = context.get("persona_prompt", "")
         try:
             ws_name = context.get('primary_workspace',  self._extract_workspace_name(base_prompt))
+            folder_depth = context.get('workspace_folder_depth', 5)
+            file_depth = context.get('workspace_file_depth', 3)
             if ws_name:
                 ws_tool = context['tool_chest'].active_tools.get('WorkspaceTools')
 
-                tree = await ws_tool.tree(path=f"//{ws_name}/", folder_depth=10, file_depth=7, tool_context=context)
+                tree = await ws_tool.tree(path=f"//{ws_name}/", folder_depth=folder_depth, file_depth=file_depth, tool_context=context)
                 context['workspace_tree'] = f"Generated: {self.timestamp()}\n{tree}"
 
             template: Template = Template(base_prompt, )
