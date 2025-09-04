@@ -7,7 +7,7 @@ REQUIRED_KEYS_BY_POLICY = {
     "git":        ["subcommands", "deny_global_flags", "env_overrides"],
     "npm":        ["validator", "root_flags", "subcommands", "default_timeout"],
     "pnpm":       ["validator", "root_flags", "subcommands", "default_timeout"],
-    "npx":        ["validator", "flags", "allowed_packages", "default_timeout"],  # npx uses flags, not root_flags, and allowed_packages not subcommands
+    "npx":        ["validator", "flags", "packages", "default_timeout"],  # npx uses flags, not root_flags, and packages not subcommands
     "lerna":      ["flags", "subcommands", "default_timeout"],                   # lerna does NOT have explicit validator
     "dotnet":     ["validator", "subcommands", "default_timeout"],
     "pytest":     ["flags", "default_timeout", "env_overrides"],
