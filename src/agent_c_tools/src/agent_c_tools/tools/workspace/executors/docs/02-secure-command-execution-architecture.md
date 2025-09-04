@@ -33,7 +33,7 @@ The secure command execution system provides a robust, multi-layered security ar
 │  • Command Parsing    • Policy Enforcement  • Resource Limits  │
 │  • Validator Dispatch • Environment Control • Timeout Mgmt     │
 │  • Executable Resolution • Path Safety    • Output Streaming  │
-└─────────────────────┬───────────────────────────────────────────┘
+└─────────────────────┬──────────────���────────────────────────────┘
                       │
           ┌───────────┼───────────┐
           ▼           ▼           ▼
@@ -85,6 +85,12 @@ The architecture implements defense-in-depth through multiple security layers:
 - **Resource Limits** - Memory, timeout, and output size constraints
 - **Process Isolation** - Commands run in controlled subprocess environments
 - **Streaming I/O** - Bounded memory usage with early termination
+
+#### Layer 6: Output Control Security
+- **Success Output Suppression** - Test/build commands can suppress stdout on success
+- **Error Transparency** - Failed commands always show full output regardless of suppression
+- **Conditional Behavior** - Suppression only applies to successful executions (exit code 0)
+- **CI/Automation Enhancement** - Cleaner automation workflows with preserved error visibility
 
 ## Security Mechanisms
 
@@ -721,6 +727,77 @@ The system protects against:
 - **Data Exfiltration** - Unauthorized data access blocked by path safety and command restrictions
 - **Supply Chain Attacks** - Package installation disabled, script execution restricted to allowlists
 
+## Advanced Features
+
+### Output Suppression for Automation
+
+The system includes sophisticated output suppression capabilities to optimize token usage in CI/automation scenarios while preserving full error visibility:
+
+```python
+@dataclass
+class CommandExecutionResult:
+    # ... existing fields ...
+    suppress_success_output: bool = False
+
+    def to_friendly_string(self, success_prefix: str = "OK") -> str:
+        """Get appropriate response string for tool to return to LLM"""
+        if self.status == "blocked":
+            return f"ERROR: Command blocked by security policy: {self.error_message}"
+        
+        elif self.status == "success":
+            # Success output suppression only applies to successful executions
+            if self.suppress_success_output:
+                return f"{success_prefix} (output suppressed for token efficiency)"
+            elif self.stdout.strip():
+                return f"{success_prefix}:\n{self.stdout}"
+            else:
+                return f"{success_prefix} (no output)"
+        
+        elif self.status == "timeout":
+            return f"ERROR: Command timed out: {self.error_message}"
+        
+        else:
+            # Failed commands always show full output regardless of suppression flag
+            msg = self.error_message or "Command failed."
+            tail = (self.stderr or "").strip().splitlines()[-10:]
+            err_tail = ("\n" + "\n".join(tail)) if tail else ""
+            return f"ERROR: {msg}{err_tail}"
+```
+
+#### Key Suppression Behaviors
+
+1. **Success-Only Suppression** - Only successful commands (exit code 0) have output suppressed
+2. **Error Transparency** - Failed commands always show full stderr regardless of suppression setting
+3. **Policy-Driven** - Suppression can be configured per command in policies via `suppress_success_output: true`
+4. **Tool-Level Override** - Individual tool calls can override policy defaults
+5. **Token Optimization** - Dramatically reduces token usage for successful build/test operations
+
+### Enhanced Token Management
+
+```python
+def to_yaml_capped(
+    self,
+    max_tokens: int,
+    count_tokens: Callable[[str], int],
+    *,
+    head_lines: int = 200,
+    tail_lines: int = 50,
+    min_head: int = 20,
+    min_tail: int = 10,
+) -> str:
+    """
+    Serialize to YAML, trimming stdout/stderr to satisfy a token budget.
+    
+    Features:
+    - Intelligent head/tail windowing
+    - Progressive shrinking until under budget
+    - Separate stderr window sizing (smaller than stdout)
+    - Line count annotations for clipped output
+    - Last resort: complete omission with summary
+    """
+    # ... implementation with progressive window shrinking ...
+```
+
 ## Best Practices for Implementation
 
 ### Security-First Development
@@ -731,20 +808,26 @@ The system protects against:
 
 ### Policy Management
 1. **Centralized Configuration** - Single `whitelist_commands.yaml` file with hot-reload
-2. **Environment Overrides** - Support for environment-specific policy paths
-3. **Multi-encoding Support** - Handle different file encodings gracefully
+2. **Environment Overrides** - Support for environment-specific policy paths via `AGENTC_POLICIES_FILE`
+3. **Multi-encoding Support** - Handle different file encodings gracefully (UTF-8, UTF-8-BOM, UTF-16)
 4. **Version Control** - Track policy changes and maintain audit trail
 
 ### Performance and Scalability
 1. **Async Execution** - Non-blocking command execution with proper resource limits
-2. **Memory Efficiency** - Streaming I/O with bounded memory usage
-3. **Policy Caching** - File-based caching with mtime checking
+2. **Memory Efficiency** - Streaming I/O with bounded memory usage (1MB default cap)
+3. **Policy Caching** - File-based caching with mtime checking for hot-reload
 4. **Output Management** - Token-aware truncation and smart formatting
 
 ### Monitoring and Maintenance
 1. **Comprehensive Logging** - Log all attempts with security event classification
-2. **Resource Monitoring** - Track execution times, memory usage, and truncation
+2. **Resource Monitoring** - Track execution times, memory usage, and truncation events
 3. **Security Auditing** - Regular policy reviews and blocked command analysis
 4. **Error Analysis** - Monitor validation failures and policy gaps
 
-This architecture provides a robust foundation for secure command execution that balances security, functionality, and performance while remaining extensible for future workspace types and command validators.
+### Token Optimization Strategies
+1. **Strategic Suppression** - Use `suppress_success_output: true` for build/test commands
+2. **Smart Capping** - Implement `to_yaml_capped()` for large output scenarios
+3. **Error Prioritization** - Always preserve full error output for debugging
+4. **Progressive Truncation** - Use head/tail windowing instead of simple truncation
+
+This architecture provides a robust foundation for secure command execution that balances security, functionality, and performance while remaining extensible for future workspace types and command validators. The recent enhancements in output suppression and token management make it particularly well-suited for AI automation scenarios where token efficiency is critical.

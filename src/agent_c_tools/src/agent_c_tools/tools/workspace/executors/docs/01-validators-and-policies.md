@@ -15,16 +15,154 @@ The secure command execution system uses a three-layer approach:
 
 All command policies follow the standardized structure defined in [04-WHITELIST_COMMAND_STANDARDS.md](04-WHITELIST_COMMAND_STANDARDS.md):
 
+```
+
+### Advanced Flag Configuration
+
+Starting with version 1.3, the system supports **dictionary-based flag configuration** for advanced features like output suppression and conditional permissions:
+
+#### Dictionary Format vs List Format
+
+```yaml
+# Legacy List Format (Still Supported)
+node:
+  flags: ["--test", "-v", "--version", "--help"]
+  allow_test_mode: true  # Global setting
+
+# Advanced Dictionary Format (Recommended for New Policies)
+node:
+  flags:
+    "--test": { suppress_success_output: true, allow_test_mode: true }
+    "--test-reporter": { suppress_success_output: true, allow_test_mode: true }
+    "--test-name-pattern": { suppress_success_output: true, allow_test_mode: true }
+    "-c": { suppress_success_output: true, allow_test_mode: true }
+    "-v": {}  # No special configuration
+    "--version": {}
+    "--help": {}
+```
+
+#### Flag-Specific Configuration Options
+
+- **`suppress_success_output: true`** - Suppress stdout when command succeeds (exit code 0)
+- **`allow_test_mode: true`** - Enable test-specific features for this flag
+- **Additional options** can be added as needed for specific validator logic
+
+#### Output Suppression Behavior
+
+Output suppression provides cleaner CI/automation experiences by hiding verbose output from successful test runs while preserving error information:
+
+**Suppression Rules:**
+- **Success (exit code 0)**: stdout suppressed, stderr suppressed
+- **Failure (non-zero exit code)**: stdout shown, stderr shown
+- **Applies only when**: Command uses a flag configured with `suppress_success_output: true`
+
+**Example with Node.js testing:**
+```bash
+# Successful test run - output suppressed
+$ node --test test/example.test.js
+# (no output shown)
+
+# Failed test run - full output shown
+$ node --test test/failing.test.js
+✗ test/failing.test.js
+  × expect(true).toBe(false)
+Error: 1 test failed
+
+# Regular commands - output always shown
+$ node -v
+v18.17.0
+```
+
+#### NPX Package Configuration
+
+NPX supports package-specific configuration including output suppression:
+
+```yaml
+npx:
+  packages:
+    "jest": { suppress_success_output: true }
+    "mocha": { suppress_success_output: true }
+    "typescript": { suppress_success_output: true }
+    "webpack": { suppress_success_output: true }
+    "eslint": {}  # No suppression - show linting results
+    "prettier": {}  # No suppression - show formatting results
+```
+
+## Updated ValidationResult Structure
+
+The `ValidationResult` class has been enhanced to support output suppression and policy-specific configurations:
+
+```python
+@dataclass
+class ValidationResult:
+    allowed: bool                                     # Required: Allow/block the command
+    reason: str = "OK"                               # Error message if blocked
+    timeout: Optional[int] = None                    # Override default timeout
+    env_overrides: Dict[str, str] = field(default_factory=dict)  # Environment changes
+    suppress_success_output: bool = False            # NEW: Suppress stdout on success
+    policy_spec: Optional[Mapping[str, Any]] = None  # NEW: Mode-specific configuration
+```
+
+### ValidationResult Precedence Rules
+
+**Output Suppression Priority (highest to lowest):**
+1. `ValidationResult.suppress_success_output` - Set by validator based on flags
+2. `policy_spec["suppress_success_output"]` - Mode-specific configuration
+3. Global policy settings - Tool-level defaults
+
+**Example Validator Implementation:**
+```python
+def validate(self, parts: List[str], policy: Mapping[str, Any]) -> ValidationResult:
+    # Handle both old (list) and new (dict) flags format
+    flags_config = policy.get("flags")
+    if isinstance(flags_config, dict):
+        allowed_flags = set(flags_config.keys())
+        flags_settings = flags_config
+    else:
+        # Legacy list format
+        allowed_flags = set(flags_config or [])
+        flags_settings = {}
+    
+    # Parse command and check for suppression flags
+    suppress_success_output = False
+    used_flags = [arg for arg in parts[1:] if arg.startswith("-")]
+    
+    for flag in used_flags:
+        base_flag = flag.split("=", 1)[0]
+        flag_spec = flags_settings.get(base_flag, {}) or flags_settings.get(flag, {})
+        if flag_spec.get("suppress_success_output", False):
+            suppress_success_output = True
+            break
+    
+    return ValidationResult(
+        allowed=True,
+        reason="OK",
+        timeout=policy.get("default_timeout"),
+        suppress_success_output=suppress_success_output
+    )
+```
+
+### Standard Policy Schema
+
+All command policies follow the standardized structure defined in [04-WHITELIST_COMMAND_STANDARDS.md](04-WHITELIST_COMMAND_STANDARDS.md):
+
 ```yaml
 command_name:
   # Core Configuration
   validator: validator_class_name          # Optional: Custom validator (defaults to command_name)
   description: "Human-readable description" # Optional: Purpose and safety rationale
   
-  # Global Flags (apply to all subcommands)
+  # Global Flags - List Format (Legacy)
   flags: ["-v", "--version", "--help"]     # Allowed global flags
   deny_global_flags: ["-e", "--eval"]     # Explicitly blocked global flags
   require_flags: ["-NoProfile"]           # Flags that must always be present
+  
+  # Global Flags - Dictionary Format (Advanced)
+  flags:
+    "--test": { suppress_success_output: true, allow_test_mode: true }
+    "--test-reporter": { suppress_success_output: true, allow_test_mode: true }
+    "-v": {}                               # No special configuration
+    "--version": {}
   
   # Execution Control
   default_timeout: 120                    # Default timeout in seconds

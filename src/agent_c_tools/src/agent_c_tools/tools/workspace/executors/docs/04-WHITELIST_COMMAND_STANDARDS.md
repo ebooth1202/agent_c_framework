@@ -21,10 +21,17 @@ command_name:
   validator: validator_class_name          # Optional: Custom validator (defaults to command_name)
   description: "Human-readable description. This doubles as a fallback to a tool param description." # Optional: Purpose and safety rationale
   
-  # Global Flags (apply to all subcommands)
+  # Global Flags - List Format (Legacy, Still Supported)
   flags: ["-v", "--version", "--help"]     # Allowed global flags
   deny_global_flags: ["-e", "--eval"]     # Explicitly blocked global flags
   require_flags: ["-NoProfile"]           # Flags that must always be present
+  
+  # Global Flags - Dictionary Format (Advanced, Recommended for New Policies)
+  flags:
+    "--test": { suppress_success_output: true, allow_test_mode: true }
+    "--test-reporter": { suppress_success_output: true, allow_test_mode: true }
+    "-v": {}                               # No special configuration
+    "--version": {}
   
   # Execution Control
   default_timeout: 120                    # Default timeout in seconds
@@ -36,6 +43,11 @@ command_name:
     TOOL_DISABLE_TELEMETRY: "1"
   safe_env:                              # Required environment variables
     TOOL_SAFE_MODE: "1"
+  
+  # Package Configuration (NPX-style tools)
+  packages:
+    "package-name": { suppress_success_output: true }
+    "other-package": {}  # No special configuration
   
   # Subcommands (if applicable)
   subcommands:
@@ -215,7 +227,52 @@ pytest:
 - Disable plugin autoloading for security
 - Use moderate timeouts (120-300 seconds)
 
-### 6. High-Risk Tools (PowerShell, etc.)
+### 7. Testing Tools with Output Suppression
+
+For testing tools and CI/automation workflows that benefit from cleaner output:
+
+```yaml
+node:
+  validator: node
+  flags:
+    "--test": { suppress_success_output: true, allow_test_mode: true }
+    "--test-reporter": { suppress_success_output: true, allow_test_mode: true }
+    "--test-name-pattern": { suppress_success_output: true, allow_test_mode: true }
+    "-c": { suppress_success_output: true, allow_test_mode: true }
+    "-v": {}  # Show version output
+    "--version": {}
+  deny_global_flags: ["-e", "--eval", "-p", "--print"]
+  default_timeout: 5
+  env_overrides:
+    NODE_DISABLE_COLORS: "1"
+    NO_COLOR: "1"
+    FORCE_COLOR: "0"
+
+npx:
+  validator: npx
+  packages:
+    # Testing frameworks - suppress verbose output on success
+    "jest": { suppress_success_output: true }
+    "mocha": { suppress_success_output: true }
+    "vitest": { suppress_success_output: true }
+    # Build tools - suppress verbose output on success  
+    "typescript": { suppress_success_output: true }
+    "webpack": { suppress_success_output: true }
+    "vite": { suppress_success_output: true }
+    "rollup": { suppress_success_output: true }
+    "parcel": { suppress_success_output: true }
+    "@angular/cli": { suppress_success_output: true }
+    # Linting/formatting - show results
+    "eslint": {}  # Don't suppress - show linting results
+    "prettier": {}  # Don't suppress - show formatting results
+    "serve": {}  # Don't suppress - show server startup info
+```
+
+**Standards:**
+- Use `suppress_success_output: true` for testing frameworks and build tools
+- Keep output visible for linting tools (users want to see results)
+- Keep output visible for servers and interactive tools
+- Combine with appropriate timeout values for the tool type
 
 For powerful tools requiring maximum security:
 
@@ -244,7 +301,69 @@ powershell:
 
 ## Security Guidelines
 
-### Flag Management
+### Advanced Flag Configuration
+
+#### Dictionary vs List Format
+
+Starting with version 1.3, policies support both list and dictionary formats for flags:
+
+**List Format (Legacy, Still Supported):**
+```yaml
+command:
+  flags: ["-v", "--version", "--help", "--test"]
+  allow_test_mode: true  # Global setting
+```
+
+**Dictionary Format (Advanced, Recommended for New Policies):**
+```yaml
+command:
+  flags:
+    "--test": { suppress_success_output: true, allow_test_mode: true }
+    "--test-reporter": { suppress_success_output: true }
+    "-v": {}  # No special configuration
+    "--version": {}
+    "--help": {}
+```
+
+#### Flag-Specific Configuration Options
+
+- **`suppress_success_output: true`** - Hide stdout/stderr when command succeeds (exit code 0)
+- **`allow_test_mode: true`** - Enable test-specific features for this flag
+- **Additional options** can be added as needed for specific validators
+
+#### Output Suppression Guidelines
+
+**When to Use Output Suppression:**
+- Testing frameworks (pytest, jest, mocha, node --test)
+- Build tools (webpack, typescript, rollup, vite)
+- CI/automation tasks that produce verbose output on success
+
+**When NOT to Use Output Suppression:**
+- Linting tools (eslint, prettier) - users want to see results
+- Version commands (-v, --version) - users expect to see version
+- Server startup commands - users need startup information
+- Interactive tools - users need feedback
+
+**Behavior:**
+- **Success (exit code 0)**: stdout and stderr suppressed
+- **Failure (non-zero exit code)**: stdout and stderr shown in full
+- **Only applies when**: Command uses a flag with `suppress_success_output: true`
+
+### Package Configuration (NPX-style Tools)
+
+For package managers that execute individual packages:
+
+```yaml
+npx:
+  packages:
+    "package-name": { suppress_success_output: true }
+    "other-package": {}  # No special configuration
+```
+
+**Package Configuration Standards:**
+- Use for testing and build packages that produce verbose output
+- Consider user experience - some tools should show output even on success
+- Group similar packages with consistent behavior
 
 1. **Allowed Flags (`flags` / `allowed_flags`)**
    - Only include flags that are known to be safe
