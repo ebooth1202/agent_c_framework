@@ -18,7 +18,7 @@ from agent_c.util.heygen_streaming_avatar_client import HeyGenStreamingClient
 from agent_c.util.registries.event import EventRegistry
 from agent_c_api.api.rt.models.client_events import GetAgentsEvent, ErrorEvent, AgentListEvent, GetAvatarsEvent, AvatarListEvent, TextInputEvent, SetAvatarEvent, AvatarConnectionChangedEvent, \
     SetAgentEvent, AgentConfigurationChangedEvent, SetAvatarSessionEvent, ChatSessionChangedEvent, SessionMetadataChangedEvent, ChatSessionNameChangedEvent, ResumeChatSessionEvent, \
-    NewChatSessionEvent, SetAgentVoiceEvent, AgentVoiceChangedEvent, UserTurnStartEvent, UserTurnEndEvent, GetUserSessionsEvent, GetUserSessionsResponseEvent
+    NewChatSessionEvent, SetAgentVoiceEvent, AgentVoiceChangedEvent, UserTurnStartEvent, UserTurnEndEvent, GetUserSessionsEvent, GetUserSessionsResponseEvent, PingEvent, PongEvent
 from agent_c_api.api.rt.models.client_events import SetChatSessionNameEvent, SetSessionMessagesEvent, ChatSessionNameChangedEvent, SetSessionMetadataEvent, SessionMetadataChangedEvent
 from agent_c_api.core.agent_bridge import AgentBridge
 from agent_c.models.input import AudioInput
@@ -69,7 +69,11 @@ class RealtimeBridge(AgentBridge):
     async def handle_client_event(self, event: BaseEvent) -> None:
         """Default handler for unknown events"""
         self.logger.warning(f"RealtimeBridge {self.ui_session_id}: Unhandled event type: {event.type}")
-        await self.send_error(f"Unknown event type: {event.type}")
+        # await self.send_error(f"Unknown event type: {event.type}")
+
+    @handle_client_event.register
+    async def _(self, _: PingEvent) -> None:
+        await self.send_event(PongEvent())
 
     @handle_client_event.register
     async def _(self, _: GetAgentsEvent) -> None:

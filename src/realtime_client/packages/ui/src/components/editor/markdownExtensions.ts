@@ -5,9 +5,19 @@
  * - Import statements are simpler (no module resolution issues)
  * - All extensions work with standard imports
  * - Better Next.js compatibility
+ * 
+ * IMPORTANT: StarterKit already includes markdown InputRules for:
+ * - Bold (**text**)
+ * - Italic (*text*)
+ * - Headers (#, ##, etc.)
+ * - Lists (-, *, 1.)
+ * - Blockquotes (>)
+ * - Code blocks (```)
+ * We don't need to add custom InputRules for these!
  */
-import { Extension, markInputRule, InputRule } from '@tiptap/core';
+import { Extension } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
+import Typography from '@tiptap/extension-typography';
 import Link from '@tiptap/extension-link';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 import { common, createLowlight } from 'lowlight';
@@ -33,124 +43,6 @@ const lowlight = createLowlight(common);
 // Register additional languages
 lowlight.register('dockerfile', dockerfile);
 lowlight.register('docker', dockerfile); // Alias
-
-/**
- * Custom Markdown InputRules Extension - v2 Compatible
- * Uses proper TipTap v2 InputRule patterns with transaction handling
- */
-const MarkdownInputRules = Extension.create({
-  name: 'markdownInputRules',
-
-  addInputRules() {
-    return [
-      // Bold: **text** → bold text
-      markInputRule({
-        find: /(\*\*|__)([^*_]+)(\*\*|__)$/,
-        type: this.editor.schema.marks.bold,
-      }),
-
-      // Italic: *text* or _text_ → italic text
-      // Fixed to properly capture single asterisk/underscore
-      markInputRule({
-        find: /(^|[^*_])([*_])([^*_]+?)\2$/,
-        type: this.editor.schema.marks.italic,
-      }),
-
-      // Strikethrough: ~~text~~ → strikethrough text
-      markInputRule({
-        find: /~~([^~]+)~~$/,
-        type: this.editor.schema.marks.strike,
-      }),
-
-      // Inline code: `text` → inline code
-      markInputRule({
-        find: /`([^`]+)`$/,
-        type: this.editor.schema.marks.code,
-      }),
-
-      // Heading 1: # text → Heading 1
-      new InputRule({
-        find: /^#\s$/,
-        handler: ({ state, range, commands }) => {
-          commands.deleteRange(range);
-          commands.setHeading({ level: 1 });
-          return;
-        },
-      }),
-
-      // Heading 2: ## text → Heading 2  
-      new InputRule({
-        find: /^##\s$/,
-        handler: ({ state, range, commands }) => {
-          commands.deleteRange(range);
-          commands.setHeading({ level: 2 });
-          return;
-        },
-      }),
-
-      // Heading 3: ### text → Heading 3
-      new InputRule({
-        find: /^###\s$/,
-        handler: ({ state, range, commands }) => {
-          commands.deleteRange(range);
-          commands.setHeading({ level: 3 });
-          return;
-        },
-      }),
-
-      // Bullet list: - or * → bullet list
-      new InputRule({
-        find: /^[-*]\s$/,
-        handler: ({ commands, range }) => {
-          commands.deleteRange(range);
-          commands.toggleBulletList();
-          return;
-        },
-      }),
-
-      // Ordered list: 1. → numbered list
-      new InputRule({
-        find: /^(\d+)\.\s$/,
-        handler: ({ commands, range }) => {
-          commands.deleteRange(range);
-          commands.toggleOrderedList();
-          return;
-        },
-      }),
-
-      // Blockquote: > → blockquote
-      new InputRule({
-        find: /^>\s$/,
-        handler: ({ commands, range }) => {
-          commands.deleteRange(range);
-          commands.toggleBlockquote();
-          return;
-        },
-      }),
-
-      // Horizontal rule: --- → horizontal rule
-      new InputRule({
-        find: /^(-{3,})$/,
-        handler: ({ commands, range }) => {
-          commands.deleteRange(range);
-          commands.setHorizontalRule();
-          return;
-        },
-      }),
-
-      // Code block: ```language → code block with language
-      new InputRule({
-        find: /^```([a-z]*)\s$/,
-        handler: ({ commands, range, match }) => {
-          const language = match[1] || 'plaintext';
-          commands.deleteRange(range);
-          commands.setCodeBlock({ language });
-          return;
-        },
-      }),
-    ];
-  },
-});
 
 /**
  * Custom Keyboard Shortcuts Extension - v2 Compatible
@@ -234,69 +126,11 @@ export function getMarkdownExtensions(options: {
   onImageUploadError?: (error: Error) => void;
 } = {}) {
   return [
-    // StarterKit bundles most of what we need
-    StarterKit.configure({
-      bold: {
-        HTMLAttributes: {
-          class: 'font-bold',
-        },
-      },
-      italic: {
-        HTMLAttributes: {
-          class: 'italic',
-        },
-      },
-      strike: {
-        HTMLAttributes: {
-          class: 'line-through',
-        },
-      },
-      code: {
-        HTMLAttributes: {
-          class: 'bg-muted px-1 py-0.5 rounded font-mono text-sm',
-        },
-      },
-      heading: {
-        levels: [1, 2, 3],
-        HTMLAttributes: {
-          1: { class: 'text-2xl font-bold' },
-          2: { class: 'text-xl font-semibold' },
-          3: { class: 'text-lg font-semibold' },
-        },
-      },
-      bulletList: {
-        HTMLAttributes: {
-          class: 'list-disc list-inside ml-4',
-        },
-      },
-      orderedList: {
-        HTMLAttributes: {
-          class: 'list-decimal list-inside ml-4',
-        },
-      },
-      listItem: {
-        HTMLAttributes: {
-          class: 'ml-2',
-        },
-      },
-      blockquote: {
-        HTMLAttributes: {
-          class: 'border-l-4 border-muted pl-4 italic',
-        },
-      },
-      horizontalRule: {
-        HTMLAttributes: {
-          class: 'border-t border-border my-4',
-        },
-      },
-      paragraph: {
-        HTMLAttributes: {
-          class: 'leading-relaxed',
-        },
-      },
-      // Disable default codeBlock as we use CodeBlockLowlight
-      codeBlock: false,
-    }),
+    // StarterKit bundles most of what we need - no configuration needed
+    StarterKit,
+    
+    // Typography extension for smart quotes and other text transformations
+    Typography,
 
     // Enhanced code block with syntax highlighting
     CodeBlockLowlight.configure({
@@ -315,11 +149,8 @@ export function getMarkdownExtensions(options: {
       },
     }),
 
-    // Custom keyboard shortcuts
+    // Custom keyboard shortcuts (these are different from InputRules)
     KeyboardShortcuts,
-
-    // Custom markdown input rules
-    MarkdownInputRules,
     
     // Smart paste handler for images (if enabled)
     ...(options.enableSmartPaste !== false ? [
