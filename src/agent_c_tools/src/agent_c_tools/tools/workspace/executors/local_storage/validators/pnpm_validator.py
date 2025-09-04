@@ -63,12 +63,10 @@ class PnpmCommandValidator(CommandValidator):
             non_flags = [p for p in parts[1:] if not p.startswith("-")]
             if non_flags:
                 return ValidationResult(False, f"Unexpected args: {' '.join(non_flags[:3])}")
-            return ValidationResult(True, "OK", timeout=policy.get("default_timeout"))
+            return ValidationResult(True, "OK", timeout=policy.get("default_timeout"), policy_spec=None)
 
-        # Case B: subcommand mode
-        raw_sub = parts[1].lower()
-        alias_map = {"i": "install", "add": "install"}  # pnpm i/add -> install
-        sub = alias_map.get(raw_sub, raw_sub)
+        # Case B: subcommand mode - MUCH SIMPLER!
+        sub = parts[1].lower()
 
         if sub in deny_subs:
             return ValidationResult(False, f"Subcommand not allowed: {sub}")
@@ -77,71 +75,47 @@ class PnpmCommandValidator(CommandValidator):
         if spec is None:
             return ValidationResult(False, f"Subcommand not allowed: {sub}")
 
+        # Standard flag validation
         after = parts[2:]
         used_flags = [p for p in after if p.startswith("-")]
-        positionals = [p for p in after if not p.startswith("-")]
-
         allowed_flags = set(self._get_allowed_flags(spec))
+
         if allowed_flags:
             for f in used_flags:
                 base = self._flag_base(f)
                 if base not in allowed_flags and f not in allowed_flags:
                     return ValidationResult(False, f"Flag not allowed for {sub}: {f}")
 
-        # NEW: workspace root for path fencing
-        workspace_root = (
-                policy.get("workspace_root")
-                or os.environ.get("WORKSPACE_ROOT")
-                or os.getcwd()
-        )
+        # Path safety validation for commands that accept file arguments
+        if not spec.get("deny_args", True):  # If args are allowed
+            workspace_root = (
+                    policy.get("workspace_root")
+                    or os.environ.get("WORKSPACE_ROOT")
+                    or os.getcwd()
+            )
 
-        if sub == "run":
-            allowed_scripts = set(spec.get("allowed_scripts") or [])
-            if not positionals:
-                return ValidationResult(False, "pnpm run requires a script name")
-            script = positionals[0]
-            if script not in allowed_scripts:
-                return ValidationResult(False, f"Script not allowed: {script}")
+            positionals = [p for p in after if not p.startswith("-")]
 
-            # Determine args destined for the script, respecting `--`
-            # parts: ["pnpm","run","test", ...]
-            # after: ["test", <maybe flags/args>]
-            try:
-                script_pos = after.index(script)
-            except ValueError:
-                script_pos = 0  # defensive; script should be first positional
-            rest = after[script_pos + 1:]  # tokens after script name
-            runner_args = rest[rest.index("--") + 1:] if "--" in rest else rest
+            if spec.get("allow_test_paths", False):
+                # Validate that any path-like arguments are within workspace
+                from .path_safety import is_within_workspace, looks_like_path, extract_file_part
 
-            if spec.get("deny_args"):
-                # disallow anything after the script (and also a bare `--`)
-                if runner_args or ("--" in rest):
-                    return ValidationResult(False, "Extra args not allowed after script")
-            elif spec.get("allow_test_paths", False):
-                # Fence file/node-id selectors to the workspace
                 bad = next(
-                    (a for a in runner_args
+                    (a for a in positionals
                      if looks_like_path(a)
                      and not is_within_workspace(workspace_root, extract_file_part(a))),
                     None
                 )
                 if bad:
-                    return ValidationResult(False, f"Unsafe path outside workspace in pnpm run args: {bad}")
+                    return ValidationResult(False, f"Unsafe path outside workspace: {bad}")
+            elif positionals:
+                # If test paths not enabled but we have positional args, block them
+                return ValidationResult(False, f"Arguments not allowed for {sub}: {' '.join(positionals[:3])}")
 
-        elif sub == "install":
-            if not spec.get("enabled", False):
-                return ValidationResult(False, f"Subcommand disabled by policy: {sub}")
-            if spec.get("require_no_packages"):
-                if positionals:
-                    return ValidationResult(False, f"{sub} with package names is not allowed")
-
-        elif sub == "config":
-            if spec.get("get_only"):
-                first_nonflag = positionals[0].lower() if positionals else None
-                if first_nonflag != "get":
-                    return ValidationResult(False, "Only 'pnpm config get <key>' is allowed")
-
-        return ValidationResult(True, "OK", timeout=spec.get("timeout") or policy.get("default_timeout"))
+        # Simple return with spec
+        return ValidationResult(True, "OK",
+                                timeout=spec.get("timeout") or policy.get("default_timeout"),
+                                policy_spec=spec)
 
     def adjust_arguments(self, parts: List[str], policy: Mapping[str, Any]) -> List[str]:
         """

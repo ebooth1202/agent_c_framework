@@ -21,11 +21,15 @@ class NodeCommandValidator:
         if name not in ("node", "nodejs"):
             return ValidationResult(False, "Not a node command")
 
+        # UNCHANGED: Existing policy extraction
         allowed_flags = set(policy.get("flags") or [])
         deny_global = set(policy.get("deny_global_flags") or [])
         allow_script_paths = bool(policy.get("allow_script_paths", False))
         allow_test_mode = bool(policy.get("allow_test_mode", False))
         allowed_entrypoints = set(policy.get("allowed_entrypoints") or [])
+
+        # Extract modes configuration
+        modes_config = policy.get("modes", {})
 
         # Workspace root for fencing
         workspace_root = (
@@ -34,6 +38,7 @@ class NodeCommandValidator:
                 or os.getcwd()
         )
 
+        # All the argument parsing logic
         args = parts[1:]
         i = 0
         after_dashdash = False
@@ -75,30 +80,41 @@ class NodeCommandValidator:
 
         # Case 0: no positionals ⇒ REPL or flag-only usage
         if not positionals:
-            # Allowed: e.g., `node -v` / `node --help` / `node --trace-warnings` (if whitelisted)
-            return ValidationResult(True, "OK", timeout=policy.get("default_timeout"))
+            # CHANGED: Use modes config instead of hardcoded policy_spec=None
+            mode_spec = modes_config.get("repl", {})
+            return ValidationResult(True, "OK", timeout=policy.get("default_timeout"), policy_spec=mode_spec)
 
-        # Detect Node’s built-in test runner mode
+        # Detect Node's built-in test runner mode
         is_test_mode = ("--test" in used_flags)
 
         # Case 1: node --test <paths...>
         if is_test_mode:
-            if not allow_test_mode:
+            # Use modes config for test mode settings
+            mode_spec = modes_config.get("test", {})
+
+            # Check allow_test_mode from mode spec first, fallback to global policy
+            if not (mode_spec.get("allow_test_mode", False) or allow_test_mode):
                 return ValidationResult(False, "Node --test mode is disabled by policy")
+
             # Fence every path-like positional to the workspace
             for tok in positionals:
                 if looks_like_path(tok) and not is_within_workspace(workspace_root, extract_file_part(tok)):
                     return ValidationResult(False, f"Unsafe path outside workspace in node --test args: {tok}")
-            return ValidationResult(True, "OK", timeout=policy.get("default_timeout"))
+
+            # CHANGED: Return mode_spec instead of None
+            return ValidationResult(True, "OK", timeout=policy.get("default_timeout"), policy_spec=mode_spec)
 
         # Case 2: node <script.js> [args...]  (script execution)
-        if not allow_script_paths:
-            # Your original behavior: disallow running scripts entirely
+        # Use modes config for script mode settings
+        mode_spec = modes_config.get("script", {})
+
+        # Check allow_script_paths from mode spec first, fallback to global policy
+        if not (mode_spec.get("allow_script_paths", False) or allow_script_paths):
             return ValidationResult(False, f"Arguments not allowed for node: {' '.join(positionals[:3])}")
 
         script = positionals[0]
 
-        # Never permit eval/print/STDIN “scripts”
+        # Never permit eval/print/STDIN "scripts"
         if script in ("-e", "--eval", "-p", "--print", "-"):
             return ValidationResult(False, "Eval/print/STDIN execution is not allowed")
 
@@ -118,7 +134,7 @@ class NodeCommandValidator:
             if norm_script not in norm_allow:
                 return ValidationResult(False, f"Script not in allowed entrypoints: {script}")
 
-        return ValidationResult(True, "OK", timeout=policy.get("default_timeout"))
+        return ValidationResult(True, "OK", timeout=policy.get("default_timeout"), policy_spec=mode_spec)
 
     def adjust_environment(self, base_env: Dict[str, str], parts: List[str], policy: Mapping[str, Any]) -> Dict[str, str]:
         env = dict(base_env)

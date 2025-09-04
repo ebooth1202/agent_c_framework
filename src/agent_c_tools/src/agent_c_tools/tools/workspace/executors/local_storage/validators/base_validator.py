@@ -8,6 +8,8 @@ class ValidationResult:
     # Optional per-command overrides:
     timeout: Optional[int] = None
     env_overrides: Dict[str, str] = field(default_factory=dict)
+    suppress_success_output: bool = False # validator forced edge cases only
+    policy_spec: Optional[Mapping[str, Any]] = None # used by executor for suppression of output
 
 class CommandValidator(Protocol):
     """

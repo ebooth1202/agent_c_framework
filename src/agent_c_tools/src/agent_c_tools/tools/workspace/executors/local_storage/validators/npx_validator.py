@@ -48,11 +48,17 @@ class NpxCommandValidator(CommandValidator):
         if len(parts) < 2:
             return ValidationResult(False, "npx requires a package or command")
 
+        # NEW: Support both old and new policy formats
+        packages_config = policy.get("packages", {})
         allowed_packages = set(policy.get("allowed_packages", []))
+
+        # If using new format, extract allowed packages from config
+        if packages_config:
+            allowed_packages.update(packages_config.keys())
+
         allowed_flags = set(policy.get("flags", []))
         cmd_aliases = policy.get("command_aliases") or {}
 
-        # NEW: workspace root for path fencing
         workspace_root = (
                 policy.get("workspace_root")
                 or os.environ.get("WORKSPACE_ROOT")
@@ -68,7 +74,7 @@ class NpxCommandValidator(CommandValidator):
             base = self._flag_base(flag)
             return (flag in allowed_flags) or (base in allowed_flags)
 
-        # 1) Scan flags (and consume values for -p/--package)
+        # UNCHANGED: Flag parsing logic
         while i < len(args):
             a = args[i]
             if a == "--":
@@ -92,34 +98,37 @@ class NpxCommandValidator(CommandValidator):
                     preinstall_pkgs.append(pkg_name)
                     i += 1
                     continue
-                # other flags (possibly --flag=value) — already vetted
                 i += 1
                 continue
-            break  # first non-flag reached
+            break
 
-        # 2) Determine the invoked command/package (first token after flags/-p pairs/--).
+        # UNCHANGED: Extract invoked command
         if i >= len(args):
             return ValidationResult(False, "npx requires a package or command to run")
 
         invoked = args[i]
         invoked_name = self._split_pkg_name(invoked)
-        package_args = args[i + 1:]  # everything after the invoked token goes to the package
+        package_args = args[i + 1:]
 
-        # 3) Check if the invoked token is allowed (package or alias of allowed/preinstalled)
+        # UNCHANGED: Permission checking
         allowed = False
+        resolved_package = None  # NEW: Track which package we resolved to
+
         if invoked_name in allowed_packages:
             allowed = True
+            resolved_package = invoked_name
         else:
             for pkg, aliases in cmd_aliases.items():
                 if pkg in allowed_packages or pkg in preinstall_pkgs:
                     if invoked in aliases or invoked_name in aliases:
                         allowed = True
+                        resolved_package = pkg
                         break
 
         if not allowed:
             return ValidationResult(False, f"Command not allowed: {invoked}")
 
-        # 4) FENCE package args to workspace (this is the path_safety integration)
+        # UNCHANGED: Path fencing
         bad = next(
             (a for a in package_args
              if looks_like_path(a) and not is_within_workspace(workspace_root, extract_file_part(a))),
@@ -128,7 +137,15 @@ class NpxCommandValidator(CommandValidator):
         if bad:
             return ValidationResult(False, f"Unsafe path outside workspace in npx package args: {bad}")
 
-        return ValidationResult(True, "OK", timeout=policy.get("default_timeout"))
+        # NEW: Get package-specific configuration for policy_spec
+        package_spec = {}
+        if packages_config and resolved_package:
+            package_spec = packages_config.get(resolved_package, {})
+
+        # CHANGED: Pass package_spec instead of no policy_spec
+        return ValidationResult(True, "OK",
+                                timeout=policy.get("default_timeout"),
+                                policy_spec=package_spec)
 
     def adjust_environment(self, base_env, parts, policy):
         env = super().adjust_environment(base_env, parts, policy)

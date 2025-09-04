@@ -91,7 +91,7 @@ class PowershellValidator:
                     if cmdlet.lower() not in safe_cmdlets:
                         return ValidationResult(False, f"Cmdlet not allowed: {cmdlet}")
 
-        return ValidationResult(True, "OK", timeout=policy.get("default_timeout"))
+        return ValidationResult(True, "OK", timeout=policy.get("default_timeout"), policy_spec=policy)
 
     def adjust_environment(self, base_env: Dict[str, str], parts: List[str], policy: Mapping[str, Any]) -> Dict[
         str, str]:
