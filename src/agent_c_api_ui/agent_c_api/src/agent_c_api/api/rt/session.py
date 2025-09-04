@@ -46,13 +46,7 @@ async def login(login_request: UserLoginRequest,
     
     return RealtimeLoginResponse(agent_c_token=login_response.token,
                                  heygen_token=heygen_token,
-                                 user=login_response.user,
-                                 agents=agent_config_loader.client_catalog,
-                                 avatars=avatar_list,
-                                 ui_session_id=MnemonicSlugs.generate_slug(3),
-                                 toolsets=tools,
-                                 voices=voices,
-                                 sessions=chat_sessions)
+                                 ui_session_id=MnemonicSlugs.generate_slug(3))
 
 @router.get("/refresh_token")
 async def refresh_token(request: Request):
