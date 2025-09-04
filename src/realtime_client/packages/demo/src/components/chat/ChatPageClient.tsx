@@ -70,7 +70,6 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
  * Chat content component - The main chat interface with new layout
  */
 function ChatContent() {
-  const { user } = useAuth();
   const [sessionName, setSessionName] = useState<string>('New Chat');
   const [outputMode, setOutputMode] = useState<'chat' | 'avatar' | 'voice'>('chat');
 

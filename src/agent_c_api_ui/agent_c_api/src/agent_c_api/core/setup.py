@@ -62,10 +62,12 @@ def create_application(router: APIRouter, **kwargs) -> FastAPI:
         logger.info("🔧 Initializing HeyGen client")
         try:
             lifespan_app.state.heygen_client = HeyGenStreamingClient()
-            logger.info("✅ HeyGen client initialized successfully")
+            lifespan_app.state.heygen_avatar_list = (await lifespan_app.state.heygen_client.list_avatars()).data
+            logger.info("✅ HeyGen avatars fetched")
         except Exception as e:
             logger.error(f"❌ Error initializing HeyGen client: {e}")
             lifespan_app.state.heygen_client = None
+            lifespan_app.state.heygen_avatar_list = []
         
         # Validate Redis connection (no longer managing server lifecycle)
         logger.info("🔍 Validating Redis connection and configuration...")

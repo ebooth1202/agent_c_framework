@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any, TYPE_CHECKING
+from typing import Optional, Dict, Any, TYPE_CHECKING, List
 from fastapi import APIRouter, HTTPException, Depends, WebSocket, Request
 
 
@@ -7,7 +7,7 @@ from agent_c.models.client_tool_info import ClientToolInfo
 from agent_c.toolsets import Toolset
 from agent_c.util import MnemonicSlugs
 from agent_c.util.logging_utils import LoggingManager
-from agent_c_api.api.dependencies import get_auth_service, get_chat_session_manager, get_agent_config_loader, get_heygen_client
+from agent_c_api.api.dependencies import get_auth_service, get_chat_session_manager, get_agent_config_loader, get_heygen_client, get_heygen_avatar_list
 from agent_c_api.core.util.jwt import validate_request_jwt, create_jwt_token, verify_jwt_token
 from agent_c_api.core.voice.models import open_ai_voice_models, heygen_avatar_voice_model, no_voice_model
 from agent_c_api.models.auth_models import UserLoginRequest, RealtimeLoginResponse
@@ -26,8 +26,6 @@ logger = LoggingManager(__name__).get_logger()
 @router.post("/login", response_model=RealtimeLoginResponse)
 async def login(login_request: UserLoginRequest,
                 auth_service: "AuthService" = Depends(get_auth_service),
-                chat_session_manager: "ChatSessionManager" = Depends(get_chat_session_manager),
-                agent_config_loader: "AgentConfigLoader" = Depends(get_agent_config_loader),
                 heygen_client: "HeyGenStreamingClient" = Depends(get_heygen_client)) -> RealtimeLoginResponse:
     """
     Authenticate user and return config with token.
@@ -39,21 +37,10 @@ async def login(login_request: UserLoginRequest,
     
     # Get config data
     heygen_token = await heygen_client.create_streaming_access_token()
-    avatar_list = (await heygen_client.list_avatars()).data
-    tools = [ClientToolInfo.from_toolset(tool_class) for tool_class in Toolset.tool_registry]
-    tools.sort(key=lambda x: x.name.lower())
-    chat_sessions = await chat_session_manager.get_user_sessions(login_response.user.user_id)
-    voices = [no_voice_model, heygen_avatar_voice_model] + open_ai_voice_models
-    
+
     return RealtimeLoginResponse(agent_c_token=login_response.token,
                                  heygen_token=heygen_token,
-                                 user=login_response.user,
-                                 agents=agent_config_loader.client_catalog,
-                                 avatars=avatar_list,
-                                 ui_session_id=MnemonicSlugs.generate_slug(3),
-                                 toolsets=tools,
-                                 voices=voices,
-                                 sessions=chat_sessions)
+                                 ui_session_id=MnemonicSlugs.generate_slug(3))
 
 @router.get("/refresh_token")
 async def refresh_token(request: Request):

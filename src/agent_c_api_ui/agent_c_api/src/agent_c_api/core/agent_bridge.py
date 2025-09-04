@@ -377,6 +377,7 @@ class AgentBridge:
                 - timestamp: Current timestamp in ISO format
                 - env_name: Environment name (development, production, etc.)
         """
+        agent_meta = self.chat_session.agent_config.prompt_metadata or {}
         return {
             "session_id": self.chat_session.session_id,
             "current_user_username": self.chat_session.user_id,
@@ -384,7 +385,7 @@ class AgentBridge:
             "agent_config": self.chat_session.agent_config,
             "timestamp": datetime.now().isoformat(),
             "env_name": os.getenv('ENV_NAME', DEFAULT_ENV_NAME)
-        } | self.chat_session.agent_config.prompt_metadata
+        } | agent_meta
 
     @staticmethod
     def _current_timestamp() -> str:

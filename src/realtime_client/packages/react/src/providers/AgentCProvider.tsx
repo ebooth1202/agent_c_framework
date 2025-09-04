@@ -9,7 +9,7 @@ import {
   RealtimeClientConfig,
   AuthManager
 } from '@agentc/realtime-core';
-import { AgentCContext, AgentCContextValue } from './AgentCContext';
+import { AgentCContext, AgentCContextValue, InitializationState } from './AgentCContext';
 
 /**
  * Configuration props for the AgentCProvider
@@ -36,6 +36,9 @@ export interface AgentCProviderProps {
   /** Callback when client is successfully initialized */
   onInitialized?: (client: RealtimeClient) => void;
   
+  /** Callback when all initialization events have been received */
+  onInitializationComplete?: (data: InitializationState) => void;
+  
   /** Callback when initialization fails */
   onError?: (error: Error) => void;
   
@@ -54,12 +57,25 @@ export function AgentCProvider({
   config,
   autoConnect = false,
   onInitialized,
+  onInitializationComplete,
   onError,
   debug = false
 }: AgentCProviderProps): React.ReactElement {
   const [client, setClient] = useState<RealtimeClient | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  
+  // Initialization state tracking
+  const [initialization, setInitialization] = useState<InitializationState>({
+    isInitialized: false,
+    receivedEvents: new Set<string>(),
+    user: null,
+    agents: [],
+    avatars: [],
+    voices: [],
+    toolsets: [],
+    currentSession: null
+  });
   
   // Use ref to track if we've already initialized to prevent double initialization in StrictMode
   const initializationRef = useRef(false);
@@ -131,6 +147,97 @@ export function AgentCProvider({
       const newClient = new RealtimeClient(clientConfig);
       clientRef.current = newClient;
       
+      // Set up initialization event listeners
+      const requiredInitEvents = new Set([
+        'chat_user_data',
+        'avatar_list',
+        'voice_list',
+        'agent_list',
+        'tool_catalog',
+        'chat_session_changed'
+      ]);
+      
+      const updateInitialization = (eventType: string, data: any) => {
+        setInitialization(prev => {
+          const newState = { ...prev };
+          const newReceivedEvents = new Set(prev.receivedEvents);
+          newReceivedEvents.add(eventType);
+          
+          // Update specific data based on event type
+          switch (eventType) {
+            case 'chat_user_data':
+              newState.user = data.user;
+              break;
+            case 'agent_list':
+              newState.agents = data.agents;
+              break;
+            case 'avatar_list':
+              newState.avatars = data.avatars;
+              break;
+            case 'voice_list':
+              newState.voices = data.voices;
+              break;
+            case 'tool_catalog':
+              newState.toolsets = data.toolsets;
+              break;
+            case 'chat_session_changed':
+              newState.currentSession = data.chat_session;
+              break;
+          }
+          
+          newState.receivedEvents = newReceivedEvents;
+          
+          // Check if all required events have been received
+          const allReceived = Array.from(requiredInitEvents).every(
+            event => newReceivedEvents.has(event)
+          );
+          newState.isInitialized = allReceived;
+          
+          if (allReceived && !prev.isInitialized) {
+            if (debug) {
+              console.warn('AgentCProvider: All initialization events received');
+            }
+            // Invoke callback when initialization is complete
+            if (onInitializationComplete) {
+              onInitializationComplete(newState);
+            }
+          }
+          
+          return newState;
+        });
+      };
+      
+      // Listen for initialization events
+      newClient.on('chat_user_data', (data) => {
+        if (debug) console.warn('AgentCProvider: Received chat_user_data event');
+        updateInitialization('chat_user_data', data);
+      });
+      
+      newClient.on('agent_list', (data) => {
+        if (debug) console.warn('AgentCProvider: Received agent_list event');
+        updateInitialization('agent_list', data);
+      });
+      
+      newClient.on('avatar_list', (data) => {
+        if (debug) console.warn('AgentCProvider: Received avatar_list event');
+        updateInitialization('avatar_list', data);
+      });
+      
+      newClient.on('voice_list', (data) => {
+        if (debug) console.warn('AgentCProvider: Received voice_list event');
+        updateInitialization('voice_list', data);
+      });
+      
+      newClient.on('tool_catalog', (data) => {
+        if (debug) console.warn('AgentCProvider: Received tool_catalog event');
+        updateInitialization('tool_catalog', data);
+      });
+      
+      newClient.on('chat_session_changed', (data) => {
+        if (debug) console.warn('AgentCProvider: Received chat_session_changed event');
+        updateInitialization('chat_session_changed', data);
+      });
+      
       // Set up connection state listener for debugging
       if (debug) {
         newClient.on('connected', () => {
@@ -190,7 +297,7 @@ export function AgentCProvider({
       // Reset initialization flag for potential re-mount
       initializationRef.current = false;
     };
-  }, [clientConfig, autoConnect, onInitialized, onError, debug]);
+  }, [clientConfig, autoConnect, onInitialized, onInitializationComplete, onError, debug]);
   
   // Update auth token if it changes
   useEffect(() => {
@@ -219,8 +326,9 @@ export function AgentCProvider({
   const contextValue = useMemo<AgentCContextValue>(() => ({
     client,
     isInitializing,
-    error
-  }), [client, isInitializing, error]);
+    error,
+    initialization
+  }), [client, isInitializing, error, initialization]);
   
   return (
     <AgentCContext.Provider value={contextValue}>

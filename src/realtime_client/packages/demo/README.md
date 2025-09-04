@@ -39,13 +39,26 @@ graph TD
 1. Clone this repository
 ```
 
-2. Install the required depdencies
+2. Install the required dependencies and set up audio worklet
 
    ```bash
    pnpm install # Or package manager of choice
+   
+   # The audio worklet file is automatically deployed during install
+   # It will be copied to public/worklets/audio-processor.worklet.js
    ```
 
-3. Copy `.env.example` to `.env.local`
+3. Verify audio worklet deployment
+
+   ```bash
+   # Check that the worklet file exists
+   ls public/worklets/audio-processor.worklet.js
+   
+   # If missing, copy manually:
+   cp ../../packages/core/dist/worklets/audio-processor.worklet.js public/worklets/
+   ```
+
+4. Copy `.env.example` to `.env.local`
 
    ```bash
    cp .env.example .env.local
@@ -57,11 +70,32 @@ graph TD
    pnpm dev
    ```
 
-5. Build the project
+6. Build the project
 
    ```bash
    pnpm build
    ```
+
+## Audio System Notes
+
+### AudioWorklet Deployment
+
+This application uses an AudioWorklet for high-performance audio processing. The worklet file must be accessible at `/worklets/audio-processor.worklet.js`. 
+
+**Key features of the audio system:**
+- Automatic resampling from browser native rate to 16kHz
+- Off-thread processing for better performance
+- Binary WebSocket transmission for 33% bandwidth savings
+
+### Troubleshooting Audio Issues
+
+If you encounter audio problems:
+
+1. **404 Error for worklet:** Ensure `public/worklets/audio-processor.worklet.js` exists
+2. **No audio input:** Check HTTPS is enabled (required for microphone access)
+3. **Distorted audio:** The system automatically handles sample rate conversion
+
+For detailed troubleshooting, see the [Audio Troubleshooting Guide](../../docs/guides/audio-troubleshooting.md).
 
 ## Features
 

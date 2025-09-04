@@ -5,9 +5,19 @@
  * - Import statements are simpler (no module resolution issues)
  * - All extensions work with standard imports
  * - Better Next.js compatibility
+ * 
+ * IMPORTANT: StarterKit already includes markdown InputRules for:
+ * - Bold (**text**)
+ * - Italic (*text*)
+ * - Headers (#, ##, etc.)
+ * - Lists (-, *, 1.)
+ * - Blockquotes (>)
+ * - Code blocks (```)
+ * We don't need to add custom InputRules for these!
  */
-import { Extension, InputRule } from '@tiptap/core';
+import { Extension } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
+import Typography from '@tiptap/extension-typography';
 import Link from '@tiptap/extension-link';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 import { common, createLowlight } from 'lowlight';
@@ -33,191 +43,6 @@ const lowlight = createLowlight(common);
 // Register additional languages
 lowlight.register('dockerfile', dockerfile);
 lowlight.register('docker', dockerfile); // Alias
-
-/**
- * Custom Markdown InputRules Extension - v2 Compatible
- */
-const MarkdownInputRules = Extension.create({
-  name: 'markdownInputRules',
-
-  addInputRules() {
-    return [
-      // Bold: **text** → bold text
-      new InputRule({
-        find: /(?:^|\s)(\*\*|__)([^*_]+)(\*\*|__)$/,
-        handler: ({ state: _state, range, match }) => {
-          const start = range.from;
-          const end = range.to;
-          
-          this.editor
-            .chain()
-            .deleteRange({ from: start, to: end })
-            .insertContentAt(start, {
-              type: 'text',
-              text: match[2],
-              marks: [{ type: 'bold' }]
-            })
-            .run();
-        },
-      }),
-
-      // Italic: *text* or _text_ → italic text
-      new InputRule({
-        find: /(?:^|\s)(\*|_)([^*_]+)(\*|_)$/,
-        handler: ({ state: _state, range, match }) => {
-          const start = range.from;
-          const end = range.to;
-          
-          this.editor
-            .chain()
-            .deleteRange({ from: start, to: end })
-            .insertContentAt(start, {
-              type: 'text',
-              text: match[2],
-              marks: [{ type: 'italic' }]
-            })
-            .run();
-        },
-      }),
-
-      // Strikethrough: ~~text~~ → strikethrough text
-      new InputRule({
-        find: /(?:^|\s)(~~)([^~]+)(~~)$/,
-        handler: ({ state: _state, range, match }) => {
-          const start = range.from;
-          const end = range.to;
-          
-          this.editor
-            .chain()
-            .deleteRange({ from: start, to: end })
-            .insertContentAt(start, {
-              type: 'text',
-              text: match[2],
-              marks: [{ type: 'strike' }]
-            })
-            .run();
-        },
-      }),
-
-      // Inline code: `text` → inline code
-      new InputRule({
-        find: /(?:^|\s)(`([^`]+)`)$/,
-        handler: ({ state: _state, range, match }) => {
-          const start = range.from;
-          const end = range.to;
-          
-          this.editor
-            .chain()
-            .deleteRange({ from: start, to: end })
-            .insertContentAt(start, {
-              type: 'text',
-              text: match[2],
-              marks: [{ type: 'code' }]
-            })
-            .run();
-        },
-      }),
-
-      // Heading 1: # text → Heading 1
-      new InputRule({
-        find: /^# $/,
-        handler: ({ state: _state, range }) => {
-          this.editor
-            .chain()
-            .deleteRange(range)
-            .setHeading({ level: 1 })
-            .run();
-        },
-      }),
-
-      // Heading 2: ## text → Heading 2
-      new InputRule({
-        find: /^## $/,
-        handler: ({ state: _state, range }) => {
-          this.editor
-            .chain()
-            .deleteRange(range)
-            .setHeading({ level: 2 })
-            .run();
-        },
-      }),
-
-      // Heading 3: ### text → Heading 3
-      new InputRule({
-        find: /^### $/,
-        handler: ({ state: _state, range }) => {
-          this.editor
-            .chain()
-            .deleteRange(range)
-            .setHeading({ level: 3 })
-            .run();
-        },
-      }),
-
-      // Bullet list: - or * → bullet list
-      new InputRule({
-        find: /^(\*|-) $/,
-        handler: ({ state: _state, range }) => {
-          this.editor
-            .chain()
-            .deleteRange(range)
-            .toggleBulletList()
-            .run();
-        },
-      }),
-
-      // Ordered list: 1. → numbered list
-      new InputRule({
-        find: /^(\d+)\. $/,
-        handler: ({ state: _state, range }) => {
-          this.editor
-            .chain()
-            .deleteRange(range)
-            .toggleOrderedList()
-            .run();
-        },
-      }),
-
-      // Blockquote: > → blockquote
-      new InputRule({
-        find: /^> $/,
-        handler: ({ state: _state, range }) => {
-          this.editor
-            .chain()
-            .deleteRange(range)
-            .toggleBlockquote()
-            .run();
-        },
-      }),
-
-      // Horizontal rule: --- → horizontal rule
-      new InputRule({
-        find: /^---$/,
-        handler: ({ state: _state, range }) => {
-          this.editor
-            .chain()
-            .deleteRange(range)
-            .setHorizontalRule()
-            .run();
-        },
-      }),
-
-      // Code block: ```language → code block with language
-      new InputRule({
-        find: /^```([a-z]*)\s$/,
-        handler: ({ state: _state, range, match }) => {
-          const language = match[1] || 'plaintext';
-          
-          this.editor
-            .chain()
-            .deleteRange(range)
-            .setCodeBlock({ language })
-            .run();
-        },
-      }),
-    ];
-  },
-});
 
 /**
  * Custom Keyboard Shortcuts Extension - v2 Compatible
@@ -301,69 +126,11 @@ export function getMarkdownExtensions(options: {
   onImageUploadError?: (error: Error) => void;
 } = {}) {
   return [
-    // StarterKit bundles most of what we need
-    StarterKit.configure({
-      bold: {
-        HTMLAttributes: {
-          class: 'font-bold',
-        },
-      },
-      italic: {
-        HTMLAttributes: {
-          class: 'italic',
-        },
-      },
-      strike: {
-        HTMLAttributes: {
-          class: 'line-through',
-        },
-      },
-      code: {
-        HTMLAttributes: {
-          class: 'bg-muted px-1 py-0.5 rounded font-mono text-sm',
-        },
-      },
-      heading: {
-        levels: [1, 2, 3],
-        HTMLAttributes: {
-          1: { class: 'text-2xl font-bold' },
-          2: { class: 'text-xl font-semibold' },
-          3: { class: 'text-lg font-semibold' },
-        },
-      },
-      bulletList: {
-        HTMLAttributes: {
-          class: 'list-disc list-inside ml-4',
-        },
-      },
-      orderedList: {
-        HTMLAttributes: {
-          class: 'list-decimal list-inside ml-4',
-        },
-      },
-      listItem: {
-        HTMLAttributes: {
-          class: 'ml-2',
-        },
-      },
-      blockquote: {
-        HTMLAttributes: {
-          class: 'border-l-4 border-muted pl-4 italic',
-        },
-      },
-      horizontalRule: {
-        HTMLAttributes: {
-          class: 'border-t border-border my-4',
-        },
-      },
-      paragraph: {
-        HTMLAttributes: {
-          class: 'leading-relaxed',
-        },
-      },
-      // Disable default codeBlock as we use CodeBlockLowlight
-      codeBlock: false,
-    }),
+    // StarterKit bundles most of what we need - no configuration needed
+    StarterKit,
+    
+    // Typography extension for smart quotes and other text transformations
+    Typography,
 
     // Enhanced code block with syntax highlighting
     CodeBlockLowlight.configure({
@@ -382,11 +149,8 @@ export function getMarkdownExtensions(options: {
       },
     }),
 
-    // Custom keyboard shortcuts
+    // Custom keyboard shortcuts (these are different from InputRules)
     KeyboardShortcuts,
-
-    // Custom markdown input rules
-    MarkdownInputRules,
     
     // Smart paste handler for images (if enabled)
     ...(options.enableSmartPaste !== false ? [

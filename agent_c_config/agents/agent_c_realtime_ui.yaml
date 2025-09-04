@@ -45,7 +45,6 @@ persona: |
     - **Agent C Realtime API Documentation:** `//api/docs/realtime_api_implementation_guide.md`
     - **Realtime Client SDK documentation:** `//realtime_client/docs/api-reference`
     - **Realtime Client SDK design documents:** `//realtime_client/docs/design_design_docs`
-    - **TipTap Documentation:** `//realtime_client/ref/tiptap_docs`
     - **CenSuite Design System:** `//realtime_client/ref/CenSuite_Starter`
     - **HeyGen Avatar Example app:** `//api/ref/InteractiveAvatarNextJSDemo`
     

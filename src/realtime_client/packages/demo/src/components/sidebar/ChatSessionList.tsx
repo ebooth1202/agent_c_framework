@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 export interface ChatSessionListProps {
+  isCollapsed?: boolean
   className?: string
 }
 
@@ -15,7 +16,7 @@ export interface ChatSessionListProps {
  * Design specifications available in .scratch/design_docs/chat_session_list_design.md
  */
 export const ChatSessionList = React.forwardRef<HTMLDivElement, ChatSessionListProps>(
-  ({ className }, ref) => {
+  ({ isCollapsed, className }, ref) => {
     // Stub data for visual representation
     const stubSessions = [
       {
@@ -34,6 +35,37 @@ export const ChatSessionList = React.forwardRef<HTMLDivElement, ChatSessionListP
       },
     ]
 
+    // When collapsed, show minimal UI
+    if (isCollapsed) {
+      return (
+        <div
+          ref={ref}
+          className={cn(
+            "flex-grow overflow-hidden",
+            className
+          )}
+        >
+          <div className="flex flex-col items-center gap-2 py-4">
+            {stubSessions.slice(0, 3).map((session) => (
+              <button
+                key={session.id}
+                className={cn(
+                  "w-10 h-10 rounded-lg flex items-center justify-center transition-colors",
+                  "hover:bg-muted",
+                  session.isActive && "bg-muted"
+                )}
+                disabled
+                title={session.name}
+                aria-label={`Chat session: ${session.name}`}
+              >
+                <MessageSquare className="h-4 w-4 text-muted-foreground" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )
+    }
+    
     return (
       <div
         ref={ref}

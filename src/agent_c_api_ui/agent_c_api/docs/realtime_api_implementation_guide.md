@@ -38,86 +38,13 @@ Authenticate user and get initial configuration.
 {
   "agent_c_token": "jwt_token_string",
   "heygen_token": "heygen_access_token",
-  "user": {
-    "user_id": "string",
-    "user_name": "string",
-    "email": "string|null",
-    "first_name": "string|null",
-    "last_name": "string|null", 
-    "is_active": true,
-    "roles": ["array_of_strings"],
-    "groups": ["array_of_strings"],
-    "created_at": "iso_timestamp|null",
-    "last_login": "iso_timestamp|null"
-  },
-  "agents": [
-    {
-      "name": "Agent Name",
-      "key": "agent_key", 
-      "agent_description": "Agent description|null",
-      "category": ["array_of_categories"]
-    }
-  ],
-  "avatars": [
-    {
-      "avatar_id": "string",
-      "created_at": 1234567890,
-      "default_voice": "voice_id",
-      "is_public": true,
-      "normal_preview": "preview_url",
-      "pose_name": "pose_name",
-      "status": "status_string"
-    }
-  ],
-  "toolsets": [
-    {
-      "name": "toolset_name",
-      "description": "Description of the toolset functionality",
-      "schemas": {
-        "tool_name": {
-          "type": "function",
-          "function": {
-            "name": "tool_name",
-            "description": "Tool description",
-            "parameters": {
-              "type": "object",
-              "properties": {
-                "param_name": {
-                  "type": "string",
-                  "description": "Parameter description"
-                }
-              },
-              "required": ["param_name"]
-            }
-          }
-        }
-      }
-    }
-  ],
-  "voices": [
-    {
-      "voice_id": "none",
-      "vendor": "system",
-      "description": "No Voice (text only)",
-      "output_format": "none"
-    },
-    {
-      "voice_id": "avatar",
-      "vendor": "heygen",
-      "description": "HeyGen Avatar Voice Model",
-      "output_format": "special"
-    },
-    {
-      "voice_id": "alloy",
-      "vendor": "openai",
-      "description": "OpenAI Alloy voice",
-      "output_format": "pcm16"
-    }
-  ],
   "ui_session_id": "three-word-slug"
 }
 ```
 
+**Note:** User data, agents, avatars, tools, and voices are provided via the WebSocket initialization events after connection, not in the login response.
+
+```
 #### `GET /rt/refresh_token`
 
 Refresh JWT and HeyGen tokens.
@@ -178,7 +105,21 @@ The system uses two types of session identifiers:
 1. **Authentication** - JWT token validation
 2. **Session Creation/Resume** - Initialize or load chat session
 3. **Bridge Initialization** - Setup event handlers
-4. **Event Loop** - Bidirectional event processing
+4. **Initialization Events** - Server sends configuration data to client
+5. **Event Loop** - Bidirectional event processing
+
+#### Initialization Event Sequence
+
+When a client successfully connects to the WebSocket, the server automatically sends a series of initialization events to provide the client with current configuration and state:
+
+1. **`chat_user_data`** - Current user information and profile data
+2. **`avatar_list`** - Available HeyGen avatars for the user
+3. **`voice_list`** - Available TTS voice models and configurations
+4. **`agent_list`** - Available AI agents the user can interact with
+5. **`tool_catalog`** - Available tools and their schemas for the current session
+6. **`chat_session_changed`** - Current or newly created chat session state
+
+These events provide all the necessary information for the client to render its UI and be ready for user interaction. Clients should handle these events during the connection setup phase to ensure proper initialization.
 
 ---
 
@@ -235,6 +176,16 @@ Connect to existing avatar session.
 
 ### Voice Management
 
+#### `get_voices`
+
+Request list of available voices.
+
+```json
+{
+  "type": "get_voices"
+}
+```
+
 #### `set_agent_voice`
 
 Set the TTS voice for the current agent.
@@ -243,6 +194,44 @@ Set the TTS voice for the current agent.
 {
   "type": "set_agent_voice",
   "voice_id": "alloy"
+}
+```
+
+### Tool Management
+
+#### `get_tool_catalog`
+
+Request the tool catalog.
+
+```json
+{
+  "type": "get_tool_catalog"
+}
+```
+
+### Session Management
+
+#### `get_user_sessions`
+
+Request list of user chat sessions.
+
+```json
+{
+  "type": "get_user_sessions",
+  "offset": 0,
+  "limit": 50
+}
+```
+
+### Connection Health
+
+#### `ping`
+
+Check if the connection is alive.
+
+```json
+{
+  "type": "ping"
 }
 ```
 
@@ -643,6 +632,36 @@ Notification that the server has received user input and is no longer accepting 
 
 ### Voice Events
 
+#### `voice_list`
+
+Response to `get_voices` with available voices.
+
+```json
+{
+  "type": "voice_list",
+  "voices": [
+    {
+      "voice_id": "none",
+      "vendor": "system",
+      "description": "No Voice (text only)",
+      "output_format": "none"
+    },
+    {
+      "voice_id": "avatar",
+      "vendor": "heygen",
+      "description": "HeyGen Avatar Voice Model",
+      "output_format": "special"
+    },
+    {
+      "voice_id": "alloy",
+      "vendor": "openai",
+      "description": "OpenAI Alloy voice",
+      "output_format": "pcm16"
+    }
+  ]
+}
+```
+
 #### `agent_voice_changed`
 
 Notification that the agent's voice has been updated.
@@ -656,6 +675,103 @@ Notification that the agent's voice has been updated.
     "description": "OpenAI Alloy voice",
     "output_format": "pcm16"
   }
+}
+```
+
+### Tool Events
+
+#### `tool_catalog`
+
+Response to `get_tool_catalog` with available tools.
+
+```json
+{
+  "type": "tool_catalog",
+  "tools": [
+    {
+      "name": "toolset_name",
+      "description": "Description of the toolset functionality",
+      "schemas": {
+        "tool_name": {
+          "type": "function",
+          "function": {
+            "name": "tool_name",
+            "description": "Tool description",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "param_name": {
+                  "type": "string",
+                  "description": "Parameter description"
+                }
+              },
+              "required": ["param_name"]
+            }
+          }
+        }
+      }
+    }
+  ]
+}
+```
+
+### User Events
+
+#### `chat_user_data`
+
+Sent during initialization with current user information.
+
+```json
+{
+  "type": "chat_user_data",
+  "user": {
+    "user_id": "string",
+    "user_name": "string",
+    "email": "string|null",
+    "first_name": "string|null",
+    "last_name": "string|null",
+    "is_active": true,
+    "roles": ["array_of_strings"],
+    "groups": ["array_of_strings"],
+    "created_at": "iso_timestamp|null",
+    "last_login": "iso_timestamp|null"
+  }
+}
+```
+
+#### `get_user_sessions_response`
+
+Response to `get_user_sessions` with user's chat sessions.
+
+```json
+{
+  "type": "get_user_sessions_response",
+  "sessions": {
+    "sessions": [
+      {
+        "session_id": "session-id",
+        "session_name": "Session Name|null",
+        "created_at": "iso_timestamp",
+        "updated_at": "iso_timestamp",
+        "agent_config": { /* agent configuration */ }
+      }
+    ],
+    "total": 10,
+    "offset": 0,
+    "limit": 50
+  }
+}
+```
+
+### Connection Events
+
+#### `pong`
+
+Response to `ping` event for connection health check.
+
+```json
+{
+  "type": "pong"
 }
 ```
 

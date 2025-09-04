@@ -221,17 +221,14 @@ export type MessageFormat = 'text' | 'markdown';
 
 /**
  * Login response structure
+ * NOTE: Breaking change - login now only returns tokens and session ID.
+ * All configuration data (user, agents, avatars, voices, toolsets, sessions) 
+ * now comes through WebSocket events after connection.
  */
 export interface LoginResponse {
   agent_c_token: string;
   heygen_token: string;
-  user: User;
-  agents: Agent[];
-  avatars: Avatar[];
-  toolsets: Toolset[];
-  voices: Voice[];
   ui_session_id: string;
-  sessions: ChatSessionQueryResponse; // Changed from ChatSession[] to support pagination
 }
 
 /**

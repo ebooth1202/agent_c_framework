@@ -121,7 +121,7 @@ export class AgentCService {
     
     return {
       agent_c_token: tokenData.token,
-      websocket_url: tokenData.websocket_url,
+      apiUrl: 'https://api.agentc.ai', // Base API URL for SDK to construct WebSocket
       expires_at: tokenData.expires_at,
       agents: chatUser.agents,
       voices: chatUser.voices,

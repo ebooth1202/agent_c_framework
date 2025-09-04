@@ -11,6 +11,6 @@ export {
   AgentCContext,
   useRealtimeClient,
   useAgentCContext,
-  useRealtimeClientSafe 
+  useRealtimeClientSafe
 } from './AgentCContext';
-export type { AgentCContextValue } from './AgentCContext';
+export type { AgentCContextValue, InitializationState } from './AgentCContext';

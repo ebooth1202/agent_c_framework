@@ -15,7 +15,10 @@
     "clean": "rimraf dist",
     "type-check": "tsc --noEmit",
     "lint": "eslint",
-    "lint:fix": "eslint --fix"
+    "lint:fix": "eslint --fix",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:watch": "vitest watch"
   },
   "peerDependencies": {
     "react": "^18.0.0",

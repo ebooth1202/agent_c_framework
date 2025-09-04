@@ -1,0 +1,393 @@
+{
+  "agent_c_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJwcmVzdG8tY2hhbnQiLCJwZXJtaXNzaW9ucyI6WyJhZG1pbiIsImRlbW8iXSwiZXhwIjoxNzU3MDE4MDA3LCJpYXQiOjE3NTY5MzE2MDd9.PXSTMgsQ3bJY6d3YPszLm3rcl3XvFOwMYBPT2YtjtGM",
+  "heygen_token": "eyJ0b2tlbiI6ImFmZmE0ZGIzYmEyNzRjYmM4NTkxYzY5OTNjZGZlN2U1IiwidG9rZW5fdHlwZSI6InNhX2Zyb21fcmVndWxhciIsImNyZWF0ZWRfYXQiOjE3NTY5MzE2MDZ9",
+  "ui_session_id": "job-first-insect",
+  "user": {
+    "user_id": "presto-chant",
+    "user_name": "admin",
+    "email": "admin@example.com",
+    "first_name": "Admin",
+    "last_name": "User",
+    "is_active": true,
+    "roles": [
+      "admin",
+      "demo"
+    ],
+    "groups": [],
+    "created_at": "2025-08-22T18:49:25.476442",
+    "last_login": null
+  },
+  "agents": [
+    {
+      "name": "Alexandra - Strategic Document Architect",
+      "key": "alexandra_strategic_document_architect",
+      "agent_description": "Alexandra is a specialized strategic consulting deliverable architect who excels at creating comprehensive strategy documents, frameworks, executive communications, and implementation roadmaps. She transforms complex strategic thinking into polished, executive-ready deliverables.\n",
+      "category": [
+        "domo",
+        "agent_assist"
+      ]
+    },
+    {
+      "name": "Bobb the Agent Builder",
+      "key": "bobb_agent_builder",
+      "agent_description": "Bobb is a specialized agent designed to assist users in building and configuring new agents within the Agent C Framework. He provides guidance on best practices, configuration options, and helps users create agents tailored to their specific needs.\n",
+      "category": [
+        "domo"
+      ]
+    },
+    {
+      "name": "Casey - Centric AI Monitor",
+      "key": "casey_centric_ai_monitor",
+      "agent_description": "Casey is the Centric AI Insight Monitor who keeps users informed about the latest AI news and insights from RSS feeds, ensuring no duplicate information is shared across sessions.\n",
+      "category": [
+        "domo"
+      ]
+    },
+    {
+      "name": "Tina Tree Sitter Dev",
+      "key": "tina_tree_sitter_dev",
+      "agent_description": "Tina is a seasoned Python developer working as half of a paired development effort tasked with developing, extending, and improving the \"Agent Code Explorer\" (ACE) project. ACE leverages the latest tree-sitter Python package for code analysis.\n",
+      "category": [
+        "domo"
+      ]
+    }
+  ],
+  "avatars": [
+    {
+      "avatar_id": "0b87f9f6d6f74d68af077513ab6a0497",
+      "created_at": 1755540079,
+      "default_voice": "af836dad6a634d4ba7b06e959571683d",
+      "is_public": false,
+      "normal_preview": "https://files2.heygen.ai/avatar/v3/0b87f9f6d6f74d68af077513ab6a0497/full/2.2/preview_target.webp",
+      "pose_name": "Joseph Ours",
+      "status": "ACTIVE"
+    },
+    {
+      "avatar_id": "Thaddeus_ProfessionalLook2_public",
+      "created_at": 1744264310,
+      "default_voice": "da04d9a268ac468887a68359908e55b7",
+      "is_public": true,
+      "normal_preview": "https://files2.heygen.ai/avatar/v3/c0b5b8aecefb41e2bb2589ba58bee1ab_55950/preview_talk_1.webp",
+      "pose_name": "Thaddeus Professional Look 2",
+      "status": "ACTIVE"
+    },
+    {
+      "avatar_id": "Wayne_20240711",
+      "created_at": 1727136000,
+      "default_voice": "2411aaf820874397a44530f94032bfdc",
+      "is_public": true,
+      "normal_preview": "https://files2.heygen.ai/avatar/v3/a3fdb0c652024f79984aaec11ebf2694_34350/preview_target.webp",
+      "pose_name": "Wayne",
+      "status": "ACTIVE"
+    }
+  ],
+  "toolsets": [
+    {
+      "name": "AgentAssistTools",
+      "description": "\nEnables your agent to collaborate with other specialized AI agents and assistants to solve complex problems.\nYour agent can delegate specific tasks to expert agents, have ongoing conversations with them, or get one-time\nassistance with particular challenges that require specialized knowledge or capabilities.\n",
+      "schemas": [
+        {
+          "type": "function",
+          "function": {
+            "name": "chat",
+            "description": "Begin or resume a chat session with an agent assistant. The return value will be the final output from the agent along with the agent session ID.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "description": "The message ."
+                },
+                "agent_key": {
+                  "type": "string",
+                  "description": "The ID key of the agent to chat with."
+                },
+                "process_context": {
+                  "type": "string",
+                  "description": "Optional process rules, context, or specific instructions to provide to the assistant. This will be prepended to the assistant's persona to guide its behavior for this interaction."
+                },
+                "session_id": {
+                  "type": "string",
+                  "description": "Populate this with a an agent session ID to resume a chat session"
+                }
+              },
+              "required": [
+                "message",
+                "agent_key"
+              ]
+            }
+          }
+        },
+        {
+          "type": "function",
+          "function": {
+            "name": "load_agent",
+            "description": "Load an agent agent as a YAML string for you to review",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "agent_id": {
+                  "type": "string",
+                  "description": "The ID of the agent to load."
+                }
+              },
+              "required": [
+                "agent_id"
+              ]
+            }
+          }
+        },
+        {
+          "type": "function",
+          "function": {
+            "name": "oneshot",
+            "description": "Make a request of an agent and receive a response. This is a reasoning agent with a large thinking budget. This is a \"oneshot\" request, meaning that the agent will not be able to remember anything from this request in the future.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "request": {
+                  "type": "string",
+                  "description": "A question, or request for the agent."
+                },
+                "agent_key": {
+                  "type": "string",
+                  "description": "The ID key of the agent to make a request of."
+                },
+                "process_context": {
+                  "type": "string",
+                  "description": "Optional process rules, context, or specific instructions to provide to the assistant. This will be prepended to the assistant's persona to guide its behavior for this oneshot."
+                }
+              },
+              "required": [
+                "request",
+                "agent_key"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AgentCloneTools",
+      "description": "\nAllows your agent to create copies of itself to work on multiple tasks simultaneously or approach problems\nfrom different angles. The agent can delegate work to its clones and have extended conversations with them,\nenabling parallel problem-solving and collaborative thinking.\n",
+      "schemas": [
+        {
+          "type": "function",
+          "function": {
+            "name": "chat",
+            "description": "Begin or resume a chat session with a clone of yourself. The return value will be the final output from the agent along with the agent session ID.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "description": "The message ."
+                },
+                "agent_session_id": {
+                  "type": "string",
+                  "description": "Populate this with a an agent session ID to resume a chat session"
+                },
+                "process_context": {
+                  "type": "string",
+                  "description": "Optional process rules, context, or specific instructions to provide to the clone. This will be prepended to the clone's persona to guide its behavior for this session."
+                }
+              },
+              "required": [
+                "message"
+              ]
+            }
+          }
+        },
+        {
+          "type": "function",
+          "function": {
+            "name": "oneshot",
+            "description": "Make a request of clone of yourself and receive a response. This is a \"oneshot\" request, meaning that the agent will not be able to remember anything from this request in the future.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "request": {
+                  "type": "string",
+                  "description": "A question, or request for the clone."
+                },
+                "process_context": {
+                  "type": "string",
+                  "description": "Optional process rules, context, or specific instructions to provide to the clone. This will be prepended to the clone's persona to guide its behavior for this specific task."
+                }
+              },
+              "required": [
+                "request"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "YoutubeTranscriptTools",
+      "description": "Class for handling YouTube video transcripts.",
+      "schemas": [
+        {
+          "type": "function",
+          "function": {
+            "name": "list_transcript_languages",
+            "description": "List available transcript languages for a video.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "video_url": {
+                  "type": "string",
+                  "description": "The URL of the YouTube video."
+                }
+              },
+              "required": [
+                "video_url"
+              ]
+            }
+          }
+        },
+        {
+          "type": "function",
+          "function": {
+            "name": "only_save_transcript",
+            "description": "Save a YouTube transcript without returning its content.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "video_url": {
+                  "type": "string",
+                  "description": "The URL of the YouTube video."
+                },
+                "workspace_name": {
+                  "type": "string",
+                  "description": "The name of the workspace to save the transcript.",
+                  "default": "project"
+                },
+                "file_path": {
+                  "type": "string",
+                  "description": "The relative file path and name in the workspace for saving the transcript file. File extension will be '.txt'"
+                },
+                "include_timestamps": {
+                  "type": "boolean",
+                  "description": "Whether to include timestamps in the transcript. Default is False.",
+                  "default": false
+                }
+              },
+              "required": [
+                "video_url",
+                "file_path"
+              ]
+            }
+          }
+        },
+        {
+          "type": "function",
+          "function": {
+            "name": "retrieve_and_save_transcript",
+            "description": "Retrieve and save a YouTube transcript.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "video_url": {
+                  "type": "string",
+                  "description": "The URL of the YouTube video."
+                },
+                "workspace_name": {
+                  "type": "string",
+                  "description": "The name of the workspace to save the transcript.",
+                  "default": "project"
+                },
+                "file_path": {
+                  "type": "string",
+                  "description": "The relative file path and name in the workspace for saving the transcript file. File extension will be '.txt'"
+                },
+                "include_timestamps": {
+                  "type": "boolean",
+                  "description": "Whether to include timestamps in the transcript. Default is False.",
+                  "default": false
+                }
+              },
+              "required": [
+                "video_url",
+                "file_path"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "voices": [
+    {
+      "voice_id": "none",
+      "vendor": "system",
+      "description": "No Voice (text only)",
+      "output_format": "none"
+    },
+    {
+      "voice_id": "avatar",
+      "vendor": "heygen",
+      "description": "HeyGen Avatar Voice Model",
+      "output_format": "special"
+    },
+    {
+      "voice_id": "alloy",
+      "vendor": "openai",
+      "description": "",
+      "output_format": "pcm16"
+    },
+    {
+      "voice_id": "ash",
+      "vendor": "openai",
+      "description": "",
+      "output_format": "pcm16"
+    },
+    {
+      "voice_id": "coral",
+      "vendor": "openai",
+      "description": "",
+      "output_format": "pcm16"
+    },
+    {
+      "voice_id": "echo",
+      "vendor": "openai",
+      "description": "",
+      "output_format": "pcm16"
+    },
+    {
+      "voice_id": "fable",
+      "vendor": "openai",
+      "description": "",
+      "output_format": "pcm16"
+    },
+    {
+      "voice_id": "nova",
+      "vendor": "openai",
+      "description": "",
+      "output_format": "pcm16"
+    },
+    {
+      "voice_id": "onyx",
+      "vendor": "openai",
+      "description": "",
+      "output_format": "pcm16"
+    },
+    {
+      "voice_id": "sage",
+      "vendor": "openai",
+      "description": "",
+      "output_format": "pcm16"
+    },
+    {
+      "voice_id": "shimmer",
+      "vendor": "openai",
+      "description": "",
+      "output_format": "pcm16"
+    }
+  ],
+  "sessions": {
+    "chat_sessions": [],
+    "total_sessions": 0,
+    "offset": 0
+  }
+}

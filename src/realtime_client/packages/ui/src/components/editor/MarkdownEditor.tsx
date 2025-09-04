@@ -14,6 +14,7 @@ import { cn } from '../../lib/utils';
 import type { MarkdownEditorProps } from './types';
 import { getMarkdownExtensions, keyboardShortcuts } from './markdownExtensions';
 import { codeHighlightStyles } from './codeHighlightTheme';
+import { editorStyles } from './editorStyles';
 
 /**
  * MarkdownEditor component - v2 Compatible
@@ -147,8 +148,8 @@ const MarkdownEditor = React.forwardRef<HTMLDivElement, MarkdownEditorProps>(
           editor={editor}
           className="w-full"
         />
-        {/* Inject syntax highlighting styles */}
-        <style dangerouslySetInnerHTML={{ __html: codeHighlightStyles }} />
+        {/* Inject editor and syntax highlighting styles */}
+        <style dangerouslySetInnerHTML={{ __html: editorStyles + codeHighlightStyles }} />
       </div>
     );
   }

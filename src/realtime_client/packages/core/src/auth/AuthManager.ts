@@ -7,13 +7,7 @@ import { EventEmitter } from '../events/EventEmitter';
 import { 
   LoginResponse, 
   RefreshTokenResponse,
-  User,
-  Agent,
-  Avatar,
-  Voice,
-  Toolset,
-  ChatSessionIndexEntry,
-  ChatSessionQueryResponse
+  User
 } from '../events/types/CommonTypes';
 import {
   AuthConfig,
@@ -43,7 +37,6 @@ export class AuthManager extends EventEmitter<AuthManagerEvents> {
   private config: Required<AuthConfig>;
   private state: AuthState;
   private refreshTimer?: ReturnType<typeof setTimeout>;
-  private loginData?: LoginResponse;
 
   constructor(config: AuthConfig) {
     super();
@@ -133,49 +126,7 @@ export class AuthManager extends EventEmitter<AuthManagerEvents> {
     return url.toString();
   }
 
-  /**
-   * Get available agents from login data
-   */
-  getAgents(): Agent[] {
-    return this.loginData?.agents || [];
-  }
 
-  /**
-   * Get available avatars from login data
-   */
-  getAvatars(): Avatar[] {
-    return this.loginData?.avatars || [];
-  }
-
-  /**
-   * Get available voices from login data
-   */
-  getVoices(): Voice[] {
-    return this.loginData?.voices || [];
-  }
-
-  /**
-   * Get available toolsets from login data
-   */
-  getToolsets(): Toolset[] {
-    return this.loginData?.toolsets || [];
-  }
-
-  /**
-   * Get chat sessions from login data
-   * Returns the array of session index entries from the paginated response
-   */
-  getSessions(): ChatSessionIndexEntry[] {
-    return this.loginData?.sessions?.chat_sessions || [];
-  }
-
-  /**
-   * Get full sessions metadata including pagination info
-   * Returns the complete ChatSessionQueryResponse with total_sessions and offset
-   */
-  getSessionsMetadata(): ChatSessionQueryResponse | null {
-    return this.loginData?.sessions || null;
-  }
 
   /**
    * Check if currently authenticated
@@ -241,17 +192,14 @@ export class AuthManager extends EventEmitter<AuthManagerEvents> {
         expiresAt,
       };
 
-      // Store login data
-      this.loginData = data;
-
       // Store tokens
       await this.config.storage.setTokens(tokens);
 
-      // Update state
+      // Update state - note that user data will come from WebSocket events
       this.updateState({
         isAuthenticated: true,
         tokens,
-        user: data.user,
+        user: null, // User data will come from chat_user_data event
         uiSessionId: data.ui_session_id,
         isAuthenticating: false,
       });
@@ -366,9 +314,6 @@ export class AuthManager extends EventEmitter<AuthManagerEvents> {
     // Clear stored tokens
     await this.config.storage.clearTokens();
 
-    // Clear login data
-    this.loginData = undefined;
-
     // Reset state
     this.updateState({
       isAuthenticated: false,
@@ -386,10 +331,11 @@ export class AuthManager extends EventEmitter<AuthManagerEvents> {
   }
 
   /**
-   * Initialize AuthManager from a complete login payload
-   * Useful for production apps where the backend provides the full payload
+   * Initialize AuthManager from a login payload
+   * Note: The simplified login response only contains tokens and session ID.
+   * User data and configuration will come through WebSocket events.
    * 
-   * @param payload - Complete login response from the backend
+   * @param payload - Login response from the backend (tokens and session ID only)
    * @param wsUrl - Optional WebSocket URL for the realtime connection
    */
   async initializeFromPayload(payload: LoginResponse, wsUrl?: string): Promise<void> {
@@ -404,17 +350,14 @@ export class AuthManager extends EventEmitter<AuthManagerEvents> {
         expiresAt,
       };
 
-      // Store login data (contains agents, avatars, voices, toolsets)
-      this.loginData = payload;
-
       // Store tokens
       await this.config.storage.setTokens(tokens);
 
-      // Update state with all the data from the payload
+      // Update state - user data will come from WebSocket events
       this.updateState({
         isAuthenticated: true,
         tokens,
-        user: payload.user,
+        user: null,  // Will be populated by chat_user_data event
         uiSessionId: payload.ui_session_id,
         wsUrl: wsUrl || null,  // Store the WebSocket URL if provided
         isAuthenticating: false,

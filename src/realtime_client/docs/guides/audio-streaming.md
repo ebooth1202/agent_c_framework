@@ -14,12 +14,48 @@ The Agent C SDK uses binary WebSocket frames for audio streaming, providing:
 ## Audio Architecture
 
 ```
-Microphone → Web Audio API → AudioWorklet → PCM16 → WebSocket → Server
-                                                         ↓
+Microphone → Web Audio API → AudioWorklet → Resampling → PCM16 → WebSocket → Server
+   (Native Rate)              (Float32)      (to 16kHz)   (Binary)
+                                                              ↓
 Speaker ← Web Audio API ← PCM16 ← WebSocket ← Server Response
+   (Native Rate)         (16kHz)              (Binary Frames)
 ```
 
+### Key Components
+
+- **AudioWorklet**: Processes audio off the main thread for better performance
+- **Resampling**: Automatically converts browser native sample rate (e.g., 48kHz) to 16kHz
+- **PCM16 Format**: 16-bit signed integers for efficient transmission
+- **Binary WebSocket**: Direct ArrayBuffer transmission for 33% bandwidth savings
+
 ## Getting Started
+
+### Prerequisites
+
+**Important:** The AudioWorklet file must be deployed to your application's public directory.
+
+1. **Copy the AudioWorklet file to your public directory:**
+
+   ```bash
+   # For Next.js, React, Vue, or similar frameworks
+   cp node_modules/@agentc/realtime-core/dist/worklets/audio-processor.worklet.js public/worklets/
+   ```
+
+2. **Verify the file is accessible:**
+   
+   Navigate to `http://localhost:3000/worklets/audio-processor.worklet.js` in your browser.
+   You should see JavaScript code, not a 404 error.
+
+3. **For production builds, ensure the worklet is included:**
+
+   ```json
+   // package.json
+   {
+     "scripts": {
+       "postinstall": "cp node_modules/@agentc/realtime-core/dist/worklets/audio-processor.worklet.js public/worklets/"
+     }
+   }
+   ```
 
 ### Basic Audio Setup
 
@@ -96,13 +132,22 @@ const stream = await navigator.mediaDevices.getUserMedia({
 
 // 2. Process with AudioWorklet (runs on separate thread)
 class AudioProcessor extends AudioWorkletProcessor {
+  constructor() {
+    super();
+    // The worklet handles resampling automatically
+    this.resampler = new Resampler(sampleRate, 16000); // Browser rate to 16kHz
+  }
+  
   process(inputs, outputs, parameters) {
     const input = inputs[0];
     if (input.length > 0) {
       const channelData = input[0]; // Mono channel
       
+      // Resample to 16kHz if needed
+      const resampled = this.resampler.process(channelData);
+      
       // Convert Float32 to PCM16
-      const pcm16 = this.float32ToPCM16(channelData);
+      const pcm16 = this.float32ToPCM16(resampled);
       
       // Send to main thread
       this.port.postMessage({ audioData: pcm16 });
@@ -609,7 +654,38 @@ client.sendBinaryFrame(testTone.buffer);
 
 ## Troubleshooting
 
+**📚 Comprehensive Troubleshooting Guide**  
+For detailed solutions to AudioWorklet deployment, sample rate issues, and browser compatibility problems, see our [Audio Troubleshooting Guide](./audio-troubleshooting.md).
+
 ### Common Issues
+
+**AudioWorklet 404 Error:**
+
+```typescript
+// Ensure the worklet file is in your public directory
+// public/worklets/audio-processor.worklet.js
+
+// Or specify a custom path
+const client = new RealtimeClient({
+  audioConfig: {
+    workletPath: '/custom/path/to/audio-processor.worklet.js'
+  }
+});
+```
+
+**Sample Rate Mismatch:**
+
+```typescript
+// The SDK automatically handles resampling
+// Browser native rate (e.g., 48kHz) → Resampled to 16kHz → Server
+
+// To debug sample rate issues:
+client.on('audio:config', (config) => {
+  console.log('Browser native rate:', config.nativeSampleRate);
+  console.log('Target rate:', config.targetSampleRate);
+  console.log('Resampling:', config.isResampling);
+});
+```
 
 **No audio input detected:**
 
