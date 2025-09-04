@@ -1,687 +1,595 @@
 # React Hooks API Reference
 
-The Agent C Realtime React SDK provides a comprehensive set of hooks for building real-time applications.
+## Overview
 
-## Authentication with Agent C
+The React SDK provides a comprehensive set of hooks for integrating Agent C functionality into React applications. All hooks must be used within an `AgentCProvider` context.
 
-Agent C uses username/password authentication, not API keys. The authentication flow:
+## Core Hooks
 
-1. **REST API Login** - Authenticate with credentials at `https://localhost:8000/rt/login` (or your server URL)
-2. **Receive Tokens** - Get JWT token and WebSocket URL from login response
-3. **WebSocket Connection** - Connect to the WebSocket URL with the JWT token
+### `useAgentCData()`
 
-### AgentCProvider Configuration
+Access all configuration data received during initialization.
 
 ```typescript
-// Development configuration
-<AgentCProvider
-  config={{
-    // REST API endpoint for authentication
-    restApiUrl: 'https://localhost:8000',
-    // Optional: provide credentials for auto-connect
-    credentials: {
-      username: 'demo_user',
-      password: 'demo_pass'
-    },
-    // WebSocket URL is obtained from login response
-    autoConnect: false,
-    enableAudio: true
-  }}
->
-
-// Production configuration with environment variables
-<AgentCProvider
-  config={{
-    restApiUrl: process.env.REACT_APP_AGENTC_API_URL,
-    credentials: {
-      username: process.env.REACT_APP_AGENTC_USERNAME,
-      password: process.env.REACT_APP_AGENTC_PASSWORD
-    },
-    autoConnect: true
-  }}
->
+function useAgentCData(): {
+  user: UserProfile | null;
+  voices: Voice[];
+  agents: Agent[];
+  avatars: Avatar[];
+  tools: Tool[];
+  currentAgent: Agent | null;
+  currentSession: ChatSession | null;
+}
 ```
 
-## Available Hooks
+#### Returns
 
-- [`useRealtimeClient`](#userealtimeclient) - Direct client access
-- [`useConnection`](#useconnection) - Connection management with authentication
-- [`useChat`](#usechat) - Chat messaging
-- [`useAudio`](#useaudio) - Audio control
-- [`useTurnState`](#useturnstate) - Turn management
-- [`useVoiceModel`](#usevoicemodel) - Voice selection
-- [`useAvatar`](#useavatar) - Avatar integration
+- `user` - Current user profile from `chat_user_data` event
+- `voices` - Available voice models from `voice_list` event
+- `agents` - Available agents from `agent_list` event
+- `avatars` - Available avatars from `avatar_list` event
+- `tools` - Available tools from `tool_catalog` event
+- `currentAgent` - Currently selected agent
+- `currentSession` - Current chat session
 
-## Import
-
-```typescript
-import { 
-  useRealtimeClient,
-  useConnection,
-  useChat,
-  useAudio,
-  useTurnState,
-  useVoiceModel,
-  useAvatar
-} from '@agentc/realtime-react';
-```
-
----
-
-## useRealtimeClient
-
-Direct access to the RealtimeClient instance. The client is automatically configured with authentication details from the AgentCProvider.
-
-### Signature
-
-```typescript
-function useRealtimeClient(): RealtimeClient | null
-```
-
-### Returns
-
-- `RealtimeClient | null` - The client instance or null if not initialized
-
-### Important Notes
-
-- The client instance is managed by the AgentCProvider
-- WebSocket URL is automatically obtained from the authentication process
-- JWT tokens are handled internally by the AuthManager
-- Do not manually configure WebSocket URLs
-
-### Example
+#### Example
 
 ```tsx
-function CustomComponent() {
-  const client = useRealtimeClient();
-  const { isAuthenticated } = useConnection();
+function UserInfo() {
+  const { user, voices, agents } = useAgentCData();
   
-  useEffect(() => {
-    if (!client || !isAuthenticated) return;
-    
-    const handler = (event) => {
-      console.log('Custom event:', event);
-    };
-    
-    client.on('custom_event', handler);
-    
-    return () => {
-      client.off('custom_event', handler);
-    };
-  }, [client, isAuthenticated]);
-  
-  const sendCustomCommand = () => {
-    if (!isAuthenticated) {
-      console.error('Not authenticated');
-      return;
-    }
-    client?.sendText('Custom command');
-  };
+  if (!user) {
+    return <div>Loading user data...</div>;
+  }
   
   return (
-    <button onClick={sendCustomCommand} disabled={!isAuthenticated}>
-      Send Custom Command
-    </button>
+    <div>
+      <h1>Welcome {user.display_name}</h1>
+      <p>You have access to {voices.length} voices and {agents.length} agents</p>
+    </div>
   );
 }
 ```
 
----
+### `useInitializationStatus()`
 
-## useConnection
-
-Manages WebSocket connection state and control with Agent C authentication.
-
-### Signature
+Track the initialization state of the SDK.
 
 ```typescript
-interface UseConnectionReturn {
-  connect: (credentials?: { username: string; password: string }) => Promise<void>;
-  disconnect: () => void;
-  isConnected: boolean;
-  isAuthenticated: boolean;
-  connectionState: ConnectionState;
+function useInitializationStatus(): {
+  isInitialized: boolean;
+  isConnecting: boolean;
   error: Error | null;
-  reconnectAttempt: number;
+  initializationProgress: {
+    userData: boolean;
+    voices: boolean;
+    agents: boolean;
+    avatars: boolean;
+    tools: boolean;
+    session: boolean;
+  };
 }
-
-function useConnection(): UseConnectionReturn
 ```
 
-### Returns
+#### Returns
 
-- `connect` - Async function to authenticate and establish connection
-- `disconnect` - Function to close connection
-- `isConnected` - Boolean WebSocket connection status
-- `isAuthenticated` - Boolean authentication status
-- `connectionState` - Current ConnectionState enum value
-- `error` - Connection or authentication error if any
-- `reconnectAttempt` - Current reconnection attempt number
+- `isInitialized` - True when all initialization events have been received
+- `isConnecting` - True while establishing WebSocket connection
+- `error` - Connection or initialization error if any
+- `initializationProgress` - Individual status for each initialization event
 
-### Authentication Flow
-
-The connection process handles Agent C authentication:
-1. Authenticates with username/password via REST API
-2. Receives WebSocket URL from login response
-3. Establishes WebSocket connection with JWT token
-
-### Example
+#### Example
 
 ```tsx
-function ConnectionManager() {
-  const { 
-    connect, 
-    disconnect, 
-    isConnected,
-    isAuthenticated,
-    connectionState, 
-    error,
-    reconnectAttempt 
-  } = useConnection();
+function App() {
+  const { isInitialized, isConnecting, error, initializationProgress } = useInitializationStatus();
   
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  if (error) {
+    return <ErrorDisplay error={error} />;
+  }
   
-  const handleConnect = async () => {
-    try {
-      // Authenticate and connect
-      await connect({ username, password });
-      console.log('Connected successfully');
-    } catch (err) {
-      console.error('Connection failed:', err);
-    }
-  };
+  if (isConnecting) {
+    return <div>Connecting to Agent C...</div>;
+  }
+  
+  if (!isInitialized) {
+    return (
+      <div>
+        <h2>Initializing...</h2>
+        <ul>
+          <li>User Data: {initializationProgress.userData ? '✓' : '...'}</li>
+          <li>Voices: {initializationProgress.voices ? '✓' : '...'}</li>
+          <li>Agents: {initializationProgress.agents ? '✓' : '...'}</li>
+        </ul>
+      </div>
+    );
+  }
+  
+  return <ChatInterface />;
+}
+```
+
+### `useUserData()`
+
+Dedicated hook for accessing user profile data.
+
+```typescript
+function useUserData(): {
+  user: UserProfile | null;
+  isLoading: boolean;
+  error: Error | null;
+  refetch: () => Promise<void>;
+}
+```
+
+#### Returns
+
+- `user` - User profile from `chat_user_data` event
+- `isLoading` - True while waiting for user data
+- `error` - Error if user data failed to load
+- `refetch` - Function to manually request user data refresh
+
+#### Example
+
+```tsx
+function UserProfile() {
+  const { user, isLoading, error, refetch } = useUserData();
+  
+  if (isLoading) return <Skeleton />;
+  if (error) return <button onClick={refetch}>Retry</button>;
+  if (!user) return null;
   
   return (
-    <div>
-      <div>Status: {ConnectionState[connectionState]}</div>
-      <div>Authenticated: {isAuthenticated ? 'Yes' : 'No'}</div>
-      {error && <div>Error: {error.message}</div>}
-      {reconnectAttempt > 0 && <div>Reconnecting... Attempt {reconnectAttempt}</div>}
-      
-      {!isConnected ? (
-        <div>
-          <input
-            type="text"
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <button onClick={handleConnect} disabled={!username || !password}>
-            Connect
-          </button>
-        </div>
-      ) : (
-        <button onClick={disconnect}>Disconnect</button>
+    <div className="user-profile">
+      <img src={user.avatar_url} alt={user.display_name} />
+      <h2>{user.display_name}</h2>
+      <p>{user.email}</p>
+      <p>Member since: {new Date(user.created_at).toLocaleDateString()}</p>
+    </div>
+  );
+}
+```
+
+## Connection Hooks
+
+### `useConnection()`
+
+Manage WebSocket connection state.
+
+```typescript
+function useConnection(): {
+  isConnected: boolean;
+  connectionState: ConnectionState;
+  connectionStats: ConnectionStats;
+  connect: () => Promise<void>;
+  disconnect: () => Promise<void>;
+  reconnect: () => Promise<void>;
+}
+```
+
+#### Returns
+
+- `isConnected` - Simple boolean for connection status
+- `connectionState` - Detailed connection state (`connecting`, `connected`, `disconnecting`, `disconnected`, `error`)
+- `connectionStats` - Connection statistics (latency, uptime, reconnect count)
+- `connect` - Function to establish connection
+- `disconnect` - Function to close connection
+- `reconnect` - Function to force reconnection
+
+#### Example
+
+```tsx
+function ConnectionStatus() {
+  const { isConnected, connectionState, connectionStats, reconnect } = useConnection();
+  
+  return (
+    <div className="connection-status">
+      <span className={isConnected ? 'connected' : 'disconnected'}>
+        {connectionState}
+      </span>
+      {connectionStats.latency && (
+        <span>Latency: {connectionStats.latency}ms</span>
+      )}
+      {!isConnected && (
+        <button onClick={reconnect}>Reconnect</button>
       )}
     </div>
   );
 }
 ```
 
-### With Environment Variables
+### `useRealtimeClient()`
 
-```tsx
-function AutoConnectionManager() {
-  const { connect, isConnected } = useConnection();
-  
-  useEffect(() => {
-    // Auto-connect using environment credentials
-    if (!isConnected) {
-      connect({
-        username: process.env.REACT_APP_AGENTC_USERNAME || 'demo',
-        password: process.env.REACT_APP_AGENTC_PASSWORD || 'demo'
-      });
-    }
-  }, []);
-  
-  return <div>Connection status: {isConnected ? 'Connected' : 'Connecting...'}</div>;
-}
-```
-
----
-
-## useChat
-
-Manages chat messages and sessions.
-
-### Signature
+Direct access to the underlying RealtimeClient instance.
 
 ```typescript
-interface Message {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  timestamp: number;
-  metadata?: Record<string, any>;
-}
-
-interface UseChatReturn {
-  messages: Message[];
-  sendMessage: (text: string, fileIds?: string[]) => void;
-  streamingText: string;
-  isStreaming: boolean;
-  clearMessages: () => void;
-  newSession: (agentKey?: string) => void;
-  resumeSession: (sessionId: string) => void;
-  setSessionName: (name: string) => void;
-  currentSessionId: string | null;
-  sessions: ChatSession[];
-}
-
-function useChat(): UseChatReturn
+function useRealtimeClient(): RealtimeClient | null
 ```
 
-### Returns
+#### Returns
+
+The RealtimeClient instance or null if not initialized.
+
+#### Example
+
+```tsx
+function CustomFeature() {
+  const client = useRealtimeClient();
+  
+  const handleCustomEvent = () => {
+    if (client) {
+      // Direct client access for advanced use cases
+      client.send('custom:event', { data: 'value' });
+    }
+  };
+  
+  return <button onClick={handleCustomEvent}>Send Custom Event</button>;
+}
+```
+
+## Chat Hooks
+
+### `useChat()`
+
+Complete chat functionality including messages and typing indicators.
+
+```typescript
+function useChat(): {
+  messages: ChatMessage[];
+  sendMessage: (text: string) => Promise<void>;
+  clearMessages: () => void;
+  isAgentTyping: boolean;
+  typingIndicator: string | null;
+  messageStatus: Record<string, 'sending' | 'sent' | 'error'>;
+}
+```
+
+#### Returns
 
 - `messages` - Array of chat messages
-- `sendMessage` - Function to send a message
-- `streamingText` - Currently streaming text
-- `isStreaming` - Whether text is streaming
-- `clearMessages` - Clear current session messages
-- `newSession` - Create new chat session
-- `resumeSession` - Resume existing session
-- `setSessionName` - Set session name
-- `currentSessionId` - Current session ID
-- `sessions` - All available sessions
+- `sendMessage` - Function to send text message
+- `clearMessages` - Function to clear message history
+- `isAgentTyping` - True when agent is typing
+- `typingIndicator` - Current typing indicator text
+- `messageStatus` - Status of each message by ID
 
-### Example
+#### Example
 
 ```tsx
 function ChatInterface() {
   const { 
     messages, 
     sendMessage, 
-    streamingText, 
-    isStreaming,
-    clearMessages,
-    newSession
+    clearMessages, 
+    isAgentTyping,
+    messageStatus 
   } = useChat();
   
   const [input, setInput] = useState('');
   
-  const handleSend = () => {
+  const handleSend = async () => {
     if (input.trim()) {
-      sendMessage(input);
+      await sendMessage(input);
       setInput('');
     }
   };
   
   return (
-    <div>
-      <button onClick={() => newSession()}>New Chat</button>
-      <button onClick={clearMessages}>Clear</button>
-      
+    <div className="chat">
       <div className="messages">
-        {messages.map((msg, i) => (
-          <div key={i} className={`message ${msg.role}`}>
-            <strong>{msg.role}:</strong> {msg.content}
+        {messages.map(msg => (
+          <div key={msg.id} className={`message ${msg.role}`}>
+            {msg.content}
+            {messageStatus[msg.id] === 'sending' && <span>Sending...</span>}
           </div>
         ))}
-        
-        {isStreaming && (
-          <div className="message assistant streaming">
-            <strong>assistant:</strong> {streamingText}
-          </div>
-        )}
+        {isAgentTyping && <div className="typing">Agent is typing...</div>}
       </div>
       
-      <input
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-      />
-      <button onClick={handleSend}>Send</button>
+      <div className="input-bar">
+        <input 
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+        />
+        <button onClick={handleSend}>Send</button>
+        <button onClick={clearMessages}>Clear</button>
+      </div>
     </div>
   );
 }
 ```
 
----
+### `useChatSession()`
 
-## useAudio
-
-Controls audio input and output.
-
-### Signature
+Manage chat sessions and history.
 
 ```typescript
-interface UseAudioReturn {
-  // Recording control
-  startRecording: () => Promise<void>;
-  stopRecording: () => void;
-  isRecording: boolean;
-  
-  // Streaming control
-  startStreaming: () => void;
-  stopStreaming: () => void;
-  isStreaming: boolean;
-  
-  // Audio status
-  hasPermission: boolean;
-  audioLevel: number;
-  isPlaying: boolean;
-  
-  // Volume control
-  volume: number;
-  setVolume: (volume: number) => void;
-  
-  // Error handling
-  error: Error | null;
+function useChatSession(): {
+  currentSession: ChatSession | null;
+  sessions: ChatSession[];
+  createSession: (name?: string) => Promise<ChatSession>;
+  switchSession: (sessionId: string) => Promise<void>;
+  deleteSession: (sessionId: string) => Promise<void>;
+  renameSession: (sessionId: string, name: string) => Promise<void>;
 }
-
-function useAudio(): UseAudioReturn
 ```
 
-### Returns
+#### Returns
 
-Audio control functions and status information
+- `currentSession` - Active chat session
+- `sessions` - List of all sessions
+- `createSession` - Create new chat session
+- `switchSession` - Switch to different session
+- `deleteSession` - Delete a session
+- `renameSession` - Rename a session
 
-### Example
+#### Example
+
+```tsx
+function SessionManager() {
+  const { 
+    currentSession, 
+    sessions, 
+    createSession, 
+    switchSession 
+  } = useChatSession();
+  
+  return (
+    <div className="session-manager">
+      <button onClick={() => createSession('New Chat')}>
+        New Chat
+      </button>
+      
+      <div className="session-list">
+        {sessions.map(session => (
+          <div 
+            key={session.id}
+            className={session.id === currentSession?.id ? 'active' : ''}
+            onClick={() => switchSession(session.id)}
+          >
+            {session.name || `Chat ${session.created_at}`}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+## Audio Hooks
+
+### `useAudio()`
+
+Complete audio control for voice conversations.
+
+```typescript
+function useAudio(): {
+  // Recording state
+  isRecording: boolean;
+  startRecording: () => Promise<void>;
+  stopRecording: () => Promise<void>;
+  
+  // Audio controls
+  isMuted: boolean;
+  toggleMute: () => void;
+  setMuted: (muted: boolean) => void;
+  
+  // Volume controls
+  inputVolume: number;
+  outputVolume: number;
+  setInputVolume: (volume: number) => void;
+  setOutputVolume: (volume: number) => void;
+  
+  // Audio state
+  audioState: AudioState;
+  audioLevel: number;
+  isVADActive: boolean;
+}
+```
+
+#### Returns
+
+- `isRecording` - True when recording audio
+- `startRecording` - Start audio recording
+- `stopRecording` - Stop audio recording
+- `isMuted` - Microphone mute state
+- `toggleMute` - Toggle microphone mute
+- `setMuted` - Set mute state explicitly
+- `inputVolume` - Input volume (0-1)
+- `outputVolume` - Output volume (0-1)
+- `setInputVolume` - Set input volume
+- `setOutputVolume` - Set output volume
+- `audioState` - Detailed audio state
+- `audioLevel` - Current audio level (0-1)
+- `isVADActive` - Voice Activity Detection state
+
+#### Example
 
 ```tsx
 function AudioControls() {
   const {
+    isRecording,
     startRecording,
     stopRecording,
-    isRecording,
-    startStreaming,
-    stopStreaming,
-    isStreaming,
-    hasPermission,
+    isMuted,
+    toggleMute,
     audioLevel,
-    volume,
-    setVolume,
-    error
+    isVADActive
   } = useAudio();
   
-  const handleMicrophone = async () => {
-    if (!isRecording) {
-      try {
-        await startRecording();
-        startStreaming();
-      } catch (err) {
-        console.error('Microphone error:', err);
-      }
-    } else {
-      stopStreaming();
-      stopRecording();
-    }
-  };
-  
   return (
-    <div>
-      {error && <div>Audio Error: {error.message}</div>}
-      
-      <button onClick={handleMicrophone}>
-        {isRecording ? '🔴 Stop' : '🎤 Start'} Recording
+    <div className="audio-controls">
+      <button 
+        onClick={() => isRecording ? stopRecording() : startRecording()}
+        className={isRecording ? 'recording' : ''}
+      >
+        {isRecording ? '🔴 Stop' : '🎤 Start'}
       </button>
       
-      <div>
-        Audio Level: 
-        <progress value={audioLevel} max={1} />
-      </div>
+      <button onClick={toggleMute}>
+        {isMuted ? '🔇 Unmute' : '🔊 Mute'}
+      </button>
       
-      <div>
-        Volume: 
-        <input
-          type="range"
-          min="0"
-          max="1"
-          step="0.1"
-          value={volume}
-          onChange={(e) => setVolume(parseFloat(e.target.value))}
+      <div className="audio-meter">
+        <div 
+          className="level" 
+          style={{ width: `${audioLevel * 100}%` }}
         />
-        {Math.round(volume * 100)}%
       </div>
       
-      <div>
-        Status: {!hasPermission && 'No permission | '}
-        {isRecording && 'Recording | '}
-        {isStreaming && 'Streaming'}
-      </div>
+      {isVADActive && <span>Voice detected</span>}
     </div>
   );
 }
 ```
 
----
+### `useTurnState()`
 
-## useTurnState
-
-Monitors and controls conversation turns.
-
-### Signature
+Monitor conversation turn management.
 
 ```typescript
-interface UseTurnStateReturn {
-  currentTurn: TurnState;
+function useTurnState(): {
+  turnState: TurnState;
   isUserTurn: boolean;
   isAgentTurn: boolean;
-  turnHistory: TurnHistoryEntry[];
-  canTransmitAudio: boolean;
-  turnDuration: number;
+  canSpeak: boolean;
+  turnHistory: TurnEvent[];
 }
-
-enum TurnState {
-  USER_TURN = 'user_turn',
-  AGENT_TURN = 'agent_turn',
-  IDLE = 'idle'
-}
-
-interface TurnHistoryEntry {
-  state: TurnState;
-  timestamp: number;
-  duration?: number;
-}
-
-function useTurnState(): UseTurnStateReturn
 ```
 
-### Returns
+#### Returns
 
-Turn state information and history
+- `turnState` - Current turn state (`idle`, `user_speaking`, `agent_speaking`, `processing`)
+- `isUserTurn` - True when it's user's turn
+- `isAgentTurn` - True when agent is speaking
+- `canSpeak` - True when user can speak
+- `turnHistory` - Recent turn events
 
-### Example
+#### Example
 
 ```tsx
 function TurnIndicator() {
-  const { 
-    currentTurn, 
-    isUserTurn, 
-    isAgentTurn,
-    turnDuration 
-  } = useTurnState();
-  
-  const getTurnDisplay = () => {
-    if (isUserTurn) return '🎤 Your turn to speak';
-    if (isAgentTurn) return '🤖 Agent is speaking';
-    return '⏸️ Waiting...';
-  };
+  const { turnState, isUserTurn, isAgentTurn } = useTurnState();
   
   return (
     <div className="turn-indicator">
-      <div>{getTurnDisplay()}</div>
-      <div>Duration: {(turnDuration / 1000).toFixed(1)}s</div>
-      
-      <div className={`indicator ${currentTurn}`}>
-        {currentTurn === TurnState.USER_TURN && '🟢'}
-        {currentTurn === TurnState.AGENT_TURN && '🔴'}
-        {currentTurn === TurnState.IDLE && '⚪'}
-      </div>
+      {isUserTurn && <span>🎤 Your turn to speak</span>}
+      {isAgentTurn && <span>🤖 Agent is speaking</span>}
+      {turnState === 'processing' && <span>⏳ Processing...</span>}
     </div>
   );
 }
 ```
 
----
+## Voice Hooks
 
-## useVoiceModel
+### `useVoiceModel()`
 
-Manages TTS voice selection.
-
-### Signature
+Manage voice model selection.
 
 ```typescript
-interface Voice {
-  voice_id: string;
-  name: string;
-  vendor: string;
-  description?: string;
-  output_format?: string;
-}
-
-interface UseVoiceModelReturn {
-  currentVoice: Voice | null;
+function useVoiceModel(): {
+  voiceModel: string;
+  setVoiceModel: (voiceId: string) => Promise<void>;
   availableVoices: Voice[];
-  setVoice: (voiceId: string) => void;
-  isAvatarMode: boolean;
-  isTextOnly: boolean;
+  isChanging: boolean;
+  supportsAudio: boolean;
 }
-
-function useVoiceModel(): UseVoiceModelReturn
 ```
 
-### Returns
+#### Returns
 
-Voice management functions and state
+- `voiceModel` - Current voice model ID
+- `setVoiceModel` - Function to change voice
+- `availableVoices` - List of available voices
+- `isChanging` - True while changing voice
+- `supportsAudio` - False for text-only mode
 
-### Example
+#### Example
 
 ```tsx
 function VoiceSelector() {
   const { 
-    currentVoice, 
+    voiceModel, 
+    setVoiceModel, 
     availableVoices, 
-    setVoice,
-    isAvatarMode,
-    isTextOnly
+    isChanging 
   } = useVoiceModel();
   
   return (
-    <div>
-      <select 
-        value={currentVoice?.voice_id || 'none'}
-        onChange={(e) => setVoice(e.target.value)}
-      >
-        <option value="none">Text Only (No Audio)</option>
-        {availableVoices.map(voice => (
-          <option key={voice.voice_id} value={voice.voice_id}>
-            {voice.name} - {voice.description}
-          </option>
-        ))}
-        <option value="avatar">Avatar Mode</option>
-      </select>
-      
-      <div>
-        {isTextOnly && '📝 Text-only mode'}
-        {isAvatarMode && '🎭 Avatar mode'}
-        {!isTextOnly && !isAvatarMode && `🔊 Voice: ${currentVoice?.name}`}
-      </div>
-    </div>
+    <select 
+      value={voiceModel} 
+      onChange={(e) => setVoiceModel(e.target.value)}
+      disabled={isChanging}
+    >
+      <option value="none">Text Only</option>
+      {availableVoices.map(voice => (
+        <option key={voice.voice_id} value={voice.voice_id}>
+          {voice.name} ({voice.language})
+        </option>
+      ))}
+    </select>
   );
 }
 ```
 
----
+## Agent Hooks
 
-## useAvatar
+### `useAgent()`
 
-Manages HeyGen avatar integration. HeyGen access tokens and available avatars are provided by Agent C during authentication.
-
-### Signature
+Manage agent selection and interaction.
 
 ```typescript
-interface Avatar {
-  avatar_id: string;
-  name: string;
-  preview_url?: string;
-  description?: string;
+function useAgent(): {
+  currentAgent: Agent | null;
+  availableAgents: Agent[];
+  selectAgent: (agentId: string) => Promise<void>;
+  agentCapabilities: AgentCapabilities;
+  isLoading: boolean;
 }
-
-interface UseAvatarReturn {
-  availableAvatars: Avatar[];
-  currentAvatar: Avatar | null;
-  isSessionActive: boolean;
-  startAvatarSession: (avatarId: string) => Promise<void>;
-  endAvatarSession: () => void;
-  sessionId: string | null;
-  error: Error | null;
-  hasHeyGenAccess: boolean;
-}
-
-function useAvatar(): UseAvatarReturn
 ```
 
-### Returns
+#### Returns
 
-Avatar management functions and state
+- `currentAgent` - Currently selected agent
+- `availableAgents` - List of available agents
+- `selectAgent` - Function to change agent
+- `agentCapabilities` - Current agent's capabilities
+- `isLoading` - True while loading agent
 
-### Authentication Note
-
-HeyGen integration requires:
-1. Valid Agent C authentication
-2. HeyGen access token (provided in login response)
-3. Available avatars list (provided in login response)
-
-The SDK automatically handles HeyGen token management after Agent C authentication.
-
-### Example
+#### Example
 
 ```tsx
-function AvatarControls() {
-  const {
-    availableAvatars,
-    currentAvatar,
-    isSessionActive,
-    startAvatarSession,
-    endAvatarSession,
-    error
-  } = useAvatar();
-  
-  const [selectedAvatar, setSelectedAvatar] = useState('');
-  
-  const handleStartAvatar = async () => {
-    if (selectedAvatar) {
-      try {
-        await startAvatarSession(selectedAvatar);
-      } catch (err) {
-        console.error('Avatar error:', err);
-      }
-    }
-  };
+function AgentSelector() {
+  const { 
+    currentAgent, 
+    availableAgents, 
+    selectAgent,
+    agentCapabilities 
+  } = useAgent();
   
   return (
-    <div>
-      {error && <div>Avatar Error: {error.message}</div>}
+    <div className="agent-selector">
+      <select 
+        value={currentAgent?.id} 
+        onChange={(e) => selectAgent(e.target.value)}
+      >
+        {availableAgents.map(agent => (
+          <option key={agent.id} value={agent.id}>
+            {agent.name}
+          </option>
+        ))}
+      </select>
       
-      {!isSessionActive ? (
-        <div>
-          <select 
-            value={selectedAvatar}
-            onChange={(e) => setSelectedAvatar(e.target.value)}
-          >
-            <option value="">Select an avatar</option>
-            {availableAvatars.map(avatar => (
-              <option key={avatar.avatar_id} value={avatar.avatar_id}>
-                {avatar.name}
-              </option>
+      {agentCapabilities && (
+        <div className="capabilities">
+          <h3>Agent can:</h3>
+          <ul>
+            {agentCapabilities.tools.map(tool => (
+              <li key={tool}>{tool}</li>
             ))}
-          </select>
-          
-          <button onClick={handleStartAvatar} disabled={!selectedAvatar}>
-            Start Avatar
-          </button>
-        </div>
-      ) : (
-        <div>
-          <div>Active: {currentAvatar?.name}</div>
-          <button onClick={endAvatarSession}>Stop Avatar</button>
+          </ul>
         </div>
       )}
     </div>
@@ -689,365 +597,281 @@ function AvatarControls() {
 }
 ```
 
----
+## Avatar Hooks
 
-## Complete Example
+### `useAvatar()`
+
+Manage HeyGen avatar integration.
+
+```typescript
+function useAvatar(): {
+  isAvatarEnabled: boolean;
+  avatarSession: AvatarSession | null;
+  availableAvatars: Avatar[];
+  startAvatarSession: (avatarId: string) => Promise<void>;
+  stopAvatarSession: () => Promise<void>;
+  avatarState: AvatarState;
+}
+```
+
+#### Returns
+
+- `isAvatarEnabled` - True when avatar is active
+- `avatarSession` - Current avatar session
+- `availableAvatars` - List of available avatars
+- `startAvatarSession` - Start avatar session
+- `stopAvatarSession` - Stop avatar session
+- `avatarState` - Avatar state details
+
+#### Example
 
 ```tsx
-import React, { useState } from 'react';
-import {
-  AgentCProvider,
-  useConnection,
-  useChat,
-  useAudio,
-  useTurnState,
-  useVoiceModel
-} from '@agentc/realtime-react';
-
-function App() {
-  return (
-    <AgentCProvider 
-      config={{
-        // REST API endpoint for authentication
-        restApiUrl: process.env.REACT_APP_AGENTC_API_URL || 'https://localhost:8000',
-        // Optional: provide default credentials
-        credentials: {
-          username: process.env.REACT_APP_AGENTC_USERNAME,
-          password: process.env.REACT_APP_AGENTC_PASSWORD
-        },
-        enableAudio: true,
-        // WebSocket URL will be obtained from login response
-        autoConnect: false
-      }}
-    >
-      <CompleteInterface />
-    </AgentCProvider>
-  );
-}
-
-function CompleteInterface() {
-  const { connect, disconnect, isConnected, isAuthenticated } = useConnection();
-  const { messages, sendMessage, isStreaming, streamingText } = useChat();
-  const { startRecording, stopRecording, isRecording, audioLevel } = useAudio();
-  const { currentTurn, isUserTurn } = useTurnState();
-  const { currentVoice, setVoice, availableVoices } = useVoiceModel();
+function AvatarView() {
+  const { 
+    isAvatarEnabled,
+    avatarSession,
+    availableAvatars,
+    startAvatarSession,
+    stopAvatarSession
+  } = useAvatar();
   
-  const [input, setInput] = useState('');
-  const [credentials, setCredentials] = useState({ username: '', password: '' });
-  const [showLogin, setShowLogin] = useState(true);
-  
-  // Handle authentication and connection
-  const handleConnect = async () => {
-    try {
-      await connect(credentials);
-      setShowLogin(false);
-    } catch (error) {
-      console.error('Authentication failed:', error);
-      alert('Failed to connect. Please check your credentials.');
-    }
-  };
-  
-  // Auto-start recording on user turn
-  React.useEffect(() => {
-    if (isUserTurn && !isRecording && isConnected) {
-      startRecording().catch(console.error);
-    } else if (!isUserTurn && isRecording) {
-      stopRecording();
-    }
-  }, [isUserTurn, isRecording, isConnected]);
-  
-  // Show login form if not authenticated
-  if (!isAuthenticated && showLogin) {
+  if (!isAvatarEnabled) {
     return (
-      <div className="login-form">
-        <h2>Connect to Agent C</h2>
-        <input
-          type="text"
-          placeholder="Username"
-          value={credentials.username}
-          onChange={(e) => setCredentials({...credentials, username: e.target.value})}
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={credentials.password}
-          onChange={(e) => setCredentials({...credentials, password: e.target.value})}
-        />
-        <button 
-          onClick={handleConnect}
-          disabled={!credentials.username || !credentials.password}
-        >
-          Connect
-        </button>
+      <div className="avatar-selector">
+        {availableAvatars.map(avatar => (
+          <button 
+            key={avatar.id}
+            onClick={() => startAvatarSession(avatar.id)}
+          >
+            Start {avatar.name}
+          </button>
+        ))}
       </div>
     );
   }
   
   return (
-    <div className="app">
-      <header>
-        <button onClick={disconnect}>
-          Disconnect
-        </button>
-        
-        <select 
-          value={currentVoice?.voice_id || 'none'}
-          onChange={(e) => setVoice(e.target.value)}
-        >
-          <option value="none">No Voice</option>
-          {availableVoices.map(v => (
-            <option key={v.voice_id} value={v.voice_id}>
-              {v.name}
-            </option>
-          ))}
-        </select>
-        
-        <div className="turn-indicator">
-          {currentTurn}
-        </div>
-        
-        <div className="audio-level">
-          <progress value={audioLevel} max={1} />
-        </div>
-      </header>
-      
-      <main className="chat">
-        {messages.map((msg, i) => (
-          <div key={i} className={`message ${msg.role}`}>
-            {msg.content}
-          </div>
-        ))}
-        
-        {isStreaming && (
-          <div className="message assistant streaming">
-            {streamingText}
-          </div>
-        )}
-      </main>
-      
-      <footer>
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyPress={(e) => {
-            if (e.key === 'Enter') {
-              sendMessage(input);
-              setInput('');
-            }
-          }}
-          disabled={!isConnected}
-        />
-        
-        <button 
-          onClick={() => {
-            sendMessage(input);
-            setInput('');
-          }}
-          disabled={!isConnected || !input.trim()}
-        >
-          Send
-        </button>
-        
-        <button 
-          onClick={isRecording ? stopRecording : () => startRecording()}
-          disabled={!isConnected}
-        >
-          {isRecording ? '🔴' : '🎤'}
-        </button>
-      </footer>
+    <div className="avatar-view">
+      <video 
+        src={avatarSession?.streamUrl} 
+        autoPlay 
+        playsInline 
+      />
+      <button onClick={stopAvatarSession}>Stop Avatar</button>
     </div>
   );
 }
 ```
 
-## Custom Hooks
+## Utility Hooks
 
-You can create custom hooks that combine the base hooks:
+### `useEventListener()`
+
+Subscribe to specific SDK events.
+
+```typescript
+function useEventListener<T = any>(
+  eventName: string,
+  handler: (event: T) => void,
+  deps?: DependencyList
+): void
+```
+
+#### Parameters
+
+- `eventName` - Name of the event to listen for
+- `handler` - Callback function for the event
+- `deps` - Optional dependency array for the handler
+
+#### Example
 
 ```tsx
-// Custom hook for authenticated voice chat
-function useVoiceChat() {
-  const { isConnected, isAuthenticated } = useConnection();
-  const { sendMessage } = useChat();
-  const { startRecording, stopRecording, isRecording } = useAudio();
-  const { isUserTurn } = useTurnState();
+function CustomEventHandler() {
+  const [customData, setCustomData] = useState(null);
   
-  const startVoiceChat = useCallback(async () => {
-    if (!isAuthenticated) throw new Error('Not authenticated');
-    if (!isConnected) throw new Error('Not connected');
-    if (!isUserTurn) throw new Error('Not your turn');
-    
-    await startRecording();
-  }, [isAuthenticated, isConnected, isUserTurn, startRecording]);
+  useEventListener('custom:event', (event) => {
+    setCustomData(event.data);
+  });
   
-  const stopVoiceChat = useCallback(() => {
-    stopRecording();
-  }, [stopRecording]);
-  
-  return {
-    startVoiceChat,
-    stopVoiceChat,
-    isVoiceChatActive: isRecording && isUserTurn,
-    canStartChat: isAuthenticated && isConnected && isUserTurn
-  };
-}
-
-// Custom hook for session management
-function useSessionManager() {
-  const { sessions, currentSessionId, newSession, resumeSession } = useChat();
-  const [selectedSession, setSelectedSession] = useState<string | null>(null);
-  
-  const switchSession = useCallback((sessionId: string) => {
-    setSelectedSession(sessionId);
-    resumeSession(sessionId);
-  }, [resumeSession]);
-  
-  const createNewSession = useCallback(() => {
-    newSession();
-    setSelectedSession(null);
-  }, [newSession]);
-  
-  return {
-    sessions,
-    currentSessionId,
-    selectedSession,
-    switchSession,
-    createNewSession
-  };
+  return <div>{customData && <pre>{JSON.stringify(customData)}</pre>}</div>;
 }
 ```
 
-## TypeScript Support
+### `useConnectionStats()`
 
-All hooks are fully typed:
+Monitor detailed connection statistics.
+
+```typescript
+function useConnectionStats(): {
+  latency: number | null;
+  bandwidth: BandwidthStats;
+  messageRate: number;
+  reconnectCount: number;
+  uptime: number;
+  lastError: Error | null;
+}
+```
+
+#### Returns
+
+- `latency` - Round-trip time in milliseconds
+- `bandwidth` - Upload/download bandwidth stats
+- `messageRate` - Messages per second
+- `reconnectCount` - Number of reconnections
+- `uptime` - Connection uptime in seconds
+- `lastError` - Last connection error
+
+#### Example
 
 ```tsx
-import { 
-  UseConnectionReturn,
-  UseChatReturn,
-  UseAudioReturn,
-  UseTurnStateReturn,
-  UseVoiceModelReturn,
-  UseAvatarReturn,
-  Message,
-  Voice,
-  Avatar,
-  TurnState,
-  ConnectionState
-} from '@agentc/realtime-react';
+function ConnectionMonitor() {
+  const stats = useConnectionStats();
+  
+  return (
+    <div className="stats">
+      <div>Latency: {stats.latency}ms</div>
+      <div>Upload: {stats.bandwidth.upload}kbps</div>
+      <div>Download: {stats.bandwidth.download}kbps</div>
+      <div>Uptime: {Math.floor(stats.uptime / 60)}m</div>
+      {stats.lastError && (
+        <div className="error">Last error: {stats.lastError.message}</div>
+      )}
+    </div>
+  );
+}
 ```
 
 ## Best Practices
 
-1. **Always check authentication and connection state before operations:**
-```tsx
-const { isConnected, isAuthenticated } = useConnection();
-const { sendMessage } = useChat();
+### 1. Always Check Initialization
 
-const handleSend = (text: string) => {
-  if (!isAuthenticated) {
-    showError('Please authenticate first');
-    return;
+```tsx
+function SafeComponent() {
+  const { isInitialized } = useInitializationStatus();
+  const { user, voices } = useAgentCData();
+  
+  // Always check initialization first
+  if (!isInitialized) {
+    return <LoadingSpinner />;
   }
-  if (!isConnected) {
-    showError('WebSocket not connected');
-    return;
-  }
-  sendMessage(text);
-};
+  
+  // Now safe to use data
+  return <div>{user?.display_name}</div>;
+}
 ```
 
-### Authentication Best Practices
+### 2. Handle Loading States
 
-1. **Never hardcode credentials:**
 ```tsx
-// ❌ Bad - hardcoded credentials
-const credentials = { username: 'admin', password: 'password123' };
-
-// ✅ Good - use environment variables or user input
-const credentials = {
-  username: process.env.REACT_APP_USERNAME || userInput.username,
-  password: process.env.REACT_APP_PASSWORD || userInput.password
-};
+function RobustComponent() {
+  const { isInitialized, error } = useInitializationStatus();
+  const { isConnected } = useConnection();
+  
+  if (error) return <ErrorBoundary error={error} />;
+  if (!isConnected) return <Reconnecting />;
+  if (!isInitialized) return <Initializing />;
+  
+  return <MainContent />;
+}
 ```
 
-2. **Handle authentication errors gracefully:**
+### 3. Use Optional Chaining
+
 ```tsx
-const handleConnect = async () => {
-  try {
-    await connect({ username, password });
-  } catch (error) {
-    if (error.code === 'AUTH_FAILED') {
-      showError('Invalid credentials');
-    } else if (error.code === 'NETWORK_ERROR') {
-      showError('Cannot reach authentication server');
-    } else {
-      showError('Connection failed: ' + error.message);
-    }
-  }
-};
+function DefensiveComponent() {
+  const { user, voices } = useAgentCData();
+  
+  return (
+    <div>
+      {/* Safe access with optional chaining */}
+      <h1>{user?.display_name || 'Guest'}</h1>
+      <p>{user?.email || 'No email'}</p>
+      <span>{voices?.length || 0} voices available</span>
+    </div>
+  );
+}
 ```
 
-3. **Store authentication state properly:**
+### 4. Cleanup in useEffect
+
 ```tsx
-// The SDK handles token storage internally
-// Access authentication state through hooks
-const { isAuthenticated } = useConnection();
-
-// The WebSocket URL is obtained automatically from login
-// No need to configure it manually
-```
-
-2. **Handle async operations properly:**
-```tsx
-const { startRecording } = useAudio();
-
-const handleStart = async () => {
-  try {
-    await startRecording();
-  } catch (error) {
-    if (error.name === 'NotAllowedError') {
-      showError('Microphone permission denied');
-    }
-  }
-};
-```
-
-3. **Clean up subscriptions:**
-```tsx
-useEffect(() => {
+function EffectComponent() {
   const client = useRealtimeClient();
-  if (!client) return;
   
-  const handler = () => {};
-  client.on('event', handler);
-  
-  return () => {
-    client.off('event', handler);
-  };
-}, []);
+  useEffect(() => {
+    if (!client) return;
+    
+    const handler = (event) => console.log(event);
+    client.on('custom:event', handler);
+    
+    // Always cleanup
+    return () => {
+      client.off('custom:event', handler);
+    };
+  }, [client]);
+}
 ```
 
-4. **Respect turn management:**
-```tsx
-const { isUserTurn } = useTurnState();
-const { startRecording } = useAudio();
+## TypeScript Types
 
-useEffect(() => {
-  if (isUserTurn) {
-    startRecording();
+All hooks are fully typed. Import types as needed:
+
+```typescript
+import type {
+  UserProfile,
+  Voice,
+  Agent,
+  Avatar,
+  Tool,
+  ChatMessage,
+  ChatSession,
+  ConnectionState,
+  AudioState,
+  TurnState,
+  AgentCapabilities,
+  AvatarSession,
+  AvatarState,
+  BandwidthStats
+} from '@agentc/realtime-react';
+```
+
+## Hook Dependencies
+
+All hooks require the `AgentCProvider` at the root:
+
+```tsx
+import { AgentCProvider } from '@agentc/realtime-react';
+
+function App() {
+  return (
+    <AgentCProvider client={realtimeClient}>
+      {/* All hooks work within this provider */}
+      <YourComponents />
+    </AgentCProvider>
+  );
+}
+```
+
+## Error Handling
+
+Hooks provide built-in error handling:
+
+```tsx
+function ErrorAwareComponent() {
+  const { error: initError } = useInitializationStatus();
+  const { error: userError } = useUserData();
+  
+  const error = initError || userError;
+  
+  if (error) {
+    return (
+      <ErrorBoundary 
+        error={error}
+        onRetry={() => window.location.reload()}
+      />
+    );
   }
-}, [isUserTurn]);
-```
-
-5. **Provide feedback for streaming:**
-```tsx
-const { isStreaming, streamingText } = useChat();
-
-return (
-  <div>
-    {isStreaming && <LoadingIndicator />}
-    <div>{streamingText}</div>
-  </div>
-);
+  
+  return <MainContent />;
+}
 ```
