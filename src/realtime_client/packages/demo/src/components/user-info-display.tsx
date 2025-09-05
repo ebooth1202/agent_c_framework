@@ -8,9 +8,15 @@
 import React from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useUserData } from '@agentc/realtime-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Badge,
+  Skeleton
+} from '@agentc/realtime-ui';
 import { User, Mail, Calendar, Shield, Users } from 'lucide-react';
 
 export function UserInfoDisplay() {

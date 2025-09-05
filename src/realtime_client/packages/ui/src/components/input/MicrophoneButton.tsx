@@ -1,3 +1,5 @@
+"use client"
+
 import * as React from "react"
 import { forwardRef, useCallback, useState, useEffect } from "react"
 import { cva, type VariantProps } from "class-variance-authority"

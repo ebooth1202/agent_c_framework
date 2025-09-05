@@ -25,15 +25,15 @@ export type { InputToolbarProps } from './InputToolbar'
 export { MicrophoneButton } from './MicrophoneButton'
 export type { MicrophoneButtonProps } from './MicrophoneButton'
 
-export { AgentSelector } from './AgentSelector'
-export type { AgentSelectorProps } from './AgentSelector'
-
-export { OutputSelector } from './OutputSelector'
-export type { OutputSelectorProps } from './OutputSelector'
+// Note: AgentSelector has been moved to controls/AgentSelector
+// It no longer requires props as it uses SDK hooks directly
+// Note: OutputSelector has been moved to controls/OutputSelector
+// It no longer requires props as it uses SDK hooks directly
 
 // Types
 export type { 
-  Agent, 
+  Agent,
+  AgentTool, 
   OutputMode, 
   OutputOption 
 } from './types'

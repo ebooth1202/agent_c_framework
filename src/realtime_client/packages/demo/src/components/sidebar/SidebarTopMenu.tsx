@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { Plus } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Button } from "@agentc/realtime-ui"
 import { cn } from "@/lib/utils"
 
 export interface SidebarTopMenuProps {

@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { cn } from '@/lib/utils'
 import { Check, Copy, User, Bot, AlertCircle, Clock } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@agentc/realtime-ui'
 
 // Note: These imports will work once react-markdown and react-syntax-highlighter are installed
 // For now, we'll create fallback components

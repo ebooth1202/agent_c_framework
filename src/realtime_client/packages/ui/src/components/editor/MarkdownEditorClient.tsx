@@ -1,3 +1,5 @@
+"use client"
+
 /**
  * Client-only wrapper for MarkdownEditor to prevent SSR issues with TipTap v3
  * 

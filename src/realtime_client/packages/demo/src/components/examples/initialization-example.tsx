@@ -2,9 +2,15 @@
 
 import React from 'react';
 import { useAgentCData, useInitializationStatus, useRealtimeClient, ConnectionState } from '@agentc/realtime-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Badge,
+  ScrollArea
+} from '@agentc/realtime-ui';
 
 /**
  * Example component demonstrating the new initialization hooks

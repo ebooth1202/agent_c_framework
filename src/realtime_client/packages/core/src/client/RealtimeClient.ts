@@ -30,7 +30,7 @@ import { TurnManager, SessionManager } from '../session';
 import { AudioService, AudioAgentCBridge, AudioOutputService } from '../audio';
 import type { AudioStatus, VoiceModel } from '../audio/types';
 import { VoiceManager } from '../voice';
-import type { Voice, Message, User, Agent, Avatar, Toolset } from '../events/types/CommonTypes';
+import type { Voice, Message, User, Agent, AgentConfiguration, Avatar, Toolset } from '../events/types/CommonTypes';
 import { AvatarManager } from '../avatar';
 
 /**
@@ -352,6 +352,21 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
             if (!this.initializationState.has('chat_session_changed')) {
                 this.initializationState.add('chat_session_changed');
                 this.checkInitializationComplete();
+            }
+        });
+        
+        // Handle agent configuration changes
+        this.on('agent_configuration_changed', (event: any) => {
+            if (event.agent_config && this.sessionManager) {
+                // Update the current session's agent configuration
+                const currentSession = this.sessionManager.getCurrentSession();
+                if (currentSession) {
+                    currentSession.agent_config = event.agent_config;
+                    
+                    if (this.config.debug) {
+                        console.debug('Agent configuration updated:', event.agent_config.key);
+                    }
+                }
             }
         });
     }
@@ -887,6 +902,18 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
      */
     getAgentsList(): Agent[] {
         return this.agents;
+    }
+    
+    /**
+     * Get current agent configuration from the active session
+     * Returns null if no session is active
+     */
+    getCurrentAgentConfig(): AgentConfiguration | null {
+        if (this.sessionManager) {
+            const currentSession = this.sessionManager.getCurrentSession();
+            return currentSession?.agent_config || null;
+        }
+        return null;
     }
     
     /**

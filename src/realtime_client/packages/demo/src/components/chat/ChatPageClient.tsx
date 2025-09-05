@@ -5,9 +5,7 @@ import { useRouter } from 'next/navigation';
 import { AuthProvider, useAuth } from '@/contexts/auth-context';
 import { ClientProvider } from '@/components/providers/client-provider';
 import { ChatLayout } from '@/components/layout/ChatLayout';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Skeleton, Card, CardHeader, CardTitle, CardDescription, Button } from '@agentc/realtime-ui';
 
 /**
  * AuthGuard component - Ensures user is authenticated before rendering children

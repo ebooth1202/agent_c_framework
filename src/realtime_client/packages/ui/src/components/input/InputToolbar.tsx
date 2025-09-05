@@ -3,6 +3,9 @@
  * 
  * Provides the toolbar for the input area with microphone controls,
  * attachment, agent selection, and send functionality.
+ * 
+ * Layout according to design doc:
+ * [Attachments] [Tools] [OutputSelector] ... [Microphone] ... [AgentSelector] [Send]
  */
 
 import * as React from "react"
@@ -17,7 +20,8 @@ import {
 
 // Import actual components
 import { MicrophoneButton } from "./MicrophoneButton"
-import type { Agent, OutputMode, OutputOption } from "./types"
+import { OutputSelector } from "../controls/OutputSelector"  // Use the fixed version from controls
+import { AgentSelector } from "../controls/AgentSelector"  // Use the proper version from controls
 
 export interface InputToolbarProps {
   /** Callback when send button is clicked */
@@ -36,14 +40,12 @@ export interface InputToolbarProps {
   onAttachment?: () => void
   /** Callback for tools button (optional, placeholder) */
   onTools?: () => void
-  /** Currently selected agent */
-  selectedAgent?: Agent
-  /** Callback when agent selection changes */
-  onAgentChange?: (agent: Agent) => void
-  /** Current output mode (how agent responds) */
-  outputMode?: OutputMode
-  /** Callback when output mode changes */
-  onOutputModeChange?: (mode: OutputMode, option?: OutputOption) => void
+  /** @deprecated List of available agents - AgentSelector now uses SDK data */
+  agents?: any[]
+  /** @deprecated Currently selected agent - AgentSelector now uses SDK state */
+  selectedAgent?: any
+  /** @deprecated Callback when agent selection changes - AgentSelector now uses SDK events */
+  onAgentChange?: (agent: any) => void
   /** Additional CSS classes */
   className?: string
 }
@@ -126,49 +128,15 @@ const ToolsButton: React.FC<{ onClick?: () => void }> = ({ onClick }) => (
   </TooltipProvider>
 )
 
-/**
- * Simple output mode selector
- * For now, just shows the current mode
- */
-const OutputModeDisplay: React.FC<{
-  mode?: OutputMode
-}> = ({ mode = 'text' }) => {
-  const modeLabels = {
-    'text': 'Text',
-    'voice': 'Voice',
-    'avatar': 'Avatar'
-  }
-  
-  return (
-    <div className="text-sm text-muted-foreground px-2">
-      Mode: {modeLabels[mode]}
-    </div>
-  )
-}
 
-/**
- * Simple agent display
- * For now, just shows the agent name
- */
-const AgentDisplay: React.FC<{
-  selectedAgent?: Agent
-}> = ({ selectedAgent }) => {
-  if (!selectedAgent) return null
-  
-  return (
-    <div className="text-sm text-muted-foreground px-2">
-      {selectedAgent.name}
-    </div>
-  )
-}
 
 /**
  * InputToolbar Component
  * 
  * Main toolbar with three sections:
- * - Left: Attachments, Tools, Output mode
+ * - Left: Attachments, Tools, OutputSelector (controls how AGENT responds)
  * - Center: Microphone controls with audio level
- * - Right: Agent selector and Send button
+ * - Right: AgentSelector (which agent to talk to) and Send button
  */
 export const InputToolbar = React.forwardRef<HTMLDivElement, InputToolbarProps>(
   ({ 
@@ -180,10 +148,9 @@ export const InputToolbar = React.forwardRef<HTMLDivElement, InputToolbarProps>(
     audioLevel = 0,
     onAttachment,
     onTools,
-    selectedAgent,
-    onAgentChange,
-    outputMode,
-    onOutputModeChange,
+    agents,  // @deprecated - AgentSelector now manages its own state via SDK
+    selectedAgent,  // @deprecated - AgentSelector now manages its own state via SDK
+    onAgentChange,  // @deprecated - AgentSelector now manages its own state via SDK
     className,
     ...props 
   }, ref) => {
@@ -196,15 +163,16 @@ export const InputToolbar = React.forwardRef<HTMLDivElement, InputToolbarProps>(
         )}
         {...props}
       >
-        {/* Left Section - Attachment, Tools, Output */}
+        {/* Left Section - Attachment, Tools, OutputSelector */}
         <div className="flex items-center gap-1">
           <AttachmentButton onClick={onAttachment} />
           <ToolsButton onClick={onTools} />
-          <div className="w-px h-6 bg-border mx-1" aria-hidden="true" />
-          <OutputModeDisplay mode={outputMode} />
+          
+          {/* OutputSelector - Controls how AGENT responds (text/voice/avatar) */}
+          <OutputSelector className="ml-1" />
         </div>
 
-        {/* Center Section - Microphone Controls (Critical) */}
+        {/* Center Section - Microphone Controls (NOT a mode toggle) */}
         <div className="flex-1 flex justify-center items-center gap-2">
           <MicrophoneButton
             isRecording={isRecording}
@@ -226,17 +194,20 @@ export const InputToolbar = React.forwardRef<HTMLDivElement, InputToolbarProps>(
 
         {/* Right Section - Agent Selector and Send */}
         <div className="flex items-center gap-2">
-          <AgentDisplay selectedAgent={selectedAgent} />
-          <div className="w-px h-6 bg-border mx-1" aria-hidden="true" />
+          {/* AgentSelector - Choose which agent to talk to */}
+          <AgentSelector
+            className="min-w-[150px] max-w-[200px]"
+          />
+          
+          {/* Send Button */}
           <Button
             variant="default"
-            size="default"
+            size="icon"
             onClick={onSend}
             disabled={!canSend}
             aria-label="Send message"
           >
             <Send className="h-4 w-4" />
-            <span className="ml-1">Send</span>
           </Button>
         </div>
       </div>

@@ -1,3 +1,5 @@
+"use client"
+
 import * as React from "react"
 import { useState, useCallback, useEffect, useMemo } from "react"
 import { cn } from "../../lib/utils"
@@ -60,8 +62,6 @@ const InputArea: React.FC<InputAreaProps> = ({
   // Local state
   const [content, setContent] = useState('')
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null)
-  const [outputMode, setOutputMode] = useState<OutputMode>('text')
-  const [selectedOutputOption, setSelectedOutputOption] = useState<OutputOption | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   // Default agents if not provided
@@ -71,6 +71,11 @@ const InputArea: React.FC<InputAreaProps> = ({
       name: 'Assistant',
       description: 'General purpose AI assistant',
       avatar: '🤖',
+      tools: [
+        { id: 'search', name: 'Search' },
+        { id: 'calculate', name: 'Calculate' }
+      ],
+      capabilities: ['General Q&A', 'Basic reasoning'],
       available: true
     },
     {
@@ -78,6 +83,11 @@ const InputArea: React.FC<InputAreaProps> = ({
       name: 'Creative',
       description: 'Creative writing and ideation',
       avatar: '🎨',
+      tools: [
+        { id: 'write', name: 'Write' },
+        { id: 'edit', name: 'Edit' }
+      ],
+      capabilities: ['Creative writing', 'Storytelling'],
       available: true
     },
     {
@@ -85,6 +95,12 @@ const InputArea: React.FC<InputAreaProps> = ({
       name: 'Technical',
       description: 'Technical and coding assistance',
       avatar: '💻',
+      tools: [
+        { id: 'code', name: 'Code' },
+        { id: 'debug', name: 'Debug' },
+        { id: 'review', name: 'Review' }
+      ],
+      capabilities: ['Programming', 'Debugging', 'Architecture'],
       available: true
     }
   ], [])
@@ -218,50 +234,8 @@ const InputArea: React.FC<InputAreaProps> = ({
     onAgentChange?.(agent)
   }, [onAgentChange])
 
-  // Handle output mode change
-  const handleOutputModeChange = useCallback(async (mode: OutputMode, option?: OutputOption) => {
-    try {
-      setError(null)
-      setOutputMode(mode)
-      setSelectedOutputOption(option || null)
-      
-      // Update SDK based on output mode
-      switch (mode) {
-        case 'text':
-          // Disable voice and avatar
-          await setVoice('none')
-          if (isAvatarActive) {
-            await clearAvatar()
-          }
-          break
-          
-        case 'voice':
-          // Set voice, disable avatar
-          if (option?.metadata?.voiceId) {
-            await setVoice(option.metadata.voiceId)
-          }
-          if (isAvatarActive) {
-            await clearAvatar()
-          }
-          break
-          
-        case 'avatar':
-          // Enable avatar mode
-          await setVoice('avatar')
-          if (option?.metadata?.avatarId) {
-            // For avatar, we need to create a session - using a placeholder session ID
-            const sessionId = `session-${Date.now()}`
-            await setAvatar(option.metadata.avatarId, sessionId)
-          }
-          break
-      }
-      
-      onOutputModeChange?.(mode, option)
-    } catch (err) {
-      console.error('Failed to change output mode:', err)
-      setError('Failed to change output mode. Please try again.')
-    }
-  }, [setVoice, isAvatarActive, clearAvatar, setAvatar, onOutputModeChange])
+  // Note: Output option changes are now handled internally by the OutputSelector component
+  // which uses SDK hooks directly for state management
 
   // Stop recording if turn is lost
   useEffect(() => {
@@ -307,10 +281,9 @@ const InputArea: React.FC<InputAreaProps> = ({
           onStartRecording={handleStartRecording}
           onStopRecording={handleStopRecording}
           audioLevel={audioLevel}
+          agents={agents}
           selectedAgent={selectedAgent || undefined}
           onAgentChange={handleAgentChange}
-          outputMode={outputMode}
-          onOutputModeChange={handleOutputModeChange}
         />
       </InputContainer>
       

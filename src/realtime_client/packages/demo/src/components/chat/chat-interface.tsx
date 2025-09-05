@@ -5,11 +5,10 @@ import { useChat, useAudio, useTurnState, useConnection } from '@agentc/realtime
 import { MessageList } from './message-list';
 import { TypingIndicator } from './typing-indicator';
 import { InputArea } from '@/components/input/input-area';
-import type { OutputMode } from '@/components/input/input-area';
 import { ViewManager } from './view-manager';
-import { useOutputMode } from '@/hooks/use-output-mode';
+import { useOutputMode, type OutputMode } from '@agentc/realtime-react';
 import { cn } from '@/lib/utils';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription } from '@agentc/realtime-ui';
 import { AlertCircle, WifiOff } from 'lucide-react';
 
 export interface ChatInterfaceProps {

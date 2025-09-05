@@ -1,5 +1,5 @@
 import dynamicImport from 'next/dynamic';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from '@agentc/realtime-ui';
 
 // Force dynamic rendering to prevent static generation issues
 export const dynamic = 'force-dynamic';

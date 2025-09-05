@@ -2,8 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { useInitializationStatus, useAgentCData } from '@agentc/realtime-react';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton, Alert, AlertDescription } from '@agentc/realtime-ui';
 import { CheckCircle2, Circle, Loader2 } from 'lucide-react';
 
 /**

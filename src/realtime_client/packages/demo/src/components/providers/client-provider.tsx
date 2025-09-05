@@ -5,8 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { RealtimeClientConfig } from '@agentc/realtime-core';
 import { AgentCProvider } from '@agentc/realtime-react';
 import { useAuth } from '@/contexts/auth-context';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton, Alert, AlertDescription } from '@agentc/realtime-ui';
 
 /**
  * Client provider props

@@ -6,8 +6,7 @@ import { ConnectionStatus } from './connection-status';
 import { SidePanel } from './side-panel';
 import { ViewManager } from './view-manager';
 import { InputArea, type OutputMode } from '@/components/input/input-area';
-import { Card } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
+import { Card, Separator } from '@agentc/realtime-ui';
 
 export interface ChatLayoutProps {
   className?: string;

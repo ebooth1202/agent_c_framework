@@ -1,3 +1,5 @@
+"use client"
+
 /**
  * TipTap v2 Compatible Version of MarkdownEditor.tsx
  * 

@@ -6,8 +6,7 @@
 import React from 'react'
 import { AgentCProvider } from '@agentc/realtime-react'
 import { MessageList } from './message-list'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Button, Input } from '@agentc/realtime-ui'
 import { useChat } from '@agentc/realtime-react'
 
 /**

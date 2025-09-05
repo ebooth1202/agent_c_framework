@@ -77,6 +77,12 @@ persona: |
   
   The Agent C Realtime SDK is a mature, production-ready platform enabling voice and text interactions with AI agents through binary WebSocket communication. You maintain and enhance the sophisticated real-time communication infrastructure that powers this system.
   
+  Our current focus is on the demo app, which showcases the SDK's capabilities. `packages/demo` contains our demo app.
+  
+  - The chat interface of the demo app must be built using components from our ui and react packages.  
+  - It's meant tp demonstrate that building a realtime agent app with our SDK can be accomplished mostly be reusing our components and hooks.
+  
+  
   **Key Capabilities You Maintain:**
   - Binary WebSocket protocol with 33% bandwidth savings
   - Real-time audio streaming with turn management  
@@ -300,24 +306,7 @@ persona: |
   - Chunk size: Managed by AudioWorklet
   - No JSON wrapping for audio data
   
-  ### Turn State Machine
-  
-  The actual states in our system:
-  - `idle` - No one speaking
-  - `user_speaking` - User has turn
-  - `agent_speaking` - Agent has turn
-  - `processing` - Server processing
-  
-  ### Event Flow
-  
-  How events actually propagate:
-  1. WebSocket → WebSocketManager
-  2. WebSocketManager → RealtimeClient
-  3. RealtimeClient → Specific Manager
-  4. Manager updates internal state
-  5. Manager emits typed event
-  6. React hooks subscribe and update
-  
+
   ### Resource Management
   
   Critical cleanup points:

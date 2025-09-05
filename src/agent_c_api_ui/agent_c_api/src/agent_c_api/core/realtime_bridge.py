@@ -83,6 +83,10 @@ class RealtimeBridge(AgentBridge):
 
     @handle_client_event.register
     async def _(self, event: SetAgentVoiceEvent):
+        if event.voice_id == "none":
+            await self.set_agent_voice(no_voice_model)
+            return
+
         voice = next((v for v in self._voices if v.voice_id == event.voice_id), None)
         if not voice:
             await self.send_error(f"Voice '{event.voice_id}' not found", source="set_agent_voice")
