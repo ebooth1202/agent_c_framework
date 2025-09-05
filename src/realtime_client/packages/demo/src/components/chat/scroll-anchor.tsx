@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
+import { Button } from '@agentc/realtime-ui'
 import { ArrowDown } from 'lucide-react'
 
 export interface ScrollAnchorProps {

@@ -11,7 +11,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@agentc/realtime-ui"
 
 export interface UserDisplayProps {
   isCollapsed?: boolean

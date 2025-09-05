@@ -1,3 +1,5 @@
+"use client"
+
 import * as React from "react"
 import { useState, useCallback, useEffect, useMemo } from "react"
 import { cn } from "../../lib/utils"
@@ -71,6 +73,11 @@ const InputArea: React.FC<InputAreaProps> = ({
       name: 'Assistant',
       description: 'General purpose AI assistant',
       avatar: '🤖',
+      tools: [
+        { id: 'search', name: 'Search' },
+        { id: 'calculate', name: 'Calculate' }
+      ],
+      capabilities: ['General Q&A', 'Basic reasoning'],
       available: true
     },
     {
@@ -78,6 +85,11 @@ const InputArea: React.FC<InputAreaProps> = ({
       name: 'Creative',
       description: 'Creative writing and ideation',
       avatar: '🎨',
+      tools: [
+        { id: 'write', name: 'Write' },
+        { id: 'edit', name: 'Edit' }
+      ],
+      capabilities: ['Creative writing', 'Storytelling'],
       available: true
     },
     {
@@ -85,6 +97,12 @@ const InputArea: React.FC<InputAreaProps> = ({
       name: 'Technical',
       description: 'Technical and coding assistance',
       avatar: '💻',
+      tools: [
+        { id: 'code', name: 'Code' },
+        { id: 'debug', name: 'Debug' },
+        { id: 'review', name: 'Review' }
+      ],
+      capabilities: ['Programming', 'Debugging', 'Architecture'],
       available: true
     }
   ], [])
@@ -218,12 +236,14 @@ const InputArea: React.FC<InputAreaProps> = ({
     onAgentChange?.(agent)
   }, [onAgentChange])
 
-  // Handle output mode change
-  const handleOutputModeChange = useCallback(async (mode: OutputMode, option?: OutputOption) => {
+  // Handle output option change (replaces output mode change)
+  const handleOutputOptionChange = useCallback(async (option: OutputOption) => {
     try {
       setError(null)
+      setSelectedOutputOption(option)
+      
+      const mode = option.type
       setOutputMode(mode)
-      setSelectedOutputOption(option || null)
       
       // Update SDK based on output mode
       switch (mode) {
@@ -256,7 +276,7 @@ const InputArea: React.FC<InputAreaProps> = ({
           break
       }
       
-      onOutputModeChange?.(mode, option)
+      onOutputModeChange?.(option.type, option)
     } catch (err) {
       console.error('Failed to change output mode:', err)
       setError('Failed to change output mode. Please try again.')
@@ -307,10 +327,13 @@ const InputArea: React.FC<InputAreaProps> = ({
           onStartRecording={handleStartRecording}
           onStopRecording={handleStopRecording}
           audioLevel={audioLevel}
+          agents={agents}
           selectedAgent={selectedAgent || undefined}
           onAgentChange={handleAgentChange}
-          outputMode={outputMode}
-          onOutputModeChange={handleOutputModeChange}
+          selectedOutputOption={selectedOutputOption}
+          onOutputOptionChange={handleOutputOptionChange}
+          voiceOptions={voiceOptions}
+          avatarOptions={avatarOptions}
         />
       </InputContainer>
       

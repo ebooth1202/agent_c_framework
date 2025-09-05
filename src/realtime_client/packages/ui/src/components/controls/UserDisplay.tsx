@@ -1,3 +1,5 @@
+"use client"
+
 /**
  * UserDisplay Component - Display user profile information from WebSocket events
  * Supports compact and full display variants with loading states

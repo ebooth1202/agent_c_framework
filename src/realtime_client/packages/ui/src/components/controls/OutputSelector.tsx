@@ -1,3 +1,5 @@
+"use client"
+
 /**
  * OutputSelector Component
  * 
@@ -9,8 +11,7 @@
 
 import * as React from "react"
 import { ChevronDown, Type, Mic, User } from "lucide-react"
-import { useAgentCData, useInitializationStatus, useVoiceModel } from "@agentc/realtime-react"
-import { useRealtimeClient } from "@agentc/realtime-react"
+import { useAgentCData, useInitializationStatus, useVoiceModel, useRealtimeClientSafe } from "@agentc/realtime-react"
 import { cn } from "../../lib/utils"
 import { Button } from "../ui/button"
 import {
@@ -43,7 +44,7 @@ interface SelectedOutput {
 
 export const OutputSelector = React.forwardRef<HTMLButtonElement, OutputSelectorProps>(
   ({ className, disabled = false, showIcon = true }, ref) => {
-    const client = useRealtimeClient()
+    const client = useRealtimeClientSafe()
     const { data, isInitialized, isLoading } = useAgentCData()
     const { isInitialized: connectionInitialized } = useInitializationStatus()
     const { currentVoice } = useVoiceModel()
@@ -180,7 +181,7 @@ export const OutputSelector = React.forwardRef<HTMLButtonElement, OutputSelector
       }
     }
 
-    const isDisabled = disabled || !isInitialized || !connectionInitialized || isLoading || isChanging
+    const isDisabled = disabled || !client || !isInitialized || !connectionInitialized || isLoading || isChanging
 
     return (
       <DropdownMenu>

@@ -3,13 +3,13 @@
 import * as React from "react"
 import { useTheme } from "next-themes"
 
-import { Button } from "@/components/ui/button"
 import {
+  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+  DropdownMenuTrigger
+} from "@agentc/realtime-ui"
 import { Icons } from "@/components/icons"
 
 export function ModeToggle() {

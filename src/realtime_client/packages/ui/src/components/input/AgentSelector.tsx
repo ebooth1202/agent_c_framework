@@ -12,23 +12,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
-
-// Type definitions
-export interface AgentTool {
-  id: string
-  name: string
-  icon?: string
-  category?: string
-}
-
-export interface Agent {
-  id: string
-  name: string
-  description: string
-  avatar?: string
-  tools: AgentTool[]
-  capabilities?: string[]
-}
+import type { Agent, AgentTool } from './types'
 
 export interface AgentSelectorProps {
   agents?: Agent[]

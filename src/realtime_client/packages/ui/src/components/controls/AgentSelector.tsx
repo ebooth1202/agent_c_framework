@@ -1,3 +1,5 @@
+"use client"
+
 /**
  * AgentSelector Component
  * 
@@ -7,8 +9,7 @@
 
 import * as React from "react"
 import { Bot, ChevronDown } from "lucide-react"
-import { useAgentCData, useInitializationStatus } from "@agentc/realtime-react"
-import { useRealtimeClient } from "@agentc/realtime-react"
+import { useAgentCData, useInitializationStatus, useRealtimeClientSafe } from "@agentc/realtime-react"
 import type { Agent } from "@agentc/realtime-react"
 import { cn } from "../../lib/utils"
 import { Badge } from "../ui/badge"
@@ -46,7 +47,7 @@ function formatToolName(toolClass: string): string {
 
 export const AgentSelector = React.forwardRef<HTMLButtonElement, AgentSelectorProps>(
   ({ className, disabled = false, showIcon = true, placeholder = "Select an agent" }, ref) => {
-    const client = useRealtimeClient()
+    const client = useRealtimeClientSafe()
     const { data, isInitialized, isLoading } = useAgentCData()
     const { isInitialized: connectionInitialized } = useInitializationStatus()
     
@@ -104,7 +105,7 @@ export const AgentSelector = React.forwardRef<HTMLButtonElement, AgentSelectorPr
       }
     }
     
-    const isDisabled = disabled || !isInitialized || !connectionInitialized || isLoading || isChanging
+    const isDisabled = disabled || !client || !isInitialized || !connectionInitialized || isLoading || isChanging
     
     // Find the current agent details
     const currentAgent = data.agents.find(agent => agent.key === selectedAgent)

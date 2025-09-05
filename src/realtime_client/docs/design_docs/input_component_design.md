@@ -73,19 +73,6 @@ InputArea/
 
 **Purpose:** Main wrapper that provides structure and spacing
 
-**Implementation:**
-
-```typescript
-interface InputContainerProps {
-  children: React.ReactNode
-  className?: string
-  maxHeight?: string // Default: "max-h-96"
-}
-
-// Layout classes
-"flex flex-col gap-3.5 m-3.5"
-```
-
 #### RichTextEditor
 
 **Purpose:** Core editor component using Tiptap (ProseMirror wrapper)
@@ -96,47 +83,12 @@ interface InputContainerProps {
 - Placeholder text handling
 - Markdown shortcuts
 - Voice transcription integration
-- Auto-resize with max height
-
-**Props:**
-
-```typescript
-interface RichTextEditorProps {
-  value: string
-  onChange: (value: string) => void
-  onSubmit: () => void
-  placeholder?: string
-  disabled?: boolean
-  maxHeight?: string
-  className?: string
-  // Note: No voice mode - editor is always available
-  // Transcriptions appear as messages in chat, not in editor
-}
-```
 
 #### InputToolbar
 
 **Purpose:** Action toolbar with microphone control, agent output settings, and send functionality
 
-**Props:**
-
-```typescript
-interface InputToolbarProps {
-  onSend: () => void
-  canSend: boolean
-  isRecording: boolean      // From useAudio() hook
-  onStartRecording: () => void  // Start audio streaming
-  onStopRecording: () => void   // Stop audio streaming
-  audioLevel?: number       // Visual feedback during recording
-  onAttachment?: () => void
-  onTools?: () => void      // Placeholder for future
-  selectedAgent?: Agent
-  onAgentChange?: (agent: Agent) => void
-  outputMode?: OutputMode   // How AGENT responds: text/voice/avatar
-  onOutputModeChange?: (mode: OutputMode, option?: OutputOption) => void
-}
 ```
-
 **Implementation Example:**
 
 ```typescript

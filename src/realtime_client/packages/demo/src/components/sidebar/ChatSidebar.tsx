@@ -6,7 +6,7 @@ import { SidebarTopMenu } from "./SidebarTopMenu"
 import { ChatSessionList } from "./ChatSessionList"
 import { UserDisplay } from "./UserDisplay"
 import { X, ChevronLeft, ChevronRight } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Button } from "@agentc/realtime-ui"
 
 export interface ChatSidebarProps {
   isOpen?: boolean

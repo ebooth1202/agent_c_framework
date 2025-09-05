@@ -15,6 +15,10 @@ export type { UseTurnStateOptions, UseTurnStateReturn, TurnStateEvent } from './
 export { useVoiceModel } from './useVoiceModel';
 export type { UseVoiceModelReturn } from './useVoiceModel';
 
+// Output mode coordination
+export { useOutputMode } from './useOutputMode';
+export type { UseOutputModeOptions, UseOutputModeReturn, OutputMode } from './useOutputMode';
+
 // Chat functionality
 export { useChat } from './useChat';
 export type { UseChatOptions, UseChatReturn } from './useChat';

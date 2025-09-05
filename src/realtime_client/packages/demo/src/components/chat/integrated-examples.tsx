@@ -6,12 +6,9 @@ import { MessageList } from './message-list'
 import { Message } from './message'
 import { TypingIndicator } from './typing-indicator'
 import { ViewManager } from './view-manager'
-import { Card } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { useChat, useAudio, useConnection } from '@agentc/realtime-react'
-import { useOutputMode } from '@/hooks/use-output-mode'
-import { Button } from '@/components/ui/button'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Card, Tabs, TabsContent, TabsList, TabsTrigger } from '@agentc/realtime-ui'
+import { useChat, useAudio, useConnection, useOutputMode } from '@agentc/realtime-react'
+import { Button, Alert, AlertDescription } from '@agentc/realtime-ui'
 import { MessageSquare, Mic, Volume2, Video, Info } from 'lucide-react'
 
 /**
@@ -377,7 +374,7 @@ function App() {
           <div>
             <h3 className="text-lg font-semibold mb-2">Output Mode Management</h3>
             <pre className="bg-muted p-4 rounded-lg overflow-x-auto">
-              <code className="text-sm">{`import { useOutputMode } from '@/hooks/use-output-mode'
+              <code className="text-sm">{`import { useOutputMode } from '@agentc/realtime-react'
 
 function ChatWithModes() {
   const {

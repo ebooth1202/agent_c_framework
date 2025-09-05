@@ -1,7 +1,10 @@
-'use client';
+/**
+ * useOutputMode - React hook for output mode management
+ * Coordinates between UI output modes (text/voice/avatar) and SDK voice model selection
+ */
 
 import { useState, useCallback, useEffect } from 'react';
-import { useVoiceModel } from '@agentc/realtime-react';
+import { useVoiceModel } from './useVoiceModel';
 
 export type OutputMode = 'text' | 'voice' | 'avatar';
 
@@ -84,8 +87,25 @@ export interface UseOutputModeReturn {
 }
 
 /**
- * Custom hook to manage output mode state and SDK voice switching
+ * React hook to manage output mode state and SDK voice switching
  * Coordinates between UI output mode and SDK voice model selection
+ * 
+ * @example
+ * ```tsx
+ * const {
+ *   outputMode,
+ *   setOutputMode,
+ *   isTextMode,
+ *   isVoiceMode,
+ *   isAvatarMode
+ * } = useOutputMode({ initialMode: 'voice' });
+ * 
+ * // Switch to text mode
+ * setOutputMode('text');
+ * 
+ * // Or use convenience methods
+ * switchToVoice();
+ * ```
  */
 export function useOutputMode(options: UseOutputModeOptions = {}): UseOutputModeReturn {
   const {

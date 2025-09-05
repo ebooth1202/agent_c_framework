@@ -13,17 +13,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator
 } from '../ui/dropdown-menu'
-
-export interface OutputOption {
-  id: string
-  name: string
-  type: 'text' | 'voice' | 'avatar'
-  available: boolean
-  metadata?: {
-    voiceId?: string      // For voice mode
-    avatarId?: string     // For avatar mode
-  }
-}
+import type { OutputOption } from './types'
 
 export interface OutputSelectorProps {
   selectedOption: OutputOption | null

@@ -33,7 +33,8 @@ export type { OutputSelectorProps } from './OutputSelector'
 
 // Types
 export type { 
-  Agent, 
+  Agent,
+  AgentTool, 
   OutputMode, 
   OutputOption 
 } from './types'

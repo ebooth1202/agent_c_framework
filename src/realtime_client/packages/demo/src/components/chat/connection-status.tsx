@@ -2,9 +2,7 @@
 
 import React from 'react';
 import { useConnection } from '@agentc/realtime-react';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Button, Card, Badge } from '@agentc/realtime-ui';
 import { cn } from '@/lib/utils';
 import { RefreshCw, Wifi, WifiOff } from 'lucide-react';
 

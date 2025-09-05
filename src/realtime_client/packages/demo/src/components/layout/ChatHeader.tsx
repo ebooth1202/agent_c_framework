@@ -3,15 +3,12 @@
 import * as React from "react"
 import { Menu } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { Button } from "@agentc/realtime-ui"
 import { SessionNameDropdown } from "./SessionNameDropdown"
 import { 
   ConnectionButton, 
-  AudioControls,
-  OutputSelector,
-  AgentSelector 
+  AudioControls
 } from "@agentc/realtime-ui"
-import { toast } from "sonner"
 
 export interface ChatHeaderProps {
   onMenuToggle?: () => void
@@ -21,28 +18,10 @@ export interface ChatHeaderProps {
 
 /**
  * ChatHeader component - Main header for the chat interface
- * Contains menu toggle (mobile), session name, selectors, and connection/audio controls
+ * Contains menu toggle (mobile), session name, and connection/audio controls
  */
 export const ChatHeader = React.forwardRef<HTMLDivElement, ChatHeaderProps>(
   ({ onMenuToggle, sessionName, className }, ref) => {
-    // Set up effect to monitor avatar selections
-    React.useEffect(() => {
-      // Monitor for avatar selection attempts by checking console logs
-      const originalWarn = console.warn
-      console.warn = function(...args) {
-        if (args[0] && args[0].includes('Avatar selection requires HeyGen SDK integration')) {
-          toast.info('Avatar integration coming soon!', {
-            description: 'HeyGen avatar support will be available in the next release.',
-            duration: 5000,
-          })
-        }
-        originalWarn.apply(console, args)
-      }
-      
-      return () => {
-        console.warn = originalWarn
-      }
-    }, [])
 
     return (
       <header
@@ -68,13 +47,8 @@ export const ChatHeader = React.forwardRef<HTMLDivElement, ChatHeaderProps>(
             <SessionNameDropdown sessionName={sessionName} />
           </div>
 
-          {/* Center: Agent and Output selectors */}
-          <div className="flex items-center gap-2 flex-1 justify-center max-w-md">
-            <div className="hidden sm:flex items-center gap-2">
-              <AgentSelector className="w-[200px]" />
-              <OutputSelector className="w-[180px]" />
-            </div>
-          </div>
+          {/* Center spacer for balanced layout */}
+          <div className="flex-1" />
 
           {/* Right side: Connection status and audio controls */}
           <div className="flex items-center gap-2 shrink-0">
@@ -83,11 +57,7 @@ export const ChatHeader = React.forwardRef<HTMLDivElement, ChatHeaderProps>(
           </div>
         </div>
 
-        {/* Mobile selectors - shown below header on small screens */}
-        <div className="sm:hidden px-4 pb-2 flex items-center justify-center gap-2 border-b">
-          <AgentSelector className="flex-1" />
-          <OutputSelector className="flex-1" />
-        </div>
+
       </header>
     )
   }

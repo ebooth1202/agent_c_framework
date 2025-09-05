@@ -2,15 +2,22 @@
 
 import React from 'react';
 import { Send, Mic, Type, Volume2, Video } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Card } from '@/components/ui/card';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useAudio, useChat } from '@agentc/realtime-react';
-import { cn } from '@/lib/utils';
+import { 
+  Button,
+  Textarea,
+  Card,
+  ToggleGroup,
+  ToggleGroupItem,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from '@agentc/realtime-ui';
+import { useAudio, useChat, type OutputMode } from '@agentc/realtime-react';
 
-export type OutputMode = 'text' | 'voice' | 'avatar';
+// Re-export OutputMode for other components
+export type { OutputMode };
+import { cn } from '@/lib/utils';
 
 export interface InputAreaProps {
   className?: string;
