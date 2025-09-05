@@ -135,9 +135,9 @@ export {
   RichTextEditor,
   MarkdownEditor,
   InputToolbar,
-  MicrophoneButton,
-  // Temporarily rename the old ones to avoid conflicts
-  AgentSelector as LegacyAgentSelector
+  MicrophoneButton
+  // Note: AgentSelector has been removed from input components
+  // Use the fixed AgentSelector from controls instead
   // Note: OutputSelector has been removed from input components
   // Use the fixed OutputSelector from controls instead
 } from './components/input';
@@ -149,8 +149,7 @@ export type {
   MarkdownEditorProps,
   InputToolbarProps,
   MicrophoneButtonProps,
-  // Rename old types too
-  AgentSelectorProps as LegacyAgentSelectorProps,
+  // AgentSelectorProps removed - use controls/AgentSelector
   // OutputSelectorProps removed - use controls/OutputSelector
   Agent,
   OutputMode,

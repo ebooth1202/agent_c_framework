@@ -21,8 +21,7 @@ import {
 // Import actual components
 import { MicrophoneButton } from "./MicrophoneButton"
 import { OutputSelector } from "../controls/OutputSelector"  // Use the fixed version from controls
-import { AgentSelector } from "./AgentSelector"
-import type { Agent } from "./types"
+import { AgentSelector } from "../controls/AgentSelector"  // Use the proper version from controls
 
 export interface InputToolbarProps {
   /** Callback when send button is clicked */
@@ -41,12 +40,12 @@ export interface InputToolbarProps {
   onAttachment?: () => void
   /** Callback for tools button (optional, placeholder) */
   onTools?: () => void
-  /** List of available agents */
-  agents?: Agent[]
-  /** Currently selected agent */
-  selectedAgent?: Agent
-  /** Callback when agent selection changes */
-  onAgentChange?: (agent: Agent) => void
+  /** @deprecated List of available agents - AgentSelector now uses SDK data */
+  agents?: any[]
+  /** @deprecated Currently selected agent - AgentSelector now uses SDK state */
+  selectedAgent?: any
+  /** @deprecated Callback when agent selection changes - AgentSelector now uses SDK events */
+  onAgentChange?: (agent: any) => void
   /** Additional CSS classes */
   className?: string
 }
@@ -149,9 +148,9 @@ export const InputToolbar = React.forwardRef<HTMLDivElement, InputToolbarProps>(
     audioLevel = 0,
     onAttachment,
     onTools,
-    agents,
-    selectedAgent,
-    onAgentChange,
+    agents,  // @deprecated - AgentSelector now manages its own state via SDK
+    selectedAgent,  // @deprecated - AgentSelector now manages its own state via SDK
+    onAgentChange,  // @deprecated - AgentSelector now manages its own state via SDK
     className,
     ...props 
   }, ref) => {
@@ -196,15 +195,9 @@ export const InputToolbar = React.forwardRef<HTMLDivElement, InputToolbarProps>(
         {/* Right Section - Agent Selector and Send */}
         <div className="flex items-center gap-2">
           {/* AgentSelector - Choose which agent to talk to */}
-          {onAgentChange && (
-            <AgentSelector
-              agents={agents}
-              selectedAgent={selectedAgent || null}
-              onAgentSelect={onAgentChange}
-              variant="dropdown"
-              className="min-w-[150px] max-w-[200px]"
-            />
-          )}
+          <AgentSelector
+            className="min-w-[150px] max-w-[200px]"
+          />
           
           {/* Send Button */}
           <Button

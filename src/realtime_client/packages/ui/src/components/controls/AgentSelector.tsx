@@ -8,8 +8,8 @@
  */
 
 import * as React from "react"
-import { Bot, ChevronDown } from "lucide-react"
-import { useAgentCData, useInitializationStatus, useRealtimeClientSafe } from "@agentc/realtime-react"
+import { Bot } from "lucide-react"
+import { useAgentCData, useConnection, useRealtimeClientSafe } from "@agentc/realtime-react"
 import type { Agent } from "@agentc/realtime-react"
 import { cn } from "../../lib/utils"
 import { Badge } from "../ui/badge"
@@ -20,7 +20,6 @@ import {
   SelectItem,
   SelectLabel,
   SelectTrigger,
-  SelectValue,
 } from "../ui/select"
 
 export interface AgentSelectorProps {
@@ -49,7 +48,7 @@ export const AgentSelector = React.forwardRef<HTMLButtonElement, AgentSelectorPr
   ({ className, disabled = false, showIcon = true, placeholder = "Select an agent" }, ref) => {
     const client = useRealtimeClientSafe()
     const { data, isInitialized, isLoading } = useAgentCData()
-    const { isInitialized: connectionInitialized } = useInitializationStatus()
+    const { isConnected } = useConnection()
     
     const [selectedAgent, setSelectedAgent] = React.useState<string>('')
     const [isChanging, setIsChanging] = React.useState(false)
@@ -105,7 +104,8 @@ export const AgentSelector = React.forwardRef<HTMLButtonElement, AgentSelectorPr
       }
     }
     
-    const isDisabled = disabled || !client || !isInitialized || !connectionInitialized || isLoading || isChanging
+    // Match OutputSelector's disabled logic pattern - only disable when truly necessary
+    const isDisabled = disabled || !client || !isConnected || isChanging
     
     // Find the current agent details
     const currentAgent = data.agents.find(agent => agent.key === selectedAgent)
@@ -118,12 +118,18 @@ export const AgentSelector = React.forwardRef<HTMLButtonElement, AgentSelectorPr
       >
         <SelectTrigger 
           ref={ref}
-          className={cn("w-[250px]", className)}
+          className={cn("w-[180px]", className)}
           aria-label="Select an agent"
         >
-          <div className="flex items-center gap-2">
-            {showIcon && <Bot className="h-4 w-4" />}
-            <SelectValue placeholder={isLoading ? "Loading agents..." : placeholder} />
+          <div className="flex items-center gap-2 truncate flex-1">
+            {showIcon && <Bot className="h-4 w-4 flex-shrink-0" />}
+            {currentAgent ? (
+              <span className="truncate">{currentAgent.name || currentAgent.key}</span>
+            ) : (
+              <span className="text-muted-foreground">
+                {isLoading ? "Loading agents..." : placeholder}
+              </span>
+            )}
           </div>
         </SelectTrigger>
         
