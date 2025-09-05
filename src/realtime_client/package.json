@@ -2,7 +2,7 @@
   "name": "@agentc/realtime-client",
   "private": true,
   "scripts": {
-    "build": "lerna run build",
+    "build": "lerna run build --concurrency=1",
     "test": "lerna run test --concurrency=1",
     "test:run": "lerna run test:run",
     "test:watch": "lerna run test:watch",

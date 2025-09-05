@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "next lint",
     "format": "pnpm prettier ./src --write",
-    "format:check": "pnpm prettier ./src --check"
+    "format:check": "pnpm prettier ./src --check",
+    "clean": "rimraf .next"
   },
   "dependencies": {
     "@agentc/realtime-core": "workspace:*",
