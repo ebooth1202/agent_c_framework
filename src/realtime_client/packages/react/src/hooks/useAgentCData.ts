@@ -13,7 +13,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRealtimeClientSafe } from '../providers/AgentCContext';
-import type { User, Agent, Voice, Avatar, Toolset } from '@agentc/realtime-core';
+import type { User, Agent, AgentConfiguration, Voice, Avatar, Toolset } from '@agentc/realtime-core';
 
 /**
  * All configuration data from WebSocket initialization
@@ -27,6 +27,9 @@ export interface AgentCData {
   
   /** Available AI agents */
   agents: Agent[];
+  
+  /** Current agent configuration from active session */
+  currentAgentConfig: AgentConfiguration | null;
   
   /** Available HeyGen avatars */
   avatars: Avatar[];
@@ -90,6 +93,7 @@ export function useAgentCData(): UseAgentCDataReturn {
     user: null,
     voices: [],
     agents: [],
+    currentAgentConfig: null,
     avatars: [],
     toolsets: []
   });
@@ -105,6 +109,7 @@ export function useAgentCData(): UseAgentCDataReturn {
         user: null,
         voices: [],
         agents: [],
+        currentAgentConfig: null,
         avatars: [],
         toolsets: []
       });
@@ -120,6 +125,7 @@ export function useAgentCData(): UseAgentCDataReturn {
         user: client.getUserData(),
         voices: client.getVoicesList(),
         agents: client.getAgentsList(),
+        currentAgentConfig: client.getCurrentAgentConfig(),
         avatars: client.getAvailableAvatars(),
         toolsets: client.getToolsets()
       };
@@ -185,6 +191,20 @@ export function useAgentCData(): UseAgentCDataReturn {
       }
     };
     
+    // Handle session changes which include agent configuration
+    const handleSessionChanged = (event: any) => {
+      if (event.chat_session?.agent_config) {
+        setData(prev => ({ ...prev, currentAgentConfig: event.chat_session.agent_config }));
+      }
+    };
+    
+    // Handle agent configuration changes
+    const handleAgentConfigChanged = (event: any) => {
+      if (event.agent_config) {
+        setData(prev => ({ ...prev, currentAgentConfig: event.agent_config }));
+      }
+    };
+    
     // Handle initialization complete event
     const handleInitialized = () => {
       // When initialization completes, do a final update
@@ -217,6 +237,8 @@ export function useAgentCData(): UseAgentCDataReturn {
     client.on('voice_list', handleVoiceList);
     client.on('agent_list', handleAgentList);
     client.on('tool_catalog', handleToolCatalog);
+    client.on('chat_session_changed', handleSessionChanged);
+    client.on('agent_configuration_changed', handleAgentConfigChanged);
     client.on('initialized' as any, handleInitialized);
     client.on('connected', handleConnect);
     client.on('disconnected', handleDisconnect);
@@ -228,6 +250,8 @@ export function useAgentCData(): UseAgentCDataReturn {
       client.off('voice_list', handleVoiceList);
       client.off('agent_list', handleAgentList);
       client.off('tool_catalog', handleToolCatalog);
+      client.off('chat_session_changed', handleSessionChanged);
+      client.off('agent_configuration_changed', handleAgentConfigChanged);
       client.off('initialized' as any, handleInitialized);
       client.off('connected', handleConnect);
       client.off('disconnected', handleDisconnect);
@@ -245,4 +269,4 @@ export function useAgentCData(): UseAgentCDataReturn {
 }
 
 // Re-export types for convenience
-export type { User, Agent, Voice, Avatar, Toolset };
+export type { User, Agent, AgentConfiguration, Voice, Avatar, Toolset };

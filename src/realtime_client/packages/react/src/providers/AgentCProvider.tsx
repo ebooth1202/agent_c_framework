@@ -7,7 +7,14 @@ import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { 
   RealtimeClient, 
   RealtimeClientConfig,
-  AuthManager
+  AuthManager,
+  ChatUserDataEvent,
+  AgentListEvent,
+  AvatarListEvent,
+  VoiceListEvent,
+  ToolCatalogEvent,
+  ChatSessionChangedEvent,
+  ErrorEvent
 } from '@agentc/realtime-core';
 import { AgentCContext, AgentCContextValue, InitializationState } from './AgentCContext';
 
@@ -208,32 +215,32 @@ export function AgentCProvider({
       };
       
       // Listen for initialization events
-      newClient.on('chat_user_data', (data) => {
+      newClient.on('chat_user_data', (data: ChatUserDataEvent) => {
         if (debug) console.warn('AgentCProvider: Received chat_user_data event');
         updateInitialization('chat_user_data', data);
       });
       
-      newClient.on('agent_list', (data) => {
+      newClient.on('agent_list', (data: AgentListEvent) => {
         if (debug) console.warn('AgentCProvider: Received agent_list event');
         updateInitialization('agent_list', data);
       });
       
-      newClient.on('avatar_list', (data) => {
+      newClient.on('avatar_list', (data: AvatarListEvent) => {
         if (debug) console.warn('AgentCProvider: Received avatar_list event');
         updateInitialization('avatar_list', data);
       });
       
-      newClient.on('voice_list', (data) => {
+      newClient.on('voice_list', (data: VoiceListEvent) => {
         if (debug) console.warn('AgentCProvider: Received voice_list event');
         updateInitialization('voice_list', data);
       });
       
-      newClient.on('tool_catalog', (data) => {
+      newClient.on('tool_catalog', (data: ToolCatalogEvent) => {
         if (debug) console.warn('AgentCProvider: Received tool_catalog event');
         updateInitialization('tool_catalog', data);
       });
       
-      newClient.on('chat_session_changed', (data) => {
+      newClient.on('chat_session_changed', (data: ChatSessionChangedEvent) => {
         if (debug) console.warn('AgentCProvider: Received chat_session_changed event');
         updateInitialization('chat_session_changed', data);
       });
@@ -244,11 +251,11 @@ export function AgentCProvider({
           console.warn('AgentCProvider: Client connected');
         });
         
-        newClient.on('disconnected', ({ code, reason }) => {
+        newClient.on('disconnected', ({ code, reason }: { code: number; reason: string }) => {
           console.warn('AgentCProvider: Client disconnected', { code, reason });
         });
         
-        newClient.on('error', (error) => {
+        newClient.on('error', (error: ErrorEvent) => {
           console.error('AgentCProvider: Client error', error);
         });
       }
@@ -261,7 +268,7 @@ export function AgentCProvider({
       
       // Auto-connect if requested
       if (autoConnect) {
-        newClient.connect().catch((err) => {
+        newClient.connect().catch((err: Error) => {
           console.error('AgentCProvider: Auto-connect failed', err);
           const connectError = new Error(`Failed to auto-connect: ${err.message}`);
           setError(connectError);

@@ -27,6 +27,7 @@ export interface Agent {
   key: string;
   agent_description: string | null;
   category: string[];
+  tools: string[];
 }
 
 /**
