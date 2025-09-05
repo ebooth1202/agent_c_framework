@@ -73,6 +73,9 @@ class VoiceIOManager:
         if self.is_running:
             self.close()
 
+        if voice.voice_id == "none":
+            return
+
         self._voice = voice
         self.start(voice)
 

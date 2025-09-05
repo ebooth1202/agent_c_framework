@@ -137,8 +137,9 @@ export {
   InputToolbar,
   MicrophoneButton,
   // Temporarily rename the old ones to avoid conflicts
-  AgentSelector as LegacyAgentSelector,
-  OutputSelector as LegacyOutputSelector
+  AgentSelector as LegacyAgentSelector
+  // Note: OutputSelector has been removed from input components
+  // Use the fixed OutputSelector from controls instead
 } from './components/input';
 
 export type { 
@@ -150,7 +151,7 @@ export type {
   MicrophoneButtonProps,
   // Rename old types too
   AgentSelectorProps as LegacyAgentSelectorProps,
-  OutputSelectorProps as LegacyOutputSelectorProps,
+  // OutputSelectorProps removed - use controls/OutputSelector
   Agent,
   OutputMode,
   OutputOption

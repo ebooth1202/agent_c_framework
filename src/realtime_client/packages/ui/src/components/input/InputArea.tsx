@@ -62,8 +62,6 @@ const InputArea: React.FC<InputAreaProps> = ({
   // Local state
   const [content, setContent] = useState('')
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null)
-  const [outputMode, setOutputMode] = useState<OutputMode>('text')
-  const [selectedOutputOption, setSelectedOutputOption] = useState<OutputOption | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   // Default agents if not provided
@@ -236,52 +234,8 @@ const InputArea: React.FC<InputAreaProps> = ({
     onAgentChange?.(agent)
   }, [onAgentChange])
 
-  // Handle output option change (replaces output mode change)
-  const handleOutputOptionChange = useCallback(async (option: OutputOption) => {
-    try {
-      setError(null)
-      setSelectedOutputOption(option)
-      
-      const mode = option.type
-      setOutputMode(mode)
-      
-      // Update SDK based on output mode
-      switch (mode) {
-        case 'text':
-          // Disable voice and avatar
-          await setVoice('none')
-          if (isAvatarActive) {
-            await clearAvatar()
-          }
-          break
-          
-        case 'voice':
-          // Set voice, disable avatar
-          if (option?.metadata?.voiceId) {
-            await setVoice(option.metadata.voiceId)
-          }
-          if (isAvatarActive) {
-            await clearAvatar()
-          }
-          break
-          
-        case 'avatar':
-          // Enable avatar mode
-          await setVoice('avatar')
-          if (option?.metadata?.avatarId) {
-            // For avatar, we need to create a session - using a placeholder session ID
-            const sessionId = `session-${Date.now()}`
-            await setAvatar(option.metadata.avatarId, sessionId)
-          }
-          break
-      }
-      
-      onOutputModeChange?.(option.type, option)
-    } catch (err) {
-      console.error('Failed to change output mode:', err)
-      setError('Failed to change output mode. Please try again.')
-    }
-  }, [setVoice, isAvatarActive, clearAvatar, setAvatar, onOutputModeChange])
+  // Note: Output option changes are now handled internally by the OutputSelector component
+  // which uses SDK hooks directly for state management
 
   // Stop recording if turn is lost
   useEffect(() => {
@@ -330,10 +284,6 @@ const InputArea: React.FC<InputAreaProps> = ({
           agents={agents}
           selectedAgent={selectedAgent || undefined}
           onAgentChange={handleAgentChange}
-          selectedOutputOption={selectedOutputOption}
-          onOutputOptionChange={handleOutputOptionChange}
-          voiceOptions={voiceOptions}
-          avatarOptions={avatarOptions}
         />
       </InputContainer>
       

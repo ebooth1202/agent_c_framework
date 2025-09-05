@@ -20,9 +20,9 @@ import {
 
 // Import actual components
 import { MicrophoneButton } from "./MicrophoneButton"
-import { OutputSelector } from "./OutputSelector"
+import { OutputSelector } from "../controls/OutputSelector"  // Use the fixed version from controls
 import { AgentSelector } from "./AgentSelector"
-import type { Agent, OutputMode, OutputOption } from "./types"
+import type { Agent } from "./types"
 
 export interface InputToolbarProps {
   /** Callback when send button is clicked */
@@ -47,14 +47,6 @@ export interface InputToolbarProps {
   selectedAgent?: Agent
   /** Callback when agent selection changes */
   onAgentChange?: (agent: Agent) => void
-  /** Current selected output option (includes mode and specific selection) */
-  selectedOutputOption?: OutputOption | null
-  /** Callback when output option changes */
-  onOutputOptionChange?: (option: OutputOption) => void
-  /** Available voice options for OutputSelector */
-  voiceOptions?: OutputOption[]
-  /** Available avatar options for OutputSelector */
-  avatarOptions?: OutputOption[]
   /** Additional CSS classes */
   className?: string
 }
@@ -160,10 +152,6 @@ export const InputToolbar = React.forwardRef<HTMLDivElement, InputToolbarProps>(
     agents,
     selectedAgent,
     onAgentChange,
-    selectedOutputOption,
-    onOutputOptionChange,
-    voiceOptions,
-    avatarOptions,
     className,
     ...props 
   }, ref) => {
@@ -182,15 +170,7 @@ export const InputToolbar = React.forwardRef<HTMLDivElement, InputToolbarProps>(
           <ToolsButton onClick={onTools} />
           
           {/* OutputSelector - Controls how AGENT responds (text/voice/avatar) */}
-          {onOutputOptionChange && (
-            <OutputSelector
-              selectedOption={selectedOutputOption || null}
-              onOptionSelect={onOutputOptionChange}
-              voiceOptions={voiceOptions}
-              avatarOptions={avatarOptions}
-              className="ml-1"
-            />
-          )}
+          <OutputSelector className="ml-1" />
         </div>
 
         {/* Center Section - Microphone Controls (NOT a mode toggle) */}
