@@ -1,4 +1,4 @@
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Literal
 
 from pydantic import Field
 
@@ -273,6 +273,33 @@ class UserTurnStartEvent(BaseEvent):
 class UserTurnEndEvent(BaseEvent):
     """
     Event to notify that the client we're accepting user input
+
+    This event does not require any additional data.
+    """
+    pass
+
+class PushToTalkStartEvent(BaseEvent):
+    """
+    Event for the client to notify that it's starting to accept push-to-talk audio input.
+    """
+    type: str = Field( "ptt_start", description="The type of the event. Defaults to the snake case class name without event")
+
+class PushToTalkEndEvent(BaseEvent):
+    """
+    Event for the client to notify that it's stopping accepting push-to-talk audio input.
+    """
+    type: str = Field( "ptt_end", description="The type of the event. Defaults to the snake case class name without event")
+
+class SetVoiceInputMode(BaseEvent):
+    """
+    Sent by the client to set the voice input mode.
+    """
+    mode: Literal["ptt", "vad"] = Field(..., description="The voice input mode, either 'ptt' for push-to-talk or 'vad' for voice activity detection.")
+
+
+class ServerListeningEvent(BaseEvent):
+    """
+    Event to notify that the server is listening for audio input.
 
     This event does not require any additional data.
     """

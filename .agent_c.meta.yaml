@@ -2101,6 +2101,83 @@ _plans:
         updated_at: '2025-08-30T16:47:38.897184'
     title: Agent C Realtime Team Restructuring & Enhancement
     updated_at: '2025-08-30T16:47:38.897212'
+  realtime_ui_fixes:
+    created_at: '2025-09-03T14:47:50.241320'
+    description: 'Address the three critical issues identified after achieving the
+      connection milestone: React editorProps warning, WebSocket ping event handling,
+      and AudioWorklet browser compatibility issues.'
+    id: 75ddcac1-0898-4eeb-9529-5da41b903ea5
+    lessons_learned: []
+    tasks:
+      1a31cf12-3375-46ce-9dec-e1d34edf9e50:
+        child_tasks: []
+        completed: true
+        completion_report: Successfully fixed the React editorProps DOM warning by
+          restructuring how keyboard handlers are passed to the MarkdownEditor component.
+          Added a proper onKeyDown prop to the MarkdownEditorProps interface and updated
+          the component chain to pass handlers correctly without spreading DOM-incompatible
+          props.
+        completion_signoff_by: Hank
+        context: Error trace shows the issue originates in MarkdownEditor.js:111 and
+          flows through the component chain. The editorProps is likely being passed
+          to a DOM element instead of being properly handled by the TipTap editor
+          component.
+        created_at: '2025-09-03T14:47:55.910657'
+        description: 'Resolve the React warning: "React does not recognize the `editorProps`
+          prop on a DOM element" occurring in the MarkdownEditor component chain.'
+        id: 1a31cf12-3375-46ce-9dec-e1d34edf9e50
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 1
+        title: Fix React editorProps DOM Warning
+        updated_at: '2025-09-03T14:54:04.705985'
+      287adeac-459b-4197-8d1f-b6ee9ca4ed7b:
+        child_tasks: []
+        completed: true
+        completion_report: Successfully fixed AudioWorklet browser compatibility issues
+          through team collaboration. Fixed worklet file deployment (404 error) and
+          sample rate mismatch problems. Audio input now works correctly with packets
+          reaching the server. Team implemented proper resampling in the AudioWorklet
+          to handle browser sample rate variations.
+        completion_signoff_by: Hank
+        context: 'Error: "AudioWorklet is not supported in this browser" when clicking
+          mic button. User was never prompted for mic access. The virt_joe project
+          has a working audio worklet implementation that can be referenced.'
+        created_at: '2025-09-03T14:48:04.883230'
+        description: Resolve AudioWorklet compatibility issues preventing microphone
+          functionality, potentially using the working audio solution from virt_joe
+          project as reference.
+        id: 287adeac-459b-4197-8d1f-b6ee9ca4ed7b
+        parent_id: null
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 3
+        title: Fix AudioWorklet Browser Compatibility
+        updated_at: '2025-09-03T17:06:32.316539'
+      ea29990f-32ee-4b8c-b534-baace5a83874:
+        child_tasks: []
+        completed: true
+        completion_report: 'Added proper ping/pong handling to RealtimeClient.ts to
+          prevent "Unknown event type: ping" errors. Client now automatically responds
+          to server ping events with pong responses and handles both event types without
+          triggering unknown event errors.'
+        completion_signoff_by: Hank
+        context: The WebSocket server is sending ping events for keepalive, but the
+          client doesn't recognize them. Need to add ping/pong handling to the event
+          processing in RealtimeClient.ts.
+        created_at: '2025-09-03T14:48:00.315143'
+        description: 'Implement proper handling for "ping" events in the RealtimeClient
+          to prevent "Unknown event type: ping" errors.'
+        id: ea29990f-32ee-4b8c-b534-baace5a83874
+        parent_id: null
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 2
+        title: Add WebSocket Ping Event Handling
+        updated_at: '2025-09-03T14:59:13.581018'
+    title: Realtime Client UI and Connection Fixes
+    updated_at: '2025-09-03T17:06:32.316607'
 agents:
   hank_agent:
     agent_key: hank_agent
