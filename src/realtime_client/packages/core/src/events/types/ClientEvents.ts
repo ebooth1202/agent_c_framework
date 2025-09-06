@@ -109,6 +109,40 @@ export interface SetSessionMessagesEvent extends BaseClientEvent {
 }
 
 /**
+ * Request paginated list of user sessions
+ * Used for loading additional sessions beyond the initial login response
+ */
+export interface GetUserSessionsEvent extends BaseClientEvent {
+  type: 'get_user_sessions';
+  offset: number; // Starting offset for pagination (default 0)
+  limit: number;  // Number of sessions to fetch (default 50)
+}
+
+/**
+ * Request list of available TTS voices
+ * Server responds with voice_list event
+ */
+export interface GetVoicesEvent extends BaseClientEvent {
+  type: 'get_voices';
+}
+
+/**
+ * Request tool catalog with available tools and schemas
+ * Server responds with tool_catalog event
+ */
+export interface GetToolCatalogEvent extends BaseClientEvent {
+  type: 'get_tool_catalog';
+}
+
+/**
+ * Connection health check ping
+ * Server responds with pong event
+ */
+export interface PingEvent extends BaseClientEvent {
+  type: 'ping';
+}
+
+/**
  * Union type of all client events
  */
 export type ClientEvent =
@@ -123,7 +157,11 @@ export type ClientEvent =
   | ResumeChatSessionEvent
   | SetChatSessionNameEvent
   | SetSessionMetadataEvent
-  | SetSessionMessagesEvent;
+  | SetSessionMessagesEvent
+  | GetUserSessionsEvent
+  | GetVoicesEvent
+  | GetToolCatalogEvent
+  | PingEvent;
 
 /**
  * Type guard to check if an object is a client event
@@ -141,6 +179,10 @@ export function isClientEvent(obj: unknown): obj is ClientEvent {
     'resume_chat_session',
     'set_chat_session_name',
     'set_session_metadata',
-    'set_session_messages'
+    'set_session_messages',
+    'get_user_sessions',
+    'get_voices',
+    'get_tool_catalog',
+    'ping'
   ].includes((obj as any).type);
 }

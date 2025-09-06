@@ -1,358 +1,566 @@
 # Command Validators and Security Policies Guide
 
-This document explains how to add validators, configure security policies, and manage command execution entries in the Agent C Framework workspace system.
+This document explains how to add validators, configure security policies, and manage command execution in the Agent C Framework workspace system.
 
 ## Overview
 
 The secure command execution system uses a three-layer approach:
-1. **Policy Provider** - Defines what commands and arguments are allowed (YAML configuration)
-2. **Validators** - Enforce the policies and provide command-specific logic
+1. **Policy Provider** - Loads and manages command policies from `whitelist_commands.yaml`
+2. **Validators** - Enforce policies with command-specific security logic
 3. **Secure Command Executor** - Manages actual execution with security controls
 
-## Adding New Validators
+## Policy Configuration Structure
 
-### 1. Create a Validator Class
+### Standard Policy Schema
 
-Create a new validator in `executors/local_storage/validators/` by inheriting from the `CommandValidator` protocol:
+All command policies follow the standardized structure defined in [04-WHITELIST_COMMAND_STANDARDS.md](04-WHITELIST_COMMAND_STANDARDS.md):
+
+```
+
+### Advanced Flag Configuration
+
+Starting with version 1.3, the system supports **dictionary-based flag configuration** for advanced features like output suppression and conditional permissions:
+
+#### Dictionary Format vs List Format
+
+```yaml
+# Legacy List Format (Still Supported)
+node:
+  flags: ["--test", "-v", "--version", "--help"]
+  allow_test_mode: true  # Global setting
+
+# Advanced Dictionary Format (Recommended for New Policies)
+node:
+  flags:
+    "--test": { suppress_success_output: true, allow_test_mode: true }
+    "--test-reporter": { suppress_success_output: true, allow_test_mode: true }
+    "--test-name-pattern": { suppress_success_output: true, allow_test_mode: true }
+    "-c": { suppress_success_output: true, allow_test_mode: true }
+    "-v": {}  # No special configuration
+    "--version": {}
+    "--help": {}
+```
+
+#### Flag-Specific Configuration Options
+
+- **`suppress_success_output: true`** - Suppress stdout when command succeeds (exit code 0)
+- **`allow_test_mode: true`** - Enable test-specific features for this flag
+- **Additional options** can be added as needed for specific validator logic
+
+#### Output Suppression Behavior
+
+Output suppression provides cleaner CI/automation experiences by hiding verbose output from successful test runs while preserving error information:
+
+**Suppression Rules:**
+- **Success (exit code 0)**: stdout suppressed, stderr suppressed
+- **Failure (non-zero exit code)**: stdout shown, stderr shown
+- **Applies only when**: Command uses a flag configured with `suppress_success_output: true`
+
+**Example with Node.js testing:**
+```bash
+# Successful test run - output suppressed
+$ node --test test/example.test.js
+# (no output shown)
+
+# Failed test run - full output shown
+$ node --test test/failing.test.js
+✗ test/failing.test.js
+  × expect(true).toBe(false)
+Error: 1 test failed
+
+# Regular commands - output always shown
+$ node -v
+v18.17.0
+```
+
+#### NPX Package Configuration
+
+NPX supports package-specific configuration including output suppression:
+
+```yaml
+npx:
+  packages:
+    "jest": { suppress_success_output: true }
+    "mocha": { suppress_success_output: true }
+    "typescript": { suppress_success_output: true }
+    "webpack": { suppress_success_output: true }
+    "eslint": {}  # No suppression - show linting results
+    "prettier": {}  # No suppression - show formatting results
+```
+
+## Updated ValidationResult Structure
+
+The `ValidationResult` class has been enhanced to support output suppression and policy-specific configurations:
 
 ```python
-from typing import Dict, Any, List, Mapping
-from .base_validator import ValidationResult
+@dataclass
+class ValidationResult:
+    allowed: bool                                     # Required: Allow/block the command
+    reason: str = "OK"                               # Error message if blocked
+    timeout: Optional[int] = None                    # Override default timeout
+    env_overrides: Dict[str, str] = field(default_factory=dict)  # Environment changes
+    suppress_success_output: bool = False            # NEW: Suppress stdout on success
+    policy_spec: Optional[Mapping[str, Any]] = None  # NEW: Mode-specific configuration
+```
 
-class MyCommandValidator:
+### ValidationResult Precedence Rules
+
+**Output Suppression Priority (highest to lowest):**
+1. `ValidationResult.suppress_success_output` - Set by validator based on flags
+2. `policy_spec["suppress_success_output"]` - Mode-specific configuration
+3. Global policy settings - Tool-level defaults
+
+**Example Validator Implementation:**
+```python
+def validate(self, parts: List[str], policy: Mapping[str, Any]) -> ValidationResult:
+    # Handle both old (list) and new (dict) flags format
+    flags_config = policy.get("flags")
+    if isinstance(flags_config, dict):
+        allowed_flags = set(flags_config.keys())
+        flags_settings = flags_config
+    else:
+        # Legacy list format
+        allowed_flags = set(flags_config or [])
+        flags_settings = {}
+    
+    # Parse command and check for suppression flags
+    suppress_success_output = False
+    used_flags = [arg for arg in parts[1:] if arg.startswith("-")]
+    
+    for flag in used_flags:
+        base_flag = flag.split("=", 1)[0]
+        flag_spec = flags_settings.get(base_flag, {}) or flags_settings.get(flag, {})
+        if flag_spec.get("suppress_success_output", False):
+            suppress_success_output = True
+            break
+    
+    return ValidationResult(
+        allowed=True,
+        reason="OK",
+        timeout=policy.get("default_timeout"),
+        suppress_success_output=suppress_success_output
+    )
+```
+
+### Standard Policy Schema
+
+All command policies follow the standardized structure defined in [04-WHITELIST_COMMAND_STANDARDS.md](04-WHITELIST_COMMAND_STANDARDS.md):
+
+```yaml
+command_name:
+  # Core Configuration
+  validator: validator_class_name          # Optional: Custom validator (defaults to command_name)
+  description: "Human-readable description" # Optional: Purpose and safety rationale
+  
+  # Global Flags - List Format (Legacy)
+  flags: ["-v", "--version", "--help"]     # Allowed global flags
+  deny_global_flags: ["-e", "--eval"]     # Explicitly blocked global flags
+  require_flags: ["-NoProfile"]           # Flags that must always be present
+  
+  # Global Flags - Dictionary Format (Advanced)
+  flags:
+    "--test": { suppress_success_output: true, allow_test_mode: true }
+    "--test-reporter": { suppress_success_output: true, allow_test_mode: true }
+    "-v": {}                               # No special configuration
+    "--version": {}
+  
+  # Execution Control
+  default_timeout: 120                    # Default timeout in seconds
+  workspace_root: "/path/to/workspace"    # Optional: Override workspace root
+  
+  # Environment Security
+  env_overrides:                          # Environment variables to set/override
+    NO_COLOR: "1"
+    TOOL_DISABLE_TELEMETRY: "1"
+  safe_env:                              # Required environment variables
+    TOOL_SAFE_MODE: "1"
+  
+  # Subcommands (if applicable)
+  subcommands:
+    subcommand_name:
+      flags: ["--safe-flag"]             # Allowed flags for this subcommand
+      allowed_flags: ["--alt-syntax"]    # Alternative syntax (some validators use this)
+      deny_flags: ["--dangerous"]       # Explicitly blocked flags
+      require_flags:                     # Flags that must be present
+        --no-build: true                 # Boolean: flag must be present
+        --verbosity: ["minimal", "quiet"] # Array: flag value must be in list
+        --logger: "console;verbosity=minimal" # String: flag must have exact value
+      
+      # Argument Control
+      allowed_scripts: ["test", "build"] # For script runners (npm, pnpm, lerna)
+      deny_args: false                   # Whether to block additional arguments
+      require_no_packages: true         # Block package name arguments
+      
+      # Path Safety
+      allow_test_paths: false            # Allow workspace-relative test file paths
+      allow_project_paths: true         # Allow project/solution file paths
+      allow_script_paths: false         # Allow script file execution
+      
+      # Execution Control
+      timeout: 300                       # Override default timeout for this subcommand
+      enabled: true                      # Whether subcommand is enabled
+      
+      # Special Behaviors
+      get_only: true                     # Special: only allow 'get' operations
+  
+  # Explicit Denials
+  deny_subcommands: ["dangerous_cmd"]    # Blocked subcommands
+```
+
+### Policy Categories
+
+#### 1. Simple Commands (OS Utilities)
+For basic system commands:
+
+```yaml
+which:
+  validator: os_basic
+  flags: ["-a", "--version"]
+  default_timeout: 5
+
+echo:
+  validator: os_basic
+  flags: ["--help", "-n", "-e"]
+  default_timeout: 5
+```
+
+#### 2. Development Tools
+For tools with moderate complexity:
+
+```yaml
+git:
+  description: "Read-only/metadata git operations (no mutations)."
+  subcommands:
+    status: { flags: ["--porcelain", "-s", "-b", "--no-color"], timeout: 20 }
+    log: { flags: ["--oneline", "--graph", "--decorate", "-n", "-p", "--no-color"] }
+    diff: { flags: ["--name-only", "--stat", "--cached", "-p", "--no-color"] }
+  deny_global_flags: ["-c", "--exec-path", "--help", "-P"]
+  env_overrides:
+    GIT_PAGER: "cat"
+    CLICOLOR: "0"
+    TERM: "dumb"
+  default_timeout: 30
+```
+
+#### 3. Package Managers
+For script execution tools:
+
+```yaml
+npm:
+  validator: npm
+  root_flags: ["-v", "--version", "--help"]
+  subcommands:
+    run:
+      allowed_scripts: ["build", "test", "lint", "format", "typecheck"]
+      deny_args: false
+      allow_test_paths: true
+    install:
+      enabled: false
+      require_no_packages: true
+      require_flags: ["--ignore-scripts"]
+      allowed_flags: ["--ignore-scripts", "--no-audit", "--prefer-offline"]
+  deny_subcommands: ["exec", "publish", "update", "audit"]
+  default_timeout: 120
+```
+
+#### 4. Build Tools
+For complex build systems:
+
+```yaml
+dotnet:
+  validator: dotnet
+  subcommands:
+    test:
+      flags: ["--configuration", "-c", "--no-build", "--nologo", "--verbosity", "--logger"]
+      allow_project_paths: true
+      allow_test_paths: false
+      require_flags:
+        --no-build: true
+        --nologo: true
+        --verbosity: ["minimal", "quiet"]
+        --logger: "console;verbosity=minimal"
+  deny_subcommands: ["run", "publish", "tool", "pack"]
+  default_timeout: 300
+```
+
+#### 5. Testing Tools
+For test frameworks:
+
+```yaml
+pytest:
+  flags: ["-q", "--maxfail", "--disable-warnings", "--no-header", "--tb"]
+  allow_test_paths: true
+  default_timeout: 120
+  env_overrides:
+    PYTEST_ADDOPTS: "-q --color=no --maxfail=1"
+    PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+    PYTHONWARNINGS: "ignore"
+```
+
+#### 6. High-Risk Tools
+For powerful tools requiring maximum security:
+
+```yaml
+powershell:
+  validator: powershell
+  description: "Execute safe, read-only PowerShell cmdlets for information gathering only"
+  flags: ["-Help", "-?", "-NoProfile", "-NonInteractive", "-NoLogo"]
+  deny_global_flags: ["-Command", "-c", "-EncodedCommand", "-File"]
+  require_flags: ["-NoProfile", "-NonInteractive"]
+  safe_cmdlets: ["get-process", "get-service", "get-location"]
+  dangerous_patterns: ["invoke-expression", "start-process", "new-object"]
+  safe_env:
+    PSExecutionPolicyPreference: "Restricted"
+    __PSLockdownPolicy: "1"
+  default_timeout: 30
+```
+
+## Creating Custom Validators
+
+### 1. Validator Class Structure
+
+Create a new validator in `executors/local_storage/validators/`:
+
+```python
+from typing import Dict, Any, List, Mapping, Optional
+import os
+from .base_validator import ValidationResult, CommandValidator
+from .path_safety import is_within_workspace, looks_like_path, extract_file_part
+
+class MyCommandValidator(CommandValidator):
     """
     Custom validator for 'mycommand' with specific security requirements.
-    """
     
+    Expected policy shape:
+      mycommand:
+        subcommands:
+          safe_action: { allowed_flags: [...] }
+          risky_action: { enabled: false }
+        deny_subcommands: [...]
+        default_timeout: 60
+        env_overrides: {...}
+    """
+
     def validate(self, parts: List[str], policy: Mapping[str, Any]) -> ValidationResult:
-        """
-        Validate command parts against policy.
-        
-        Args:
-            parts: Command split into parts (e.g., ['git', 'status', '--porcelain'])
-            policy: Policy configuration from YAML
-            
-        Returns:
-            ValidationResult with allowed status and optional timeout/env overrides
-        """
-        if not parts or parts[0] != "mycommand":
+        """Validate command against policy."""
+        name = os.path.splitext(os.path.basename(parts[0]))[0].lower()
+        if name != "mycommand":
             return ValidationResult(False, "Not a mycommand")
-            
-        # Example: Require subcommand
+
         if len(parts) < 2:
             return ValidationResult(False, "Missing subcommand")
-            
+
         subcommand = parts[1]
-        allowed_subs = policy.get("subcommands", {})
-        
-        if subcommand not in allowed_subs:
+        subcommands = policy.get("subcommands", {})
+        deny_subcommands = set(policy.get("deny_subcommands", []))
+
+        # Check if subcommand is explicitly denied
+        if subcommand in deny_subcommands:
             return ValidationResult(False, f"Subcommand not allowed: {subcommand}")
-            
-        # Validate flags for this subcommand
-        sub_policy = allowed_subs[subcommand]
-        allowed_flags = set(sub_policy.get("flags", []))
-        used_flags = [p for p in parts[2:] if p.startswith("-")]
+
+        # Check if subcommand is configured
+        if subcommand not in subcommands:
+            return ValidationResult(False, f"Subcommand not configured: {subcommand}")
+
+        subcommand_spec = subcommands[subcommand]
+        
+        # Check if subcommand is enabled
+        if not subcommand_spec.get("enabled", True):
+            return ValidationResult(False, f"Subcommand disabled: {subcommand}")
+
+        # Validate flags
+        allowed_flags = set(subcommand_spec.get("allowed_flags", []))
+        used_flags = [arg for arg in parts[2:] if arg.startswith("-")]
         
         for flag in used_flags:
-            base_flag = flag.split("=", 1)[0]  # Handle --flag=value
+            base_flag = self._flag_base(flag)
             if base_flag not in allowed_flags and flag not in allowed_flags:
                 return ValidationResult(False, f"Flag not allowed: {flag}")
+
+        # Path safety validation if needed
+        workspace_root = (
+            policy.get("workspace_root")
+            or os.environ.get("WORKSPACE_ROOT")
+            or os.getcwd()
+        )
         
-        # Custom timeout from policy
-        timeout = sub_policy.get("timeout") or policy.get("default_timeout")
+        if subcommand_spec.get("allow_test_paths", False):
+            positionals = [arg for arg in parts[2:] if not arg.startswith("-")]
+            for arg in positionals:
+                if looks_like_path(arg):
+                    file_part = extract_file_part(arg)
+                    if not is_within_workspace(workspace_root, file_part):
+                        return ValidationResult(False, f"Unsafe path: {arg}")
+
+        # Get timeout
+        timeout = subcommand_spec.get("timeout") or policy.get("default_timeout")
         
         return ValidationResult(True, "OK", timeout=timeout)
-    
+
+    def _flag_base(self, flag: str) -> str:
+        """Handle flags with values like --flag=value."""
+        return flag.split("=", 1)[0]
+
     def adjust_environment(self, base_env: Dict[str, str], parts: List[str], policy: Mapping[str, Any]) -> Dict[str, str]:
-        """
-        Modify environment variables for secure execution.
-        
-        Args:
-            base_env: Current environment
-            parts: Command parts
-            policy: Policy configuration
-            
-        Returns:
-            Modified environment dictionary
-        """
+        """Configure safe environment for execution."""
         env = dict(base_env)
         
         # Apply safe environment from policy
         safe_env = policy.get("safe_env", {})
         env.update(safe_env)
         
-        # Apply command-specific overrides
+        # Apply environment overrides from policy
         env_overrides = policy.get("env_overrides", {})
         env.update(env_overrides)
         
         return env
+
+    def adjust_arguments(self, parts: List[str], policy: Mapping[str, Any]) -> List[str]:
+        """
+        Auto-inject required flags for subcommands if missing.
+        Called AFTER validate() by the executor.
+        """
+        if len(parts) < 2:
+            return parts
+
+        subcommands = policy.get("subcommands", {})
+        subcommand = parts[1].lower()
+        subcommand_spec = subcommands.get(subcommand, {})
+
+        required_flags = list(subcommand_spec.get("require_flags", {}))
+        if not required_flags:
+            return parts
+
+        existing_flags = set()
+        for p in parts[2:]:
+            if p.startswith("-"):
+                existing_flags.add(self._flag_base(p))
+
+        # Insert missing required flags after the subcommand
+        insert_at = 2
+        for needed in required_flags:
+            base = self._flag_base(needed)
+            if base not in existing_flags:
+                parts.insert(insert_at, needed)
+                insert_at += 1
+
+        return parts
 ```
 
 ### 2. Register the Validator
 
-Add your validator to the `SecureCommandExecutor` in `secure_command_executor.py`:
+Validators are automatically registered based on the `validator` field in policies, or by command name. Add your validator to `SecureCommandExecutor`:
 
 ```python
 # In SecureCommandExecutor.__init__()
 self.validators: Dict[str, CommandValidator] = {
     "git": GitCommandValidator(),
     "pytest": PytestCommandValidator(),
+    "os_basic": OSBasicValidator(),
+    "node": NodeCommandValidator(),
+    "npm": NpmCommandValidator(),
+    "dotnet": DotnetCommandValidator(),
+    "powershell": PowershellValidator(),
+    "npx": NpxCommandValidator(),
+    "pnpm": PnpmCommandValidator(),
+    "lerna": LernaCommandValidator(),
     "mycommand": MyCommandValidator(),  # Add your validator here
 }
 ```
 
-### 3. What Validators Should Do
+### 3. Path Safety Integration
 
-Validators are responsible for:
-
-- **Command Authorization** - Verify the command is allowed
-- **Argument Validation** - Check flags, subcommands, and parameters
-- **Path Security** - Prevent directory traversal and unsafe paths
-- **Environment Setup** - Configure safe environment variables
-- **Timeout Configuration** - Set appropriate execution timeouts
-
-Key principles:
-- **Fail Secure** - Block anything not explicitly allowed
-- **Stateless** - No side effects between validations
-- **Clear Error Messages** - Help users understand why commands are blocked
-
-## Policy Configuration in YAML
-
-### Basic Structure
-
-The `.agentc_policies.yaml` file defines allowed commands:
-
-```yaml
-# Command name (matches validator key)
-mycommand:
-  # Simple flag allowlist (for basic commands)
-  flags: ["-v", "--verbose", "-q", "--quiet"]
-  
-  # OR subcommand-based structure (more complex commands)
-  subcommands:
-    run:
-      flags: ["-v", "--dry-run", "--config"]
-      timeout: 60
-    test:
-      flags: ["-q", "--parallel"]
-      timeout: 120
-  
-  # Global settings
-  default_timeout: 30
-  
-  # Safe environment variables (applied to all subcommands)
-  safe_env:
-    MYCOMMAND_SAFE_MODE: "1"
-    MYCOMMAND_CONFIG: "/path/to/safe/config"
-  
-  # Environment overrides (higher priority than safe_env)
-  env_overrides:
-    MYCOMMAND_DEBUG: "0"
-  
-  # Global flag denials (blocked for all subcommands)
-  deny_global_flags: ["--unsafe", "--exec"]
-```
-
-### Policy Examples
-
-#### Simple Command (Basic Validator)
-```yaml
-curl:
-  flags: ["-s", "-L", "--fail", "-o", "--max-time"]
-  default_timeout: 30
-  safe_env:
-    HTTP_PROXY: ""
-    HTTPS_PROXY: ""
-```
-
-#### Complex Command (Custom Validator)
-```yaml
-docker:
-  subcommands:
-    ps:
-      flags: ["-a", "--format", "--filter"]
-      timeout: 10
-    images:
-      flags: ["-a", "--format", "--filter"]
-      timeout: 15
-    inspect:
-      flags: ["--format"]
-      timeout: 20
-  
-  deny_global_flags: ["--privileged", "-v", "--volume"]
-  
-  safe_env:
-    DOCKER_CONFIG: "/tmp/docker-readonly"
-  
-  default_timeout: 30
-```
-
-#### Environment-Specific Policies
-```yaml
-npm:
-  subcommands:
-    list:
-      flags: ["--depth", "--json", "--global"]
-      timeout: 30
-    audit:
-      flags: ["--json", "--audit-level"]
-      timeout: 60
-  
-  # Secure npm execution
-  safe_env:
-    NPM_CONFIG_FUND: "false"
-    NPM_CONFIG_AUDIT: "false"
-    npm_config_yes: "false"
-    npm_config_audit: "false"
-  
-  default_timeout: 45
-
-pnpm:
-  subcommands:
-    list:
-      flags: ["--depth", "--json", "--long"]
-      timeout: 30
-    why:
-      flags: ["--json", "--long"]
-      timeout: 30
-  
-  # Secure pnpm execution
-  safe_env:
-    PNPM_CONFIG_FUND: "false"
-    PNPM_CONFIG_PROGRESS: "false"
-  
-  default_timeout: 45
-```
-
-## Adding Policy Entries
-
-### 1. Identify Command Requirements
-
-Before adding a policy entry:
-- What subcommands need to be supported?
-- Which flags are safe to allow?
-- What environment variables should be controlled?
-- What are appropriate timeout values?
-- Are there any dangerous flags to explicitly deny?
-
-### 2. Policy Entry Template
-
-```yaml
-command_name:
-  # Choose ONE structure:
-  
-  # Option A: Simple flag-based (for commands without subcommands)
-  flags: ["--safe-flag1", "--safe-flag2"]
-  default_timeout: 30
-  
-  # Option B: Subcommand-based (for complex commands)
-  subcommands:
-    subcommand1:
-      flags: ["--flag1", "--flag2"]
-      timeout: 60  # Override default for this subcommand
-    subcommand2:
-      flags: ["--different-flags"]
-      # Uses default_timeout
-  
-  # Common settings (optional)
-  default_timeout: 30
-  
-  # Environment security (optional)
-  safe_env:
-    SAFE_VAR: "safe_value"
-    
-  env_overrides:
-    OVERRIDE_VAR: "override_value"
-  
-  # Global restrictions (optional)
-  deny_global_flags: ["--dangerous", "--exec"]
-  
-  # Custom validator (optional, defaults to command name)
-  validator: "custom_validator_name"
-```
-
-### 3. Testing Policy Entries
-
-Test your policies by:
-
-1. **Positive Tests** - Verify allowed commands work
-2. **Negative Tests** - Verify blocked commands are rejected
-3. **Edge Cases** - Test flag combinations, empty commands, etc.
+Use the path safety utilities for secure file/directory handling:
 
 ```python
-# Example test in your validator
-def test_policy():
-    validator = MyCommandValidator()
-    policy = {
-        "subcommands": {
-            "test": {"flags": ["-v", "--quiet"]}
-        }
-    }
+from .path_safety import is_within_workspace, looks_like_path, extract_file_part
+
+# Check if a token looks like a path
+if looks_like_path(token):
+    # Extract the file part (handles test selectors like file.py::test_name)
+    file_part = extract_file_part(token)
     
-    # Should allow
-    result = validator.validate(["mycommand", "test", "-v"], policy)
-    assert result.allowed
-    
-    # Should block
-    result = validator.validate(["mycommand", "test", "--dangerous"], policy)
-    assert not result.allowed
+    # Ensure it's within the workspace
+    if not is_within_workspace(workspace_root, file_part):
+        return ValidationResult(False, f"Unsafe path: {token}")
 ```
 
-## Security Considerations
+## Policy Provider Configuration
 
-### Whitelisting Strategy
+### File Resolution
 
-The system uses a **whitelist approach** - only explicitly allowed commands pass through:
+The `YamlPolicyProvider` resolves the policy file using:
 
-1. **Command must have a policy** - No policy = blocked
-2. **Command must have a validator** - No validator = blocked  
-3. **Arguments must be explicitly allowed** - Unknown flags = blocked
-4. **Paths are validated** - Directory traversal attempts = blocked
+1. Environment override: `AGENTC_POLICIES_FILE` (absolute path)
+2. `<config_path>/whitelist_commands.yaml`
 
-### Common Security Patterns
+### Loading and Caching
 
-#### Flag Validation
+Policies are automatically loaded and cached with mtime checking:
+
 ```python
-# Handle flag variations
-allowed_flags = {"-v", "--verbose", "--output"}
-used_flags = [p for p in parts if p.startswith("-")]
-
-for flag in used_flags:
-    base_flag = flag.split("=", 1)[0]  # Handle --flag=value
-    if base_flag not in allowed_flags:
-        return ValidationResult(False, f"Flag not allowed: {flag}")
+provider = YamlPolicyProvider()
+policy = provider.get_policy("git")  # Returns policy dict or None
+all_policies = provider.get_all_policies()  # Returns all loaded policies
+provider.reload_policy()  # Force reload from disk
 ```
 
-#### Path Security
-```python
-# Prevent directory traversal
-for arg in non_flag_args:
-    if ".." in arg.split(os.sep):
-        return ValidationResult(False, f"Unsafe path: {arg}")
-    if os.path.isabs(arg) and not allow_absolute_paths:
-        return ValidationResult(False, f"Absolute path not allowed: {arg}")
-```
+## Security Guidelines
 
-#### Environment Isolation
-```python
-def adjust_environment(self, base_env, parts, policy):
-    env = dict(base_env)
-    
-    # Clear potentially dangerous variables
-    dangerous_vars = ["LD_PRELOAD", "LD_LIBRARY_PATH", "PYTHONPATH"]
-    for var in dangerous_vars:
-        env.pop(var, None)
-    
-    # Set safe defaults
-    safe_env = policy.get("safe_env", {})
-    env.update(safe_env)
-    
-    return env
-```
+### Flag Management
 
-## Validation Result Options
+**Allowed Flags (`flags` / `allowed_flags`)**
+- Only include flags that are known to be safe
+- Prefer read-only and informational flags
+- Always include color-disabling flags where available
 
-The `ValidationResult` class supports several configuration options:
+**Denied Flags (`deny_flags` / `deny_global_flags`)**
+- Explicitly block dangerous flags
+- Include execution flags (`-e`, `--eval`, `-c`, `--command`)
+- Block file manipulation flags where inappropriate
+
+**Required Flags (`require_flags`)**
+- Enforce security-critical flags (e.g., `--no-build`, `--ignore-scripts`)
+- Use boolean `true` for flags that must be present
+- Use arrays for flags that must have specific values
+- Use strings for flags that must have exact values
+
+### Path Safety
+
+**Workspace Boundaries**
+- `allow_test_paths`: Only enable for legitimate testing tools
+- `allow_project_paths`: Enable for build tools that need project files
+- `allow_script_paths`: Very rarely enable; high security risk
+
+**File Access Controls**
+- Always validate paths are within workspace boundaries
+- Block absolute paths outside workspace
+- Use `extract_file_part()` for test selectors
+
+### Environment Security
+
+**Environment Overrides (`env_overrides`)**
+- Disable colors: `NO_COLOR: "1"`, `CLICOLOR: "0"`
+- Disable telemetry: `TOOL_TELEMETRY_OPTOUT: "1"`
+- Enable CI mode: `CI: "1"` (reduces interactivity)
+- Set stable output: `TERM: "dumb"`
+
+**Safe Environment (`safe_env`)**
+- Use for tools requiring specific security settings
+- Example: PowerShell execution policy restrictions
+
+### Timeout Management
+
+**Timeout Guidelines**
+- OS utilities: 5-10 seconds
+- Development tools: 30-60 seconds
+- Package managers: 120-180 seconds
+- Build tools: 300-600 seconds
+- Testing tools: 120-300 seconds
+
+## Validation Features
+
+### ValidationResult Options
 
 ```python
 @dataclass
@@ -363,43 +571,113 @@ class ValidationResult:
     env_overrides: Dict[str, str] = field(default_factory=dict)  # Environment changes
 ```
 
-Usage examples:
+### Validator Methods
+
+**Required Methods:**
+- `validate(parts, policy)` → `ValidationResult`
+- `adjust_environment(base_env, parts, policy)` → `Dict[str, str]`
+
+**Optional Methods:**
+- `adjust_arguments(parts, policy)` → `List[str]` - Modify command before execution
+
+## Examples
+
+### Complete Policy Example
+
+```yaml
+mycommand:
+  validator: mycommand
+  description: "Execute mycommand operations with security restrictions"
+  
+  # Global flags allowed for all subcommands
+  flags: ["-v", "--version", "--help"]
+  
+  # Flags denied for all subcommands
+  deny_global_flags: ["--unsafe", "--exec"]
+  
+  # Subcommand definitions
+  subcommands:
+    info:
+      flags: ["--json", "--verbose"]
+      timeout: 15
+    
+    process:
+      flags: ["--input", "--output", "--format"]
+      allow_test_paths: true
+      require_flags:
+        --safe-mode: true
+        --verbosity: ["quiet", "minimal"]
+      timeout: 120
+    
+    dangerous:
+      enabled: false  # Completely disabled
+  
+  # Explicitly blocked subcommands
+  deny_subcommands: ["exec", "eval", "shell"]
+  
+  # Environment security
+  safe_env:
+    MYCOMMAND_SAFE_MODE: "1"
+    MYCOMMAND_TELEMETRY: "0"
+  
+  env_overrides:
+    NO_COLOR: "1"
+    CLICOLOR: "0"
+  
+  default_timeout: 60
+```
+
+### Testing Your Validator
 
 ```python
-# Simple allow/block
-return ValidationResult(True, "OK")
-return ValidationResult(False, "Command not allowed")
-
-# With custom timeout
-return ValidationResult(True, "OK", timeout=120)
-
-# With environment overrides
-return ValidationResult(
-    True, 
-    "OK", 
-    timeout=60,
-    env_overrides={"DEBUG_MODE": "1"}
-)
+def test_mycommand_validator():
+    validator = MyCommandValidator()
+    policy = {
+        "subcommands": {
+            "info": {"flags": ["-v", "--json"]},
+            "process": {"flags": ["--input"], "allow_test_paths": True}
+        },
+        "deny_subcommands": ["dangerous"]
+    }
+    
+    # Should allow
+    result = validator.validate(["mycommand", "info", "-v"], policy)
+    assert result.allowed
+    
+    # Should block - dangerous subcommand
+    result = validator.validate(["mycommand", "dangerous"], policy)
+    assert not result.allowed
+    
+    # Should block - invalid flag
+    result = validator.validate(["mycommand", "info", "--invalid"], policy)
+    assert not result.allowed
+    
+    # Should allow - test path when enabled
+    result = validator.validate(["mycommand", "process", "test.py"], policy)
+    assert result.allowed
 ```
 
 ## Best Practices
 
 ### Validator Design
-1. **Minimize Complexity** - Keep validation logic simple and clear
-2. **Consistent Patterns** - Follow established patterns from git/pytest validators
-3. **Good Error Messages** - Help users understand what went wrong
-4. **Document Assumptions** - Explain what the validator expects
+1. **Fail Secure** - Block anything not explicitly allowed
+2. **Clear Error Messages** - Help users understand why commands are blocked
+3. **Path Safety First** - Always validate file/directory access
+4. **Environment Isolation** - Control dangerous environment variables
+5. **Consistent Patterns** - Follow established patterns from existing validators
 
 ### Policy Design
 1. **Principle of Least Privilege** - Only allow what's necessary
-2. **Clear Organization** - Group related commands and use consistent naming
+2. **Document Intent** - Use `description` fields to explain security rationale
 3. **Reasonable Timeouts** - Balance security with usability
-4. **Environment Safety** - Control variables that could affect security
+4. **Environment Controls** - Disable dangerous features and telemetry
+5. **Test Thoroughly** - Verify both positive and negative cases
 
-### Testing
-1. **Test All Paths** - Cover both allowed and blocked scenarios
-2. **Test Flag Combinations** - Verify complex flag interactions
-3. **Test Environment Changes** - Ensure environment modifications work correctly
-4. **Test Edge Cases** - Empty commands, malformed input, etc.
+### Security Considerations
+1. **Whitelist Approach** - Only explicitly allowed commands pass through
+2. **Multi-Layer Validation** - Policy + validator + path safety + environment
+3. **No Shell Execution** - Always use `shell=False` for subprocess execution
+4. **Resource Limits** - Enforce timeouts and output size limits
+5. **Audit Trail** - Log all command executions for security review
 
 This system provides strong security guarantees while remaining flexible enough to support a wide variety of development tools and workflows.

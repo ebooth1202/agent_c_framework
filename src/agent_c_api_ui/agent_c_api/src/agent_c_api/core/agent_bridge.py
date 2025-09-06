@@ -377,6 +377,7 @@ class AgentBridge:
                 - timestamp: Current timestamp in ISO format
                 - env_name: Environment name (development, production, etc.)
         """
+        agent_meta = self.chat_session.agent_config.prompt_metadata or {}
         return {
             "session_id": self.chat_session.session_id,
             "current_user_username": self.chat_session.user_id,
@@ -384,7 +385,7 @@ class AgentBridge:
             "agent_config": self.chat_session.agent_config,
             "timestamp": datetime.now().isoformat(),
             "env_name": os.getenv('ENV_NAME', DEFAULT_ENV_NAME)
-        }
+        } | agent_meta
 
     @staticmethod
     def _current_timestamp() -> str:
@@ -717,7 +718,7 @@ class AgentBridge:
             Exception: If session flushing fails.
         """
         self.chat_session.messages = event.messages
-        await self.session_manager.flush(self.chat_session.session_id)
+        await self.session_manager.flush(self.chat_session.session_id, self.chat_session.user_id)
         
         payload = json.dumps({
             "type": "history",
@@ -1066,7 +1067,7 @@ class AgentBridge:
                     break
 
             await chat_task
-            await self.session_manager.flush(self.chat_session.session_id)
+            await self.session_manager.flush(self.chat_session.session_id, self.chat_session.user_id)
 
         except Exception as e:
             self.logger.exception (f"Error in stream_chat: {e}", exc_info=True)

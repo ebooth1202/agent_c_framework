@@ -12,7 +12,9 @@ import {
     ChatSessionNameChangedEvent,
     AgentVoiceChangedEvent,
     TextInputEvent,
-    NewChatSessionEvent
+    NewChatSessionEvent,
+    GetUserSessionsEvent,
+    GetUserSessionsResponseEvent
 } from '../events';
 import {
     RealtimeClientConfig,
@@ -28,7 +30,7 @@ import { TurnManager, SessionManager } from '../session';
 import { AudioService, AudioAgentCBridge, AudioOutputService } from '../audio';
 import type { AudioStatus, VoiceModel } from '../audio/types';
 import { VoiceManager } from '../voice';
-import type { Voice, Message } from '../events/types/CommonTypes';
+import type { Voice, Message, User, Agent, AgentConfiguration, Avatar, Toolset } from '../events/types/CommonTypes';
 import { AvatarManager } from '../avatar';
 
 /**
@@ -52,6 +54,15 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
     private audioBridge: AudioAgentCBridge | null = null;
     private audioOutputService: AudioOutputService | null = null;
     private audioConfig: AudioConfig | null = null;
+    
+    // Configuration data from WebSocket initialization events
+    private userData: User | null = null;
+    private agents: Agent[] = [];
+    private avatars: Avatar[] = [];
+    private voices: Voice[] = [];
+    private toolsets: Toolset[] = [];
+    private initializationState: Set<string> = new Set();
+    private isInitialized: boolean = false;
 
     constructor(config: RealtimeClientConfig) {
         super();
@@ -77,17 +88,8 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
                 this.authToken = tokens.agentCToken;
             }
             
-            // Initialize voice manager with available voices from auth
-            const voices = this.authManager.getVoices();
-            if (voices && voices.length > 0) {
-                this.voiceManager = new VoiceManager({ enableLogging: this.config.debug });
-                this.voiceManager.setAvailableVoices(voices);
-                this.setupVoiceManagerHandlers();
-            }
-            
-            // Initialize avatar manager with available avatars from auth
-            const avatars = this.authManager.getAvatars();
-            this.avatarManager = new AvatarManager({ availableAvatars: avatars });
+            // Note: Voice and avatar data will come from WebSocket initialization events
+            this.avatarManager = new AvatarManager({ availableAvatars: [] });
         }
         
         // Initialize voice manager if not already created
@@ -126,11 +128,47 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
             persistSessions: false
         });
         
+        // Setup session manager handlers for fetching sessions
+        this.setupSessionFetchingHandlers();
+        
         // Initialize audio system if enabled
         if (this.config.enableAudio && this.config.audioConfig) {
             this.audioConfig = this.config.audioConfig;
             this.initializeAudioSystem();
         }
+        
+        // Setup initialization event handlers
+        this.setupInitializationHandlers();
+    }
+    
+    /**
+     * Setup session fetching handlers
+     */
+    private setupSessionFetchingHandlers(): void {
+        if (!this.sessionManager) return;
+        
+        // Listen for session fetch requests from SessionManager
+        this.sessionManager.on('request-user-sessions', ({ offset, limit }) => {
+            this.fetchUserSessions(offset, limit);
+        });
+        
+        // Handle the response from server
+        this.on('get_user_sessions_response', (event: GetUserSessionsResponseEvent) => {
+            if (this.sessionManager && event.sessions) {
+                // Append new sessions to the index
+                this.sessionManager.setSessionIndex(event.sessions, true);
+                
+                if (this.config.debug) {
+                    console.debug('Received user sessions:', {
+                        count: event.sessions.chat_sessions.length,
+                        total: event.sessions.total_sessions,
+                        offset: event.sessions.offset
+                    });
+                }
+            }
+        });
+        
+        // Note: Session data will come from WebSocket initialization events
     }
     
     /**
@@ -213,6 +251,151 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
             description: voice.description,
             sampleRate: 16000 // Default sample rate for PCM16
         };
+    }
+    
+    /**
+     * Setup handlers for initialization events sent by server on connection
+     * Server sends 6 events in sequence: chat_user_data, avatar_list, voice_list,
+     * agent_list, tool_catalog, chat_session_changed
+     */
+    private setupInitializationHandlers(): void {
+        // Handle user data event
+        this.on('chat_user_data', (event: any) => {
+            if (event.user) {
+                this.userData = event.user;
+                this.initializationState.add('chat_user_data');
+                
+                // Update auth manager's user state if available
+                if (this.authManager) {
+                    (this.authManager as any).updateState({
+                        user: event.user
+                    });
+                }
+                
+                if (this.config.debug) {
+                    console.debug('Received user data:', event.user.user_name);
+                }
+                
+                this.checkInitializationComplete();
+            }
+        });
+        
+        // Handle avatar list event
+        this.on('avatar_list', (event: any) => {
+            if (event.avatars) {
+                this.avatars = event.avatars;
+                this.initializationState.add('avatar_list');
+                
+                // Update avatar manager
+                if (this.avatarManager) {
+                    this.avatarManager.updateAvailableAvatars(event.avatars);
+                }
+                
+                if (this.config.debug) {
+                    console.debug('Received avatars:', event.avatars.length);
+                }
+                
+                this.checkInitializationComplete();
+            }
+        });
+        
+        // Handle voice list event
+        this.on('voice_list', (event: any) => {
+            if (event.voices) {
+                this.voices = event.voices;
+                this.initializationState.add('voice_list');
+                
+                // Update voice manager
+                if (this.voiceManager) {
+                    this.voiceManager.setAvailableVoices(event.voices);
+                }
+                
+                if (this.config.debug) {
+                    console.debug('Received voices:', event.voices.length);
+                }
+                
+                this.checkInitializationComplete();
+            }
+        });
+        
+        // Handle agent list event
+        this.on('agent_list', (event: any) => {
+            if (event.agents) {
+                this.agents = event.agents;
+                this.initializationState.add('agent_list');
+                
+                if (this.config.debug) {
+                    console.debug('Received agents:', event.agents.length);
+                }
+                
+                this.checkInitializationComplete();
+            }
+        });
+        
+        // Handle tool catalog event
+        this.on('tool_catalog', (event: any) => {
+            if (event.toolsets) {
+                this.toolsets = event.toolsets;
+                this.initializationState.add('tool_catalog');
+                
+                if (this.config.debug) {
+                    console.debug('Received toolsets:', event.toolsets.length);
+                }
+                
+                this.checkInitializationComplete();
+            }
+        });
+        
+        // The 6th event (chat_session_changed) is already handled in setupSessionManagerHandlers
+        // We track it for initialization completion
+        this.on('chat_session_changed', () => {
+            if (!this.initializationState.has('chat_session_changed')) {
+                this.initializationState.add('chat_session_changed');
+                this.checkInitializationComplete();
+            }
+        });
+        
+        // Handle agent configuration changes
+        this.on('agent_configuration_changed', (event: any) => {
+            if (event.agent_config && this.sessionManager) {
+                // Update the current session's agent configuration
+                const currentSession = this.sessionManager.getCurrentSession();
+                if (currentSession) {
+                    currentSession.agent_config = event.agent_config;
+                    
+                    if (this.config.debug) {
+                        console.debug('Agent configuration updated:', event.agent_config.key);
+                    }
+                }
+            }
+        });
+    }
+    
+    /**
+     * Check if all initialization events have been received
+     */
+    private checkInitializationComplete(): void {
+        const requiredEvents = [
+            'chat_user_data',
+            'avatar_list', 
+            'voice_list',
+            'agent_list',
+            'tool_catalog',
+            'chat_session_changed'
+        ];
+        
+        const allReceived = requiredEvents.every(event => this.initializationState.has(event));
+        
+        if (allReceived && !this.isInitialized) {
+            this.isInitialized = true;
+            
+            if (this.config.debug) {
+                console.debug('Initialization complete - all 6 events received');
+            }
+            
+            // Emit a custom event to signal initialization is complete
+            this.emit('initialized' as any, undefined);
+        }
     }
     
     /**
@@ -387,6 +570,10 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
         if (this.sessionManager) {
             this.sessionManager.resetAccumulator();
         }
+        
+        // Reset initialization state for next connection
+        this.initializationState.clear();
+        this.isInitialized = false;
 
         if (this.wsManager) {
             this.wsManager.disconnect(1000, 'Client disconnect');
@@ -591,6 +778,48 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
     setSessionMessages(messages: Message[]): void {
         this.sendEvent({ type: 'set_session_messages', messages });
     }
+    
+    /**
+     * Fetch paginated list of user sessions
+     * @param offset Starting offset for pagination (default 0)
+     * @param limit Number of sessions to fetch (default 50)
+     */
+    fetchUserSessions(offset: number = 0, limit: number = 50): void {
+        const event: GetUserSessionsEvent = {
+            type: 'get_user_sessions',
+            offset,
+            limit
+        };
+        this.sendEvent(event);
+        
+        if (this.config.debug) {
+            console.debug('Requesting user sessions:', { offset, limit });
+        }
+    }
+    
+    /**
+     * Request list of available voices from server
+     * Server responds with voice_list event
+     */
+    getVoices(): void {
+        this.sendEvent({ type: 'get_voices' });
+    }
+    
+    /**
+     * Request tool catalog from server
+     * Server responds with tool_catalog event
+     */
+    getToolCatalog(): void {
+        this.sendEvent({ type: 'get_tool_catalog' });
+    }
+    
+    /**
+     * Send ping to server for connection health check
+     * Server responds with pong event
+     */
+    ping(): void {
+        this.sendEvent({ type: 'ping' });
+    }
 
     // Getters
 
@@ -644,13 +873,10 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
     }
     
     /**
-     * Get available avatars from auth response
+     * Get available avatars from initialization events or avatar manager
      */
     getAvailableAvatars() {
-        if (this.authManager) {
-            return this.authManager.getAvatars();
-        }
-        return this.avatarManager?.getAvailableAvatars() || [];
+        return this.avatars.length > 0 ? this.avatars : (this.avatarManager?.getAvailableAvatars() || []);
     }
     
     /**
@@ -662,6 +888,70 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
             return tokens?.heygenToken || null;
         }
         return null;
+    }
+    
+    /**
+     * Get current user data from initialization events
+     */
+    getUserData(): User | null {
+        return this.userData;
+    }
+    
+    /**
+     * Get available agents from initialization events
+     */
+    getAgentsList(): Agent[] {
+        return this.agents;
+    }
+    
+    /**
+     * Get current agent configuration from the active session
+     * Returns null if no session is active
+     */
+    getCurrentAgentConfig(): AgentConfiguration | null {
+        if (this.sessionManager) {
+            const currentSession = this.sessionManager.getCurrentSession();
+            return currentSession?.agent_config || null;
+        }
+        return null;
+    }
+    
+    /**
+     * Get available voices from initialization events
+     */
+    getVoicesList(): Voice[] {
+        return this.voices;
+    }
+    
+    /**
+     * Get available toolsets from initialization events
+     */
+    getToolsets(): Toolset[] {
+        return this.toolsets;
+    }
+    
+    /**
+     * Check if client has completed initialization
+     * All 6 initialization events must be received
+     */
+    isFullyInitialized(): boolean {
+        return this.isInitialized;
+    }
+    
+    /**
+     * Wait for initialization to complete
+     * Returns a promise that resolves when all 6 initialization events are received
+     */
+    waitForInitialization(): Promise<void> {
+        return new Promise((resolve) => {
+            if (this.isInitialized) {
+                resolve();
+            } else {
+                this.once('initialized' as any, () => {
+                    resolve();
+                });
+            }
+        });
     }
     
     // Audio control methods
@@ -776,24 +1066,13 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
             }
         });
         
-        // Subscribe to login event to get voices
-        this.authManager.on('auth:login', (loginResponse) => {
-            if (this.voiceManager && loginResponse.voices) {
-                this.voiceManager.setAvailableVoices(loginResponse.voices);
-            }
-        });
-        
         // Get initial token if available
         const tokens = this.authManager.getTokens();
         if (tokens) {
             this.authToken = tokens.agentCToken;
         }
         
-        // Get available voices if auth manager has them
-        const voices = this.authManager.getVoices();
-        if (this.voiceManager && voices && voices.length > 0) {
-            this.voiceManager.setAvailableVoices(voices);
-        }
+        // Note: Voice and avatar data will come from WebSocket initialization events
     }
 
     /**
@@ -830,7 +1109,11 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
             throw new Error('Authentication token is required');
         }
 
-        const url = new URL(this.config.apiUrl);
+        // Build the WebSocket URL with the correct endpoint path
+        const baseUrl = this.config.apiUrl;
+        const wsUrl = baseUrl.endsWith('/') ? baseUrl + 'api/rt/ws' : baseUrl + '/api/rt/ws';
+        
+        const url = new URL(wsUrl);
         url.searchParams.set('token', this.authToken);
         
         if (this.sessionId) {
@@ -850,6 +1133,24 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
             try {
                 const event = JSON.parse(data);
                 if (event && typeof event.type === 'string') {
+                    // Handle ping events with pong response
+                    if (event.type === 'ping') {
+                        // Send pong directly via WebSocket, not through sendEvent
+                        this.wsManager?.sendJSON({ type: 'pong' });
+                        if (this.config.debug) {
+                            // console.debug('Received ping, sent pong');
+                        }
+                        return;
+                    }
+                    
+                    // Handle pong events (no action needed, just acknowledge)
+                    if (event.type === 'pong') {
+                        if (this.config.debug) {
+                            // console.debug('Received pong');
+                        }
+                        return;
+                    }
+                    
                     // Emit the specific event
                     this.emit(event.type as keyof RealtimeEventMap, event as RealtimeEventMap[keyof RealtimeEventMap]);
                     

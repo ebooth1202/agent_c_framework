@@ -1,277 +1,283 @@
 # Agent C Realtime SDK Documentation
 
-Welcome to the Agent C Realtime SDK documentation. This SDK provides a powerful, type-safe TypeScript/JavaScript library for building real-time voice and text applications with AI agents, including optional HeyGen avatar support.
+> **Breaking Changes in v2.0.0**: Authentication and initialization have been completely restructured. See the [Migration Guide](./guides/authentication-migration.md) for upgrade instructions.
 
-## 📦 Packages
+## Overview
 
-The SDK is organized into two main packages:
+The Agent C Realtime SDK enables voice and text conversations with AI agents through WebSocket connections. Built with TypeScript, it provides a production-ready platform for creating interactive AI experiences.
 
-- **[@agentc/realtime-core](#core-sdk)** - Framework-agnostic TypeScript library with all core functionality
-- **[@agentc/realtime-react](#react-bindings)** - React hooks and components for easy integration
+## Key Features
 
-## 🚀 Quick Start
+- 🎙️ **Real-time Voice Conversations** - WebRTC-based audio streaming with automatic resampling
+- 💬 **Text Chat** - Streaming text responses with typing indicators
+- 🔄 **Binary Protocol** - 33% bandwidth savings with efficient binary audio transport
+- 🎯 **Turn Management** - Sophisticated conversation flow control
+- 🔌 **Event-Driven Architecture** - Comprehensive event system for all interactions
+- 🎭 **Avatar Support** - HeyGen avatar integration for visual agents
+- ⚛️ **React Integration** - Complete hooks and components for React apps
+- 🔐 **Flexible Authentication** - Support for both development and production patterns
+
+## What's New in v2.0.0
+
+### Simplified Authentication
+- Login response reduced by 90% - now only returns essential tokens
+- All configuration data delivered via WebSocket events
+- Automatic initialization sequence on connection
+
+### New Event System  
+- 6 automatic initialization events deliver all configuration
+- Rich event types for every interaction
+- Built-in initialization tracking
+
+### Enhanced React Hooks
+- `useAgentCData()` - Unified access to all configuration
+- `useInitializationStatus()` - Track initialization state
+- `useUserData()` - Direct user profile access
+
+See the [Migration Guide](./guides/authentication-migration.md) for details.
+
+## Quick Links
+
+### Getting Started
+- [Quick Start Guide](./getting-started.md) - Set up your first chat in 5 minutes
+- [Authentication Guide](./guides/authentication.md) - Production authentication patterns
+- [Migration Guide](./guides/authentication-migration.md) - Upgrade from v1.x
+
+### Core Features
+- [Audio Streaming](./guides/audio-streaming.md) - Voice conversation setup
+- [Turn Management](./guides/turn-management.md) - Conversation flow control
+- [Avatar Integration](./guides/avatar-integration.md) - Visual agent setup
+- [Voice Models](./guides/voice-models.md) - Available voice options
+
+### API Reference
+- [Core SDK](./api-reference/core/index.md) - RealtimeClient and managers
+- [React Hooks](./api-reference/react/index.md) - React integration
+- [UI Components](./api-reference/ui-components.md) - Pre-built components
+
+### Architecture
+- [System Architecture](./architecture.md) - Technical deep dive
+- [Audio Architecture](./AUDIO_QUICK_REFERENCE.md) - Audio system details
+- [WebSocket Protocol](./api-reference/core/WebSocketManager.md) - Binary protocol
+
+## Installation
+
+```bash
+# Core SDK
+npm install @agentc/realtime-core
+
+# React integration
+npm install @agentc/realtime-react
+
+# UI Components  
+npm install @agentc/realtime-ui
+```
+
+## Basic Usage
+
+### Simple Connection
 
 ```typescript
-// Vanilla JavaScript/TypeScript
-import { RealtimeClient, AuthManager } from '@agentc/realtime-core';
+import { AuthManager, RealtimeClient } from '@agentc/realtime-core';
 
-// Initialize with authentication
-const authManager = new AuthManager({
-  apiUrl: 'https://localhost:8000'  // Or your Agent C server URL
-});
+// Authenticate
+const authManager = new AuthManager();
+await authManager.login({ username, password });
 
-// Login with ChatUser credentials
-await authManager.login({ 
-  username: 'your-username', 
-  password: 'your-password' 
-});
-
-// Create and connect client using the WebSocket URL from login
+// Connect
 const client = new RealtimeClient({
-  apiUrl: authManager.getWebSocketUrl(),  // URL from login response
-  authManager,
-  enableAudio: true
+  apiUrl: authManager.getWebSocketUrl(),
+  authManager
 });
 
 await client.connect();
 
-// Send a message
-client.sendText('Hello, Agent!');
-
-// Listen for responses
-client.on('text_delta', (event) => {
-  console.log(event.content);
+// Data arrives automatically via events
+client.on('chat_user_data', (event) => {
+  console.log('User:', event.user);
 });
+
+client.on('initialization:complete', () => {
+  console.log('Ready to chat!');
+});
+
+// Send messages
+await client.sendText('Hello!');
 ```
+
+### React Integration
 
 ```tsx
-// React Application
-import { AgentCProvider, useRealtimeClient, useChat } from '@agentc/realtime-react';
+import { AgentCProvider, useChat, useInitializationStatus } from '@agentc/realtime-react';
 
 function App() {
+  const { isInitialized } = useInitializationStatus();
+  const { messages, sendMessage } = useChat();
+  
+  if (!isInitialized) {
+    return <div>Initializing...</div>;
+  }
+  
   return (
-    <AgentCProvider config={{ 
-      apiUrl: 'https://localhost:8000',  // Your Agent C server URL
-      credentials: {
-        username: 'your-username',
-        password: 'your-password'
-      }
-    }}>
-      <ChatComponent />
-    </AgentCProvider>
+    <div>
+      {messages.map(msg => (
+        <div key={msg.id}>{msg.content}</div>
+      ))}
+      <input onKeyPress={(e) => {
+        if (e.key === 'Enter') sendMessage(e.target.value);
+      }} />
+    </div>
   );
 }
-
-function ChatComponent() {
-  const { sendMessage } = useChat();
-  
-  const handleSend = () => {
-    sendMessage('Hello, Agent!');
-  };
-  
-  return <button onClick={handleSend}>Send Message</button>;
-}
 ```
 
-## 📚 Documentation Structure
+## Package Structure
 
-### Getting Started
-- **[Getting Started Guide](./getting-started.md)** - Installation, setup, and your first connection
-- **[Architecture Overview](./architecture.md)** - Understanding the SDK design and data flow
+The SDK is organized as a monorepo with four main packages:
 
-### API Reference
-
-#### Core SDK
-- **[RealtimeClient](./api-reference/core/RealtimeClient.md)** - Main client class for WebSocket connections
-- **[AuthManager](./api-reference/core/AuthManager.md)** - Authentication and token management
-- **[TurnManager](./api-reference/core/TurnManager.md)** - Conversation turn control
-- **[VoiceManager](./api-reference/core/VoiceManager.md)** - Voice model management
-- **[SessionManager](./api-reference/core/SessionManager.md)** - Chat session handling
-- **[AvatarManager](./api-reference/core/AvatarManager.md)** - HeyGen avatar integration
-- **[AudioInput](./api-reference/core/AudioInput.md)** - Microphone capture and streaming
-- **[AudioOutput](./api-reference/core/AudioOutput.md)** - TTS playback
-
-#### React Bindings
-- **[AgentCProvider](./api-reference/react/AgentCProvider.md)** - React context provider
-- **[React Hooks](./api-reference/react/hooks.md)** - All available React hooks
-- **[React Examples](./api-reference/react/examples.md)** - Complete React usage examples
-
-### Guides
-- **[Authentication Guide](./guides/authentication.md)** - ChatUser login and JWT token management
-- **[Audio Streaming Guide](./guides/audio-streaming.md)** - Binary audio streaming setup
-- **[Turn Management Guide](./guides/turn-management.md)** - Understanding conversation flow
-- **[Voice Models Guide](./guides/voice-models.md)** - Working with different TTS voices
-- **[Avatar Integration Guide](./guides/avatar-integration.md)** - Setting up HeyGen avatars
-
-## 🌟 Key Features
-
-### 🎯 Production-Ready
-- **Binary WebSocket streaming** for 33% bandwidth reduction
-- **Automatic reconnection** with exponential backoff
-- **Token refresh** before expiry
-- **Type-safe events** with TypeScript generics
-
-### 🎤 Advanced Audio
-- **Web Audio API** with AudioWorklet for optimal performance
-- **Turn-aware streaming** prevents talk-over conflicts
-- **Multiple voice models** including OpenAI TTS
-- **Binary PCM16** transmission without base64 overhead
-
-### 🤖 Avatar Support
-- **HeyGen integration** for virtual avatars
-- **Automatic voice switching** in avatar mode
-- **Session coordination** with Agent C backend
-
-### 📱 Multi-Platform
-- **Browser support** for modern web applications
-- **Node.js support** for server-side applications
-- **React bindings** for React applications
-- **Framework agnostic** core library
-
-## 💻 Requirements
-
-- **Node.js** 16.0 or later
-- **TypeScript** 4.5 or later (for TypeScript projects)
-- **Modern browser** with Web Audio API support (Chrome 66+, Firefox 76+, Safari 14.1+)
-- **React** 18.0 or later (for React bindings only)
-
-## 📦 Installation
-
-### NPM
-```bash
-npm install @agentc/realtime-core
-# For React applications
-npm install @agentc/realtime-react
+```
+@agentc/
+├── realtime-core      # Core SDK with WebSocket client
+├── realtime-react     # React hooks and providers
+├── realtime-ui        # Pre-built UI components
+└── demo              # Example application
 ```
 
-### Yarn
-```bash
-yarn add @agentc/realtime-core
-# For React applications
-yarn add @agentc/realtime-react
-```
+## Authentication Patterns
 
-### PNPM
-```bash
-pnpm add @agentc/realtime-core
-# For React applications
-pnpm add @agentc/realtime-react
-```
+The SDK supports two authentication modes:
 
-## 🔧 Configuration
-
-The SDK can be configured through environment variables or directly in code:
+### Development Mode
+Direct login with ChatUser credentials (development only):
 
 ```typescript
-// Environment variables
-AGENTC_API_URL=https://localhost:8000  # Your Agent C server URL
-AGENTC_USERNAME=your-username
-AGENTC_PASSWORD=your-password
-
-// Direct configuration
-const authManager = new AuthManager({
-  apiUrl: process.env.AGENTC_API_URL || 'https://localhost:8000'
-});
-
-// Login to get JWT token and WebSocket URL
-await authManager.login({
-  username: process.env.AGENTC_USERNAME,
-  password: process.env.AGENTC_PASSWORD
-});
-
-const client = new RealtimeClient({
-  apiUrl: authManager.getWebSocketUrl(),  // WebSocket URL from login
-  authManager,  // Handles JWT token automatically
-  enableAudio: true,
-  audioConfig: {
-    enableInput: true,
-    enableOutput: true,
-    sampleRate: 16000,
-    respectTurnState: true
-  },
-  reconnection: {
-    maxAttempts: 5,
-    initialDelay: 1000,
-    maxDelay: 30000
-  }
-});
+const authManager = new AuthManager();
+await authManager.login({ username, password });
 ```
 
-## 🧪 Examples
+### Production Mode
+Token-based authentication through your backend:
 
-Check out our example applications:
+```typescript
+// Your backend provides tokens
+const tokens = await yourBackend.getAgentCTokens();
+await authManager.initializeFromPayload(tokens);
+```
 
-- **[Basic Chat](../examples/basic-chat)** - Simple text chat with an agent
-- **[Voice Assistant](../examples/voice-assistant)** - Voice-enabled AI assistant
-- **[Avatar Demo](../examples/avatar-demo)** - HeyGen avatar integration
-- **[React App](../examples/react-app)** - Complete React application
+See the [Authentication Guide](./guides/authentication.md) for complete patterns.
 
-## 🛠️ Development
+## Event System
 
-### Building from Source
+The SDK uses a comprehensive event system:
+
+### Initialization Events (Automatic)
+- `chat_user_data` - User profile information
+- `voice_list` - Available voice models
+- `agent_list` - Available agents
+- `avatar_list` - Available avatars  
+- `tool_catalog` - Available tools
+- `chat_session_changed` - Current chat session
+- `initialization:complete` - All data received
+
+### Interaction Events
+- `text:delta` - Streaming text chunks
+- `text:complete` - Complete message
+- `audio:output` - Binary audio frames
+- `user_turn_start` - User can speak
+- `agent_turn_start` - Agent is speaking
+
+## Audio System
+
+The audio system provides high-performance voice conversations:
+
+- **Format**: PCM16 at 24000Hz
+- **Processing**: Off-thread via AudioWorklet
+- **Transport**: Binary WebSocket frames
+- **Features**: VAD, noise suppression, automatic resampling
+
+See [Audio Streaming Guide](./guides/audio-streaming.md) for details.
+
+## Browser Requirements
+
+- Chrome 90+, Firefox 88+, Safari 14.1+, Edge 90+
+- HTTPS required (for microphone access)
+- WebRTC support required for audio
+
+## TypeScript Support
+
+Full TypeScript support with comprehensive type definitions:
+
+```typescript
+import type {
+  RealtimeClient,
+  ChatMessage,
+  Voice,
+  Agent,
+  UserProfile,
+  ConnectionState,
+  AudioState,
+  TurnState
+} from '@agentc/realtime-core';
+```
+
+## Testing
+
+The SDK uses Vitest for testing:
 
 ```bash
-# Clone the repository
-git clone https://github.com/agentc-ai/realtime-sdk.git
-cd realtime-sdk
-
-# Install dependencies
-pnpm install
-
-# Build all packages
-pnpm build
-
 # Run tests
-pnpm test
+npm test
 
-# Start development mode
-pnpm dev
+# Run with coverage
+npm run test:coverage
+
+# Watch mode
+npm run test:watch
 ```
 
-### Package Structure
+## Examples
 
-```
-packages/
-├── core/               # Core SDK package
-│   ├── src/
-│   │   ├── client/    # WebSocket client
-│   │   ├── auth/      # Authentication
-│   │   ├── audio/     # Audio system
-│   │   ├── session/   # Session management
-│   │   ├── voice/     # Voice management
-│   │   ├── avatar/    # Avatar integration
-│   │   └── events/    # Event types
-│   └── dist/          # Built files
-└── react/             # React bindings
-    ├── src/
-    │   ├── providers/ # Context providers
-    │   ├── hooks/     # React hooks
-    │   └── components/# UI components
-    └── dist/          # Built files
-```
+### Complete Chat Application
+See [packages/demo](../packages/demo) for a full example application.
 
-## 🤝 Contributing
+### Code Snippets
+- [Simple chat](./examples/simple-chat.ts)
+- [Voice conversation](./examples/voice-chat.ts)
+- [Avatar integration](./examples/avatar-chat.ts)
+- [Custom UI](./examples/custom-ui.tsx)
+
+## Troubleshooting
+
+Common issues and solutions:
+
+- **WebSocket fails to connect**: Check HTTPS and authentication
+- **No audio input**: Verify microphone permissions and HTTPS
+- **Data is undefined**: Wait for `initialization:complete` event
+- **Audio quality issues**: Check network bandwidth
+
+See [Troubleshooting Guide](./guides/audio-troubleshooting.md) for more.
+
+## Migration from v1.x
+
+Version 2.0.0 includes breaking changes to authentication and initialization:
+
+1. Login response simplified to only tokens
+2. Configuration data now delivered via events
+3. New hooks for accessing data
+4. Automatic initialization tracking
+
+See [Migration Guide](./guides/authentication-migration.md) for step-by-step instructions.
+
+## Contributing
 
 We welcome contributions! Please see our [Contributing Guide](../CONTRIBUTING.md) for details.
 
-## 📄 License
+## License
 
-This SDK is licensed under the MIT License. See [LICENSE](../LICENSE) for details.
+[MIT License](../LICENSE)
 
-## 🆘 Support
+## Support
 
-- **Documentation**: You are here!
-- **GitHub Issues**: Report bugs or request features
-- **Discord**: Join our community
-- **Email**: Contact support
-
-## 🔗 Related Resources
-
-- [Agent C Platform Documentation](https://localhost:8000/docs)
-- [API Reference](https://localhost:8000/api/docs)
-- [HeyGen Documentation](https://docs.heygen.com)
-- [Web Audio API Reference](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)
-
----
-
-Built with ❤️ by the Agent C team
+For questions and support:
+- Review the [documentation](./getting-started.md)
+- Check [troubleshooting guides](./guides/audio-troubleshooting.md)
+- Contact the Agent C support team

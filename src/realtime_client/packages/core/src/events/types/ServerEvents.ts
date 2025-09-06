@@ -10,6 +10,7 @@ import {
   AvatarSessionRequest,
   AvatarSession,
   ChatSession,
+  ChatSessionQueryResponse,
   Voice,
   Message,
   ToolCall,
@@ -17,7 +18,9 @@ import {
   CompletionOptions,
   StopReason,
   Severity,
-  MessageFormat
+  MessageFormat,
+  User,
+  Toolset
 } from './CommonTypes';
 
 /**
@@ -198,6 +201,48 @@ export interface ErrorEvent extends BaseServerEvent {
 }
 
 /**
+ * Response to get_user_sessions request with paginated session list
+ */
+export interface GetUserSessionsResponseEvent extends BaseServerEvent {
+  type: 'get_user_sessions_response';
+  sessions: ChatSessionQueryResponse;
+}
+
+/**
+ * User data sent during connection initialization
+ * Contains current user profile and authentication info
+ */
+export interface ChatUserDataEvent extends BaseServerEvent {
+  type: 'chat_user_data';
+  user: User;
+}
+
+/**
+ * Voice list sent during initialization or in response to get_voices
+ * Contains complete voice model information
+ */
+export interface VoiceListEvent extends BaseServerEvent {
+  type: 'voice_list';
+  voices: Voice[];
+}
+
+/**
+ * Tool catalog sent during initialization or in response to get_tool_catalog
+ * Note: Event name is tool_catalog but contains toolsets array
+ */
+export interface ToolCatalogEvent extends BaseServerEvent {
+  type: 'tool_catalog';
+  toolsets: Toolset[];
+}
+
+/**
+ * Response to ping request for connection health check
+ */
+export interface PongEvent extends BaseServerEvent {
+  type: 'pong';
+}
+
+/**
  * Union type of all server events
  */
 export type ServerEvent =
@@ -218,7 +263,12 @@ export type ServerEvent =
   | UserTurnStartEvent
   | UserTurnEndEvent
   | AgentVoiceChangedEvent
-  | ErrorEvent;
+  | ErrorEvent
+  | GetUserSessionsResponseEvent
+  | ChatUserDataEvent
+  | VoiceListEvent
+  | ToolCatalogEvent
+  | PongEvent;
 
 /**
  * Type guard to check if an object is a server event
@@ -242,6 +292,11 @@ export function isServerEvent(obj: unknown): obj is ServerEvent {
     'user_turn_start',
     'user_turn_end',
     'agent_voice_changed',
-    'error'
+    'error',
+    'get_user_sessions_response',
+    'chat_user_data',
+    'voice_list',
+    'tool_catalog',
+    'pong'
   ].includes((obj as any).type);
 }

@@ -50,7 +50,7 @@ class OSBasicValidator:
             if (basef not in allowed_flags) and (f not in allowed_flags):
                 return ValidationResult(False, f"Flag not allowed: {f}")
 
-        return ValidationResult(True, "OK", timeout=policy.get("default_timeout"))
+        return ValidationResult(True, "OK", timeout=policy.get("default_timeout"), policy_spec=policy)
 
     def adjust_environment(self, base_env: Dict[str, str], parts: List[str], policy: Mapping[str, Any]) -> Dict[str, str]:
         # Allow per-command env tweaks via policy.env_overrides

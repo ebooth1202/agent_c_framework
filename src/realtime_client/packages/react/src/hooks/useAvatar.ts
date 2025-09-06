@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useState, useCallback } from 'react';
-import type { Avatar } from '@agentc/realtime-core';
+import type { Avatar, Voice } from '@agentc/realtime-core';
 import { useRealtimeClientSafe } from '../providers/AgentCContext';
 
 /**
@@ -164,7 +164,7 @@ export function useAvatar(): UseAvatarReturn {
       if (voiceManager) {
         const availableVoices = voiceManager.getAvailableVoices();
         // Find a non-avatar voice
-        const defaultVoice = availableVoices.find(v => v.voice_id !== 'avatar' && v.voice_id !== 'none');
+        const defaultVoice = availableVoices.find((v: Voice) => v.voice_id !== 'avatar' && v.voice_id !== 'none');
         if (defaultVoice) {
           voiceManager.setCurrentVoice(defaultVoice.voice_id, 'client');
           client.setAgentVoice(defaultVoice.voice_id);

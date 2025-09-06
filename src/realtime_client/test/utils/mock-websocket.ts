@@ -134,7 +134,7 @@ export function createMockWebSocket(url?: string) {
 }
 
 export function mockWebSocketConstructor() {
-  const MockWebSocketClass = vi.fn().mockImplementation((url: string) => {
+  const MockWebSocketClass = vi.fn().mockImplementation((url: string, protocols?: string | string[]) => {
     return createMockWebSocket(url);
   });
   

@@ -987,6 +987,6 @@ tools:
 - WorkspacePlanningTools
 - AgentCloneTools
 - AgentTeamTools
-- DynamicCommandToolset
+- DynamicCommandTools
 uid: gatekeeper-mason-authority
 version: 2

@@ -1,0 +1,46 @@
+---
+title: Style Tiptap UI Components
+meta:
+  title: UI Components | Tiptap
+  description: Style Tiptap UI Components to match your design system or application theme.
+  category: UI Components
+---
+
+import { Callout } from '@/components/ui/Callout'
+
+### Add Styles
+
+Component styles are written in SCSS. The SCSS compiler (`sass` or `sass-embedded`) is installed automatically when you install a component or template using the Tiptap CLI. If you follow a manual setup, you'll need to install it manually.
+
+<Callout title="Styles are only added when using the CLI" variant="info">
+  Styles are included only if you installed a component or template using the CLI. These styles come
+  bundled with whatever you add through the CLI.
+</Callout>
+
+#### For Next.js
+
+When a template or component is added to your Next.js project, global SCSS files are automatically added in the `styles` directory.
+
+Import the global SCSS styles in the main stylesheet:
+
+**File:** `app/globals.css`
+
+```css
+@import '../styles/_variables.scss';
+@import '../styles/_keyframe-animations.scss';
+```
+
+#### For Vite + React
+
+When a template or component is added to your Vite + React project, global SCSS files are automatically added in the `src/styles` directory.
+
+Import the global SCSS styles in the main stylesheet:
+
+**File:** `src/index.css`
+
+```css
+@import './styles/_variables.scss';
+@import './styles/_keyframe-animations.scss';
+```
+
+Make sure the SCSS files are in the correct path so the styles load properly in your project.

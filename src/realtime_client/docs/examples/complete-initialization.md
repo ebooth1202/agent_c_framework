@@ -1,861 +1,940 @@
-# Complete SDK Initialization Guide - The FULL Picture
+# Complete Initialization Examples
 
-This guide shows you the **complete picture** of how to work with the Agent C login response payload and properly initialize the SDK. Most documentation skips over the details - this guide shows you **everything** that's available and how to use it all.
+This document provides complete, working examples demonstrating the new authentication and initialization patterns in Agent C Realtime SDK v2.0.0.
 
-## What's REALLY in the Login Response
+## Table of Contents
 
-When you authenticate with Agent C (either directly in development or through your backend in production), you receive a comprehensive payload with **everything** needed to initialize the SDK. Here's what you're actually getting:
+1. [Basic Connection and Initialization](#basic-connection-and-initialization)
+2. [React Application with Hooks](#react-application-with-hooks)
+3. [Production Authentication Pattern](#production-authentication-pattern)
+4. [Progressive Loading UI](#progressive-loading-ui)
+5. [Voice-First Application](#voice-first-application)
+6. [Multi-Session Chat](#multi-session-chat)
+
+## Basic Connection and Initialization
+
+The simplest example showing the new event-based initialization:
 
 ```typescript
-// This is the COMPLETE login response structure
-interface CompleteLoginResponse {
-  // Authentication tokens
-  agent_c_token: string;        // JWT for WebSocket authentication
-  heygen_token: string;         // HeyGen access token for avatar creation
+import { AuthManager, RealtimeClient } from '@agentc/realtime-core';
+
+async function connectToAgentC() {
+  // Step 1: Create auth manager
+  const authManager = new AuthManager({
+    apiUrl: 'https://api.agentc.ai'
+  });
   
-  // UI session for reconnection
-  ui_session_id: string;        // Three-word slug like "tiger-castle-moon"
+  // Step 2: Login (returns only tokens now)
+  const loginResponse = await authManager.login({
+    username: 'your-username',
+    password: 'your-password'
+  });
   
-  // Complete user information
-  user: {
-    user_id: string;
-    user_name: string;
-    email: string | null;
-    first_name: string | null;
-    last_name: string | null;
-    is_active: boolean;
-    roles: string[];           // User's roles in the system
-    groups: string[];          // User's group memberships
-    created_at: string | null;
-    last_login: string | null;
+  console.log('Login response (simplified):', {
+    hasToken: !!loginResponse.jwt_token,
+    hasWebSocketUrl: !!loginResponse.websocket_url,
+    // Note: No user data, voices, agents, etc. in response anymore
+  });
+  
+  // Step 3: Create client
+  const client = new RealtimeClient({
+    apiUrl: authManager.getWebSocketUrl(),
+    authManager: authManager
+  });
+  
+  // Step 4: Set up event listeners for initialization data
+  const initializationData = {
+    user: null,
+    voices: [],
+    agents: [],
+    avatars: [],
+    tools: [],
+    session: null
   };
   
-  // Available agents for this user
-  agents: Array<{
-    name: string;              // Display name
-    key: string;               // Unique identifier for API calls
-    agent_description: string | null;
-    category: string[];        // Agent categories/tags
-  }>;
+  client.on('chat_user_data', (event) => {
+    console.log('✅ User data received:', event.user);
+    initializationData.user = event.user;
+  });
   
-  // HeyGen avatars available
-  avatars: Array<{
-    avatar_id: string;         // HeyGen avatar ID
-    created_at: number;        // Unix timestamp
-    default_voice: string;     // Default voice for this avatar
-    is_public: boolean;
-    normal_preview: string;    // Preview image URL
-    pose_name: string;
-    status: string;
-  }>;
+  client.on('voice_list', (event) => {
+    console.log('✅ Voices received:', event.voices.length, 'voices');
+    initializationData.voices = event.voices;
+  });
   
-  // Available toolsets with schemas
-  toolsets: Array<{
-    name: string;
-    description: string;
-    schemas: {
-      [toolName: string]: {
-        type: "function";
-        function: {
-          name: string;
-          description: string;
-          parameters: {
-            type: "object";
-            properties: Record<string, any>;
-            required: string[];
-          };
-        };
-      };
-    };
-  }>;
+  client.on('agent_list', (event) => {
+    console.log('✅ Agents received:', event.agents.length, 'agents');
+    initializationData.agents = event.agents;
+  });
   
-  // TTS voices with formats
-  voices: Array<{
-    voice_id: string;          // Unique identifier
-    vendor: string;            // Provider (openai, heygen, system)
-    description: string;       // Human-readable description
-    output_format: string;     // Audio format (pcm16, none, special)
-  }>;
+  client.on('avatar_list', (event) => {
+    console.log('✅ Avatars received:', event.avatars.length, 'avatars');
+    initializationData.avatars = event.avatars;
+  });
+  
+  client.on('tool_catalog', (event) => {
+    console.log('✅ Tools received:', event.tools.length, 'tools');
+    initializationData.tools = event.tools;
+  });
+  
+  client.on('chat_session_changed', (event) => {
+    console.log('✅ Session received:', event.session.id);
+    initializationData.session = event.session;
+  });
+  
+  client.on('initialization:complete', () => {
+    console.log('🎉 Initialization complete! Ready to chat.');
+    console.log('Final data:', initializationData);
+  });
+  
+  // Step 5: Connect (triggers automatic initialization)
+  await client.connect();
+  
+  // Step 6: Wait for initialization to complete
+  await new Promise<void>((resolve) => {
+    client.on('initialization:complete', resolve);
+  });
+  
+  // Step 7: Now ready to interact
+  await client.sendText('Hello! I just connected using the new SDK.');
+  
+  return { client, initializationData };
 }
+
+// Run the example
+connectToAgentC()
+  .then(({ client, initializationData }) => {
+    console.log('Connected successfully!');
+    console.log('User:', initializationData.user?.display_name);
+    console.log('Available voices:', initializationData.voices.map(v => v.name));
+  })
+  .catch(console.error);
 ```
 
-### Important: WebSocket URL is NOT in the Response!
+## React Application with Hooks
 
-**Critical Detail**: The WebSocket URL is **NOT** included in the login response. You must construct it yourself:
+Complete React application using the new hooks:
 
-```typescript
-// The response does NOT include websocket_url
-// You must build it from your API URL configuration
-const wsUrl = `wss://${API_HOST}/rt/ws`;
-```
+```tsx
+import React, { useState, useEffect } from 'react';
+import { AuthManager, RealtimeClient } from '@agentc/realtime-core';
+import {
+  AgentCProvider,
+  useAgentCData,
+  useInitializationStatus,
+  useChat,
+  useAudio,
+  useVoiceModel,
+  useConnection
+} from '@agentc/realtime-react';
 
-## Complete Initialization Example - Using EVERYTHING
-
-Here's how to properly initialize the SDK using **all** the data from the login response:
-
-```typescript
-import { 
-  AuthManager, 
-  RealtimeClient,
-  VoiceManager,
-  AvatarManager,
-  SessionManager
-} from '@agentc/realtime-core';
-
-class CompleteSDKInitializer {
-  private authManager: AuthManager;
-  private client: RealtimeClient;
-  private loginPayload: CompleteLoginResponse;
+// Main App Component
+function App() {
+  const [client, setClient] = useState<RealtimeClient | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
   
-  /**
-   * Initialize the SDK with the COMPLETE login payload
-   * This shows how to use ALL the data, not just the token
-   */
-  async initializeWithFullPayload(loginResponse: CompleteLoginResponse) {
-    // Store the complete payload for later use
-    this.loginPayload = loginResponse;
-    
-    // 1. Initialize AuthManager with configuration
-    this.authManager = new AuthManager({
-      apiUrl: 'https://api.agentc.example.com',  // Your API base URL
-      autoRefresh: true,
-      refreshBufferMs: 5 * 60 * 1000,  // Refresh 5 minutes before expiry
-    });
-    
-    // 2. Store ALL the authentication data in AuthManager
-    // The AuthManager stores the complete login response internally
-    // This is done automatically by login(), but here's what happens:
-    this.authManager['loginData'] = loginResponse;  // Internal storage
-    
-    // Parse JWT to get expiry
-    const expiresAt = this.parseJWTExpiry(loginResponse.agent_c_token);
-    
-    // Set tokens with expiry
-    await this.authManager.setTokens({
-      agentCToken: loginResponse.agent_c_token,
-      heygenToken: loginResponse.heygen_token,
-      expiresAt: expiresAt
-    });
-    
-    // Update AuthManager state with user info
-    this.authManager['state'].user = loginResponse.user;
-    this.authManager['state'].uiSessionId = loginResponse.ui_session_id;
-    
-    // 3. Construct the WebSocket URL (NOT in response!)
-    const wsUrl = this.buildWebSocketUrl();
-    
-    // 4. Create RealtimeClient with AuthManager
-    this.client = new RealtimeClient({
-      apiUrl: wsUrl,
-      authManager: this.authManager,
-      sessionId: loginResponse.ui_session_id,  // Use for reconnection
-      autoReconnect: true,
-      enableTurnManager: true,
-      enableAudio: true,
-      audioConfig: {
-        enableInput: true,
-        enableOutput: true,
-        respectTurnState: true,
-        sampleRate: 16000,  // Match voice format requirements
-      },
-      debug: true  // See what's happening
-    });
-    
-    // 5. Access ALL the resources through AuthManager
-    this.demonstrateDataAccess();
-    
-    // 6. Initialize subsystems with the available data
-    await this.initializeSubsystems();
-    
-    // 7. Connect to the WebSocket
-    await this.client.connect();
-    
-    console.log('SDK fully initialized with ALL available data!');
-  }
-  
-  /**
-   * Build the WebSocket URL - NOT provided in response!
-   */
-  private buildWebSocketUrl(): string {
-    // You must construct this yourself from your API configuration
-    const apiHost = 'api.agentc.example.com';
-    const wsProtocol = 'wss';  // Always use secure WebSocket
-    
-    // Build the base URL
-    const wsUrl = `${wsProtocol}://${apiHost}/rt/ws`;
-    
-    // Token is added as query parameter by the client
-    // Session ID is also added if available
-    return wsUrl;
-  }
-  
-  /**
-   * Parse JWT to extract expiry time
-   */
-  private parseJWTExpiry(token: string): number {
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-      throw new Error('Invalid JWT format');
-    }
-    
-    const payload = JSON.parse(
-      atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'))
-    );
-    
-    // Convert seconds to milliseconds
-    return payload.exp * 1000;
-  }
-  
-  /**
-   * Demonstrate accessing ALL the data from the login response
-   */
-  private demonstrateDataAccess() {
-    // Access user information
-    const user = this.authManager.getUser();
-    console.log('User:', {
-      id: user?.user_id,
-      name: user?.user_name,
-      email: user?.email,
-      roles: user?.roles,
-      groups: user?.groups,
-      lastLogin: user?.last_login
-    });
-    
-    // Access available agents
-    const agents = this.authManager.getAgents();
-    console.log('Available Agents:', agents.map(a => ({
-      name: a.name,
-      key: a.key,
-      description: a.agent_description,
-      categories: a.category
-    })));
-    
-    // Access available avatars
-    const avatars = this.authManager.getAvatars();
-    console.log('Available Avatars:', avatars.map(a => ({
-      id: a.avatar_id,
-      preview: a.normal_preview,
-      defaultVoice: a.default_voice,
-      status: a.status
-    })));
-    
-    // Access available voices
-    const voices = this.authManager.getVoices();
-    console.log('Available Voices:', voices.map(v => ({
-      id: v.voice_id,
-      vendor: v.vendor,
-      description: v.description,
-      format: v.output_format
-    })));
-    
-    // Access available toolsets
-    const toolsets = this.authManager.getToolsets();
-    console.log('Available Toolsets:', toolsets.map(t => ({
-      name: t.name,
-      description: t.description,
-      tools: Object.keys(t.schemas)
-    })));
-    
-    // Access tokens
-    console.log('Tokens:', {
-      agentCToken: this.authManager.getAgentCToken() ? 'Present' : 'Missing',
-      heygenToken: this.authManager.getHeygenToken() ? 'Present' : 'Missing',
-      uiSessionId: this.authManager.getUiSessionId()
-    });
-  }
-  
-  /**
-   * Initialize all subsystems with the available data
-   */
-  private async initializeSubsystems() {
-    // VoiceManager is automatically initialized by RealtimeClient
-    // when AuthManager has voices, but here's how to access it:
-    const voiceManager = this.client.getVoiceManager();
-    if (voiceManager) {
-      // Set default voice if available
-      const voices = this.authManager.getVoices();
-      const defaultVoice = voices.find(v => v.voice_id === 'nova');
-      if (defaultVoice) {
-        voiceManager.setCurrentVoice(defaultVoice.voice_id, 'client');
-      }
+  const handleLogin = async (username: string, password: string) => {
+    try {
+      setAuthError(null);
       
-      console.log('Voice Manager initialized with', voices.length, 'voices');
-    }
-    
-    // AvatarManager is also auto-initialized
-    const avatarManager = this.client.getAvatarManager();
-    if (avatarManager) {
-      const avatars = this.authManager.getAvatars();
-      console.log('Avatar Manager initialized with', avatars.length, 'avatars');
-    }
-    
-    // SessionManager for chat history
-    const sessionManager = this.client.getSessionManager();
-    if (sessionManager) {
-      console.log('Session Manager ready for chat history management');
-    }
-    
-    // TurnManager for conversation flow
-    const turnManager = this.client.getTurnManager();
-    if (turnManager) {
-      console.log('Turn Manager ready for conversation control');
-    }
-  }
-  
-  /**
-   * Use agents from the login response
-   */
-  async selectAndUseAgent() {
-    const agents = this.authManager.getAgents();
-    
-    if (agents.length === 0) {
-      console.error('No agents available for this user');
-      return;
-    }
-    
-    // Find a specific agent or use the first one
-    const defaultAgent = agents.find(a => a.key === 'default_realtime') || agents[0];
-    
-    console.log('Selecting agent:', defaultAgent.name);
-    
-    // Set the agent on the connection
-    this.client.setAgent(defaultAgent.key);
-    
-    // Create a new chat session with this agent
-    this.client.newChatSession(defaultAgent.key);
-  }
-  
-  /**
-   * Use voices from the login response
-   */
-  async selectAndUseVoice() {
-    const voices = this.authManager.getVoices();
-    
-    // Find specific voice types
-    const textOnlyVoice = voices.find(v => v.voice_id === 'none');
-    const avatarVoice = voices.find(v => v.voice_id === 'avatar');
-    const ttsVoices = voices.filter(v => 
-      v.voice_id !== 'none' && v.voice_id !== 'avatar'
-    );
-    
-    console.log('Available voice modes:', {
-      textOnly: !!textOnlyVoice,
-      avatar: !!avatarVoice,
-      ttsCount: ttsVoices.length
-    });
-    
-    // Select a TTS voice
-    const selectedVoice = ttsVoices.find(v => v.voice_id === 'nova') || ttsVoices[0];
-    if (selectedVoice) {
-      console.log('Setting voice:', selectedVoice.description);
-      this.client.setAgentVoice(selectedVoice.voice_id);
-      
-      // Check the audio format for this voice
-      console.log('Audio format:', selectedVoice.output_format);
-      if (selectedVoice.output_format === 'pcm16') {
-        console.log('Voice uses PCM16 format at 16kHz');
-      }
-    }
-  }
-  
-  /**
-   * Use avatars from the login response
-   */
-  async createAvatarSession() {
-    const avatars = this.authManager.getAvatars();
-    const heygenToken = this.authManager.getHeygenToken();
-    
-    if (avatars.length === 0 || !heygenToken) {
-      console.error('No avatars available or missing HeyGen token');
-      return;
-    }
-    
-    const selectedAvatar = avatars[0];
-    console.log('Creating avatar session with:', selectedAvatar.avatar_id);
-    
-    // This would integrate with HeyGen SDK
-    // When avatar session is ready, notify Agent C:
-    const avatarSessionId = 'heygen-session-uuid';
-    this.client.setAvatarSession(avatarSessionId, selectedAvatar.avatar_id);
-  }
-  
-  /**
-   * Use toolsets information
-   */
-  displayAvailableTools() {
-    const toolsets = this.authManager.getToolsets();
-    
-    console.log('Available Tools:');
-    toolsets.forEach(toolset => {
-      console.log(`\nToolset: ${toolset.name}`);
-      console.log(`Description: ${toolset.description}`);
-      
-      Object.entries(toolset.schemas).forEach(([toolName, schema]) => {
-        console.log(`  - ${toolName}: ${schema.function.description}`);
-        
-        // Display parameters
-        const params = schema.function.parameters.properties;
-        Object.entries(params).forEach(([paramName, paramDef]: [string, any]) => {
-          const required = schema.function.parameters.required.includes(paramName);
-          console.log(`    * ${paramName} (${paramDef.type}${required ? ', required' : ''}): ${paramDef.description}`);
-        });
+      // Create auth manager
+      const authManager = new AuthManager({
+        apiUrl: process.env.REACT_APP_API_URL || 'https://api.agentc.ai'
       });
-    });
+      
+      // Login - returns only tokens
+      await authManager.login({ username, password });
+      
+      // Create client
+      const newClient = new RealtimeClient({
+        apiUrl: authManager.getWebSocketUrl(),
+        authManager,
+        audioConfig: {
+          enableAudio: true,
+          enableVAD: true
+        }
+      });
+      
+      // Connect - initialization events will follow
+      await newClient.connect();
+      setClient(newClient);
+      
+    } catch (error) {
+      setAuthError(error.message);
+    }
+  };
+  
+  if (!client) {
+    return (
+      <LoginScreen 
+        onLogin={handleLogin} 
+        error={authError} 
+      />
+    );
   }
+  
+  return (
+    <AgentCProvider client={client}>
+      <MainApplication />
+    </AgentCProvider>
+  );
 }
 
-// Example usage
-async function main() {
-  const initializer = new CompleteSDKInitializer();
+// Login Screen Component
+function LoginScreen({ onLogin, error }: {
+  onLogin: (username: string, password: string) => Promise<void>;
+  error: string | null;
+}) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   
-  // In production, this comes from YOUR backend
-  // In development, from direct Agent C login
-  const loginResponse = await getLoginResponse();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    await onLogin(username, password);
+    setIsLoading(false);
+  };
   
-  // Initialize with EVERYTHING
-  await initializer.initializeWithFullPayload(loginResponse);
+  return (
+    <div className="login-screen">
+      <h1>Agent C Login</h1>
+      <form onSubmit={handleSubmit}>
+        <input
+          type="text"
+          placeholder="Username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          disabled={isLoading}
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          disabled={isLoading}
+        />
+        <button type="submit" disabled={isLoading}>
+          {isLoading ? 'Logging in...' : 'Login'}
+        </button>
+        {error && <div className="error">{error}</div>}
+      </form>
+    </div>
+  );
+}
+
+// Main Application Component
+function MainApplication() {
+  // Check initialization status
+  const { isInitialized, isConnecting, error, initializationProgress } = useInitializationStatus();
   
-  // Now use all the capabilities
-  await initializer.selectAndUseAgent();
-  await initializer.selectAndUseVoice();
-  initializer.displayAvailableTools();
+  // Show connection status
+  if (error) {
+    return <ErrorScreen error={error} />;
+  }
+  
+  if (isConnecting) {
+    return <ConnectingScreen />;
+  }
+  
+  if (!isInitialized) {
+    return <InitializingScreen progress={initializationProgress} />;
+  }
+  
+  // Fully initialized - show main UI
+  return <ChatInterface />;
+}
+
+// Initializing Screen Component
+function InitializingScreen({ progress }: {
+  progress: {
+    userData: boolean;
+    voices: boolean;
+    agents: boolean;
+    avatars: boolean;
+    tools: boolean;
+    session: boolean;
+  }
+}) {
+  const completedCount = Object.values(progress).filter(Boolean).length;
+  const totalCount = Object.keys(progress).length;
+  
+  return (
+    <div className="initializing-screen">
+      <h2>Initializing Agent C</h2>
+      <div className="progress-bar">
+        <div 
+          className="progress-fill" 
+          style={{ width: `${(completedCount / totalCount) * 100}%` }}
+        />
+      </div>
+      <ul className="progress-list">
+        <li className={progress.userData ? 'complete' : 'pending'}>
+          {progress.userData ? '✅' : '⏳'} Loading user data
+        </li>
+        <li className={progress.voices ? 'complete' : 'pending'}>
+          {progress.voices ? '✅' : '⏳'} Loading voices
+        </li>
+        <li className={progress.agents ? 'complete' : 'pending'}>
+          {progress.agents ? '✅' : '⏳'} Loading agents
+        </li>
+        <li className={progress.avatars ? 'complete' : 'pending'}>
+          {progress.avatars ? '✅' : '⏳'} Loading avatars
+        </li>
+        <li className={progress.tools ? 'complete' : 'pending'}>
+          {progress.tools ? '✅' : '⏳'} Loading tools
+        </li>
+        <li className={progress.session ? 'complete' : 'pending'}>
+          {progress.session ? '✅' : '⏳'} Loading session
+        </li>
+      </ul>
+    </div>
+  );
+}
+
+// Chat Interface Component
+function ChatInterface() {
+  // Access all data from hooks
+  const { user, voices, agents } = useAgentCData();
+  const { messages, sendMessage, clearMessages, isAgentTyping } = useChat();
+  const { voiceModel, setVoiceModel } = useVoiceModel();
+  const { isRecording, startRecording, stopRecording, audioLevel } = useAudio();
+  const { isConnected, connectionStats } = useConnection();
+  
+  const [inputText, setInputText] = useState('');
+  
+  const handleSendMessage = async () => {
+    if (inputText.trim()) {
+      await sendMessage(inputText);
+      setInputText('');
+    }
+  };
+  
+  return (
+    <div className="chat-interface">
+      {/* Header */}
+      <header className="chat-header">
+        <div className="user-info">
+          <span>👤 {user?.display_name || 'User'}</span>
+          <span className={`connection-status ${isConnected ? 'connected' : 'disconnected'}`}>
+            {isConnected ? '🟢 Connected' : '🔴 Disconnected'}
+          </span>
+          {connectionStats.latency && (
+            <span className="latency">{connectionStats.latency}ms</span>
+          )}
+        </div>
+        
+        <div className="voice-selector">
+          <label>Voice:</label>
+          <select 
+            value={voiceModel} 
+            onChange={(e) => setVoiceModel(e.target.value)}
+          >
+            <option value="none">Text Only</option>
+            {voices.map(voice => (
+              <option key={voice.voice_id} value={voice.voice_id}>
+                {voice.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </header>
+      
+      {/* Messages */}
+      <div className="messages-container">
+        {messages.map((message, index) => (
+          <div key={index} className={`message ${message.role}`}>
+            <span className="role">{message.role}:</span>
+            <span className="content">{message.content}</span>
+          </div>
+        ))}
+        {isAgentTyping && (
+          <div className="typing-indicator">
+            Agent is typing<span className="dots">...</span>
+          </div>
+        )}
+      </div>
+      
+      {/* Input Controls */}
+      <div className="input-controls">
+        <button 
+          className={`voice-button ${isRecording ? 'recording' : ''}`}
+          onClick={() => isRecording ? stopRecording() : startRecording()}
+        >
+          {isRecording ? '🔴' : '🎤'}
+          {isRecording && (
+            <div 
+              className="audio-level" 
+              style={{ width: `${audioLevel * 100}%` }}
+            />
+          )}
+        </button>
+        
+        <input
+          type="text"
+          placeholder="Type a message..."
+          value={inputText}
+          onChange={(e) => setInputText(e.target.value)}
+          onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+        />
+        
+        <button onClick={handleSendMessage}>Send</button>
+        <button onClick={clearMessages}>Clear</button>
+      </div>
+    </div>
+  );
+}
+
+// Error Screen Component
+function ErrorScreen({ error }: { error: Error }) {
+  const { reconnect } = useConnection();
+  
+  return (
+    <div className="error-screen">
+      <h2>Connection Error</h2>
+      <p>{error.message}</p>
+      <button onClick={reconnect}>Retry Connection</button>
+    </div>
+  );
+}
+
+// Connecting Screen Component
+function ConnectingScreen() {
+  return (
+    <div className="connecting-screen">
+      <div className="spinner" />
+      <h2>Connecting to Agent C...</h2>
+    </div>
+  );
 }
 ```
 
-## Production Pattern - Backend Provides Everything
+## Production Authentication Pattern
 
-In production, your backend fetches the login payload and passes it to the frontend:
-
-### Backend - Fetching and Providing the Complete Payload
+Example showing how to integrate with your backend for production:
 
 ```typescript
-// backend/services/agentc-auth.ts
-export class AgentCAuthService {
+// Frontend: AuthService.ts
+export class AuthService {
+  private authManager: AuthManager;
+  private client?: RealtimeClient;
+  
+  constructor() {
+    this.authManager = new AuthManager();
+  }
+  
   /**
-   * Get complete Agent C configuration for a user
-   * This runs on YOUR backend, not in the browser
+   * Login through YOUR backend (production pattern)
    */
-  async getCompleteAgentCPayload(userId: string): Promise<any> {
-    // Your backend authenticates with Agent C
-    const response = await fetch('https://api.agentc.example.com/rt/login', {
+  async loginThroughBackend(email: string, password: string): Promise<void> {
+    // Step 1: Authenticate with YOUR backend
+    const response = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        // These credentials NEVER leave your backend
-        username: process.env.AGENTC_USERNAME,
-        password: process.env.AGENTC_PASSWORD
-      })
+      body: JSON.stringify({ email, password })
     });
     
-    const loginData: CompleteLoginResponse = await response.json();
+    if (!response.ok) {
+      throw new Error('Login failed');
+    }
     
-    // Add the WebSocket URL since it's not in the response
-    const enhancedPayload = {
-      ...loginData,
-      websocket_url: `wss://${process.env.AGENTC_HOST}/rt/ws`,
-      
-      // Add any additional configuration
-      api_host: process.env.AGENTC_HOST,
-      api_protocol: 'https',
-      
-      // Add user context
-      app_user: {
-        id: userId,
-        // ... other app user data
+    const data = await response.json();
+    
+    // Step 2: Store your app's session
+    sessionStorage.setItem('app_session', data.session_token);
+    
+    // Step 3: Initialize Agent C with tokens from your backend
+    await this.authManager.initializeFromPayload({
+      agent_c_token: data.agent_c.jwt_token,
+      websocket_url: data.agent_c.websocket_url,
+      heygen_token: data.agent_c.heygen_token,
+      expires_at: data.agent_c.expires_at
+    });
+    
+    // Step 4: Create and connect client
+    this.client = new RealtimeClient({
+      apiUrl: this.authManager.getWebSocketUrl(),
+      authManager: this.authManager
+    });
+    
+    // Step 5: Set up token refresh
+    this.authManager.on('token-expiring', async () => {
+      await this.refreshToken();
+    });
+    
+    await this.client.connect();
+  }
+  
+  /**
+   * Refresh token through YOUR backend
+   */
+  private async refreshToken(): Promise<void> {
+    const response = await fetch('/api/auth/refresh-agent-token', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${sessionStorage.getItem('app_session')}`
       }
-    };
+    });
     
-    return enhancedPayload;
+    if (!response.ok) {
+      throw new Error('Token refresh failed');
+    }
+    
+    const data = await response.json();
+    
+    await this.authManager.updateTokens({
+      agent_c_token: data.agent_c.jwt_token,
+      expires_at: data.agent_c.expires_at
+    });
+  }
+  
+  getClient(): RealtimeClient | undefined {
+    return this.client;
   }
 }
 
-// backend/routes/auth.ts
-app.post('/api/auth/initialize-agentc', authenticate, async (req, res) => {
-  const userId = req.user.id;
+// Backend: Express endpoint example
+app.post('/api/auth/login', async (req, res) => {
+  const { email, password } = req.body;
   
-  const agentCService = new AgentCAuthService();
-  const payload = await agentCService.getCompleteAgentCPayload(userId);
+  // 1. Authenticate YOUR user
+  const user = await authenticateUser(email, password);
+  if (!user) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
   
-  // Send EVERYTHING to the frontend
+  // 2. Get Agent C tokens for this user
+  // (Your backend manages ChatUser credentials)
+  const agentCTokens = await agentCService.getTokensForUser(user.id);
+  
+  // 3. Return to frontend
   res.json({
-    agent_c: payload,
-    // Include your app's data too
-    app_config: {
-      features: ['voice', 'avatar', 'chat'],
-      theme: 'dark'
+    session_token: generateSessionToken(user),
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name
+    },
+    agent_c: {
+      jwt_token: agentCTokens.jwt_token,
+      websocket_url: agentCTokens.websocket_url,
+      heygen_token: agentCTokens.heygen_token,
+      expires_at: agentCTokens.expires_at
     }
   });
 });
 ```
 
-### Frontend - Using the Complete Payload
+## Progressive Loading UI
 
-```typescript
-// frontend/src/services/AgentCService.ts
-export class AgentCProductionInitializer {
-  private authManager: AuthManager;
-  private client: RealtimeClient;
+Example showing progressive UI updates as data arrives:
+
+```tsx
+import React, { useState, useEffect } from 'react';
+import { useEventListener, useAgentCData } from '@agentc/realtime-react';
+
+function ProgressiveLoadingApp() {
+  const [loadingStates, setLoadingStates] = useState({
+    user: 'loading',
+    voices: 'loading',
+    agents: 'loading',
+    avatars: 'loading',
+    tools: 'loading',
+    session: 'loading'
+  });
   
-  /**
-   * Initialize with the complete payload from YOUR backend
-   * This is the production pattern - no direct Agent C auth
-   */
-  async initializeFromBackend() {
-    // 1. Get the complete payload from YOUR backend
-    const response = await fetch('/api/auth/initialize-agentc', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('app_token')}`
-      }
-    });
-    
-    const data = await response.json();
-    const agentCPayload = data.agent_c;
-    
-    // 2. Create AuthManager with proper configuration
-    this.authManager = new AuthManager({
-      apiUrl: `https://${agentCPayload.api_host}`,
-      autoRefresh: true,
-      onTokensRefreshed: async (tokens) => {
-        // Refresh through YOUR backend
-        await this.refreshThroughBackend();
-      }
-    });
-    
-    // 3. Initialize AuthManager with ALL the data
-    // Note: There's no initializeFromPayload method currently,
-    // so we need to use the internal storage approach:
-    
-    // Store the complete login data
-    this.authManager['loginData'] = agentCPayload;
-    
-    // Parse and set tokens
-    const expiresAt = this.parseJWTExpiry(agentCPayload.agent_c_token);
-    await this.authManager.setTokens({
-      agentCToken: agentCPayload.agent_c_token,
-      heygenToken: agentCPayload.heygen_token,
-      expiresAt: expiresAt
-    });
-    
-    // Update state with user and session info
-    this.authManager['state'].user = agentCPayload.user;
-    this.authManager['state'].uiSessionId = agentCPayload.ui_session_id;
-    
-    // 4. Create RealtimeClient with all features
-    this.client = new RealtimeClient({
-      apiUrl: agentCPayload.websocket_url,
-      authManager: this.authManager,
-      sessionId: agentCPayload.ui_session_id,
-      autoReconnect: true,
-      enableTurnManager: true,
-      enableAudio: true,
-      audioConfig: {
-        enableInput: true,
-        enableOutput: true,
-        respectTurnState: true
-      }
-    });
-    
-    // 5. Connect with all subsystems initialized
-    await this.client.connect();
-    
-    // 6. Now everything is available
-    this.logAvailableResources();
-  }
+  // Listen to individual events for progressive loading
+  useEventListener('chat_user_data', () => {
+    setLoadingStates(prev => ({ ...prev, user: 'loaded' }));
+  });
   
-  /**
-   * Log all available resources to show what we have
-   */
-  private logAvailableResources() {
-    console.group('Agent C Resources Initialized');
-    
-    console.log('User:', this.authManager.getUser());
-    console.log('Agents:', this.authManager.getAgents());
-    console.log('Voices:', this.authManager.getVoices());
-    console.log('Avatars:', this.authManager.getAvatars());
-    console.log('Toolsets:', this.authManager.getToolsets());
-    console.log('UI Session:', this.authManager.getUiSessionId());
-    
-    console.log('Subsystems:', {
-      voiceManager: !!this.client.getVoiceManager(),
-      avatarManager: !!this.client.getAvatarManager(),
-      sessionManager: !!this.client.getSessionManager(),
-      turnManager: !!this.client.getTurnManager()
-    });
-    
-    console.groupEnd();
-  }
+  useEventListener('voice_list', () => {
+    setLoadingStates(prev => ({ ...prev, voices: 'loaded' }));
+  });
   
-  private parseJWTExpiry(token: string): number {
-    const payload = JSON.parse(
-      atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))
-    );
-    return payload.exp * 1000;
-  }
+  useEventListener('agent_list', () => {
+    setLoadingStates(prev => ({ ...prev, agents: 'loaded' }));
+  });
   
-  private async refreshThroughBackend() {
-    const response = await fetch('/api/auth/refresh-agentc', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('app_token')}`
-      }
-    });
-    
-    const data = await response.json();
-    
-    // Update tokens in AuthManager
-    await this.authManager.setTokens({
-      agentCToken: data.agent_c_token,
-      heygenToken: data.heygen_token,
-      expiresAt: this.parseJWTExpiry(data.agent_c_token)
-    });
-  }
+  useEventListener('avatar_list', () => {
+    setLoadingStates(prev => ({ ...prev, avatars: 'loaded' }));
+  });
+  
+  useEventListener('tool_catalog', () => {
+    setLoadingStates(prev => ({ ...prev, tools: 'loaded' }));
+  });
+  
+  useEventListener('chat_session_changed', () => {
+    setLoadingStates(prev => ({ ...prev, session: 'loaded' }));
+  });
+  
+  // Get actual data
+  const { user, voices, agents, avatars, tools, currentSession } = useAgentCData();
+  
+  return (
+    <div className="progressive-app">
+      {/* User Section - Shows as soon as user data loads */}
+      <section className="user-section">
+        {loadingStates.user === 'loading' ? (
+          <div className="skeleton user-skeleton" />
+        ) : (
+          <div className="user-card">
+            <img src={user?.avatar_url || '/default-avatar.png'} />
+            <h2>{user?.display_name}</h2>
+            <p>{user?.email}</p>
+          </div>
+        )}
+      </section>
+      
+      {/* Voice Section - Shows when voices load */}
+      <section className="voice-section">
+        <h3>Available Voices</h3>
+        {loadingStates.voices === 'loading' ? (
+          <div className="skeleton voice-skeleton" />
+        ) : (
+          <div className="voice-grid">
+            {voices.map(voice => (
+              <div key={voice.voice_id} className="voice-card">
+                <span className="voice-name">{voice.name}</span>
+                <span className="voice-lang">{voice.language}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+      
+      {/* Agents Section - Shows when agents load */}
+      <section className="agents-section">
+        <h3>Available Agents</h3>
+        {loadingStates.agents === 'loading' ? (
+          <div className="skeleton agents-skeleton" />
+        ) : (
+          <div className="agents-list">
+            {agents.map(agent => (
+              <div key={agent.id} className="agent-card">
+                <img src={agent.avatar_url} />
+                <div className="agent-info">
+                  <h4>{agent.name}</h4>
+                  <p>{agent.description}</p>
+                  <div className="agent-tools">
+                    {agent.tools.map(tool => (
+                      <span key={tool} className="tool-badge">{tool}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+      
+      {/* Session Info - Shows when session loads */}
+      <section className="session-section">
+        {loadingStates.session === 'loading' ? (
+          <div className="skeleton session-skeleton" />
+        ) : (
+          <div className="session-info">
+            <h3>Current Session</h3>
+            <p>ID: {currentSession?.id}</p>
+            <p>Messages: {currentSession?.message_count}</p>
+            <p>Created: {new Date(currentSession?.created_at || 0).toLocaleString()}</p>
+          </div>
+        )}
+      </section>
+    </div>
+  );
 }
 ```
 
-## Development Pattern - Direct Login
+## Voice-First Application
 
-For development only, you can use direct login and still access everything:
+Example of a voice-focused interface:
 
-```typescript
-// development/dev-initializer.ts
-export class DevelopmentInitializer {
-  private authManager: AuthManager;
-  private client: RealtimeClient;
+```tsx
+import React, { useEffect, useState } from 'react';
+import {
+  useAudio,
+  useTurnState,
+  useChat,
+  useVoiceModel,
+  useInitializationStatus
+} from '@agentc/realtime-react';
+
+function VoiceFirstApp() {
+  const { isInitialized } = useInitializationStatus();
+  const { isRecording, startRecording, stopRecording, audioLevel, isVADActive } = useAudio();
+  const { turnState, isUserTurn, isAgentTurn } = useTurnState();
+  const { messages } = useChat();
+  const { voiceModel, setVoiceModel, availableVoices } = useVoiceModel();
   
-  /**
-   * Development only - direct login to Agent C
-   * Shows how login() method populates everything
-   */
-  async initializeForDevelopment() {
-    console.warn('⚠️ Using direct login - DEVELOPMENT ONLY!');
-    
-    // 1. Create AuthManager
-    this.authManager = new AuthManager({
-      apiUrl: 'https://localhost:8000',  // Local dev server
-      autoRefresh: true
-    });
-    
-    // 2. Direct login - this populates EVERYTHING
-    const loginResponse = await this.authManager.login({
-      username: process.env.DEV_USERNAME!,
-      password: process.env.DEV_PASSWORD!
-    });
-    
-    // The login() method automatically:
-    // - Stores the complete response in loginData
-    // - Parses and stores tokens with expiry
-    // - Updates user and uiSessionId in state
-    // - Schedules token refresh
-    
-    // 3. Create client - WebSocket URL must be constructed
-    const wsUrl = 'wss://localhost:8000/rt/ws';
-    
-    this.client = new RealtimeClient({
-      apiUrl: wsUrl,
-      authManager: this.authManager,
-      sessionId: loginResponse.ui_session_id,
-      autoReconnect: true,
-      enableTurnManager: true,
-      enableAudio: true,
-      audioConfig: {
-        enableInput: true,
-        enableOutput: true
-      },
-      debug: true  // See everything in development
-    });
-    
-    // 4. Everything is now available through AuthManager
-    console.log('Development initialization complete');
-    console.log('Available resources:', {
-      agents: this.authManager.getAgents().length,
-      voices: this.authManager.getVoices().length,
-      avatars: this.authManager.getAvatars().length,
-      toolsets: this.authManager.getToolsets().length
-    });
-    
-    // 5. Connect
-    await this.client.connect();
-  }
-}
-```
-
-## Proposed SDK Enhancement - initializeFromPayload Method
-
-The SDK should have a proper `initializeFromPayload` method to make this cleaner:
-
-```typescript
-// Proposed addition to AuthManager
-export class AuthManager {
-  /**
-   * Initialize from a complete login payload (production pattern)
-   * This should be added to the SDK for cleaner initialization
-   */
-  async initializeFromPayload(payload: CompleteLoginResponse & { websocket_url?: string }) {
-    // Store the complete payload
-    this.loginData = payload;
-    
-    // Parse JWT expiry
-    const expiresAt = this.parseJWTExpiry(payload.agent_c_token);
-    
-    // Create and store token pair
-    const tokens: TokenPair = {
-      agentCToken: payload.agent_c_token,
-      heygenToken: payload.heygen_token,
-      expiresAt
-    };
-    
-    await this.storage.setTokens(tokens);
-    
-    // Update state
-    this.updateState({
-      isAuthenticated: true,
-      tokens,
-      user: payload.user,
-      uiSessionId: payload.ui_session_id,
-      isAuthenticating: false,
-    });
-    
-    // Schedule refresh if enabled
-    if (this.config.autoRefresh) {
-      this.scheduleTokenRefresh(tokens);
+  const [isListening, setIsListening] = useState(false);
+  
+  // Auto-start recording when it's user's turn
+  useEffect(() => {
+    if (isUserTurn && isListening && !isRecording) {
+      startRecording();
+    } else if (!isUserTurn && isRecording) {
+      stopRecording();
     }
-    
-    // Emit login event for subsystems
-    this.emit('auth:login', payload);
-    
-    return payload;
+  }, [isUserTurn, isListening, isRecording]);
+  
+  if (!isInitialized) {
+    return <div className="voice-app-loading">Initializing voice assistant...</div>;
   }
-}
-```
-
-## Common Mistakes and How to Avoid Them
-
-### Mistake 1: Only Using the Token
-
-```typescript
-// ❌ WRONG - Missing all the other data
-const client = new RealtimeClient({
-  apiUrl: 'wss://api.example.com/rt/ws',
-  authToken: loginResponse.agent_c_token  // Just the token
-});
-
-// ✅ CORRECT - Use AuthManager with complete data
-const authManager = new AuthManager({...});
-// Store complete login response
-authManager['loginData'] = loginResponse;
-await authManager.setTokens({...});
-
-const client = new RealtimeClient({
-  apiUrl: wsUrl,
-  authManager: authManager  // Has access to everything
-});
-```
-
-### Mistake 2: Expecting WebSocket URL in Response
-
-```typescript
-// ❌ WRONG - There's no websocket_url in the response
-const wsUrl = loginResponse.websocket_url;  // undefined!
-
-// ✅ CORRECT - Build it yourself
-const wsUrl = `wss://${API_HOST}/rt/ws`;
-```
-
-### Mistake 3: Not Using Available Resources
-
-```typescript
-// ❌ WRONG - Hardcoding when data is available
-client.setAgent('default_agent');  // What if user doesn't have access?
-
-// ✅ CORRECT - Use what's available
-const agents = authManager.getAgents();
-const defaultAgent = agents.find(a => a.key === 'default_agent') || agents[0];
-if (defaultAgent) {
-  client.setAgent(defaultAgent.key);
-}
-```
-
-### Mistake 4: Ignoring Voice Formats
-
-```typescript
-// ❌ WRONG - Assuming all voices use same format
-audioConfig: {
-  sampleRate: 24000  // What if voice uses 16000?
-}
-
-// ✅ CORRECT - Check voice format
-const voices = authManager.getVoices();
-const selectedVoice = voices.find(v => v.voice_id === 'nova');
-if (selectedVoice?.output_format === 'pcm16') {
-  // PCM16 uses 16kHz
-  audioConfig.sampleRate = 16000;
-}
-```
-
-## Testing Your Implementation
-
-Here's how to verify you're using everything correctly:
-
-```typescript
-function verifyCompleteInitialization(authManager: AuthManager, client: RealtimeClient) {
-  const checks = {
-    hasTokens: !!authManager.getAgentCToken(),
-    hasHeyGenToken: !!authManager.getHeygenToken(),
-    hasUser: !!authManager.getUser(),
-    hasUISession: !!authManager.getUiSessionId(),
-    hasAgents: authManager.getAgents().length > 0,
-    hasVoices: authManager.getVoices().length > 0,
-    hasAvatars: authManager.getAvatars().length > 0,
-    hasToolsets: authManager.getToolsets().length > 0,
-    
-    // Subsystems initialized
-    hasVoiceManager: !!client.getVoiceManager(),
-    hasAvatarManager: !!client.getAvatarManager(),
-    hasSessionManager: !!client.getSessionManager(),
-    hasTurnManager: !!client.getTurnManager(),
-    
-    // Voice manager has voices
-    voiceManagerInitialized: client.getVoiceManager()?.getAvailableVoices().length > 0
+  
+  const toggleListening = () => {
+    if (isListening) {
+      setIsListening(false);
+      if (isRecording) stopRecording();
+    } else {
+      setIsListening(true);
+      if (isUserTurn) startRecording();
+    }
   };
   
-  const failed = Object.entries(checks)
-    .filter(([_, value]) => !value)
-    .map(([key]) => key);
+  return (
+    <div className="voice-first-app">
+      {/* Voice Model Selector */}
+      <div className="voice-selector-bar">
+        <label>Assistant Voice:</label>
+        <select value={voiceModel} onChange={(e) => setVoiceModel(e.target.value)}>
+          {availableVoices.map(voice => (
+            <option key={voice.voice_id} value={voice.voice_id}>
+              {voice.name} ({voice.gender})
+            </option>
+          ))}
+        </select>
+      </div>
+      
+      {/* Main Voice Interface */}
+      <div className="voice-interface">
+        {/* Status Display */}
+        <div className="status-display">
+          {isUserTurn && <div className="status user-turn">Your turn to speak</div>}
+          {isAgentTurn && <div className="status agent-turn">Assistant is speaking</div>}
+          {turnState === 'processing' && <div className="status processing">Processing...</div>}
+          {turnState === 'idle' && <div className="status idle">Ready</div>}
+        </div>
+        
+        {/* Voice Button */}
+        <button 
+          className={`voice-button ${isListening ? 'listening' : ''} ${isRecording ? 'recording' : ''}`}
+          onClick={toggleListening}
+        >
+          <div className="voice-button-inner">
+            {isListening ? (
+              isRecording ? '🔴' : '⏸️'
+            ) : (
+              '🎤'
+            )}
+          </div>
+          
+          {/* Audio Level Indicator */}
+          {isRecording && (
+            <div className="audio-rings">
+              <div 
+                className="audio-ring" 
+                style={{ 
+                  transform: `scale(${1 + audioLevel * 0.5})`,
+                  opacity: audioLevel 
+                }}
+              />
+            </div>
+          )}
+          
+          {/* VAD Indicator */}
+          {isVADActive && (
+            <div className="vad-indicator">Speaking detected</div>
+          )}
+        </button>
+        
+        <div className="button-label">
+          {isListening ? 'Tap to stop' : 'Tap to start'}
+        </div>
+      </div>
+      
+      {/* Transcript */}
+      <div className="transcript">
+        <h3>Conversation</h3>
+        <div className="transcript-messages">
+          {messages.slice(-10).map((msg, i) => (
+            <div key={i} className={`transcript-message ${msg.role}`}>
+              <span className="role">{msg.role === 'user' ? 'You' : 'Assistant'}:</span>
+              <span className="text">{msg.content}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+## Multi-Session Chat
+
+Example with session management:
+
+```tsx
+import React, { useState } from 'react';
+import {
+  useChatSession,
+  useChat,
+  useInitializationStatus,
+  useAgentCData
+} from '@agentc/realtime-react';
+
+function MultiSessionChat() {
+  const { isInitialized } = useInitializationStatus();
+  const { user } = useAgentCData();
+  const { 
+    currentSession, 
+    sessions, 
+    createSession, 
+    switchSession, 
+    deleteSession,
+    renameSession 
+  } = useChatSession();
+  const { messages, sendMessage } = useChat();
   
-  if (failed.length > 0) {
-    console.error('Initialization incomplete:', failed);
-    return false;
+  const [showNewSessionDialog, setShowNewSessionDialog] = useState(false);
+  const [newSessionName, setNewSessionName] = useState('');
+  const [messageInput, setMessageInput] = useState('');
+  
+  if (!isInitialized) {
+    return <div>Loading sessions...</div>;
   }
   
-  console.log('✅ Complete initialization verified!');
-  return true;
+  const handleCreateSession = async () => {
+    if (newSessionName.trim()) {
+      await createSession(newSessionName);
+      setNewSessionName('');
+      setShowNewSessionDialog(false);
+    }
+  };
+  
+  const handleSendMessage = async () => {
+    if (messageInput.trim()) {
+      await sendMessage(messageInput);
+      setMessageInput('');
+    }
+  };
+  
+  return (
+    <div className="multi-session-chat">
+      {/* Sidebar with sessions */}
+      <aside className="sessions-sidebar">
+        <div className="sidebar-header">
+          <h3>Chat Sessions</h3>
+          <button onClick={() => setShowNewSessionDialog(true)}>+ New</button>
+        </div>
+        
+        <div className="sessions-list">
+          {sessions.map(session => (
+            <div 
+              key={session.id}
+              className={`session-item ${session.id === currentSession?.id ? 'active' : ''}`}
+              onClick={() => switchSession(session.id)}
+            >
+              <div className="session-info">
+                <div className="session-name">
+                  {session.name || `Session ${session.id.slice(0, 8)}`}
+                </div>
+                <div className="session-meta">
+                  {session.message_count} messages • 
+                  {new Date(session.updated_at).toLocaleDateString()}
+                </div>
+              </div>
+              <div className="session-actions">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const newName = prompt('Rename session:', session.name);
+                    if (newName) renameSession(session.id, newName);
+                  }}
+                >
+                  ✏️
+                </button>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (confirm('Delete this session?')) {
+                      deleteSession(session.id);
+                    }
+                  }}
+                >
+                  🗑️
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </aside>
+      
+      {/* Main chat area */}
+      <main className="chat-area">
+        <div className="chat-header">
+          <h2>{currentSession?.name || 'Chat'}</h2>
+          <span className="user-info">👤 {user?.display_name}</span>
+        </div>
+        
+        <div className="messages-area">
+          {messages.map((msg, i) => (
+            <div key={i} className={`message ${msg.role}`}>
+              <div className="message-content">{msg.content}</div>
+              <div className="message-time">
+                {new Date(msg.timestamp).toLocaleTimeString()}
+              </div>
+            </div>
+          ))}
+        </div>
+        
+        <div className="input-area">
+          <input
+            type="text"
+            value={messageInput}
+            onChange={(e) => setMessageInput(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+            placeholder="Type your message..."
+          />
+          <button onClick={handleSendMessage}>Send</button>
+        </div>
+      </main>
+      
+      {/* New session dialog */}
+      {showNewSessionDialog && (
+        <div className="dialog-overlay">
+          <div className="dialog">
+            <h3>Create New Session</h3>
+            <input
+              type="text"
+              value={newSessionName}
+              onChange={(e) => setNewSessionName(e.target.value)}
+              placeholder="Session name..."
+              autoFocus
+            />
+            <div className="dialog-buttons">
+              <button onClick={handleCreateSession}>Create</button>
+              <button onClick={() => setShowNewSessionDialog(false)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 ```
 
 ## Summary
 
-The Agent C login response contains **much more** than just authentication tokens. It provides:
+These examples demonstrate the key changes in v2.0.0:
 
-1. **Authentication tokens** (JWT and HeyGen)
-2. **User information** with roles and groups
-3. **Available agents** the user can access
-4. **HeyGen avatars** for video streaming
-5. **Voice models** with format specifications
-6. **Toolsets** with complete schemas
-7. **UI session ID** for reconnection
+1. **Simplified Login** - Login only returns tokens, not data
+2. **Automatic Events** - 6 events deliver all configuration
+3. **New Hooks** - `useAgentCData()`, `useInitializationStatus()`, etc.
+4. **Progressive Loading** - UI can update as data arrives
+5. **No Manual Storage** - SDK handles all data internally
 
-The WebSocket URL is **NOT** included and must be constructed from your API configuration.
-
-To properly use the SDK:
-
-1. **Store the complete login response** in AuthManager
-2. **Parse the JWT** to get token expiry
-3. **Build the WebSocket URL** yourself
-4. **Initialize with AuthManager** not just a token
-5. **Access all resources** through AuthManager methods
-6. **Use available data** instead of hardcoding
-
-In production, your backend fetches this data and provides it to the frontend. In development, you can use direct login but should transition to the production pattern before deployment.
-
-The SDK automatically initializes subsystems (VoiceManager, AvatarManager, etc.) when the AuthManager has the necessary data, giving you a fully-featured real-time communication client with voice, avatar, and chat capabilities.
+For more examples and patterns, see:
+- [Migration Guide](../guides/authentication-migration.md)
+- [API Reference](../api-reference/core/events.md)
+- [React Hooks Guide](../api-reference/react/hooks.md)

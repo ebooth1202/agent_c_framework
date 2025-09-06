@@ -1,4 +1,3 @@
-import platform
 from typing import Dict, Any, List, Mapping
 
 from .base_validator import ValidationResult
@@ -70,7 +69,7 @@ class GitCommandValidator:
         return ValidationResult(
             True,
             "OK",
-            timeout=spec.get("timeout") or policy.get("default_timeout")
+            timeout=spec.get("timeout") or policy.get("default_timeout"), policy_spec=spec
         )
 
     @staticmethod

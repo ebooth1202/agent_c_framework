@@ -34,80 +34,35 @@ async function initializeFromBackend() {
     autoRefresh: true,
   });
 
-  // Your backend provides the complete login payload
-  // This might come from your own authentication service
+  // Your backend provides the simplified login payload
+  // NOTE: Breaking change - login now only returns tokens and session ID
+  // All configuration data comes through WebSocket events after connection
   const payloadFromBackend: LoginResponse = {
     agent_c_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
     heygen_token: 'hg_token_123...',
-    user: {
-      user_id: 'user123',
-      user_name: 'user@example.com',
-      email: 'user@example.com',
-      first_name: 'John',
-      last_name: 'Doe',
-      is_active: true,
-      roles: ['user'],
-      groups: [],
-      created_at: '2024-01-01T00:00:00Z',
-      last_login: '2024-01-01T00:00:00Z',
-    },
-    agents: [
-      {
-        key: 'agent1',
-        name: 'Assistant',
-        agent_description: 'AI Assistant',
-        category: ['assistant'],
-      },
-    ],
-    avatars: [
-      {
-        avatar_id: 'avatar1',
-        created_at: 1704067200,
-        default_voice: 'en-US-1',
-        is_public: false,
-        normal_preview: 'https://example.com/avatar.jpg',
-        pose_name: 'default',
-        status: 'active',
-      },
-    ],
-    voices: [
-      {
-        voice_id: 'voice1',
-        vendor: 'openai',
-        description: 'Alloy voice',
-        output_format: 'pcm16',
-      },
-    ],
-    toolsets: [
-      {
-        name: 'Default Tools',
-        description: 'Standard toolset',
-        schemas: {},
-      },
-    ],
     ui_session_id: 'session_abc123',
   };
 
   // WebSocket URL (might also come from your backend)
   const wsUrl = 'wss://api.example.com/rt/ws';
 
-  // Initialize with the complete payload
+  // Initialize with the simplified payload
   await authManager.initializeFromPayload(payloadFromBackend, wsUrl);
 
-  // Now you can access all resources immediately
-  const agents = authManager.getAgents();
-  const voices = authManager.getVoices();
-  // const avatars = authManager.getAvatars();
-  // const toolsets = authManager.getToolsets();
-  // const token = authManager.getAgentCToken();
-  // const heygenToken = authManager.getHeygenToken();
-  const user = authManager.getUser();
-  // const sessionId = authManager.getUiSessionId();
+  // NOTE: Configuration data is no longer available from authManager
+  // Data like agents, voices, avatars, toolsets, and sessions now come
+  // through WebSocket events after connection.
+  
+  const token = authManager.getAgentCToken();
+  const heygenToken = authManager.getHeygenToken();
+  const user = authManager.getUser(); // Will be null until chat_user_data event
+  const sessionId = authManager.getUiSessionId();
 
-  // AuthManager is fully initialized and ready to use
-  console.log('Authenticated user:', user?.user_name);
-  console.log('Available agents:', agents.length);
-  console.log('Available voices:', voices.length);
+  // AuthManager is initialized with tokens only
+  console.log('Authentication token:', token ? 'Present' : 'Missing');
+  console.log('HeyGen token:', heygenToken ? 'Present' : 'Missing');
+  console.log('User data:', user ? user.user_name : 'Will come from WebSocket events');
+  console.log('UI Session ID:', sessionId);
   
   // The auth tokens will auto-refresh if autoRefresh is enabled
   // The authManager will emit the same events as if you had logged in normally

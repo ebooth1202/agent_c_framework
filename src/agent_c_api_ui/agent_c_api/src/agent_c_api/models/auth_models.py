@@ -12,6 +12,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from pydantic import BaseModel, Field, EmailStr
 
 from agent_c.models.agent_config import CurrentAgentConfiguration, AgentCatalogEntry
+from agent_c.models.chat_history.chat_session import ChatSessionQueryResponse
 from agent_c.models.client_tool_info import ClientToolInfo
 from agent_c.models.heygen import Avatar
 from agent_c_api.core.voice.models import AvailableVoiceModel
@@ -142,8 +143,3 @@ class RealtimeLoginResponse(BaseModel):
     agent_c_token: str = Field(..., description="JWT authentication token")
     heygen_token: str = Field(..., description="HeyGen access token")
     ui_session_id: str = Field(..., description="UI session identifier")
-    user: ChatUserResponse = Field(..., description="User profile information")
-    agents: List[AgentCatalogEntry] = Field(..., description="Available agents catalog")
-    avatars: List[Avatar] = Field(..., description="Available avatar list")
-    toolsets: List[ClientToolInfo] = Field(..., description="Available toolsets and their tools")
-    voices: List[AvailableVoiceModel] = Field(..., description="Available TTS voice models")

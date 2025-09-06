@@ -27,6 +27,7 @@ export interface Agent {
   key: string;
   agent_description: string | null;
   category: string[];
+  tools: string[];
 }
 
 /**
@@ -156,6 +157,28 @@ export interface ChatSession {
 }
 
 /**
+ * Lightweight session index entry for paginated session lists
+ * Used when fetching session lists without full message history
+ */
+export interface ChatSessionIndexEntry {
+  session_id: string;
+  session_name: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  user_id: string | null;
+}
+
+/**
+ * Response model for paginated session queries
+ * Supports infinite scrolling and batch loading of sessions
+ */
+export interface ChatSessionQueryResponse {
+  chat_sessions: ChatSessionIndexEntry[];
+  total_sessions: number;
+  offset: number;
+}
+
+/**
  * Tool call structure for function calling
  */
 export interface ToolCall {
@@ -199,15 +222,13 @@ export type MessageFormat = 'text' | 'markdown';
 
 /**
  * Login response structure
+ * NOTE: Breaking change - login now only returns tokens and session ID.
+ * All configuration data (user, agents, avatars, voices, toolsets, sessions) 
+ * now comes through WebSocket events after connection.
  */
 export interface LoginResponse {
   agent_c_token: string;
   heygen_token: string;
-  user: User;
-  agents: Agent[];
-  avatars: Avatar[];
-  toolsets: Toolset[];
-  voices: Voice[];
   ui_session_id: string;
 }
 

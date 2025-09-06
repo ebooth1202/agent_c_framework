@@ -2,8 +2,10 @@ from typing import List, Optional, Any
 
 from pydantic import Field
 
-from agent_c.models import ChatSession
+from agent_c.models import ChatSession, ChatUser
 from agent_c.models.agent_config import CurrentAgentConfiguration, AgentCatalogEntry
+from agent_c.models.chat_history.chat_session import ChatSessionQueryResponse
+from agent_c.models.client_tool_info import ClientToolInfo
 from agent_c.models.events import BaseEvent
 from agent_c.models.heygen import Avatar, HeygenAvatarSessionData, NewSessionRequest
 from agent_c_api.core.voice.models import AvailableVoiceModel
@@ -142,6 +144,41 @@ class ChatSessionNameChangedEvent(BaseEvent):
     """
     session_name: str
 
+class GetUserSessionsEvent(BaseEvent):
+    """
+    Event to request a list of user chat sessions.
+
+    This event does not require any additional data.
+    """
+    offset: int = 0
+    limit: int = 50
+
+class GetUserSessionsResponseEvent(BaseEvent):
+    """
+    Event to send a list of user chat sessions.
+
+    Attributes:
+        sessions (ChatSessionQueryResponse): A model with a list of user chat session, total count, offset
+    """
+    sessions: ChatSessionQueryResponse
+
+class PingEvent(BaseEvent):
+    """
+    Event to check if the connection is alive.
+
+    This event does not require any additional data.
+    """
+    pass
+
+class PongEvent(BaseEvent):
+    """
+    Event to respond to a ping event.
+
+    This event does not require any additional data.
+    """
+    pass
+
+
 class SetSessionMetadataEvent(BaseEvent):
     """
     Event to set metadata for the current chat session.
@@ -171,6 +208,50 @@ class SetAgentVoiceEvent(BaseEvent):
         voice_id (str): The ID of the voice to set.
     """
     voice_id: str
+
+class GetVoicesEvent(BaseEvent):
+    """
+    Event to request a list of available voices.
+
+    This event does not require any additional data.
+    """
+    pass
+
+class VoiceListEvent(BaseEvent):
+    """
+    Event to send a list of available voices.
+
+    Attributes:
+        voices (list): A list of available voices.
+    """
+    voices: List[AvailableVoiceModel]
+
+class GetToolCatalogEvent(BaseEvent):
+    """
+    Event to request the tool catalog.
+
+    This event does not require any additional data.
+    """
+    pass
+
+class ToolCatalogEvent(BaseEvent):
+    """
+    Event to send the tool catalog.
+
+    Attributes:
+        tools (list): A list of available tools.
+    """
+    tools: List[ClientToolInfo]
+
+class ChatUserDataEvent(BaseEvent):
+    """
+    Event to send user-specific data.
+
+    Attributes:
+        user (ChatUser): The user data.
+    """
+    user: ChatUser
+
 
 class AgentVoiceChangedEvent(BaseEvent):
     """

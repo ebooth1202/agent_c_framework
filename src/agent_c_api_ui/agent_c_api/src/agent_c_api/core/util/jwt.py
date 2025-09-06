@@ -2,11 +2,16 @@ import os
 import sys
 import argparse
 
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from fastapi import WebSocket, HTTPException, status, Request
 from fastapi.security import HTTPBearer
 from jose import jwt, JWTError
 from datetime import datetime, timedelta, UTC
+
+from agent_c_api.models.auth_models import ChatUserResponse
+
+if TYPE_CHECKING:
+    from agent_c.models.chat_history.user import ChatUser
 
 
 # JWT Configuration
@@ -22,14 +27,14 @@ def _jwt_secret_key() -> str:
 
     return secret_key
 
-def create_jwt_token(user_id: str, permissions: list = None, time_delta: Optional[timedelta] = None ) -> str:
+def create_jwt_token(user: 'ChatUser',  time_delta: Optional[timedelta] = None ) -> str:
     """Create a JWT token for a user"""
     if time_delta is None:
         time_delta = timedelta(hours=24)
     now = datetime.now(UTC)  # Python 3.11+ has UTC constant
     payload = {
-        "sub": user_id,
-        "permissions": permissions or [],
+        "sub": user.user_id,
+        "user": ChatUserResponse.from_chat_user(user).model_dump(),
         "exp": now + time_delta,
         "iat": now,
     }

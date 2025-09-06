@@ -16,6 +16,10 @@ import {
   SetChatSessionNameEvent,
   SetSessionMetadataEvent,
   SetSessionMessagesEvent,
+  GetUserSessionsEvent,
+  GetVoicesEvent,
+  GetToolCatalogEvent,
+  PingEvent,
   ClientEvent
 } from './types/ClientEvents';
 
@@ -38,6 +42,11 @@ import {
   UserTurnEndEvent,
   AgentVoiceChangedEvent,
   ErrorEvent,
+  GetUserSessionsResponseEvent,
+  ChatUserDataEvent,
+  VoiceListEvent,
+  ToolCatalogEvent,
+  PongEvent,
   ServerEvent
 } from './types/ServerEvents';
 
@@ -57,6 +66,10 @@ export interface ClientEventMap {
   'set_chat_session_name': SetChatSessionNameEvent;
   'set_session_metadata': SetSessionMetadataEvent;
   'set_session_messages': SetSessionMessagesEvent;
+  'get_user_sessions': GetUserSessionsEvent;
+  'get_voices': GetVoicesEvent;
+  'get_tool_catalog': GetToolCatalogEvent;
+  'ping': PingEvent;
 }
 
 /**
@@ -81,6 +94,11 @@ export interface ServerEventMap {
   'user_turn_end': UserTurnEndEvent;
   'agent_voice_changed': AgentVoiceChangedEvent;
   'error': ErrorEvent;
+  'get_user_sessions_response': GetUserSessionsResponseEvent;
+  'chat_user_data': ChatUserDataEvent;
+  'voice_list': VoiceListEvent;
+  'tool_catalog': ToolCatalogEvent;
+  'pong': PongEvent;
 }
 
 /**
@@ -94,6 +112,9 @@ export interface RealtimeEventMap extends ClientEventMap, ServerEventMap {
   'disconnected': { code: number; reason: string };
   'reconnecting': { attempt: number; delay: number };
   'reconnected': void;
+  // WebSocket ping/pong events
+  'ping': any;
+  'pong': any;
 }
 
 /**
@@ -132,7 +153,11 @@ export class EventRegistry {
     'resume_chat_session',
     'set_chat_session_name',
     'set_session_metadata',
-    'set_session_messages'
+    'set_session_messages',
+    'get_user_sessions',
+    'get_voices',
+    'get_tool_catalog',
+    'ping'
   ]);
 
   private static readonly serverEventTypes = new Set<string>([
@@ -153,7 +178,12 @@ export class EventRegistry {
     'user_turn_start',
     'user_turn_end',
     'agent_voice_changed',
-    'error'
+    'error',
+    'get_user_sessions_response',
+    'chat_user_data',
+    'voice_list',
+    'tool_catalog',
+    'pong'
   ]);
 
   /**
@@ -176,7 +206,7 @@ export class EventRegistry {
   static isValidEventType(type: string): type is EventType {
     return this.isClientEventType(type) || 
            this.isServerEventType(type) ||
-           ['binary_audio', 'audio:output', 'connected', 'disconnected', 'reconnecting', 'reconnected'].includes(type);
+           ['binary_audio', 'audio:output', 'connected', 'disconnected', 'reconnecting', 'reconnected', 'ping', 'pong'].includes(type);
   }
 
   /**

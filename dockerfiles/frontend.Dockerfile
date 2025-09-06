@@ -16,12 +16,14 @@ RUN npm install
 
 # Then copy the rest of the app
 COPY src/agent_c_api_ui/agent_c_react_client/ ./
+COPY src/agent_c_api_ui/agent_c_react_client/vite.config.js.docker ./vite.config.js
 COPY agent_c_config /app/agent_c_config
+
 # Set environment variables
 ARG NODE_ENV=development
 ENV NODE_ENV=${NODE_ENV}
-ENV VITE_API_URL=http://localhost:8000/api/v1
-ENV VITE_RAG_API_URL=http://localhost:8000/api/v1
+ENV VITE_API_URL=https://localhost:8000/api/v1
+ENV VITE_RAG_API_URL=https://localhost:8000/api/v1
 
 # Expose the Vite dev server port
 EXPOSE 5173
