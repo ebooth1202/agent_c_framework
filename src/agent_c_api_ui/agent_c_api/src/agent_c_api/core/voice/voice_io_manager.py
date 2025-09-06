@@ -87,6 +87,9 @@ class VoiceIOManager:
         if self._pipeline_task is not None:
             self._pipeline_task.cancel()
 
+        # Disable for now
+        return
+
         voice = voice or self._voice
         tts_voice = voice.voice_id if voice else None
 
