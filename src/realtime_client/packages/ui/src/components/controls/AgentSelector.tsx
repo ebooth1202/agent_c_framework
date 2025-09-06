@@ -75,7 +75,7 @@ const AgentSelectorPopover: React.FC<{
   triggerRef: React.RefObject<HTMLButtonElement>
 }> = ({ open, onClose, agents, selectedAgent, onSelect, isChanging, triggerRef }) => {
   const [searchValue, setSearchValue] = React.useState('')
-  const [position, setPosition] = React.useState({ top: 0, left: 0, width: 0 })
+  const [position, setPosition] = React.useState({ top: 0, left: 0, width: 0, maxHeight: 400 })
   const popoverRef = React.useRef<HTMLDivElement>(null)
   const searchInputRef = React.useRef<HTMLInputElement>(null)
   
@@ -100,16 +100,52 @@ const AgentSelectorPopover: React.FC<{
     if (open && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect()
       const viewportHeight = window.innerHeight
-      const spaceBelow = viewportHeight - rect.bottom
-      const popoverHeight = 450 // max height from style
+      const viewportWidth = window.innerWidth
+      const spaceBelow = viewportHeight - rect.bottom - 20 // 20px for padding
+      const spaceAbove = rect.top - 20
       
-      // Position below button if space, otherwise above
-      const shouldFlip = spaceBelow < popoverHeight && rect.top > popoverHeight
+      // Calculate max height that fits in viewport
+      const preferredHeight = 400
+      const minHeight = 200
+      
+      let top: number
+      let maxHeight: number
+      
+      // Prefer positioning below if there's enough space
+      if (spaceBelow >= minHeight) {
+        // Position below
+        top = rect.bottom + 8
+        maxHeight = Math.min(preferredHeight, spaceBelow)
+      } else if (spaceAbove >= minHeight) {
+        // Position above if not enough space below
+        maxHeight = Math.min(preferredHeight, spaceAbove)
+        top = rect.top - maxHeight - 8
+      } else {
+        // If neither has enough space, use the larger space
+        if (spaceBelow > spaceAbove) {
+          top = rect.bottom + 8
+          maxHeight = spaceBelow
+        } else {
+          maxHeight = spaceAbove
+          top = rect.top - maxHeight - 8
+        }
+      }
+      
+      // Ensure left position keeps popover in viewport
+      let left = rect.left
+      const popoverWidth = 400
+      if (left + popoverWidth > viewportWidth - 20) {
+        left = viewportWidth - popoverWidth - 20
+      }
+      if (left < 20) {
+        left = 20
+      }
       
       setPosition({
-        top: shouldFlip ? rect.top - popoverHeight - 8 : rect.bottom + 8,
-        left: rect.left,
-        width: rect.width
+        top,
+        left,
+        width: rect.width,
+        maxHeight
       })
       
       // Focus search input
@@ -163,25 +199,27 @@ const AgentSelectorPopover: React.FC<{
         aria-hidden="true"
       />
       
-      {/* Popover Content - Fixed positioning */}
+      {/* Popover Content - Fixed positioning with dynamic height */}
       <div
         ref={popoverRef}
         className={cn(
           "fixed z-[9999] w-[400px] max-w-[calc(100vw-2rem)]",
           "bg-background border border-border rounded-lg shadow-xl",
-          "animate-in fade-in-0 zoom-in-95"
+          "animate-in fade-in-0 zoom-in-95",
+          "flex flex-col overflow-hidden" // Add flex layout
         )}
         style={{
           top: `${position.top}px`,
           left: `${position.left}px`,
           minWidth: `${Math.max(position.width, 200)}px`,
-          maxHeight: 'min(450px, calc(100vh - 100px))'
+          maxHeight: `${position.maxHeight}px`,
+          height: 'auto'
         }}
         role="listbox"
         aria-label="Select an agent"
       >
-        {/* Search Header */}
-        <div className="p-3 border-b border-border">
+        {/* Search Header - Fixed height */}
+        <div className="flex-shrink-0 p-3 border-b border-border">
           <div className="flex items-center gap-2">
             <Search className="h-4 w-4 text-muted-foreground" />
             <Input
@@ -207,8 +245,8 @@ const AgentSelectorPopover: React.FC<{
           </div>
         </div>
         
-        {/* Agents List */}
-        <ScrollArea className="h-[350px]">
+        {/* Agents List - Flexible height that fills available space */}
+        <ScrollArea className="flex-1 min-h-0 overflow-auto">
           <div className="p-2">
             {filteredAgents.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground text-sm">
@@ -291,8 +329,8 @@ const AgentSelectorPopover: React.FC<{
           </div>
         </ScrollArea>
         
-        {/* Footer with agent count */}
-        <div className="p-2 border-t border-border">
+        {/* Footer with agent count - Fixed height */}
+        <div className="flex-shrink-0 p-2 border-t border-border">
           <p className="text-xs text-muted-foreground text-center">
             {filteredAgents.length} of {agents.length} agents
             {searchValue && " matching search"}
