@@ -1,5 +1,5 @@
 from .chat_service import ChatService
-from .user_service import UserService
+from .auth_service import AuthService
 from .session_service import SessionService
 
-__all__ = ["ChatService", "UserService", "SessionService"]
+__all__ = ["ChatService","SessionService", "AuthService"]

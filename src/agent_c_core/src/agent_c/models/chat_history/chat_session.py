@@ -15,7 +15,10 @@ class ChatSessionIndexEntry(BaseModel):
     session_name: Optional[str] = Field(None, description="The name of the session, if any")
     created_at: Optional[str] = Field(default_factory=lambda: datetime.datetime.now().isoformat())
     updated_at: Optional[str] = Field(default_factory=lambda: datetime.datetime.now().isoformat())
-    user_id: Optional[str] = Field("Agent C user", description="The user ID associated with the session")
+    user_id: Optional[str] = Field("admin", description="The user ID associated with the session")
+    agent_key: Optional[str] = Field(None, description="The key of the agent associated with the session")
+    agent_name: Optional[str] = Field(None, description="The name of the agent associated with the session")
+
 
 
 class ChatSessionQueryResponse(BaseModel):
@@ -40,7 +43,7 @@ class ChatSession(BaseModel):
     created_at: Optional[str] = Field(default_factory=lambda: datetime.datetime.now().isoformat())
     updated_at: Optional[str] = Field(default_factory=lambda: datetime.datetime.now().isoformat())
     deleted_at: Optional[str] = Field(None, description="Timestamp when the session was deleted")
-    user_id: Optional[str] = Field("Agent C user", description="The user ID associated with the session")
+    user_id: Optional[str] = Field("admin", description="The user ID associated with the session")
     metadata: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Metadata associated with the session")
     messages: List[dict[str, Any]] = Field(default_factory=list, description="List of messages in the session")
     agent_config: Optional[CurrentAgentConfiguration] = Field(None, description="Configuration for the agent associated with the session")

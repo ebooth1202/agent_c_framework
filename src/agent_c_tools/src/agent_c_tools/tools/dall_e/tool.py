@@ -90,7 +90,7 @@ class DallETools(Toolset):
         await self._render_media_markdown(f"### Generating image from prompt:\n> {prompt}\n\n",
                                           "DALL-E-3 Image Generation", session_id=session_id)
 
-        user: str = tool_context.get('current_user_username', 'Agent C User')
+        user: str = tool_context.get('current_user_username', 'admin')
 
         try:
             response: ImagesResponse = await self.openai_client.images.generate(prompt=prompt, size=size, quality=quality, style=style,

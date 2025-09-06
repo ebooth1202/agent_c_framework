@@ -33,6 +33,8 @@ class ChatSessionIndex(Base):
     created_at: Mapped[str] = mapped_column(String(32), nullable=False)
     updated_at: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     user_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    agent_key:Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    agent_name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     
     __table_args__ = (
         Index("idx_user_updated", "user_id", "updated_at"),
@@ -131,7 +133,9 @@ class SavedChatLoader(ConfigLoader):
             session_name=session.session_name,
             created_at=session.created_at,
             updated_at=session.updated_at,
-            user_id=session.user_id
+            user_id=session.user_id,
+            agent_key = session.agent_config.key,
+            agent_name = session.agent_config.agent_name
         )
 
     async def _create_index_entry(self, session: ChatSession) -> None:
@@ -149,7 +153,9 @@ class SavedChatLoader(ConfigLoader):
                 session_name=index_entry.session_name,
                 created_at=index_entry.created_at,
                 updated_at=index_entry.updated_at,
-                user_id=index_entry.user_id
+                user_id=index_entry.user_id,
+                agent_key = index_entry.key,
+                agent_name = index_entry.agent_name
             )
             db_session.add(index_record)
             await db_session.commit()
@@ -176,6 +182,8 @@ class SavedChatLoader(ConfigLoader):
                 existing_record.session_name = index_entry.session_name
                 existing_record.updated_at = index_entry.updated_at
                 existing_record.user_id = index_entry.user_id
+                existing_record.agent_key = session.agent_config.key
+                existing_record.agent_name = session.agent_config.agent_name
                 await db_session.commit()
                 self.logger.debug(f"Updated index entry for session {session.session_id}")
             else:
@@ -238,7 +246,9 @@ class SavedChatLoader(ConfigLoader):
                     session_name=record.session_name,
                     created_at=record.created_at,
                     updated_at=record.updated_at,
-                    user_id=record.user_id
+                    user_id=record.user_id,
+                    agent_key=record.agent_key,
+                    agent_name=record.agent_name
                 )
                 for record in session_records
             ]
@@ -392,33 +402,39 @@ class SavedChatLoader(ConfigLoader):
             await db_session.commit()
         
         self.logger.info("Cleared existing chat session index")
-        
+        paths = [self.save_file_folder, self.save_file_folder.joinpath("agent__c__user")]
         # First, migrate any files from legacy flat structure
-        if self.save_file_folder.exists():
-            for json_file in self.save_file_folder.glob("*.json"):
-                try:
-                    # Load the session to get the user_id
-                    with open(json_file, 'r', encoding='utf-8') as f:
-                        session_data = json.load(f)
-                    
-                    session = ChatSession.model_validate(session_data)
-                    user_folder = self._get_user_folder(session.user_id)
-                    user_folder.mkdir(parents=True, exist_ok=True)
-                    
-                    # Move file to user subfolder
-                    new_path = user_folder / json_file.name
-                    if not new_path.exists():  # Don't overwrite existing files
-                        json_file.rename(new_path)
-                        stats["migrated_files"] += 1
-                        stats["users_processed"].add(session.user_id)
-                        self.logger.debug(f"Migrated {json_file.name} to {session.user_id} folder")
-                    else:
-                        self.logger.warning(f"File {new_path} already exists, skipping migration of {json_file}")
-                        
-                except Exception as e:
-                    error_msg = f"Failed to migrate {json_file}: {e}"
-                    stats["errors"].append(error_msg)
-                    self.logger.error(error_msg)
+        for path in paths:
+            if path.exists():
+                for json_file in path.glob("*.json"):
+                    try:
+                        # Load the session to get the user_id
+                        with open(json_file, 'r', encoding='utf-8') as f:
+                            session_data = json.load(f)
+
+                        session = ChatSession.model_validate(session_data)
+                        if session.user_id is None or session.user_id.lower() == "agent c user":
+                            session.user_id = "admin"  # Migrate old single user account to 'admin'
+                            with open(json_file, 'w', encoding='utf-8') as f:
+                                json.dump(session.model_dump(), f, indent=4)
+
+                        user_folder = self._get_user_folder(session.user_id)
+                        user_folder.mkdir(parents=True, exist_ok=True)
+
+                        # Move file to user subfolder
+                        new_path = user_folder / json_file.name
+                        if not new_path.exists():  # Don't overwrite existing files
+                            json_file.rename(new_path)
+                            stats["migrated_files"] += 1
+                            stats["users_processed"].add(session.user_id)
+                            self.logger.debug(f"Migrated {json_file.name} to {session.user_id} folder")
+                        else:
+                            self.logger.warning(f"File {new_path} already exists, skipping migration of {json_file}")
+
+                    except Exception as e:
+                        error_msg = f"Failed to migrate {json_file}: {e}"
+                        stats["errors"].append(error_msg)
+                        self.logger.error(error_msg)
         
         # Now rebuild index from all user folders
         if self.save_file_folder.exists():
@@ -478,7 +494,8 @@ class SavedChatLoader(ConfigLoader):
         legacy_files_exist = False
         if self.save_file_folder.exists():
             legacy_files = list(self.save_file_folder.glob("*.json"))
-            legacy_files_exist = len(legacy_files) > 0
+            agent_c_user_files = list(self.save_file_folder.joinpath("agent__c__user").glob("*.json"))
+            legacy_files_exist = len(legacy_files) > 0 or len(agent_c_user_files) > 0
         
         if legacy_files_exist:
             self.logger.info("Legacy session files detected, running migration...")

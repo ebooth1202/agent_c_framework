@@ -137,7 +137,7 @@ class ClaudeChatAgent(BaseAgent):
         if len(functions):
             completion_opts['tools'] = functions
 
-        completion_opts["metadata"] = {'user_id': kwargs.get('user_id', 'Agent C user')}
+        completion_opts["metadata"] = {'user_id': kwargs.get('user_id', 'admin')}
 
         opts = {"callback_opts": callback_opts, "completion_opts": completion_opts, 'tool_chest': tool_chest, 'tool_context': tool_context}
         return opts
