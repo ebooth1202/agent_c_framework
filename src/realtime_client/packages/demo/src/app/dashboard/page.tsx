@@ -6,6 +6,7 @@ import { LogOut, Mic } from "lucide-react"
 
 import { isAuthenticated, logout, getCurrentUser } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
+import RealtimeChat from "@/components/realtime-chat"
 import {
   Card,
   CardContent,
@@ -97,43 +98,8 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Realtime Interface Placeholder */}
-          <Card className="border-dashed">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                  <Mic className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <CardTitle>Realtime Interface</CardTitle>
-                  <CardDescription className="text-muted-foreground">
-                    Coming Soon
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  The realtime voice and chat interface will be added here. This will include:
-                </p>
-                <ul className="list-inside list-disc space-y-1 text-sm text-muted-foreground">
-                  <li>Voice-to-voice conversations with AI agents</li>
-                  <li>Real-time text chat capabilities</li>
-                  <li>Avatar streaming support</li>
-                  <li>Multi-agent selection</li>
-                  <li>Audio level visualization</li>
-                  <li>Connection status monitoring</li>
-                </ul>
-                <div className="rounded-lg bg-muted/50 p-4">
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Note:</strong> This dashboard confirms that authentication is working correctly. 
-                    The full realtime interface components will be integrated once the SDK connection is established.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Agent C Real-Time Chat Interface */}
+          <RealtimeChat />
 
           {/* Status Card */}
           <Card>
@@ -157,6 +123,8 @@ export default function DashboardPage() {
               </div>
             </CardContent>
           </Card>
+
+
         </div>
       </main>
     </div>

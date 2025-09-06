@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Construct the full URL for the Agent C login endpoint
+    // Construct the full URL for the Agent C realtime login endpoint
     const loginUrl = `${agentCApiUrl}/api/rt/login`;
 
     // In development, handle self-signed certificates
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
       ? new https.Agent({ rejectUnauthorized: false })
       : undefined;
 
-    // Use axios instead of fetch to properly support custom HTTPS agents
+    // Use real Agent C authentication
     const response = await axios.post(loginUrl, credentials, {
       headers: {
         'Content-Type': 'application/json',
@@ -126,17 +126,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate the response has an agent_c_token
+    // Use the real Agent C login response
     const loginResponse = responseData as LoginResponse;
+    
     if (!loginResponse.agent_c_token) {
       return NextResponse.json(
         { error: 'No agent_c_token received from authentication server' },
         { status: 500 }
       );
     }
-
-    // Return the successful response
-    // The client will handle storing the token in cookies
+    
+    // Return the real login response from Agent C
     return NextResponse.json(loginResponse, { status: 200 });
 
   } catch (error) {

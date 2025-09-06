@@ -71,32 +71,31 @@ async def create_user(username: str, password: str = None, email: str = None,
                 print("❌ Password cannot be empty")
                 return False
         
-        # Create database session
-        db_config = get_database_config()
-        async with db_config.async_session_factory() as session:
-            auth_service = AuthService(session)
-            
-            # Create user request
-            user_request = UserCreateRequest(
-                username=username,
-                password=password,
-                email=email,
-                first_name=first_name,
-                last_name=last_name,
-                roles=roles or []
-            )
-            
-            # Create user
-            user = await auth_service.create_user(user_request)
-            
-            print(f"✅ User '{username}' created successfully!")
-            print(f"   User ID: {user.user_id}")
-            print(f"   Email: {user.email or 'Not provided'}")
-            print(f"   Name: {user.first_name} {user.last_name}")
-            print(f"   Active: {user.is_active}")
-            print(f"   Roles: {', '.join(user.roles) if user.roles else 'None'}")
-            
-            return True
+        # Initialize AuthService (it manages its own session)
+        auth_service = AuthService()
+        await auth_service.initialize()
+        
+        # Create user request
+        user_request = UserCreateRequest(
+            username=username,
+            password=password,
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            roles=roles or []
+        )
+        
+        # Create user
+        user = await auth_service.create_user(user_request)
+        
+        print(f"✅ User '{username}' created successfully!")
+        print(f"   User ID: {user.user_id}")
+        print(f"   Email: {user.email or 'Not provided'}")
+        print(f"   Name: {user.first_name} {user.last_name}")
+        print(f"   Active: {user.is_active}")
+        print(f"   Roles: {', '.join(user.roles) if user.roles else 'None'}")
+        
+        return True
             
     except ValueError as e:
         # Return the error message for better handling
@@ -105,6 +104,10 @@ async def create_user(username: str, password: str = None, email: str = None,
     except Exception as e:
         print(f"❌ Unexpected error: {e}")
         return False
+    finally:
+        # Clean up the auth service
+        if 'auth_service' in locals():
+            await auth_service.close()
 
 
 async def list_users():
@@ -122,36 +125,38 @@ async def list_users():
         # Initialize database if needed
         await initialize_database()
         
-        # Create database session
-        db_config = get_database_config()
-        async with db_config.async_session_factory() as session:
-
-            auth_service = AuthService(session)
-            
-            # Get all users
-            users = await auth_service.list_users()
-            
-            if not users:
-                print("No users found in the database.")
-                return
-            
-            print(f"\nFound {len(users)} user(s):\n")
-            print(f"{'Username':<20} {'User ID':<25} {'Email':<30} {'Active':<8} {'Last Login'}")
-            print("-" * 100)
-            
-            for user in users:
-                # last_login is now an ISO string, not datetime
-                if user.last_login:
-                    from datetime import datetime
-                    last_login_dt = datetime.fromisoformat(user.last_login.replace('Z', '+00:00'))
-                    last_login = last_login_dt.strftime("%Y-%m-%d %H:%M")
-                else:
-                    last_login = "Never"
-                print(f"{user.user_name:<20} {user.user_id:<25} {user.email or 'N/A':<30} "
-                      f"{'Yes' if user.is_active else 'No':<8} {last_login}")
+        # Initialize AuthService (it manages its own session)
+        auth_service = AuthService()
+        await auth_service.initialize()
+        
+        # Get all users
+        users = await auth_service.list_users()
+        
+        if not users:
+            print("No users found in the database.")
+            return
+        
+        print(f"\nFound {len(users)} user(s):\n")
+        print(f"{'Username':<20} {'User ID':<25} {'Email':<30} {'Active':<8} {'Last Login'}")
+        print("-" * 100)
+        
+        for user in users:
+            # last_login is now an ISO string, not datetime
+            if user.last_login:
+                from datetime import datetime
+                last_login_dt = datetime.fromisoformat(user.last_login.replace('Z', '+00:00'))
+                last_login = last_login_dt.strftime("%Y-%m-%d %H:%M")
+            else:
+                last_login = "Never"
+            print(f"{user.user_name:<20} {user.user_id:<25} {user.email or 'N/A':<30} "
+                  f"{'Yes' if user.is_active else 'No':<8} {last_login}")
             
     except Exception as e:
         print(f"❌ Error listing users: {e}")
+    finally:
+        # Clean up the auth service
+        if 'auth_service' in locals():
+            await auth_service.close()
 
 
 async def delete_user(user_id: str, confirm: bool = False):
@@ -175,19 +180,18 @@ async def delete_user(user_id: str, confirm: bool = False):
         # Initialize database if needed
         await initialize_database()
         
-        # Create database session
-        db_config = get_database_config()
-        async with db_config.async_session_factory() as session:
-            auth_service = AuthService(session)
-            
-            # Get user first to show details
-            user = await auth_service.auth_repo.get_user_by_id(user_id)
-            if not user:
-                print(f"❌ User with ID '{user_id}' not found.")
-                return False
-            
-            # Confirm deletion unless --force is used
-            if not confirm:
+        # Initialize AuthService (it manages its own session)
+        auth_service = AuthService()
+        await auth_service.initialize()
+        
+        # Get user first to show details
+        user = await auth_service.auth_repo.get_user_by_id(user_id)
+        if not user:
+            print(f"❌ User with ID '{user_id}' not found.")
+            return False
+        
+        # Confirm deletion unless --force is used
+        if not confirm:
                 print(f"This will permanently delete user:")
                 print(f"  Username: {user.user_name}")
                 print(f"  User ID: {user.user_id}")
@@ -197,20 +201,24 @@ async def delete_user(user_id: str, confirm: bool = False):
                 if response not in ['yes', 'y']:
                     print("❌ Deletion cancelled.")
                     return False
-            
-            # Delete user
-            success = await auth_service.delete_user(user_id)
-            
-            if success:
-                print(f"✅ User '{user.user_name}' deleted successfully.")
-                return True
-            else:
-                print(f"❌ Failed to delete user '{user_id}'.")
-                return False
+        
+        # Delete user
+        success = await auth_service.delete_user(user_id)
+        
+        if success:
+            print(f"✅ User '{user.user_name}' deleted successfully.")
+            return True
+        else:
+            print(f"❌ Failed to delete user '{user_id}'.")
+            return False
                 
     except Exception as e:
         print(f"❌ Error deleting user: {e}")
         return False
+    finally:
+        # Clean up the auth service
+        if 'auth_service' in locals():
+            await auth_service.close()
 
 
 def main():
