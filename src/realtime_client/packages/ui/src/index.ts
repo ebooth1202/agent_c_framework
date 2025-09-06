@@ -167,8 +167,7 @@ export {
   AudioControls,
   AgentSelector,
   OutputSelector,
-  UserDisplay,
-  UserAvatar
+  ThemeSwitcher
 } from './components/controls';
 
 export type {
@@ -177,7 +176,7 @@ export type {
   AudioControlsProps,
   AgentSelectorProps,
   OutputSelectorProps,
-  UserDisplayProps
+  ThemeSwitcherProps
 } from './components/controls';
 
 // Session component exports
@@ -194,12 +193,14 @@ export type {
 // Sidebar component exports
 export {
   ChatSidebar,
-  SidebarTopMenu
+  SidebarTopMenu,
+  UserDisplay
 } from './components/sidebar';
 
 export type {
   ChatSidebarProps,
-  SidebarTopMenuProps
+  SidebarTopMenuProps,
+  UserDisplayProps
 } from './components/sidebar';
 
 // Chat component exports

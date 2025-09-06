@@ -208,7 +208,7 @@ const Message = React.forwardRef<HTMLDivElement, MessageProps>(
         )
       },
       thead({ children }: any) {
-        return <thead className="bg-muted/50">{children}</thead>
+        return <thead className="bg-accent/20">{children}</thead>
       },
       th({ children }: any) {
         return (

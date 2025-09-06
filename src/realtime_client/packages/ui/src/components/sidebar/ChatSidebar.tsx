@@ -4,7 +4,7 @@ import * as React from "react"
 import { cn } from "../../lib/utils"
 import { SidebarTopMenu } from "./SidebarTopMenu"
 import { ChatSessionList } from "../session/ChatSessionList"
-import { UserDisplay } from "../controls/UserDisplay"
+import { UserDisplay } from "./UserDisplay"
 import { X, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "../ui/button"
 
@@ -13,6 +13,7 @@ export interface ChatSidebarProps {
   isCollapsed?: boolean
   onClose?: () => void
   onToggleCollapse?: () => void
+  onLogout?: () => void
   className?: string
 }
 
@@ -22,7 +23,7 @@ export interface ChatSidebarProps {
  * Mobile: Overlay with backdrop (can be fully hidden)
  */
 export const ChatSidebar = React.forwardRef<HTMLDivElement, ChatSidebarProps>(
-  ({ isOpen = true, isCollapsed = false, onClose, onToggleCollapse, className }, ref) => {
+  ({ isOpen = true, isCollapsed = false, onClose, onToggleCollapse, onLogout, className }, ref) => {
     const [isMobile, setIsMobile] = React.useState(false)
 
     // Detect mobile viewport
@@ -58,23 +59,29 @@ export const ChatSidebar = React.forwardRef<HTMLDivElement, ChatSidebarProps>(
             )}
           >
             {/* Mobile Close Button */}
-            <div className="flex items-center justify-between px-2 pt-2">
-              <span className="text-sm font-semibold px-2">Navigation</span>
+            <div className="flex items-center justify-between p-4">
+              <span className="text-base font-semibold">Navigation</span>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={onClose}
-                className="h-8 w-8"
+                className="h-9 w-9"
                 aria-label="Close sidebar"
               >
                 <X className="h-4 w-4" />
               </Button>
             </div>
             
-            {/* Sidebar Content */}
-            <SidebarTopMenu />
-            <ChatSessionList />
-            <UserDisplay variant="compact" showMenu={true} />
+            {/* Sidebar Content with proper flex layout */}
+            <div className="flex flex-col flex-1 overflow-hidden">
+              <SidebarTopMenu />
+              <div className="flex-1 overflow-y-auto">
+                <ChatSessionList />
+              </div>
+              <div className="mt-auto">
+                <UserDisplay onLogout={onLogout} />
+              </div>
+            </div>
           </div>
         </>
       )
@@ -87,17 +94,17 @@ export const ChatSidebar = React.forwardRef<HTMLDivElement, ChatSidebarProps>(
         <div
           ref={ref}
           className={cn(
-            "border-r border-border bg-muted/30 transition-all duration-300 ease-in-out",
+            "border-r border-border bg-sidebar transition-all duration-300 ease-in-out",
             "sticky top-0 h-screen flex flex-col",
-            isCollapsed ? "w-16" : "w-72",
+            isCollapsed ? "w-16" : "w-64",
             className
           )}
         >
           {/* Sidebar Header with Title and Collapse Button */}
-          <div className="flex items-center justify-between px-2 pt-2 pb-1 border-b border-border mb-4">
+          <div className="flex items-center justify-between p-4 border-b border-border">
             <span className={cn(
-              "text-sm font-semibold transition-opacity duration-200 overflow-hidden whitespace-nowrap",
-              isCollapsed ? "opacity-0 w-0" : "opacity-100 px-2"
+              "text-lg font-semibold transition-opacity duration-200 overflow-hidden whitespace-nowrap",
+              isCollapsed ? "opacity-0 w-0" : "opacity-100"
             )}>
               Agent C Realtime
             </span>
@@ -105,7 +112,7 @@ export const ChatSidebar = React.forwardRef<HTMLDivElement, ChatSidebarProps>(
               variant="ghost"
               size="icon"
               onClick={onToggleCollapse}
-              className="h-8 w-8 flex-shrink-0"
+              className="h-10 w-10 flex-shrink-0"
               aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
               {isCollapsed ? (
@@ -116,14 +123,25 @@ export const ChatSidebar = React.forwardRef<HTMLDivElement, ChatSidebarProps>(
             </Button>
           </div>
           
-          {/* Sidebar Content */}
+          {/* Sidebar Content with proper flex layout */}
           <div className={cn(
             "flex flex-col flex-1 overflow-hidden",
             isCollapsed && "items-center"
           )}>
-            <SidebarTopMenu isCollapsed={isCollapsed} />
-            <ChatSessionList isCollapsed={isCollapsed} />
-            <UserDisplay variant="compact" avatarSize={isCollapsed ? "sm" : "md"} showMenu={true} />
+            {/* Top menu section */}
+            <div className="p-4">
+              <SidebarTopMenu isCollapsed={isCollapsed} />
+            </div>
+            
+            {/* Chat sessions list - takes up available space */}
+            <div className="flex-1 overflow-y-auto px-4">
+              <ChatSessionList isCollapsed={isCollapsed} />
+            </div>
+            
+            {/* User display - pinned to bottom */}
+            <div className="border-t border-border">
+              <UserDisplay isCollapsed={isCollapsed} onLogout={onLogout} />
+            </div>
           </div>
         </div>
       )

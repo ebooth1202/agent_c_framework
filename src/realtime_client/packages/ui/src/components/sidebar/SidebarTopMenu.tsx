@@ -33,23 +33,23 @@ export const SidebarTopMenu = React.forwardRef<HTMLDivElement, SidebarTopMenuPro
       <div
         ref={ref}
         className={cn(
-          "px-2 pt-1 gap-px mb-6",
+          "w-full",
           className
         )}
       >
         <Button
           onClick={handleNewChat}
+          variant="default"
+          size="default"
           className={cn(
-            "inline-flex items-center justify-center h-9 rounded-lg w-full",
-            "bg-primary text-primary-foreground hover:bg-primary/90",
-            "transition duration-300",
-            isCollapsed ? "px-0" : "px-4 py-2"
+            "w-full",
+            isCollapsed && "px-0"
           )}
           aria-label="Start a new chat"
           title={isCollapsed ? "New Chat" : undefined}
         >
           <Plus className={cn("h-4 w-4", !isCollapsed && "mr-2")} />
-          {!isCollapsed && <span>New Chat</span>}
+          {!isCollapsed && <span className="font-medium">New Chat</span>}
         </Button>
       </div>
     )

@@ -41,24 +41,25 @@ export const ChatSessionList = React.forwardRef<HTMLDivElement, ChatSessionListP
         <div
           ref={ref}
           className={cn(
-            "flex-grow overflow-hidden",
+            "flex-1 overflow-hidden",
             className
           )}
         >
-          <div className="flex flex-col items-center gap-2 py-4">
+          <div className="flex flex-col items-center gap-2">
             {stubSessions.slice(0, 3).map((session) => (
               <button
                 key={session.id}
                 className={cn(
-                  "w-10 h-10 rounded-lg flex items-center justify-center transition-colors",
-                  "hover:bg-muted",
-                  session.isActive && "bg-muted"
+                  "w-12 h-12 rounded-md flex items-center justify-center transition-colors",
+                  "hover:bg-accent hover:text-accent-foreground",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  session.isActive && "bg-accent text-accent-foreground"
                 )}
                 disabled
                 title={session.name}
                 aria-label={`Chat session: ${session.name}`}
               >
-                <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                <MessageSquare className="h-5 w-5" />
               </button>
             ))}
           </div>
@@ -70,62 +71,65 @@ export const ChatSessionList = React.forwardRef<HTMLDivElement, ChatSessionListP
       <div
         ref={ref}
         className={cn(
-          "flex-grow overflow-hidden px-2",
+          "flex-1 overflow-hidden",
           className
         )}
       >
         <ScrollArea className="h-full">
-          <div className="space-y-1">
+          <div className="space-y-4">
             {/* Section Header */}
-            <div className="px-2 py-1">
-              <h3 className="text-xs font-medium text-muted-foreground">Today</h3>
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Today</h3>
             </div>
 
             {/* Session Items */}
-            {stubSessions.map((session) => (
-              <button
-                key={session.id}
-                className={cn(
-                  "w-full rounded-lg px-2 py-2 text-left transition-colors",
-                  "hover:bg-muted",
-                  session.isActive && "bg-muted"
-                )}
-                disabled // Stub - no functionality yet
-                aria-label={`Chat session: ${session.name}`}
-                aria-current={session.isActive ? "page" : undefined}
-              >
-                <div className="flex items-start gap-2">
-                  <MessageSquare className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
-                  <div className="flex-1 overflow-hidden">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium truncate">
-                        {session.name}
-                      </span>
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {session.time}
-                      </span>
+            <div className="space-y-1">
+              {stubSessions.map((session) => (
+                <button
+                  key={session.id}
+                  className={cn(
+                    "w-full rounded-md p-3 text-left transition-colors",
+                    "hover:bg-accent hover:text-accent-foreground",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    session.isActive && "bg-accent text-accent-foreground"
+                  )}
+                  disabled // Stub - no functionality yet
+                  aria-label={`Chat session: ${session.name}`}
+                  aria-current={session.isActive ? "page" : undefined}
+                >
+                  <div className="flex items-start gap-3">
+                    <MessageSquare className="h-4 w-4 mt-0.5 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <span className="text-sm font-medium truncate">
+                          {session.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {session.time}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {session.preview}
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground truncate mt-0.5">
-                      {session.preview}
-                    </p>
                   </div>
-                </div>
-              </button>
-            ))}
+                </button>
+              ))}
+            </div>
 
             {/* Empty State for Other Sections */}
-            <div className="px-2 py-1 mt-4">
-              <h3 className="text-xs font-medium text-muted-foreground">Yesterday</h3>
+            <div className="mt-6">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Yesterday</h3>
             </div>
-            <div className="px-2 py-3 text-center">
-              <p className="text-xs text-muted-foreground">No previous sessions</p>
+            <div className="p-4 text-center">
+              <p className="text-sm text-muted-foreground">No previous sessions</p>
             </div>
 
             {/* Coming Soon Notice */}
-            <div className="mt-6 mx-2 p-3 rounded-lg border border-dashed border-border">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Clock className="h-3 w-3" />
-                <span className="text-xs">Session management coming soon</span>
+            <div className="mt-6 p-4 rounded-md bg-accent/20 border border-border">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Session management coming soon</span>
               </div>
             </div>
           </div>
