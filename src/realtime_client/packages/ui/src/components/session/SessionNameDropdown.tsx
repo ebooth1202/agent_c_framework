@@ -2,13 +2,13 @@
 
 import * as React from "react"
 import { ChevronDown, Edit2, Trash2 } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn } from "../../lib/utils"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@agentc/realtime-ui"
+} from "../ui/dropdown-menu"
 
 export interface SessionNameDropdownProps {
   sessionName?: string

@@ -3,9 +3,9 @@
 import * as React from "react"
 import { Menu } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Button } from "@agentc/realtime-ui"
-import { SessionNameDropdown } from "./SessionNameDropdown"
 import { 
+  Button,
+  SessionNameDropdown,
   ConnectionButton, 
   AudioControls
 } from "@agentc/realtime-ui"

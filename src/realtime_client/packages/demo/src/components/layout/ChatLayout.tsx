@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { cn } from "@/lib/utils"
-import { ChatSidebar } from "../sidebar/ChatSidebar"
+import { ChatSidebar } from "@agentc/realtime-ui"
 import { ChatHeader } from "./ChatHeader"
 import { MainContentArea, OutputMode } from "../content/MainContentArea"
 // Import the SSR-safe wrapper instead of the UI package directly

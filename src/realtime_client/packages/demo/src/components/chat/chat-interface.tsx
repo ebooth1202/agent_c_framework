@@ -2,9 +2,7 @@
 
 import React from 'react';
 import { useChat, useAudio, useTurnState, useConnection } from '@agentc/realtime-react';
-import { MessageList } from './message-list';
-import { TypingIndicator } from './typing-indicator';
-import { InputArea } from '@/components/input/input-area';
+import { MessageList, TypingIndicator, ChatInputArea } from '@agentc/realtime-ui';
 import { ViewManager } from './view-manager';
 import { useOutputMode, type OutputMode } from '@agentc/realtime-react';
 import { cn } from '@/lib/utils';
@@ -154,7 +152,7 @@ export function ChatInterface({
       
       {/* Input area */}
       <div className="flex-shrink-0 mt-4">
-        <InputArea
+        <ChatInputArea
           outputMode={outputMode}
           onOutputModeChange={handleOutputModeChange}
           onSendMessage={handleSendMessage}

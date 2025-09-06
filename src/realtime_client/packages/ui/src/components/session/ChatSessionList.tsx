@@ -2,8 +2,8 @@
 
 import * as React from "react"
 import { MessageSquare, Clock, Hash } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { ScrollArea } from "@agentc/realtime-ui"
+import { cn } from "../../lib/utils"
+import { ScrollArea } from "../ui/scroll-area"
 
 export interface ChatSessionListProps {
   isCollapsed?: boolean

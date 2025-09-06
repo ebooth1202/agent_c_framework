@@ -128,8 +128,10 @@ export type { MarkdownEditorProps as LegacyMarkdownEditorProps } from './compone
 
 // Input component exports
 export { 
-  // Main integrated component
+  // Main integrated components
   InputArea,
+  ChatInputArea,
+  OutputModeSelector,
   // Individual components
   InputContainer, 
   RichTextEditor,
@@ -144,6 +146,7 @@ export {
 
 export type { 
   InputAreaProps,
+  ChatInputAreaProps,
   InputContainerProps, 
   RichTextEditorProps,
   MarkdownEditorProps,
@@ -159,14 +162,68 @@ export type {
 // Control component exports - Include the new selectors here
 export {
   ConnectionButton,
+  ConnectionStatus,
+  ConnectionIndicator,
   AudioControls,
   AgentSelector,
-  OutputSelector
+  OutputSelector,
+  UserDisplay,
+  UserAvatar
 } from './components/controls';
 
 export type {
   ConnectionButtonProps,
+  ConnectionStatusProps,
   AudioControlsProps,
   AgentSelectorProps,
-  OutputSelectorProps
+  OutputSelectorProps,
+  UserDisplayProps
 } from './components/controls';
+
+// Session component exports
+export {
+  ChatSessionList,
+  SessionNameDropdown
+} from './components/session';
+
+export type {
+  ChatSessionListProps,
+  SessionNameDropdownProps
+} from './components/session';
+
+// Sidebar component exports
+export {
+  ChatSidebar,
+  SidebarTopMenu
+} from './components/sidebar';
+
+export type {
+  ChatSidebarProps,
+  SidebarTopMenuProps
+} from './components/sidebar';
+
+// Chat component exports
+export {
+  Message,
+  MessageList,
+  TypingIndicator,
+  ScrollAnchor,
+  typingIndicatorStyles
+} from './components/chat';
+
+export type {
+  MessageProps,
+  MessageData,
+  MessageListProps,
+  TypingIndicatorProps,
+  ScrollAnchorProps
+} from './components/chat';
+
+// Audio component exports
+export {
+  VoiceVisualizerView
+} from './components/audio';
+
+export type {
+  VoiceVisualizerViewProps
+} from './components/audio';

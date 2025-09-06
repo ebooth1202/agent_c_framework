@@ -1,12 +1,12 @@
 "use client"
 
 import * as React from "react"
-import { cn } from "@/lib/utils"
+import { cn } from "../../lib/utils"
 import { SidebarTopMenu } from "./SidebarTopMenu"
-import { ChatSessionList } from "./ChatSessionList"
-import { UserDisplay } from "./UserDisplay"
+import { ChatSessionList } from "../session/ChatSessionList"
+import { UserDisplay } from "../controls/UserDisplay"
 import { X, ChevronLeft, ChevronRight } from "lucide-react"
-import { Button } from "@agentc/realtime-ui"
+import { Button } from "../ui/button"
 
 export interface ChatSidebarProps {
   isOpen?: boolean
@@ -18,8 +18,8 @@ export interface ChatSidebarProps {
 
 /**
  * ChatSidebar component - Main sidebar container with responsive behavior
- * Desktop: Sticky sidebar always visible
- * Mobile: Overlay with backdrop
+ * Desktop: Sticky sidebar always visible (can be collapsed but not hidden)
+ * Mobile: Overlay with backdrop (can be fully hidden)
  */
 export const ChatSidebar = React.forwardRef<HTMLDivElement, ChatSidebarProps>(
   ({ isOpen = true, isCollapsed = false, onClose, onToggleCollapse, className }, ref) => {
@@ -36,7 +36,7 @@ export const ChatSidebar = React.forwardRef<HTMLDivElement, ChatSidebarProps>(
       return () => window.removeEventListener("resize", checkMobile)
     }, [])
 
-    // Mobile overlay backdrop
+    // Mobile overlay - only render when mobile AND open
     if (isMobile && isOpen) {
       return (
         <>
@@ -74,21 +74,21 @@ export const ChatSidebar = React.forwardRef<HTMLDivElement, ChatSidebarProps>(
             {/* Sidebar Content */}
             <SidebarTopMenu />
             <ChatSessionList />
-            <UserDisplay />
+            <UserDisplay variant="compact" showMenu={true} />
           </div>
         </>
       )
     }
 
-    // Desktop sidebar (always visible) or hidden mobile
-    if (!isMobile || !isOpen) {
+    // Desktop sidebar - always visible when not mobile
+    // Mobile - hidden when closed
+    if (!isMobile) {
       return (
         <div
           ref={ref}
           className={cn(
             "border-r border-border bg-muted/30 transition-all duration-300 ease-in-out",
-            "lg:sticky lg:top-0 lg:h-screen lg:flex lg:flex-col",
-            "hidden lg:flex", // Hide on mobile, show on desktop
+            "sticky top-0 h-screen flex flex-col",
             isCollapsed ? "w-16" : "w-72",
             className
           )}
@@ -96,7 +96,7 @@ export const ChatSidebar = React.forwardRef<HTMLDivElement, ChatSidebarProps>(
           {/* Sidebar Header with Title and Collapse Button */}
           <div className="flex items-center justify-between px-2 pt-2 pb-1 border-b border-border mb-4">
             <span className={cn(
-              "text-sm font-semibold transition-opacity duration-200",
+              "text-sm font-semibold transition-opacity duration-200 overflow-hidden whitespace-nowrap",
               isCollapsed ? "opacity-0 w-0" : "opacity-100 px-2"
             )}>
               Agent C Realtime
@@ -123,12 +123,13 @@ export const ChatSidebar = React.forwardRef<HTMLDivElement, ChatSidebarProps>(
           )}>
             <SidebarTopMenu isCollapsed={isCollapsed} />
             <ChatSessionList isCollapsed={isCollapsed} />
-            <UserDisplay isCollapsed={isCollapsed} />
+            <UserDisplay variant="compact" avatarSize={isCollapsed ? "sm" : "md"} showMenu={true} />
           </div>
         </div>
       )
     }
 
+    // Mobile closed state - render nothing
     return null
   }
 )

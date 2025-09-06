@@ -1,26 +1,11 @@
 /**
- * Chat Components for Agent C Realtime SDK
+ * Chat Components for Agent C Realtime SDK Demo
  * 
- * This module provides a complete chat interface with:
- * - Message rendering with markdown support
- * - Auto-scrolling behavior
- * - Typing indicators
- * - Code syntax highlighting
- * - Responsive design
+ * This module provides demo-specific chat components.
+ * Core chat components have been moved to @agentc/realtime-ui package.
  */
 
-export { MessageList } from './message-list'
-export type { MessageListProps } from './message-list'
-
-export { Message } from './message'
-export type { MessageProps, MessageData } from './message'
-
-export { ScrollAnchor } from './scroll-anchor'
-export type { ScrollAnchorProps } from './scroll-anchor'
-
-export { TypingIndicator, typingIndicatorStyles } from './typing-indicator'
-export type { TypingIndicatorProps } from './typing-indicator'
-
+// Demo-specific components (not moved to UI package)
 export { ChatInterface, CompactChatInterface } from './chat-interface'
 export type { ChatInterfaceProps } from './chat-interface'
 
@@ -33,5 +18,21 @@ export type { ChatLayoutProps } from './chat-layout'
 export { SidePanel } from './side-panel'
 export type { SidePanelProps } from './side-panel'
 
-export { ConnectionStatus } from './connection-status'
-export type { ConnectionStatusProps } from './connection-status'
+// Re-export from UI package for backwards compatibility
+export { 
+  MessageList,
+  Message,
+  ScrollAnchor,
+  TypingIndicator,
+  ConnectionStatus,
+  typingIndicatorStyles
+} from '@agentc/realtime-ui'
+
+export type {
+  MessageListProps,
+  MessageProps,
+  MessageData,
+  ScrollAnchorProps,
+  TypingIndicatorProps,
+  ConnectionStatusProps
+} from '@agentc/realtime-ui'

@@ -2,6 +2,9 @@
 export { ConnectionButton } from './ConnectionButton'
 export type { ConnectionButtonProps } from './ConnectionButton'
 
+export { ConnectionStatus, ConnectionIndicator } from './ConnectionStatus'
+export type { ConnectionStatusProps } from './ConnectionStatus'
+
 export { AudioControls } from './AudioControls'
 export type { AudioControlsProps } from './AudioControls'
 

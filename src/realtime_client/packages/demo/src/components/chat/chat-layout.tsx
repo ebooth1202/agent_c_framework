@@ -2,10 +2,10 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { ConnectionStatus } from './connection-status';
+import { ConnectionStatus } from '@agentc/realtime-ui';
 import { SidePanel } from './side-panel';
 import { ViewManager } from './view-manager';
-import { InputArea, type OutputMode } from '@/components/input/input-area';
+import { ChatInputArea, type OutputMode } from '@agentc/realtime-ui';
 import { Card, Separator } from '@agentc/realtime-ui';
 
 export interface ChatLayoutProps {
@@ -86,7 +86,7 @@ export function ChatLayout({
           {/* Input Area - Footer */}
           <footer className="flex-shrink-0 border-t bg-background">
             <div className="p-4">
-              <InputArea 
+              <ChatInputArea 
                 outputMode={outputMode}
                 onOutputModeChange={setOutputMode}
               />
@@ -129,7 +129,7 @@ export function CompactChatLayout({
 
       {/* Input Footer */}
       <div className="flex-shrink-0 p-3">
-        <InputArea 
+        <ChatInputArea 
           outputMode={outputMode}
           onOutputModeChange={setOutputMode}
         />
@@ -184,7 +184,7 @@ export function DebugChatLayout({
           </div>
           
           <div className="flex-shrink-0 border-t p-4">
-            <InputArea 
+            <ChatInputArea 
               outputMode={outputMode}
               onOutputModeChange={setOutputMode}
             />

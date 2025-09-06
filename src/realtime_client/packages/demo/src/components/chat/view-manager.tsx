@@ -13,10 +13,9 @@ import {
   User,
   Bot
 } from 'lucide-react';
-import type { OutputMode } from '@/components/input/input-area';
+import type { OutputMode } from '@agentc/realtime-ui';
 import type { Message } from '@agentc/realtime-core';
-import { MessageList } from './message-list';
-import { TypingIndicator } from './typing-indicator';
+import { MessageList, TypingIndicator } from '@agentc/realtime-ui';
 
 export interface ViewManagerProps {
   outputMode: OutputMode;

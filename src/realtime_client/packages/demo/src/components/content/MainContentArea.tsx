@@ -4,7 +4,7 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { ChatMessagesView } from "./ChatMessagesView"
 import { AvatarDisplayView } from "./AvatarDisplayView"
-import { VoiceVisualizerView } from "./VoiceVisualizerView"
+import { VoiceVisualizerView } from "@agentc/realtime-ui"
 
 export type OutputMode = 'chat' | 'avatar' | 'voice'
 
