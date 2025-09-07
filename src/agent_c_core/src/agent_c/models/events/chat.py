@@ -69,7 +69,6 @@ class SystemMessageEvent(SessionEvent):
     format: str = Field("markdown", description="The format of the content, default is markdown")
     severity: str = Field("error", description="The severity of the message, default is error, can be 'info', 'warning', or 'error'")
 
-
 class TextDeltaEvent(SessionEvent):
     """
     Sent to notify the UI that a chunk of content text has been received.

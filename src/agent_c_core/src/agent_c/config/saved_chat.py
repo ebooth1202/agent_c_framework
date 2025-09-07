@@ -33,7 +33,7 @@ class ChatSessionIndex(Base):
     created_at: Mapped[str] = mapped_column(String(32), nullable=False)
     updated_at: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     user_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    agent_key:Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    agent_key: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     agent_name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     
     __table_args__ = (
