@@ -154,7 +154,7 @@ class SavedChatLoader(ConfigLoader):
                 created_at=index_entry.created_at,
                 updated_at=index_entry.updated_at,
                 user_id=index_entry.user_id,
-                agent_key = index_entry.key,
+                agent_key = index_entry.agent_key,
                 agent_name = index_entry.agent_name
             )
             db_session.add(index_record)

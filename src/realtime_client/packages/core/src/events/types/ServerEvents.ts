@@ -10,6 +10,7 @@ import {
   AvatarSessionRequest,
   AvatarSession,
   ChatSession,
+  ChatSessionIndexEntry,
   ChatSessionQueryResponse,
   Voice,
   Message,
@@ -77,6 +78,7 @@ export interface ChatSessionChangedEvent extends BaseServerEvent {
 export interface ChatSessionNameChangedEvent extends BaseServerEvent {
   type: 'chat_session_name_changed';
   session_name: string;
+  session_id?: string; // Optional - if not set, refers to current session
 }
 
 /**
@@ -258,6 +260,24 @@ export interface ServerListeningEvent extends BaseServerEvent {
 }
 
 /**
+ * Notification that a new chat session has been added
+ * Note: New chat sessions don't get indexed and added to the list of user sessions
+ * until there's been at least one message in the session
+ */
+export interface ChatSessionAddedEvent extends BaseServerEvent {
+  type: 'chat_session_added';
+  chat_session: ChatSessionIndexEntry;
+}
+
+/**
+ * Notification that a chat session has been deleted
+ */
+export interface ChatSessionDeletedEvent extends BaseServerEvent {
+  type: 'chat_session_deleted';
+  session_id?: string; // Optional - if not set, refers to current session
+}
+
+/**
  * Union type of all server events
  */
 export type ServerEvent =
@@ -285,7 +305,9 @@ export type ServerEvent =
   | ToolCatalogEvent
   | PongEvent
   | VoiceInputSupportedEvent
-  | ServerListeningEvent;
+  | ServerListeningEvent
+  | ChatSessionAddedEvent
+  | ChatSessionDeletedEvent;
 
 /**
  * Type guard to check if an object is a server event
@@ -316,6 +338,8 @@ export function isServerEvent(obj: unknown): obj is ServerEvent {
     'tool_catalog',
     'pong',
     'voice_input_supported',
-    'server_listening'
+    'server_listening',
+    'chat_session_added',
+    'chat_session_deleted'
   ].includes((obj as any).type);
 }

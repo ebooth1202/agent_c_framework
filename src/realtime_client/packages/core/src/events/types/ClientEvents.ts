@@ -85,11 +85,12 @@ export interface ResumeChatSessionEvent extends BaseClientEvent {
 }
 
 /**
- * Set the name/title for the current session
+ * Set the name/title for a chat session
  */
 export interface SetChatSessionNameEvent extends BaseClientEvent {
   type: 'set_chat_session_name';
   session_name: string;
+  session_id?: string; // Optional - if not set, applies to current session
 }
 
 /**
@@ -165,6 +166,14 @@ export interface SetVoiceInputModeEvent extends BaseClientEvent {
 }
 
 /**
+ * Delete a chat session belonging to the user
+ */
+export interface DeleteChatSessionEvent extends BaseClientEvent {
+  type: 'delete_chat_session';
+  session_id?: string; // Optional - if not set, deletes the current session
+}
+
+/**
  * Union type of all client events
  */
 export type ClientEvent =
@@ -186,7 +195,8 @@ export type ClientEvent =
   | PingEvent
   | PushToTalkStartEvent
   | PushToTalkEndEvent
-  | SetVoiceInputModeEvent;
+  | SetVoiceInputModeEvent
+  | DeleteChatSessionEvent;
 
 /**
  * Type guard to check if an object is a client event
@@ -211,6 +221,7 @@ export function isClientEvent(obj: unknown): obj is ClientEvent {
     'ping',
     'ptt_start',
     'ptt_end',
-    'set_voice_input_mode'
+    'set_voice_input_mode',
+    'delete_chat_session'
   ].includes((obj as any).type);
 }

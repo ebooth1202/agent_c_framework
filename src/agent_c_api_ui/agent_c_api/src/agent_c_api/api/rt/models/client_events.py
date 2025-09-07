@@ -132,8 +132,10 @@ class SetChatSessionNameEvent(BaseEvent):
 
     Attributes:
         session_name (str): The new name for the chat session.
+        session_id (Optional[str]): The ID of the session to rename, if not set the current session is used.
     """
     session_name: str
+    session_id: Optional[str] = None
 
 class ChatSessionNameChangedEvent(BaseEvent):
     """
@@ -141,8 +143,10 @@ class ChatSessionNameChangedEvent(BaseEvent):
 
     Attributes:
         session_name (str): The updated name of the chat session.
+        session_id (Optional[str]): The ID of the session to rename, if not set the current session is used.
     """
     session_name: str
+    session_id: Optional[str] = None
 
 class GetUserSessionsEvent(BaseEvent):
     """
@@ -313,8 +317,27 @@ class ServerListeningEvent(BaseEvent):
 class ChatSessionAddedEvent(BaseEvent):
     """
     Event to notify that a new chat session has been added.
+    New chat sessions are don't get indexed and added to the list of user sessions until there's been at least one message in the session.
 
     Attributes:
         chat_session (ChatSessionIndexEntry): The index for the new chat session.
     """
     chat_session: ChatSessionIndexEntry
+
+class DeleteChatSessionEvent(BaseEvent):
+    """
+    Event sent by the client to delete a chat session belonging to the user
+
+    Attributes:
+        session_id (Optional[str]): The ID of the session to rename, if not set the current session is used.
+    """
+    session_id: Optional[str] = None
+
+class ChatSessionDeletedEvent(BaseEvent):
+    """
+    Event sent by the server when a chat session has been deleted
+
+    Attributes:
+        session_id (Optional[str]): The ID of the session to rename, if not set the current session is used.
+    """
+    session_id: Optional[str] = None
