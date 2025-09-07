@@ -166,6 +166,8 @@ export interface ChatSessionIndexEntry {
   created_at: string | null;
   updated_at: string | null;
   user_id: string | null;
+  agent_key?: string;
+  agent_name?: string;
 }
 
 /**

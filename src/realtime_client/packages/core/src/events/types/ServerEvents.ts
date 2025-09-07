@@ -243,6 +243,21 @@ export interface PongEvent extends BaseServerEvent {
 }
 
 /**
+ * Notification of supported voice input modes
+ */
+export interface VoiceInputSupportedEvent extends BaseServerEvent {
+  type: 'voice_input_supported';
+  modes: ('ptt' | 'vad')[];
+}
+
+/**
+ * Notification that server is listening for audio input
+ */
+export interface ServerListeningEvent extends BaseServerEvent {
+  type: 'server_listening';
+}
+
+/**
  * Union type of all server events
  */
 export type ServerEvent =
@@ -268,7 +283,9 @@ export type ServerEvent =
   | ChatUserDataEvent
   | VoiceListEvent
   | ToolCatalogEvent
-  | PongEvent;
+  | PongEvent
+  | VoiceInputSupportedEvent
+  | ServerListeningEvent;
 
 /**
  * Type guard to check if an object is a server event
@@ -297,6 +314,8 @@ export function isServerEvent(obj: unknown): obj is ServerEvent {
     'chat_user_data',
     'voice_list',
     'tool_catalog',
-    'pong'
+    'pong',
+    'voice_input_supported',
+    'server_listening'
   ].includes((obj as any).type);
 }

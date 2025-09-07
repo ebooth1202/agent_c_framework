@@ -4,7 +4,7 @@ from pydantic import Field
 
 from agent_c.models import ChatSession, ChatUser
 from agent_c.models.agent_config import CurrentAgentConfiguration, AgentCatalogEntry
-from agent_c.models.chat_history.chat_session import ChatSessionQueryResponse
+from agent_c.models.chat_history.chat_session import ChatSessionQueryResponse, ChatSessionIndexEntry
 from agent_c.models.client_tool_info import ClientToolInfo
 from agent_c.models.events import BaseEvent
 from agent_c.models.heygen import Avatar, HeygenAvatarSessionData, NewSessionRequest
@@ -294,8 +294,13 @@ class SetVoiceInputMode(BaseEvent):
     """
     Sent by the client to set the voice input mode.
     """
-    mode: Literal["ptt", "vad"] = Field(..., description="The voice input mode, either 'ptt' for push-to-talk or 'vad' for voice activity detection.")
+    mode: Literal["ptt", "vad", "realtime"] = Field(..., description="The voice input mode, either 'ptt' for push-to-talk or 'vad' for voice activity detection.")
 
+class VoiceInputSupportedEvent(BaseEvent):
+    """
+    Sent by the server to notify the client of the supported voice input modes.
+    """
+    modes: List[Literal["ptt", "vad", "realtime"]] = Field(["ptt"], description="The list of supported voice input modes, either 'ptt' for push-to-talk or 'vad' for voice activity detection.")
 
 class ServerListeningEvent(BaseEvent):
     """
@@ -304,3 +309,12 @@ class ServerListeningEvent(BaseEvent):
     This event does not require any additional data.
     """
     pass
+
+class ChatSessionAddedEvent(BaseEvent):
+    """
+    Event to notify that a new chat session has been added.
+
+    Attributes:
+        chat_session (ChatSessionIndexEntry): The index for the new chat session.
+    """
+    chat_session: ChatSessionIndexEntry
