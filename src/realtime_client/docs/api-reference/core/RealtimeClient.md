@@ -220,6 +220,46 @@ const audioData = new Int16Array(1600); // 100ms of 16kHz audio
 client.sendBinaryFrame(audioData.buffer);
 ```
 
+### sendEvent()
+
+Sends a raw event to the server. This is an advanced method that allows sending any valid ClientEventMap event directly.
+
+```typescript
+sendEvent<K extends keyof ClientEventMap>(event: ClientEventMap[K]): void
+```
+
+**Parameters:**
+- `event` - A valid event object from the ClientEventMap type
+
+**Throws:** Error if not connected to the server
+
+**Note:** This is a public API method as of version 0.1.0. Most use cases should use the higher-level methods like `sendText()`, `setAgent()`, etc. Use this method when you need direct control over the event structure or for advanced integrations.
+
+**Example:**
+```typescript
+// Send a custom event
+client.sendEvent({ type: 'ping' });
+
+// Send a text input event (equivalent to sendText)
+client.sendEvent({ 
+  type: 'text_input', 
+  text: 'Hello',
+  file_ids: ['file123'] 
+});
+
+// Send a session management event
+client.sendEvent({ 
+  type: 'resume_chat_session', 
+  session_id: 'session-123' 
+});
+
+// TypeScript ensures type safety
+client.sendEvent<'set_agent'>({ 
+  type: 'set_agent', 
+  agent_key: 'support-agent' 
+});
+```
+
 ## Agent Management
 
 ### getAgents()

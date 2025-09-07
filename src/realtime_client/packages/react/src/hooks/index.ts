@@ -42,3 +42,7 @@ export type { UseAgentCDataReturn, AgentCData, Agent, Voice, Avatar, Toolset } f
 // Initialization status tracking
 export { useInitializationStatus, ConnectionState } from './useInitializationStatus';
 export type { UseInitializationStatusReturn } from './useInitializationStatus';
+
+// Chat session list management
+export { useChatSessionList } from './useChatSessionList';
+export type { UseChatSessionListOptions, UseChatSessionListReturn } from './useChatSessionList';

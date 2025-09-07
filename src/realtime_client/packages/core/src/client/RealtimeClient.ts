@@ -585,8 +585,18 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
 
     /**
      * Send a raw event to the server
+     * 
+     * @public
+     * @param event - The event object to send to the server. Must be a valid ClientEventMap event type.
+     * @throws {Error} If not connected to the server
+     * 
+     * @example
+     * ```typescript
+     * // Send a custom event to the server
+     * client.sendEvent({ type: 'custom_event', data: 'example' });
+     * ```
      */
-    private sendEvent<K extends keyof ClientEventMap>(event: ClientEventMap[K]): void {
+    public sendEvent<K extends keyof ClientEventMap>(event: ClientEventMap[K]): void {
         if (!this.wsManager || !this.wsManager.isConnected()) {
             throw new Error('Not connected to server');
         }

@@ -31,6 +31,9 @@ export interface UseChatReturn {
   /** Current session information */
   currentSession: ChatSession | null;
   
+  /** Current session ID */
+  currentSessionId: string | null;
+  
   /** Send a text message */
   sendMessage: (text: string) => Promise<void>;
   
@@ -67,6 +70,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
   // State
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [isAgentTyping, setIsAgentTyping] = useState(false);
   const [partialMessage, setPartialMessage] = useState('');
@@ -80,6 +84,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
   const updateChatInfo = useCallback(() => {
     if (!client) {
       setCurrentSession(null);
+      setCurrentSessionId(null);
       setMessages([]);
       return;
     }
@@ -87,6 +92,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     const sessionManager = client.getSessionManager();
     if (!sessionManager) {
       setCurrentSession(null);
+      setCurrentSessionId(null);
       setMessages([]);
       return;
     }
@@ -94,6 +100,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     try {
       const session = sessionManager.getCurrentSession();
       setCurrentSession(session);
+      setCurrentSessionId(session?.session_id || null);
       
       if (session) {
         // SessionManager doesn't have getMessageHistory, we'll track messages ourselves
@@ -233,19 +240,28 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
       // Agent is now typing
     };
     
+    // Handle session change events
+    const handleSessionChanged = (event: unknown) => {
+      const sessionEvent = event as { chat_session?: ChatSession };
+      if (sessionEvent.chat_session) {
+        setCurrentSession(sessionEvent.chat_session);
+        setCurrentSessionId(sessionEvent.chat_session.session_id);
+      }
+    };
+    
     // Subscribe to events
     client.on('text_delta', handleTextDelta);
     client.on('completion', handleCompletion);
     client.on('user_turn_start', handleUserTurnStart);
     client.on('user_turn_end', handleUserTurnEnd);
-    // Remove agent_message handler as it doesn't exist
+    client.on('chat_session_changed', handleSessionChanged);
     
     return () => {
       client.off('text_delta', handleTextDelta);
       client.off('completion', handleCompletion);
       client.off('user_turn_start', handleUserTurnStart);
       client.off('user_turn_end', handleUserTurnEnd);
-      // Remove agent_message handler as it doesn't exist
+      client.off('chat_session_changed', handleSessionChanged);
     };
   }, [client, maxMessages, updateChatInfo]);
   
@@ -255,6 +271,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
   return {
     messages,
     currentSession,
+    currentSessionId,
     sendMessage,
     clearMessages,
     isSending,

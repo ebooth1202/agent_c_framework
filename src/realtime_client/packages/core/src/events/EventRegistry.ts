@@ -20,6 +20,7 @@ import {
   GetVoicesEvent,
   GetToolCatalogEvent,
   PingEvent,
+  DeleteChatSessionEvent,
   ClientEvent
 } from './types/ClientEvents';
 
@@ -47,6 +48,8 @@ import {
   VoiceListEvent,
   ToolCatalogEvent,
   PongEvent,
+  ChatSessionAddedEvent,
+  ChatSessionDeletedEvent,
   ServerEvent
 } from './types/ServerEvents';
 
@@ -70,6 +73,7 @@ export interface ClientEventMap {
   'get_voices': GetVoicesEvent;
   'get_tool_catalog': GetToolCatalogEvent;
   'ping': PingEvent;
+  'delete_chat_session': DeleteChatSessionEvent;
 }
 
 /**
@@ -99,6 +103,8 @@ export interface ServerEventMap {
   'voice_list': VoiceListEvent;
   'tool_catalog': ToolCatalogEvent;
   'pong': PongEvent;
+  'chat_session_added': ChatSessionAddedEvent;
+  'chat_session_deleted': ChatSessionDeletedEvent;
 }
 
 /**
@@ -157,7 +163,8 @@ export class EventRegistry {
     'get_user_sessions',
     'get_voices',
     'get_tool_catalog',
-    'ping'
+    'ping',
+    'delete_chat_session'
   ]);
 
   private static readonly serverEventTypes = new Set<string>([
@@ -183,7 +190,9 @@ export class EventRegistry {
     'chat_user_data',
     'voice_list',
     'tool_catalog',
-    'pong'
+    'pong',
+    'chat_session_added',
+    'chat_session_deleted'
   ]);
 
   /**
