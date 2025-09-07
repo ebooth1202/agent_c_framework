@@ -48,6 +48,19 @@ class ChatSession(BaseModel):
     messages: List[dict[str, Any]] = Field(default_factory=list, description="List of messages in the session")
     agent_config: Optional[CurrentAgentConfiguration] = Field(None, description="Configuration for the agent associated with the session")
 
+    @property
+    def display_name(self) -> str:
+        """
+        Returns the display name of the session.
+        If session_name is set, it returns that
+        """
+        if self.session_name:
+            return self.session_name
+
+        return f"New chat with {self.agent_config.name}"
+
+
+
     def touch(self) -> None:
         """
         Updates the updated_at timestamp to the current time.

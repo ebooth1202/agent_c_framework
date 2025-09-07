@@ -130,12 +130,12 @@ class SavedChatLoader(ConfigLoader):
         """
         return ChatSessionIndexEntry(
             session_id=session.session_id,
-            session_name=session.session_name,
+            session_name=session.display_name,
             created_at=session.created_at,
             updated_at=session.updated_at,
             user_id=session.user_id,
-            agent_key = session.agent_config.key,
-            agent_name = session.agent_config.name
+            agent_key=session.agent_config.key,
+            agent_name=session.agent_config.name
         )
 
     async def _create_index_entry(self, session: ChatSession) -> None:
