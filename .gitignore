@@ -2,8 +2,9 @@
 *_auth.db
 .agent_c.meta.yaml
 agent_c_config/saved_sessions
+agent_c_config/chat_sessions.db
 agent_c_config/*cache*
-agent_c_config/users
+agent_c_config/users/*.yaml
 centric_tools
 __pycache__/
 *.py[cod]
