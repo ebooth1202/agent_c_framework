@@ -207,7 +207,7 @@ class SavedChatLoader(ConfigLoader):
             else:
                 self.logger.warning(f"No index entry found to delete for session {session_id}")
 
-    async def get_user_sessions(self, user_id: str, limit: int = 50, offset: int = 0) -> ChatSessionQueryResponse:
+    async def get_user_sessions(self, user_id: str, offset: int = 0, limit: int = 50) -> ChatSessionQueryResponse:
         """
         Get paginated chat sessions for a user, sorted by updated_at descending.
         
