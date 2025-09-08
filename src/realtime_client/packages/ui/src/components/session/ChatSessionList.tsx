@@ -7,15 +7,23 @@ import {
   Trash2,
   Loader2,
   AlertCircle,
-  Clock,
   ChevronRight
 } from "lucide-react"
 import { cn } from "../../lib/utils"
-import { ScrollArea } from "../ui/scroll-area"
 import { Input } from "../ui/input"
-import { Button } from "../ui/button"
+import { Button, buttonVariants } from "../ui/button"
 import { Skeleton } from "../ui/skeleton"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../ui/alert-dialog"
 import { useChatSessionList } from "@agentc/realtime-react"
 import type { ChatSessionIndexEntry } from "@agentc/realtime-core"
 
@@ -31,44 +39,6 @@ export interface ChatSessionListProps extends React.HTMLAttributes<HTMLDivElemen
   onSessionSelect?: (sessionId: string) => void
   /** Whether to auto-load sessions on mount */
   autoLoad?: boolean
-}
-
-/**
- * Internal type for grouped sessions
- */
-interface GroupedSessions {
-  today: ChatSessionIndexEntry[]
-  recent: ChatSessionIndexEntry[]  // Past 14 days
-  past: ChatSessionIndexEntry[]     // Older than 14 days
-}
-
-/**
- * Group sessions by time periods
- */
-function groupSessionsByTime(sessions: ChatSessionIndexEntry[]): GroupedSessions {
-  const now = new Date()
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const twoWeeksAgo = new Date(today.getTime() - (14 * 24 * 60 * 60 * 1000))
-  
-  const groups: GroupedSessions = {
-    today: [],
-    recent: [],
-    past: []
-  }
-  
-  sessions.forEach(session => {
-    const sessionDate = new Date(session.updated_at || session.created_at || 0)
-    
-    if (sessionDate >= today) {
-      groups.today.push(session)
-    } else if (sessionDate >= twoWeeksAgo) {
-      groups.recent.push(session)
-    } else {
-      groups.past.push(session)
-    }
-  })
-  
-  return groups
 }
 
 /**
@@ -118,44 +88,123 @@ function getSessionDisplayName(session: ChatSessionIndexEntry): string {
 const SearchFilterBar: React.FC<{
   value: string
   onChange: (value: string) => void
+  onClear?: () => void
   isSearching?: boolean
-}> = ({ value, onChange, isSearching }) => (
-  <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm p-2 border-b">
-    <div className="relative">
-      {isSearching ? (
-        <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
-      ) : (
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-      )}
-      <Input
-        type="search"
-        placeholder="Search sessions..."
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="pl-9 h-9 text-sm"
-        aria-label="Search sessions"
-      />
+}> = ({ value, onChange, onClear, isSearching }) => {
+  const searchInputRef = React.useRef<HTMLInputElement>(null)
+  
+  // Handle escape key to clear search
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && value) {
+        e.preventDefault()
+        onClear?.()
+        searchInputRef.current?.focus()
+      }
+    }
+    
+    if (searchInputRef.current) {
+      searchInputRef.current.addEventListener('keydown', handleKeyDown)
+      return () => searchInputRef.current?.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [value, onClear])
+  
+  return (
+    <div className="bg-background p-2 border-b">
+      <div className="relative">
+        {isSearching ? (
+          <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+        ) : (
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        )}
+        <Input
+          ref={searchInputRef}
+          type="search"
+          placeholder="Search sessions..."
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="pl-9 h-9 text-sm"
+          aria-label="Search sessions"
+        />
+      </div>
     </div>
-  </div>
-)
+  )
+}
 
 /**
  * Session group header component
  */
 const SessionGroupHeader: React.FC<{
   label: string
-  count?: number
-}> = ({ label, count }) => (
-  <div className="sticky top-[53px] z-[5] flex items-center gap-2 px-3 py-2 bg-background/90 backdrop-blur-sm">
+  count: number
+  groupId: string
+  onHeaderClick?: () => void
+}> = ({ label, count, groupId, onHeaderClick }) => (
+  <div 
+    className={cn(
+      "flex items-center gap-2 px-3 py-2",
+      "bg-background",
+      "border-b border-t",  // Keep borders for visual separation
+      "cursor-pointer hover:bg-muted/50 transition-colors"
+    )}
+    onClick={onHeaderClick}
+    role="heading"
+    aria-level={3}
+    id={`header-${groupId}`}
+  >
     <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
       {label}
     </span>
-    {count !== undefined && count > 0 && (
-      <span className="text-xs text-muted-foreground">({count})</span>
-    )}
-    <div className="flex-1 h-px bg-border/50" />
+    <span className="text-xs text-muted-foreground">({count})</span>
+    <div className="flex-1 h-px bg-border/50" aria-hidden="true" />
   </div>
 )
+
+/**
+ * Delete confirmation dialog component
+ */
+const DeleteSessionDialog: React.FC<{
+  session: ChatSessionIndexEntry | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onConfirm: () => void
+  isDeleting?: boolean
+}> = ({ session, open, onOpenChange, onConfirm, isDeleting }) => {
+  const sessionName = session ? getSessionDisplayName(session) : ''
+  
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete Session?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to delete '{sessionName}'? This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={onConfirm}
+            disabled={isDeleting}
+            className={cn(
+              buttonVariants({ variant: "destructive" }),
+              isDeleting && "opacity-50 cursor-wait"
+            )}
+          >
+            {isDeleting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Deleting...
+              </>
+            ) : (
+              'Delete'
+            )}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
 
 /**
  * Individual session item component
@@ -163,10 +212,14 @@ const SessionGroupHeader: React.FC<{
 const SessionItem: React.FC<{
   session: ChatSessionIndexEntry
   isActive: boolean
+  isFocused?: boolean
   onSelect: () => void
   onDelete: () => void
+  onFocus?: () => void
   isDeleting?: boolean
-}> = ({ session, isActive, onSelect, onDelete, isDeleting }) => {
+  index?: number
+  totalCount?: number
+}> = ({ session, isActive, isFocused, onSelect, onDelete, onFocus, isDeleting, index, totalCount }) => {
   const displayName = getSessionDisplayName(session)
   const timeAgo = getRelativeTime(session.updated_at || session.created_at)
   const agentDisplay = session.agent_name || session.agent_key || 'Unknown Agent'
@@ -174,24 +227,33 @@ const SessionItem: React.FC<{
   return (
     <div
       className={cn(
-        "group relative flex items-start gap-3 rounded-lg px-3 py-3",
+        "group relative px-3 py-3",
         "transition-all duration-200 cursor-pointer",
-        "hover:bg-muted/60 hover:shadow-sm",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        isActive && "bg-accent shadow-sm ring-1 ring-border/50",
-        isDeleting && "opacity-50 pointer-events-none"
+        "min-h-[44px]", // 44px touch target
+        "hover:bg-muted/60",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+        isActive && "bg-accent",
+        isFocused && "ring-2 ring-ring ring-offset-1",
+        isDeleting && "opacity-50 pointer-events-none",
+        "motion-safe:transition-all motion-reduce:transition-none"
       )}
       onClick={onSelect}
+      onFocus={onFocus}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
           onSelect()
+        } else if (e.key === 'Delete') {
+          e.preventDefault()
+          onDelete()
         }
       }}
-      tabIndex={0}
-      role="button"
-      aria-label={`Select session: ${displayName} with ${agentDisplay}`}
-      aria-current={isActive ? "true" : undefined}
+      tabIndex={isFocused ? 0 : -1}
+      role="option"
+      aria-selected={isActive}
+      aria-label={`Session ${index !== undefined ? index + 1 : ''} of ${totalCount || ''}: ${displayName} with ${agentDisplay}, last updated ${timeAgo}`}
+      aria-posinset={index !== undefined ? index + 1 : undefined}
+      aria-setsize={totalCount}
     >
       {/* Active indicator */}
       {isActive && (
@@ -201,23 +263,23 @@ const SessionItem: React.FC<{
         />
       )}
       
-      {/* Session icon */}
-      <MessageSquare className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
-      
-      {/* Session content */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <p className="font-medium text-sm truncate">
-              {displayName}
-            </p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {agentDisplay}
-            </p>
-          </div>
+      {/* Session content - Two-row layout */}
+      <div className="flex flex-col gap-1">
+        {/* Row 1: Session name - full width */}
+        <p className="font-medium text-sm leading-tight">
+          {displayName}
+        </p>
+        
+        {/* Row 2: Agent name on left | Age + Delete button on right */}
+        <div className="flex items-center justify-between gap-2">
+          {/* Left side: Agent name */}
+          <p className="text-xs text-muted-foreground truncate">
+            {agentDisplay}
+          </p>
           
-          <div className="flex items-center gap-1">
-            <span className="text-xs text-muted-foreground">
+          {/* Right side: Age + Delete button */}
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
               {timeAgo}
             </span>
             
@@ -225,14 +287,20 @@ const SessionItem: React.FC<{
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+              className={cn(
+                "h-6 w-6 flex-shrink-0 -mr-1",  // Smaller delete button
+                "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
+                "transition-opacity",
+                "focus-visible:opacity-100"
+              )}
               onClick={(e) => {
                 e.stopPropagation()
                 onDelete()
               }}
+              tabIndex={isFocused ? 0 : -1}
               aria-label={`Delete session: ${displayName}`}
             >
-              <Trash2 className="h-3 w-3" />
+              <Trash2 className="h-3 w-3" aria-hidden="true" />
             </Button>
           </div>
         </div>
@@ -367,6 +435,7 @@ export const ChatSessionList = React.forwardRef<HTMLDivElement, ChatSessionListP
     const {
       sessions,
       filteredSessions,
+      sessionGroups,  // Using the sessionGroups from the hook
       searchQuery,
       isLoading,
       isPaginationLoading,
@@ -386,54 +455,166 @@ export const ChatSessionList = React.forwardRef<HTMLDivElement, ChatSessionListP
     })
     
     // State for delete confirmation
-    const [deleteConfirmId, setDeleteConfirmId] = React.useState<string | null>(null)
+    const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
+    const [sessionToDelete, setSessionToDelete] = React.useState<ChatSessionIndexEntry | null>(null)
     const [deletingId, setDeletingId] = React.useState<string | null>(null)
     
-    // Ref for scroll area
-    const scrollAreaRef = React.useRef<HTMLDivElement>(null)
-    const loadMoreTriggerRef = React.useRef<HTMLDivElement>(null)
+    // State for keyboard navigation
+    const [focusedIndex, setFocusedIndex] = React.useState(-1)
     
-    // Group sessions by time
-    const groupedSessions = React.useMemo(
-      () => groupSessionsByTime(filteredSessions),
-      [filteredSessions]
-    )
+    // Announcements for screen readers
+    const [announcement, setAnnouncement] = React.useState('')
+    
+    // Refs
+    const scrollContainerRef = React.useRef<HTMLDivElement>(null)
+    const loadMoreTriggerRef = React.useRef<HTMLDivElement>(null)
+    const searchInputRef = React.useRef<HTMLInputElement>(null)
     
     // Handle session selection
     const handleSessionSelect = React.useCallback((sessionId: string) => {
       selectSession(sessionId)
       onSessionSelect?.(sessionId)
+      setAnnouncement('Session selected')
     }, [selectSession, onSessionSelect])
     
-    // Handle delete with confirmation
-    const handleDeleteSession = React.useCallback(async (sessionId: string) => {
-      setDeletingId(sessionId)
+    // Handle delete request (opens dialog)
+    const handleDeleteRequest = React.useCallback((session: ChatSessionIndexEntry) => {
+      setSessionToDelete(session)
+      setDeleteDialogOpen(true)
+    }, [])
+    
+    // Handle delete confirmation
+    const handleDeleteConfirm = React.useCallback(async () => {
+      if (!sessionToDelete) return
+      
+      setDeletingId(sessionToDelete.session_id)
+      setDeleteDialogOpen(false)
+      
       try {
-        await deleteSession(sessionId)
+        await deleteSession(sessionToDelete.session_id)
+        setAnnouncement('Session deleted successfully')
       } catch (error) {
         console.error('Failed to delete session:', error)
+        setAnnouncement('Failed to delete session')
       } finally {
         setDeletingId(null)
+        setSessionToDelete(null)
       }
-    }, [deleteSession])
+    }, [sessionToDelete, deleteSession])
+    
+    // Handle clear search
+    const handleClearSearch = React.useCallback(() => {
+      searchSessions('')
+      searchInputRef.current?.focus()
+    }, [searchSessions])
+    
+    // Handle header click to scroll UP to section
+    const handleHeaderClick = React.useCallback((groupId: string) => {
+      const element = document.getElementById(`header-${groupId}`)
+      if (element) {
+        // Use scrollIntoView with block: 'start' to bring section to TOP of viewport
+        element.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start'  // This ensures the section scrolls to the TOP
+        })
+      }
+    }, [])
+    
+    // Keyboard navigation handler
+    const handleKeyboardNavigation = React.useCallback((e: React.KeyboardEvent) => {
+      const allSessions = filteredSessions
+      
+      if (allSessions.length === 0) return
+      
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault()
+          setFocusedIndex(prev => {
+            const next = prev < allSessions.length - 1 ? prev + 1 : prev
+            // Scroll focused item into view
+            const element = scrollContainerRef.current?.querySelectorAll('[role="option"]')[next] as HTMLElement
+            element?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+            return next
+          })
+          break
+          
+        case 'ArrowUp':
+          e.preventDefault()
+          setFocusedIndex(prev => {
+            const next = prev > 0 ? prev - 1 : 0
+            const element = scrollContainerRef.current?.querySelectorAll('[role="option"]')[next] as HTMLElement
+            element?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+            return next
+          })
+          break
+          
+        case 'Home':
+          e.preventDefault()
+          setFocusedIndex(0)
+          scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+          break
+          
+        case 'End':
+          e.preventDefault()
+          setFocusedIndex(allSessions.length - 1)
+          scrollContainerRef.current?.scrollTo({ 
+            top: scrollContainerRef.current.scrollHeight, 
+            behavior: 'smooth' 
+          })
+          break
+          
+        case 'Enter':
+        case ' ':
+          if (focusedIndex >= 0 && focusedIndex < allSessions.length) {
+            e.preventDefault()
+            handleSessionSelect(allSessions[focusedIndex].session_id)
+          }
+          break
+          
+        case 'Delete':
+          if (focusedIndex >= 0 && focusedIndex < allSessions.length) {
+            e.preventDefault()
+            handleDeleteRequest(allSessions[focusedIndex])
+          }
+          break
+      }
+    }, [filteredSessions, focusedIndex, handleSessionSelect, handleDeleteRequest])
     
     // Intersection observer for infinite scroll
     React.useEffect(() => {
-      if (!loadMoreTriggerRef.current || !hasMore || isPaginationLoading) return
+      const triggerElement = loadMoreTriggerRef.current
+      if (!triggerElement) {
+        console.debug('No trigger element for infinite scroll')
+        return
+      }
       
+      // Create observer with proper threshold
       const observer = new IntersectionObserver(
         (entries) => {
-          if (entries[0].isIntersecting) {
+          const [entry] = entries
+          if (entry.isIntersecting) {
+            console.debug('Trigger element intersecting, attempting to load more...', { hasMore, isPaginationLoading })
+            // Call loadMore directly without checking conditions here
+            // The loadMore function handles its own validation
             loadMore()
           }
         },
-        { threshold: 0.1 }
+        { 
+          root: scrollContainerRef.current,
+          rootMargin: '100px', // Trigger 100px before reaching the element
+          threshold: 0.01 // More sensitive threshold
+        }
       )
       
-      observer.observe(loadMoreTriggerRef.current)
+      observer.observe(triggerElement)
       
-      return () => observer.disconnect()
-    }, [hasMore, isPaginationLoading, loadMore])
+      return () => {
+        if (triggerElement) {
+          observer.unobserve(triggerElement)
+        }
+        observer.disconnect()
+      }
+    }, [loadMore]) // Only depend on loadMore, not on hasMore or isPaginationLoading
     
     // Collapsed view
     if (isCollapsed) {
@@ -463,112 +644,121 @@ export const ChatSessionList = React.forwardRef<HTMLDivElement, ChatSessionListP
         <SearchFilterBar
           value={searchQuery}
           onChange={searchSessions}
+          onClear={handleClearSearch}
           isSearching={false}
         />
         
-        {/* Session count indicator */}
-        {totalCount > 0 && (
-          <div className="px-3 py-2 text-xs text-muted-foreground border-b">
-            Showing {filteredSessions.length} of {totalCount} sessions
-          </div>
-        )}
-        
-        {/* Main content area */}
-        <ScrollArea className="flex-1" ref={scrollAreaRef}>
-          <div className="pb-4">
-            {/* Loading state */}
-            {isLoading && sessions.length === 0 && (
-              <LoadingSkeleton />
-            )}
-            
-            {/* Error state */}
-            {error && sessions.length === 0 && (
-              <ErrorState error={error} onRetry={refresh} />
-            )}
-            
-            {/* Empty state */}
-            {!isLoading && !error && filteredSessions.length === 0 && (
-              <EmptyState searchQuery={searchQuery} />
-            )}
-            
-            {/* Session groups */}
-            {!isLoading && filteredSessions.length > 0 && (
-              <>
-                {/* Today's sessions */}
-                {groupedSessions.today.length > 0 && (
-                  <>
-                    <SessionGroupHeader label="Today" count={groupedSessions.today.length} />
-                    <div className="px-2 py-2 space-y-1">
-                      {groupedSessions.today.map(session => (
-                        <SessionItem
-                          key={session.session_id}
-                          session={session}
-                          isActive={session.session_id === currentSessionId}
-                          onSelect={() => handleSessionSelect(session.session_id)}
-                          onDelete={() => handleDeleteSession(session.session_id)}
-                          isDeleting={deletingId === session.session_id}
-                        />
-                      ))}
-                    </div>
-                  </>
-                )}
+        {/* Main scrollable content area */}
+        <div 
+          ref={scrollContainerRef}
+          className="flex-1 overflow-y-auto"
+          role="listbox"
+          aria-label="Chat sessions"
+          onKeyDown={handleKeyboardNavigation}
+          tabIndex={0}
+        >
+          {/* Loading state */}
+          {isLoading && sessions.length === 0 && (
+            <LoadingSkeleton />
+          )}
+          
+          {/* Error state */}
+          {error && sessions.length === 0 && (
+            <ErrorState error={error} onRetry={refresh} />
+          )}
+          
+          {/* Empty state */}
+          {!isLoading && !error && filteredSessions.length === 0 && (
+            <EmptyState searchQuery={searchQuery} />
+          )}
+          
+          {/* Session groups using sessionGroups from hook */}
+          {!isLoading && sessionGroups.length > 0 && (
+            <>
+              {sessionGroups.map((group, groupIndex) => {
+                let globalIndexOffset = 0
+                // Calculate the offset for this group
+                for (const g of sessionGroups) {
+                  if (g.group === group.group) break
+                  globalIndexOffset += g.sessions.length
+                }
                 
-                {/* Recent sessions (past 14 days) */}
-                {groupedSessions.recent.length > 0 && (
-                  <>
-                    <SessionGroupHeader label="Recent" count={groupedSessions.recent.length} />
-                    <div className="px-2 py-2 space-y-1">
-                      {groupedSessions.recent.map(session => (
-                        <SessionItem
-                          key={session.session_id}
-                          session={session}
-                          isActive={session.session_id === currentSessionId}
-                          onSelect={() => handleSessionSelect(session.session_id)}
-                          onDelete={() => handleDeleteSession(session.session_id)}
-                          isDeleting={deletingId === session.session_id}
-                        />
-                      ))}
+                return (
+                  <div key={group.group}>
+                    {/* Section header */}
+                    <SessionGroupHeader
+                      label={group.label}
+                      count={group.count}
+                      groupId={group.group}
+                      onHeaderClick={() => handleHeaderClick(group.group)}
+                    />
+                    
+                    {/* Session items */}
+                    <div className="pb-2">
+                      {group.sessions.map((session, idx) => {
+                        const globalIndex = globalIndexOffset + idx
+                        return (
+                          <SessionItem
+                            key={session.session_id}
+                            session={session}
+                            isActive={session.session_id === currentSessionId}
+                            isFocused={focusedIndex === globalIndex}
+                            onSelect={() => handleSessionSelect(session.session_id)}
+                            onDelete={() => handleDeleteRequest(session)}
+                            onFocus={() => setFocusedIndex(globalIndex)}
+                            isDeleting={deletingId === session.session_id}
+                            index={globalIndex}
+                            totalCount={filteredSessions.length}
+                          />
+                        )
+                      })}
                     </div>
-                  </>
-                )}
-                
-                {/* Past sessions (older than 14 days) */}
-                {groupedSessions.past.length > 0 && (
-                  <>
-                    <SessionGroupHeader label="Past Sessions" count={groupedSessions.past.length} />
-                    <div className="px-2 py-2 space-y-1">
-                      {groupedSessions.past.map(session => (
-                        <SessionItem
-                          key={session.session_id}
-                          session={session}
-                          isActive={session.session_id === currentSessionId}
-                          onSelect={() => handleSessionSelect(session.session_id)}
-                          onDelete={() => handleDeleteSession(session.session_id)}
-                          isDeleting={deletingId === session.session_id}
-                        />
-                      ))}
-                    </div>
-                  </>
-                )}
-                
-                {/* Load more trigger */}
-                {hasMore && (
-                  <div
-                    ref={loadMoreTriggerRef}
-                    className="flex items-center justify-center py-4"
-                  >
-                    {isPaginationLoading && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>Loading more sessions...</span>
-                      </div>
-                    )}
                   </div>
-                )}
-              </>
-            )}
-          </div>
-        </ScrollArea>
+                )
+              })}
+              
+              {/* Load more trigger - Always render when hasMore, visibility controls loading */}
+              {hasMore && (
+                <div
+                  ref={loadMoreTriggerRef}
+                  className="flex items-center justify-center py-4 min-h-[60px]"
+                  aria-label="Load more sessions trigger"
+                >
+                  {isPaginationLoading ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status" aria-live="polite">
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                      <span>Loading more sessions...</span>
+                    </div>
+                  ) : (
+                    // Invisible element to maintain height and trigger intersection
+                    <div className="text-sm text-muted-foreground opacity-50">
+                      <span>Scroll for more</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+        
+        {/* Delete confirmation dialog */}
+        <DeleteSessionDialog
+          session={sessionToDelete}
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          onConfirm={handleDeleteConfirm}
+          isDeleting={!!deletingId}
+        />
+        
+        {/* Screen reader announcements */}
+        <div 
+          className="sr-only" 
+          role="status" 
+          aria-live="assertive" 
+          aria-atomic="true"
+        >
+          {announcement}
+        </div>
       </div>
     )
   }

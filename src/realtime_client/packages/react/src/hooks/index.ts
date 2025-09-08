@@ -45,4 +45,10 @@ export type { UseInitializationStatusReturn } from './useInitializationStatus';
 
 // Chat session list management
 export { useChatSessionList } from './useChatSessionList';
-export type { UseChatSessionListOptions, UseChatSessionListReturn } from './useChatSessionList';
+export type { 
+  UseChatSessionListOptions, 
+  UseChatSessionListReturn,
+  GroupedSessions,
+  SessionGroup,
+  SessionGroupMeta 
+} from './useChatSessionList';

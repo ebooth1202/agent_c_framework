@@ -3,7 +3,7 @@
  * Provides interface for loading, searching, and managing chat sessions
  */
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import type { 
   ChatSessionIndexEntry,
   GetUserSessionsResponseEvent,
@@ -15,23 +15,119 @@ import type {
 import { useRealtimeClientSafe } from '../providers/AgentCContext';
 
 /**
- * Simple debounce utility
+ * Parse date string with microseconds support
+ * Handles formats like '2025-09-06T20:16:26.515250' or ISO 8601
  */
-function debounce<T extends (...args: any[]) => void>(
-  func: T,
-  delay: number
-): (...args: Parameters<T>) => void {
-  let timeoutId: NodeJS.Timeout | null = null;
+function parseDate(dateString: string | null | undefined): Date {
+  if (!dateString) return new Date(0);
   
-  return (...args: Parameters<T>) => {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
+  try {
+    // Handle microseconds by truncating to milliseconds
+    // Format: YYYY-MM-DDTHH:mm:ss.microseconds
+    const microsecondPattern = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})\.(\d{6})$/;
+    const match = dateString.match(microsecondPattern);
+    
+    if (match) {
+      // Convert microseconds to milliseconds (take first 3 digits)
+      const [, dateTimePart, microseconds] = match;
+      const milliseconds = microseconds ? microseconds.substring(0, 3) : '000';
+      const normalizedDate = `${dateTimePart}.${milliseconds}Z`;
+      return new Date(normalizedDate);
     }
     
-    timeoutId = setTimeout(() => {
-      func(...args);
-    }, delay);
+    // Try standard ISO parsing
+    const date = new Date(dateString);
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      console.warn(`Invalid date string: ${dateString}`);
+      return new Date(0);
+    }
+    
+    return date;
+  } catch (error) {
+    console.error(`Error parsing date: ${dateString}`, error);
+    return new Date(0);
+  }
+}
+
+/**
+ * Session group type
+ */
+export type SessionGroup = 'today' | 'recent' | 'past';
+
+/**
+ * Grouped sessions interface
+ */
+export interface GroupedSessions {
+  today: ChatSessionIndexEntry[];
+  recent: ChatSessionIndexEntry[];  // Past 14 days
+  past: ChatSessionIndexEntry[];    // Older than 14 days
+}
+
+/**
+ * Session group metadata
+ */
+export interface SessionGroupMeta {
+  group: SessionGroup;
+  label: string;
+  count: number;
+  sessions: ChatSessionIndexEntry[];
+}
+
+/**
+ * Group sessions by time periods with robust date parsing
+ */
+function groupSessionsByTime(sessions: ChatSessionIndexEntry[]): GroupedSessions {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const twoWeeksAgo = new Date(today.getTime() - (14 * 24 * 60 * 60 * 1000));
+  
+  const groups: GroupedSessions = {
+    today: [],
+    recent: [],
+    past: []
   };
+  
+  // Debug logging for date parsing issues
+  const debugDates = sessions.slice(0, 3).map(s => ({
+    id: s.session_id.substring(0, 8),
+    updated: s.updated_at,
+    parsed: parseDate(s.updated_at || s.created_at)
+  }));
+  
+  if (debugDates.length > 0) {
+    console.debug('Sample date parsing:', debugDates);
+  }
+  
+  sessions.forEach(session => {
+    const sessionDate = parseDate(session.updated_at || session.created_at);
+    
+    // Additional validation - if date is in the far future, treat as recent
+    const oneYearFromNow = new Date(now.getTime() + (365 * 24 * 60 * 60 * 1000));
+    if (sessionDate > oneYearFromNow) {
+      console.warn(`Session ${session.session_id} has future date: ${session.updated_at}, treating as recent`);
+      groups.recent.push(session);
+    } else if (sessionDate >= today) {
+      groups.today.push(session);
+    } else if (sessionDate >= twoWeeksAgo) {
+      groups.recent.push(session);
+    } else {
+      groups.past.push(session);
+    }
+  });
+  
+  // Log grouping results for debugging
+  console.debug('Session grouping results:', {
+    total: sessions.length,
+    today: groups.today.length,
+    recent: groups.recent.length,
+    past: groups.past.length,
+    todayStart: today.toISOString(),
+    twoWeeksAgoStart: twoWeeksAgo.toISOString()
+  });
+  
+  return groups;
 }
 
 /**
@@ -60,6 +156,12 @@ export interface UseChatSessionListReturn {
   
   /** Filtered sessions based on search */
   filteredSessions: ChatSessionIndexEntry[];
+  
+  /** Sessions grouped by date */
+  groupedSessions: GroupedSessions;
+  
+  /** Session groups with metadata */
+  sessionGroups: SessionGroupMeta[];
   
   /** Current search query */
   searchQuery: string;
@@ -146,6 +248,50 @@ export function useChatSessionList(options: UseChatSessionListOptions = {}): Use
   }, []);
   
   /**
+   * Group filtered sessions by date with memoization
+   */
+  const groupedSessions = useMemo(
+    () => groupSessionsByTime(filteredSessions),
+    [filteredSessions]
+  );
+  
+  /**
+   * Create session groups with metadata for UI
+   */
+  const sessionGroups = useMemo((): SessionGroupMeta[] => {
+    const groups: SessionGroupMeta[] = [];
+    
+    if (groupedSessions.today.length > 0) {
+      groups.push({
+        group: 'today',
+        label: 'Today',
+        count: groupedSessions.today.length,
+        sessions: groupedSessions.today
+      });
+    }
+    
+    if (groupedSessions.recent.length > 0) {
+      groups.push({
+        group: 'recent',
+        label: 'Recent',
+        count: groupedSessions.recent.length,
+        sessions: groupedSessions.recent
+      });
+    }
+    
+    if (groupedSessions.past.length > 0) {
+      groups.push({
+        group: 'past',
+        label: 'Past Sessions',
+        count: groupedSessions.past.length,
+        sessions: groupedSessions.past
+      });
+    }
+    
+    return groups;
+  }, [groupedSessions]);
+  
+  /**
    * Load sessions from server
    */
   const loadSessions = useCallback((isInitial: boolean = false) => {
@@ -155,6 +301,7 @@ export function useChatSessionList(options: UseChatSessionListOptions = {}): Use
     }
     
     if (isLoadingRef.current) {
+      console.debug('Load already in progress, skipping');
       return;
     }
     
@@ -170,6 +317,7 @@ export function useChatSessionList(options: UseChatSessionListOptions = {}): Use
     setError(null);
     
     // Request sessions from server using sendEvent
+    console.debug('Sending get_user_sessions event', { offset: offsetRef.current, limit: pageSize });
     client.sendEvent({
       type: 'get_user_sessions',
       offset: offsetRef.current,
@@ -181,12 +329,26 @@ export function useChatSessionList(options: UseChatSessionListOptions = {}): Use
    * Load more sessions (pagination)
    */
   const loadMore = useCallback(() => {
-    if (!hasMore || isLoadingRef.current) {
+    // Check current state values directly
+    if (!client || !client.isConnected()) {
+      console.debug('Cannot load more: client not connected');
       return;
     }
     
+    if (isLoadingRef.current) {
+      console.debug('Cannot load more: already loading');
+      return;
+    }
+    
+    // Check hasMore by comparing offset with total
+    if (offsetRef.current >= totalCount && totalCount > 0) {
+      console.debug('Cannot load more: no more sessions', { offset: offsetRef.current, total: totalCount });
+      return;
+    }
+    
+    console.debug('Loading more sessions...', { offset: offsetRef.current, total: totalCount });
     loadSessions(false);
-  }, [hasMore, loadSessions]);
+  }, [client, totalCount, loadSessions]);
   
   /**
    * Select and resume a session
@@ -250,8 +412,8 @@ export function useChatSessionList(options: UseChatSessionListOptions = {}): Use
           const newSessions = [...prev, rollbackDataRef.current!];
           // Sort by updated_at descending
           return newSessions.sort((a, b) => {
-            const dateA = new Date(a.updated_at || 0).getTime();
-            const dateB = new Date(b.updated_at || 0).getTime();
+            const dateA = parseDate(a.updated_at || a.created_at).getTime();
+            const dateB = parseDate(b.updated_at || b.created_at).getTime();
             return dateB - dateA;
           });
         });
@@ -275,19 +437,36 @@ export function useChatSessionList(options: UseChatSessionListOptions = {}): Use
   }, [client, sessions, currentSessionId, searchQuery, filterSessions]);
   
   /**
-   * Search sessions with debouncing
+   * Debounced search handler that uses current sessions state
    */
-  const debouncedSearch = useRef(
-    debounce((query: string) => {
-      const filtered = filterSessions(query, sessions);
-      setFilteredSessions(filtered);
-    }, searchDebounceMs)
-  ).current;
+  const debouncedSearchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const searchSessions = useCallback((query: string) => {
     setSearchQuery(query);
-    debouncedSearch(query);
-  }, [debouncedSearch]);
+    
+    // Clear any existing timeout
+    if (debouncedSearchTimeoutRef.current) {
+      clearTimeout(debouncedSearchTimeoutRef.current);
+    }
+    
+    // If clearing search, update immediately
+    if (!query.trim()) {
+      setSessions(prev => {
+        setFilteredSessions(prev); // Use current sessions
+        return prev;
+      });
+      return;
+    }
+    
+    // Debounce the search
+    debouncedSearchTimeoutRef.current = setTimeout(() => {
+      setSessions(prev => {
+        const filtered = filterSessions(query, prev);
+        setFilteredSessions(filtered);
+        return prev;
+      });
+    }, searchDebounceMs);
+  }, [filterSessions, searchDebounceMs]);
   
   /**
    * Refresh sessions from server
@@ -307,12 +486,30 @@ export function useChatSessionList(options: UseChatSessionListOptions = {}): Use
     
     // Handle get_user_sessions_response
     const handleSessionsResponse = (event: GetUserSessionsResponseEvent) => {
-      if (!event.sessions) return;
+      console.debug('Received get_user_sessions_response', { 
+        hasData: !!event.sessions, 
+        currentOffset: offsetRef.current 
+      });
+      
+      if (!event.sessions) {
+        console.warn('No sessions data in response');
+        isLoadingRef.current = false;
+        setIsLoading(false);
+        setIsPaginationLoading(false);
+        return;
+      }
       
       const response = event.sessions;
       const newSessions = response.chat_sessions.filter(
         session => !deletedSessionsRef.current.has(session.session_id)
       );
+      
+      console.debug('Processing sessions response', {
+        received: response.chat_sessions.length,
+        filtered: newSessions.length,
+        total: response.total_sessions,
+        currentOffset: offsetRef.current
+      });
       
       if (offsetRef.current === 0) {
         // Initial load - replace all sessions
@@ -322,55 +519,151 @@ export function useChatSessionList(options: UseChatSessionListOptions = {}): Use
         // Pagination - append new sessions
         setSessions(prev => {
           const combined = [...prev, ...newSessions];
-          // Limit cache size
-          if (combined.length > maxCachedSessions) {
-            return combined.slice(0, maxCachedSessions);
-          }
-          return combined;
-        });
-        
-        setFilteredSessions(prev => {
-          const combined = [...prev, ...filterSessions(searchQuery, newSessions)];
-          if (combined.length > maxCachedSessions) {
-            return combined.slice(0, maxCachedSessions);
-          }
-          return combined;
+          const limited = combined.length > maxCachedSessions 
+            ? combined.slice(0, maxCachedSessions)
+            : combined;
+          
+          // Update filtered sessions with the combined list
+          const filtered = filterSessions(searchQuery, limited);
+          setFilteredSessions(filtered);
+          
+          return limited;
         });
       }
       
+      // Update pagination state
+      const newOffset = offsetRef.current + newSessions.length;
+      offsetRef.current = newOffset;
       setTotalCount(response.total_sessions);
-      offsetRef.current += newSessions.length;
-      setHasMore(offsetRef.current < response.total_sessions);
       
+      // Calculate hasMore - true if we haven't loaded all sessions yet
+      const hasMoreSessions = newOffset < response.total_sessions;
+      setHasMore(hasMoreSessions);
+      
+      console.debug('Updated pagination state', {
+        newOffset,
+        totalSessions: response.total_sessions,
+        hasMore: hasMoreSessions
+      });
+      
+      // Reset loading states
       isLoadingRef.current = false;
       setIsLoading(false);
       setIsPaginationLoading(false);
       setError(null);
     };
     
-    // Handle chat_session_changed
+    // Handle chat_session_changed - Update the session in the list with new data
     const handleSessionChanged = (event: ChatSessionChangedEvent) => {
-      if (event.chat_session) {
-        setCurrentSessionId(event.chat_session.session_id);
-      }
+      if (!event.chat_session) return;
+      
+      const updatedSession = event.chat_session;
+      const sessionId: string = updatedSession.session_id;
+      
+      // Update current session ID
+      setCurrentSessionId(sessionId);
+      
+      // Update the session in our list with the new data (especially updated_at)
+      setSessions(prev => {
+        const sessionIndex = prev.findIndex(s => s.session_id === sessionId);
+        if (sessionIndex === -1) {
+          // Session not in list yet, add it at the beginning
+          const newEntry = {
+            session_id: sessionId,
+            session_name: updatedSession.session_name,
+            created_at: updatedSession.created_at,
+            updated_at: updatedSession.updated_at,
+            user_id: updatedSession.user_id,
+            agent_key: updatedSession.agent_config?.key,
+            agent_name: updatedSession.agent_config?.name
+          } as ChatSessionIndexEntry;
+          return [newEntry, ...prev];
+        }
+        
+        // Update existing session and re-sort by updated_at
+        const updated = [...prev];
+        updated[sessionIndex] = {
+          ...updated[sessionIndex],
+          session_name: updatedSession.session_name,
+          updated_at: updatedSession.updated_at
+        } as ChatSessionIndexEntry;
+        
+        // Re-sort by updated_at descending (newest first)
+        return updated.sort((a, b) => {
+          const dateA = parseDate(a.updated_at || a.created_at).getTime();
+          const dateB = parseDate(b.updated_at || b.created_at).getTime();
+          return dateB - dateA;
+        });
+      });
+      
+      // Update filtered list too
+      setFilteredSessions(prev => {
+        const sessionIndex = prev.findIndex(s => s.session_id === sessionId);
+        if (sessionIndex === -1) {
+          // Check if new session matches search
+          const newEntry = {
+            session_id: sessionId,
+            session_name: updatedSession.session_name,
+            created_at: updatedSession.created_at,
+            updated_at: updatedSession.updated_at,
+            user_id: updatedSession.user_id,
+            agent_key: updatedSession.agent_config?.key,
+            agent_name: updatedSession.agent_config?.name
+          } as ChatSessionIndexEntry;
+          
+          if (filterSessions(searchQuery, [newEntry]).length > 0) {
+            return [newEntry, ...prev];
+          }
+          return prev;
+        }
+        
+        // Update existing session and re-sort
+        const updated = [...prev];
+        updated[sessionIndex] = {
+          ...updated[sessionIndex],
+          session_name: updatedSession.session_name,
+          updated_at: updatedSession.updated_at
+        } as ChatSessionIndexEntry;
+        
+        return updated.sort((a, b) => {
+          const dateA = parseDate(a.updated_at || a.created_at).getTime();
+          const dateB = parseDate(b.updated_at || b.created_at).getTime();
+          return dateB - dateA;
+        });
+      });
     };
     
     // Handle chat_session_name_changed
     const handleSessionNameChanged = (event: ChatSessionNameChangedEvent) => {
       if (!event.session_name) return;
       
+      // Use session_id from event if provided, otherwise use current session
+      const sessionId = event.session_id || currentSessionId;
+      if (!sessionId) return;
+      
       // Update session name in our list
       setSessions(prev => prev.map(session => {
-        if (session.session_id === currentSessionId) {
-          return { ...session, session_name: event.session_name };
+        if (session.session_id === sessionId) {
+          const updated: ChatSessionIndexEntry = { 
+            ...session, 
+            session_name: event.session_name,
+            // Update timestamp since the session was modified
+            updated_at: new Date().toISOString()
+          };
+          return updated;
         }
         return session;
       }));
       
       // Update filtered list too
       setFilteredSessions(prev => prev.map(session => {
-        if (session.session_id === currentSessionId) {
-          return { ...session, session_name: event.session_name };
+        if (session.session_id === sessionId) {
+          const updated: ChatSessionIndexEntry = { 
+            ...session, 
+            session_name: event.session_name,
+            updated_at: new Date().toISOString()
+          };
+          return updated;
         }
         return session;
       }));
@@ -450,8 +743,22 @@ export function useChatSessionList(options: UseChatSessionListOptions = {}): Use
       setIsPaginationLoading(false);
     };
     
+    // Handle reconnection - refresh to sync state
+    const handleReconnected = () => {
+      // On reconnection, refresh the session list to ensure we're in sync
+      if (autoLoad) {
+        // Small delay to let the connection stabilize
+        setTimeout(() => {
+          refresh();
+        }, 500);
+      }
+    };
+    
     // Handle errors
     const handleError = (error: unknown) => {
+      console.error('Session list error:', error);
+      
+      // Always reset loading states on error
       isLoadingRef.current = false;
       setIsLoading(false);
       setIsPaginationLoading(false);
@@ -470,6 +777,7 @@ export function useChatSessionList(options: UseChatSessionListOptions = {}): Use
     client.on('chat_session_deleted', handleSessionDeleted);
     client.on('connected', handleConnected);
     client.on('disconnected', handleDisconnected);
+    client.on('reconnected', handleReconnected);
     client.on('error', handleError);
     
     // Cleanup
@@ -481,9 +789,10 @@ export function useChatSessionList(options: UseChatSessionListOptions = {}): Use
       client.off('chat_session_deleted', handleSessionDeleted);
       client.off('connected', handleConnected);
       client.off('disconnected', handleDisconnected);
+      client.off('reconnected', handleReconnected);
       client.off('error', handleError);
     };
-  }, [client, autoLoad, searchQuery, currentSessionId, filterSessions, maxCachedSessions, loadSessions]);
+  }, [client, autoLoad, searchQuery, currentSessionId, filterSessions, maxCachedSessions, loadSessions, refresh]);
   
   // Initial load on mount if autoLoad is enabled
   useEffect(() => {
@@ -508,6 +817,8 @@ export function useChatSessionList(options: UseChatSessionListOptions = {}): Use
   return {
     sessions,
     filteredSessions,
+    groupedSessions,
+    sessionGroups,
     searchQuery,
     isLoading,
     isPaginationLoading,
