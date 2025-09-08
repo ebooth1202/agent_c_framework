@@ -10,7 +10,7 @@ import { Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 
 export default function RealtimeChat() {
   const { connect, disconnect, isConnected, connectionState } = useConnection();
-  const { messages, sendMessage, isStreaming } = useChat();
+  const { messages, sendMessage, isAgentTyping } = useChat();
   const { startRecording, stopRecording, isRecording, audioLevel } = useAudio();
   const [inputText, setInputText] = useState('');
 
@@ -71,7 +71,7 @@ export default function RealtimeChat() {
                 🎤 Recording ({Math.round(audioLevel * 100)}%)
               </Badge>
             )}
-            {isStreaming && (
+            {isAgentTyping && (
               <Badge variant="outline">
                 ✨ Agent typing...
               </Badge>
@@ -121,7 +121,7 @@ export default function RealtimeChat() {
               ) : (
                 <div>
                   <p className="text-lg font-medium">🔌 Ready to Connect</p>
-                  <p className="text-sm mt-2">Click "Connect to Agent C" to begin</p>
+                  <p className="text-sm mt-2">Click &quot;Connect to Agent C&quot; to begin</p>
                 </div>
               )}
             </div>
@@ -143,7 +143,7 @@ export default function RealtimeChat() {
                 </div>
               ))}
               
-              {isStreaming && (
+              {isAgentTyping && (
                 <div className="bg-white dark:bg-gray-800 border shadow-sm p-3 rounded-lg max-w-[80%]">
                   <div className="text-sm font-medium mb-1">🤖 Agent</div>
                   <div className="flex items-center gap-2">
@@ -172,7 +172,7 @@ export default function RealtimeChat() {
           />
           <Button
             onClick={handleSendMessage}
-            disabled={!isConnected || !inputText.trim() || isStreaming}
+            disabled={!isConnected || !inputText.trim() || isAgentTyping}
           >
             Send
           </Button>

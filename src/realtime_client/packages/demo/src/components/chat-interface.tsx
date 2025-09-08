@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 
 export default function ChatInterface() {
   const { connect, disconnect, isConnected, connectionState } = useConnection();
-  const { messages, sendMessage, isStreaming } = useChat();
+  const { messages, sendMessage, isAgentTyping } = useChat();
   const { startRecording, stopRecording, isRecording, audioLevel } = useAudio();
   const [inputText, setInputText] = useState('');
 
@@ -95,7 +95,7 @@ export default function ChatInterface() {
                 </div>
               ))
             )}
-            {isStreaming && (
+            {isAgentTyping && (
               <div className="bg-white border p-3 rounded-lg max-w-[80%]">
                 <div className="text-sm font-medium mb-1">Agent</div>
                 <div className="animate-pulse">Typing...</div>

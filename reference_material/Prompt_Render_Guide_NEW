@@ -1,0 +1,361 @@
+Agent C Prompt Rendering Guide
+Philosophy: Selective Rendering for Attention Management
+
+Core Principle: Any instruction or context information in a prompt that's not ACTUALLY useful for the current task is a hindrance to task performance. Agent C's prompt rendering system is designed to include only what's needed, when it's needed.
+
+Overview: How Prompt Rendering Works
+
+Agent C uses a multi-stage rendering process:
+Template Collection: Gather all required prompt sections from tools and agent configuration
+Section Grouping: Group sections by SectionRenderSlot for ordered rendering
+Master Template Rendering: Process the agent instructions and section collections
+Selective Inclusion: Use helper functions to conditionally include content
+Deduplication: Ensure each template renders only once per render pass
+
+Section Render Slots
+
+Sections are automatically grouped into render slots that determine their default ordering:
+
+class SectionRenderSlot(StrEnum):
+    INCLUDE_ONLY = "include_only"     # For macros or includes that should not be rendered directly
+    SYSTEM = "system"                 # Reserved
+    BEFORE_AGENT = "before_agent"     # For content more important than the agent instructions
+    AFTER_AGENT = "after_agent"       # For content less important than agent instructions but more important than tools
+    TOOL = "tool"                     # Tool sections for agent tools
+    DEFAULT = "default"               # Default render slot for sections that do not fit into other categories
+    AT_BOTTOM = "at_bottom"           # For temporary sections that should be rendered at the bottom of the prompt
+
+
+Master Template Flow
+
+The master template follows this rendering order:
+Render SYSTEM sections
+Render agent instructions (capturing output)
+Render BEFORE_AGENT sections
+Render output from #2
+Render AFTER_AGENT sections
+Render TOOL sections (only those not already included)
+Render DEFAULT sections (only those not already included)
+Render AT_BOTTOM sections
+Key Insight: Well-formed agent instructions explicitly place everything where it should be. The auto-rendering is a fallback for sections that weren't explicitly positioned.
+
+Core Helper Functions
+
+Section Inclusion Helpers
+
+prompt_section(name)
+Renders a template section exactly once per render pass.
+
+{# This will render the workspace list exactly once no matter where it is imported #}
+{{ prompt_section('tools/workspace/workspace_list') }}
+{# Subsequent calls return empty string #}
+{{ prompt_section('tools/workspace/workspace_list') }}
+{# No output #}
+
+
+skip_prompt_section(name)
+
+Prevents a section from rendering, even during auto-rendering.
+
+{# Mark this section as "already rendered" without actually rendering it #}
+{{ skip_prompt_section('tools/workspace/workspace_list') }}
+
+
+tool_section(section_name)
+Shorthand for prompt_section('tools/{section_name}').
+
+{{ tool_section('workspace/workspace_list') }}
+{# Equivalent to: {{ prompt_section('tools/workspace/workspace_list') }} #}
+
+
+State-Based Selective Rendering
+
+Toggle System
+Create simple on/off switches for content sections:
+
+{# Basic toggle usage #}{% if toggle('debug_info', default='closed') == 'open' %}
+<detailed_debug_context>
+  Session state: {{ session.state }}  Active tools: {{ session.active_tools }}
+</detailed_debug_context>
+{% endif %}
+{# Programmatic control #}
+{{ toggle_open('verbose_mode') }}
+{% if toggle('verbose_mode') == 'open' %}
+    {{ tool_section('advanced_debugging') }}
+{% endif %}
+
+
+State-Based Template Inclusion
+
+Include different templates based on machine state:
+
+{# Include different contexts based on user authentication #}
+{{ include_for_state('user_auth_machine', {
+    'logged_in': 'prompts/authenticated_user',
+    'guest': 'prompts/guest_user',
+    'admin': 'prompts/admin_user',
+    'default': 'prompts/fallback_user'})
+}}
+{# Keyword argument syntax #}
+{{ switch_on_state('debug_level_machine',
+                  verbose='debug/verbose_context',
+                  normal='debug/standard_context',
+                  minimal='debug/minimal_context') }}
+
+
+Collapsible Content
+
+Create agent-controlled progressive disclosure:
+
+{# Collapsible inline content #}{{ collapsible('debug_info',
+               'Current memory usage: 45MB\nActive connections: 3\nLast API call: 10:30:25',
+               'Debug information available') }}
+{# Collapsible template sections #}
+{{ collapsible_section('advanced_features',
+                       'tools/advanced/feature_set',
+                       'Advanced feature documentation available') }}
+
+{# Collapsible tool sections #}
+{{ collapsible_tool_section('search_tools',
+                           'elasticsearch',
+                           'Advanced search capabilities available') }}
+
+
+Output when closed:
+Debug information available - *Use `toggle(debug_info)` to display.*
+
+Output when open:
+Current memory usage: 45MB
+Active connections: 3
+Last API call: 10:30:25
+*Use `toggle(debug_info)` to hide this info and save context space.*
+
+Best Practices for Agent Prompt Authors
+
+1. Explicit Positioning
+Always explicitly position important content in your agent instructions using registered section keys:
+
+# Core Agent Instructions
+#
+# EXAMPLE NAMES ONLY
+## Context Setup
+{{ prompt_section('user_profile_context') }}
+{{ prompt_section('session_state') }}
+
+## Core Capabilities
+{{ tool_section('basic_tools') }}
+{{ tool_section('workspace_tools') }}
+
+## Advanced Features (Conditional)
+{{ collapsible_tool_section('advanced_mode', 'advanced_analysis_tools', 'Advanced analysis tools available') }}
+
+## Working Memory
+{{ include_for_toggle('working_memory', 'detailed_memory_context') }}
+
+
+2. Use Selective Rendering
+
+Don't include everything - include what's needed for the current task:
+
+{# Bad: Always include verbose debugging #}
+{{ tool_section('debug_tools') }}
+{# Good: Make it conditional #}
+{{ collapsible_tool_section('debug_mode', 'debug_tools', 'Debug tools available') }}
+
+
+3. Leverage State Machines
+Use state machines to adapt content to context:
+
+{# Adapt tool instructions based on user skill level #}
+{{ switch_on_state('user_skill_machine',
+                  beginner='basic_tool_instructions',
+                  intermediate='standard_tool_instructions',
+                  expert='minimal_tool_instructions') }}
+
+
+4. Skip Redundant Sections
+If you include a tool section explicitly, it will not be rendered again
+
+{# Include workspace tools in a specific location with custom context #}
+{{ tool_section('workspace_tools') }}
+{{ tool_section('workspace_tools') }}
+{# no output the second time #}
+
+
+
+5. Control Tool Section Complexity
+Use the selective rendering to control how much detail is shown:
+
+{# Always include core search capabilities #}
+{{ tool_section('search_tools') }}
+{# But make advanced features optional #}
+{{ collapsible('advanced_search_features',
+               tool_section('elasticsearch_tools'),
+               'Advanced search capabilities available') }}
+
+
+Tool Section Registration
+
+Auto-Registration
+Tool sections are automatically registered when their Python classes are imported:
+
+from agent_c.models.prompts import BaseToolSection
+class  MyCustomToolSection(BaseToolSection):
+    """
+    This tool section will be automatically registered as 'my_custom_tool'
+    and available in templates as {{ tool_section('my_custom_tool') }}.
+    The section_type is derived from the class name (MyCustomToolSection -> my_custom_tool).
+    """
+
+
+Section Keys
+Class name: MyCustomToolSection
+Registered as: my_custom_tool (snake_case, minus 'Section' suffix)
+Template access: {{ tool_section('my_custom_tool') }}
+Template key: tools/my_custom_tool
+
+Override Defaults
+
+You can customize the registration behavior:
+
+class SpecialToolSection(BaseToolSection):
+    """Custom tool with specific configuration."""
+     section_type = "custom_name"           # Override auto-generated name
+     render_slot = SectionRenderSlot.BEFORE_AGENT  # Change render order
+     template_key = "special/custom_tool"   # Override template path
+
+
+Best Practices for Tool Authors
+
+1. Create Tool Section Classes
+Tool sections are defined as Python classes that inherit from BaseToolSection:
+
+from agent_c.models.prompts import BaseToolSection
+class DallEToolsSection(BaseToolSection):
+    """
+    The dalle_create_image tool allows you to generate an image based on a prompt using DALL-E-3.
+    - If the user requests a portrait make sure to specify a tall ratio.
+    - If the user requests a landscape, photo or cinematic image make sure to specify a wide ratio.
+    - Details are important, the more detailed the prompt the better the image will be. Work with the user to help refine their image prompt.    - For example, if the user wants a cat in a forest, suggest they specify the type of cat and the type of forest after their image generates.    - Images meant to emulate photos can benefit from appropriate camera terms being adding to the prompt such as the camera make, lens information etc. If the user does not specify the camera / lens, adjust their prompt to add them.
+    - If the user requests street photography, but does not otherwise specify, include Hasselblad as the camera in the prompt.
+    - If the user requests an HD images, make sure to specify the quality as hd
+    """
+
+The class docstring becomes the template content and supports full Jinja2 syntax.
+
+2. Use Selective Rendering in Tool Sections
+
+Make your tool instructions adaptive using the selective rendering helpers:
+
+class SearchToolsSection(BaseToolSection):
+    """
+    # Search Tool
+    ## Basic Search Operations
+    You have access to search capabilities for finding information.
+    {{ collapsible('search_examples',
+                   '## Examples:\n- `search("python tutorials")` - Find Python learning resources\n- `search("current weather London")` - Get current weather\n- `search("latest news AI")` - Recent AI developments',
+                   'Search examples and patterns available') }}
+    ## Advanced Features
+    {% if toggle('advanced_search') == 'open' %}
+    ### Advanced Search Options:
+    - Use quotation marks for exact phrases
+    - Use site: operator to limit to specific domains
+    - Use date ranges with after: and before: operators
+
+    *Use `toggle(advanced_search)` to hide advanced options.*
+    {% else %}
+    Advanced search features available - *Use `toggle(advanced_search)` to display.*
+    {% endif %}
+    """
+
+3. Design for Modularity
+
+Create tool sections that work well both standalone and when composed:
+
+class WorkspaceToolsSection(BaseToolSection):
+    """
+    # Workspace Management Tool
+    You can manage files and directories in the user's workspace.
+    ## Core Operations
+    {{ prompt_section('tools/workspace/file_operations') if prompt_section else '- Create, read, update, and delete files\n- Navigate directory structures' }}
+
+    {{ collapsible_section('workspace_advanced',
+                           'tools/workspace/advanced_operations',
+
+
+4. Support Progressive Disclosure
+Design your tool sections to reveal complexity gradually:
+
+class DatabaseToolsSection(BaseToolSection):
+    """
+    # Database Access Tool
+    ## Basic Queries
+    You can execute read-only SQL queries against the database.
+    {{ collapsible('query_examples',
+                   '### Query Examples:\n```sql\nSELECT * FROM users WHERE active = true;\nSELECT COUNT(*) FROM orders WHERE date > "2024-01-01";\n```',
+                   'SQL query examples available') }}
+    {{ collapsible('schema_info',
+                   prompt_section('database/schema_reference') if prompt_section else 'Database schema information available',
+                   'Database schema and table information available') }}
+    ## Safety Guidelines
+    - Only SELECT statements are allowed
+    - Queries are automatically limited to 1000 rows
+    - No DDL or D
+
+5. Choose Appropriate Render Slots
+Set the right render slot for your tool section:
+
+class CoreToolsSection(BaseToolSection):
+    """Core tool instructions that should appear before agent instructions."""
+    render_slot = SectionRenderSlot.BEFORE_AGENT
+class AdvancedToolsSection(BaseToolSection):
+    """Advanced tools that supplement the main agent instructions."""
+    render_slot = SectionRenderSlot.TOOL  # Default for tool sections
+class ExamplesSection(BaseToolSection):
+    """Usage examples that should appear at the bottom."""
+    render_slot = SectionRenderSlot.AT_BOTTOM
+class MacroSection(BaseToolSection):
+    """Reusable template macros that should only be included explicitly."""
+    render_slot = SectionRenderSlot.INCLUDE_ONLY
+
+Common Patterns
+
+Progressive Disclosure
+
+{# Start with basics, allow expansion #}
+{{ tool_section('core_tools') }}
+{{ collapsible_section('advanced_tools',
+                       'tools/advanced_capabilities',
+                       'Advanced tools and features available') }}
+{{ collapsible_section('examples',
+                       'examples/tool_usage',
+                       'Usage examples and patterns available') }}
+
+Context-Aware Instructions
+
+{# Adapt instructions based on current context #}
+{{ switch_on_state('task_complexity_machine',
+                  simple='instructions/basic_guidance',
+                  complex='instructions/detailed_guidance',
+                  expert='instructions/minimal_guidance') }}
+
+Conditional Tool Loading
+
+{# Only include tools when they're actually needed #}
+{% if toggle('file_operations') == 'open' %}
+{{ tool_section('file_tools') }}
+{% endif %}
+{% if toggle('database_access') == 'open' %}
+{{ tool_section('database_tools') }}
+{% endif %}
+
+Result: Cleaner, More Effective Prompts
+
+The selective rendering system enables:
+Reduced token usage by including only relevant content
+Better task focus by avoiding irrelevant instructions
+User-controlled verbosity through toggles and collapsible sections
+Context-aware adaptation through state machines
+Modular, reusable components through the section system
+
+Remember: Every piece of content in your prompt should earn its place by being useful for the current task. Use these tools to make that happen automatically.

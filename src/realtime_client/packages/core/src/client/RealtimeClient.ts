@@ -1111,7 +1111,7 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
 
         // Build the WebSocket URL with the correct endpoint path
         const baseUrl = this.config.apiUrl;
-        const wsUrl = baseUrl.endsWith('/') ? baseUrl + 'api/rt/ws' : baseUrl + '/api/rt/ws';
+        const wsUrl = baseUrl.endsWith('/') ? baseUrl + 'rt/ws' : baseUrl + '/rt/ws';
         
         const url = new URL(wsUrl);
         url.searchParams.set('token', this.authToken);

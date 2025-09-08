@@ -25,9 +25,9 @@ def get_agent_config_loader(request: Request) -> 'AgentConfigLoader':
     """FastAPI dependency that provides the AgentConfigLoader from app state."""
     return request.app.state.agent_config_loader
 
-def get_heygen_client(request: Request) -> 'HeyGenStreamingClient':
+def get_heygen_client(request: Request) -> Optional['HeyGenStreamingClient']:
     """FastAPI dependency that provides the HeyGenStreamingClient from app state."""
-    return request.app.state.heygen_client
+    return getattr(request.app.state, 'heygen_client', None)
 
 def get_heygen_avatar_list(request: Request) -> List:
     """FastAPI dependency that provides the HeyGenStreamingClient from app state."""

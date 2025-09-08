@@ -3,7 +3,7 @@ services:
     image: redis:7-alpine
     restart: always
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes --appendfsync everysec
@@ -22,7 +22,7 @@ services:
     env_file:
       - ../.env
     ports:
-      - "8800:8000"
+      - "8801:8000"
     restart: always
     volumes:
       - ../src:/app/src  # For development hot-reloading

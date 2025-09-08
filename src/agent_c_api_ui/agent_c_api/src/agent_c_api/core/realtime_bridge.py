@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import json
 import threading
@@ -16,12 +18,20 @@ from agent_c.models.events.chat import ThoughtDeltaEvent, AudioInputDeltaEvent
 from agent_c.models.heygen import HeygenAvatarSessionData, NewSessionRequest
 from agent_c.toolsets import Toolset
 from agent_c.util.heygen_streaming_avatar_client import HeyGenStreamingClient
+from typing import TYPE_CHECKING
 from agent_c.util.registries.event import EventRegistry
-from agent_c_api.api.rt.models.client_events import GetAgentsEvent, ErrorEvent, AgentListEvent, GetAvatarsEvent, AvatarListEvent, TextInputEvent, SetAvatarEvent, AvatarConnectionChangedEvent, \
-    SetAgentEvent, AgentConfigurationChangedEvent, SetAvatarSessionEvent, ChatSessionChangedEvent, SessionMetadataChangedEvent, ChatSessionNameChangedEvent, ResumeChatSessionEvent, \
-    NewChatSessionEvent, SetAgentVoiceEvent, AgentVoiceChangedEvent, UserTurnStartEvent, UserTurnEndEvent, GetUserSessionsEvent, GetUserSessionsResponseEvent, PingEvent, PongEvent, \
-    GetToolCatalogEvent, ToolCatalogEvent, ChatUserDataEvent, GetVoicesEvent, VoiceListEvent
-from agent_c_api.api.rt.models.client_events import SetChatSessionNameEvent, SetSessionMessagesEvent, ChatSessionNameChangedEvent, SetSessionMetadataEvent, SessionMetadataChangedEvent
+
+if TYPE_CHECKING:
+    from agent_c_api.api.rt.models.client_events import (
+        GetAgentsEvent, ErrorEvent, AgentListEvent, GetAvatarsEvent, AvatarListEvent, 
+        TextInputEvent, SetAvatarEvent, AvatarConnectionChangedEvent, SetAgentEvent, 
+        AgentConfigurationChangedEvent, SetAvatarSessionEvent, ChatSessionChangedEvent, 
+        SessionMetadataChangedEvent, ChatSessionNameChangedEvent, ResumeChatSessionEvent, 
+        NewChatSessionEvent, SetAgentVoiceEvent, AgentVoiceChangedEvent, UserTurnStartEvent, 
+        UserTurnEndEvent, GetUserSessionsEvent, GetUserSessionsResponseEvent, PingEvent, PongEvent, 
+        GetToolCatalogEvent, ToolCatalogEvent, ChatUserDataEvent, GetVoicesEvent, VoiceListEvent,
+        SetChatSessionNameEvent, SetSessionMessagesEvent, SetSessionMetadataEvent
+    )
 from agent_c_api.core.agent_bridge import AgentBridge
 from agent_c.models.input import AudioInput
 
@@ -29,7 +39,7 @@ from agent_c.models.input.file_input import FileInput
 from agent_c_api.core.file_handler import FileHandler
 from agent_c.models.input.image_input import ImageInput
 from agent_c_api.core.voice.models import open_ai_voice_models, AvailableVoiceModel, heygen_avatar_voice_model, no_voice_model
-from agent_c_api.core.voice.voice_io_manager import VoiceIOManager
+from agent_c_api.core.voice.voice_io_manager_stub import VoiceIOManager
 from agent_c_tools.tools.think.prompt import ThinkSection
 from agent_c.prompting import PromptBuilder
 from agent_c.prompting.basic_sections.persona import DynamicPersonaSection

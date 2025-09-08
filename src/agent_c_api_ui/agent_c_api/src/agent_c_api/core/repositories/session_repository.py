@@ -1,4 +1,5 @@
-from datetime import datetime
+from __future__ import annotations
+
 import json
 import re
 from datetime import datetime
@@ -6,15 +7,17 @@ from typing import Dict, List, Any, Optional, Union
 
 from redis import asyncio as aioredis
 import structlog
+from typing import TYPE_CHECKING
 from agent_c.util import MnemonicSlugs
 
-from agent_c_api.api.v2.models.session_models import (
-    SessionCreate,
-    SessionDetail,
-    SessionListResponse,
-    SessionSummary,
-    SessionUpdate
-)
+if TYPE_CHECKING:
+    from agent_c_api.api.v2.models.session_models import (
+        SessionCreate,
+        SessionDetail,
+        SessionListResponse,
+        SessionSummary,
+        SessionUpdate
+    )
 from agent_c_api.core.repositories.exceptions import (
     SessionRepositoryError,
     SessionNotFoundError,
@@ -97,7 +100,7 @@ class SessionRepository:
         # Set TTL for single session hash
         await self.redis.expire(f"session:{session_id}", self.session_ttl)
     
-    async def create_session(self, session_data: SessionCreate) -> SessionDetail:
+    async def create_session(self, session_data: 'SessionCreate') -> 'SessionDetail':
         """Create a new session
         
         Generates MnemonicSlug format session ID if not provided (e.g., 'tiger-castle').
@@ -113,6 +116,9 @@ class SessionRepository:
             ValueError: If session ID format is invalid
             Exception: If session creation fails
         """
+        # Import models locally to avoid circular imports
+        from agent_c_api.api.v2.models.session_models import SessionDetail
+        
         try:
             # Generate session ID if not provided
             session_id = session_data.id or MnemonicSlugs.generate_slug(2)
@@ -188,7 +194,7 @@ class SessionRepository:
                 context=context
             )
     
-    async def get_session(self, session_id: str) -> Optional[SessionDetail]:
+    async def get_session(self, session_id: str) -> Optional['SessionDetail']:
         """Get session details
         
         Args:
@@ -197,6 +203,9 @@ class SessionRepository:
         Returns:
             Session details if found, None otherwise
         """
+        # Import models locally to avoid circular imports
+        from agent_c_api.api.v2.models.session_models import SessionDetail
+        
         try:
             # Validate session ID format
             self._validate_session_id(session_id)
@@ -246,7 +255,7 @@ class SessionRepository:
             # For other errors, return None (session not found/accessible)
             return None
     
-    async def update_session(self, session_id: str, update_data: SessionUpdate) -> Optional[SessionDetail]:
+    async def update_session(self, session_id: str, update_data: 'SessionUpdate') -> Optional['SessionDetail']:
         """Update session properties
         
         Args:
@@ -256,6 +265,9 @@ class SessionRepository:
         Returns:
             Updated session details if successful, None otherwise
         """
+        # Import models locally to avoid circular imports
+        from agent_c_api.api.v2.models.session_models import SessionDetail
+        
         try:
             # Validate session ID format
             self._validate_session_id(session_id)
@@ -324,6 +336,9 @@ class SessionRepository:
         Returns:
             True if successful, False otherwise
         """
+        # Import models locally to avoid circular imports
+        from agent_c_api.api.v2.models.session_models import SessionDetail
+        
         try:
             # Validate session ID format
             self._validate_session_id(session_id)
@@ -371,7 +386,7 @@ class SessionRepository:
         cursor: Optional[str] = None,
         sort_by: str = "last_activity",
         sort_order: str = "desc"
-    ) -> SessionListResponse:
+    ) -> 'SessionListResponse':
         """List active sessions with efficient pagination
         
         Supports both offset-based (legacy) and cursor-based pagination.
@@ -387,6 +402,9 @@ class SessionRepository:
         Returns:
             Paginated list of sessions
         """
+        # Import models locally to avoid circular imports
+        from agent_c_api.api.v2.models.session_models import SessionDetail
+        
         try:
             # Use cursor-based pagination if cursor provided or offset not provided
             if cursor is not None or offset is None:
@@ -411,7 +429,7 @@ class SessionRepository:
         cursor: Optional[str],
         sort_by: str,
         sort_order: str
-    ) -> SessionListResponse:
+    ) -> 'SessionListResponse':
         """Efficient cursor-based pagination using Redis SSCAN"""
         
         # Parse cursor (Redis SSCAN cursor)
@@ -473,7 +491,7 @@ class SessionRepository:
         offset: int,
         sort_by: str,
         sort_order: str
-    ) -> SessionListResponse:
+    ) -> 'SessionListResponse':
         """Legacy offset-based pagination (less efficient but provides total count)"""
         
         # Get all active session IDs
@@ -590,6 +608,9 @@ class SessionRepository:
         Returns:
             Number of sessions cleaned up
         """
+        # Import models locally to avoid circular imports
+        from agent_c_api.api.v2.models.session_models import SessionDetail
+        
         try:
             # Use SSCAN for efficient iteration instead of loading all IDs
             cursor = 0
@@ -674,6 +695,9 @@ class SessionRepository:
         Returns:
             True if configuration successful, False otherwise
         """
+        # Import models locally to avoid circular imports
+        from agent_c_api.api.v2.models.session_models import SessionDetail
+        
         try:
             # Configure Redis to notify on expired events
             await self.redis.config_set("notify-keyspace-events", "Ex")
@@ -692,6 +716,9 @@ class SessionRepository:
         Args:
             callback: Optional callback function for expiration events
         """
+        # Import models locally to avoid circular imports
+        from agent_c_api.api.v2.models.session_models import SessionDetail
+        
         try:
             # Subscribe to expiration events for session keys
             pubsub = self.redis.pubsub()

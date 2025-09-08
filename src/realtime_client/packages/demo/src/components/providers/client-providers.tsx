@@ -27,12 +27,10 @@ export default function ClientProviders({ children }: ClientProvidersProps) {
   console.log('🚀 Initializing AgentCProvider with auth token');
   
   return (
-    <AgentCProvider config={{
-      websocketUrl: 'ws://localhost:8000/api/rt/ws',
-      authToken: authToken,
-      enableAudio: true,
-      debug: true
-    }}>
+    <AgentCProvider 
+      authToken={authToken}
+      autoConnect={true}
+      debug={true}>
       {children}
     </AgentCProvider>
   );
