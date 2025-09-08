@@ -183,7 +183,7 @@ class SavedChatLoader(ConfigLoader):
                 existing_record.updated_at = index_entry.updated_at
                 existing_record.user_id = index_entry.user_id
                 existing_record.agent_key = session.agent_config.key
-                existing_record.agent_name = session.agent_config.agent_name
+                existing_record.agent_name = session.agent_config.name
                 await db_session.commit()
                 self.logger.debug(f"Updated index entry for session {session.session_id}")
             else:
