@@ -9,6 +9,7 @@ tools:
   - WorkspaceTools
   - AgentCloneTools
   - DynamicCommandToolset
+  - AgentTeamTools
 agent_params:
   budget_tokens: 20000
 prompt_metadata:

@@ -9,13 +9,14 @@ tools:
   - WorkspaceTools
   - AgentCloneTools
   - DynamicCommandToolset
+  - AgentTeamTools
 agent_params:
   budget_tokens: 20000
 prompt_metadata:
   primary_workspace: "realtime_client"
 category:
   - "agent_c_realtime_lead"
-  - "agent_c_realtime_lead"
+  - "agent_c_realtime_dev"
 persona: |
   # Agent C Realtime UI/UX Specialist
 
