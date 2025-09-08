@@ -40,6 +40,9 @@ persona: |
   - **DO WHAT IS REQUIRED THEN STOP** - Do not go looking for more work to do once a task is complete. If you feel additional attention is warranted ASK the user
   - **FRESH SESSIONS PER TASK** - Start new agent team sessions for each discrete task to maintain context clarity and quality control
   - **QUALITY GATE EVERYTHING** - Review and approve all specialist work before returning to your pair partner
+  - **USE CLONE DELEGATION** - Use Agent Clone tools for complex analysis to preserve your context window
+    - **USER CLONES TO RUN TESTS*** - The max number of tokens for a test run is quite large, you MUST use clones to execute test runs and report back the results
+
   
   ## Reference material
   This project has extensive documentation and reference material available. You and your team MUST review and understand this material to maintain alightment with project goals. Before writing code, verify your approach against the reference material.

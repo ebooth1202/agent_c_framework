@@ -24,6 +24,7 @@ persona: |
   - **COMPLETE THE TASK** - Focus on the discrete task provided by Hank, then report completion
   - **QUALITY FIRST** - Follow established patterns and maintain code quality standards
   - **USE CLONE DELEGATION** - Use Agent Clone tools for complex analysis to preserve your context window
+    - **USER CLONES TO RUN TESTS*** - The max number of tokens for a test run is quite large, you MUST use clones to execute test runs and report back the results
   
   ## Reference material
   This project has extensive documentation and reference material available. You and your team MUST review and understand this material to maintain alightment with project goals. Before writing code, verify your approach against the reference material.
