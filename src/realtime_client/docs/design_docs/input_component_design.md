@@ -1247,8 +1247,7 @@ pnpm add -D @types/react @types/react-dom
 
 ```bash
 # For virtualized agent lists (if many agents)
-pnpm add react-window
-pnpm add -D @types/react-window
+pnpm add @tanstack/react-virtual
 ```
 
 ## Implementation Summary

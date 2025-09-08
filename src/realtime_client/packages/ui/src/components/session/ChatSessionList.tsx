@@ -26,6 +26,8 @@ import {
 } from "../ui/alert-dialog"
 import { useChatSessionList } from "@agentc/realtime-react"
 import type { ChatSessionIndexEntry } from "@agentc/realtime-core"
+import type { SessionGroupMeta } from "@agentc/realtime-react"
+import { useVirtualizer } from '@tanstack/react-virtual'
 
 /**
  * Props for the ChatSessionList component
@@ -42,7 +44,66 @@ export interface ChatSessionListProps extends React.HTMLAttributes<HTMLDivElemen
 }
 
 /**
- * Format relative time for session timestamps
+ * Virtual list item data structure
+ */
+interface VirtualListItem {
+  type: 'header' | 'session'
+  data: SessionGroupMeta | ChatSessionIndexEntry
+  groupId?: string
+  groupLabel?: string
+  sessionIndex?: number
+  globalIndex: number
+}
+
+/**
+ * Calculate item heights for virtual scrolling
+ */
+const HEADER_HEIGHT = 40
+const SESSION_ITEM_HEIGHT = 68 // Two rows with padding
+
+/**
+ * Flatten session groups into a single array for virtual scrolling
+ */
+function flattenSessionGroups(sessionGroups: SessionGroupMeta[]): VirtualListItem[] {
+  const items: VirtualListItem[] = []
+  let globalIndex = 0
+  
+  sessionGroups.forEach(group => {
+    // Add header
+    items.push({
+      type: 'header',
+      data: group,
+      groupId: group.group,
+      groupLabel: group.label,
+      globalIndex: globalIndex++
+    })
+    
+    // Add sessions
+    group.sessions.forEach((session, idx) => {
+      items.push({
+        type: 'session',
+        data: session,
+        groupId: group.group,
+        sessionIndex: idx,
+        globalIndex: globalIndex++
+      })
+    })
+  })
+  
+  return items
+}
+
+/**
+ * Get item size for variable size list
+ */
+function getItemSize(index: number, items: VirtualListItem[]): number {
+  const item = items[index]
+  if (!item) return SESSION_ITEM_HEIGHT
+  return item.type === 'header' ? HEADER_HEIGHT : SESSION_ITEM_HEIGHT
+}
+
+/**
+ * Function to format relative time for session timestamps
  */
 function getRelativeTime(timestamp: string | null): string {
   if (!timestamp) return 'Unknown'
@@ -65,7 +126,7 @@ function getRelativeTime(timestamp: string | null): string {
 }
 
 /**
- * Get display name for a session
+ * Function to get display name for a session
  */
 function getSessionDisplayName(session: ChatSessionIndexEntry): string {
   if (session.session_name) {
@@ -83,31 +144,38 @@ function getSessionDisplayName(session: ChatSessionIndexEntry): string {
 }
 
 /**
- * Search/Filter bar component
+ * Memoized Search/Filter bar component
  */
-const SearchFilterBar: React.FC<{
+const SearchFilterBar = React.memo<{
   value: string
   onChange: (value: string) => void
   onClear?: () => void
   isSearching?: boolean
-}> = ({ value, onChange, onClear, isSearching }) => {
+}>(({ value, onChange, onClear, isSearching }) => {
   const searchInputRef = React.useRef<HTMLInputElement>(null)
+  
+  // Memoized event handler for escape key
+  const handleKeyDown = React.useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape' && value) {
+      e.preventDefault()
+      onClear?.()
+      searchInputRef.current?.focus()
+    }
+  }, [value, onClear])
   
   // Handle escape key to clear search
   React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && value) {
-        e.preventDefault()
-        onClear?.()
-        searchInputRef.current?.focus()
-      }
+    const input = searchInputRef.current
+    if (input) {
+      input.addEventListener('keydown', handleKeyDown)
+      return () => input.removeEventListener('keydown', handleKeyDown)
     }
-    
-    if (searchInputRef.current) {
-      searchInputRef.current.addEventListener('keydown', handleKeyDown)
-      return () => searchInputRef.current?.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [value, onClear])
+  }, [handleKeyDown])
+  
+  // Memoized change handler
+  const handleChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    onChange(e.target.value)
+  }, [onChange])
   
   return (
     <div className="bg-background p-2 border-b">
@@ -122,29 +190,30 @@ const SearchFilterBar: React.FC<{
           type="search"
           placeholder="Search sessions..."
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={handleChange}
           className="pl-9 h-9 text-sm"
           aria-label="Search sessions"
         />
       </div>
     </div>
   )
-}
+})
+SearchFilterBar.displayName = 'SearchFilterBar'
 
 /**
- * Session group header component
+ * Memoized Session group header component
  */
-const SessionGroupHeader: React.FC<{
+const SessionGroupHeader = React.memo<{
   label: string
   count: number
   groupId: string
   onHeaderClick?: () => void
-}> = ({ label, count, groupId, onHeaderClick }) => (
+}>(({ label, count, groupId, onHeaderClick }) => (
   <div 
     className={cn(
       "flex items-center gap-2 px-3 py-2",
-      "bg-background",
-      "border-b border-t",  // Keep borders for visual separation
+      "bg-background sticky top-0 z-10", // Make headers sticky
+      "border-b border-t",
       "cursor-pointer hover:bg-muted/50 transition-colors"
     )}
     onClick={onHeaderClick}
@@ -158,19 +227,23 @@ const SessionGroupHeader: React.FC<{
     <span className="text-xs text-muted-foreground">({count})</span>
     <div className="flex-1 h-px bg-border/50" aria-hidden="true" />
   </div>
-)
+))
+SessionGroupHeader.displayName = 'SessionGroupHeader'
 
 /**
- * Delete confirmation dialog component
+ * Memoized Delete confirmation dialog component
  */
-const DeleteSessionDialog: React.FC<{
+const DeleteSessionDialog = React.memo<{
   session: ChatSessionIndexEntry | null
   open: boolean
   onOpenChange: (open: boolean) => void
   onConfirm: () => void
   isDeleting?: boolean
-}> = ({ session, open, onOpenChange, onConfirm, isDeleting }) => {
-  const sessionName = session ? getSessionDisplayName(session) : ''
+}>(({ session, open, onOpenChange, onConfirm, isDeleting }) => {
+  const sessionName = React.useMemo(
+    () => session ? getSessionDisplayName(session) : '',
+    [session]
+  )
   
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -178,7 +251,7 @@ const DeleteSessionDialog: React.FC<{
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Session?</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete '{sessionName}'? This action cannot be undone.
+            Are you sure you want to delete &apos;{sessionName}&apos;? This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -204,12 +277,13 @@ const DeleteSessionDialog: React.FC<{
       </AlertDialogContent>
     </AlertDialog>
   )
-}
+})
+DeleteSessionDialog.displayName = 'DeleteSessionDialog'
 
 /**
- * Individual session item component
+ * Memoized Individual session item component
  */
-const SessionItem: React.FC<{
+const SessionItem = React.memo<{
   session: ChatSessionIndexEntry
   isActive: boolean
   isFocused?: boolean
@@ -219,17 +293,34 @@ const SessionItem: React.FC<{
   isDeleting?: boolean
   index?: number
   totalCount?: number
-}> = ({ session, isActive, isFocused, onSelect, onDelete, onFocus, isDeleting, index, totalCount }) => {
-  const displayName = getSessionDisplayName(session)
-  const timeAgo = getRelativeTime(session.updated_at || session.created_at)
-  const agentDisplay = session.agent_name || session.agent_key || 'Unknown Agent'
+}>(({ session, isActive, isFocused, onSelect, onDelete, onFocus, isDeleting, index, totalCount }) => {
+  const displayName = React.useMemo(() => getSessionDisplayName(session), [session])
+  const timeAgo = React.useMemo(() => getRelativeTime(session.updated_at || session.created_at), [session.updated_at, session.created_at])
+  const agentDisplay = React.useMemo(() => session.agent_name || session.agent_key || 'Unknown Agent', [session.agent_name, session.agent_key])
+  
+  // Memoized keyboard handler
+  const handleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      onSelect()
+    } else if (e.key === 'Delete') {
+      e.preventDefault()
+      onDelete()
+    }
+  }, [onSelect, onDelete])
+  
+  // Memoized delete click handler
+  const handleDeleteClick = React.useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    onDelete()
+  }, [onDelete])
   
   return (
     <div
       className={cn(
         "group relative px-3 py-3",
         "transition-all duration-200 cursor-pointer",
-        "min-h-[44px]", // 44px touch target
+        "min-h-[44px]",
         "hover:bg-muted/60",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
         isActive && "bg-accent",
@@ -239,15 +330,7 @@ const SessionItem: React.FC<{
       )}
       onClick={onSelect}
       onFocus={onFocus}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          onSelect()
-        } else if (e.key === 'Delete') {
-          e.preventDefault()
-          onDelete()
-        }
-      }}
+      onKeyDown={handleKeyDown}
       tabIndex={isFocused ? 0 : -1}
       role="option"
       aria-selected={isActive}
@@ -288,15 +371,12 @@ const SessionItem: React.FC<{
               variant="ghost"
               size="icon"
               className={cn(
-                "h-6 w-6 flex-shrink-0 -mr-1",  // Smaller delete button
+                "h-6 w-6 flex-shrink-0 -mr-1",
                 "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
                 "transition-opacity",
                 "focus-visible:opacity-100"
               )}
-              onClick={(e) => {
-                e.stopPropagation()
-                onDelete()
-              }}
+              onClick={handleDeleteClick}
               tabIndex={isFocused ? 0 : -1}
               aria-label={`Delete session: ${displayName}`}
             >
@@ -307,14 +387,15 @@ const SessionItem: React.FC<{
       </div>
     </div>
   )
-}
+})
+SessionItem.displayName = 'SessionItem'
 
 /**
- * Empty state component
+ * Memoized Empty state component
  */
-const EmptyState: React.FC<{
+const EmptyState = React.memo<{
   searchQuery?: string
-}> = ({ searchQuery }) => (
+}>(({ searchQuery }) => (
   <div className="flex flex-col items-center justify-center py-12 px-4">
     <div className="rounded-full bg-muted/50 p-4 mb-4">
       <MessageSquare className="h-6 w-6 text-muted-foreground" />
@@ -328,12 +409,13 @@ const EmptyState: React.FC<{
         : 'Start a new chat to begin your conversation history'}
     </p>
   </div>
-)
+))
+EmptyState.displayName = 'EmptyState'
 
 /**
- * Loading skeleton component
+ * Memoized Loading skeleton component
  */
-const LoadingSkeleton: React.FC = () => (
+const LoadingSkeleton = React.memo(() => (
   <div className="space-y-3 p-3">
     {[...Array(5)].map((_, i) => (
       <div key={i} className="space-y-2">
@@ -341,15 +423,16 @@ const LoadingSkeleton: React.FC = () => (
       </div>
     ))}
   </div>
-)
+))
+LoadingSkeleton.displayName = 'LoadingSkeleton'
 
 /**
- * Error state component
+ * Memoized Error state component
  */
-const ErrorState: React.FC<{
+const ErrorState = React.memo<{
   error: Error
   onRetry: () => void
-}> = ({ error, onRetry }) => (
+}>(({ error, onRetry }) => (
   <div className="flex flex-col items-center justify-center py-12 px-4">
     <div className="rounded-full bg-destructive/10 p-4 mb-4">
       <AlertCircle className="h-6 w-6 text-destructive" />
@@ -368,66 +451,241 @@ const ErrorState: React.FC<{
       Try again
     </Button>
   </div>
-)
+))
+ErrorState.displayName = 'ErrorState'
 
 /**
- * Collapsed view component
+ * Memoized Collapsed view component
  */
-const CollapsedView: React.FC<{
+const CollapsedView = React.memo<{
   sessions: ChatSessionIndexEntry[]
   currentSessionId: string | null
   onSessionSelect: (sessionId: string) => void
   onExpand?: () => void
-}> = ({ sessions, currentSessionId, onSessionSelect, onExpand }) => (
-  <div className="flex flex-col items-center gap-2 p-2">
-    <TooltipProvider>
-      {sessions.slice(0, 5).map(session => (
-        <Tooltip key={session.session_id}>
-          <TooltipTrigger asChild>
-            <Button
-              variant={session.session_id === currentSessionId ? "default" : "ghost"}
-              size="icon"
-              className="h-10 w-10"
-              onClick={() => onSessionSelect(session.session_id)}
-              aria-label={`Select ${getSessionDisplayName(session)}`}
-            >
-              <MessageSquare className="h-5 w-5" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="right">
-            <p>{getSessionDisplayName(session)}</p>
-            <p className="text-xs text-muted-foreground">
-              {getRelativeTime(session.updated_at || session.created_at)}
-            </p>
-          </TooltipContent>
-        </Tooltip>
-      ))}
-      
-      {sessions.length > 5 && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-10 w-10"
-              onClick={onExpand}
-              aria-label="Show all sessions"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="right">
-            <p>Show all sessions</p>
-          </TooltipContent>
-        </Tooltip>
-      )}
-    </TooltipProvider>
-  </div>
-)
+}>(({ sessions, currentSessionId, onSessionSelect, onExpand }) => {
+  // Memoize the top 5 sessions
+  const topSessions = React.useMemo(() => sessions.slice(0, 5), [sessions])
+  
+  return (
+    <div className="flex flex-col items-center gap-2 p-2">
+      <TooltipProvider>
+        {topSessions.map(session => (
+          <Tooltip key={session.session_id}>
+            <TooltipTrigger asChild>
+              <Button
+                variant={session.session_id === currentSessionId ? "default" : "ghost"}
+                size="icon"
+                className="h-10 w-10"
+                onClick={() => onSessionSelect(session.session_id)}
+                aria-label={`Select ${getSessionDisplayName(session)}`}
+              >
+                <MessageSquare className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              <p>{getSessionDisplayName(session)}</p>
+              <p className="text-xs text-muted-foreground">
+                {getRelativeTime(session.updated_at || session.created_at)}
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        ))}
+        
+        {sessions.length > 5 && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10"
+                onClick={onExpand}
+                aria-label="Show all sessions"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              <p>Show all sessions</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
+      </TooltipProvider>
+    </div>
+  )
+})
+CollapsedView.displayName = 'CollapsedView'
 
 /**
- * ChatSessionList component - Full implementation with session management
- * Displays user's chat session history with search, filtering, and pagination
+ * Virtual Session List Component with @tanstack/react-virtual
+ * Efficiently renders large lists with virtual scrolling
+ */
+const VirtualSessionList = React.memo<{
+  sessionGroups: SessionGroupMeta[]
+  currentSessionId: string | null
+  focusedIndex: number
+  handleSessionSelect: (sessionId: string) => void
+  handleDeleteRequest: (session: ChatSessionIndexEntry) => void
+  setFocusedIndex: (index: number) => void
+  deletingId: string | null
+  filteredSessions: ChatSessionIndexEntry[]
+  hasMore: boolean
+  isPaginationLoading: boolean
+  loadMore: () => void
+  scrollContainerRef: React.RefObject<HTMLDivElement>
+}>(({ 
+  sessionGroups, 
+  currentSessionId, 
+  focusedIndex, 
+  handleSessionSelect, 
+  handleDeleteRequest, 
+  setFocusedIndex, 
+  deletingId, 
+  filteredSessions,
+  hasMore,
+  isPaginationLoading,
+  loadMore,
+  scrollContainerRef
+}) => {
+  // Flatten groups for virtual scrolling
+  const items = React.useMemo(
+    () => flattenSessionGroups(sessionGroups),
+    [sessionGroups]
+  )
+  
+  // Initialize virtualizer
+  const virtualizer = useVirtualizer({
+    count: items.length,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: React.useCallback((index: number) => getItemSize(index, items), [items]),
+    overscan: 5,
+    measureElement: (element) => {
+      if (element) {
+        return element.getBoundingClientRect().height
+      }
+      return SESSION_ITEM_HEIGHT
+    }
+  })
+  
+  const virtualItems = virtualizer.getVirtualItems()
+  
+  // Scroll to focused item when it changes
+  React.useEffect(() => {
+    if (focusedIndex >= 0 && focusedIndex < items.length) {
+      virtualizer.scrollToIndex(focusedIndex, { align: 'auto' })
+    }
+  }, [focusedIndex, virtualizer, items.length])
+  
+  // Handle infinite scroll
+  React.useEffect(() => {
+    const lastItem = virtualItems[virtualItems.length - 1]
+    
+    if (
+      lastItem &&
+      lastItem.index >= items.length - 1 &&
+      hasMore &&
+      !isPaginationLoading
+    ) {
+      loadMore()
+    }
+  }, [virtualItems, items.length, hasMore, isPaginationLoading, loadMore])
+  
+  return (
+    <>
+      <div
+        style={{
+          height: `${virtualizer.getTotalSize()}px`,
+          width: '100%',
+          position: 'relative'
+        }}
+      >
+        {virtualItems.map((virtualItem) => {
+          const item = items[virtualItem.index]
+          if (!item) return null
+          
+          if (item.type === 'header') {
+            const group = item.data as SessionGroupMeta
+            return (
+              <div
+                key={virtualItem.key}
+                data-index={virtualItem.index}
+                ref={virtualizer.measureElement}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  transform: `translateY(${virtualItem.start}px)`
+                }}
+              >
+                <SessionGroupHeader
+                  label={group.label}
+                  count={group.count}
+                  groupId={group.group}
+                  onHeaderClick={() => {
+                    virtualizer.scrollToIndex(virtualItem.index, { align: 'start' })
+                  }}
+                />
+              </div>
+            )
+          }
+          
+          const session = item.data as ChatSessionIndexEntry
+          const sessionGlobalIndex = items.findIndex(
+            i => i.type === 'session' && (i.data as ChatSessionIndexEntry).session_id === session.session_id
+          )
+          
+          return (
+            <div
+              key={virtualItem.key}
+              data-index={virtualItem.index}
+              ref={virtualizer.measureElement}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                transform: `translateY(${virtualItem.start}px)`
+              }}
+            >
+              <SessionItem
+                session={session}
+                isActive={session.session_id === currentSessionId}
+                isFocused={focusedIndex === sessionGlobalIndex}
+                onSelect={() => handleSessionSelect(session.session_id)}
+                onDelete={() => handleDeleteRequest(session)}
+                onFocus={() => setFocusedIndex(sessionGlobalIndex)}
+                isDeleting={deletingId === session.session_id}
+                index={item.sessionIndex}
+                totalCount={filteredSessions.length}
+              />
+            </div>
+          )
+        })}
+      </div>
+      
+      {/* Load more trigger */}
+      {hasMore && (
+        <div className="flex items-center justify-center py-4 min-h-[60px]">
+          {isPaginationLoading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status" aria-live="polite">
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              <span>Loading more sessions...</span>
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground opacity-50">
+              <span>Scroll for more</span>
+            </div>
+          )}
+        </div>
+      )}
+    </>
+  )
+})
+VirtualSessionList.displayName = 'VirtualSessionList'
+
+/**
+ * ChatSessionList component with virtual scrolling as default
+ * Efficiently renders large lists of chat sessions using @tanstack/react-virtual
  */
 export const ChatSessionList = React.forwardRef<HTMLDivElement, ChatSessionListProps>(
   ({ isCollapsed, className, onSessionSelect, autoLoad = true, ...props }, ref) => {
@@ -435,13 +693,12 @@ export const ChatSessionList = React.forwardRef<HTMLDivElement, ChatSessionListP
     const {
       sessions,
       filteredSessions,
-      sessionGroups,  // Using the sessionGroups from the hook
+      sessionGroups,
       searchQuery,
       isLoading,
       isPaginationLoading,
       error,
       hasMore,
-      totalCount,
       currentSessionId,
       loadMore,
       selectSession,
@@ -462,28 +719,26 @@ export const ChatSessionList = React.forwardRef<HTMLDivElement, ChatSessionListP
     // State for keyboard navigation
     const [focusedIndex, setFocusedIndex] = React.useState(-1)
     
-    // Announcements for screen readers
+    // State for announcements
     const [announcement, setAnnouncement] = React.useState('')
     
     // Refs
     const scrollContainerRef = React.useRef<HTMLDivElement>(null)
-    const loadMoreTriggerRef = React.useRef<HTMLDivElement>(null)
-    const searchInputRef = React.useRef<HTMLInputElement>(null)
     
-    // Handle session selection
+    // Memoized session selection handler
     const handleSessionSelect = React.useCallback((sessionId: string) => {
       selectSession(sessionId)
       onSessionSelect?.(sessionId)
       setAnnouncement('Session selected')
     }, [selectSession, onSessionSelect])
     
-    // Handle delete request (opens dialog)
+    // Memoized delete request handler
     const handleDeleteRequest = React.useCallback((session: ChatSessionIndexEntry) => {
       setSessionToDelete(session)
       setDeleteDialogOpen(true)
     }, [])
     
-    // Handle delete confirmation
+    // Memoized delete confirmation handler
     const handleDeleteConfirm = React.useCallback(async () => {
       if (!sessionToDelete) return
       
@@ -502,25 +757,12 @@ export const ChatSessionList = React.forwardRef<HTMLDivElement, ChatSessionListP
       }
     }, [sessionToDelete, deleteSession])
     
-    // Handle clear search
+    // Memoized clear search handler
     const handleClearSearch = React.useCallback(() => {
       searchSessions('')
-      searchInputRef.current?.focus()
     }, [searchSessions])
     
-    // Handle header click to scroll UP to section
-    const handleHeaderClick = React.useCallback((groupId: string) => {
-      const element = document.getElementById(`header-${groupId}`)
-      if (element) {
-        // Use scrollIntoView with block: 'start' to bring section to TOP of viewport
-        element.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start'  // This ensures the section scrolls to the TOP
-        })
-      }
-    }, [])
-    
-    // Keyboard navigation handler
+    // Memoized keyboard navigation handler
     const handleKeyboardNavigation = React.useCallback((e: React.KeyboardEvent) => {
       const allSessions = filteredSessions
       
@@ -531,9 +773,6 @@ export const ChatSessionList = React.forwardRef<HTMLDivElement, ChatSessionListP
           e.preventDefault()
           setFocusedIndex(prev => {
             const next = prev < allSessions.length - 1 ? prev + 1 : prev
-            // Scroll focused item into view
-            const element = scrollContainerRef.current?.querySelectorAll('[role="option"]')[next] as HTMLElement
-            element?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
             return next
           })
           break
@@ -542,8 +781,6 @@ export const ChatSessionList = React.forwardRef<HTMLDivElement, ChatSessionListP
           e.preventDefault()
           setFocusedIndex(prev => {
             const next = prev > 0 ? prev - 1 : 0
-            const element = scrollContainerRef.current?.querySelectorAll('[role="option"]')[next] as HTMLElement
-            element?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
             return next
           })
           break
@@ -580,42 +817,6 @@ export const ChatSessionList = React.forwardRef<HTMLDivElement, ChatSessionListP
       }
     }, [filteredSessions, focusedIndex, handleSessionSelect, handleDeleteRequest])
     
-    // Intersection observer for infinite scroll
-    React.useEffect(() => {
-      const triggerElement = loadMoreTriggerRef.current
-      if (!triggerElement) {
-        console.debug('No trigger element for infinite scroll')
-        return
-      }
-      
-      // Create observer with proper threshold
-      const observer = new IntersectionObserver(
-        (entries) => {
-          const [entry] = entries
-          if (entry.isIntersecting) {
-            console.debug('Trigger element intersecting, attempting to load more...', { hasMore, isPaginationLoading })
-            // Call loadMore directly without checking conditions here
-            // The loadMore function handles its own validation
-            loadMore()
-          }
-        },
-        { 
-          root: scrollContainerRef.current,
-          rootMargin: '100px', // Trigger 100px before reaching the element
-          threshold: 0.01 // More sensitive threshold
-        }
-      )
-      
-      observer.observe(triggerElement)
-      
-      return () => {
-        if (triggerElement) {
-          observer.unobserve(triggerElement)
-        }
-        observer.disconnect()
-      }
-    }, [loadMore]) // Only depend on loadMore, not on hasMore or isPaginationLoading
-    
     // Collapsed view
     if (isCollapsed) {
       return (
@@ -648,7 +849,7 @@ export const ChatSessionList = React.forwardRef<HTMLDivElement, ChatSessionListP
           isSearching={false}
         />
         
-        {/* Main scrollable content area */}
+        {/* Main scrollable content area with virtual scrolling */}
         <div 
           ref={scrollContainerRef}
           className="flex-1 overflow-y-auto"
@@ -672,72 +873,22 @@ export const ChatSessionList = React.forwardRef<HTMLDivElement, ChatSessionListP
             <EmptyState searchQuery={searchQuery} />
           )}
           
-          {/* Session groups using sessionGroups from hook */}
+          {/* Virtual Session list - DEFAULT AND ONLY IMPLEMENTATION */}
           {!isLoading && sessionGroups.length > 0 && (
-            <>
-              {sessionGroups.map((group, groupIndex) => {
-                let globalIndexOffset = 0
-                // Calculate the offset for this group
-                for (const g of sessionGroups) {
-                  if (g.group === group.group) break
-                  globalIndexOffset += g.sessions.length
-                }
-                
-                return (
-                  <div key={group.group}>
-                    {/* Section header */}
-                    <SessionGroupHeader
-                      label={group.label}
-                      count={group.count}
-                      groupId={group.group}
-                      onHeaderClick={() => handleHeaderClick(group.group)}
-                    />
-                    
-                    {/* Session items */}
-                    <div className="pb-2">
-                      {group.sessions.map((session, idx) => {
-                        const globalIndex = globalIndexOffset + idx
-                        return (
-                          <SessionItem
-                            key={session.session_id}
-                            session={session}
-                            isActive={session.session_id === currentSessionId}
-                            isFocused={focusedIndex === globalIndex}
-                            onSelect={() => handleSessionSelect(session.session_id)}
-                            onDelete={() => handleDeleteRequest(session)}
-                            onFocus={() => setFocusedIndex(globalIndex)}
-                            isDeleting={deletingId === session.session_id}
-                            index={globalIndex}
-                            totalCount={filteredSessions.length}
-                          />
-                        )
-                      })}
-                    </div>
-                  </div>
-                )
-              })}
-              
-              {/* Load more trigger - Always render when hasMore, visibility controls loading */}
-              {hasMore && (
-                <div
-                  ref={loadMoreTriggerRef}
-                  className="flex items-center justify-center py-4 min-h-[60px]"
-                  aria-label="Load more sessions trigger"
-                >
-                  {isPaginationLoading ? (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status" aria-live="polite">
-                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                      <span>Loading more sessions...</span>
-                    </div>
-                  ) : (
-                    // Invisible element to maintain height and trigger intersection
-                    <div className="text-sm text-muted-foreground opacity-50">
-                      <span>Scroll for more</span>
-                    </div>
-                  )}
-                </div>
-              )}
-            </>
+            <VirtualSessionList
+              sessionGroups={sessionGroups}
+              currentSessionId={currentSessionId}
+              focusedIndex={focusedIndex}
+              handleSessionSelect={handleSessionSelect}
+              handleDeleteRequest={handleDeleteRequest}
+              setFocusedIndex={setFocusedIndex}
+              deletingId={deletingId}
+              filteredSessions={filteredSessions}
+              hasMore={hasMore}
+              isPaginationLoading={isPaginationLoading}
+              loadMore={loadMore}
+              scrollContainerRef={scrollContainerRef}
+            />
           )}
         </div>
         

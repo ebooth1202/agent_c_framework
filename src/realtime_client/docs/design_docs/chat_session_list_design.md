@@ -659,8 +659,8 @@ const handleTouchEnd = () => {
 ### Virtual Scrolling for Large Lists
 
 ```typescript
-// Use react-window for lists > 100 items
-import { VariableSizeList } from 'react-window'
+// Use @tanstack/react-virtual for lists > 100 items
+import { useVirtualizer } from '@tanstack/react-virtual'
 import AutoSizer from 'react-virtualized-auto-sizer'
 
 const VirtualizedSessionList: React.FC<{

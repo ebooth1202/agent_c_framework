@@ -48,8 +48,15 @@ import {
   VoiceListEvent,
   ToolCatalogEvent,
   PongEvent,
+  VoiceInputSupportedEvent,
+  ServerListeningEvent,
   ChatSessionAddedEvent,
   ChatSessionDeletedEvent,
+  ToolSelectDeltaEvent,
+  RenderMediaEvent,
+  HistoryDeltaEvent,
+  SystemPromptEvent,
+  UserRequestEvent,
   ServerEvent
 } from './types/ServerEvents';
 
@@ -103,8 +110,15 @@ export interface ServerEventMap {
   'voice_list': VoiceListEvent;
   'tool_catalog': ToolCatalogEvent;
   'pong': PongEvent;
+  'voice_input_supported': VoiceInputSupportedEvent;
+  'server_listening': ServerListeningEvent;
   'chat_session_added': ChatSessionAddedEvent;
   'chat_session_deleted': ChatSessionDeletedEvent;
+  'tool_select_delta': ToolSelectDeltaEvent;
+  'render_media': RenderMediaEvent;
+  'history_delta': HistoryDeltaEvent;
+  'system_prompt': SystemPromptEvent;
+  'user_request': UserRequestEvent;
 }
 
 /**
@@ -191,8 +205,15 @@ export class EventRegistry {
     'voice_list',
     'tool_catalog',
     'pong',
+    'voice_input_supported',
+    'server_listening',
     'chat_session_added',
-    'chat_session_deleted'
+    'chat_session_deleted',
+    'tool_select_delta',
+    'render_media',
+    'history_delta',
+    'system_prompt',
+    'user_request'
   ]);
 
   /**
