@@ -2,7 +2,18 @@
   "name": "@agentc/realtime-react",
   "version": "0.1.0",
   "main": "dist/index.js",
+  "module": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
   "peerDependencies": {
     "react": "^18.0.0",
     "react-dom": "^18.0.0"
@@ -19,7 +30,7 @@
     "dev": "tsc --watch",
     "clean": "rimraf dist tsconfig.tsbuildinfo",
     "type-check": "tsc --noEmit",
-    "test": "vitest run --reporter=verbose",
+    "test": "vitest run --reporter=dot",
     "test:run": "vitest run",
     "test:watch": "vitest watch",
     "test:coverage": "vitest run --coverage",

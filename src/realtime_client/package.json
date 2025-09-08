@@ -3,7 +3,8 @@
   "private": true,
   "scripts": {
     "build": "lerna run build --concurrency=1",
-    "test": "lerna run test --concurrency=1",
+    "testold": "lerna run test --concurrency=1",
+    "test": "vitest run --reporter=dot",
     "test:run": "lerna run test:run",
     "test:watch": "lerna run test:watch",
     "test:coverage": "lerna run test:coverage",

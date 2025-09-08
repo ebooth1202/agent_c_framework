@@ -16,7 +16,7 @@
     "type-check": "tsc --noEmit",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
-    "test": "vitest",
+    "test": "vitest run --reporter=dot",
     "test:run": "vitest run",
     "test:watch": "vitest watch"
   },
