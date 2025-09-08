@@ -4,7 +4,7 @@ import yaml
 from typing import Optional, Dict, List
 
 from agent_c.config.saved_chat import SavedChatLoader
-from agent_c.models.chat_history.chat_session import ChatSession, ChatSessionQueryResponse, ChatSessionIndexEntry
+from agent_c.models.chat_history.chat_session import ChatSession, ChatSessionQueryResponse
 from agent_c.util.logging_utils import LoggingManager
 
 
