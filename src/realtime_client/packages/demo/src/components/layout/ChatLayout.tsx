@@ -57,18 +57,20 @@ export const ChatLayout = React.forwardRef<HTMLDivElement, ChatLayoutProps>(
         />
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col h-screen overflow-hidden">
           {/* Header */}
           <ChatHeader 
             onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
             sessionName={sessionName}
           />
 
-          {/* Dynamic Content Area */}
-          <MainContentArea outputMode={currentOutputMode} />
+          {/* Dynamic Content Area - flex-1 to take remaining space */}
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <MainContentArea outputMode={currentOutputMode} />
+          </div>
 
-          {/* Input Area - Using SSR-safe wrapper to prevent TipTap build issues */}
-          <div className="bg-accent/10 border-t border-border">
+          {/* Input Area - flex-shrink-0 to always remain visible */}
+          <div className="flex-shrink-0 bg-accent/10 border-t border-border">
             <div className="max-w-4xl mx-auto p-4">
               <InputAreaWrapper 
                 className="w-full"

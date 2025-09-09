@@ -24,18 +24,19 @@ export const ChatMessagesView = React.forwardRef<HTMLDivElement, ChatMessagesVie
       <div
         ref={ref}
         className={cn(
-          "flex flex-col h-full overflow-hidden",
+          "h-full overflow-hidden",
           className
         )}
       >
-        {/* Scrollable message area */}
+        {/* Scrollable message area - takes full height */}
         <div 
           ref={scrollRef}
-          className="flex-1 overflow-y-auto"
+          className="h-full overflow-y-auto"
         >
-          {/* Message list */}
+          {/* Message list - remove fixed height, let it grow naturally */}
           <MessageList 
             className="px-4 py-4"
+            maxHeight="none"
           />
           
           {/* Typing indicator */}

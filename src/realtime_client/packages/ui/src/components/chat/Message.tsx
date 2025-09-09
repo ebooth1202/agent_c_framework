@@ -240,6 +240,18 @@ const Message = React.forwardRef<HTMLDivElement, MessageProps>(
     const [isEditing, setIsEditing] = React.useState(false)
     const [editContent, setEditContent] = React.useState(extractTextContent(message.content) || '')
     
+    // Debug logging
+    React.useEffect(() => {
+      console.log('[Message] Rendering message:', {
+        role: message.role,
+        contentType: typeof message.content,
+        contentLength: Array.isArray(message.content) ? message.content.length : undefined,
+        content: message.content,
+        timestamp: message.timestamp,
+        isThought: message.isThought
+      })
+    }, [message])
+    
     // Check for thought messages
     if (message.isThought || message.role === 'assistant (thought)') {
       return (

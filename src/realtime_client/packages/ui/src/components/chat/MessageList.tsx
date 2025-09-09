@@ -4,7 +4,6 @@ import * as React from 'react'
 import { useChat } from '@agentc/realtime-react'
 import { cn } from '../../lib/utils'
 import { Message } from './Message'
-import { ScrollAnchor } from './ScrollAnchor'
 import { TypingIndicator } from './TypingIndicator'
 import { Loader2, MessageSquare } from 'lucide-react'
 
@@ -40,12 +39,33 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
     const scrollContainerRef = React.useRef<HTMLDivElement>(null)
     const [isLoading, setIsLoading] = React.useState(false)
     
+    // Debug logging for messages
+    React.useEffect(() => {
+      console.log('[MessageList] Received messages:', messages.length, 'messages')
+      console.log('[MessageList] First 3 messages:', messages.slice(0, 3))
+      if (messages.length > 0) {
+        console.log('[MessageList] Message roles:', messages.map(m => m.role))
+        console.log('[MessageList] Message content types:', messages.map(m => {
+          if (typeof m.content === 'string') return 'string';
+          if (Array.isArray(m.content)) return `array[${m.content.length}]`;
+          return typeof m.content;
+        }))
+      }
+    }, [messages])
+    
     // Combine ref forwarding with internal ref
     React.useImperativeHandle(ref, () => scrollContainerRef.current as HTMLDivElement)
     
     // Virtual scrolling logic (simplified for now - can be enhanced with react-window)
     const visibleMessages = React.useMemo(() => {
-      if (!enableVirtualScroll) return messages
+      console.log('[MessageList] Computing visible messages');
+      console.log('[MessageList] enableVirtualScroll:', enableVirtualScroll);
+      console.log('[MessageList] messages length:', messages.length);
+      
+      if (!enableVirtualScroll) {
+        console.log('[MessageList] Returning all messages (no virtual scroll)');
+        return messages
+      }
       // For now, return all messages - in production, implement windowing
       return messages
     }, [messages, enableVirtualScroll])
@@ -87,17 +107,17 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
       <div
         ref={scrollContainerRef}
         className={cn(
-          "relative flex flex-col overflow-y-auto",
+          "relative flex flex-col",
           className
         )}
-        style={{ maxHeight }}
+        style={{ maxHeight: maxHeight === 'none' ? undefined : maxHeight }}
         role="log"
         aria-label="Chat messages"
         aria-live="polite"
         {...props}
       >
         {/* Messages container */}
-        <div className="flex-1 space-y-4 p-4">
+        <div className="space-y-4">
           {visibleMessages.length === 0 ? (
             <EmptyState />
           ) : (
@@ -142,12 +162,6 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
             </>
           )}
         </div>
-        
-        {/* Scroll anchor for auto-scrolling */}
-        <ScrollAnchor 
-          scrollContainerRef={scrollContainerRef}
-          dependencies={[messages, partialMessage, isAgentTyping]}
-        />
       </div>
     )
   }

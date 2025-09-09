@@ -23,11 +23,11 @@ export const MainContentArea = React.forwardRef<HTMLDivElement, MainContentAreaP
       <div
         ref={ref}
         className={cn(
-          "flex-1 overflow-hidden relative",
+          "h-full overflow-hidden relative",
           className
         )}
       >
-        {outputMode === 'chat' && <ChatMessagesView />}
+        {outputMode === 'chat' && <ChatMessagesView className="h-full" />}
         {outputMode === 'avatar' && <AvatarDisplayView />}
         {outputMode === 'voice' && <VoiceVisualizerView />}
       </div>
