@@ -10,7 +10,13 @@
     "lint": "next lint",
     "format": "pnpm prettier ./src --write",
     "format:check": "pnpm prettier ./src --check",
-    "clean": "rimraf .next"
+    "clean": "rimraf .next",
+    "test": "vitest run --reporter=dot",
+    "test:run": "vitest run",
+    "test:watch": "vitest watch",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui",
+    "test:debug": "vitest run --reporter=verbose --no-threads"
   },
   "dependencies": {
     "@agentc/realtime-core": "workspace:*",

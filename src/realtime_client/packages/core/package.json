@@ -26,5 +26,11 @@
     "test:ui": "vitest --ui",
     "test:simple": "vitest run --config vitest.simple.config.ts",
     "test:debug": "vitest run --reporter=verbose --no-threads"
+  },
+  "devDependencies": {
+    "@types/dompurify": "^3.2.0"
+  },
+  "dependencies": {
+    "dompurify": "^3.2.6"
   }
 }
