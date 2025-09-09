@@ -1,5 +1,5 @@
 import datetime
-from pydantic import Field
+from pydantic import Field, computed_field
 from typing import Optional, Dict, Any, List
 
 from agent_c.models.base import BaseModel
@@ -48,6 +48,22 @@ class ChatSession(BaseModel):
     messages: List[dict[str, Any]] = Field(default_factory=list, description="List of messages in the session")
     agent_config: Optional[CurrentAgentConfiguration] = Field(None, description="Configuration for the agent associated with the session")
 
+    @computed_field
+    @property
+    def vendor(self) -> str:
+        """
+        Returns the vendor format of the messages in the session.
+        NOTEL The is a temporary hack implementation until this code merges into the context branch
+        """
+        if self.agent_config is None:
+            return "none"
+
+        if self.agent_config.model_id.lower().startswith(("claude", "bedrock")):
+            return "anthropic"
+
+        return "openai"
+
+    @computed_field
     @property
     def display_name(self) -> str:
         """

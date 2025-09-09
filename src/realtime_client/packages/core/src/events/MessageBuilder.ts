@@ -118,7 +118,11 @@ export class MessageBuilder {
     
     this.logger.info(`Finalized ${this.messageType} message`, {
       id: finalMessage.id,
-      contentLength: finalMessage.content.length,
+      contentLength: typeof finalMessage.content === 'string' 
+        ? finalMessage.content.length 
+        : Array.isArray(finalMessage.content) 
+          ? finalMessage.content.length 
+          : 0,
       hasToolCalls: !!finalMessage.toolCalls?.length,
       inputTokens: metadata?.inputTokens,
       outputTokens: metadata?.outputTokens

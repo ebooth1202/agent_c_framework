@@ -241,17 +241,28 @@ function VoiceView({
           {messages.length > 0 && (
             <div className="mt-6 max-h-40 overflow-y-auto border-t pt-4">
               <div className="space-y-2">
-                {messages.slice(-3).map((msg, idx) => (
-                  <div key={idx} className="text-sm">
-                    <span className="font-medium">
-                      {msg.role === 'user' ? 'You: ' : 'Agent: '}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {msg.content.substring(0, 100)}
-                      {msg.content.length > 100 && '...'}
-                    </span>
-                  </div>
-                ))}
+                {messages.slice(-3).map((msg, idx) => {
+                  const textContent = typeof msg.content === 'string' 
+                    ? msg.content 
+                    : msg.content === null 
+                      ? '' 
+                      : msg.content
+                        .filter((part: any) => part.type === 'text')
+                        .map((part: any) => part.text || '')
+                        .join(' ');
+                  
+                  return (
+                    <div key={idx} className="text-sm">
+                      <span className="font-medium">
+                        {msg.role === 'user' ? 'You: ' : 'Agent: '}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {textContent.substring(0, 100)}
+                        {textContent.length > 100 && '...'}
+                      </span>
+                    </div>
+                  );
+                })}
                 {partialMessage && (
                   <div className="text-sm">
                     <span className="font-medium">Agent: </span>
@@ -339,17 +350,28 @@ function AvatarView({
         {(messages.length > 0 || partialMessage) && (
           <div className="px-4 py-2 max-h-32 overflow-y-auto bg-muted/20">
             <div className="space-y-1">
-              {messages.slice(-2).map((msg, idx) => (
-                <div key={idx} className="text-xs">
-                  <span className="font-medium">
-                    {msg.role === 'user' ? 'You: ' : 'Agent: '}
-                  </span>
-                  <span className="text-muted-foreground">
-                    {msg.content.substring(0, 80)}
-                    {msg.content.length > 80 && '...'}
-                  </span>
-                </div>
-              ))}
+              {messages.slice(-2).map((msg, idx) => {
+                const textContent = typeof msg.content === 'string' 
+                  ? msg.content 
+                  : msg.content === null 
+                    ? '' 
+                    : msg.content
+                      .filter((part: any) => part.type === 'text')
+                      .map((part: any) => part.text || '')
+                      .join(' ');
+                
+                return (
+                  <div key={idx} className="text-xs">
+                    <span className="font-medium">
+                      {msg.role === 'user' ? 'You: ' : 'Agent: '}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {textContent.substring(0, 80)}
+                      {textContent.length > 80 && '...'}
+                    </span>
+                  </div>
+                );
+              })}
               {partialMessage && (
                 <div className="text-xs">
                   <span className="font-medium">Agent: </span>

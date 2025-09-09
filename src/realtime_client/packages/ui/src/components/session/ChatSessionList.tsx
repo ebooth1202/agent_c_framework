@@ -105,7 +105,7 @@ function getItemSize(index: number, items: VirtualListItem[]): number {
 /**
  * Function to format relative time for session timestamps
  */
-function getRelativeTime(timestamp: string | null): string {
+function getRelativeTime(timestamp: string | null | undefined): string {
   if (!timestamp) return 'Unknown'
   
   const date = new Date(timestamp)
@@ -295,7 +295,7 @@ const SessionItem = React.memo<{
   totalCount?: number
 }>(({ session, isActive, isFocused, onSelect, onDelete, onFocus, isDeleting, index, totalCount }) => {
   const displayName = React.useMemo(() => getSessionDisplayName(session), [session])
-  const timeAgo = React.useMemo(() => getRelativeTime(session.updated_at || session.created_at), [session.updated_at, session.created_at])
+  const timeAgo = React.useMemo(() => getRelativeTime(session.updated_at ?? session.created_at), [session.updated_at, session.created_at])
   const agentDisplay = React.useMemo(() => session.agent_name || session.agent_key || 'Unknown Agent', [session.agent_name, session.agent_key])
   
   // Memoized keyboard handler
@@ -485,7 +485,7 @@ const CollapsedView = React.memo<{
             <TooltipContent side="right">
               <p>{getSessionDisplayName(session)}</p>
               <p className="text-xs text-muted-foreground">
-                {getRelativeTime(session.updated_at || session.created_at)}
+                {getRelativeTime(session.updated_at ?? session.created_at)}
               </p>
             </TooltipContent>
           </Tooltip>

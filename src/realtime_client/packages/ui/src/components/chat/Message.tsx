@@ -10,7 +10,8 @@ import { Button } from '../ui/button'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { motion, AnimatePresence } from 'framer-motion'
-import type { Message as SDKMessage } from '@agentc/realtime-core'
+import type { Message as SDKMessage, MessageContent, ContentPart } from '@agentc/realtime-core'
+import { MessageContentRenderer } from './MessageContentRenderer'
 
 export interface MessageData extends Omit<SDKMessage, 'timestamp'> {
   id?: string  // Optional ID for keying
@@ -32,6 +33,27 @@ export interface MessageData extends Omit<SDKMessage, 'timestamp'> {
     results?: any
   }>
 }
+
+/**
+ * Extract text content from MessageContent for display purposes
+ */
+function extractTextContent(content: MessageContent): string {
+  if (content === null) {
+    return ''
+  }
+  
+  if (typeof content === 'string') {
+    return content
+  }
+  
+  // For array of content parts, extract text parts
+  return content
+    .filter((part): part is ContentPart => part.type === 'text')
+    .map((part: any) => part.text || '')
+    .join('\n')
+}
+
+
 
 export interface MessageProps extends React.HTMLAttributes<HTMLDivElement> {
   /**
@@ -75,16 +97,35 @@ const ThoughtMessage: React.FC<ThoughtMessageProps> = ({
   
   // Extract first line for preview
   const firstLine = React.useMemo(() => {
-    const lines = message.content.split('\n')
+    const textContent = extractTextContent(message.content)
+    const lines = textContent.split('\n')
     const first = lines[0] || ''
     return first.length > 80 ? `${first.slice(0, 77)}...` : first
   }, [message.content])
   
   const handleCopy = React.useCallback(() => {
-    navigator.clipboard.writeText(message.content)
+    const textContent = extractTextContent(message.content)
+    navigator.clipboard.writeText(textContent)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }, [message.content])
+  
+  // Simple markdown components for thought messages
+  const thoughtMarkdownComponents = {
+    p({ children }: any) {
+      return <p className="mb-2 last:mb-0">{children}</p>
+    },
+    code({ inline, children }: any) {
+      if (inline) {
+        return <code className="bg-muted px-1 py-0.5 rounded text-xs">{children}</code>
+      }
+      return (
+        <pre className="bg-muted rounded p-2 overflow-x-auto my-2">
+          <code className="text-xs">{children}</code>
+        </pre>
+      )
+    }
+  }
   
   return (
     <div className={cn(
@@ -140,8 +181,11 @@ const ThoughtMessage: React.FC<ThoughtMessageProps> = ({
               }}
             >
               <div className="prose prose-sm prose-muted max-w-none">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {message.content}
+                <ReactMarkdown 
+                  remarkPlugins={[remarkGfm]}
+                  components={thoughtMarkdownComponents}
+                >
+                  {extractTextContent(message.content)}
                 </ReactMarkdown>
               </div>
               
@@ -193,9 +237,8 @@ const Message = React.forwardRef<HTMLDivElement, MessageProps>(
     showFooter = true,
     ...props 
   }, ref) => {
-    const [copiedCode, setCopiedCode] = React.useState<string | null>(null)
     const [isEditing, setIsEditing] = React.useState(false)
-    const [editContent, setEditContent] = React.useState(message.content)
+    const [editContent, setEditContent] = React.useState(extractTextContent(message.content) || '')
     
     // Check for thought messages
     if (message.isThought || message.role === 'assistant (thought)') {
@@ -210,14 +253,6 @@ const Message = React.forwardRef<HTMLDivElement, MessageProps>(
     const isUser = message.role === 'user'
     const isAssistant = message.role === 'assistant'
     const isError = message.status === 'error'
-    
-    // Handle code copy
-    const handleCopyCode = React.useCallback((code: string) => {
-      navigator.clipboard.writeText(code).then(() => {
-        setCopiedCode(code)
-        setTimeout(() => setCopiedCode(null), 2000)
-      })
-    }, [])
     
     // Format timestamp
     const formattedTime = React.useMemo(() => {
@@ -251,164 +286,43 @@ const Message = React.forwardRef<HTMLDivElement, MessageProps>(
       )
     }
     
-    // Markdown components configuration
-    const markdownComponents = {
-      // Code blocks 
-      code({ inline, className, children, ...props }: any) {
-        const match = /language-(\w+)/.exec(className || '')
-        const language = match ? match[1] : ''
-        const codeString = String(children).replace(/\n$/, '')
-        
-        if (!inline && language) {
-          return (
-            <div className="relative group my-4">
-              <div className="absolute right-2 top-2 z-10">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 px-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={() => handleCopyCode(codeString)}
-                >
-                  {copiedCode === codeString ? (
-                    <>
-                      <Check className="h-3 w-3 mr-1" />
-                      <span className="text-xs">Copied</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="h-3 w-3 mr-1" />
-                      <span className="text-xs">Copy</span>
-                    </>
-                  )}
-                </Button>
-              </div>
-              <pre className="bg-muted rounded-md p-4 overflow-x-auto">
-                <code className="text-sm font-mono" {...props}>
-                  {codeString}
-                </code>
-              </pre>
-            </div>
-          )
-        }
-        
-        // Inline code
-        return (
-          <code 
-            className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono"
-            {...props}
-          >
-            {children}
-          </code>
-        )
-      },
-      // Custom paragraph styling
-      p({ children }: any) {
-        return <p className="mb-3 last:mb-0 leading-relaxed">{children}</p>
-      },
-      // Lists
-      ul({ children }: any) {
-        return <ul className="list-disc pl-6 mb-3 space-y-1">{children}</ul>
-      },
-      ol({ children }: any) {
-        return <ol className="list-decimal pl-6 mb-3 space-y-1">{children}</ol>
-      },
-      // Headings
-      h1({ children }: any) {
-        return <h1 className="text-2xl font-bold mb-3">{children}</h1>
-      },
-      h2({ children }: any) {
-        return <h2 className="text-xl font-semibold mb-2">{children}</h2>
-      },
-      h3({ children }: any) {
-        return <h3 className="text-lg font-semibold mb-2">{children}</h3>
-      },
-      // Links
-      a({ href, children }: any) {
-        return (
-          <a 
-            href={href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary hover:underline"
-          >
-            {children}
-          </a>
-        )
-      },
-      // Blockquotes
-      blockquote({ children }: any) {
-        return (
-          <blockquote className="border-l-4 border-muted pl-4 py-1 my-3 text-muted-foreground">
-            {children}
-          </blockquote>
-        )
-      },
-      // Tables (with GFM)
-      table({ children }: any) {
-        return (
-          <div className="overflow-x-auto my-3">
-            <table className="min-w-full divide-y divide-border">
-              {children}
-            </table>
-          </div>
-        )
-      },
-      thead({ children }: any) {
-        return <thead className="bg-accent/20">{children}</thead>
-      },
-      th({ children }: any) {
-        return (
-          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider">
-            {children}
-          </th>
-        )
-      },
-      td({ children }: any) {
-        return <td className="px-3 py-2 text-sm">{children}</td>
-      }
-    }
+
     
     // Render content
     const renderContent = () => {
-      if (isUser) {
-        // Plain text for user messages
+      if (isUser && isEditing) {
+        // Edit mode for user messages - only text editing is supported
         return (
           <div className="whitespace-pre-wrap break-words">
-            {isEditing ? (
-              <textarea
-                value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                    e.preventDefault()
-                    if (onEdit && message.id) {
-                      onEdit(message.id, editContent)
-                      setIsEditing(false)
-                    }
-                  } else if (e.key === 'Escape') {
-                    e.preventDefault()
-                    setEditContent(message.content)
+            <textarea
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                  e.preventDefault()
+                  if (onEdit && message.id) {
+                    onEdit(message.id, editContent)
                     setIsEditing(false)
                   }
-                }}
-                className="w-full bg-transparent border-none outline-none resize-none min-h-[80px]"
-                autoFocus
-              />
-            ) : (
-              message.content
-            )}
+                } else if (e.key === 'Escape') {
+                  e.preventDefault()
+                  setEditContent(extractTextContent(message.content) || '')
+                  setIsEditing(false)
+                }
+              }}
+              className="w-full bg-transparent border-none outline-none resize-none min-h-[80px]"
+              autoFocus
+            />
           </div>
         )
       }
       
-      // Markdown for assistant messages
+      // Use the new MessageContentRenderer for all message content
       return (
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          components={markdownComponents}
-        >
-          {message.content}
-        </ReactMarkdown>
+        <MessageContentRenderer
+          content={message.content}
+          role={message.role as 'user' | 'assistant' | 'system'}
+        />
       )
     }
     
@@ -454,10 +368,7 @@ const Message = React.forwardRef<HTMLDivElement, MessageProps>(
             )}
             
             {/* Main content */}
-            <div className={cn(
-              "text-[0.9375rem] leading-6 tracking-tight",
-              isUser ? "text-foreground" : "prose prose-sm max-w-none"
-            )}>
+            <div className="text-[0.9375rem] leading-6 tracking-tight">
               {renderContent()}
             </div>
             
@@ -480,7 +391,7 @@ const Message = React.forwardRef<HTMLDivElement, MessageProps>(
                   size="sm"
                   variant="ghost"
                   onClick={() => {
-                    setEditContent(message.content)
+                    setEditContent(extractTextContent(message.content) || '')
                     setIsEditing(false)
                   }}
                 >

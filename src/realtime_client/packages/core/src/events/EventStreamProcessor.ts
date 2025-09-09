@@ -21,6 +21,17 @@ import {
   HistoryDeltaEvent,
   ChatSessionChangedEvent
 } from './types/ServerEvents';
+import { Message, MessageContent, ContentPart } from './types/CommonTypes';
+import { ChatSession } from '../types/chat-session';
+import { 
+  MessageParam,
+  ContentBlockParam,
+  isTextBlockParam,
+  isImageBlockParam,
+  isToolUseBlockParam,
+  isDocumentBlockParam,
+  isThinkingBlockParam
+} from '../types/message-params';
 import { Logger } from '../utils/logger';
 
 /**
@@ -39,6 +50,131 @@ export class EventStreamProcessor {
     this.toolCallManager = new ToolCallManager();
     this.richMediaHandler = new RichMediaHandler();
     this.logger = new Logger('EventStreamProcessor');
+  }
+  
+  /**
+   * Normalize MessageParam content to MessageContent format for UI compatibility
+   * Handles the conversion from Anthropic ContentBlockParam[] to simplified ContentPart[]
+   */
+  private normalizeMessageContent(content: string | ContentBlockParam[]): MessageContent {
+    // Handle simple string content
+    if (typeof content === 'string') {
+      return content;
+    }
+    
+    // Handle array of content blocks
+    if (Array.isArray(content)) {
+      // Convert ContentBlockParam[] to ContentPart[] for UI compatibility
+      const normalizedParts: ContentPart[] = [];
+      
+      for (const block of content) {
+        if (isTextBlockParam(block)) {
+          normalizedParts.push({
+            type: 'text',
+            text: block.text
+          });
+        } else if (isImageBlockParam(block)) {
+          normalizedParts.push({
+            type: 'image',
+            source: block.source
+          });
+        } else if (isToolUseBlockParam(block)) {
+          normalizedParts.push({
+            type: 'tool_use',
+            id: block.id,
+            name: block.name,
+            input: block.input
+          });
+        } else if ('type' in block && block.type === 'tool_result') {
+          // Handle tool result blocks
+          normalizedParts.push({
+            type: 'tool_result',
+            tool_use_id: (block as any).tool_use_id,
+            content: typeof (block as any).content === 'string' ? (block as any).content : '',
+            is_error: (block as any).is_error
+          });
+        } else if (isThinkingBlockParam(block)) {
+          // Convert thinking blocks to text for now
+          normalizedParts.push({
+            type: 'text',
+            text: `[Thinking] ${block.thinking}`
+          });
+        } else if (isDocumentBlockParam(block)) {
+          // For documents, create a text representation
+          normalizedParts.push({
+            type: 'text',
+            text: `[Document: ${block.title || 'Untitled'}]`
+          });
+        } else {
+          // For any other block types, try to extract text or skip
+          this.logger.debug(`Skipping unsupported content block type: ${(block as any).type}`);
+        }
+      }
+      
+      // If we have normalized parts, return them
+      if (normalizedParts.length > 0) {
+        return normalizedParts;
+      }
+    }
+    
+    // Return empty string as fallback
+    return '';
+  }
+  
+  /**
+   * Convert a MessageParam to a Message with proper content normalization
+   */
+  private convertMessageParam(param: MessageParam): Message {
+    const normalizedContent = this.normalizeMessageContent(param.content);
+    
+    return {
+      role: param.role as Message['role'],
+      content: normalizedContent,
+      timestamp: new Date().toISOString(),
+      format: 'text' as const
+    };
+  }
+  
+  /**
+   * Convert ServerChatSession to ChatSession with normalized messages
+   */
+  private convertServerSession(serverSession: any): ChatSession {
+    // Check if this is already a ChatSession (has Message[]) or needs conversion
+    const needsConversion = serverSession.messages && 
+      serverSession.messages.length > 0 && 
+      serverSession.messages[0] && 
+      !('timestamp' in serverSession.messages[0]);
+    
+    if (!needsConversion) {
+      // Already in the correct format
+      return serverSession as ChatSession;
+    }
+    
+    // Convert messages from MessageParam[] to Message[]
+    const convertedMessages: Message[] = [];
+    
+    if (serverSession.messages && Array.isArray(serverSession.messages)) {
+      for (const msg of serverSession.messages) {
+        try {
+          const convertedMessage = this.convertMessageParam(msg);
+          convertedMessages.push(convertedMessage);
+        } catch (error) {
+          this.logger.error('Failed to convert message:', error);
+          // Create a fallback message
+          convertedMessages.push({
+            role: msg.role || 'assistant',
+            content: '[Message could not be displayed]',
+            timestamp: new Date().toISOString(),
+            format: 'text'
+          });
+        }
+      }
+    }
+    
+    return {
+      ...serverSession,
+      messages: convertedMessages
+    } as ChatSession;
   }
   
   /**
@@ -275,9 +411,17 @@ export class EventStreamProcessor {
   private handleHistoryDelta(event: HistoryDeltaEvent): void {
     const session = this.sessionManager.getCurrentSession();
     if (session) {
-      // Add the new messages to the session
+      // Convert and add the new messages to the session
       event.messages.forEach(msg => {
-        session.messages.push(msg);
+        // Check if the message needs conversion
+        if (!('timestamp' in msg)) {
+          // This is a MessageParam, convert it
+          const convertedMessage = this.convertMessageParam(msg as any);
+          session.messages.push(convertedMessage);
+        } else {
+          // Already a proper Message
+          session.messages.push(msg);
+        }
       });
       session.updated_at = new Date().toISOString();
       
@@ -298,8 +442,13 @@ export class EventStreamProcessor {
       return;
     }
     
-    const session = event.chat_session;
+    // Convert the server session to runtime ChatSession with normalized messages
+    const session = this.convertServerSession(event.chat_session);
+    
     this.logger.info(`Processing session change: ${session.session_id} with ${session.messages?.length || 0} messages`);
+    
+    // Update the session in SessionManager with the converted version
+    this.sessionManager.setCurrentSession(session);
     
     // Reset the message builder for new session context
     this.messageBuilder.reset();

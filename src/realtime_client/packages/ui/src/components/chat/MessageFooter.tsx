@@ -9,6 +9,7 @@ import {
 import { Button } from '../ui/button'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { MessageData } from './Message'
+import type { MessageContent } from '@agentc/realtime-core'
 
 export interface MessageFooterProps extends React.HTMLAttributes<HTMLDivElement> {
   /**
@@ -122,7 +123,21 @@ export const MessageFooter = React.forwardRef<HTMLDivElement, MessageFooterProps
     const [showToolCalls, setShowToolCalls] = React.useState(false)
     
     const handleCopy = React.useCallback(() => {
-      navigator.clipboard.writeText(message.content)
+      // Extract text content for copying
+      let textContent = ''
+      if (message.content === null) {
+        textContent = ''
+      } else if (typeof message.content === 'string') {
+        textContent = message.content
+      } else if (Array.isArray(message.content)) {
+        // Extract text from content parts
+        textContent = message.content
+          .filter((part: any) => part.type === 'text')
+          .map((part: any) => part.text || '')
+          .join('\n')
+      }
+      
+      navigator.clipboard.writeText(textContent)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     }, [message.content])

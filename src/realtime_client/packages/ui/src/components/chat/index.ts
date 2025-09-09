@@ -2,6 +2,12 @@
 export { Message } from './Message'
 export type { MessageProps, MessageData } from './Message'
 
+export { MessageContentRenderer } from './MessageContentRenderer'
+export type { MessageContentRendererProps } from './MessageContentRenderer'
+
+// Content Renderers
+export * from './content-renderers'
+
 export { MessageFooter } from './MessageFooter'
 export type { MessageFooterProps } from './MessageFooter'
 
