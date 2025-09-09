@@ -206,7 +206,10 @@ export type {
 // Chat component exports
 export {
   Message,
+  MessageFooter,
   MessageList,
+  SystemNotification,
+  SystemNotificationContainer,
   TypingIndicator,
   ScrollAnchor,
   typingIndicatorStyles
@@ -215,7 +218,12 @@ export {
 export type {
   MessageProps,
   MessageData,
+  MessageFooterProps,
   MessageListProps,
+  SystemNotificationProps,
+  SystemNotificationContainerProps,
+  SystemNotificationData,
+  NotificationSeverity,
   TypingIndicatorProps,
   ScrollAnchorProps
 } from './components/chat';

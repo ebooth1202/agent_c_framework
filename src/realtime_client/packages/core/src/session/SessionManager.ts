@@ -6,6 +6,8 @@
 import { EventEmitter } from '../events/EventEmitter';
 import { ChatSession, Message, ChatSessionIndexEntry, ChatSessionQueryResponse } from '../events/types/CommonTypes';
 import { Logger } from '../utils/logger';
+import type { EnhancedMessage } from '../events/MessageBuilder';
+import type { ToolNotification } from '../events/ToolCallManager';
 
 /**
  * Event map for SessionManager events
@@ -33,6 +35,28 @@ export interface SessionManagerEventMap {
   'request-user-sessions': {
     offset: number;
     limit: number;
+  };
+  // New events for message streaming and rich content
+  'message-streaming': {
+    sessionId: string;
+    message: Partial<EnhancedMessage>;
+  };
+  'message-complete': {
+    sessionId: string;
+    message: EnhancedMessage;
+  };
+  'tool-notification': ToolNotification;
+  'tool-notification-removed': string; // Tool ID
+  'media-added': {
+    sessionId: string;
+    media: EnhancedMessage;
+  };
+  'system-notification': {
+    type: 'system' | 'error';
+    severity: 'info' | 'warning' | 'error';
+    content: string;
+    source?: string;
+    timestamp: string;
   };
 }
 

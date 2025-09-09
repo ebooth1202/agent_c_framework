@@ -2,7 +2,13 @@
 
 import React from 'react';
 import { useChat, useAudio, useTurnState, useConnection } from '@agentc/realtime-react';
-import { MessageList, TypingIndicator, ChatInputArea } from '@agentc/realtime-ui';
+import { 
+  MessageList, 
+  TypingIndicator, 
+  ChatInputArea,
+  SystemNotificationContainer,
+  type SystemNotificationData 
+} from '@agentc/realtime-ui';
 import { ViewManager } from './view-manager';
 import { useOutputMode, type OutputMode } from '@agentc/realtime-react';
 import { cn } from '@/lib/utils';

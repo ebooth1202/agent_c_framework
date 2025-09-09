@@ -2,9 +2,7 @@
 
 import React from 'react'
 import { ChatInterface, CompactChatInterface } from './chat-interface'
-import { MessageList } from './message-list'
-import { Message } from './message'
-import { TypingIndicator } from './typing-indicator'
+import { MessageList, Message, TypingIndicator } from '@agentc/realtime-ui'
 import { ViewManager } from './view-manager'
 import { Card, Tabs, TabsContent, TabsList, TabsTrigger } from '@agentc/realtime-ui'
 import { useChat, useAudio, useConnection, useOutputMode } from '@agentc/realtime-react'

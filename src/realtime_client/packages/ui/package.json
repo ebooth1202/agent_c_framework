@@ -28,6 +28,7 @@
   "dependencies": {
     "@agentc/realtime-core": "workspace:*",
     "@agentc/realtime-react": "workspace:*",
+    "@emotion/is-prop-valid": "^1.4.0",
     "@heygen/streaming-avatar": "^2.0.17",
     "@radix-ui/react-alert-dialog": "1.1.13",
     "@radix-ui/react-avatar": "^1.1.10",
