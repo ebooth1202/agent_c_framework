@@ -33,6 +33,176 @@ persona: |
     - **Realtime Client SDK design documents:** `//realtime_client/docs/design_design_docs` 
     - **CenSuite Design System:** `//realtime_client/ref/CenSuite_Starter` 
     - **HeyGen Avatar Example app:** `//api/ref/InteractiveAvatarNextJSDemo` 
+ 
+ # Testing Standards & Practices
+  
+  See: `//realtime_client/docs/testing_standards_and_architecture.md` for full details
+  
+  ## 1. Testing Architecture
+
+  ### 1.1 Test Organization Structure
+  ```
+  packages/
+    [package-name]/
+      src/
+        [feature]/
+          index.ts
+          [component].ts
+          __tests__/
+            [component].test.ts
+            [component].integration.test.ts
+            fixtures/
+              [test-data].json
+      vitest.config.ts
+      package.json
+  ```
+  
+  **MANDATORY RULES:**
+  - Unit tests MUST be co-located with source code in `__tests__` directories
+  - Integration tests use `.integration.test.ts` suffix
+  - Test fixtures go in `__tests__/fixtures/`
+  - Each package MUST have its own `vitest.config.ts`
+  - NO alternative test locations are permitted
+  
+  ### 1.2 Test File Naming Convention
+  - Unit tests: `[component-name].test.ts(x)`
+  - Integration tests: `[feature].integration.test.ts(x)`
+  - Test utilities: `test-utils.ts`
+  - Mock files: `[component].mock.ts`
+  
+  ## 2. Testing Stack
+  
+  ### 2.1 Required Packages
+  ```json
+  {
+    "devDependencies": {
+      // Core Testing
+      "vitest": "^1.0.0",
+      "@vitest/ui": "^1.0.0",
+      "@vitest/coverage-v8": "^1.0.0",
+      
+      // React Testing (for react/ui/demo packages)
+      "@testing-library/react": "^14.0.0",
+      "@testing-library/user-event": "^14.0.0",
+      "@testing-library/jest-dom": "^6.0.0",
+      
+      // DOM Environment
+      "happy-dom": "^12.0.0",
+      
+      // Mocking
+      "msw": "^2.0.0",
+      
+      // Utilities
+      "@faker-js/faker": "^8.0.0",
+      "superstruct": "^1.0.0"
+    }
+  }
+  ```
+  
+  ### 2.2 Vitest Configuration Template
+  ```typescript
+  // packages/[package-name]/vitest.config.ts
+  import { defineConfig } from 'vitest/config';
+  import { resolve } from 'path';
+  
+  export default defineConfig({
+    test: {
+      globals: true,
+      environment: 'happy-dom', // or 'node' for core package
+      setupFiles: ['./src/test/setup.ts'],
+      coverage: {
+        provider: 'v8',
+        reporter: ['text', 'json', 'html', 'lcov'],
+        exclude: [
+          'node_modules/**',
+          'dist/**',
+          '**/*.config.*',
+          '**/*.d.ts',
+          '**/__tests__/**',
+          '**/__mocks__/**',
+          '**/test/setup.ts'
+        ],
+        thresholds: {
+          branches: 80,
+          functions: 80,
+          lines: 80,
+          statements: 80
+        }
+      },
+      testTimeout: 10000,
+      hookTimeout: 10000
+    },
+    resolve: {
+      alias: {
+        '@': resolve(__dirname, './src'),
+        '@test': resolve(__dirname, './src/test')
+      }
+    }
+  });
+  ```
+  
+  ## 3. Console Logging Standards
+  
+  ### 3.1 Development Logging
+  ```typescript
+  // src/utils/logger.ts
+  export enum LogLevel {
+    ERROR = 0,
+    WARN = 1,
+    INFO = 2,
+    DEBUG = 3,
+    TRACE = 4
+  }
+  
+  export class Logger {
+    private static level: LogLevel = 
+      process.env.NODE_ENV === 'test' ? LogLevel.ERROR :
+      process.env.NODE_ENV === 'development' ? LogLevel.DEBUG :
+      LogLevel.WARN;
+  
+    static setLevel(level: LogLevel) {
+      this.level = level;
+    }
+  
+    static error(message: string, ...args: any[]) {
+      if (this.level >= LogLevel.ERROR) {
+        console.error(`[ERROR] ${message}`, ...args);
+      }
+    }
+  
+    static warn(message: string, ...args: any[]) {
+      if (this.level >= LogLevel.WARN) {
+        console.warn(`[WARN] ${message}`, ...args);
+      }
+    }
+  
+    static info(message: string, ...args: any[]) {
+      if (this.level >= LogLevel.INFO) {
+        console.info(`[INFO] ${message}`, ...args);
+      }
+    }
+  
+    static debug(message: string, ...args: any[]) {
+      if (this.level >= LogLevel.DEBUG) {
+        console.debug(`[DEBUG] ${message}`, ...args);
+      }
+    }
+  
+    static trace(message: string, ...args: any[]) {
+      if (this.level >= LogLevel.TRACE) {
+        console.trace(`[TRACE] ${message}`, ...args);
+      }
+    }
+  }
+  ```
+  
+  ### 3.2 Diagnostic Logging Rules
+  - **Production**: ERROR and WARN only
+  - **Development**: DEBUG level by default
+  - **Testing**: ERROR only (unless debugging specific test)
+  - **NO console.log()**: Use Logger class exclusively
+  - **Structured logging**: Include context in log messages
+  - **Performance logging**: Use `console.time()` and `console.timeEnd()` for performance measurements 
    
   ## Running commands
     Not all arguments are whitelisted. Refer to the section "Dynamic Commands" in your instructions for details on whitelisted commands and parameters. 
