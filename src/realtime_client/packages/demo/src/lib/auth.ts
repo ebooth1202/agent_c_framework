@@ -311,19 +311,13 @@ export async function login(credentials: LoginCredentials): Promise<LoginRespons
       throw new Error('No agent_c_token received from login endpoint');
     }
     
-    if (!data.user) {
-      authLibLog.critical('NO USER OBJECT IN LOGIN RESPONSE!');
-      authLibLog.error('Full response:', data);
-    }
-    
-    if (data.user && (!data.user.user_id || !data.user.email || !data.user.user_name)) {
-      authLibLog.critical('USER OBJECT MISSING REQUIRED FIELDS!', {
-        hasUserId: !!data.user.user_id,
-        hasEmail: !!data.user.email,
-        hasUserName: !!data.user.user_name,
-        user: data.user
-      });
-    }
+    // Note: User data now comes from WebSocket events, not the login response
+    // The login response only contains tokens and session ID
+    authLibLog.debug('Login response received (user data will come from WebSocket events)', {
+      hasAgentCToken: !!data.agent_c_token,
+      hasHeygenToken: !!data.heygen_token,
+      hasUiSessionId: !!data.ui_session_id
+    });
 
     // Store agent_c_token in secure cookie
     authLibLog.info('Storing agent_c_token in cookie...');

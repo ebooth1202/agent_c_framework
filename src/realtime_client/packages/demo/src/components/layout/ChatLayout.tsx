@@ -2,17 +2,17 @@
 
 import * as React from "react"
 import { cn } from "@/lib/utils"
-import { ChatSidebar } from "@agentc/realtime-ui"
+import { ChatSidebar, MainContentArea } from "@agentc/realtime-ui"
+import type { ContentOutputMode } from "@agentc/realtime-ui"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { ChatHeader } from "./ChatHeader"
-import { MainContentArea, OutputMode } from "../content/MainContentArea"
 // Import the SSR-safe wrapper instead of the UI package directly
-// This prevents TipTap v3 from breaking the Next.js build
+// This prevents TipTap from breaking the Next.js build
 import { InputAreaWrapper } from "../input/InputAreaWrapper"
 
 export interface ChatLayoutProps {
-  outputMode?: OutputMode
+  outputMode?: ContentOutputMode
   sessionName?: string
   className?: string
   children?: React.ReactNode
@@ -28,7 +28,7 @@ export const ChatLayout = React.forwardRef<HTMLDivElement, ChatLayoutProps>(
     const { logout } = useAuth()
     const [sidebarOpen, setSidebarOpen] = React.useState(false)
     const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false)
-    const [currentOutputMode, setCurrentOutputMode] = React.useState<OutputMode>(outputMode)
+    const [currentOutputMode, setCurrentOutputMode] = React.useState<ContentOutputMode>(outputMode)
 
     const handleLogout = React.useCallback(() => {
       logout()

@@ -212,6 +212,7 @@ export {
   SystemNotificationContainer,
   TypingIndicator,
   ScrollAnchor,
+  ChatMessagesView,
   typingIndicatorStyles
 } from './components/chat';
 
@@ -225,7 +226,8 @@ export type {
   SystemNotificationData,
   NotificationSeverity,
   TypingIndicatorProps,
-  ScrollAnchorProps
+  ScrollAnchorProps,
+  ChatMessagesViewProps
 } from './components/chat';
 
 // Audio component exports
@@ -236,3 +238,22 @@ export {
 export type {
   VoiceVisualizerViewProps
 } from './components/audio';
+
+// Layout component exports
+export {
+  MainContentArea
+} from './components/layout';
+
+export type {
+  MainContentAreaProps,
+  OutputMode as ContentOutputMode
+} from './components/layout';
+
+// Avatar component exports
+export {
+  AvatarDisplayView
+} from './components/avatar';
+
+export type {
+  AvatarDisplayViewProps
+} from './components/avatar';

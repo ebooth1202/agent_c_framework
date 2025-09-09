@@ -18,7 +18,8 @@ import {
   InteractionEvent,
   SystemMessageEvent,
   ErrorEvent,
-  HistoryDeltaEvent
+  HistoryDeltaEvent,
+  ChatSessionChangedEvent
 } from './types/ServerEvents';
 import { Logger } from '../utils/logger';
 
@@ -76,6 +77,9 @@ export class EventStreamProcessor {
         break;
       case 'history_delta':
         this.handleHistoryDelta(event);
+        break;
+      case 'chat_session_changed':
+        this.handleChatSessionChanged(event);
         break;
       // Other events are handled elsewhere or don't require processing here
       default:
@@ -280,6 +284,33 @@ export class EventStreamProcessor {
       // Emit update event
       this.sessionManager.emit('sessions-updated', {
         sessions: this.sessionManager.getAllSessions()
+      });
+    }
+  }
+  
+  /**
+   * Handle chat session changed events
+   * This is called when resuming an existing session or switching sessions
+   */
+  private handleChatSessionChanged(event: ChatSessionChangedEvent): void {
+    if (!event.chat_session) {
+      this.logger.warn('ChatSessionChangedEvent received without chat_session');
+      return;
+    }
+    
+    const session = event.chat_session;
+    this.logger.info(`Processing session change: ${session.session_id} with ${session.messages?.length || 0} messages`);
+    
+    // Reset the message builder for new session context
+    this.messageBuilder.reset();
+    
+    // Process existing messages to emit proper events for UI
+    if (session.messages && session.messages.length > 0) {
+      // Emit a session-messages-loaded event for bulk updates
+      // This is more appropriate for pre-existing messages
+      this.sessionManager.emit('session-messages-loaded', {
+        sessionId: session.session_id,
+        messages: session.messages
       });
     }
   }

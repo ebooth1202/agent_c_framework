@@ -1,9 +1,8 @@
 // Type check file to verify components compile
 import { ChatLayout } from './components/layout/ChatLayout'
 import { ChatHeader } from './components/layout/ChatHeader'
-import { MainContentArea } from './components/content/MainContentArea'
-import { ChatMessagesView } from './components/content/ChatMessagesView'
-import { AvatarDisplayView } from './components/content/AvatarDisplayView'
+// Content components moved to @agentc/realtime-ui
+// import { MainContentArea, ChatMessagesView, AvatarDisplayView } from '@agentc/realtime-ui'
 import { VoiceVisualizerView } from '@agentc/realtime-ui'
 
 // These components are now imported from the UI package
@@ -20,9 +19,9 @@ export {
   ChatLayout,
   ChatSidebar,
   ChatHeader,
-  MainContentArea,
-  ChatMessagesView,
-  AvatarDisplayView,
+  // MainContentArea, // Moved to @agentc/realtime-ui
+  // ChatMessagesView, // Moved to @agentc/realtime-ui
+  // AvatarDisplayView, // Moved to @agentc/realtime-ui
   VoiceVisualizerView,
   SessionNameDropdown,
   SidebarTopMenu,

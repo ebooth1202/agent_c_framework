@@ -246,6 +246,31 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
       if (sessionEvent.chat_session) {
         setCurrentSession(sessionEvent.chat_session);
         setCurrentSessionId(sessionEvent.chat_session.session_id);
+        
+        // Load existing messages from the session
+        if (sessionEvent.chat_session.messages && sessionEvent.chat_session.messages.length > 0) {
+          setMessages(sessionEvent.chat_session.messages.slice(-maxMessages));
+          // Clear any partial message when switching sessions
+          setPartialMessage('');
+          messageBufferRef.current = '';
+          currentMessageIdRef.current = null;
+        } else {
+          // Clear messages if new session has no messages
+          clearMessages();
+        }
+      }
+    };
+    
+    // Handle session messages loaded event (from EventStreamProcessor)
+    const handleSessionMessagesLoaded = (event: unknown) => {
+      const messagesEvent = event as { sessionId?: string; messages?: Message[] };
+      if (messagesEvent.messages) {
+        // Update messages with the loaded messages
+        setMessages(messagesEvent.messages.slice(-maxMessages));
+        // Clear any partial message
+        setPartialMessage('');
+        messageBufferRef.current = '';
+        currentMessageIdRef.current = null;
       }
     };
     
@@ -256,14 +281,26 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     client.on('user_turn_end', handleUserTurnEnd);
     client.on('chat_session_changed', handleSessionChanged);
     
+    // Subscribe to SessionManager events if available
+    const sessionManager = client.getSessionManager();
+    if (sessionManager) {
+      sessionManager.on('session-messages-loaded', handleSessionMessagesLoaded);
+    }
+    
     return () => {
       client.off('text_delta', handleTextDelta);
       client.off('completion', handleCompletion);
       client.off('user_turn_start', handleUserTurnStart);
       client.off('user_turn_end', handleUserTurnEnd);
       client.off('chat_session_changed', handleSessionChanged);
+      
+      // Unsubscribe from SessionManager events
+      const sessionManager = client.getSessionManager();
+      if (sessionManager) {
+        sessionManager.off('session-messages-loaded', handleSessionMessagesLoaded);
+      }
     };
-  }, [client, maxMessages, updateChatInfo]);
+  }, [client, maxMessages, updateChatInfo, clearMessages]);
   
   // Computed properties
   const lastMessage: ChatMessage | null = messages.length > 0 ? messages[messages.length - 1]! : null;

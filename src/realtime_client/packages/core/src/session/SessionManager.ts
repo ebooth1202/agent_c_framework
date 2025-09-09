@@ -45,6 +45,10 @@ export interface SessionManagerEventMap {
     sessionId: string;
     message: EnhancedMessage;
   };
+  'session-messages-loaded': {
+    sessionId: string;
+    messages: Message[];
+  };
   'tool-notification': ToolNotification;
   'tool-notification-removed': string; // Tool ID
   'media-added': {
