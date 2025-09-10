@@ -1,61 +1,70 @@
 /**
- * Test setup for @agentc/realtime-react package
+ * Test Setup for React Package
+ * Configure testing environment and global mocks
  */
 
-import { afterEach, afterAll, beforeAll, vi } from 'vitest';
 import '@testing-library/jest-dom';
+import { vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
+import { afterEach, beforeAll, afterAll } from 'vitest';
+import { server } from './mocks/server';
 
-// Re-export testing utilities
-export * from '@testing-library/react';
-export { default as userEvent } from '@testing-library/user-event';
-
-// Track active resources for cleanup
-const activeTimers = new Set<any>();
-const activePromises = new Set<Promise<any>>();
-
-// Setup test timeout defaults
+// Start MSW server before all tests
 beforeAll(() => {
-  // Set a reasonable default timeout for async tests
-  vi.setConfig({ testTimeout: 10000 });
+  server.listen({ onUnhandledRequest: 'warn' });
 });
 
-// Clean up after each test
-afterEach(async () => {
-  // Clean up React Testing Library
+// Cleanup after each test
+afterEach(() => {
   cleanup();
-  
-  // Clear all mock function calls
   vi.clearAllMocks();
-  
-  // Wait for any pending promises to resolve
-  if (activePromises.size > 0) {
-    await Promise.allSettled(Array.from(activePromises));
-    activePromises.clear();
-  }
-  
-  // Clear any pending timers
-  vi.clearAllTimers();
-  
-  // Restore real timers if they were faked
-  if (vi.isFakeTimers()) {
-    vi.useRealTimers();
-  }
-  
-  // Clear tracked timers
-  activeTimers.clear();
+  server.resetHandlers();
 });
 
-// Final cleanup after all tests
-afterAll(async () => {
-  // Ensure everything is cleaned up
-  cleanup();
-  activeTimers.clear();
-  activePromises.clear();
-  
-  // Reset all mocks
-  vi.resetAllMocks();
-  
-  // Restore all mocked modules
-  vi.restoreAllMocks();
+// Close MSW server after all tests
+afterAll(() => {
+  server.close();
 });
+
+// Mock IntersectionObserver
+global.IntersectionObserver = vi.fn().mockImplementation(() => ({
+  observe: vi.fn(),
+  unobserve: vi.fn(),
+  disconnect: vi.fn(),
+  takeRecords: vi.fn(() => []),
+  root: null,
+  rootMargin: '',
+  thresholds: []
+}));
+
+// Mock ResizeObserver
+global.ResizeObserver = vi.fn().mockImplementation(() => ({
+  observe: vi.fn(),
+  unobserve: vi.fn(),
+  disconnect: vi.fn()
+}));
+
+// Mock matchMedia
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation(query => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+});
+
+// Mock scrollTo
+Object.defineProperty(window, 'scrollTo', {
+  writable: true,
+  value: vi.fn()
+});
+
+// Mock requestAnimationFrame
+global.requestAnimationFrame = vi.fn((cb) => setTimeout(cb, 0));
+global.cancelAnimationFrame = vi.fn((id) => clearTimeout(id));

@@ -1,0 +1,183 @@
+{
+  "connectionEvents": {
+    "open": {
+      "type": "open",
+      "target": "WebSocket",
+      "timeStamp": 1234567890
+    },
+    "close": {
+      "normal": {
+        "type": "close",
+        "code": 1000,
+        "reason": "Normal closure",
+        "wasClean": true
+      },
+      "abnormal": {
+        "type": "close",
+        "code": 1006,
+        "reason": "Connection lost",
+        "wasClean": false
+      },
+      "error": {
+        "type": "close",
+        "code": 1011,
+        "reason": "Internal server error",
+        "wasClean": false
+      }
+    },
+    "error": {
+      "type": "error",
+      "message": "Connection failed",
+      "target": "WebSocket"
+    }
+  },
+  "binaryMessages": {
+    "audioChunk": {
+      "description": "16-bit PCM audio at 24kHz",
+      "sampleRate": 24000,
+      "channels": 1,
+      "bitsPerSample": 16,
+      "duration": 100,
+      "samples": 2400
+    },
+    "compressedAudio": {
+      "description": "Compressed audio data",
+      "codec": "opus",
+      "bitrate": 32000,
+      "frameSize": 20
+    }
+  },
+  "textMessages": {
+    "handshake": {
+      "type": "session.created",
+      "session": {
+        "id": "sess_123abc",
+        "created_at": "2024-01-15T10:00:00.000Z",
+        "expires_at": "2024-01-15T10:30:00.000Z",
+        "config": {
+          "audio": {
+            "sample_rate": 24000,
+            "channels": 1,
+            "format": "pcm16"
+          },
+          "turn_detection": {
+            "enabled": true,
+            "threshold": 0.5,
+            "silence_duration": 1000
+          }
+        }
+      }
+    },
+    "textDelta": {
+      "type": "response.text.delta",
+      "response_id": "resp_001",
+      "item_id": "item_001",
+      "delta": "Hello, ",
+      "role": "assistant"
+    },
+    "textDone": {
+      "type": "response.text.done",
+      "response_id": "resp_001",
+      "item_id": "item_001",
+      "text": "Hello, how can I help you today?",
+      "role": "assistant"
+    },
+    "audioDelta": {
+      "type": "response.audio.delta",
+      "response_id": "resp_002",
+      "item_id": "item_002",
+      "delta": "base64_encoded_audio_data",
+      "content_type": "audio/pcm16"
+    },
+    "audioDone": {
+      "type": "response.audio.done",
+      "response_id": "resp_002",
+      "item_id": "item_002"
+    },
+    "turnDetection": {
+      "userStarted": {
+        "type": "turn.started",
+        "turn_id": "turn_001",
+        "role": "user",
+        "detected_speech": true
+      },
+      "userEnded": {
+        "type": "turn.ended",
+        "turn_id": "turn_001",
+        "role": "user",
+        "duration": 2500
+      },
+      "assistantStarted": {
+        "type": "turn.started",
+        "turn_id": "turn_002",
+        "role": "assistant"
+      },
+      "assistantEnded": {
+        "type": "turn.ended",
+        "turn_id": "turn_002",
+        "role": "assistant",
+        "duration": 3200
+      }
+    },
+    "functionCall": {
+      "request": {
+        "type": "response.function_call",
+        "response_id": "resp_003",
+        "function": {
+          "name": "get_weather",
+          "arguments": "{\"location\":\"San Francisco\",\"units\":\"celsius\"}"
+        }
+      },
+      "result": {
+        "type": "function_call.result",
+        "call_id": "call_001",
+        "result": "{\"temperature\":18,\"condition\":\"sunny\",\"humidity\":65}"
+      }
+    }
+  },
+  "errorMessages": {
+    "rateLimited": {
+      "type": "error",
+      "error": {
+        "type": "rate_limit_exceeded",
+        "message": "Rate limit exceeded. Please slow down.",
+        "param": null,
+        "code": 429
+      }
+    },
+    "invalidRequest": {
+      "type": "error",
+      "error": {
+        "type": "invalid_request",
+        "message": "Invalid request format",
+        "param": "audio_format",
+        "code": 400
+      }
+    },
+    "serverError": {
+      "type": "error",
+      "error": {
+        "type": "internal_server_error",
+        "message": "An unexpected error occurred",
+        "param": null,
+        "code": 500
+      }
+    }
+  },
+  "controlMessages": {
+    "updateSession": {
+      "type": "session.update",
+      "session": {
+        "instructions": "You are a helpful assistant",
+        "voice": "alloy",
+        "temperature": 0.7
+      }
+    },
+    "cancelResponse": {
+      "type": "response.cancel"
+    },
+    "clearContext": {
+      "type": "context.clear"
+    }
+  }
+}
