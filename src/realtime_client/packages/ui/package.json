@@ -16,9 +16,12 @@
     "type-check": "tsc --noEmit",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
-    "test": "vitest run --reporter=dot",
-    "test:run": "vitest run",
-    "test:watch": "vitest watch"
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui",
+    "test:integration": "vitest run --grep '\\.integration\\.'",
+    "test:unit": "vitest run --grep -v '\\.integration\\.'"
   },
   "peerDependencies": {
     "react": "^18.0.0",
@@ -74,10 +77,12 @@
     "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.8.0",
     "@types/dompurify": "^3.2.0",
     "@types/react": "^18.3.24",
     "@types/react-dom": "^18.3.7",
     "autoprefixer": "^10.4.21",
+    "jest-axe": "^10.0.0",
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.17",
     "tsup": "^8.0.0",

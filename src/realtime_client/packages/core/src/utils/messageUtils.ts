@@ -5,8 +5,6 @@
 import type { Message } from '../events/types/CommonTypes';
 import { Logger } from './logger';
 
-const logger = new Logger('MessageUtils');
-
 /**
  * Normalize message content to ensure it's always a string
  * Handles cases where content might be an object or other non-string type
@@ -21,7 +19,7 @@ export function normalizeMessageContent(content: any): string {
   
   // If null or undefined, return empty string
   if (content == null) {
-    logger.warn('Message content is null or undefined, using empty string');
+    Logger.warn('[MessageUtils] Message content is null or undefined, using empty string');
     return '';
   }
   
@@ -29,17 +27,17 @@ export function normalizeMessageContent(content: any): string {
   if (typeof content === 'object') {
     // Check for common text properties
     if ('text' in content && typeof content.text === 'string') {
-      logger.debug('Extracted text property from content object');
+      Logger.debug('[MessageUtils] Extracted text property from content object');
       return content.text;
     }
     
     if ('content' in content && typeof content.content === 'string') {
-      logger.debug('Extracted nested content property from content object');
+      Logger.debug('[MessageUtils] Extracted nested content property from content object');
       return content.content;
     }
     
     if ('value' in content && typeof content.value === 'string') {
-      logger.debug('Extracted value property from content object');
+      Logger.debug('[MessageUtils] Extracted value property from content object');
       return content.value;
     }
     
@@ -54,23 +52,23 @@ export function normalizeMessageContent(content: any): string {
         .filter(text => text);
       
       if (textParts.length > 0) {
-        logger.debug('Extracted text from array content');
+        Logger.debug('[MessageUtils] Extracted text from array content');
         return textParts.join('');
       }
     }
     
     // As a last resort, stringify the object
-    logger.warn('Content is an object without known text properties, stringifying:', content);
+    Logger.warn('[MessageUtils] Content is an object without known text properties, stringifying:', content);
     try {
       return JSON.stringify(content, null, 2);
     } catch (error) {
-      logger.error('Failed to stringify content object:', error);
+      Logger.error('[MessageUtils] Failed to stringify content object:', error);
       return '[Complex Object]';
     }
   }
   
   // For any other type, convert to string
-  logger.warn(`Unexpected content type: ${typeof content}, converting to string`);
+  Logger.warn(`[MessageUtils] Unexpected content type: ${typeof content}, converting to string`);
   return String(content);
 }
 
@@ -81,7 +79,7 @@ export function normalizeMessageContent(content: any): string {
  */
 export function normalizeMessage(message: any): Message {
   if (!message || typeof message !== 'object') {
-    logger.error('Invalid message provided to normalizeMessage');
+    Logger.error('[MessageUtils] Invalid message provided to normalizeMessage');
     return {
       role: 'system',
       content: '',
@@ -105,7 +103,7 @@ export function normalizeMessage(message: any): Message {
  */
 export function normalizeMessages(messages: any[]): Message[] {
   if (!Array.isArray(messages)) {
-    logger.error('Invalid messages array provided to normalizeMessages');
+    Logger.error('[MessageUtils] Invalid messages array provided to normalizeMessages');
     return [];
   }
   

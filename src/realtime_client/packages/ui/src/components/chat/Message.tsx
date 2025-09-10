@@ -12,6 +12,7 @@ import remarkGfm from 'remark-gfm'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Message as SDKMessage, MessageContent, ContentPart } from '@agentc/realtime-core'
 import { MessageContentRenderer } from './MessageContentRenderer'
+import { Logger } from '../../utils/logger'
 
 export interface MessageData extends Omit<SDKMessage, 'timestamp'> {
   id?: string  // Optional ID for keying
@@ -242,7 +243,7 @@ const Message = React.forwardRef<HTMLDivElement, MessageProps>(
     
     // Debug logging
     React.useEffect(() => {
-      console.log('[Message] Rendering message:', {
+      Logger.debug('[Message] Rendering message:', {
         role: message.role,
         contentType: typeof message.content,
         contentLength: Array.isArray(message.content) ? message.content.length : undefined,

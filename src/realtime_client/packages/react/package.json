@@ -22,6 +22,7 @@
     "@agentc/realtime-core": "workspace:*"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.8.0",
     "@types/node": "^20.0.0",
     "@types/react": "^18.3.24"
   },
@@ -30,11 +31,11 @@
     "dev": "tsc --watch",
     "clean": "rimraf dist tsconfig.tsbuildinfo",
     "type-check": "tsc --noEmit",
-    "test": "vitest run --reporter=dot",
-    "test:run": "vitest run",
+    "test": "vitest run",
     "test:watch": "vitest watch",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
-    "test:debug": "vitest run --reporter=verbose --no-threads"
+    "test:integration": "vitest run --grep '\\.integration\\.'",
+    "test:unit": "vitest run --grep -v '\\.integration\\.'"
   }
 }

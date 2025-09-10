@@ -6,6 +6,7 @@
  */
 
 import { getToken, getCurrentUser, getStoredUser, isAuthenticated } from './auth';
+import { Logger } from '@/utils/logger';
 
 export interface AuthDiagnosticReport {
   timestamp: string;
@@ -32,7 +33,7 @@ export interface AuthDiagnosticReport {
  * Run a comprehensive auth diagnostic
  */
 export function runAuthDiagnostic(): AuthDiagnosticReport {
-  console.log('%c=== AUTH DIAGNOSTIC TOOL ===', 'color: cyan; font-size: 16px; font-weight: bold');
+  Logger.info('=== AUTH DIAGNOSTIC TOOL ===');
   
   const report: AuthDiagnosticReport = {
     timestamp: new Date().toISOString(),
@@ -56,97 +57,97 @@ export function runAuthDiagnostic(): AuthDiagnosticReport {
   };
 
   // Check localStorage
-  console.log('%cChecking localStorage...', 'color: yellow');
+  Logger.info('Checking localStorage...');
   
   try {
     const userData = localStorage.getItem('agentc-user-data');
     if (userData) {
       report.localStorage.userData = JSON.parse(userData);
-      console.log('✅ User data found in localStorage:', report.localStorage.userData);
+      Logger.info('✅ User data found in localStorage:', report.localStorage.userData);
     } else {
       report.issues.push('No user data in localStorage');
-      console.warn('❌ No user data in localStorage');
+      Logger.warn('❌ No user data in localStorage');
     }
   } catch (e) {
     report.issues.push('Failed to parse user data from localStorage');
-    console.error('❌ Failed to parse user data:', e);
+    Logger.error('❌ Failed to parse user data:', e);
   }
 
   try {
     const loginResponse = localStorage.getItem('agentc-login-response');
     if (loginResponse) {
       report.localStorage.loginResponse = JSON.parse(loginResponse);
-      console.log('✅ Login response found in localStorage');
+      Logger.info('✅ Login response found in localStorage');
     } else {
       report.issues.push('No login response in localStorage');
-      console.warn('❌ No login response in localStorage');
+      Logger.warn('❌ No login response in localStorage');
     }
   } catch (e) {
     report.issues.push('Failed to parse login response from localStorage');
-    console.error('❌ Failed to parse login response:', e);
+    Logger.error('❌ Failed to parse login response:', e);
   }
 
   // Check auth token in localStorage (backup check)
   const storedToken = localStorage.getItem('agentc-auth-token');
   if (storedToken) {
     report.localStorage.authToken = storedToken;
-    console.log('✅ Auth token found in localStorage (backup)');
+    Logger.info('✅ Auth token found in localStorage (backup)');
   }
 
   // Check cookies
-  console.log('%cChecking cookies...', 'color: yellow');
+  Logger.info('Checking cookies...');
   
   const cookieToken = document.cookie.match(/agentc-auth-token=([^;]+)/)?.[1];
   if (cookieToken) {
     report.cookies.hasAuthToken = true;
     report.cookies.authTokenLength = decodeURIComponent(cookieToken).length;
-    console.log('✅ Auth token found in cookies');
+    Logger.info('✅ Auth token found in cookies');
   } else {
     report.issues.push('No auth token in cookies');
-    console.warn('❌ No auth token in cookies');
+    Logger.warn('❌ No auth token in cookies');
   }
 
   const heygenToken = document.cookie.match(/agentc-heygen-token=([^;]+)/)?.[1];
   if (heygenToken) {
     report.cookies.hasHeyGenToken = true;
-    console.log('✅ HeyGen token found in cookies');
+    Logger.info('✅ HeyGen token found in cookies');
   }
 
   // Check auth state
-  console.log('%cChecking auth state...', 'color: yellow');
+  Logger.info('Checking auth state...');
   
   report.authState.isAuthenticated = isAuthenticated();
   report.authState.currentUser = getCurrentUser();
   report.authState.token = getToken();
 
   if (report.authState.isAuthenticated) {
-    console.log('✅ User is authenticated');
+    Logger.info('✅ User is authenticated');
   } else {
     report.issues.push('User is not authenticated');
-    console.warn('❌ User is not authenticated');
+    Logger.warn('❌ User is not authenticated');
   }
 
   if (report.authState.currentUser) {
-    console.log('⚠️ Current user from JWT (MINIMAL DATA):', report.authState.currentUser);
-    console.warn('%c⚠️ JWT only contains: id, sub, permissions, exp, iat', 'color: orange; font-weight: bold');
-    console.warn('%c⚠️ JWT DOES NOT contain: email, user_name, first_name, last_name, roles', 'color: orange; font-weight: bold');
+    Logger.warn('Current user from JWT (MINIMAL DATA):', report.authState.currentUser);
+    Logger.warn('⚠️ JWT only contains: id, sub, permissions, exp, iat');
+    Logger.warn('⚠️ JWT DOES NOT contain: email, user_name, first_name, last_name, roles');
   } else {
     report.issues.push('Cannot get current user from JWT');
-    console.warn('❌ Cannot get current user from JWT');
+    Logger.warn('❌ Cannot get current user from JWT');
   }
   
   // CRITICAL: Check stored user vs JWT user
-  console.log('%c🔍 Comparing JWT user vs Stored user...', 'color: magenta; font-weight: bold');
+  Logger.info('🔍 Comparing JWT user vs Stored user...');
   const storedUser = getStoredUser();
   
   if (storedUser) {
-    console.log('✅ Full user data from storage:', storedUser);
-    console.log('%c✅ This is the CORRECT data to use for user profiles!', 'color: green; font-weight: bold');
+    Logger.info('✅ Full user data from storage:', storedUser);
+    Logger.info('✅ This is the CORRECT data to use for user profiles!');
     
     // Compare with JWT
     if (report.authState.currentUser) {
-      console.log('%c📊 Comparison:', 'color: cyan; font-weight: bold');
-      console.table({
+      Logger.info('📊 Comparison:');
+      Logger.info('Comparison table:', {
         'User ID': {
           'JWT': report.authState.currentUser.id || report.authState.currentUser.sub,
           'Stored': storedUser.user_id,
@@ -181,17 +182,17 @@ export function runAuthDiagnostic(): AuthDiagnosticReport {
       
       if (!storedUser.email || !storedUser.user_name) {
         report.issues.push('CRITICAL: Stored user is missing email or username!');
-        console.error('%c❌ CRITICAL: Using JWT data would result in fallback UI values!', 'color: red; font-size: 14px; font-weight: bold');
+        Logger.error('❌ CRITICAL: Using JWT data would result in fallback UI values!');
       }
     }
   } else {
-    console.error('%c❌ No stored user data found!', 'color: red; font-weight: bold');
+    Logger.error('❌ No stored user data found!');
     report.issues.push('CRITICAL: No stored user data - app will use JWT minimal data');
     report.recommendations.push('User must log in again to get full profile data');
   }
 
   // Analysis and recommendations
-  console.log('%cAnalyzing issues...', 'color: yellow');
+  Logger.info('Analyzing issues...');
 
   // Check for data consistency
   if (report.authState.isAuthenticated && !report.localStorage.userData) {
@@ -227,27 +228,27 @@ export function runAuthDiagnostic(): AuthDiagnosticReport {
   }
 
   // Final report
-  console.log('%c=== DIAGNOSTIC REPORT ===', 'color: cyan; font-size: 14px; font-weight: bold');
+  Logger.info('=== DIAGNOSTIC REPORT ===');
   
   if (report.issues.length === 0) {
-    console.log('%c✅ No issues found!', 'color: green; font-size: 14px; font-weight: bold');
+    Logger.info('✅ No issues found!');
   } else {
-    console.error('%c❌ Issues found:', 'color: red; font-weight: bold');
-    report.issues.forEach(issue => console.error(`  - ${issue}`));
+    Logger.error('❌ Issues found:');
+    report.issues.forEach(issue => Logger.error(`  - ${issue}`));
   }
 
   if (report.recommendations.length > 0) {
-    console.log('%c💡 Recommendations:', 'color: yellow; font-weight: bold');
-    report.recommendations.forEach(rec => console.log(`  - ${rec}`));
+    Logger.info('💡 Recommendations:');
+    report.recommendations.forEach(rec => Logger.info(`  - ${rec}`));
   }
 
-  console.log('%cFull report object:', 'color: gray');
-  console.log(report);
+  Logger.debug('Full report object:');
+  Logger.debug(report);
 
   // Expose to window for manual debugging
   if (typeof window !== 'undefined') {
     (window as any).__AUTH_DIAGNOSTIC__ = report;
-    console.log('%cReport saved to window.__AUTH_DIAGNOSTIC__', 'color: gray');
+    Logger.debug('Report saved to window.__AUTH_DIAGNOSTIC__');
   }
 
   return report;
@@ -257,7 +258,7 @@ export function runAuthDiagnostic(): AuthDiagnosticReport {
  * Clear all auth data (nuclear option)
  */
 export function clearAllAuthData() {
-  console.warn('%c⚠️ CLEARING ALL AUTH DATA...', 'color: red; font-size: 16px; font-weight: bold');
+  Logger.warn('⚠️ CLEARING ALL AUTH DATA...');
   
   // Clear localStorage
   localStorage.removeItem('agentc-user-data');
@@ -268,15 +269,15 @@ export function clearAllAuthData() {
   document.cookie = 'agentc-auth-token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; Secure; SameSite=strict';
   document.cookie = 'agentc-heygen-token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; Secure; SameSite=strict';
   
-  console.log('✅ All auth data cleared');
-  console.log('Reload the page to reset the app');
+  Logger.info('✅ All auth data cleared');
+  Logger.info('Reload the page to reset the app');
 }
 
 // Auto-run diagnostic in development
 if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
   // Wait a bit for app to initialize
   setTimeout(() => {
-    console.log('%c[Auth Debug] Auto-diagnostic will run in 2 seconds...', 'color: gray');
+    Logger.debug('[Auth Debug] Auto-diagnostic will run in 2 seconds...');
     setTimeout(() => {
       runAuthDiagnostic();
     }, 2000);
@@ -289,8 +290,8 @@ if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
     getReport: () => (window as any).__AUTH_DIAGNOSTIC__
   };
   
-  console.log('%c[Auth Debug] Debug tools available:', 'color: cyan');
-  console.log('  window.__AUTH_DEBUG__.runDiagnostic() - Run diagnostic');
-  console.log('  window.__AUTH_DEBUG__.clearAll() - Clear all auth data');
-  console.log('  window.__AUTH_DEBUG__.getReport() - Get last diagnostic report');
+  Logger.info('[Auth Debug] Debug tools available:');
+  Logger.info('  window.__AUTH_DEBUG__.runDiagnostic() - Run diagnostic');
+  Logger.info('  window.__AUTH_DEBUG__.clearAll() - Clear all auth data');
+  Logger.info('  window.__AUTH_DEBUG__.getReport() - Get last diagnostic report');
 }

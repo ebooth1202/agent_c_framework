@@ -8,6 +8,7 @@ import { Card, Tabs, TabsContent, TabsList, TabsTrigger } from '@agentc/realtime
 import { useChat, useAudio, useConnection, useOutputMode } from '@agentc/realtime-react'
 import { Button, Alert, AlertDescription } from '@agentc/realtime-ui'
 import { MessageSquare, Mic, Volume2, Video, Info } from 'lucide-react'
+import { Logger } from '@/utils/logger'
 
 /**
  * Main example showcasing the fully integrated chat interface
@@ -386,7 +387,7 @@ function ChatWithModes() {
     initialMode: 'text',
     defaultVoiceId: 'alloy',
     onModeChange: (mode) => {
-      console.log('Switched to:', mode)
+      Logger.info('Switched to:', mode)
     }
   })
   
@@ -450,7 +451,7 @@ function CustomAudioControls() {
         await startStreaming()
       }
     } catch (error) {
-      console.error('Audio error:', error)
+      Logger.error('Audio error:', error)
     }
   }
   

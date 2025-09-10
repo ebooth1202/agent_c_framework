@@ -9,6 +9,7 @@ import {
   SystemNotificationContainer,
   type SystemNotificationData 
 } from '@agentc/realtime-ui';
+import { Logger } from '@/utils/logger';
 import { ViewManager } from './view-manager';
 import { useOutputMode, type OutputMode } from '@agentc/realtime-react';
 import { cn } from '@/lib/utils';
@@ -90,14 +91,14 @@ export function ChatInterface({
   // Handle message sending with mode awareness
   const handleSendMessage = React.useCallback(async (text: string) => {
     if (!isConnected) {
-      console.error('Cannot send message: Not connected');
+      Logger.error('Cannot send message: Not connected');
       return;
     }
     
     try {
       await sendMessage(text);
     } catch (error) {
-      console.error('Failed to send message:', error);
+      Logger.error('Failed to send message:', error);
     }
   }, [isConnected, sendMessage]);
   

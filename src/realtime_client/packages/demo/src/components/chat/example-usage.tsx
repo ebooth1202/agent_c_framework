@@ -7,6 +7,7 @@ import React from 'react'
 import { AgentCProvider } from '@agentc/realtime-react'
 import { MessageList, Button, Input } from '@agentc/realtime-ui'
 import { useChat } from '@agentc/realtime-react'
+import { Logger } from '@/utils/logger'
 
 /**
  * Basic Chat Interface Example
@@ -53,7 +54,7 @@ function ChatInput() {
       await sendMessage(input)
       setInput('')
     } catch (error) {
-      console.error('Failed to send message:', error)
+      Logger.error('Failed to send message:', error)
     }
   }, [input, isSending, sendMessage])
   

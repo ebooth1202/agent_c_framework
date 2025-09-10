@@ -42,14 +42,12 @@ export class EventStreamProcessor {
   private toolCallManager: ToolCallManager;
   private richMediaHandler: RichMediaHandler;
   private sessionManager: SessionManager;
-  private logger: Logger;
   
   constructor(sessionManager: SessionManager) {
     this.sessionManager = sessionManager;
     this.messageBuilder = new MessageBuilder();
     this.toolCallManager = new ToolCallManager();
     this.richMediaHandler = new RichMediaHandler();
-    this.logger = new Logger('EventStreamProcessor');
   }
   
   /**
@@ -107,7 +105,7 @@ export class EventStreamProcessor {
           });
         } else {
           // For any other block types, try to extract text or skip
-          this.logger.debug(`Skipping unsupported content block type: ${(block as any).type}`);
+          Logger.debug(`[EventStreamProcessor] Skipping unsupported content block type: ${(block as any).type}`);
         }
       }
       
@@ -159,7 +157,7 @@ export class EventStreamProcessor {
           const convertedMessage = this.convertMessageParam(msg);
           convertedMessages.push(convertedMessage);
         } catch (error) {
-          this.logger.error('Failed to convert message:', error);
+          Logger.error('[EventStreamProcessor] Failed to convert message:', error);
           // Create a fallback message
           convertedMessages.push({
             role: msg.role || 'assistant',
@@ -181,7 +179,7 @@ export class EventStreamProcessor {
    * Process incoming server events
    */
   processEvent(event: ServerEvent): void {
-    this.logger.debug(`Processing event: ${event.type}`);
+    Logger.debug(`[EventStreamProcessor] Processing event: ${event.type}`);
     
     switch (event.type) {
       case 'interaction':
@@ -219,7 +217,7 @@ export class EventStreamProcessor {
         break;
       // Other events are handled elsewhere or don't require processing here
       default:
-        this.logger.debug(`Event type ${event.type} not handled by EventStreamProcessor`);
+        Logger.debug(`[EventStreamProcessor] Event type ${event.type} not handled by EventStreamProcessor`);
     }
   }
   
@@ -228,13 +226,13 @@ export class EventStreamProcessor {
    */
   private handleInteraction(event: InteractionEvent): void {
     if (event.started) {
-      this.logger.info(`Interaction started: ${event.id}`);
+      Logger.info(`[EventStreamProcessor] Interaction started: ${event.id}`);
       
       // Reset state for new interaction
       this.messageBuilder.reset();
       this.toolCallManager.reset();
     } else {
-      this.logger.info(`Interaction ended: ${event.id}`);
+      Logger.info(`[EventStreamProcessor] Interaction ended: ${event.id}`);
     }
   }
   
@@ -438,14 +436,14 @@ export class EventStreamProcessor {
    */
   private handleChatSessionChanged(event: ChatSessionChangedEvent): void {
     if (!event.chat_session) {
-      this.logger.warn('ChatSessionChangedEvent received without chat_session');
+      Logger.warn('[EventStreamProcessor] ChatSessionChangedEvent received without chat_session');
       return;
     }
     
     // Convert the server session to runtime ChatSession with normalized messages
     const session = this.convertServerSession(event.chat_session);
     
-    this.logger.info(`Processing session change: ${session.session_id} with ${session.messages?.length || 0} messages`);
+    Logger.info(`[EventStreamProcessor] Processing session change: ${session.session_id} with ${session.messages?.length || 0} messages`);
     
     // Update the session in SessionManager with the converted version
     this.sessionManager.setCurrentSession(session);
@@ -470,7 +468,7 @@ export class EventStreamProcessor {
   reset(): void {
     this.messageBuilder.reset();
     this.toolCallManager.reset();
-    this.logger.info('EventStreamProcessor reset');
+    Logger.info('[EventStreamProcessor] EventStreamProcessor reset');
   }
   
   /**
@@ -478,6 +476,6 @@ export class EventStreamProcessor {
    */
   destroy(): void {
     this.reset();
-    this.logger.info('EventStreamProcessor destroyed');
+    Logger.info('[EventStreamProcessor] EventStreamProcessor destroyed');
   }
 }

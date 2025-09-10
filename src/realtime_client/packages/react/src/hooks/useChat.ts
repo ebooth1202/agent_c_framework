@@ -6,6 +6,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import type { ChatSession, Message } from '@agentc/realtime-core';
 import { ensureMessagesFormat } from '@agentc/realtime-core';
+import { Logger } from '../utils/logger';
 
 // Define ChatMessage as alias for Message for consistency
 type ChatMessage = Message;
@@ -245,25 +246,25 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     const handleSessionChanged = (event: unknown) => {
       const sessionEvent = event as { chat_session?: ChatSession };
       if (sessionEvent.chat_session) {
-        console.log('[useChat] Session changed event received');
-        console.log('[useChat] Session ID:', sessionEvent.chat_session.session_id);
-        console.log('[useChat] Raw messages from server:', sessionEvent.chat_session.messages?.length || 0, 'messages');
+        Logger.debug('[useChat] Session changed event received');
+        Logger.debug('[useChat] Session ID:', sessionEvent.chat_session.session_id);
+        Logger.debug('[useChat] Raw messages from server:', sessionEvent.chat_session.messages?.length || 0, 'messages');
         
         setCurrentSession(sessionEvent.chat_session);
         setCurrentSessionId(sessionEvent.chat_session.session_id);
         
         // Load existing messages from the session and ensure proper format
         if (sessionEvent.chat_session.messages && sessionEvent.chat_session.messages.length > 0) {
-          console.log('[useChat] First 3 raw messages:', sessionEvent.chat_session.messages.slice(0, 3));
+          Logger.debug('[useChat] First 3 raw messages:', sessionEvent.chat_session.messages.slice(0, 3));
           
           const formattedMessages = ensureMessagesFormat(sessionEvent.chat_session.messages);
-          console.log('[useChat] After ensureMessagesFormat:', formattedMessages.length, 'messages');
-          console.log('[useChat] First 3 formatted messages:', formattedMessages.slice(0, 3));
+          Logger.debug('[useChat] After ensureMessagesFormat:', formattedMessages.length, 'messages');
+          Logger.debug('[useChat] First 3 formatted messages:', formattedMessages.slice(0, 3));
           
           const messagesToSet = formattedMessages.slice(-maxMessages);
-          console.log('[useChat] After slice(-maxMessages):', messagesToSet.length, 'messages');
-          console.log('[useChat] maxMessages value:', maxMessages);
-          console.log('[useChat] Setting messages - first 3:', messagesToSet.slice(0, 3));
+          Logger.debug('[useChat] After slice(-maxMessages):', messagesToSet.length, 'messages');
+          Logger.debug('[useChat] maxMessages value:', maxMessages);
+          Logger.debug('[useChat] Setting messages - first 3:', messagesToSet.slice(0, 3));
           
           setMessages(messagesToSet);
           // Clear any partial message when switching sessions
@@ -271,7 +272,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
           messageBufferRef.current = '';
           currentMessageIdRef.current = null;
         } else {
-          console.log('[useChat] No messages in session, clearing');
+          Logger.debug('[useChat] No messages in session, clearing');
           // Clear messages if new session has no messages
           clearMessages();
         }
@@ -281,20 +282,20 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     // Handle session messages loaded event (from EventStreamProcessor)
     const handleSessionMessagesLoaded = (event: unknown) => {
       const messagesEvent = event as { sessionId?: string; messages?: Message[] };
-      console.log('[useChat] Session messages loaded event');
-      console.log('[useChat] Event data:', messagesEvent);
+      Logger.debug('[useChat] Session messages loaded event');
+      Logger.debug('[useChat] Event data:', messagesEvent);
       
       if (messagesEvent.messages) {
-        console.log('[useChat] Messages from event:', messagesEvent.messages.length, 'messages');
-        console.log('[useChat] First 3 messages from event:', messagesEvent.messages.slice(0, 3));
+        Logger.debug('[useChat] Messages from event:', messagesEvent.messages.length, 'messages');
+        Logger.debug('[useChat] First 3 messages from event:', messagesEvent.messages.slice(0, 3));
         
         // Update messages with the loaded messages, ensuring proper format
         const formattedMessages = ensureMessagesFormat(messagesEvent.messages);
-        console.log('[useChat] After format:', formattedMessages.length, 'messages');
+        Logger.debug('[useChat] After format:', formattedMessages.length, 'messages');
         
         const messagesToSet = formattedMessages.slice(-maxMessages);
-        console.log('[useChat] After slice for loaded messages:', messagesToSet.length, 'messages');
-        console.log('[useChat] Setting loaded messages - first 3:', messagesToSet.slice(0, 3));
+        Logger.debug('[useChat] After slice for loaded messages:', messagesToSet.length, 'messages');
+        Logger.debug('[useChat] Setting loaded messages - first 3:', messagesToSet.slice(0, 3));
         
         setMessages(messagesToSet);
         // Clear any partial message

@@ -7,6 +7,7 @@
 
 import { AuthManager } from './AuthManager';
 import { LoginResponse } from '../events/types/CommonTypes';
+import { Logger } from '../utils/logger';
 
 // Example 1: Traditional login flow (existing functionality)
 async function traditionalLogin() {
@@ -59,10 +60,10 @@ async function initializeFromBackend() {
   const sessionId = authManager.getUiSessionId();
 
   // AuthManager is initialized with tokens only
-  console.log('Authentication token:', token ? 'Present' : 'Missing');
-  console.log('HeyGen token:', heygenToken ? 'Present' : 'Missing');
-  console.log('User data:', user ? user.user_name : 'Will come from WebSocket events');
-  console.log('UI Session ID:', sessionId);
+  Logger.info('Authentication token:', token ? 'Present' : 'Missing');
+  Logger.info('HeyGen token:', heygenToken ? 'Present' : 'Missing');
+  Logger.info('User data:', user ? user.user_name : 'Will come from WebSocket events');
+  Logger.info('UI Session ID:', sessionId);
   
   // The auth tokens will auto-refresh if autoRefresh is enabled
   // The authManager will emit the same events as if you had logged in normally

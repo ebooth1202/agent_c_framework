@@ -82,7 +82,6 @@ export class SessionManager extends EventEmitter<SessionManagerEventMap> {
   private textAccumulator: string;
   private isAccumulating: boolean;
   private config: SessionManagerConfig;
-  private logger: Logger;
   private sessionIndex: ChatSessionIndexEntry[];
   private totalSessionCount: number;
   private lastFetchOffset: number;
@@ -108,8 +107,7 @@ export class SessionManager extends EventEmitter<SessionManagerEventMap> {
       defaultSessionName: config.defaultSessionName || 'Chat Session'
     };
     
-    this.logger = new Logger('SessionManager');
-    this.logger.info('SessionManager initialized', this.config);
+    Logger.info('[SessionManager] SessionManager initialized', this.config);
   }
 
   /**
@@ -119,7 +117,7 @@ export class SessionManager extends EventEmitter<SessionManagerEventMap> {
    */
   setCurrentSession(session: ChatSession): void {
     if (!session || !session.session_id) {
-      this.logger.error('Invalid session provided to setCurrentSession');
+      Logger.error('[SessionManager] Invalid session provided to setCurrentSession');
       throw new Error('Invalid session: session must have a session_id');
     }
 
@@ -135,7 +133,7 @@ export class SessionManager extends EventEmitter<SessionManagerEventMap> {
       this.pruneOldestSession();
     }
 
-    this.logger.info(`Current session set to: ${session.session_id}`, {
+    Logger.info(`[SessionManager] Current session set to: ${session.session_id}`, {
       sessionName: session.session_name,
       messageCount: session.messages.length,
       tokenCount: session.token_count
@@ -207,7 +205,7 @@ export class SessionManager extends EventEmitter<SessionManagerEventMap> {
   addUserMessage(content: string): Message | null {
     const session = this.getCurrentSession();
     if (!session) {
-      this.logger.warn('Cannot add user message: no current session');
+      Logger.warn('[SessionManager] Cannot add user message: no current session');
       return null;
     }
 
@@ -224,7 +222,7 @@ export class SessionManager extends EventEmitter<SessionManagerEventMap> {
     session.token_count += Math.ceil(content.length / 4);
     session.updated_at = new Date().toISOString();
 
-    this.logger.debug(`User message added to session ${session.session_id}`, {
+    Logger.debug(`[SessionManager] User message added to session ${session.session_id}`, {
       contentLength: content.length,
       totalMessages: session.messages.length
     });
@@ -247,14 +245,14 @@ export class SessionManager extends EventEmitter<SessionManagerEventMap> {
     }
 
     if (!this.getCurrentSession()) {
-      this.logger.warn('Received text delta but no current session');
+      Logger.warn('[SessionManager] Received text delta but no current session');
       return;
     }
 
     this.isAccumulating = true;
     this.textAccumulator += delta;
     
-    this.logger.debug(`Text delta accumulated`, {
+    Logger.debug(`[SessionManager] Text delta accumulated`, {
       deltaLength: delta.length,
       totalAccumulated: this.textAccumulator.length
     });
@@ -267,13 +265,13 @@ export class SessionManager extends EventEmitter<SessionManagerEventMap> {
    */
   handleTextDone(): Message | null {
     if (!this.isAccumulating || !this.textAccumulator) {
-      this.logger.debug('handleTextDone called but nothing to finalize');
+      Logger.debug('[SessionManager] handleTextDone called but nothing to finalize');
       return null;
     }
 
     const session = this.getCurrentSession();
     if (!session) {
-      this.logger.warn('Cannot finalize assistant message: no current session');
+      Logger.warn('[SessionManager] Cannot finalize assistant message: no current session');
       this.resetAccumulator();
       return null;
     }
@@ -291,7 +289,7 @@ export class SessionManager extends EventEmitter<SessionManagerEventMap> {
     session.token_count += Math.ceil(this.textAccumulator.length / 4);
     session.updated_at = new Date().toISOString();
 
-    this.logger.info(`Assistant message finalized in session ${session.session_id}`, {
+    Logger.info(`[SessionManager] Assistant message finalized in session ${session.session_id}`, {
       contentLength: this.textAccumulator.length,
       totalMessages: session.messages.length,
       tokenCount: session.token_count
@@ -342,7 +340,7 @@ export class SessionManager extends EventEmitter<SessionManagerEventMap> {
   clearSession(sessionId: string): boolean {
     const session = this.sessions.get(sessionId);
     if (!session) {
-      this.logger.warn(`Cannot clear session: ${sessionId} not found`);
+      Logger.warn(`[SessionManager] Cannot clear session: ${sessionId} not found`);
       return false;
     }
 
@@ -354,7 +352,7 @@ export class SessionManager extends EventEmitter<SessionManagerEventMap> {
 
     this.sessions.delete(sessionId);
     
-    this.logger.info(`Session cleared: ${sessionId}`);
+    Logger.info(`[SessionManager] Session cleared: ${sessionId}`);
     
     this.emit('session-cleared', { sessionId });
     this.emit('sessions-updated', { sessions: this.sessions });
@@ -373,7 +371,7 @@ export class SessionManager extends EventEmitter<SessionManagerEventMap> {
     this.currentSessionId = null;
     this.resetAccumulator();
     
-    this.logger.info(`All sessions cleared (${sessionCount} sessions removed)`);
+    Logger.info(`[SessionManager] All sessions cleared (${sessionCount} sessions removed)`);
     
     this.emit('all-sessions-cleared', undefined);
     this.emit('sessions-updated', { sessions: this.sessions });
@@ -388,7 +386,7 @@ export class SessionManager extends EventEmitter<SessionManagerEventMap> {
   updateSessionMetadata(sessionId: string, metadata: Record<string, unknown>): boolean {
     const session = this.sessions.get(sessionId);
     if (!session) {
-      this.logger.warn(`Cannot update metadata: session ${sessionId} not found`);
+      Logger.warn(`[SessionManager] Cannot update metadata: session ${sessionId} not found`);
       return false;
     }
 
@@ -398,7 +396,7 @@ export class SessionManager extends EventEmitter<SessionManagerEventMap> {
     };
     session.updated_at = new Date().toISOString();
 
-    this.logger.debug(`Session metadata updated for ${sessionId}`, metadata);
+    Logger.debug(`[SessionManager] Session metadata updated for ${sessionId}`, metadata);
     
     this.emit('sessions-updated', { sessions: this.sessions });
     
@@ -414,14 +412,14 @@ export class SessionManager extends EventEmitter<SessionManagerEventMap> {
   updateSessionName(sessionId: string, name: string): boolean {
     const session = this.sessions.get(sessionId);
     if (!session) {
-      this.logger.warn(`Cannot update name: session ${sessionId} not found`);
+      Logger.warn(`[SessionManager] Cannot update name: session ${sessionId} not found`);
       return false;
     }
 
     session.session_name = name;
     session.updated_at = new Date().toISOString();
 
-    this.logger.info(`Session name updated for ${sessionId}: ${name}`);
+    Logger.info(`[SessionManager] Session name updated for ${sessionId}: ${name}`);
     
     this.emit('sessions-updated', { sessions: this.sessions });
     
@@ -449,7 +447,7 @@ export class SessionManager extends EventEmitter<SessionManagerEventMap> {
     }
 
     if (oldestSessionId) {
-      this.logger.info(`Pruning oldest session: ${oldestSessionId}`);
+      Logger.info(`[SessionManager] Pruning oldest session: ${oldestSessionId}`);
       this.clearSession(oldestSessionId);
     }
   }
@@ -462,7 +460,7 @@ export class SessionManager extends EventEmitter<SessionManagerEventMap> {
    */
   setSessionIndex(response: ChatSessionQueryResponse, append: boolean = false): void {
     if (!response) {
-      this.logger.error('Invalid session query response provided to setSessionIndex');
+      Logger.error('[SessionManager] Invalid session query response provided to setSessionIndex');
       return;
     }
 
@@ -479,7 +477,7 @@ export class SessionManager extends EventEmitter<SessionManagerEventMap> {
     this.totalSessionCount = response.total_sessions;
     this.lastFetchOffset = response.offset;
 
-    this.logger.info(`Session index updated`, {
+    Logger.info(`[SessionManager] Session index updated`, {
       sessionCount: this.sessionIndex.length,
       totalSessions: this.totalSessionCount,
       offset: this.lastFetchOffset,
@@ -524,7 +522,7 @@ export class SessionManager extends EventEmitter<SessionManagerEventMap> {
   requestMoreSessions(limit: number = 50): void {
     const offset = this.sessionIndex.length;
     
-    this.logger.info(`Requesting more sessions`, {
+    Logger.info(`[SessionManager] Requesting more sessions`, {
       offset,
       limit,
       currentCount: this.sessionIndex.length,
@@ -578,7 +576,7 @@ export class SessionManager extends EventEmitter<SessionManagerEventMap> {
     this.totalSessionCount = 0;
     this.lastFetchOffset = 0;
     this.removeAllListeners();
-    this.logger.info('SessionManager cleaned up');
+    Logger.info('[SessionManager] SessionManager cleaned up');
   }
 
   /**

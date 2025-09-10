@@ -30,7 +30,6 @@ export interface AvatarManagerConfig {
  * The AvatarManager only tracks avatar state and communicates with Agent C.
  */
 export class AvatarManager extends EventEmitter<AvatarManagerEvents> {
-  private logger = new Logger('AvatarManager');
   private currentSessionId: string | null = null;
   private currentAvatarId: string | null = null;
   private availableAvatars: Avatar[] = [];
@@ -40,7 +39,7 @@ export class AvatarManager extends EventEmitter<AvatarManagerEvents> {
     super();
     if (config.availableAvatars) {
       this.availableAvatars = config.availableAvatars;
-      this.logger.debug('Initialized with avatars:', this.availableAvatars.map(a => a.avatar_id));
+      Logger.debug('[AvatarManager] Initialized with avatars:', this.availableAvatars.map(a => a.avatar_id));
     }
   }
 
@@ -53,7 +52,7 @@ export class AvatarManager extends EventEmitter<AvatarManagerEvents> {
    */
   public setAvatarSession(sessionId: string, avatarId: string): void {
     if (this.currentSessionId === sessionId) {
-      this.logger.debug('Avatar session already active:', sessionId);
+      Logger.debug('[AvatarManager] Avatar session already active:', sessionId);
       return;
     }
 
@@ -66,7 +65,7 @@ export class AvatarManager extends EventEmitter<AvatarManagerEvents> {
     this.currentAvatarId = avatarId;
     this.isActive = true;
 
-    this.logger.info('Avatar session started:', { sessionId, avatarId });
+    Logger.info('[AvatarManager] Avatar session started:', { sessionId, avatarId });
     
     this.emit('avatar-session-started', { sessionId, avatarId });
     this.emit('avatar-state-changed', { active: true });
@@ -78,7 +77,7 @@ export class AvatarManager extends EventEmitter<AvatarManagerEvents> {
    */
   public clearAvatarSession(): void {
     if (!this.currentSessionId) {
-      this.logger.debug('No avatar session to clear');
+      Logger.debug('[AvatarManager] No avatar session to clear');
       return;
     }
 
@@ -87,7 +86,7 @@ export class AvatarManager extends EventEmitter<AvatarManagerEvents> {
     this.currentAvatarId = null;
     this.isActive = false;
 
-    this.logger.info('Avatar session ended:', sessionId);
+    Logger.info('[AvatarManager] Avatar session ended:', sessionId);
     
     this.emit('avatar-session-ended', { sessionId });
     this.emit('avatar-state-changed', { active: false });
@@ -126,7 +125,7 @@ export class AvatarManager extends EventEmitter<AvatarManagerEvents> {
    */
   public updateAvailableAvatars(avatars: Avatar[]): void {
     this.availableAvatars = avatars;
-    this.logger.debug('Updated available avatars:', avatars.map(a => a.avatar_id));
+    Logger.debug('[AvatarManager] Updated available avatars:', avatars.map(a => a.avatar_id));
   }
 
   /**

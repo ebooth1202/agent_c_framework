@@ -35,10 +35,8 @@ const MEDIA_TYPE_PATTERNS = {
  * Processes rich media events from tools
  */
 export class RichMediaHandler {
-  private logger: Logger;
   
   constructor() {
-    this.logger = new Logger('RichMediaHandler');
   }
   
   /**
@@ -61,7 +59,7 @@ export class RichMediaHandler {
       needsSanitization
     };
     
-    this.logger.info(`Processed rich media`, {
+    Logger.info(`[RichMediaHandler] Processed rich media`, {
       id: media.id,
       type: media.type,
       contentType: media.contentType,
@@ -202,7 +200,7 @@ export class RichMediaHandler {
       
       metadata.contentLength = content.length;
     } catch (error) {
-      this.logger.warn('Error extracting content metadata', error);
+      Logger.warn('[RichMediaHandler] Error extracting content metadata', error);
     }
     
     return metadata;
@@ -248,7 +246,7 @@ export class RichMediaHandler {
     const isAcceptable = sizeInKB <= maxSizeKB;
     
     if (!isAcceptable) {
-      this.logger.warn(`Content size exceeds limit`, {
+      Logger.warn(`[RichMediaHandler] Content size exceeds limit`, {
         sizeKB: sizeInKB.toFixed(2),
         maxSizeKB
       });

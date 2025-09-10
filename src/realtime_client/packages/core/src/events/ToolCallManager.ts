@@ -31,10 +31,8 @@ export interface ToolCallWithResult extends ToolCall {
 export class ToolCallManager {
   private activeTools: Map<string, ToolNotification> = new Map();
   private completedToolCalls: ToolCallWithResult[] = [];
-  private logger: Logger;
   
   constructor() {
-    this.logger = new Logger('ToolCallManager');
   }
   
   /**
@@ -56,7 +54,7 @@ export class ToolCallManager {
     
     this.activeTools.set(toolCall.id, notification);
     
-    this.logger.info(`Tool selected: ${toolCall.function.name}`, {
+    Logger.info(`[ToolCallManager] Tool selected: ${toolCall.function.name}`, {
       id: toolCall.id,
       arguments: toolCall.function.arguments
     });
@@ -81,7 +79,7 @@ export class ToolCallManager {
     
     if (notification) {
       notification.status = 'executing';
-      this.logger.info(`Tool executing: ${notification.toolName}`, {
+      Logger.info(`[ToolCallManager] Tool executing: ${notification.toolName}`, {
         id: toolCall.id
       });
       return notification;
@@ -98,7 +96,7 @@ export class ToolCallManager {
     
     this.activeTools.set(toolCall.id, newNotification);
     
-    this.logger.info(`Tool executing (no prior selection): ${toolCall.function.name}`, {
+    Logger.info(`[ToolCallManager] Tool executing (no prior selection): ${toolCall.function.name}`, {
       id: toolCall.id
     });
     
@@ -135,7 +133,7 @@ export class ToolCallManager {
       this.completedToolCalls.push(completedCall);
       newlyCompleted.push(completedCall);
       
-      this.logger.info(`Tool completed: ${toolCall.function.name}`, {
+      Logger.info(`[ToolCallManager] Tool completed: ${toolCall.function.name}`, {
         id: toolCall.id,
         hasResult: !!result,
         resultLength: result?.output?.length
@@ -187,7 +185,7 @@ export class ToolCallManager {
    */
   clearCompleted(): void {
     this.completedToolCalls = [];
-    this.logger.debug('Cleared completed tool calls');
+    Logger.debug('[ToolCallManager] Cleared completed tool calls');
   }
   
   /**
@@ -196,7 +194,7 @@ export class ToolCallManager {
   reset(): void {
     this.activeTools.clear();
     this.completedToolCalls = [];
-    this.logger.debug('ToolCallManager reset');
+    Logger.debug('[ToolCallManager] ToolCallManager reset');
   }
   
   /**

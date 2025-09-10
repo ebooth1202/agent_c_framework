@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Send, Mic, Type, Volume2, Video } from 'lucide-react';
+import { Logger } from '@/utils/logger';
 import { 
   Button,
   Textarea,
@@ -95,7 +96,7 @@ export function InputArea({
         await startStreaming();
       }
     } catch (error) {
-      console.error('Failed to toggle audio streaming:', error);
+      Logger.error('Failed to toggle audio streaming:', error);
     }
   }, [isStreaming, startStreaming, stopStreaming]);
 

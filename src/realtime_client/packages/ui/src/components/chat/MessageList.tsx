@@ -6,6 +6,7 @@ import { cn } from '../../lib/utils'
 import { Message } from './Message'
 import { TypingIndicator } from './TypingIndicator'
 import { Loader2, MessageSquare } from 'lucide-react'
+import { Logger } from '../../utils/logger'
 
 export interface MessageListProps extends React.HTMLAttributes<HTMLDivElement> {
   /**
@@ -41,11 +42,11 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
     
     // Debug logging for messages
     React.useEffect(() => {
-      console.log('[MessageList] Received messages:', messages.length, 'messages')
-      console.log('[MessageList] First 3 messages:', messages.slice(0, 3))
+      Logger.debug('[MessageList] Received messages:', messages.length, 'messages')
+      Logger.debug('[MessageList] First 3 messages:', messages.slice(0, 3))
       if (messages.length > 0) {
-        console.log('[MessageList] Message roles:', messages.map(m => m.role))
-        console.log('[MessageList] Message content types:', messages.map(m => {
+        Logger.debug('[MessageList] Message roles:', messages.map(m => m.role))
+        Logger.debug('[MessageList] Message content types:', messages.map(m => {
           if (typeof m.content === 'string') return 'string';
           if (Array.isArray(m.content)) return `array[${m.content.length}]`;
           return typeof m.content;
@@ -58,12 +59,12 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
     
     // Virtual scrolling logic (simplified for now - can be enhanced with react-window)
     const visibleMessages = React.useMemo(() => {
-      console.log('[MessageList] Computing visible messages');
-      console.log('[MessageList] enableVirtualScroll:', enableVirtualScroll);
-      console.log('[MessageList] messages length:', messages.length);
+      Logger.debug('[MessageList] Computing visible messages');
+      Logger.debug('[MessageList] enableVirtualScroll:', enableVirtualScroll);
+      Logger.debug('[MessageList] messages length:', messages.length);
       
       if (!enableVirtualScroll) {
-        console.log('[MessageList] Returning all messages (no virtual scroll)');
+        Logger.debug('[MessageList] Returning all messages (no virtual scroll)');
         return messages
       }
       // For now, return all messages - in production, implement windowing

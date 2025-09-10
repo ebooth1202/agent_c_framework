@@ -44,10 +44,8 @@ export class MessageBuilder {
   private currentMessage: Partial<EnhancedMessage> | null = null;
   private messageType: MessageType = 'assistant';
   private content: string = '';
-  private logger: Logger;
   
   constructor() {
-    this.logger = new Logger('MessageBuilder');
   }
   
   /**
@@ -55,7 +53,7 @@ export class MessageBuilder {
    */
   startMessage(type: MessageType): void {
     if (this.currentMessage) {
-      this.logger.warn('Starting new message while another is in progress');
+      Logger.warn('[MessageBuilder] Starting new message while another is in progress');
     }
     
     this.currentMessage = {
@@ -71,7 +69,7 @@ export class MessageBuilder {
     this.messageType = type;
     this.content = '';
     
-    this.logger.debug(`Started ${type} message with ID: ${this.currentMessage.id}`);
+    Logger.debug(`[MessageBuilder] Started ${type} message with ID: ${this.currentMessage.id}`);
   }
   
   /**
@@ -79,7 +77,7 @@ export class MessageBuilder {
    */
   appendText(delta: string): void {
     if (!this.currentMessage) {
-      this.logger.warn('Attempting to append text without active message');
+      Logger.warn('[MessageBuilder] Attempting to append text without active message');
       this.startMessage('assistant');
     }
     
@@ -88,7 +86,7 @@ export class MessageBuilder {
       this.currentMessage.content = this.content;
     }
     
-    this.logger.debug(`Appended ${delta.length} characters to message`);
+    Logger.debug(`[MessageBuilder] Appended ${delta.length} characters to message`);
   }
   
   /**
@@ -116,7 +114,7 @@ export class MessageBuilder {
       finalMessage.isCollapsed = true;
     }
     
-    this.logger.info(`Finalized ${this.messageType} message`, {
+    Logger.info(`[MessageBuilder] Finalized ${this.messageType} message`, {
       id: finalMessage.id,
       contentLength: typeof finalMessage.content === 'string' 
         ? finalMessage.content.length 
@@ -166,7 +164,7 @@ export class MessageBuilder {
     this.currentMessage = null;
     this.content = '';
     this.messageType = 'assistant';
-    this.logger.debug('MessageBuilder reset');
+    Logger.debug('[MessageBuilder] MessageBuilder reset');
   }
   
   /**

@@ -19,13 +19,12 @@
     "dev": "tsc --watch",
     "clean": "rimraf dist tsconfig.tsbuildinfo",
     "type-check": "tsc --noEmit",
-    "test": "vitest run --reporter=dot",
-    "test:run": "vitest run",
+    "test": "vitest run",
     "test:watch": "vitest watch",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
-    "test:simple": "vitest run --config vitest.simple.config.ts",
-    "test:debug": "vitest run --reporter=verbose --no-threads"
+    "test:integration": "vitest run --grep '\\.integration\\.'",
+    "test:unit": "vitest run --grep -v '\\.integration\\.'"
   },
   "devDependencies": {
     "@types/dompurify": "^3.2.0"

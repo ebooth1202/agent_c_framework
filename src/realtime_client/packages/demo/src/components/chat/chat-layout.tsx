@@ -7,6 +7,7 @@ import { SidePanel } from './side-panel';
 import { ViewManager } from './view-manager';
 import { ChatInputArea, type OutputMode } from '@agentc/realtime-ui';
 import { Card, Separator } from '@agentc/realtime-ui';
+import { Logger } from '@/utils/logger';
 
 export interface ChatLayoutProps {
   className?: string;
@@ -66,7 +67,7 @@ export function ChatLayout({
           isMobile={isMobile}
           onNewSession={() => {
             // Placeholder for new session logic
-            console.log('New session requested');
+            Logger.debug('New session requested');
           }}
         />
 

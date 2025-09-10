@@ -9,13 +9,14 @@ import { useEffect } from 'react';
 import { UserInfoDisplay } from '@/components/user-info-display';
 import { verifyAuthPersistence } from '@/lib/verify-auth-persistence';
 import { AuthProvider } from '@/contexts/auth-context';
+import { Logger } from '@/utils/logger';
 
 function UserProfileContent() {
   // Make verification function available in browser console
   useEffect(() => {
     if (typeof window !== 'undefined') {
       (window as any).verifyAuthPersistence = verifyAuthPersistence;
-      console.log('Auth persistence verification available. Run verifyAuthPersistence() in console.');
+      Logger.debug('Auth persistence verification available. Run verifyAuthPersistence() in console.');
     }
   }, []);
 
