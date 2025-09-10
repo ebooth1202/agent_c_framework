@@ -18,6 +18,7 @@ from agent_c.models.input import FileInput
 from agent_c.models.input.audio_input import AudioInput
 from agent_c.models.input.image_input import ImageInput
 from agent_c.prompting import PromptBuilder
+from agent_c.util.logging_utils import LoggingManager
 from agent_c.util.token_counter import TokenCounter
 
 
@@ -36,16 +37,20 @@ class ClaudeChatAgent(BaseAgent):
             self.anthropic: Anthropic = Anthropic()
 
         def count_tokens(self, text: str) -> int:
-            response = self.anthropic.messages.count_tokens(
-                model="claude-3-5-sonnet-latest",
-                system="",
-                messages=[{
-                    "role": "user",
-                    "content": text
-                }],
-            )
+            try:
+                response = self.anthropic.messages.count_tokens(
+                    model="claude-sonnet-4-20250514",
+                    system="",
+                    messages=[{
+                        "role": "user",
+                        "content": text
+                    }],
+                )
+                return response.input_tokens
+            except Exception as e:
+                LoggingManager(__name__).get_logger().exception("Failed to count tokens")
 
-            return response.input_tokens
+            return 0
 
 
     def __init__(self, **kwargs) -> None:
