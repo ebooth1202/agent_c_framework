@@ -32,7 +32,10 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
-      '@test': resolve(__dirname, './src/test')
+      '@test': resolve(__dirname, './src/test'),
+      '@agentc/realtime-react': resolve(__dirname, '../react/src'),
+      '@agentc/realtime-core': resolve(__dirname, '../core/src'),
+      '@agentc/realtime-ui': resolve(__dirname, '../ui/src')
     }
   }
 });
