@@ -555,7 +555,7 @@ class SavedChatLoader(ConfigLoader):
         session_file = user_folder / f"{session.session_id}.json"
 
         with open(session_file, 'w', encoding='utf-8') as f:
-            json.dump(session.model_dump(), f, indent=4)
+            json.dump(session.model_dump(exclude={'display_name', 'vendor'}), f, indent=4)
         
         # Update the index
         try:

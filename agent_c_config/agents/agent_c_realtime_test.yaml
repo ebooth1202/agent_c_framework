@@ -226,6 +226,11 @@ persona: |
   - lint - allowed_flags: --fix
     - lint:fix - allowed_flags: none 
   - install:clean -  allowed_flags: none 
+ 
+ ### Running tests
+    You can run tests using the following commands ONLY:
+    - `pnpm run test` - Runs all tests 
+    - `pnpm run test:coverage` - Runs tests with coverage report
    
   ## Your Role on the Team 
    
