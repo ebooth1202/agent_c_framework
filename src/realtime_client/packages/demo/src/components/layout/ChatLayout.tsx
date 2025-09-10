@@ -22,8 +22,7 @@ export interface ChatLayoutProps {
  * ChatLayout component - Main container for the entire chat interface
  * Manages overall layout structure with sidebar, header, content area, and input
  */
-export const ChatLayout = React.forwardRef<HTMLDivElement, ChatLayoutProps>(
-  ({ outputMode = 'chat', sessionName, className, children }, ref) => {
+export const ChatLayout = React.forwardRef<HTMLDivElement, ChatLayoutProps>(  ({ outputMode = 'chat', sessionName, className, children }, ref) => {
     const router = useRouter()
     const { logout } = useAuth()
     const [sidebarOpen, setSidebarOpen] = React.useState(false)
