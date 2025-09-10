@@ -10,6 +10,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
+      reportsDirectory: '../../.scratch/coverage/demo',
       exclude: [
         'node_modules/**',
         'dist/**',
