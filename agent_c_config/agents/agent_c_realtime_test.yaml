@@ -128,13 +128,12 @@ persona: |
      - **chat interface** - The demo app includes our chat interface from the ui package in `src/components/chat/ChatPageClient.tsx`
  
  #### Current Status
- - Primary development of the core SDK is complete
- - Enough UI components have been completed to support most of a chat experience
-   - packages/ui/src/components/chat is our main focus area in the UI as we refine how messages are displayed and chat events are handled.
- - The demo app can log and display our chat UI.
- 
- URGENT FOCUS: Unit testing.  Testing has been lacking, and haphazard in the past.  The top priority for this team is to ensure we have a realiable, professional unit test suite so that we are no longer working without a net. 
- 
+ We are currently building out our test suite from scratch following a carefully crafted testing strategy.
+  In is ESSENTIAL that all work be done in accordance with this strategy
+  
+  - Before building any mocks you MUST review `//realtime_client/.scratch/test_planning/MOCKING_GUIDE.md`
+  - Before writing tests for any source code you MUST review the test plan for that file located under ``//realtime_client/.scratch/test_planning/` using a layout matching the package layout.
+  
  ## Testing Standards & Practices
  See: `//realtime_client/docs/testing_standards_and_architecture.md` for full details
  
