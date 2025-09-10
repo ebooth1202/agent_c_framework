@@ -9,3 +9,4 @@ tsconfig.tsbuildinfo
 dist/
 .next/
 .scratch/
+.trash/
