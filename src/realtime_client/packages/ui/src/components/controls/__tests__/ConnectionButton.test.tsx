@@ -2,12 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ConnectionButton } from '../ConnectionButton';
-// TODO: Uncomment when jest-axe is installed
-// import { axe, toHaveNoViolations } from 'jest-axe';
+import { axe, toHaveNoViolations } from 'jest-axe';
 import * as realtimeReact from '@agentc/realtime-react';
 
-// TODO: Uncomment when jest-axe is installed
-// expect.extend(toHaveNoViolations);
+expect.extend(toHaveNoViolations);
 
 // Mock the hook from @agentc/realtime-react
 vi.mock('@agentc/realtime-react', () => ({
@@ -186,11 +184,10 @@ describe('ConnectionButton', () => {
   });
 
   describe('Accessibility', () => {
-    // TODO: Uncomment when jest-axe is installed
-    it.skip('should have no accessibility violations', async () => {
-      // const { container } = render(<ConnectionButton />);
-      // const results = await axe(container);
-      // expect(results).toHaveNoViolations();
+    it('should have no accessibility violations', async () => {
+      const { container } = render(<ConnectionButton />);
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
     });
 
     it('should have appropriate ARIA labels', () => {

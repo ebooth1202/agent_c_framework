@@ -2,12 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ChatSessionList } from '../ChatSessionList';
-// TODO: Uncomment when jest-axe is installed
-// import { axe, toHaveNoViolations } from 'jest-axe';
+import { axe, toHaveNoViolations } from 'jest-axe';
 import * as realtimeReact from '@agentc/realtime-react';
 
-// TODO: Uncomment when jest-axe is installed
-// expect.extend(toHaveNoViolations);
+expect.extend(toHaveNoViolations);
 
 // Mock the hooks from @agentc/realtime-react
 vi.mock('@agentc/realtime-react', () => ({
@@ -314,11 +312,10 @@ describe('ChatSessionList', () => {
   });
 
   describe('Accessibility', () => {
-    // TODO: Uncomment when jest-axe is installed
-    it.skip('should have no accessibility violations', async () => {
-      // const { container } = render(<ChatSessionList />);
-      // const results = await axe(container);
-      // expect(results).toHaveNoViolations();
+    it('should have no accessibility violations', async () => {
+      const { container } = render(<ChatSessionList />);
+      const results = await axe(container);
+      expect(results).toHaveNoViolations();
     });
 
     it('should have proper ARIA labels', () => {

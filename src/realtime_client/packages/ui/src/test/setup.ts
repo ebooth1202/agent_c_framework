@@ -1,6 +1,12 @@
-import { vi } from 'vitest';
-// TODO: Uncomment when @testing-library/jest-dom is installed
-// import '@testing-library/jest-dom';
+import { vi, expect } from 'vitest';
+import '@testing-library/jest-dom';
+
+// Import jest-axe (with type safety)
+// @ts-ignore - jest-axe doesn't have TypeScript definitions
+import { toHaveNoViolations } from 'jest-axe';
+
+// Extend expect with jest-axe matchers
+expect.extend(toHaveNoViolations);
 
 // Mock window.prompt for link tests
 global.prompt = vi.fn();
