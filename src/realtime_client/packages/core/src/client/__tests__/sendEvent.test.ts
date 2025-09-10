@@ -1,12 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { RealtimeClient } from '../RealtimeClient';
 import { ClientEventMap } from '../../events';
-// TODO: Fix mock-websocket import
-// import { MockWebSocket, mockWebSocketConstructor } from '../../../../test/utils/mock-websocket';
+import { MockWebSocket, mockWebSocketConstructor } from '../../test/mocks/mock-websocket';
 
 describe('RealtimeClient.sendEvent', () => {
     let client: RealtimeClient;
-    let mockWS: any;
+    let mockWS: ReturnType<typeof mockWebSocketConstructor>;
     let wsInstance: MockWebSocket;
 
     beforeEach(() => {
@@ -44,7 +43,7 @@ describe('RealtimeClient.sendEvent', () => {
     it('should send event when connected', async () => {
         // Connect first
         const connectPromise = client.connect();
-        wsInstance = mockWS.mock.results[0].value as MockWebSocket;
+        wsInstance = mockWS.lastInstance();
         
         // Set readyState to OPEN to simulate connected state
         wsInstance.readyState = MockWebSocket.OPEN;
@@ -66,7 +65,7 @@ describe('RealtimeClient.sendEvent', () => {
     it('should accept various event types from ClientEventMap', async () => {
         // Connect first
         const connectPromise = client.connect();
-        wsInstance = mockWS.mock.results[0].value as MockWebSocket;
+        wsInstance = mockWS.lastInstance();
         
         // Set readyState to OPEN to simulate connected state
         wsInstance.readyState = MockWebSocket.OPEN;
@@ -98,7 +97,7 @@ describe('RealtimeClient.sendEvent', () => {
     it('should maintain type safety with TypeScript generics', async () => {
         // Connect first
         const connectPromise = client.connect();
-        wsInstance = mockWS.mock.results[0].value as MockWebSocket;
+        wsInstance = mockWS.lastInstance();
         
         // Set readyState to OPEN to simulate connected state
         wsInstance.readyState = MockWebSocket.OPEN;

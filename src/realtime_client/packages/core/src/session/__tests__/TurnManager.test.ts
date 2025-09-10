@@ -5,14 +5,15 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TurnManager } from '../TurnManager';
 import { RealtimeClient } from '../../client/RealtimeClient';
-// TODO: Fix mock utilities imports
-// import { MockWebSocket, mockWebSocketConstructor } from '../../../../test/utils/mock-websocket';
-// import { sleep } from '../../../../test/utils/test-helpers';
+import { MockWebSocket, mockWebSocketConstructor } from '../../test/mocks/mock-websocket';
+
+// Helper functions
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 describe('TurnManager', () => {
   let turnManager: TurnManager;
   let realtimeClient: RealtimeClient;
-  let mockWS: any;
+  let mockWS: ReturnType<typeof mockWebSocketConstructor>;
 
   beforeEach(() => {
     // Mock WebSocket globally
@@ -256,7 +257,7 @@ describe('TurnManager', () => {
       
       // Connect the client
       const connectPromise = realtimeClient.connect();
-      const wsInstance = mockWS.mock.results[0].value as MockWebSocket;
+      const wsInstance = mockWS.lastInstance();
       
       // Trigger open event
       if (wsInstance.onopen) {
@@ -310,7 +311,7 @@ describe('TurnManager', () => {
     it('should handle disconnection gracefully', async () => {
       // Connect the client
       const connectPromise = realtimeClient.connect();
-      const wsInstance = mockWS.mock.results[0].value as MockWebSocket;
+      const wsInstance = mockWS.lastInstance();
       
       // Trigger open event
       if (wsInstance.onopen) {

@@ -1,92 +1,199 @@
 /**
- * Test setup for demo package
+ * Test Setup for Demo Package
+ * Configure testing environment for the demo application
  */
 
-import { afterEach, afterAll, beforeAll, vi, expect } from 'vitest';
 import '@testing-library/jest-dom';
+import { vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
+import { afterEach, beforeAll, afterAll } from 'vitest';
+import { server, serverLifecycle } from './mocks/server';
 
-// Import jest-axe (with type safety)
-// @ts-ignore - jest-axe doesn't have TypeScript definitions
-import { toHaveNoViolations } from 'jest-axe';
-
-// Extend expect with jest-axe matchers
-expect.extend(toHaveNoViolations);
-
-// Re-export testing utilities
-export * from '@testing-library/react';
-export { default as userEvent } from '@testing-library/user-event';
-
-// Track active resources for cleanup
-const activeTimers = new Set<any>();
-const activePromises = new Set<Promise<any>>();
-
-// Setup test timeout defaults
-beforeAll(() => {
-  // Set a reasonable default timeout for async tests
-  vi.setConfig({ testTimeout: 10000 });
-});
-
-// Clean up after each test
-afterEach(async () => {
-  // Clean up React Testing Library
+// Cleanup after each test
+afterEach(() => {
   cleanup();
-  
-  // Clear all mock function calls
   vi.clearAllMocks();
+  localStorage.clear();
+  sessionStorage.clear();
   
-  // Wait for any pending promises to resolve
-  if (activePromises.size > 0) {
-    await Promise.allSettled(Array.from(activePromises));
-    activePromises.clear();
-  }
-  
-  // Clear any pending timers
-  vi.clearAllTimers();
-  
-  // Restore real timers if they were faked
-  if (vi.isFakeTimers()) {
-    vi.useRealTimers();
-  }
-  
-  // Clear tracked timers
-  activeTimers.clear();
+  // Reset MSW handlers and demo data
+  serverLifecycle.reset();
 });
 
-// Final cleanup after all tests
-afterAll(async () => {
-  // Ensure everything is cleaned up
-  cleanup();
-  activeTimers.clear();
-  activePromises.clear();
-  
-  // Reset all mocks
-  vi.resetAllMocks();
-  
-  // Restore all mocked modules
-  vi.restoreAllMocks();
+// Cleanup after all tests
+afterAll(() => {
+  // Close MSW server
+  serverLifecycle.close();
 });
 
-// Mock window.prompt for any interactive tests
-global.prompt = vi.fn();
+// Setup before all tests
+beforeAll(() => {
+  // Mock environment variables
+  process.env.VITE_API_URL = 'ws://localhost:8080/test';
+  process.env.VITE_AUTH_TOKEN = 'test-token';
+  
+  // Start MSW server for API mocking
+  serverLifecycle.start();
+});
 
-// Mock IntersectionObserver for components that use it
+// Mock IntersectionObserver
 global.IntersectionObserver = vi.fn().mockImplementation(() => ({
   observe: vi.fn(),
   unobserve: vi.fn(),
   disconnect: vi.fn(),
+  takeRecords: vi.fn(() => []),
+  root: null,
+  rootMargin: '',
+  thresholds: []
 }));
 
-// Mock ResizeObserver for components that use it
+// Mock ResizeObserver
 global.ResizeObserver = vi.fn().mockImplementation(() => ({
   observe: vi.fn(),
   unobserve: vi.fn(),
-  disconnect: vi.fn(),
+  disconnect: vi.fn()
 }));
 
-// Configure Testing Library
-import { configure } from '@testing-library/react';
-
-configure({
-  testIdAttribute: 'data-testid',
+// Mock matchMedia
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation(query => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
 });
+
+// Mock scrollTo
+Object.defineProperty(window, 'scrollTo', {
+  writable: true,
+  value: vi.fn()
+});
+
+// Mock requestAnimationFrame
+global.requestAnimationFrame = vi.fn((cb) => setTimeout(cb, 0));
+global.cancelAnimationFrame = vi.fn((id) => clearTimeout(id));
+
+// Mock Web Audio API
+class MockAudioContext {
+  createMediaStreamSource = vi.fn();
+  createScriptProcessor = vi.fn();
+  createAnalyser = vi.fn();
+  createGain = vi.fn();
+  destination = {};
+  sampleRate = 44100;
+  close = vi.fn();
+  resume = vi.fn();
+  suspend = vi.fn();
+  state = 'running';
+}
+
+global.AudioContext = MockAudioContext as any;
+global.webkitAudioContext = MockAudioContext as any;
+
+// Mock MediaRecorder
+class MockMediaRecorder {
+  start = vi.fn();
+  stop = vi.fn();
+  pause = vi.fn();
+  resume = vi.fn();
+  requestData = vi.fn();
+  ondataavailable = null;
+  onerror = null;
+  onpause = null;
+  onresume = null;
+  onstart = null;
+  onstop = null;
+  state = 'inactive';
+  
+  static isTypeSupported = vi.fn(() => true);
+}
+
+global.MediaRecorder = MockMediaRecorder as any;
+
+// Mock getUserMedia
+if (!navigator.mediaDevices) {
+  Object.defineProperty(navigator, 'mediaDevices', {
+    value: {},
+    writable: true
+  });
+}
+
+navigator.mediaDevices.getUserMedia = vi.fn().mockResolvedValue({
+  getTracks: () => [],
+  getAudioTracks: () => [],
+  getVideoTracks: () => [],
+  addTrack: vi.fn(),
+  removeTrack: vi.fn(),
+  clone: vi.fn(),
+  active: true,
+  id: 'mock-stream-id'
+});
+
+// Mock WebSocket
+class MockWebSocket {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSING = 2;
+  static CLOSED = 3;
+  
+  readyState = MockWebSocket.CONNECTING;
+  url = '';
+  onopen = null;
+  onclose = null;
+  onerror = null;
+  onmessage = null;
+  
+  constructor(url: string) {
+    this.url = url;
+  }
+  
+  send = vi.fn();
+  close = vi.fn();
+  addEventListener = vi.fn();
+  removeEventListener = vi.fn();
+  dispatchEvent = vi.fn();
+}
+
+global.WebSocket = MockWebSocket as any;
+
+// Mock fetch for API calls
+global.fetch = vi.fn().mockResolvedValue({
+  ok: true,
+  json: async () => ({}),
+  text: async () => '',
+  blob: async () => new Blob(),
+  arrayBuffer: async () => new ArrayBuffer(0),
+  headers: new Headers(),
+  status: 200,
+  statusText: 'OK'
+});
+
+// Mock console methods to reduce test output noise
+const originalConsole = {
+  log: console.log,
+  error: console.error,
+  warn: console.warn,
+  info: console.info,
+  debug: console.debug
+};
+
+console.log = vi.fn();
+console.error = vi.fn();
+console.warn = vi.fn();
+console.info = vi.fn();
+console.debug = vi.fn();
+
+// Restore console for debugging when needed
+(global as any).restoreConsole = () => {
+  console.log = originalConsole.log;
+  console.error = originalConsole.error;
+  console.warn = originalConsole.warn;
+  console.info = originalConsole.info;
+  console.debug = originalConsole.debug;
+};

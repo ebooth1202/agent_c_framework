@@ -1,14 +1,13 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
-import { ChatMessages } from '../chat/chat-messages'
-import { useChat } from '../../hooks/use-chat'
-import { useConnection } from '../../hooks/use-connection'
+import { ChatInterface } from '../chat/chat-interface'
+import { useChat, useConnection } from '@agentc/realtime-react'
 import type { ChatMessage } from '@agentc/realtime-core'
 
 // Mock the hooks
-vi.mock('../../hooks/use-chat')
-vi.mock('../../hooks/use-connection')
-vi.mock('../../hooks/use-voice', () => ({
+vi.mock('@agentc/realtime-react', () => ({
+  useChat: vi.fn(),
+  useConnection: vi.fn(),
   useVoice: () => ({
     isListening: false,
     startListening: vi.fn(),
@@ -22,7 +21,7 @@ vi.mock('../../hooks/use-voice', () => ({
   })
 }))
 
-describe('ChatMessages - Problem Session Rendering Debug', () => {
+describe('ChatInterface - Problem Session Rendering Debug', () => {
   const mockUseChat = useChat as jest.MockedFunction<typeof useChat>
   const mockUseConnection = useConnection as jest.MockedFunction<typeof useConnection>
 
@@ -121,7 +120,7 @@ describe('ChatMessages - Problem Session Rendering Debug', () => {
       resubmitMessage: vi.fn()
     })
 
-    const { container, debug } = render(<ChatMessages />)
+    const { container, debug } = render(<ChatInterface />)
     
     // Debug output
     console.log('\n=== Rendered HTML ===')
@@ -211,7 +210,7 @@ describe('ChatMessages - Problem Session Rendering Debug', () => {
       resubmitMessage: vi.fn()
     })
 
-    const { container } = render(<ChatMessages />)
+    const { container } = render(<ChatInterface />)
     
     await waitFor(() => {
       const allText = container.textContent || ''
@@ -268,7 +267,7 @@ describe('ChatMessages - Problem Session Rendering Debug', () => {
       resubmitMessage: vi.fn()
     })
 
-    const { container } = render(<ChatMessages />)
+    const { container } = render(<ChatInterface />)
     
     await waitFor(() => {
       const allText = container.textContent || ''

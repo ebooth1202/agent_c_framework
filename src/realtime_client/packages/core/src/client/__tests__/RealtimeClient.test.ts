@@ -4,13 +4,19 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { RealtimeClient } from '../RealtimeClient';
-// TODO: Fix mock utilities imports
-// import { MockWebSocket, mockWebSocketConstructor } from '../../../../test/utils/mock-websocket';
-// import { sleep, waitFor, createMockAgentCEvent } from '../../../../test/utils/test-helpers';
+import { MockWebSocket, mockWebSocketConstructor } from '../../test/mocks/mock-websocket';
+
+// Helper functions
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+const createMockAgentCEvent = (type: string, data: any) => ({
+  type,
+  ...data
+});
 
 describe('RealtimeClient', () => {
   let client: RealtimeClient;
-  let mockWS: any;
+  let mockWS: ReturnType<typeof mockWebSocketConstructor>;
 
   beforeEach(() => {
     // Mock WebSocket globally
@@ -52,7 +58,7 @@ describe('RealtimeClient', () => {
       if (wsCall.length === 2) {
         expect(wsCall[1]).toBeUndefined();
       }
-      const wsInstance = mockWS.mock.results[0].value as MockWebSocket;
+      const wsInstance = mockWS.lastInstance();
       
       // Trigger the open event through the onopen handler
       if (wsInstance.onopen) {
@@ -68,7 +74,7 @@ describe('RealtimeClient', () => {
       const connectPromise = client.connect();
       
       // Get the mock WebSocket instance
-      const wsInstance = mockWS.mock.results[0].value as MockWebSocket;
+      const wsInstance = mockWS.lastInstance();
       
       // Trigger error through the onerror handler
       if (wsInstance.onerror) {
@@ -92,7 +98,7 @@ describe('RealtimeClient', () => {
     it('should disconnect cleanly', async () => {
       // Connect first
       const connectPromise = client.connect();
-      const wsInstance = mockWS.mock.results[0].value as MockWebSocket;
+      const wsInstance = mockWS.lastInstance();
       
       // Trigger open event
       if (wsInstance.onopen) {
@@ -258,7 +264,7 @@ describe('RealtimeClient', () => {
       
       // Connect first
       const connectPromise = client.connect();
-      const wsInstance = mockWS.mock.results[mockWS.mock.results.length - 1].value as MockWebSocket;
+      const wsInstance = mockWS.lastInstance();
       
       // Trigger open event
       if (wsInstance.onopen) {
@@ -289,7 +295,7 @@ describe('RealtimeClient', () => {
       
       // Connect first
       const connectPromise = client.connect();
-      const wsInstance = mockWS.mock.results[mockWS.mock.results.length - 1].value as MockWebSocket;
+      const wsInstance = mockWS.lastInstance();
       
       // Set readyState to OPEN
       wsInstance.readyState = MockWebSocket.OPEN;

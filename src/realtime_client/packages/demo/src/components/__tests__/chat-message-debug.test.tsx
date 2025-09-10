@@ -1,16 +1,12 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
-import { ChatMessages } from '../chat/chat-messages'
-import { useChat } from '../../hooks/use-chat'
-import { useConnection } from '../../hooks/use-connection'
+import { ChatInterface } from '../chat/chat-interface'
+import { useChat, useConnection } from '@agentc/realtime-react'
 import type { ChatMessage } from '@agentc/realtime-core'
-import fs from 'fs'
-import path from 'path'
-
 // Mock the hooks
-vi.mock('../../hooks/use-chat')
-vi.mock('../../hooks/use-connection')
-vi.mock('../../hooks/use-voice', () => ({
+vi.mock('@agentc/realtime-react', () => ({
+  useChat: vi.fn(),
+  useConnection: vi.fn(),
   useVoice: () => ({
     isListening: false,
     startListening: vi.fn(),
@@ -24,11 +20,29 @@ vi.mock('../../hooks/use-voice', () => ({
   })
 }))
 
-// Load the actual problem session
-const problemSessionPath = path.join(process.cwd(), '.scratch', 'problem_session.json')
-const problemSession = JSON.parse(fs.readFileSync(problemSessionPath, 'utf-8'))
+// Mock problem session data for testing
+const problemSession = {
+  messages: [
+    {
+      role: 'user',
+      content: 'Cora, I need you to prepare a document'
+    },
+    {
+      role: 'assistant',
+      content: "I'll help you prepare a comprehensive reference document"
+    },
+    {
+      role: 'assistant',
+      content: [{
+        type: 'tool_use',
+        name: 'document_create',
+        input: { title: 'Test Document' }
+      }]
+    }
+  ]
+}
 
-describe('ChatMessages - Problem Session Debug', () => {
+describe('ChatInterface - Problem Session Debug', () => {
   const mockUseChat = useChat as jest.MockedFunction<typeof useChat>
   const mockUseConnection = useConnection as jest.MockedFunction<typeof useConnection>
 
@@ -114,8 +128,8 @@ describe('ChatMessages - Problem Session Debug', () => {
       resubmitMessage: vi.fn()
     })
 
-    console.log('\n=== Rendering ChatMessages component ===')
-    const { container } = render(<ChatMessages />)
+    console.log('\n=== Rendering ChatInterface component ===')
+    const { container } = render(<ChatInterface />)
     
     // Wait for async rendering
     await waitFor(() => {
@@ -204,7 +218,7 @@ describe('ChatMessages - Problem Session Debug', () => {
     })
 
     // Render component
-    const { container } = render(<ChatMessages />)
+    const { container } = render(<ChatInterface />)
     
     // Check pipeline execution
     console.log('\n=== Pipeline Trace ===')
@@ -285,7 +299,7 @@ describe('ChatMessages - Problem Session Debug', () => {
     })
     
     // Render and track
-    const { container } = render(<ChatMessages />)
+    const { container } = render(<ChatInterface />)
     
     await waitFor(() => {
       const messageElements = container.querySelectorAll('[data-message-id]')
