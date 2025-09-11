@@ -5,9 +5,12 @@
  * Individual components are also exported for advanced customization.
  */
 
-// Main integrated component
+// Main integrated components
 export { InputArea } from './InputArea'
 export type { InputAreaProps } from './InputArea'
+
+export { ChatInputArea, OutputModeSelector } from './ChatInputArea'
+export type { ChatInputAreaProps } from './ChatInputArea'
 
 // Individual components for advanced usage
 export { InputContainer } from './InputContainer'

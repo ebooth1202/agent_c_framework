@@ -2,7 +2,18 @@
   "name": "@agentc/realtime-react",
   "version": "0.1.0",
   "main": "dist/index.js",
+  "module": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
   "peerDependencies": {
     "react": "^18.0.0",
     "react-dom": "^18.0.0"
@@ -11,6 +22,7 @@
     "@agentc/realtime-core": "workspace:*"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.8.0",
     "@types/node": "^20.0.0",
     "@types/react": "^18.3.24"
   },
@@ -19,11 +31,11 @@
     "dev": "tsc --watch",
     "clean": "rimraf dist tsconfig.tsbuildinfo",
     "type-check": "tsc --noEmit",
-    "test": "vitest run --reporter=verbose",
-    "test:run": "vitest run",
+    "test": "vitest run",
     "test:watch": "vitest watch",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
-    "test:debug": "vitest run --reporter=verbose --no-threads"
+    "test:integration": "vitest run --grep '\\.integration\\.'",
+    "test:unit": "vitest run --grep -v '\\.integration\\.'"
   }
 }

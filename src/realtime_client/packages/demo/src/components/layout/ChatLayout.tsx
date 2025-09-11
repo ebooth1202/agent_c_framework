@@ -2,15 +2,17 @@
 
 import * as React from "react"
 import { cn } from "@/lib/utils"
-import { ChatSidebar } from "../sidebar/ChatSidebar"
+import { ChatSidebar, MainContentArea } from "@agentc/realtime-ui"
+import type { ContentOutputMode } from "@agentc/realtime-ui"
+import { useRouter } from "next/navigation"
+import { useAuth } from "@/contexts/auth-context"
 import { ChatHeader } from "./ChatHeader"
-import { MainContentArea, OutputMode } from "../content/MainContentArea"
 // Import the SSR-safe wrapper instead of the UI package directly
-// This prevents TipTap v3 from breaking the Next.js build
+// This prevents TipTap from breaking the Next.js build
 import { InputAreaWrapper } from "../input/InputAreaWrapper"
 
 export interface ChatLayoutProps {
-  outputMode?: OutputMode
+  outputMode?: ContentOutputMode
   sessionName?: string
   className?: string
   children?: React.ReactNode
@@ -20,11 +22,17 @@ export interface ChatLayoutProps {
  * ChatLayout component - Main container for the entire chat interface
  * Manages overall layout structure with sidebar, header, content area, and input
  */
-export const ChatLayout = React.forwardRef<HTMLDivElement, ChatLayoutProps>(
-  ({ outputMode = 'chat', sessionName, className, children }, ref) => {
+export const ChatLayout = React.forwardRef<HTMLDivElement, ChatLayoutProps>(  ({ outputMode = 'chat', sessionName, className, children }, ref) => {
+    const router = useRouter()
+    const { logout } = useAuth()
     const [sidebarOpen, setSidebarOpen] = React.useState(false)
     const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false)
-    const [currentOutputMode, setCurrentOutputMode] = React.useState<OutputMode>(outputMode)
+    const [currentOutputMode, setCurrentOutputMode] = React.useState<ContentOutputMode>(outputMode)
+
+    const handleLogout = React.useCallback(() => {
+      logout()
+      router.push("/login")
+    }, [logout, router])
 
     // Note: Output mode is controlled by the InputArea component internally
     // The display mode will update based on the SDK's state
@@ -44,21 +52,24 @@ export const ChatLayout = React.forwardRef<HTMLDivElement, ChatLayoutProps>(
           isCollapsed={sidebarCollapsed}
           onClose={() => setSidebarOpen(false)}
           onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+          onLogout={handleLogout}
         />
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col h-screen overflow-hidden">
           {/* Header */}
           <ChatHeader 
             onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
             sessionName={sessionName}
           />
 
-          {/* Dynamic Content Area */}
-          <MainContentArea outputMode={currentOutputMode} />
+          {/* Dynamic Content Area - flex-1 to take remaining space */}
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <MainContentArea outputMode={currentOutputMode} />
+          </div>
 
-          {/* Input Area - Using SSR-safe wrapper to prevent TipTap build issues */}
-          <div className="bg-muted/30">
+          {/* Input Area - flex-shrink-0 to always remain visible */}
+          <div className="flex-shrink-0 bg-accent/10 border-t border-border">
             <div className="max-w-4xl mx-auto p-4">
               <InputAreaWrapper 
                 className="w-full"

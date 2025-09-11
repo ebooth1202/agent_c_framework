@@ -4,7 +4,7 @@ import yaml
 from typing import Optional, Dict, List
 
 from agent_c.config.saved_chat import SavedChatLoader
-from agent_c.models.chat_history.chat_session import ChatSession, ChatSessionQueryResponse, ChatSessionIndexEntry
+from agent_c.models.chat_history.chat_session import ChatSession, ChatSessionQueryResponse
 from agent_c.util.logging_utils import LoggingManager
 
 
@@ -127,7 +127,7 @@ class ChatSessionManager:
             
         await self._loader.save_session(session)
 
-    async def get_user_sessions(self, user_id: str, limit: int = 50, offset: int = 0) -> ChatSessionQueryResponse:
+    async def get_user_sessions(self, user_id: str, offset: int = 0, limit: int = 50) -> ChatSessionQueryResponse:
         """
         Get paginated chat sessions for a user, sorted by updated_at descending.
         
@@ -139,7 +139,7 @@ class ChatSessionManager:
         Returns:
             ChatSessionQueryResponse with chat_sessions list and total_sessions count
         """
-        return await self._loader.get_user_sessions(user_id, limit, offset)
+        return await self._loader.get_user_sessions(user_id, offset, limit)
     
     async def get_user_session_ids(self, user_id: str) -> List[str]:
         """

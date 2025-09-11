@@ -1,24 +1,27 @@
 // Type check file to verify components compile
 import { ChatLayout } from './components/layout/ChatLayout'
-import { ChatSidebar } from './components/sidebar/ChatSidebar'
 import { ChatHeader } from './components/layout/ChatHeader'
-import { MainContentArea } from './components/content/MainContentArea'
-import { ChatMessagesView } from './components/content/ChatMessagesView'
-import { AvatarDisplayView } from './components/content/AvatarDisplayView'
-import { VoiceVisualizerView } from './components/content/VoiceVisualizerView'
-import { SessionNameDropdown } from './components/layout/SessionNameDropdown'
-import { SidebarTopMenu } from './components/sidebar/SidebarTopMenu'
-import { ChatSessionList } from './components/sidebar/ChatSessionList'
-import { UserDisplay } from './components/sidebar/UserDisplay'
+// Content components moved to @agentc/realtime-ui
+// import { MainContentArea, ChatMessagesView, AvatarDisplayView } from '@agentc/realtime-ui'
+import { VoiceVisualizerView } from '@agentc/realtime-ui'
+
+// These components are now imported from the UI package
+import {
+  ChatSidebar,
+  SessionNameDropdown,
+  SidebarTopMenu,
+  ChatSessionList,
+  UserDisplay
+} from '@agentc/realtime-ui'
 
 // This file helps verify all components can be imported and typed correctly
 export {
   ChatLayout,
   ChatSidebar,
   ChatHeader,
-  MainContentArea,
-  ChatMessagesView,
-  AvatarDisplayView,
+  // MainContentArea, // Moved to @agentc/realtime-ui
+  // ChatMessagesView, // Moved to @agentc/realtime-ui
+  // AvatarDisplayView, // Moved to @agentc/realtime-ui
   VoiceVisualizerView,
   SessionNameDropdown,
   SidebarTopMenu,

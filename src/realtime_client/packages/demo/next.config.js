@@ -2,6 +2,8 @@
 const path = require('path');
 
 const nextConfig = {
+  // Transpile the UI package to handle framer-motion properly
+  transpilePackages: ['@agentc/realtime-ui'],
   webpack: (config) => {
     // Add alias for @agentc/realtime-core to help resolve it when imported by UI package
     config.resolve.alias = {

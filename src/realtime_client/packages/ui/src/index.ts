@@ -128,8 +128,10 @@ export type { MarkdownEditorProps as LegacyMarkdownEditorProps } from './compone
 
 // Input component exports
 export { 
-  // Main integrated component
+  // Main integrated components
   InputArea,
+  ChatInputArea,
+  OutputModeSelector,
   // Individual components
   InputContainer, 
   RichTextEditor,
@@ -144,6 +146,7 @@ export {
 
 export type { 
   InputAreaProps,
+  ChatInputAreaProps,
   InputContainerProps, 
   RichTextEditorProps,
   MarkdownEditorProps,
@@ -159,14 +162,98 @@ export type {
 // Control component exports - Include the new selectors here
 export {
   ConnectionButton,
+  ConnectionStatus,
+  ConnectionIndicator,
   AudioControls,
   AgentSelector,
-  OutputSelector
+  OutputSelector,
+  ThemeSwitcher
 } from './components/controls';
 
 export type {
   ConnectionButtonProps,
+  ConnectionStatusProps,
   AudioControlsProps,
   AgentSelectorProps,
-  OutputSelectorProps
+  OutputSelectorProps,
+  ThemeSwitcherProps
 } from './components/controls';
+
+// Session component exports
+export {
+  ChatSessionList,
+  SessionNameDropdown
+} from './components/session';
+
+export type {
+  ChatSessionListProps,
+  SessionNameDropdownProps
+} from './components/session';
+
+// Sidebar component exports
+export {
+  ChatSidebar,
+  SidebarTopMenu,
+  UserDisplay
+} from './components/sidebar';
+
+export type {
+  ChatSidebarProps,
+  SidebarTopMenuProps,
+  UserDisplayProps
+} from './components/sidebar';
+
+// Chat component exports
+export {
+  Message,
+  MessageFooter,
+  MessageList,
+  SystemNotification,
+  SystemNotificationContainer,
+  TypingIndicator,
+  ScrollAnchor,
+  ChatMessagesView,
+  typingIndicatorStyles
+} from './components/chat';
+
+export type {
+  MessageProps,
+  MessageData,
+  MessageFooterProps,
+  MessageListProps,
+  SystemNotificationProps,
+  SystemNotificationContainerProps,
+  SystemNotificationData,
+  NotificationSeverity,
+  TypingIndicatorProps,
+  ScrollAnchorProps,
+  ChatMessagesViewProps
+} from './components/chat';
+
+// Audio component exports
+export {
+  VoiceVisualizerView
+} from './components/audio';
+
+export type {
+  VoiceVisualizerViewProps
+} from './components/audio';
+
+// Layout component exports
+export {
+  MainContentArea
+} from './components/layout';
+
+export type {
+  MainContentAreaProps,
+  OutputMode as ContentOutputMode
+} from './components/layout';
+
+// Avatar component exports
+export {
+  AvatarDisplayView
+} from './components/avatar';
+
+export type {
+  AvatarDisplayViewProps
+} from './components/avatar';

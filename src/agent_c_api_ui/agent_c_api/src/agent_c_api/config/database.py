@@ -29,7 +29,7 @@ class DatabaseConfig:
             self.database_url = database_url
         else:
             # Default to SQLite in the data directory
-            db_path = Path("data/avatar_auth.db")
+            db_path = Path("agent_c_config/chat_user_auth.db")
             db_path.parent.mkdir(parents=True, exist_ok=True)
             self.database_url = f"sqlite+aiosqlite:///{db_path}"
         

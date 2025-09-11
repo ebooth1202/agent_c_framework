@@ -118,7 +118,7 @@ class UItoAgentBridgeManager:
 
         async with self._locks[ui_session_id]:
             # Get existing session data if updating
-            user_id = os.environ.get("AGENT_C_USER_ID", "Agent C User")
+            user_id = os.environ.get("AGENT_C_USER_ID", "admin")
             chat_session = await self._get_or_create_chat_session(ui_session_id, agent_key, user_id)
 
             agent_bridge = AgentBridge(chat_session, self.chat_session_manager)

@@ -16,6 +16,7 @@ import {
     GetUserSessionsEvent,
     GetUserSessionsResponseEvent
 } from '../events';
+import { EventStreamProcessor } from '../events/EventStreamProcessor';
 import {
     RealtimeClientConfig,
     ConnectionState,
@@ -48,6 +49,7 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
     private voiceManager: VoiceManager | null = null;
     private sessionManager: SessionManager | null = null;
     private avatarManager: AvatarManager | null = null;
+    private eventStreamProcessor: EventStreamProcessor | null = null;
     
     // Audio system components
     private audioService: AudioService | null = null;
@@ -128,6 +130,9 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
             persistSessions: false
         });
         
+        // Initialize event stream processor with session manager
+        this.eventStreamProcessor = new EventStreamProcessor(this.sessionManager);
+        
         // Setup session manager handlers for fetching sessions
         this.setupSessionFetchingHandlers();
         
@@ -180,16 +185,22 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
         // Handle chat session changes from server
         this.on('chat_session_changed', (event: ChatSessionChangedEvent) => {
             if (event.chat_session) {
+                // Set the current session in SessionManager
                 this.sessionManager!.setCurrentSession(event.chat_session);
                 
                 if (this.config.debug) {
-                    // console.debug('Session changed:', event.chat_session.session_id);
+                    console.debug('Session changed:', event.chat_session.session_id, 'with', event.chat_session.messages?.length || 0, 'messages');
                 }
             }
         });
         
         // Handle text delta events for accumulation
         this.on('text_delta', (event: TextDeltaEvent) => {
+            // Process through EventStreamProcessor for proper message building
+            if (this.eventStreamProcessor) {
+                this.eventStreamProcessor.processEvent(event);
+            }
+            // Also handle in session manager for backward compatibility
             if (event.content) {
                 this.sessionManager!.handleTextDelta(event.content);
             }
@@ -197,7 +208,11 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
         
         // Handle completion events to finalize text
         this.on('completion', (event: CompletionEvent) => {
-            // When completion.running becomes false, the text is done
+            // Process through EventStreamProcessor to finalize messages
+            if (this.eventStreamProcessor) {
+                this.eventStreamProcessor.processEvent(event);
+            }
+            // Also handle in session manager for backward compatibility
             if (event.running === false) {
                 this.sessionManager!.handleTextDone();
             }
@@ -571,6 +586,11 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
             this.sessionManager.resetAccumulator();
         }
         
+        // Reset event stream processor
+        if (this.eventStreamProcessor) {
+            this.eventStreamProcessor.reset();
+        }
+        
         // Reset initialization state for next connection
         this.initializationState.clear();
         this.isInitialized = false;
@@ -585,8 +605,18 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
 
     /**
      * Send a raw event to the server
+     * 
+     * @public
+     * @param event - The event object to send to the server. Must be a valid ClientEventMap event type.
+     * @throws {Error} If not connected to the server
+     * 
+     * @example
+     * ```typescript
+     * // Send a custom event to the server
+     * client.sendEvent({ type: 'custom_event', data: 'example' });
+     * ```
      */
-    private sendEvent<K extends keyof ClientEventMap>(event: ClientEventMap[K]): void {
+    public sendEvent<K extends keyof ClientEventMap>(event: ClientEventMap[K]): void {
         if (!this.wsManager || !this.wsManager.isConnected()) {
             throw new Error('Not connected to server');
         }
@@ -1151,6 +1181,27 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
                         return;
                     }
                     
+                    // Process events through EventStreamProcessor if applicable
+                    if (this.eventStreamProcessor) {
+                        const eventTypesToProcess = [
+                            'interaction',
+                            'text_delta',
+                            'thought_delta',
+                            'completion',
+                            'tool_select_delta',
+                            'tool_call',
+                            'render_media',
+                            'system_message',
+                            'error',
+                            'history_delta',
+                            'chat_session_changed'
+                        ];
+                        
+                        if (eventTypesToProcess.includes(event.type)) {
+                            this.eventStreamProcessor.processEvent(event);
+                        }
+                    }
+                    
                     // Emit the specific event
                     this.emit(event.type as keyof RealtimeEventMap, event as RealtimeEventMap[keyof RealtimeEventMap]);
                     
@@ -1275,6 +1326,11 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
         if (this.avatarManager) {
             this.avatarManager.dispose();
             this.avatarManager = null;
+        }
+        
+        if (this.eventStreamProcessor) {
+            this.eventStreamProcessor.destroy();
+            this.eventStreamProcessor = null;
         }
         
         this.removeAllListeners();

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { env } from '@/env.mjs';
+import { Logger } from '@/utils/logger';
 
 // Force dynamic rendering for this route since it uses request headers
 export const dynamic = 'force-dynamic';
@@ -45,7 +46,7 @@ function parseJWT(token: string): JWTPayload | null {
     const decoded = Buffer.from(padded, 'base64').toString('utf-8');
     return JSON.parse(decoded);
   } catch (error) {
-    console.error('Failed to parse JWT:', error);
+    Logger.error('Failed to parse JWT:', error);
     return null;
   }
 }
@@ -91,7 +92,7 @@ export async function GET(request: NextRequest) {
     const agentCApiUrl = env.AGENT_C_API_URL || process.env.AGENT_C_API_URL;
     
     if (!agentCApiUrl) {
-      console.error('AGENT_C_API_URL is not configured');
+      Logger.error('AGENT_C_API_URL is not configured');
       return NextResponse.json(
         { error: 'Server configuration error' },
         { status: 500 }
@@ -123,7 +124,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(sessionResponse, { status: 200 });
 
   } catch (error) {
-    console.error('Session endpoint error:', error);
+    Logger.error('Session endpoint error:', error);
     
     return NextResponse.json(
       { error: 'Failed to retrieve session information' },

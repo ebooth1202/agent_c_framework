@@ -96,6 +96,7 @@ class UserCreateRequest(BaseModel):
     first_name: Optional[str] = Field(None, max_length=50)
     last_name: Optional[str] = Field(None, max_length=50)
     roles: List[str] = Field(default_factory=list)
+    user_id: Optional[str] = None  # Allow specifying user_id, else generated
 
 
 class UserLoginRequest(BaseModel):

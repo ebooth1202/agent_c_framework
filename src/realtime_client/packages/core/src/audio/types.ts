@@ -185,7 +185,7 @@ export function isWorkletStatusMessage(message: WorkletMessage): message is Work
  * Default audio processor configuration
  */
 export const DEFAULT_AUDIO_CONFIG: Required<AudioProcessorConfig> = {
-  sampleRate: 16000,
+  sampleRate: 24000,
   channelCount: 1,
   bufferSize: 2048,
   workletPath: '/worklets/audio-processor.worklet.js',

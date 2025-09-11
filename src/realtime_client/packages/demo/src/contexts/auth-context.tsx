@@ -9,6 +9,7 @@ import {
   type LoginCredentials,
   type LoginResponse
 } from '@/lib/auth';
+import { Logger } from '@/utils/logger';
 
 // DEBUG MODE - Set to true for verbose logging
 const DEBUG_AUTH = false;
@@ -17,20 +18,20 @@ const DEBUG_AUTH = false;
 const authLog = {
   info: (message: string, data?: any) => {
     if (DEBUG_AUTH) {
-      console.log(`[AUTH-CONTEXT] ✅ ${message}`, data || '');
+      Logger.info(`[AUTH-CONTEXT] ✅ ${message}`, data || '');
     }
   },
   error: (message: string, error?: any) => {
-    console.error(`[AUTH-CONTEXT] ❌ ${message}`, error || '');
+    Logger.error(`[AUTH-CONTEXT] ❌ ${message}`, error || '');
   },
   warn: (message: string, data?: any) => {
     if (DEBUG_AUTH) {
-      console.warn(`[AUTH-CONTEXT] ⚠️ ${message}`, data || '');
+      Logger.warn(`[AUTH-CONTEXT] ⚠️ ${message}`, data || '');
     }
   },
   debug: (message: string, data?: any) => {
     if (DEBUG_AUTH) {
-      console.log(`[AUTH-CONTEXT] 🔍 ${message}`, data || '');
+      Logger.debug(`[AUTH-CONTEXT] 🔍 ${message}`, data || '');
     }
   }
 };

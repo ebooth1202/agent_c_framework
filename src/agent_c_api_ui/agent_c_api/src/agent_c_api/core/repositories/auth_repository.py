@@ -33,7 +33,8 @@ class AuthRepository:
     
     async def create_user(self, username: str, password_hash: str, email: Optional[str] = None,
                          first_name: Optional[str] = None, last_name: Optional[str] = None,
-                         roles: List[str] = None) -> ChatUser:
+                         roles: List[str] = None,
+                         user_id: Optional[str] = None) -> ChatUser:
         """
         Create a new user in the database.
         
@@ -44,6 +45,7 @@ class AuthRepository:
             first_name: User's first name
             last_name: User's last name
             roles: List of user roles
+            user_id: Optional user ID, if not provided will be generated
             
         Returns:
             ChatUser: Created user model
@@ -55,7 +57,8 @@ class AuthRepository:
         
         try:
             # Generate user ID using mnemonic slugs
-            user_id = MnemonicSlugs.generate_id_slug(2, username)
+            if user_id is None:
+                user_id = MnemonicSlugs.generate_id_slug(2, username)
             
             self.logger.info(
                 "user_creating",

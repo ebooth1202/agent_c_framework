@@ -10,7 +10,13 @@
     "lint": "next lint",
     "format": "pnpm prettier ./src --write",
     "format:check": "pnpm prettier ./src --check",
-    "clean": "rimraf .next"
+    "clean": "rimraf .next",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui",
+    "test:integration": "vitest run --grep '\\.integration\\.'",
+    "test:unit": "vitest run --grep -v '\\.integration\\.'"
   },
   "dependencies": {
     "@agentc/realtime-core": "workspace:*",
@@ -62,6 +68,7 @@
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.56.3",
     "react-resizable-panels": "^3.0.1",
+    "react-router-dom": "^7.8.2",
     "recharts": "^2.15.3",
     "sonner": "^2.0.3",
     "table": "git+https://github.com/tanstack/react-table.git",
@@ -72,12 +79,14 @@
   },
   "devDependencies": {
     "@ianvs/prettier-plugin-sort-imports": "^4.4.1",
+    "@testing-library/jest-dom": "^6.8.0",
     "@types/node": "^20.17.46",
     "@types/react": "^18.3.21",
     "@types/react-dom": "^18.3.7",
     "autoprefixer": "^10.4.21",
     "eslint": "^8.57.1",
     "eslint-config-next": "14.1.0",
+    "jest-axe": "^10.0.0",
     "postcss": "^8.5.3",
     "prettier": "^3.5.3",
     "prettier-plugin-tailwindcss": "^0.5.14",

@@ -54,6 +54,22 @@ class AuthService:
             self.auth_repo = AuthRepository(self.db_session)
             
             self.logger.info("auth_service_initialized")
+
+            user = await self.auth_repo.get_user_by_username("admin")
+            if not user:
+                self.logger.info("creating_default_admin_user")
+                await self.create_user(
+                    UserCreateRequest(
+                        username="admin",
+                        password="changeme",  # In production, use a secure password or environment variable
+                        email="changeme@centricconsulting.com",
+                        first_name="Admin",
+                        last_name="User",
+                        roles=["admin"],
+                        user_id="admin"  # Fixed ID for default admin user
+                    )
+                )
+                self.logger.info("default_admin_user_created")
             
         except Exception as e:
             self.logger.error(
@@ -156,7 +172,8 @@ class AuthService:
                 email=user_request.email,
                 first_name=user_request.first_name,
                 last_name=user_request.last_name,
-                roles=user_request.roles
+                roles=user_request.roles,
+                user_id=user_request.user_id
             )
             
             duration = time.time() - start_time

@@ -3,11 +3,12 @@
 import * as React from "react"
 import { Menu } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Button } from "@agentc/realtime-ui"
-import { SessionNameDropdown } from "./SessionNameDropdown"
 import { 
+  Button,
+  SessionNameDropdown,
   ConnectionButton, 
-  AudioControls
+  AudioControls,
+  ThemeSwitcher
 } from "@agentc/realtime-ui"
 
 export interface ChatHeaderProps {
@@ -50,9 +51,10 @@ export const ChatHeader = React.forwardRef<HTMLDivElement, ChatHeaderProps>(
           {/* Center spacer for balanced layout */}
           <div className="flex-1" />
 
-          {/* Right side: Connection status and audio controls */}
+          {/* Right side: Audio controls, theme switcher, and connection status */}
           <div className="flex items-center gap-2 shrink-0">
             <AudioControls size="sm" showLabel={false} />
+            <ThemeSwitcher size="icon" />
             <ConnectionButton size="sm" showStatus={true} />
           </div>
         </div>

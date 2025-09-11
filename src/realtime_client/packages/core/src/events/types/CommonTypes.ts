@@ -30,22 +30,8 @@ export interface Agent {
   tools: string[];
 }
 
-/**
- * Extended agent configuration with runtime details
- */
-export interface AgentConfiguration {
-  version: number;
-  name: string;
-  key: string;
-  model_id: string;
-  agent_description: string | null;
-  tools: string[];
-  agent_params: Record<string, any>;
-  prompt_metadata: Record<string, any>;
-  persona: string;
-  uid: string | null;
-  category: string[];
-}
+// Re-export AgentConfiguration from chat-session types
+export type { AgentConfiguration, CurrentAgentConfiguration, AgentConfigurationV2 } from '../../types/chat-session';
 
 /**
  * Avatar information from HeyGen
@@ -130,53 +116,105 @@ export interface ToolSchema {
 }
 
 /**
+ * Content part types for multimodal messages
+ */
+export type ContentPartType = 'text' | 'image' | 'audio' | 'video' | 'tool_use' | 'tool_result';
+
+/**
+ * Base content part interface
+ */
+export interface BaseContentPart {
+  type: ContentPartType;
+}
+
+/**
+ * Text content part
+ */
+export interface TextContentPart extends BaseContentPart {
+  type: 'text';
+  text: string;
+}
+
+/**
+ * Image source types
+ */
+export interface ImageSource {
+  type: 'base64' | 'url';
+  media_type?: string; // e.g., 'image/png', 'image/jpeg'
+  data?: string; // base64 encoded data (when type is 'base64')
+  url?: string; // URL to image (when type is 'url')
+}
+
+/**
+ * Image content part
+ */
+export interface ImageContentPart extends BaseContentPart {
+  type: 'image';
+  source: ImageSource;
+}
+
+/**
+ * Tool use content part (for Anthropic-style tool calls in messages)
+ */
+export interface ToolUseContentPart extends BaseContentPart {
+  type: 'tool_use';
+  id: string;
+  name: string;
+  input: Record<string, any>;
+}
+
+/**
+ * Tool result content part (for Anthropic-style tool results in messages)
+ */
+export interface ToolResultContentPart extends BaseContentPart {
+  type: 'tool_result';
+  tool_use_id: string;
+  content: string | ContentPart[];
+  is_error?: boolean;
+}
+
+/**
+ * Union type for all content part types
+ */
+export type ContentPart = 
+  | TextContentPart 
+  | ImageContentPart 
+  | ToolUseContentPart 
+  | ToolResultContentPart;
+
+/**
+ * Message content can be either:
+ * - A simple string (for text-only messages)
+ * - An array of content parts (for multimodal messages)
+ * - A null value (for messages with only citations or other metadata)
+ */
+export type MessageContent = string | ContentPart[] | null;
+
+/**
+ * Citation information for messages
+ */
+export interface Citation {
+  quote?: string;
+  source?: string;
+  metadata?: Record<string, any>;
+}
+
+/**
  * Chat message structure
+ * Supports both simple text messages and multimodal content
  */
 export interface Message {
   role: 'user' | 'assistant' | 'system' | 'assistant (thought)';
-  content: string;
+  content: MessageContent;
   timestamp?: string;
   format?: 'text' | 'markdown';
+  citations?: Citation[] | null;
+  model_id?: string; // e.g., 'claude-3-5-sonnet-20241022' for vendor-specific handling
+  name?: string; // Optional name field for role-play or multi-agent scenarios
 }
 
-/**
- * Chat session information
- */
-export interface ChatSession {
-  session_id: string;
-  token_count: number;
-  context_window_size: number;
-  session_name: string | null;
-  created_at: string | null;
-  updated_at: string | null;
-  deleted_at: string | null;
-  user_id: string | null;
-  metadata: Record<string, any>;
-  messages: Message[];
-  agent_config: AgentConfiguration;
-}
-
-/**
- * Lightweight session index entry for paginated session lists
- * Used when fetching session lists without full message history
- */
-export interface ChatSessionIndexEntry {
-  session_id: string;
-  session_name: string | null;
-  created_at: string | null;
-  updated_at: string | null;
-  user_id: string | null;
-}
-
-/**
- * Response model for paginated session queries
- * Supports infinite scrolling and batch loading of sessions
- */
-export interface ChatSessionQueryResponse {
-  chat_sessions: ChatSessionIndexEntry[];
-  total_sessions: number;
-  offset: number;
-}
+// Re-export ChatSession types from chat-session module
+export type { ChatSession, ChatSessionIndexEntry, ChatSessionQueryResponse } from '../../types/chat-session';
 
 /**
  * Tool call structure for function calling

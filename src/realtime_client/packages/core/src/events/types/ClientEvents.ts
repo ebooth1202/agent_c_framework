@@ -85,11 +85,12 @@ export interface ResumeChatSessionEvent extends BaseClientEvent {
 }
 
 /**
- * Set the name/title for the current session
+ * Set the name/title for a chat session
  */
 export interface SetChatSessionNameEvent extends BaseClientEvent {
   type: 'set_chat_session_name';
   session_name: string;
+  session_id?: string; // Optional - if not set, applies to current session
 }
 
 /**
@@ -143,6 +144,36 @@ export interface PingEvent extends BaseClientEvent {
 }
 
 /**
+ * Notify server that client is starting push-to-talk audio input
+ */
+export interface PushToTalkStartEvent extends BaseClientEvent {
+  type: 'ptt_start';
+}
+
+/**
+ * Notify server that client has finished push-to-talk audio input
+ */
+export interface PushToTalkEndEvent extends BaseClientEvent {
+  type: 'ptt_end';
+}
+
+/**
+ * Set the voice input mode for the session
+ */
+export interface SetVoiceInputModeEvent extends BaseClientEvent {
+  type: 'set_voice_input_mode';
+  mode: 'ptt' | 'vad';
+}
+
+/**
+ * Delete a chat session belonging to the user
+ */
+export interface DeleteChatSessionEvent extends BaseClientEvent {
+  type: 'delete_chat_session';
+  session_id?: string; // Optional - if not set, deletes the current session
+}
+
+/**
  * Union type of all client events
  */
 export type ClientEvent =
@@ -161,7 +192,11 @@ export type ClientEvent =
   | GetUserSessionsEvent
   | GetVoicesEvent
   | GetToolCatalogEvent
-  | PingEvent;
+  | PingEvent
+  | PushToTalkStartEvent
+  | PushToTalkEndEvent
+  | SetVoiceInputModeEvent
+  | DeleteChatSessionEvent;
 
 /**
  * Type guard to check if an object is a client event
@@ -183,6 +218,10 @@ export function isClientEvent(obj: unknown): obj is ClientEvent {
     'get_user_sessions',
     'get_voices',
     'get_tool_catalog',
-    'ping'
+    'ping',
+    'ptt_start',
+    'ptt_end',
+    'set_voice_input_mode',
+    'delete_chat_session'
   ].includes((obj as any).type);
 }

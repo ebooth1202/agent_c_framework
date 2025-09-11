@@ -87,6 +87,9 @@ class VoiceIOManager:
         if self._pipeline_task is not None:
             self._pipeline_task.cancel()
 
+        # Disable for now
+        return
+
         voice = voice or self._voice
         tts_voice = voice.voice_id if voice else None
 
@@ -107,16 +110,15 @@ class VoiceIOManager:
         audio_chunk = np.frombuffer(base64.b64decode(audio_delta.content), dtype=np.int16)
         self._input.add_audio(audio_chunk)
 
-    def add_audio(self, audio_delta: bytes):
+    async def add_audio(self, audio_delta: bytes):
         """
         Add an audio chunk to the input stream for processing.
 
         Args:
             audio_delta (bytes): The incoming audio data chunk.
         """
-        self.logger.debug("Adding audio chunk")
         audio_chunk = np.frombuffer(audio_delta, dtype=np.int16)
-        self._input.add_audio(audio_chunk)
+        await self._input.add_audio(audio_chunk)
 
     def close(self):
         """

@@ -11,6 +11,9 @@ class SessionEvent(BaseEvent):
     """
     session_id: str = Field(..., description="The type of the event")
     role: str = Field(..., description="The role that triggered this event event")
+    parent_session_id: Optional[str] = Field(None, description="The parent session ID, if this session is a child session")
+    user_session_id: Optional[str] = Field(None, description="The top level user session ID, if this session is a child session")
+
 
 class SemiSessionEvent(BaseEvent):
     """
@@ -20,3 +23,5 @@ class SemiSessionEvent(BaseEvent):
     """
     session_id: Optional[str] = Field(None, description="The type of the event")
     role: Optional[str] = Field(None, description="The role that triggered this event event")
+    parent_session_id: Optional[str] = Field(None, description="The parent session ID, if this session is a child session")
+    user_session_id: Optional[str] = Field(None, description="The top level user session ID, if this session is a child session")

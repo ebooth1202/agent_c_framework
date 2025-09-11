@@ -412,7 +412,7 @@ class RealtimeBridge(AgentBridge):
                             event = self.parse_event(json.loads(message["text"]))
                             await self.handle_client_event(event)
                         elif "bytes" in message:
-                            self.voice_io_manager.add_audio(message["bytes"])
+                            await self.voice_io_manager.add_audio(message["bytes"])
                     elif message["type"] == "websocket.disconnect":
                         self.logger.info(f"Session {self.chat_session.session_id} disconnected normally")
                         break

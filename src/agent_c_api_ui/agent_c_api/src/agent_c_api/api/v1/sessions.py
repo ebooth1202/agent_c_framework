@@ -68,7 +68,7 @@ async def get_sessions(agent_manager=Depends(get_agent_manager)):
         HTTPException: If there's an error retrieving sessions
     """
     try:
-        user_id = os.environ.get("AGENT_C_USER_ID", "Agent C User")
+        user_id = os.environ.get("AGENT_C_USER_ID", "admin")
         sessions: ChatSessionQueryResponse = await agent_manager.chat_session_manager.get_user_sessions(user_id)  # Assuming single user for now
         session_ids = [s.session_id for s in sessions.chat_sessions]
         return {"session_ids": session_ids}

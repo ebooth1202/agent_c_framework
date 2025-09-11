@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { env } from '@/env.mjs';
 import axios from 'axios';
 import https from 'node:https';
+import { Logger } from '@/utils/logger';
 
 /**
  * Login credentials for the API
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest) {
     const agentCApiUrl = env.AGENT_C_API_URL || process.env.AGENT_C_API_URL;
     
     if (!agentCApiUrl) {
-      console.error('AGENT_C_API_URL is not configured');
+      Logger.error('AGENT_C_API_URL is not configured');
       return NextResponse.json(
         { error: 'Server configuration error' },
         { status: 500 }
@@ -140,7 +141,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(loginResponse, { status: 200 });
 
   } catch (error) {
-    console.error('Login proxy error:', error);
+    Logger.error('Login proxy error:', error);
     
     // Handle axios errors
     if (axios.isAxiosError(error)) {

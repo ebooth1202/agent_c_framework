@@ -1,10 +1,10 @@
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Literal
 
 from pydantic import Field
 
 from agent_c.models import ChatSession, ChatUser
 from agent_c.models.agent_config import CurrentAgentConfiguration, AgentCatalogEntry
-from agent_c.models.chat_history.chat_session import ChatSessionQueryResponse
+from agent_c.models.chat_history.chat_session import ChatSessionQueryResponse, ChatSessionIndexEntry
 from agent_c.models.client_tool_info import ClientToolInfo
 from agent_c.models.events import BaseEvent
 from agent_c.models.heygen import Avatar, HeygenAvatarSessionData, NewSessionRequest
@@ -132,8 +132,10 @@ class SetChatSessionNameEvent(BaseEvent):
 
     Attributes:
         session_name (str): The new name for the chat session.
+        session_id (Optional[str]): The ID of the session to rename, if not set the current session is used.
     """
     session_name: str
+    session_id: Optional[str] = None
 
 class ChatSessionNameChangedEvent(BaseEvent):
     """
@@ -141,8 +143,10 @@ class ChatSessionNameChangedEvent(BaseEvent):
 
     Attributes:
         session_name (str): The updated name of the chat session.
+        session_id (Optional[str]): The ID of the session to rename, if not set the current session is used.
     """
     session_name: str
+    session_id: Optional[str] = None
 
 class GetUserSessionsEvent(BaseEvent):
     """
@@ -277,3 +281,63 @@ class UserTurnEndEvent(BaseEvent):
     This event does not require any additional data.
     """
     pass
+
+class PushToTalkStartEvent(BaseEvent):
+    """
+    Event for the client to notify that it's starting to accept push-to-talk audio input.
+    """
+    type: str = Field( "ptt_start", description="The type of the event. Defaults to the snake case class name without event")
+
+class PushToTalkEndEvent(BaseEvent):
+    """
+    Event for the client to notify that it's stopping accepting push-to-talk audio input.
+    """
+    type: str = Field( "ptt_end", description="The type of the event. Defaults to the snake case class name without event")
+
+class SetVoiceInputMode(BaseEvent):
+    """
+    Sent by the client to set the voice input mode.
+    """
+    mode: Literal["ptt", "vad", "realtime"] = Field(..., description="The voice input mode, either 'ptt' for push-to-talk or 'vad' for voice activity detection.")
+
+class VoiceInputSupportedEvent(BaseEvent):
+    """
+    Sent by the server to notify the client of the supported voice input modes.
+    """
+    modes: List[Literal["ptt", "vad", "realtime"]] = Field(["ptt"], description="The list of supported voice input modes, either 'ptt' for push-to-talk or 'vad' for voice activity detection.")
+
+class ServerListeningEvent(BaseEvent):
+    """
+    Event to notify that the server is listening for audio input.
+
+    This event does not require any additional data.
+    """
+    pass
+
+class ChatSessionAddedEvent(BaseEvent):
+    """
+    Event to notify that a new chat session has been added.
+    New chat sessions are don't get indexed and added to the list of user sessions until there's been at least one message in the session.
+
+    Attributes:
+        chat_session (ChatSessionIndexEntry): The index for the new chat session.
+    """
+    chat_session: ChatSessionIndexEntry
+
+class DeleteChatSessionEvent(BaseEvent):
+    """
+    Event sent by the client to delete a chat session belonging to the user
+
+    Attributes:
+        session_id (Optional[str]): The ID of the session to rename, if not set the current session is used.
+    """
+    session_id: Optional[str] = None
+
+class ChatSessionDeletedEvent(BaseEvent):
+    """
+    Event sent by the server when a chat session has been deleted
+
+    Attributes:
+        session_id (Optional[str]): The ID of the session to rename, if not set the current session is used.
+    """
+    session_id: Optional[str] = None

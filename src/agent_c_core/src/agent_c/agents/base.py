@@ -7,11 +7,11 @@ from asyncio import Semaphore
 from typing import Any, Dict, List, Union, Optional, Callable, Awaitable, Tuple
 
 from agent_c.models.chat_history.chat_session import ChatSession
-from agent_c.chat.session_manager import ChatSessionManager
-from agent_c.models import ChatEvent, ImageInput
+
+from agent_c.models import ImageInput
 from agent_c.models.events.chat import ThoughtDeltaEvent, HistoryDeltaEvent, CompleteThoughtEvent, SystemPromptEvent, UserRequestEvent
 from agent_c.models.input import FileInput, AudioInput
-from agent_c.models.events import ToolCallEvent, InteractionEvent, TextDeltaEvent, HistoryEvent, CompletionEvent, ToolCallDeltaEvent, SystemMessageEvent
+from agent_c.models.events import ToolCallEvent, InteractionEvent, TextDeltaEvent, HistoryEvent, CompletionEvent, ToolCallDeltaEvent, SystemMessageEvent, SessionEvent
 from agent_c.prompting.prompt_builder import PromptBuilder
 from agent_c.toolsets.tool_chest import ToolChest
 from agent_c.util.slugs import MnemonicSlugs
@@ -60,7 +60,7 @@ class BaseAgent:
         self.prompt: Optional[str] = kwargs.get("prompt", None)
         self.prompt_builder: Optional[PromptBuilder] = kwargs.get("prompt_builder", None)
         self.schemas: Union[None, List[Dict[str, Any]]] = None
-        self.streaming_callback: Optional[Callable[[ChatEvent], Awaitable[None]]] = kwargs.get("streaming_callback",
+        self.streaming_callback: Optional[Callable[[SessionEvent], Awaitable[None]]] = kwargs.get("streaming_callback",
                                                                                                None)
         self.mitigate_image_prompt_injection: bool = kwargs.get("mitigate_image_prompt_injection", False)
         self.can_use_tools: bool = False
@@ -160,7 +160,7 @@ class BaseAgent:
 
         return opts
 
-    async def _raise_event(self, event, streaming_callback: Optional[Callable[[ChatEvent], Awaitable[None]]] = None):
+    async def _raise_event(self, event, streaming_callback: Optional[Callable[[SessionEvent], Awaitable[None]]] = None):
         """
         Raise a chat event to the event stream.
 
@@ -213,7 +213,9 @@ class BaseAgent:
         """
         streaming_callback = data.pop('streaming_callback', None)
         await self._raise_event(SystemMessageEvent(role="system", severity=severity, content=content,
-                                                   session_id=data.get("session_id", "none")),
+                                                   session_id=data.get("session_id", "none"),
+                                                   user_session_id=data.get("user_session_id", None),
+                                                   parent_session_id=data.get("parent_session_id", None)),
                                                    streaming_callback=streaming_callback)
 
     async def _raise_history_delta(self, messages, **data):

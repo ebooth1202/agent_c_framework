@@ -16,9 +16,12 @@
     "type-check": "tsc --noEmit",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
-    "test": "vitest",
-    "test:run": "vitest run",
-    "test:watch": "vitest watch"
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui",
+    "test:integration": "vitest run --grep '\\.integration\\.'",
+    "test:unit": "vitest run --grep -v '\\.integration\\.'"
   },
   "peerDependencies": {
     "react": "^18.0.0",
@@ -28,7 +31,9 @@
   "dependencies": {
     "@agentc/realtime-core": "workspace:*",
     "@agentc/realtime-react": "workspace:*",
+    "@emotion/is-prop-valid": "^1.4.0",
     "@heygen/streaming-avatar": "^2.0.17",
+    "@radix-ui/react-alert-dialog": "1.1.13",
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
@@ -50,10 +55,13 @@
     "@tiptap/pm": "^2.26.1",
     "@tiptap/react": "^2.26.1",
     "@tiptap/starter-kit": "^2.26.1",
+    "@types/react-syntax-highlighter": "^15.5.13",
     "axios": "^1.11.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
+    "dompurify": "^3.2.6",
+    "framer-motion": "^12.23.12",
     "highlight.js": "^11.11.1",
     "js-cookie": "^3.0.5",
     "jwt-decode": "^4.0.0",
@@ -69,9 +77,12 @@
     "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.8.0",
+    "@types/dompurify": "^3.2.0",
     "@types/react": "^18.3.24",
     "@types/react-dom": "^18.3.7",
     "autoprefixer": "^10.4.21",
+    "jest-axe": "^10.0.0",
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.17",
     "tsup": "^8.0.0",

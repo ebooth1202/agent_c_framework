@@ -1,1317 +1,499 @@
 _plans:
-  agentc_sdk_dev:
-    created_at: '2025-08-28T19:37:20.561140'
-    description: Build a clean, modular TypeScript SDK for the Agent C Realtime API
-      with framework-agnostic core and React bindings
-    id: 7fe1d406-cfe8-4078-b061-66622d317c63
-    lessons_learned:
-    - created_at: '2025-08-28T20:00:59.984689'
-      id: e6d5e6a7-71a8-4262-8ea5-9836233a5b21
-      learned_task_id: bedc11e0-9e12-4a45-b14d-db25b931b1f8
-      lesson: Strategic decision to start fresh rather than refactor was the right
-        call. The Virtual Joe spike revealed valuable patterns (binary streaming,
-        turn management, voice models) but attempting to refactor that codebase would
-        have perpetuated its brittleness. Clean architecture from the start will pay
-        dividends.
-    - created_at: '2025-08-29T00:23:31.458815'
-      id: 4ae04b7d-9877-428b-a7cd-94597562153f
-      learned_task_id: 5f7f195d-125b-4cf6-9f41-6138e1ab0737
-      lesson: Breaking down complex features (audio system) into smaller, incremental
-        steps (7-step plan) made implementation much more manageable. Each step built
-        on the previous one and could be tested independently, reducing risk and complexity.
-    - created_at: '2025-08-29T00:23:39.376926'
-      id: e8d6c43a-1b25-4c35-9b53-576f93fb68f0
-      learned_task_id: 5f7f195d-125b-4cf6-9f41-6138e1ab0737
-      lesson: Using proven patterns from virt_joe (singleton services, binary streaming)
-        while fixing its issues (wrong event types) was the right approach. Don't
-        throw away working code - adapt and improve it.
-    - created_at: '2025-08-29T09:23:40.753818'
-      id: 19c3ba28-f518-44cd-ad77-5eedd42fe843
-      learned_task_id: b745a8bb-b68c-48bb-abd0-98828542c142
-      lesson: Creating a centralized manager class (VoiceManager) for complex domain
-        logic provides clean separation of concerns. The manager pattern with EventEmitter
-        allows other components to react to changes without tight coupling. Also,
-        providing both class instances and utility functions gives developers flexibility
-        in how they use the SDK.
-    - created_at: '2025-08-29T10:13:07.049254'
-      id: 4abba42e-cf9f-4247-819e-d1dfb555cf56
-      learned_task_id: c6260c78-3a89-4dfd-9f2d-5749a4193c3b
-      lesson: Text accumulation from streaming events requires careful state management.
-        Using a dedicated accumulator with isAccumulating flag prevents message duplication
-        and ensures proper finalization. Also, tying message finalization to the 'completion'
-        event with running:false rather than a separate text_done event provides more
-        reliable message boundaries.
-    - created_at: '2025-08-29T15:24:22.091836'
-      id: b99a0f84-e736-414f-ae7a-896a70f96974
-      learned_task_id: 0cb0046a-b095-440b-9c88-dbcf6fcbace7
-      lesson: When creating comprehensive documentation, break it into smaller tasks
-        rather than having one clone do everything at once. The clone's context window
-        got flooded and they started fabricating details instead of checking the actual
-        implementation. This led to completely incorrect authentication documentation,
-        made-up API keys, and fake service URLs. Always verify documentation against
-        actual code.
-    - created_at: '2025-08-30T09:21:10.601254'
-      id: 279a4023-3d00-4ecf-aae2-b391656420f9
-      learned_task_id: 85638294-e219-4669-b688-9d8e5eecda65
-      lesson: When completing complex tasks through separate focused plans (like test_fix_plan),
-        remember to update the main plan with detailed completion reports. We created
-        156+ comprehensive tests but initially only briefly noted "Unit Tests for
-        Core SDK" as complete without documenting the extensive work done.
-    - created_at: '2025-08-30T09:24:16.961784'
-      id: 4bcbce3f-8c44-4b20-8673-f3c18b7fb1ae
-      learned_task_id: bedc11e0-9e12-4a45-b14d-db25b931b1f8
-      lesson: Building a clean SDK from scratch was the right decision over refactoring
-        the Virtual Joe spike. The methodical approach - starting with TypeScript
-        config, then event system, then incrementally adding features with proper
-        separation of concerns - resulted in a production-ready SDK with 178+ tests.
-        The combination of strategic planning, clone delegation for complex tasks,
-        and immediate test feedback created an efficient development workflow.
-    tasks:
-      083a0e53-e8c3-41db-a947-c88bb77b772f:
-        child_tasks: []
-        completed: false
-        completion_report: null
-        completion_signoff_by: null
-        context: Add VoiceManager to index.ts exports, ensure all types are properly
-          exported, run npm build to verify
-        created_at: '2025-08-29T09:10:01.904274'
-        description: Update package exports and ensure everything builds correctly
-        id: 083a0e53-e8c3-41db-a947-c88bb77b772f
-        parent_id: b745a8bb-b68c-48bb-abd0-98828542c142
-        priority: high
-        requires_completion_signoff: 'true'
-        sequence: 5
-        title: Update exports and test build
-        updated_at: '2025-08-29T09:10:01.904275'
-      0cb0046a-b095-440b-9c88-dbcf6fcbace7:
-        child_tasks: []
-        completed: true
-        completion_report: 'Successfully created comprehensive API documentation for
-          the Agent C Realtime SDK:
-
-
-          **Documentation Structure Created:**
-
-          - Main documentation index (README.md)
-
-          - Getting started guide
-
-          - Architecture overview
-
-          - Complete API reference for all Core SDK classes
-
-          - Complete API reference for React bindings
-
-          - Practical guides for key features
-
-          - 18 total documentation files
-
-
-          **Key Features:**
-
-          - Full API coverage with method signatures and types
-
-          - Working code examples throughout
-
-          - TypeScript type definitions included
-
-          - Best practices and troubleshooting sections
-
-          - Cross-referenced documentation
-
-          - Production-ready examples
-
-          - Clear, developer-friendly writing
-
-
-          The documentation provides everything developers need to understand and
-          use the SDK effectively.'
-        completion_signoff_by: null
-        context: ''
-        created_at: '2025-08-28T19:38:46.106182'
-        description: Write comprehensive API documentation for the SDK
-        id: 0cb0046a-b095-440b-9c88-dbcf6fcbace7
-        parent_id: null
-        priority: low
-        requires_completion_signoff: 'true'
-        sequence: 13
-        title: 'Documentation: API Reference'
-        updated_at: '2025-08-29T14:44:47.093307'
-      100ee6cf-9a53-4488-b668-6453ffc3551f:
-        child_tasks: []
-        completed: true
-        completion_report: 'Successfully implemented Turn Management System:
-
-          - Simple binary state tracking (canSendInput true/false)
-
-          - Listens for user_turn_start/end events from server
-
-          - Observable state changes via EventEmitter
-
-          - Integrated with RealtimeClient
-
-          - No unnecessary complexity - just tracks if input is allowed
-
-          - Successfully builds without errors'
-        completion_signoff_by: Donavan
-        context: Critical for preventing users from speaking over the agent and managing
-          conversation flow
-        created_at: '2025-08-28T19:37:53.736563'
-        description: Implement turn management to handle user_turn_start/end events
-          and prevent audio conflicts
-        id: 100ee6cf-9a53-4488-b668-6453ffc3551f
-        parent_id: null
-        priority: high
-        requires_completion_signoff: 'true'
-        sequence: 5
-        title: 'Core SDK: Turn Management System'
-        updated_at: '2025-08-29T00:23:03.700389'
-      10c3dae0-dfae-4189-817e-a05cf23a80a4:
-        child_tasks: []
-        completed: true
-        completion_report: 'Successfully implemented Authentication Manager with:
-
-          - AuthManager class with full JWT token management
-
-          - AuthConfig with storage abstraction for tokens
-
-          - Memory and localStorage token storage implementations
-
-          - Automatic token refresh before expiry (configurable buffer)
-
-          - Login/logout flow with REST API integration
-
-          - Both Agent C and HeyGen token management
-
-          - Event-driven authentication state changes
-
-          - Integration with RealtimeClient for seamless authentication
-
-          - Type-safe throughout with comprehensive error handling
-
-          - Successfully builds without errors'
-        completion_signoff_by: Donavan
-        context: Handles JWT tokens for Agent C and HeyGen, with automatic refresh
-          before expiry
-        created_at: '2025-08-28T19:37:47.455274'
-        description: Build authentication system with login, token management, and
-          automatic refresh
-        id: 10c3dae0-dfae-4189-817e-a05cf23a80a4
-        parent_id: null
-        priority: high
-        requires_completion_signoff: 'true'
-        sequence: 4
-        title: 'Core SDK: Authentication Manager'
-        updated_at: '2025-08-28T22:35:15.504587'
-      2346d447-3605-4a83-a496-9e7bdb736887:
-        child_tasks: []
-        completed: false
-        completion_report: null
-        completion_signoff_by: null
-        context: Define VoiceManagerConfig, VoiceChangeEvent, VoiceFormat enum, and
-          other necessary types for the voice management system
-        created_at: '2025-08-29T09:09:35.581495'
-        description: Create TypeScript types and interfaces for voice management
-        id: 2346d447-3605-4a83-a496-9e7bdb736887
-        parent_id: b745a8bb-b68c-48bb-abd0-98828542c142
-        priority: high
-        requires_completion_signoff: 'true'
-        sequence: 2
-        title: Define voice management types
-        updated_at: '2025-08-29T09:09:35.581496'
-      2bae93ba-5a53-4f82-81c4-2a70f3d1b10d:
-        child_tasks: []
-        completed: true
-        completion_report: 'Successfully created minimal AvatarManager class that:
-
-          - Extends EventEmitter for event-driven architecture
-
-          - Tracks current avatar session ID and avatar ID
-
-          - Provides setAvatarSession() method for when app gets HeyGen STREAM_READY
-
-          - Provides clearAvatarSession() for cleanup
-
-          - Emits events for avatar state changes
-
-          - Manages list of available avatars from auth
-
-          - NO HeyGen SDK integration - that''s the app''s responsibility as requested
-
-          - Includes helper methods for finding and checking avatar availability'
-        completion_signoff_by: null
-        context: 'The manager should:
-
-          - Track current avatar session ID
-
-          - Send SetAvatarSessionEvent when app provides session info from HeyGen
-
-          - Clear avatar session when ended
-
-          - Emit events for avatar state changes
-
-          - NO HeyGen SDK integration - that''s the app''s responsibility'
-        created_at: '2025-08-29T12:00:23.585458'
-        description: Create a simple AvatarManager that tracks avatar session state
-          and sends SetAvatarSessionEvent
-        id: 2bae93ba-5a53-4f82-81c4-2a70f3d1b10d
-        parent_id: f4e4e4a3-bb03-4eb1-a9a1-4d63d337f6f3
-        priority: high
-        requires_completion_signoff: 'true'
-        sequence: 1
-        title: Create minimal AvatarManager class
-        updated_at: '2025-08-29T12:11:12.839576'
-      4623c48a-3b93-4cf2-93c9-e38ed984d0a2:
-        child_tasks: []
-        completed: false
-        completion_report: null
-        completion_signoff_by: null
-        context: Define SessionManagerConfig, SessionChangeEvent, MessageEvent, and
-          other necessary types for the session management system
-        created_at: '2025-08-29T10:00:01.123130'
-        description: Create TypeScript types and interfaces for session management
-        id: 4623c48a-3b93-4cf2-93c9-e38ed984d0a2
-        parent_id: c6260c78-3a89-4dfd-9f2d-5749a4193c3b
-        priority: high
-        requires_completion_signoff: 'true'
-        sequence: 2
-        title: Define session management types
-        updated_at: '2025-08-29T10:00:01.123131'
-      494241b8-cab9-42fd-b7e5-c74e4938eed8:
-        child_tasks: []
-        completed: true
-        completion_report: 'Successfully integrated AvatarManager with RealtimeClient:
-
-          - Instantiates AvatarManager with available avatars from AuthManager
-
-          - Added setAvatarSession() method that sends SetAvatarSessionEvent to server
-
-          - Added clearAvatarSession() method for cleanup (with optional server notification)
-
-          - Added getAvatarManager() accessor method
-
-          - Added getAvailableAvatars() helper to access avatar list
-
-          - Added getHeyGenAccessToken() helper for app to get token for HeyGen SDK
-
-          - Updated event types to include clear_avatar_session
-
-          - Properly disposes of AvatarManager in destroy() method'
-        completion_signoff_by: null
-        context: 'Update RealtimeClient to:
-
-          - Instantiate AvatarManager
-
-          - Provide setAvatarSession() method that sends SetAvatarSessionEvent
-
-          - Handle any avatar-related events from server (if any)
-
-          - Provide getAvatarManager() accessor
-
-          - Make available avatars accessible from auth response'
-        created_at: '2025-08-29T12:00:33.148466'
-        description: Wire up AvatarManager with RealtimeClient to handle avatar events
-        id: 494241b8-cab9-42fd-b7e5-c74e4938eed8
-        parent_id: f4e4e4a3-bb03-4eb1-a9a1-4d63d337f6f3
-        priority: high
-        requires_completion_signoff: 'true'
-        sequence: 2
-        title: Integrate AvatarManager with RealtimeClient
-        updated_at: '2025-08-29T12:11:26.373344'
-      497ef0e1-6897-4742-b4b1-609c602cd089:
-        child_tasks: []
-        completed: true
-        completion_report: 'Successfully implemented Audio Output System:
-
-          - AudioOutputService singleton for TTS playback
-
-          - Handles binary audio chunks from server
-
-          - Voice model awareness (skips in avatar/none modes)
-
-          - PCM16 format support with Web Audio API
-
-          - Smooth playback with buffering and queue management
-
-          - Volume control and status monitoring
-
-          - Integrated with RealtimeClient for automatic playback
-
-          - Successfully builds without errors'
-        completion_signoff_by: Donavan
-        context: Should handle binary audio chunks from server, skip playback in avatar
-          mode, and support different audio formats
-        created_at: '2025-08-28T19:38:06.414541'
-        description: Implement audio output playback for TTS with voice model awareness
-        id: 497ef0e1-6897-4742-b4b1-609c602cd089
-        parent_id: null
-        priority: high
-        requires_completion_signoff: 'true'
-        sequence: 7
-        title: 'Core SDK: Audio Output System'
-        updated_at: '2025-08-29T00:23:24.307543'
-      5781d82a-c722-4b0d-b765-4cf450249674:
-        child_tasks: []
-        completed: true
-        completion_report: 'Successfully added avatar helper utilities:
-
-          - isValidAvatar() - type guard for Avatar objects
-
-          - formatAvatarDisplay() - formats avatar for UI display
-
-          - getAvatarById() - finds avatar in list by ID
-
-          - sortAvatarsById() - sorts avatars alphabetically
-
-          - filterAvatars() - search avatars by ID or pose name
-
-          - groupAvatars() - groups avatars for categorized display
-
-          All utilities work with the actual Avatar interface from API'
-        completion_signoff_by: null
-        context: 'Simple utilities like:
-
-          - getAvailableAvatars() - extract from auth response
-
-          - isAvatarActive() - check if avatar session is active
-
-          - Maybe format avatar data for easier consumption by apps'
-        created_at: '2025-08-29T12:00:41.609516'
-        description: Create utility functions for avatar-related operations
-        id: 5781d82a-c722-4b0d-b765-4cf450249674
-        parent_id: f4e4e4a3-bb03-4eb1-a9a1-4d63d337f6f3
-        priority: low
-        requires_completion_signoff: 'true'
-        sequence: 3
-        title: Add avatar helper utilities
-        updated_at: '2025-08-29T12:11:36.164902'
-      5a6f64b0-0f98-48d3-b60d-2194f1e58092:
-        child_tasks: []
-        completed: true
-        completion_report: "Successfully implemented all Core React Hooks:\n\n**Updated\
-          \ Existing Hooks:**\n1. **useAudio** - Now uses context instead of client\
-          \ prop\n2. **useTurnState** - Now uses context instead of client prop\n\n\
-          **Created New Hooks:**\n3. **useVoiceModel** - Voice selection and management\n\
-          \   - Lists available voices\n   - Changes voice with client/server sync\n\
-          \   - Handles special voices (avatar, none)\n   \n4. **useChat** - Chat\
-          \ message handling\n   - Send text messages\n   - Track message history\n\
-          \   - Handle streaming text_delta events\n   \n5. **useConnection** - Connection\
-          \ state management\n   - Monitor connection state\n   - Connect/disconnect/reconnect\
-          \ methods\n   - Connection statistics tracking\n   \n6. **useAvatar** -\
-          \ Avatar session management\n   - Get available avatars\n   - Set/clear\
-          \ avatar sessions\n   - Get HeyGen access token for client use\n\nAll hooks\
-          \ now use the AgentCProvider context, have proper TypeScript typing, include\
-          \ JSDoc comments, and handle cleanup properly. Successfully builds without\
-          \ errors."
-        completion_signoff_by: null
-        context: Provides React-friendly APIs wrapping the core SDK functionality
-        created_at: '2025-08-28T19:38:40.113323'
-        description: Implement useRealtimeClient, useAudio, useTurnState, useVoiceModel
-          hooks
-        id: 5a6f64b0-0f98-48d3-b60d-2194f1e58092
-        parent_id: null
-        priority: medium
-        requires_completion_signoff: 'true'
-        sequence: 12
-        title: 'React Bindings: Core Hooks'
-        updated_at: '2025-08-29T13:43:43.656353'
-      5bfcda30-cb0a-403e-b31a-ef58e7116cdf:
-        child_tasks: []
-        completed: false
-        completion_report: null
-        completion_signoff_by: null
-        context: Update RealtimeClient to instantiate VoiceManager, pass available
-          voices from auth, handle agent_voice_changed events, and update AudioOutputService
-        created_at: '2025-08-29T09:09:45.203397'
-        description: Wire up VoiceManager with RealtimeClient to handle voice change
-          events and initialization
-        id: 5bfcda30-cb0a-403e-b31a-ef58e7116cdf
-        parent_id: b745a8bb-b68c-48bb-abd0-98828542c142
-        priority: high
-        requires_completion_signoff: 'true'
-        sequence: 3
-        title: Integrate VoiceManager with RealtimeClient
-        updated_at: '2025-08-29T09:09:45.203400'
-      5f7f195d-125b-4cf6-9f41-6138e1ab0737:
-        child_tasks: []
-        completed: true
-        completion_report: 'Successfully implemented complete Audio Input System:
-
-          - Audio Worklet for PCM16 processing in separate thread
-
-          - AudioService singleton for microphone capture and recording
-
-          - Binary WebSocket transmission (fixed virt_joe issue - no base64!)
-
-          - AudioAgentCBridge for turn-aware streaming
-
-          - Full integration with RealtimeClient
-
-          - React hooks (useAudio) for easy React integration
-
-          - Respects turn state, handles permissions, streams binary efficiently
-
-          - Successfully builds without errors'
-        completion_signoff_by: Donavan
-        context: Must support PCM16 format, respect turn state, handle permissions,
-          and stream binary data efficiently
-        created_at: '2025-08-28T19:38:00.069247'
-        description: Build audio input capture with Web Audio API, worklet processing,
-          and binary streaming
-        id: 5f7f195d-125b-4cf6-9f41-6138e1ab0737
-        parent_id: null
-        priority: high
-        requires_completion_signoff: 'true'
-        sequence: 6
-        title: 'Core SDK: Audio Input System'
-        updated_at: '2025-08-29T00:23:14.533017'
-      82f3bb41-d5cb-4180-98b0-b46cb56a2d92:
-        child_tasks: []
-        completed: true
-        completion_report: 'Successfully implemented WebSocket Client with:
-
-          - RealtimeClient class extending EventEmitter with full connection management
-
-          - WebSocketManager for low-level WebSocket operations
-
-          - ReconnectionManager with exponential backoff and jitter
-
-          - ClientConfig with proper TypeScript types
-
-          - All client command methods (setAgent, textInput, setAgentVoice, etc.)
-
-          - Binary audio and JSON event handling
-
-          - Browser-compatible timer types (not NodeJS-specific)
-
-          - Successfully builds without errors'
-        completion_signoff_by: Donavan
-        context: Should handle both JSON events and binary audio frames, with automatic
-          reconnection and token refresh
-        created_at: '2025-08-28T19:37:41.105378'
-        description: Implement the main RealtimeClient class with WebSocket connection
-          management, authentication, and reconnection logic
-        id: 82f3bb41-d5cb-4180-98b0-b46cb56a2d92
-        parent_id: null
-        priority: high
-        requires_completion_signoff: 'true'
-        sequence: 3
-        title: 'Core SDK: WebSocket Client'
-        updated_at: '2025-08-28T22:22:50.896289'
-      85638294-e219-4669-b688-9d8e5eecda65:
-        child_tasks: []
-        completed: true
-        completion_report: "Comprehensive unit test suite implemented through dedicated\
-          \ test_fix_plan:\n\n**Test Files Created/Fixed:**\n- packages/core/test/auth/AuthManager.test.ts\
-          \ - 33 tests\n- packages/core/test/audio/AudioService.test.ts - 30 tests\
-          \  \n- packages/core/test/session/TurnManager.test.ts - 24 tests\n- packages/core/test/session/SessionManager.test.ts\
-          \ - 47 tests\n- packages/core/test/session/SessionManager.simple.test.ts\
-          \ - 12 tests\n- packages/core/test/client/RealtimeClient.test.ts - 11 tests\n\
-          - packages/core/test/client/RealtimeClient.simple.test.ts - 3 tests\n- Setup\
-          \ and verification tests - 5 tests\n\n**Test Coverage Achieved:**\n- WebSocket\
-          \ connection management and reconnection\n- Authentication with JWT tokens\
-          \ and automatic refresh\n- Turn state management for conversation flow\n\
-          - Audio recording, processing, and playback\n- Session management with message\
-          \ history\n- Event emission and subscription patterns\n- Error handling\
-          \ and edge cases\n- Browser API mocking (WebSocket, AudioContext, getUserMedia)\n\
-          \n**Total:** 165+ tests in Core package, 13 tests in React package\n**Status:**\
-          \ All 178+ tests passing\n**Test Runner:** Vitest with MSW for API mocking"
-        completion_signoff_by: null
-        context: ''
-        created_at: '2025-08-28T19:38:57.422080'
-        description: Write unit tests for core SDK components
-        id: 85638294-e219-4669-b688-9d8e5eecda65
-        parent_id: null
-        priority: medium
-        requires_completion_signoff: 'true'
-        sequence: 15
-        title: 'Testing: Unit Tests for Core SDK'
-        updated_at: '2025-08-30T09:21:25.558695'
-      8eb9b7c2-7f6f-4b1c-b1d2-ce940c4ca64b:
-        child_tasks: []
-        completed: true
-        completion_report: "Successfully updated exports and documentation:\n- Added\
-          \ AvatarManager to package exports in index.ts\n- Added clear documentation\
-          \ in AvatarManager class explaining:\n  * SDK does NOT handle HeyGen SDK\
-          \ directly\n  * Client app is responsible for HeyGen session creation\n\
-          \  * Flow: App creates HeyGen session → waits for STREAM_READY → calls our\
-          \ setAvatarSession()\n- Fixed all TypeScript type issues\n- Successfully\
-          \ builds without errors"
-        completion_signoff_by: null
-        context: '- Add AvatarManager to package exports
-
-          - Add code comments explaining the app''s responsibility for HeyGen SDK
-
-          - Document the flow: App establishes HeyGen session → gets STREAM_READY
-          → calls our setAvatarSession()
-
-          - Test that everything builds correctly'
-        created_at: '2025-08-29T12:00:51.856340'
-        description: Export AvatarManager and document avatar integration pattern
-        id: 8eb9b7c2-7f6f-4b1c-b1d2-ce940c4ca64b
-        parent_id: f4e4e4a3-bb03-4eb1-a9a1-4d63d337f6f3
-        priority: medium
-        requires_completion_signoff: 'true'
-        sequence: 4
-        title: Update exports and documentation
-        updated_at: '2025-08-29T12:11:47.158101'
-      9a95c639-a60c-4ddd-98f3-2c4570d42985:
-        child_tasks: []
-        completed: true
-        completion_report: "Successfully implemented React Provider and Context for\
-          \ the SDK:\n\n1. **AgentCContext.tsx** - React Context with proper typing\n\
-          \   - AgentCContext for providing RealtimeClient\n   - useRealtimeClient()\
-          \ hook - throws if not in provider\n   - useAgentCContext() hook - returns\
-          \ full context value\n   - useRealtimeClientSafe() hook - returns null if\
-          \ not ready\n\n2. **AgentCProvider.tsx** - Main provider component\n   -\
-          \ Singleton RealtimeClient instance management\n   - Automatic cleanup on\
-          \ unmount\n   - Support for environment variables\n   - AuthManager integration\n\
-          \   - Debug logging support\n   - withAgentCProvider() HOC for component\
-          \ wrapping\n\n3. **Clean Implementation**\n   - NO type declaration workarounds\n\
-          \   - Proper React 18 imports working correctly\n   - Full TypeScript typing\
-          \ throughout\n   - React StrictMode compatible\n\nSuccessfully builds without\
-          \ errors."
-        completion_signoff_by: null
-        context: Should provide singleton client instance to entire React app
-        created_at: '2025-08-28T19:38:33.311963'
-        description: Create AgentCProvider component and React context for SDK integration
-        id: 9a95c639-a60c-4ddd-98f3-2c4570d42985
-        parent_id: null
-        priority: medium
-        requires_completion_signoff: 'true'
-        sequence: 11
-        title: 'React Bindings: Provider and Context'
-        updated_at: '2025-08-29T13:10:47.904657'
-      9f6b7b5a-590e-4688-b033-6f1d565d34d8:
-        child_tasks: []
-        completed: false
-        completion_report: null
-        completion_signoff_by: null
-        context: Add SessionManager to index.ts exports, ensure all types are properly
-          exported, run npm build to verify
-        created_at: '2025-08-29T10:00:25.662690'
-        description: Update package exports and ensure everything builds correctly
-        id: 9f6b7b5a-590e-4688-b033-6f1d565d34d8
-        parent_id: c6260c78-3a89-4dfd-9f2d-5749a4193c3b
-        priority: high
-        requires_completion_signoff: 'true'
-        sequence: 5
-        title: Update exports and test build
-        updated_at: '2025-08-29T10:00:25.662691'
-      a2f829ea-4e1a-4b84-977c-588b05c8a8c0:
-        child_tasks: []
-        completed: true
-        completion_report: 'Successfully implemented the Event System Foundation with:
-
-          - Type-safe EventEmitter class with full TypeScript generics
-
-          - Complete event type definitions matching the API spec (11 client events,
-          18 server events)
-
-          - Common types for Agent, Avatar, Voice, ChatSession, etc.
-
-          - EventRegistry for type mappings and validation
-
-          - Clean public API exports
-
-          - Successfully builds without errors'
-        completion_signoff_by: Donavan
-        context: This includes EventEmitter class, event type definitions from the
-          API spec, and type-safe event handlers
-        created_at: '2025-08-28T19:37:34.799320'
-        description: Build the event emitter and type-safe event system that will
-          be the foundation for all client-server communication
-        id: a2f829ea-4e1a-4b84-977c-588b05c8a8c0
-        parent_id: null
-        priority: high
-        requires_completion_signoff: 'true'
-        sequence: 2
-        title: 'Core SDK: Event System Foundation'
-        updated_at: '2025-08-28T21:04:25.726689'
-      b745a8bb-b68c-48bb-abd0-98828542c142:
-        child_tasks:
-        - b876c4fa-737d-4a54-a73e-badb30931b80
-        - 2346d447-3605-4a83-a496-9e7bdb736887
-        - 5bfcda30-cb0a-403e-b31a-ef58e7116cdf
-        - c09f2124-a88d-40e8-979c-5129283a26e6
-        - 083a0e53-e8c3-41db-a947-c88bb77b772f
-        completed: true
-        completion_report: "Successfully implemented Voice Model Manager with comprehensive\
-          \ voice management capabilities:\n\n1. **VoiceManager Class** - Created\
-          \ centralized voice management system\n   - Extends EventEmitter for event-driven\
-          \ architecture\n   - Tracks available voices from login response\n   - Manages\
-          \ current voice selection with default handling\n   - Handles server voice\
-          \ change events\n   - Emits 'voice-changed' and 'voices-updated' events\n\
-          \   - Supports special voices (avatar, text-only, TTS)\n\n2. **Voice Utilities**\
-          \ - Added comprehensive utility functions\n   - Voice type checking (isAvatarVoice,\
-          \ isTextOnlyVoice, etc.)\n   - Audio format detection and conversion\n \
-          \  - Voice filtering and sorting functions\n   - Voice validation and capability\
-          \ detection\n   - Voice to VoiceModel conversion\n\n3. **RealtimeClient\
-          \ Integration** - Fully integrated with existing systems\n   - VoiceManager\
-          \ instantiated and managed by RealtimeClient\n   - Receives available voices\
-          \ from AuthManager\n   - Handles agent_voice_changed events from server\n\
-          \   - Updates AudioOutputService when voice changes\n   - Provides getVoiceManager()\
-          \ accessor method\n\n4. **Type Safety** - Full TypeScript support throughout\n\
-          \   - VoiceManagerEvents interface for typed events\n   - VoiceManagerConfig\
-          \ for configuration\n   - Proper Voice and VoiceModel type conversions\n\
-          \   - AudioFormat and VoiceVendor enums\n\n5. **Special Voice Handling**\n\
-          \   - 'avatar' mode - audio handled by HeyGen\n   - 'none' mode - text-only,\
-          \ no audio output\n   - Regular TTS voices with format detection\n\nSuccessfully\
-          \ builds without errors and is ready for use."
-        completion_signoff_by: Donavan
-        context: Manages available voices, handles voice changes, and adapts audio
-          behavior based on voice type (avatar, TTS, none)
-        created_at: '2025-08-28T19:38:14.004477'
-        description: Build voice model selection and management system
-        id: b745a8bb-b68c-48bb-abd0-98828542c142
-        parent_id: null
-        priority: medium
-        requires_completion_signoff: 'true'
-        sequence: 8
-        title: 'Core SDK: Voice Model Manager'
-        updated_at: '2025-08-29T09:23:32.218661'
-      b876c4fa-737d-4a54-a73e-badb30931b80:
-        child_tasks: []
-        completed: false
-        completion_report: null
-        completion_signoff_by: null
-        context: This class will track available voices, current voice, handle voice
-          changes, and emit events when voice changes. It should integrate with AuthManager
-          for available voices and RealtimeClient for voice change events.
-        created_at: '2025-08-29T09:09:27.752772'
-        description: Create the main VoiceManager class that will centralize voice
-          model management
-        id: b876c4fa-737d-4a54-a73e-badb30931b80
-        parent_id: b745a8bb-b68c-48bb-abd0-98828542c142
-        priority: high
-        requires_completion_signoff: 'true'
-        sequence: 1
-        title: Create VoiceManager class
-        updated_at: '2025-08-29T09:09:27.752773'
-      bedc11e0-9e12-4a45-b14d-db25b931b1f8:
-        child_tasks: []
-        completed: true
-        completion_report: Created TypeScript configuration files for both packages
-          with strict production settings, ES module output, and proper monorepo composite
-          project references. Build cannot succeed yet as no implementation exists,
-          but configs are ready for when code is added.
-        completion_signoff_by: Donavan
-        context: ''
-        created_at: '2025-08-28T19:37:26.342928'
-        description: Create proper TypeScript configuration files for the monorepo
-          with path mappings and build references
-        id: bedc11e0-9e12-4a45-b14d-db25b931b1f8
-        parent_id: null
-        priority: high
-        requires_completion_signoff: 'true'
-        sequence: 1
-        title: Setup TypeScript Configuration
-        updated_at: '2025-08-28T20:56:19.594304'
-      c09f2124-a88d-40e8-979c-5129283a26e6:
-        child_tasks: []
-        completed: false
-        completion_report: null
-        completion_signoff_by: null
-        context: Functions like isAvatarVoice(), isTextOnlyVoice(), getVoiceFormat(),
-          etc. to help other components adapt behavior based on voice type
-        created_at: '2025-08-29T09:09:52.579268'
-        description: Create utility functions for voice format detection and special
-          voice handling
-        id: c09f2124-a88d-40e8-979c-5129283a26e6
-        parent_id: b745a8bb-b68c-48bb-abd0-98828542c142
-        priority: medium
-        requires_completion_signoff: 'true'
-        sequence: 4
-        title: Add voice utility functions
-        updated_at: '2025-08-29T09:09:52.579270'
-      c6260c78-3a89-4dfd-9f2d-5749a4193c3b:
-        child_tasks:
-        - c9eff662-a622-4ded-a324-60b31dc16350
-        - 4623c48a-3b93-4cf2-93c9-e38ed984d0a2
-        - dea9def9-351b-445c-88fe-6a45f86c0bc9
-        - f42a2b85-f521-4ffd-8675-9a1a780bcd8f
-        - 9f6b7b5a-590e-4688-b033-6f1d565d34d8
-        completed: true
-        completion_report: "Successfully implemented Chat Session Management with\
-          \ comprehensive session and message history tracking:\n\n1. **SessionManager\
-          \ Class** - Created centralized session management\n   - Extends EventEmitter\
-          \ for event-driven architecture\n   - Tracks multiple sessions with Map<session_id,\
-          \ ChatSession>\n   - Manages current active session with proper state\n\
-          \   - Handles message accumulation from text_delta events\n   - Emits events\
-          \ for session changes and message additions\n   - Includes session pruning\
-          \ when max capacity reached\n\n2. **Message History Tracking** - Full conversation\
-          \ tracking\n   - User messages added when textInput() is called\n   - Assistant\
-          \ messages accumulated from text_delta events\n   - Messages finalized on\
-          \ completion event (running: false)\n   - Proper timestamps and token counting\n\
-          \   - Support for different message formats\n\n3. **RealtimeClient Integration**\
-          \ - Fully integrated with existing systems\n   - SessionManager instantiated\
-          \ and managed by RealtimeClient\n   - Handles chat_session_changed events\
-          \ from server\n   - Tracks text_delta and completion events for message\
-          \ history\n   - Updates session names via chat_session_name_changed\n  \
-          \ - Provides getSessionManager() accessor method\n\n4. **Logger Utility**\
-          \ - Added simple logging system\n   - Consistent logging with component\
-          \ prefixes\n   - Configurable log levels (DEBUG, INFO, WARN, ERROR)\n  \
-          \ - Used throughout SessionManager for debugging\n\n5. **Features Implemented**:\n\
-          \   - Multiple session support with 50 session limit\n   - Text accumulation\
-          \ with proper finalization\n   - Session metadata and name updates\n   -\
-          \ Session statistics tracking\n   - Resource cleanup and memory management\n\
-          \   - Full TypeScript typing throughout\n\nSuccessfully builds without errors\
-          \ and is ready for use."
-        completion_signoff_by: Donavan
-        context: Handles new_chat_session, resume_chat_session, and maintains message
-          history
-        created_at: '2025-08-28T19:38:20.379934'
-        description: Implement chat session creation, switching, and history management
-        id: c6260c78-3a89-4dfd-9f2d-5749a4193c3b
-        parent_id: null
-        priority: medium
-        requires_completion_signoff: 'true'
-        sequence: 9
-        title: 'Core SDK: Chat Session Management'
-        updated_at: '2025-08-29T10:12:57.888888'
-      c9eff662-a622-4ded-a324-60b31dc16350:
-        child_tasks: []
-        completed: false
-        completion_report: null
-        completion_signoff_by: null
-        context: This class will track active sessions, current session, handle session
-          changes from server, maintain message history, and emit events for session
-          updates
-        created_at: '2025-08-29T09:59:53.360875'
-        description: Create the main SessionManager class that will handle chat sessions,
-          message history, and session lifecycle
-        id: c9eff662-a622-4ded-a324-60b31dc16350
-        parent_id: c6260c78-3a89-4dfd-9f2d-5749a4193c3b
-        priority: high
-        requires_completion_signoff: 'true'
-        sequence: 1
-        title: Create SessionManager class
-        updated_at: '2025-08-29T09:59:53.360876'
-      cba769c0-1aa5-48c3-88d8-5003ff39a10b:
-        child_tasks: []
-        completed: true
-        completion_report: Skipped by design decision. Will plan proper demos in a
-          future session that align with actual use cases and requirements rather
-          than creating a generic vanilla JS demo.
-        completion_signoff_by: null
-        context: ''
-        created_at: '2025-08-28T19:38:51.741148'
-        description: Create a simple vanilla JS example showing SDK usage without
-          React
-        id: cba769c0-1aa5-48c3-88d8-5003ff39a10b
-        parent_id: null
-        priority: low
-        requires_completion_signoff: 'true'
-        sequence: 14
-        title: 'Example: Vanilla JavaScript Demo'
-        updated_at: '2025-08-30T09:24:06.815365'
-      dea9def9-351b-445c-88fe-6a45f86c0bc9:
-        child_tasks: []
-        completed: false
-        completion_report: null
-        completion_signoff_by: null
-        context: Update RealtimeClient to instantiate SessionManager, handle chat_session_changed
-          events, update message history from text events, and provide session management
-          methods
-        created_at: '2025-08-29T10:00:09.128856'
-        description: Wire up SessionManager with RealtimeClient to handle session
-          events and commands
-        id: dea9def9-351b-445c-88fe-6a45f86c0bc9
-        parent_id: c6260c78-3a89-4dfd-9f2d-5749a4193c3b
-        priority: high
-        requires_completion_signoff: 'true'
-        sequence: 3
-        title: Integrate SessionManager with RealtimeClient
-        updated_at: '2025-08-29T10:00:09.128856'
-      f42a2b85-f521-4ffd-8675-9a1a780bcd8f:
-        child_tasks: []
-        completed: false
-        completion_report: null
-        completion_signoff_by: null
-        context: Track incoming messages from assistant, user messages sent via text_input,
-          handle text_delta accumulation, and finalize messages on text_done
-        created_at: '2025-08-29T10:00:17.493919'
-        description: Implement message history tracking from text_delta and text_done
-          events
-        id: f42a2b85-f521-4ffd-8675-9a1a780bcd8f
-        parent_id: c6260c78-3a89-4dfd-9f2d-5749a4193c3b
-        priority: medium
-        requires_completion_signoff: 'true'
-        sequence: 4
-        title: Add message history tracking
-        updated_at: '2025-08-29T10:00:17.493920'
-      f4e4e4a3-bb03-4eb1-a9a1-4d63d337f6f3:
-        child_tasks:
-        - 2bae93ba-5a53-4f82-81c4-2a70f3d1b10d
-        - 494241b8-cab9-42fd-b7e5-c74e4938eed8
-        - 5781d82a-c722-4b0d-b765-4cf450249674
-        - 8eb9b7c2-7f6f-4b1c-b1d2-ce940c4ca64b
-        completed: true
-        completion_report: "Successfully implemented minimal Avatar Integration that\
-          \ perfectly respects separation of concerns:\n\n**What We Built:**\n1. **AvatarManager\
-          \ Class** - Minimal session tracking\n   - Tracks avatar session ID and\
-          \ avatar ID\n   - Sends SetAvatarSessionEvent to Agent C\n   - Emits events\
-          \ for state changes\n   - NO HeyGen SDK integration\n\n2. **RealtimeClient\
-          \ Integration**\n   - setAvatarSession(sessionId, avatarId) - notifies Agent\
-          \ C\n   - clearAvatarSession() - cleanup when done\n   - Helper methods\
-          \ for avatar list and HeyGen token access\n\n3. **Avatar Utilities**\n \
-          \  - Helper functions for working with avatar data\n   - Sorting, filtering,\
-          \ grouping for UI needs\n\n**Clear Separation:**\n- Our SDK: Manages Agent\
-          \ C communication only\n- Client App: Handles HeyGen SDK directly\n- Documentation:\
-          \ Clear about responsibilities\n\n**The Flow:**\n1. App gets HeyGen token\
-          \ via getHeyGenAccessToken()\n2. App creates HeyGen session using their\
-          \ SDK\n3. App waits for HeyGen STREAM_READY event\n4. App calls our setAvatarSession(sessionId,\
-          \ avatarId)\n5. We notify Agent C, which handles the rest\n\nThis minimal\
-          \ implementation avoids gold plating and provides exactly what's needed\
-          \ for the demo."
-        completion_signoff_by: null
-        context: Manages avatar sessions, handles set_avatar_session events, and coordinates
-          with voice system
-        created_at: '2025-08-28T19:38:26.739876'
-        description: Build HeyGen avatar session management and integration
-        id: f4e4e4a3-bb03-4eb1-a9a1-4d63d337f6f3
-        parent_id: null
-        priority: medium
-        requires_completion_signoff: 'true'
-        sequence: 10
-        title: 'Core SDK: Avatar Integration'
-        updated_at: '2025-08-29T12:12:06.247212'
-    title: Agent C Realtime Client SDK Development
-    updated_at: '2025-08-30T09:24:16.961805'
-  realtime_ui_components:
-    created_at: '2025-08-30T10:57:06.667598'
-    description: Build shadcn/ui and CenSuite-compatible UI components for the Agent
-      C Realtime SDK, starting with essential components for Virtual Joe
-    id: ed927175-5df3-4b81-8f63-ef36e5c1a033
+  core_unit_test_implementation:
+    created_at: '2025-09-10T18:31:20.783978'
+    description: Methodical implementation of unit tests for @agentc/realtime-core
+      package, incorporating test strategies and review feedback. Focus on high-value
+      tests with manageable complexity.
+    id: 3a831a1e-799d-48a1-b638-cb4095e4a8da
     lessons_learned: []
     tasks:
-      4ecdf2fb-02fa-486b-baba-e75a661cda1b:
-        child_tasks: []
+      04640786-aa35-47f7-81b3-35649d1223c6:
+        child_tasks:
+        - 68d4fc3c-c353-4ac1-a284-24330d3cdf37
+        - 19aa418e-7ad5-475d-abaa-b365d9ed37cb
+        - 4869173e-87a6-41cd-aa4f-0bff86404656
+        - 240fe207-7559-49bd-9d20-1a781873ecba
         completed: false
         completion_report: null
         completion_signoff_by: null
-        context: 'The button should:
-
-          - Show connection state (disconnected, connecting, connected, error)
-
-          - Use appropriate icons and colors for each state
-
-          - Support click to connect/disconnect
-
-          - Match CenSuite button patterns with variants
-
-          - Use the useConnection hook from @agentc/realtime-react'
-        created_at: '2025-08-30T13:30:28.415331'
-        description: Build a shadcn/ui style connection button component that uses
-          the SDK's useConnection hook
-        id: 4ecdf2fb-02fa-486b-baba-e75a661cda1b
-        parent_id: null
-        priority: high
-        requires_completion_signoff: 'true'
-        sequence: 3
-        title: Create ConnectionButton component
-        updated_at: '2025-08-30T13:30:28.415332'
-      bde873d8-71be-4265-99a0-353ff942478b:
-        child_tasks: []
-        completed: true
-        completion_report: 'Successfully completed pnpm conversion and verified build:
-
-
-          1. **Fixed UI package build issue** - Updated tsconfig.json to reference
-          correct base config
-
-          2. **Simplified build process** - Switched from tsup to TypeScript compiler
-          for UI package to resolve declaration issues
-
-          3. **Build verification** - All 3 packages (@agentc/realtime-core, @agentc/realtime-react,
-          @agentc/realtime-ui) build successfully
-
-          4. **Test verification** - All tests passing (165+ tests in Core, 13 in
-          React)
-
-          5. **pnpm working** - Version 10.15.0 installed and functional
-
-
-          The monorepo is fully operational with pnpm.'
-        completion_signoff_by: null
-        context: 'User needs to:
-
-          1. Remove node_modules and package-lock.json
-
-          2. Run pnpm install
-
-          3. Verify build works
-
-          4. Test that the monorepo structure is intact'
-        created_at: '2025-08-30T11:13:26.303504'
-        description: Complete the pnpm conversion and verify everything builds correctly
-        id: bde873d8-71be-4265-99a0-353ff942478b
-        parent_id: null
-        priority: high
-        requires_completion_signoff: 'true'
-        sequence: 2
-        title: Convert to pnpm and verify build
-        updated_at: '2025-08-30T13:30:18.837689'
-      ed7a5ef6-441b-4dcb-9497-3fd2c9ab0059:
-        child_tasks: []
-        completed: true
-        completion_report: 'Successfully set up @agentc/realtime-ui package structure
-          with:
-
-          - package.json with proper dependencies (Radix UI, CVA, clsx, tailwind-merge)
-
-          - TypeScript configuration for React components
-
-          - Tailwind and PostCSS configs matching CenSuite patterns
-
-          - tsup build configuration for dual CJS/ESM output
-
-          - cn() utility function from CenSuite
-
-          - README with setup instructions
-
-          - Integrated into monorepo references
-
-
-          Package is ready for component development.'
-        completion_signoff_by: null
-        context: Create package.json, tsconfig, tailwind config, and essential utilities
-          matching CenSuite patterns
-        created_at: '2025-08-30T10:57:14.310778'
-        description: Set up @agentc/realtime-ui package with proper TypeScript, Tailwind,
-          and build configuration
-        id: ed7a5ef6-441b-4dcb-9497-3fd2c9ab0059
-        parent_id: null
-        priority: high
-        requires_completion_signoff: 'true'
-        sequence: 1
-        title: Package Setup and Configuration
-        updated_at: '2025-08-30T10:59:57.891349'
-    title: Agent C Realtime UI Components
-    updated_at: '2025-08-30T13:30:28.415363'
-  test_fix_plan:
-    created_at: '2025-08-29T20:59:22.787330'
-    description: Systematically fix all disabled tests using clone delegation to maintain
-      small context and rapid iteration
-    id: 9c094981-c2b7-4bd1-acf6-c4ed8775ccde
-    lessons_learned: []
-    tasks:
-      5407dee8-8c6f-4d7b-b7d5-3b8a1c6ab85c:
-        child_tasks: []
-        completed: true
-        completion_report: 'Successfully fixed Core setup file:
-
-          - Added setupFiles configuration to vitest configs
-
-          - Implemented proper async cleanup for WebSockets and AudioContext
-
-          - Enhanced mock implementations with lifecycle tracking
-
-          - Added resource tracking to prevent leaks
-
-          - Added test timeouts to prevent hanging'
-        completion_signoff_by: null
         context: ''
-        created_at: '2025-08-29T20:59:32.234444'
-        description: Enable and fix packages/core/test/setup.ts.disabled
-        id: 5407dee8-8c6f-4d7b-b7d5-3b8a1c6ab85c
-        parent_id: null
-        priority: high
-        requires_completion_signoff: 'true'
-        sequence: 1
-        title: Fix Core Setup File
-        updated_at: '2025-08-29T21:04:43.534738'
-      89808f80-c5f4-4e27-bdbe-65b699037703:
-        child_tasks: []
-        completed: true
-        completion_report: 'Successfully fixed React setup file:
-
-          - Added setupFiles configuration to vitest config
-
-          - Implemented React Testing Library cleanup
-
-          - Added async cleanup pattern matching Core setup
-
-          - Added timer management and restoration
-
-          - Created verification test to validate setup behavior'
-        completion_signoff_by: null
-        context: ''
-        created_at: '2025-08-29T20:59:40.236402'
-        description: Enable and fix packages/react/test/setup.ts.disabled
-        id: 89808f80-c5f4-4e27-bdbe-65b699037703
-        parent_id: null
-        priority: high
-        requires_completion_signoff: 'true'
-        sequence: 2
-        title: Fix React Setup File
-        updated_at: '2025-08-29T21:09:27.606149'
-      910b9008-0c45-4186-b270-ded70afca934:
-        child_tasks: []
-        completed: true
-        completion_report: 'Successfully fixed SessionManager tests by updating to
-          match actual API:
-
-          - Fixed simple test: replaced non-existent createSession() with setCurrentSession()
-
-          - Rewrote main test file to match event-driven architecture
-
-          - Updated all method calls to match actual SessionManager API
-
-          - All 47 SessionManager tests + 12 simple tests now passing
-
-          - Total Core package: 65 tests passing'
-        completion_signoff_by: null
-        context: ''
-        created_at: '2025-08-29T20:59:50.833244'
-        description: Enable and fix packages/core/test/session/SessionManager.test.ts.disabled
-        id: 910b9008-0c45-4186-b270-ded70afca934
-        parent_id: null
-        priority: high
-        requires_completion_signoff: 'true'
-        sequence: 4
-        title: Fix SessionManager Tests
-        updated_at: '2025-08-29T22:49:44.669252'
-      e201ade0-2eb3-41fe-8d69-b63c16332f3b:
-        child_tasks: []
-        completed: true
-        completion_report: 'Successfully created comprehensive test coverage for key
-          components:
-
-          - AuthManager: 33 test cases covering login/logout, token management, automatic
-          refresh
-
-          - TurnManager: 24 test cases covering turn state, event handling, integration
-
-          - AudioService: 30 test cases covering singleton pattern, permissions, recording,
-          processing
-
-          - Total new tests added: 87
-
-          - All 143+ tests passing across entire SDK
-
-          - Achieved comprehensive coverage of core functionality'
-        completion_signoff_by: null
-        context: ''
-        created_at: '2025-08-29T20:59:56.596164'
-        description: Create tests for AudioService, AuthManager, and TurnManager to
-          achieve 70%+ coverage
-        id: e201ade0-2eb3-41fe-8d69-b63c16332f3b
-        parent_id: null
-        priority: medium
-        requires_completion_signoff: 'true'
-        sequence: 5
-        title: Add New Test Coverage
-        updated_at: '2025-08-29T23:01:24.286275'
-      e6939f1a-ea4b-42a2-a924-8f3207c173f9:
-        child_tasks: []
-        completed: true
-        completion_report: 'Successfully fixed RealtimeClient tests by updating API
-          calls to match current implementation:
-
-          - Fixed constructor to use RealtimeClientConfig object
-
-          - Updated method names (send → sendText, sendBinary → sendBinaryFrame)
-
-          - Fixed WebSocket URL to include token query parameter
-
-          - Enhanced MockWebSocket to work with WebSocketManager''s event handling
-
-          - All 11 RealtimeClient tests now passing'
-        completion_signoff_by: null
-        context: ''
-        created_at: '2025-08-29T20:59:45.653587'
-        description: Enable and fix packages/core/test/client/RealtimeClient.test.ts.disabled
-        id: e6939f1a-ea4b-42a2-a924-8f3207c173f9
-        parent_id: null
-        priority: high
-        requires_completion_signoff: 'true'
-        sequence: 3
-        title: Fix RealtimeClient Tests
-        updated_at: '2025-08-29T22:43:42.450523'
-    title: Fix Test Suite - Clone Delegation Strategy
-    updated_at: '2025-08-29T23:01:24.286300'
-  test_infrastructure:
-    created_at: '2025-08-29T19:28:07.587088'
-    description: Comprehensive testing infrastructure setup for the Agent C Realtime
-      SDK, including Vitest configuration, test organization, mocking strategies,
-      and initial test suite implementation
-    id: c9de51c6-8d46-4e4e-b735-08316d809e34
-    lessons_learned: []
-    tasks:
-      249737d2-3aff-4501-bc39-cc11b270d2da:
-        child_tasks: []
-        completed: false
-        completion_report: null
-        completion_signoff_by: null
-        context: 'Test complete flows: authentication, WebSocket connection, audio
-          streaming, turn management'
-        created_at: '2025-08-29T19:28:51.786886'
-        description: Write end-to-end integration tests for critical user flows
-        id: 249737d2-3aff-4501-bc39-cc11b270d2da
-        parent_id: null
-        priority: medium
-        requires_completion_signoff: 'true'
-        sequence: 7
-        title: Create Integration Tests
-        updated_at: '2025-08-29T19:28:51.786888'
-      30b1fc99-ea6d-4da8-9066-7244fa1d462c:
-        child_tasks: []
-        completed: true
-        completion_report: "Successfully created comprehensive test utilities and\
-          \ helpers:\n\n1. Mock WebSocket (test/utils/mock-websocket.ts):\n   - Full\
-          \ WebSocket implementation with event emitter\n   - Support for binary and\
-          \ text messages\n   - Connection simulation with delay\n   - Message queuing\
-          \ for offline messages\n\n2. Mock Audio APIs (test/utils/mock-audio.ts):\n\
-          \   - Complete AudioContext mock\n   - MediaStream and MediaStreamTrack\
-          \ mocks\n   - MediaDevices mock for getUserMedia\n   - Support for all audio\
-          \ processing nodes\n\n3. Test Helpers (test/utils/test-helpers.ts):\n  \
-          \ - waitFor utility for async conditions\n   - Promise utilities (deferred,\
-          \ flushPromises)\n   - Mock event creators for WebSocket events\n   - JWT\
-          \ token utilities\n   - Agent C event factories\n   - Audio data generators\n\
-          \n4. Created initial RealtimeClient test:\n   - Connection tests\n   - Message\
-          \ handling tests\n   - Event emitter tests\n   - Auto-reconnect tests\n\
-          \   - Demonstrates usage of mock utilities\n\nThe test utilities provide\
-          \ a solid foundation for testing all SDK components without real browser\
-          \ APIs or network connections."
-        completion_signoff_by: null
-        context: Create test/utils directory with mock factories, WebSocket mock implementation,
-          and common test helpers
-        created_at: '2025-08-29T19:28:28.200976'
-        description: Set up common test utilities, mocks, and helpers for WebSocket,
-          Audio APIs, and async testing
-        id: 30b1fc99-ea6d-4da8-9066-7244fa1d462c
-        parent_id: null
-        priority: high
-        requires_completion_signoff: 'true'
-        sequence: 3
-        title: Create Test Utilities and Helpers
-        updated_at: '2025-08-29T19:36:15.368016'
-      7a32c311-e230-495d-aecb-0b5cb5c8bba3:
-        child_tasks: []
-        completed: false
-        completion_report: null
-        completion_signoff_by: null
-        context: Set up coverage thresholds (70%+ target), coverage reports, and CI
-          integration
-        created_at: '2025-08-29T19:28:57.645925'
-        description: Configure test coverage reporting and thresholds
-        id: 7a32c311-e230-495d-aecb-0b5cb5c8bba3
+        created_at: '2025-09-10T18:33:42.682991'
+        description: Components that need simplified testing approaches, focusing
+          on integration over extensive unit tests
+        id: 04640786-aa35-47f7-81b3-35649d1223c6
         parent_id: null
         priority: low
         requires_completion_signoff: 'true'
-        sequence: 8
-        title: Setup Coverage Reporting
-        updated_at: '2025-08-29T19:28:57.645926'
-      7cabb04a-a072-481c-8583-1204c36e099d:
+        sequence: 4
+        title: 'Phase 3: Simplified Approach Components'
+        updated_at: '2025-09-10T18:33:42.682992'
+      11028537-42e0-4ee8-a92d-88cccacc2ad1:
         child_tasks: []
         completed: true
-        completion_report: "Successfully set up Vitest configuration for the monorepo:\n\
-          \n1. Created root vitest.config.ts with:\n   - Node environment for default\
-          \ tests\n   - Coverage configuration with 70% thresholds\n   - Test timeout\
-          \ settings\n   - Path aliases for packages\n\n2. Created package-specific\
-          \ vitest.config.ts files:\n   - Core package: Node environment for backend\
-          \ testing\n   - React package: Happy-dom environment for React component\
-          \ testing\n\n3. Created test setup files:\n   - Root setup with global test\
-          \ utilities\n   - Core setup with WebSocket and Audio API mocks\n   - React\
-          \ setup with testing-library integration\n\nThe configuration is ready for\
-          \ comprehensive testing across the monorepo."
-        completion_signoff_by: null
-        context: Create vitest.config.ts at root level and in each package directory.
-          Configure test environment, coverage settings, and path aliases.
-        created_at: '2025-08-29T19:28:13.949065'
-        description: Create Vitest configuration files for the monorepo root and individual
-          packages
-        id: 7cabb04a-a072-481c-8583-1204c36e099d
-        parent_id: null
-        priority: high
-        requires_completion_signoff: 'true'
-        sequence: 1
-        title: Setup Vitest Configuration
-        updated_at: '2025-08-29T19:35:51.987083'
-      8b070fbd-5835-40bf-a665-11e3ba77577b:
-        child_tasks: []
-        completed: true
-        completion_report: "Successfully configured test scripts in all package.json\
-          \ files:\n\n1. Root package.json:\n   - test: Run all tests via Lerna\n\
-          \   - test:run: Run tests once\n   - test:watch: Run tests in watch mode\n\
-          \   - test:coverage: Run tests with coverage\n   - test:ui: Open Vitest\
-          \ UI\n\n2. Core package.json:\n   - Added same test scripts for core package\n\
-          \n3. React package.json:\n   - Added same test scripts for React package\n\
-          \nAll packages now have consistent test scripts that can be run individually\
-          \ or through Lerna."
-        completion_signoff_by: null
-        context: Update package.json files in root, core, and react packages with
-          appropriate test scripts
-        created_at: '2025-08-29T19:28:20.227024'
-        description: Add test scripts to package.json files for running tests, coverage,
-          and watch mode
-        id: 8b070fbd-5835-40bf-a665-11e3ba77577b
-        parent_id: null
+        completion_report: "Created 4 browser API mock files in test/mocks/:\n- websocket.mock.ts\
+          \ (13 lines)\n- audio-context.mock.ts (17 lines)\n- media-stream.mock.ts\
+          \ (16 lines)  \n- fetch.mock.ts (11 lines)\nAll Level 1 simple stubs with\
+          \ vi.fn(), no complex state or simulation."
+        completion_signoff_by: Quinn
+        context: ''
+        created_at: '2025-09-10T18:31:51.176316'
+        description: 'Create standardized mocks for:
+
+          - WebSocket API
+
+          - AudioContext and Web Audio API (simplified Level 1 stubs)
+
+          - MediaStream and getUserMedia
+
+          - Fetch API for auth'
+        id: 11028537-42e0-4ee8-a92d-88cccacc2ad1
+        parent_id: 872b09b8-0892-454f-a94b-01a844718d15
         priority: high
         requires_completion_signoff: 'true'
         sequence: 2
-        title: Configure Test Scripts
-        updated_at: '2025-08-29T19:36:00.903470'
-      8fc90781-3fdd-4c18-8e6d-87f8bf321df1:
+        title: Create browser API mocks
+        updated_at: '2025-09-10T20:22:12.203140'
+      19aa418e-7ad5-475d-abaa-b365d9ed37cb:
         child_tasks: []
         completed: false
         completion_report: null
         completion_signoff_by: null
-        context: Test RealtimeClient, EventEmitter, AudioService, TurnManager, SessionManager,
-          and AuthManager
-        created_at: '2025-08-29T19:28:40.316791'
-        description: Create comprehensive test suite for core package functionality
-        id: 8fc90781-3fdd-4c18-8e6d-87f8bf321df1
-        parent_id: null
+        context: ''
+        created_at: '2025-09-10T18:34:03.557279'
+        description: Add format compatibility tests. Test voice selection, special
+          modes (none/avatar), event handling.
+        id: 19aa418e-7ad5-475d-abaa-b365d9ed37cb
+        parent_id: 04640786-aa35-47f7-81b3-35649d1223c6
+        priority: low
+        requires_completion_signoff: 'true'
+        sequence: 2
+        title: VoiceManager tests
+        updated_at: '2025-09-10T18:34:03.557280'
+      1cffada2-0d17-410f-9534-150f2bdea189:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-10T18:34:57.141406'
+        description: Minimize unit tests due to AudioWorklet complexity. Focus on
+          integration tests instead. Only test initialization and message passing.
+        id: 1cffada2-0d17-410f-9534-150f2bdea189
+        parent_id: 9c10e87e-2411-426f-b149-6588c5f36cbb
+        priority: low
+        requires_completion_signoff: 'true'
+        sequence: 2
+        title: AudioProcessor tests (minimal)
+        updated_at: '2025-09-10T18:34:57.141407'
+      240fe207-7559-49bd-9d20-1a781873ecba:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-10T18:34:24.829527'
+        description: Simple component. Test state tracking, session management, integration
+          boundaries.
+        id: 240fe207-7559-49bd-9d20-1a781873ecba
+        parent_id: 04640786-aa35-47f7-81b3-35649d1223c6
+        priority: low
+        requires_completion_signoff: 'true'
+        sequence: 4
+        title: AvatarManager tests
+        updated_at: '2025-09-10T18:34:24.829527'
+      242ccc77-2540-4e94-9a71-df22955301d6:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-10T18:34:46.783888'
+        description: Consolidate test files, simplify mocks to Level 1 stubs. Test
+          permission handling, state transitions, event emission. Skip complex AudioProcessor
+          internals.
+        id: 242ccc77-2540-4e94-9a71-df22955301d6
+        parent_id: 9c10e87e-2411-426f-b149-6588c5f36cbb
+        priority: low
+        requires_completion_signoff: 'true'
+        sequence: 1
+        title: AudioService tests (simplified)
+        updated_at: '2025-09-10T18:34:46.783889'
+      4869173e-87a6-41cd-aa4f-0bff86404656:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-10T18:34:13.849417'
+        description: Add URL validation suite. Test config merging, defaults, validation
+          rules.
+        id: 4869173e-87a6-41cd-aa4f-0bff86404656
+        parent_id: 04640786-aa35-47f7-81b3-35649d1223c6
+        priority: low
+        requires_completion_signoff: 'true'
+        sequence: 3
+        title: ClientConfig tests
+        updated_at: '2025-09-10T18:34:13.849418'
+      5b33e630-a540-448d-85e6-54516a1d62e6:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-10T18:33:32.840656'
+        description: Well-structured approach. Test exponential backoff, jitter, state
+          transitions, max attempts. Use fake timers.
+        id: 5b33e630-a540-448d-85e6-54516a1d62e6
+        parent_id: ceac644c-e3d8-41ed-905b-2aeb408b340e
         priority: medium
         requires_completion_signoff: 'true'
-        sequence: 5
-        title: Write Core Package Tests
-        updated_at: '2025-08-29T19:28:40.316791'
-      be94ab03-3983-48d8-af03-c86d01d2a3ec:
-        child_tasks: []
+        sequence: 4
+        title: ReconnectionManager tests
+        updated_at: '2025-09-10T18:33:32.840656'
+      5eab2b2c-6227-4c42-bbc5-68b0ade1edf1:
+        child_tasks:
+        - 70cdd5e3-822e-4092-9e8b-bbf2f2a34c7b
+        - d7e9975f-e56a-49be-81a7-738465850c08
         completed: false
         completion_report: null
         completion_signoff_by: null
-        context: Test AgentCProvider, useRealtimeClient, useAudio, useTurnState, useVoiceModel
-          hooks
-        created_at: '2025-08-29T19:28:46.294456'
-        description: Create test suite for React hooks and providers
-        id: be94ab03-3983-48d8-af03-c86d01d2a3ec
+        context: Quinn identified that we need a separate strategy for integration
+          tests to cover end-to-end flows, component interactions during edge cases,
+          real browser API behavior (especially audio), and network simulation scenarios.
+        created_at: '2025-09-10T18:35:19.105846'
+        description: Define and implement integration tests for end-to-end flows and
+          component interactions
+        id: 5eab2b2c-6227-4c42-bbc5-68b0ade1edf1
         parent_id: null
         priority: medium
         requires_completion_signoff: 'true'
         sequence: 6
-        title: Write React Package Tests
-        updated_at: '2025-08-29T19:28:46.294458'
-      cf0e1572-9c2c-483c-b3fd-e29a2ed10647:
+        title: 'Phase 5: Integration Test Strategy'
+        updated_at: '2025-09-10T18:35:19.105847'
+      68d4fc3c-c353-4ac1-a284-24330d3cdf37:
         child_tasks: []
-        completed: true
-        completion_report: "Successfully set up MSW (Mock Service Worker) for API\
-          \ mocking:\n\n1. Created MSW handlers (test/mocks/msw-handlers.ts):\n  \
-          \ - REST API handlers for authentication endpoints\n   - WebSocket handlers\
-          \ for realtime communication\n   - Mock login, refresh, and session endpoints\n\
-          \   - WebSocket message routing and response simulation\n\n2. Created MSW\
-          \ server setup (test/mocks/server.ts):\n   - Server lifecycle management\n\
-          \   - Handler reset capabilities\n   - Custom handler injection for specific\
-          \ tests\n\n3. Created integration test setup:\n   - Global MSW server initialization\n\
-          \   - Automatic cleanup between tests\n   - Server shutdown after all tests\n\
-          \nMSW is now ready to mock all Agent C API interactions for testing without\
-          \ real network calls."
+        completed: false
+        completion_report: null
         completion_signoff_by: null
-        context: Create MSW handlers for WebSocket events and REST authentication
-          endpoints
-        created_at: '2025-08-29T19:28:34.551163'
-        description: Configure Mock Service Worker for mocking WebSocket connections
-          and REST endpoints
-        id: cf0e1572-9c2c-483c-b3fd-e29a2ed10647
-        parent_id: null
+        context: ''
+        created_at: '2025-09-10T18:33:53.270227'
+        description: Use integration tests primarily. Unit tests only for critical
+          coordination logic. Mock all managers with simple stubs.
+        id: 68d4fc3c-c353-4ac1-a284-24330d3cdf37
+        parent_id: 04640786-aa35-47f7-81b3-35649d1223c6
+        priority: low
+        requires_completion_signoff: 'true'
+        sequence: 1
+        title: RealtimeClient tests (minimal unit)
+        updated_at: '2025-09-10T18:33:53.270227'
+      70cdd5e3-822e-4092-9e8b-bbf2f2a34c7b:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-10T18:35:30.043685'
+        description: 'Document strategy for integration tests covering:
+
+          - End-to-end connection and chat flows
+
+          - Audio recording to playback pipeline
+
+          - Error recovery scenarios
+
+          - Network simulation (disconnects, latency)
+
+          - Browser environment events (sleep/wake, tab switching)'
+        id: 70cdd5e3-822e-4092-9e8b-bbf2f2a34c7b
+        parent_id: 5eab2b2c-6227-4c42-bbc5-68b0ade1edf1
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 1
+        title: Create integration test strategy document
+        updated_at: '2025-09-10T18:35:30.043686'
+      7ded67c5-0491-4b9b-b39d-bf56c1daef57:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-10T18:33:22.942624'
+        description: Simplify mock complexity first, then test event coordination,
+          message building, state management. Focus on behavior not implementation.
+        id: 7ded67c5-0491-4b9b-b39d-bf56c1daef57
+        parent_id: ceac644c-e3d8-41ed-905b-2aeb408b340e
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 3
+        title: EventStreamProcessor tests (simplified)
+        updated_at: '2025-09-10T18:33:22.942625'
+      7e437968-2019-4d24-a918-05dd82919d37:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-10T18:32:42.123983'
+        description: Best-balanced audio strategy. Test streaming control, turn awareness,
+          statistics tracking. Use simple stubs for AudioService.
+        id: 7e437968-2019-4d24-a918-05dd82919d37
+        parent_id: a57ee679-8bbe-4d5e-b883-4c6fc0842d7f
         priority: high
         requires_completion_signoff: 'true'
         sequence: 4
-        title: Setup MSW for API Mocking
-        updated_at: '2025-08-29T19:40:58.534344'
-    title: Agent C Realtime SDK Test Infrastructure Setup
-    updated_at: '2025-08-29T19:40:58.534372'
-current_plan: agentc_sdk_dev
+        title: AudioAgentCBridge tests
+        updated_at: '2025-09-10T18:32:42.123984'
+      872b09b8-0892-454f-a94b-01a844718d15:
+        child_tasks:
+        - cdad2eb4-c2cb-427e-b2c7-895540d47509
+        - 11028537-42e0-4ee8-a92d-88cccacc2ad1
+        completed: true
+        completion_report: 'Phase 0 complete. Created test infrastructure:
+
+          - 4 shared test utilities (singleton, mock-builders, event, timer helpers)
+
+          - 4 browser API mocks (websocket, audio-context, media-stream, fetch)
+
+          All following Level 1 simplicity from MOCKING_GUIDE.md'
+        completion_signoff_by: Hank
+        context: ''
+        created_at: '2025-09-10T18:31:30.021224'
+        description: Create shared test utilities and helpers before implementing
+          individual tests
+        id: 872b09b8-0892-454f-a94b-01a844718d15
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 1
+        title: 'Phase 0: Test Infrastructure Setup'
+        updated_at: '2025-09-10T20:22:25.316174'
+      88a3d4e9-e6bc-44b7-8ff2-159fcf77fffd:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-10T18:33:02.428085'
+        description: Important state management. Test session lifecycle, message accumulation,
+          capacity management, pagination. Add concurrency tests for race conditions.
+        id: 88a3d4e9-e6bc-44b7-8ff2-159fcf77fffd
+        parent_id: ceac644c-e3d8-41ed-905b-2aeb408b340e
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 1
+        title: SessionManager tests
+        updated_at: '2025-09-10T18:33:02.428086'
+      9c10e87e-2411-426f-b149-6588c5f36cbb:
+        child_tasks:
+        - 242ccc77-2540-4e94-9a71-df22955301d6
+        - 1cffada2-0d17-410f-9534-150f2bdea189
+        - f0e21a83-4b27-41c2-a8bb-9b2c5d40be17
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: Quinn's review identified that the audio module strategies have mock
+          complexity approaching the actual implementation complexity. This is unmaintainable.
+          We need to drastically simplify to stub-level mocks for unit tests and move
+          timing/quality verification to integration tests.
+        created_at: '2025-09-10T18:34:36.320110'
+        description: Audio components need major simplification of mock complexity.
+          Focus on logic testing, not timing/quality.
+        id: 9c10e87e-2411-426f-b149-6588c5f36cbb
+        parent_id: null
+        priority: low
+        requires_completion_signoff: 'true'
+        sequence: 5
+        title: 'Phase 4: Audio Module (Rework Required)'
+        updated_at: '2025-09-10T18:34:36.320111'
+      a2161af8-520b-46b6-ac53-92fe2c62aa42:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-10T18:32:31.642060'
+        description: Foundation component. Test type-safe event handling, listener
+          management, memory leak prevention, and error isolation.
+        id: a2161af8-520b-46b6-ac53-92fe2c62aa42
+        parent_id: a57ee679-8bbe-4d5e-b883-4c6fc0842d7f
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 3
+        title: EventEmitter tests
+        updated_at: '2025-09-10T18:32:31.642061'
+      a57ee679-8bbe-4d5e-b883-4c6fc0842d7f:
+        child_tasks:
+        - d3082461-10ba-4c1d-b0be-11505023c228
+        - fe1d2013-351a-4941-98c8-c1b8cf800650
+        - a2161af8-520b-46b6-ac53-92fe2c62aa42
+        - 7e437968-2019-4d24-a918-05dd82919d37
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-10T18:32:00.806002'
+        description: Implement tests for simple, critical components that provide
+          maximum value with minimal mock complexity
+        id: a57ee679-8bbe-4d5e-b883-4c6fc0842d7f
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 2
+        title: 'Phase 1: High-Value, Low-Complexity Tests'
+        updated_at: '2025-09-10T18:32:00.806003'
+      a90955f3-538e-41ce-82ec-0be7e91c60b9:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-10T18:33:12.724413'
+        description: Security critical. Test JWT lifecycle, token refresh, timer management.
+          MUST include race condition tests for concurrent token refresh attempts.
+        id: a90955f3-538e-41ce-82ec-0be7e91c60b9
+        parent_id: ceac644c-e3d8-41ed-905b-2aeb408b340e
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 2
+        title: AuthManager tests
+        updated_at: '2025-09-10T18:33:12.724414'
+      cdad2eb4-c2cb-427e-b2c7-895540d47509:
+        child_tasks: []
+        completed: true
+        completion_report: 'Created 4 shared test utility files in test/shared/:
+
+          - singleton-helpers.ts (6 lines)
+
+          - mock-builders.ts (7 lines per helper)
+
+          - event-helpers.ts (7 lines per helper)
+
+          - timer-helpers.ts (8 lines)
+
+          All following Level 1 simplicity with vi.fn() stubs, no business logic.'
+        completion_signoff_by: Quinn
+        context: ''
+        created_at: '2025-09-10T18:31:40.656022'
+        description: 'Create test/shared/ directory with:
+
+          - singleton-helpers.ts for reusable singleton pattern tests
+
+          - mock-builders.ts for common mock factories
+
+          - event-helpers.ts for event assertion utilities
+
+          - timer-helpers.ts for fake timer utilities'
+        id: cdad2eb4-c2cb-427e-b2c7-895540d47509
+        parent_id: 872b09b8-0892-454f-a94b-01a844718d15
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 1
+        title: Create shared test utilities
+        updated_at: '2025-09-10T20:19:44.677460'
+      ceac644c-e3d8-41ed-905b-2aeb408b340e:
+        child_tasks:
+        - 88a3d4e9-e6bc-44b7-8ff2-159fcf77fffd
+        - a90955f3-538e-41ce-82ec-0be7e91c60b9
+        - 7ded67c5-0491-4b9b-b39d-bf56c1daef57
+        - 5b33e630-a540-448d-85e6-54516a1d62e6
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-10T18:32:51.717651'
+        description: Implement tests for core business logic components with moderate
+          complexity
+        id: ceac644c-e3d8-41ed-905b-2aeb408b340e
+        parent_id: null
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 3
+        title: 'Phase 2: Core Business Logic Tests'
+        updated_at: '2025-09-10T18:32:51.717651'
+      d3082461-10ba-4c1d-b0be-11505023c228:
+        child_tasks: []
+        completed: true
+        completion_report: 'WebSocketManager tests complete:
+
+          - 14 tests covering connection lifecycle, message handling, heartbeat, and
+          state
+
+          - All tests passing (587ms)
+
+          - Using Phase 0 mocks with Level 1 simplicity
+
+          - Behavior-focused testing, readable in 30 seconds'
+        completion_signoff_by: Quinn
+        context: ''
+        created_at: '2025-09-10T18:32:11.351442'
+        description: Critical infrastructure component. Test connection lifecycle,
+          message handling, heartbeat mechanism, and error scenarios. Use Level 1-2
+          mocks only.
+        id: d3082461-10ba-4c1d-b0be-11505023c228
+        parent_id: a57ee679-8bbe-4d5e-b883-4c6fc0842d7f
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 1
+        title: WebSocketManager tests
+        updated_at: '2025-09-10T20:35:40.737868'
+      d7e9975f-e56a-49be-81a7-738465850c08:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-10T18:35:41.124661'
+        description: 'Implement integration tests for:
+
+          - Complete connection lifecycle with auth
+
+          - Message flow from send to receive
+
+          - Audio pipeline end-to-end
+
+          - Reconnection with state recovery
+
+          - Multi-component error cascades'
+        id: d7e9975f-e56a-49be-81a7-738465850c08
+        parent_id: 5eab2b2c-6227-4c42-bbc5-68b0ade1edf1
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 2
+        title: Implement critical integration tests
+        updated_at: '2025-09-10T18:35:41.124662'
+      f0e21a83-4b27-41c2-a8bb-9b2c5d40be17:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-10T18:35:08.154511'
+        description: Test logic not timing. Use integration tests for playback quality.
+          Test queue management, voice model handling, state transitions with simple
+          stubs.
+        id: f0e21a83-4b27-41c2-a8bb-9b2c5d40be17
+        parent_id: 9c10e87e-2411-426f-b149-6588c5f36cbb
+        priority: low
+        requires_completion_signoff: 'true'
+        sequence: 3
+        title: AudioOutputService tests (logic only)
+        updated_at: '2025-09-10T18:35:08.154512'
+      fe1d2013-351a-4941-98c8-c1b8cf800650:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-10T18:32:21.419060'
+        description: Simple component with perfect scope. Test turn state transitions,
+          event handling, and cleanup. Should achieve 100% coverage easily.
+        id: fe1d2013-351a-4941-98c8-c1b8cf800650
+        parent_id: a57ee679-8bbe-4d5e-b883-4c6fc0842d7f
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 2
+        title: TurnManager tests
+        updated_at: '2025-09-10T18:32:21.419061'
+    title: Core Package Unit Test Implementation Plan
+    updated_at: '2025-09-10T20:35:40.737904'
+current_plan: core_unit_test_implementation

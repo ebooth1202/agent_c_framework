@@ -342,6 +342,116 @@ _plans:
         updated_at: '2025-08-26T11:48:30.199328'
     title: Update Realtime API Implementation Guide
     updated_at: '2025-08-26T11:52:50.432229'
+  realtime_docs_update:
+    created_at: '2025-09-04T00:18:17.529534'
+    description: Ensure the realtime API implementation guide is complete and accurate
+      based on the current client_events.py models, including the initialization sequence
+      information.
+    id: 9113542b-e263-40db-b012-70f8dd973b53
+    lessons_learned: []
+    tasks:
+      05b874a1-ca6a-43d8-a949-d2c444d2e89a:
+        child_tasks: []
+        completed: true
+        completion_report: "Successfully added initialization sequence documentation\
+          \ to the realtime API guide:\n\n1. Updated Connection Flow section to include\
+          \ step 4 (Initialization Events)\n2. Added detailed section explaining the\
+          \ 6 initialization events sent automatically when client connects:\n   -\
+          \ chat_user_data (user info)\n   - avatar_list (available avatars) \n  \
+          \ - voice_list (available voices)\n   - agent_list (available agents)\n\
+          \   - tool_catalog (available tools)\n   - chat_session_changed (current\
+          \ session)\n\nThis matches the sequence mentioned by the user from the server\
+          \ code.\""
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-04T00:18:26.970535'
+        description: Document the series of initialization events that the server
+          sends when a client connects, including the order and purpose of each event.
+        id: 05b874a1-ca6a-43d8-a949-d2c444d2e89a
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: Add initialization sequence documentation
+        updated_at: '2025-09-04T00:20:53.845552'
+      25ad319c-fec9-4620-a6dc-d4289758fae9:
+        child_tasks: []
+        completed: true
+        completion_report: "Identified missing events from documentation:\n\nMissing\
+          \ Client→Server Events:\n- get_voices: Request list of available voices\n\
+          - get_tool_catalog: Request the tool catalog\n- get_user_sessions: Request\
+          \ list of user chat sessions\n- ping: Connection health check\n\nMissing\
+          \ Server→Client Events:  \n- voice_list: Response with available voices\n\
+          - tool_catalog: Response with tool catalog\n- get_user_sessions_response:\
+          \ Response with user sessions\n- chat_user_data: User-specific data event\n\
+          - pong: Response to ping event\n\nAll other events are documented but need\
+          \ verification for accuracy."
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-04T00:18:22.602982'
+        description: Compare the events defined in client_events.py with those documented
+          in the realtime API guide to identify gaps.
+        id: 25ad319c-fec9-4620-a6dc-d4289758fae9
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: Review and identify missing events in documentation
+        updated_at: '2025-09-04T00:19:16.071761'
+      79fe646c-331c-4a81-bfc0-dbe8bcb2bf0c:
+        child_tasks: []
+        completed: true
+        completion_report: "Successfully added all missing event documentation:\n\n\
+          Client→Server Events Added:\n- get_voices: Request list of available voices\n\
+          - get_tool_catalog: Request the tool catalog  \n- get_user_sessions: Request\
+          \ list of user chat sessions (with offset/limit)\n- ping: Connection health\
+          \ check\n\nServer→Client Events Added:\n- voice_list: Response with available\
+          \ voices (with full voice model structure)\n- tool_catalog: Response with\
+          \ tool catalog (with complete tool schema format)\n- chat_user_data: User\
+          \ information sent during initialization\n- get_user_sessions_response:\
+          \ Response with user sessions (with pagination)\n- pong: Response to ping\
+          \ event\n\nAll events now include proper JSON payload examples matching\
+          \ the Pydantic models.\""
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-04T00:18:31.405432'
+        description: Document any events from client_events.py that are missing from
+          the guide, ensuring complete coverage.
+        id: 79fe646c-331c-4a81-bfc0-dbe8bcb2bf0c
+        parent_id: null
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: Add missing event documentation
+        updated_at: '2025-09-04T00:21:02.650801'
+      8bf76d35-e7da-4901-9f84-4348d4b4ef87:
+        child_tasks: []
+        completed: true
+        completion_report: "Verified that event descriptions and formats in documentation\
+          \ match the Pydantic models in client_events.py:\n\n✅ Verified Events:\n\
+          - TextInputEvent: Documentation correctly shows text + optional file_ids\n\
+          - SetSessionMessagesEvent: Documentation shows proper message format  \n\
+          - All newly added events use correct field names and types from models\n\
+          - Event descriptions match docstrings from the models\n\n✅ Payload Formats:\n\
+          - All JSON payloads in documentation reflect the actual Pydantic model fields\n\
+          - Optional fields are properly marked as optional\n- Data types and nested\
+          \ structures match model definitions\n\nNote: Found minor code issue in\
+          \ TextInputEvent model where Field(list) should be Field(default_factory=list),\
+          \ but documentation is correct.\""
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-04T00:18:35.868123'
+        description: Ensure that all documented events have accurate descriptions
+          and payload formats that match the Pydantic models.
+        id: 8bf76d35-e7da-4901-9f84-4348d4b4ef87
+        parent_id: null
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: Verify event descriptions and formats match models
+        updated_at: '2025-09-04T00:21:49.523945'
+    title: Update Realtime API Documentation
+    updated_at: '2025-09-04T00:21:49.523971'
   transport_abstraction:
     created_at: '2025-08-27T11:18:01.106521'
     description: Abstract away WebSocket transport in RealtimeBridge to support multiple

@@ -754,7 +754,6 @@ import asyncio
 
 from agent_c.toolsets.tool_set import Toolset
 from agent_c.toolsets.json_schema import json_schema
-from agent_c.models.chat_event import ChatEvent
 
 from .html_parser import HTMLParser
 from .selector_engine import SelectorEngine

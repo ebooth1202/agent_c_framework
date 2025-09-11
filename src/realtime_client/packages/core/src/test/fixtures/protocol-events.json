@@ -1,0 +1,523 @@
+{
+  "serverEvents": {
+    "system_prompt": {
+      "type": "system_prompt",
+      "session_id": "alpine-option-sardine",
+      "role": "system",
+      "content": "# Core Operating Guidelines\n\nYou are an AI assistant with specific guidelines and capabilities...",
+      "format": "markdown"
+    },
+    "user_request": {
+      "type": "user_request",
+      "session_id": "alpine-option-sardine",
+      "role": "user",
+      "data": {
+        "message": "Hello, how can you help me today?"
+      }
+    },
+    "text_delta": {
+      "type": "text_delta",
+      "session_id": "alpine-option-sardine",
+      "role": "assistant",
+      "content": "I can help you with ",
+      "format": "text"
+    },
+    "thought_delta": {
+      "type": "thought_delta",
+      "session_id": "alpine-option-sardine",
+      "role": "assistant (thought)",
+      "content": "The user is asking about my capabilities. I should provide a helpful response...",
+      "format": "text"
+    },
+    "completion": {
+      "type": "completion",
+      "session_id": "alpine-option-sardine",
+      "role": "assistant",
+      "running": true,
+      "completion_options": {
+        "model": "claude-sonnet-4-20250514",
+        "max_tokens": 64000,
+        "temperature": 1
+      },
+      "stop_reason": null,
+      "input_tokens": 0,
+      "output_tokens": 0
+    },
+    "completion_finished": {
+      "type": "completion",
+      "session_id": "alpine-option-sardine",
+      "role": "assistant",
+      "running": false,
+      "completion_options": {
+        "model": "claude-sonnet-4-20250514",
+        "max_tokens": 64000,
+        "temperature": 1
+      },
+      "stop_reason": "stop",
+      "input_tokens": 1234,
+      "output_tokens": 567
+    },
+    "interaction": {
+      "type": "interaction",
+      "session_id": "alpine-option-sardine",
+      "role": "assistant",
+      "started": true,
+      "id": "explore-store-garden"
+    },
+    "interaction_end": {
+      "type": "interaction",
+      "session_id": "alpine-option-sardine",
+      "role": "assistant",
+      "started": false,
+      "id": "explore-store-garden"
+    },
+    "tool_call": {
+      "type": "tool_call",
+      "session_id": "alpine-option-sardine",
+      "role": "assistant",
+      "active": true,
+      "vendor": "anthropic",
+      "tool_calls": [
+        {
+          "id": "toolu_01FkSXfB8ps8d1EhD7dvQLQR",
+          "type": "function",
+          "function": {
+            "name": "think",
+            "arguments": "{\"thought\":\"The user is asking for help...\"}"
+          }
+        }
+      ],
+      "tool_results": []
+    },
+    "tool_select_delta": {
+      "type": "tool_select_delta",
+      "session_id": "alpine-option-sardine",
+      "role": "assistant",
+      "tool_calls": [
+        {
+          "id": "toolu_01JT2vYL33LemaPf9ZYTskXa",
+          "type": "function",
+          "function": {
+            "name": "rng_generate_random_number",
+            "arguments": "{}"
+          }
+        }
+      ]
+    },
+    "history": {
+      "type": "history",
+      "session_id": "alpine-option-sardine",
+      "role": "system",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Hello, how are you?",
+          "timestamp": "2025-09-08T10:30:17.371991"
+        },
+        {
+          "role": "assistant",
+          "content": "I'm doing well, thank you! How can I help you today?",
+          "timestamp": "2025-09-08T10:30:18.456789"
+        }
+      ]
+    },
+    "history_delta": {
+      "type": "history_delta",
+      "session_id": "alpine-option-sardine",
+      "role": "assistant",
+      "messages": [
+        {
+          "role": "assistant",
+          "content": "I'm doing well, thank you! How can I help you today?",
+          "citations": null,
+          "format": "text"
+        }
+      ]
+    },
+    "system_message": {
+      "type": "system_message",
+      "session_id": "alpine-option-sardine",
+      "role": "system",
+      "content": "Connection established successfully",
+      "format": "text",
+      "severity": "info"
+    },
+    "error": {
+      "type": "error",
+      "message": "WebSocket connection failed",
+      "source": "websocket"
+    },
+    "user_turn_start": {
+      "type": "user_turn_start"
+    },
+    "user_turn_end": {
+      "type": "user_turn_end"
+    },
+    "server_listening": {
+      "type": "server_listening"
+    },
+    "chat_session_changed": {
+      "type": "chat_session_changed",
+      "chat_session": {
+        "version": 1,
+        "session_id": "alpine-option-sardine",
+        "session_name": "My Chat Session",
+        "created_at": "2025-09-08T10:26:21.874914",
+        "updated_at": "2025-09-08T10:26:21.874930",
+        "deleted_at": null,
+        "user_id": "admin",
+        "metadata": {},
+        "messages": [],
+        "agent_config": {
+          "version": 2,
+          "name": "Domo",
+          "key": "default",
+          "model_id": "claude-sonnet-4-20250514",
+          "agent_description": "The default agent template.",
+          "tools": ["ThinkTools", "WorkspaceTools"],
+          "agent_params": {
+            "model_name": "claude-sonnet-4-20250514",
+            "max_tokens": 64000,
+            "type": "claude_reasoning",
+            "budget_tokens": 20000
+          }
+        }
+      }
+    },
+    "chat_session_added": {
+      "type": "chat_session_added",
+      "chat_session": {
+        "session_id": "alpine-option-sardine",
+        "session_name": "New Session",
+        "created_at": "2025-09-08T10:26:21.874914",
+        "updated_at": "2025-09-08T10:26:21.874930",
+        "user_id": "admin",
+        "metadata": {}
+      }
+    },
+    "chat_session_deleted": {
+      "type": "chat_session_deleted",
+      "session_id": "alpine-option-sardine"
+    },
+    "chat_session_name_changed": {
+      "type": "chat_session_name_changed",
+      "session_name": "Updated Session Name",
+      "session_id": "alpine-option-sardine"
+    },
+    "session_metadata_changed": {
+      "type": "session_metadata_changed",
+      "meta": {
+        "custom_field": "custom_value",
+        "tags": ["important", "project-x"]
+      }
+    },
+    "agent_list": {
+      "type": "agent_list",
+      "agents": [
+        {
+          "name": "Domo",
+          "key": "default",
+          "agent_description": "The default agent template.",
+          "category": ["domo", "default"],
+          "tools": ["ThinkTools", "WorkspaceTools"]
+        }
+      ]
+    },
+    "agent_configuration_changed": {
+      "type": "agent_configuration_changed",
+      "agent_config": {
+        "version": 2,
+        "name": "Domo",
+        "key": "default",
+        "model_id": "claude-sonnet-4-20250514",
+        "tools": ["ThinkTools"],
+        "enabled": true
+      }
+    },
+    "voice_list": {
+      "type": "voice_list",
+      "voices": [
+        {
+          "voice_id": "nova",
+          "vendor": "openai",
+          "description": "A friendly, conversational voice",
+          "output_format": "pcm16"
+        },
+        {
+          "voice_id": "alloy",
+          "vendor": "openai",
+          "description": "A neutral, clear voice",
+          "output_format": "pcm16"
+        }
+      ]
+    },
+    "agent_voice_changed": {
+      "type": "agent_voice_changed",
+      "voice": {
+        "voice_id": "nova",
+        "vendor": "openai",
+        "description": "A friendly, conversational voice",
+        "output_format": "pcm16"
+      }
+    },
+    "tool_catalog": {
+      "type": "tool_catalog",
+      "toolsets": [
+        {
+          "name": "ThinkTools",
+          "description": "Tools for thinking and reasoning",
+          "schemas": {
+            "think": {
+              "type": "function",
+              "function": {
+                "name": "think",
+                "description": "Use the tool to think about something",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "thought": {
+                      "type": "string",
+                      "description": "A thought to think about"
+                    }
+                  },
+                  "required": ["thought"]
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "chat_user_data": {
+      "type": "chat_user_data",
+      "user": {
+        "user_id": "admin",
+        "user_name": "Administrator",
+        "email": "admin@example.com",
+        "first_name": "Admin",
+        "last_name": "User",
+        "is_active": true,
+        "roles": ["admin", "user"],
+        "groups": ["administrators"],
+        "created_at": "2024-01-01T00:00:00.000Z",
+        "last_login": "2025-09-08T10:00:00.000Z"
+      }
+    },
+    "get_user_sessions_response": {
+      "type": "get_user_sessions_response",
+      "sessions": {
+        "sessions": [
+          {
+            "session_id": "alpine-option-sardine",
+            "session_name": "My Session",
+            "created_at": "2025-09-08T10:26:21.874914",
+            "updated_at": "2025-09-08T10:26:21.874930",
+            "user_id": "admin",
+            "metadata": {}
+          }
+        ],
+        "total": 1,
+        "offset": 0,
+        "limit": 50
+      }
+    },
+    "avatar_list": {
+      "type": "avatar_list",
+      "avatars": [
+        {
+          "avatar_id": "avatar_123",
+          "created_at": 1704067200,
+          "default_voice": "nova",
+          "is_public": true,
+          "normal_preview": "https://example.com/avatar.jpg",
+          "pose_name": "default",
+          "status": "active"
+        }
+      ]
+    },
+    "avatar_connection_changed": {
+      "type": "avatar_connection_changed",
+      "avatar_session_request": {
+        "avatar_id": "avatar_123",
+        "quality": "high",
+        "voice": {"voice_id": "nova"},
+        "language": "en",
+        "version": "v2",
+        "video_encoding": "h264",
+        "source": "api",
+        "stt_settings": {},
+        "ia_is_livekit_transport": false,
+        "knowledge_base": null,
+        "knowledge_base_id": null,
+        "disable_idle_timeout": false,
+        "activity_idle_timeout": 300
+      },
+      "avatar_session": {
+        "session_id": "session_456",
+        "url": "wss://example.com/avatar",
+        "access_token": "token_789",
+        "session_duration_limit": 3600,
+        "is_paid": true,
+        "realtime_endpoint": "wss://realtime.example.com",
+        "sdp": null,
+        "ice_servers": null,
+        "ice_servers2": null
+      }
+    },
+    "voice_input_supported": {
+      "type": "voice_input_supported",
+      "modes": ["ptt", "vad"]
+    },
+    "pong": {
+      "type": "pong"
+    },
+    "render_media": {
+      "type": "render_media",
+      "session_id": "alpine-option-sardine",
+      "role": "assistant",
+      "content_type": "text/html",
+      "content": "<div>Hello World</div>",
+      "sent_by_class": "WebTools",
+      "sent_by_function": "render_html"
+    }
+  },
+  "clientEvents": {
+    "text_input": {
+      "type": "text_input",
+      "text": "Hello, how are you?",
+      "file_ids": []
+    },
+    "get_agents": {
+      "type": "get_agents"
+    },
+    "set_agent": {
+      "type": "set_agent",
+      "agent_key": "default"
+    },
+    "get_avatars": {
+      "type": "get_avatars"
+    },
+    "set_avatar_session": {
+      "type": "set_avatar_session",
+      "session_id": "session_456",
+      "avatar_id": "avatar_123"
+    },
+    "clear_avatar_session": {
+      "type": "clear_avatar_session",
+      "session_id": "session_456"
+    },
+    "set_agent_voice": {
+      "type": "set_agent_voice",
+      "voice_id": "nova"
+    },
+    "new_chat_session": {
+      "type": "new_chat_session",
+      "agent_key": "default"
+    },
+    "resume_chat_session": {
+      "type": "resume_chat_session",
+      "session_id": "alpine-option-sardine"
+    },
+    "set_chat_session_name": {
+      "type": "set_chat_session_name",
+      "session_name": "My Important Chat",
+      "session_id": "alpine-option-sardine"
+    },
+    "set_session_metadata": {
+      "type": "set_session_metadata",
+      "meta": {
+        "project": "important-project",
+        "priority": "high"
+      }
+    },
+    "set_session_messages": {
+      "type": "set_session_messages",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Previous message",
+          "timestamp": "2025-09-08T10:00:00.000Z"
+        },
+        {
+          "role": "assistant",
+          "content": "Previous response",
+          "timestamp": "2025-09-08T10:00:01.000Z"
+        }
+      ]
+    },
+    "get_user_sessions": {
+      "type": "get_user_sessions",
+      "offset": 0,
+      "limit": 50
+    },
+    "get_voices": {
+      "type": "get_voices"
+    },
+    "get_tool_catalog": {
+      "type": "get_tool_catalog"
+    },
+    "ping": {
+      "type": "ping"
+    },
+    "ptt_start": {
+      "type": "ptt_start"
+    },
+    "ptt_end": {
+      "type": "ptt_end"
+    },
+    "set_voice_input_mode": {
+      "type": "set_voice_input_mode",
+      "mode": "ptt"
+    },
+    "delete_chat_session": {
+      "type": "delete_chat_session",
+      "session_id": "alpine-option-sardine"
+    }
+  },
+  "multimodalMessage": {
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "Look at this image and tell me what you see"
+      },
+      {
+        "type": "image",
+        "source": {
+          "type": "base64",
+          "media_type": "image/png",
+          "data": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+        }
+      }
+    ],
+    "timestamp": "2025-09-08T10:30:17.371991"
+  },
+  "toolUseMessage": {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "text",
+        "text": "Let me generate a random number for you."
+      },
+      {
+        "type": "tool_use",
+        "id": "toolu_01JT2vYL33LemaPf9ZYTskXa",
+        "name": "rng_generate_random_number",
+        "input": {}
+      }
+    ],
+    "timestamp": "2025-09-08T10:30:18.456789"
+  },
+  "toolResultMessage": {
+    "role": "user",
+    "content": [
+      {
+        "type": "tool_result",
+        "tool_use_id": "toolu_01JT2vYL33LemaPf9ZYTskXa",
+        "content": "{\"number\": 42, \"message\": \"Random number generated successfully\"}",
+        "is_error": false
+      }
+    ],
+    "timestamp": "2025-09-08T10:30:19.123456"
+  }
+}

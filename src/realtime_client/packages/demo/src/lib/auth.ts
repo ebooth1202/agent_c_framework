@@ -1,5 +1,7 @@
 // API endpoints are now proxied through Next.js API routes for security
 
+import { Logger } from '@/utils/logger';
+
 // DEBUG MODE - Set to true for verbose logging
 const DEBUG_AUTH = true;
 
@@ -7,21 +9,21 @@ const DEBUG_AUTH = true;
 const authLibLog = {
   info: (message: string, data?: any) => {
     if (DEBUG_AUTH) {
-      console.log(`[AUTH-LIB] ✅ ${message}`, data || '');
+      Logger.info(`[AUTH-LIB] ✅ ${message}`, data || '');
     }
   },
   error: (message: string, error?: any) => {
-    console.error(`[AUTH-LIB] ❌ ${message}`, error || '');
+    Logger.error(`[AUTH-LIB] ❌ ${message}`, error || '');
   },
   warn: (message: string, data?: any) => {
-    console.warn(`[AUTH-LIB] ⚠️ ${message}`, data || '');
+    Logger.warn(`[AUTH-LIB] ⚠️ ${message}`, data || '');
   },
   critical: (message: string, data?: any) => {
-    console.error(`[AUTH-LIB] 🚨 CRITICAL: ${message}`, data || '');
+    Logger.error(`[AUTH-LIB] 🚨 CRITICAL: ${message}`, data || '');
   },
   debug: (message: string, data?: any) => {
     if (DEBUG_AUTH) {
-      console.log(`[AUTH-LIB] 🔍 ${message}`, data || '');
+      Logger.debug(`[AUTH-LIB] 🔍 ${message}`, data || '');
     }
   }
 };
@@ -311,19 +313,13 @@ export async function login(credentials: LoginCredentials): Promise<LoginRespons
       throw new Error('No agent_c_token received from login endpoint');
     }
     
-    if (!data.user) {
-      authLibLog.critical('NO USER OBJECT IN LOGIN RESPONSE!');
-      authLibLog.error('Full response:', data);
-    }
-    
-    if (data.user && (!data.user.user_id || !data.user.email || !data.user.user_name)) {
-      authLibLog.critical('USER OBJECT MISSING REQUIRED FIELDS!', {
-        hasUserId: !!data.user.user_id,
-        hasEmail: !!data.user.email,
-        hasUserName: !!data.user.user_name,
-        user: data.user
-      });
-    }
+    // Note: User data now comes from WebSocket events, not the login response
+    // The login response only contains tokens and session ID
+    authLibLog.debug('Login response received (user data will come from WebSocket events)', {
+      hasAgentCToken: !!data.agent_c_token,
+      hasHeygenToken: !!data.heygen_token,
+      hasUiSessionId: !!data.ui_session_id
+    });
 
     // Store agent_c_token in secure cookie
     authLibLog.info('Storing agent_c_token in cookie...');
@@ -659,7 +655,7 @@ export async function getSessionInfo(): Promise<SessionInfo> {
     const data: SessionInfo = await response.json();
     return data;
   } catch (error) {
-    console.error('Get session info error:', error);
+    Logger.error('Get session info error:', error);
     throw error;
   }
 }
@@ -690,7 +686,7 @@ export async function refreshTokenIfNeeded(): Promise<boolean> {
     // Token is expiring soon, attempt refresh
     // Note: This would require a refresh endpoint which may not exist yet
     // For now, return false to indicate refresh is needed
-    console.warn('Token expiring soon, refresh required');
+    Logger.warn('Token expiring soon, refresh required');
     return false;
   }
 

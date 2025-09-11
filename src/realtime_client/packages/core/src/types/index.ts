@@ -11,3 +11,9 @@ export interface ErrorDetails {
     message: string;
     details?: unknown;
 }
+
+// Export chat session types
+export * from './chat-session';
+
+// Export message param types
+export * from './message-params';

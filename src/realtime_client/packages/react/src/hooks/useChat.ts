@@ -5,6 +5,8 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import type { ChatSession, Message } from '@agentc/realtime-core';
+import { ensureMessagesFormat } from '@agentc/realtime-core';
+import { Logger } from '../utils/logger';
 
 // Define ChatMessage as alias for Message for consistency
 type ChatMessage = Message;
@@ -30,6 +32,9 @@ export interface UseChatReturn {
   
   /** Current session information */
   currentSession: ChatSession | null;
+  
+  /** Current session ID */
+  currentSessionId: string | null;
   
   /** Send a text message */
   sendMessage: (text: string) => Promise<void>;
@@ -67,6 +72,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
   // State
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [isAgentTyping, setIsAgentTyping] = useState(false);
   const [partialMessage, setPartialMessage] = useState('');
@@ -80,6 +86,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
   const updateChatInfo = useCallback(() => {
     if (!client) {
       setCurrentSession(null);
+      setCurrentSessionId(null);
       setMessages([]);
       return;
     }
@@ -87,6 +94,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     const sessionManager = client.getSessionManager();
     if (!sessionManager) {
       setCurrentSession(null);
+      setCurrentSessionId(null);
       setMessages([]);
       return;
     }
@@ -94,6 +102,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     try {
       const session = sessionManager.getCurrentSession();
       setCurrentSession(session);
+      setCurrentSessionId(session?.session_id || null);
       
       if (session) {
         // SessionManager doesn't have getMessageHistory, we'll track messages ourselves
@@ -233,21 +242,96 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
       // Agent is now typing
     };
     
+    // Handle session change events
+    const handleSessionChanged = (event: unknown) => {
+      const sessionEvent = event as { chat_session?: ChatSession };
+      if (sessionEvent.chat_session) {
+        Logger.debug('[useChat] Session changed event received');
+        Logger.debug('[useChat] Session ID:', sessionEvent.chat_session.session_id);
+        Logger.debug('[useChat] Raw messages from server:', sessionEvent.chat_session.messages?.length || 0, 'messages');
+        
+        setCurrentSession(sessionEvent.chat_session);
+        setCurrentSessionId(sessionEvent.chat_session.session_id);
+        
+        // Load existing messages from the session and ensure proper format
+        if (sessionEvent.chat_session.messages && sessionEvent.chat_session.messages.length > 0) {
+          Logger.debug('[useChat] First 3 raw messages:', sessionEvent.chat_session.messages.slice(0, 3));
+          
+          const formattedMessages = ensureMessagesFormat(sessionEvent.chat_session.messages);
+          Logger.debug('[useChat] After ensureMessagesFormat:', formattedMessages.length, 'messages');
+          Logger.debug('[useChat] First 3 formatted messages:', formattedMessages.slice(0, 3));
+          
+          const messagesToSet = formattedMessages.slice(-maxMessages);
+          Logger.debug('[useChat] After slice(-maxMessages):', messagesToSet.length, 'messages');
+          Logger.debug('[useChat] maxMessages value:', maxMessages);
+          Logger.debug('[useChat] Setting messages - first 3:', messagesToSet.slice(0, 3));
+          
+          setMessages(messagesToSet);
+          // Clear any partial message when switching sessions
+          setPartialMessage('');
+          messageBufferRef.current = '';
+          currentMessageIdRef.current = null;
+        } else {
+          Logger.debug('[useChat] No messages in session, clearing');
+          // Clear messages if new session has no messages
+          clearMessages();
+        }
+      }
+    };
+    
+    // Handle session messages loaded event (from EventStreamProcessor)
+    const handleSessionMessagesLoaded = (event: unknown) => {
+      const messagesEvent = event as { sessionId?: string; messages?: Message[] };
+      Logger.debug('[useChat] Session messages loaded event');
+      Logger.debug('[useChat] Event data:', messagesEvent);
+      
+      if (messagesEvent.messages) {
+        Logger.debug('[useChat] Messages from event:', messagesEvent.messages.length, 'messages');
+        Logger.debug('[useChat] First 3 messages from event:', messagesEvent.messages.slice(0, 3));
+        
+        // Update messages with the loaded messages, ensuring proper format
+        const formattedMessages = ensureMessagesFormat(messagesEvent.messages);
+        Logger.debug('[useChat] After format:', formattedMessages.length, 'messages');
+        
+        const messagesToSet = formattedMessages.slice(-maxMessages);
+        Logger.debug('[useChat] After slice for loaded messages:', messagesToSet.length, 'messages');
+        Logger.debug('[useChat] Setting loaded messages - first 3:', messagesToSet.slice(0, 3));
+        
+        setMessages(messagesToSet);
+        // Clear any partial message
+        setPartialMessage('');
+        messageBufferRef.current = '';
+        currentMessageIdRef.current = null;
+      }
+    };
+    
     // Subscribe to events
     client.on('text_delta', handleTextDelta);
     client.on('completion', handleCompletion);
     client.on('user_turn_start', handleUserTurnStart);
     client.on('user_turn_end', handleUserTurnEnd);
-    // Remove agent_message handler as it doesn't exist
+    client.on('chat_session_changed', handleSessionChanged);
+    
+    // Subscribe to SessionManager events if available
+    const sessionManager = client.getSessionManager();
+    if (sessionManager) {
+      sessionManager.on('session-messages-loaded', handleSessionMessagesLoaded);
+    }
     
     return () => {
       client.off('text_delta', handleTextDelta);
       client.off('completion', handleCompletion);
       client.off('user_turn_start', handleUserTurnStart);
       client.off('user_turn_end', handleUserTurnEnd);
-      // Remove agent_message handler as it doesn't exist
+      client.off('chat_session_changed', handleSessionChanged);
+      
+      // Unsubscribe from SessionManager events
+      const sessionManager = client.getSessionManager();
+      if (sessionManager) {
+        sessionManager.off('session-messages-loaded', handleSessionMessagesLoaded);
+      }
     };
-  }, [client, maxMessages, updateChatInfo]);
+  }, [client, maxMessages, updateChatInfo, clearMessages]);
   
   // Computed properties
   const lastMessage: ChatMessage | null = messages.length > 0 ? messages[messages.length - 1]! : null;
@@ -255,6 +339,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
   return {
     messages,
     currentSession,
+    currentSessionId,
     sendMessage,
     clearMessages,
     isSending,

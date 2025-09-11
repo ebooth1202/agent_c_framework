@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 import { useInitializationStatus, useAgentCData } from '@agentc/realtime-react';
 import { Skeleton, Alert, AlertDescription } from '@agentc/realtime-ui';
 import { CheckCircle2, Circle, Loader2 } from 'lucide-react';
+import { Logger } from '@/utils/logger';
 
 /**
  * Wrapper component that displays initialization status
@@ -25,7 +26,7 @@ export function InitializationWrapper({
   // Log initialization state for debugging
   useEffect(() => {
     if (showDebug) {
-      console.log('[InitializationWrapper] Status:', {
+      Logger.debug('[InitializationWrapper] Status:', {
         isInitialized,
         isLoading,
         connectionState,
