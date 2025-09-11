@@ -240,10 +240,10 @@ persona: |
 prompt_metadata:
   primary_workspace: realtime_client
 tools:
-- ThinkTools
-- WorkspaceTools
-- AgentCloneTools
-- DynamicCommandToolset
-- AgentTeamTools
+ - WorkspaceTools
+ - ThinkTools
+ - AgentCloneTools
+ - DynamicCommandToolset
+ - AgentTeamTools
 uid: slate-stream-fiber
 version: 2
