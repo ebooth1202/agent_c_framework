@@ -215,8 +215,8 @@ class BaseAgent:
         await self._raise_event(SystemMessageEvent(role="system", severity=severity, content=content,
                                                    session_id=data.get("session_id", "none"),
                                                    user_session_id=data.get("user_session_id", None),
-                                                   parent_session_id=data.get("parent_session_id", None),
-                                                   streaming_callback=streaming_callback))
+                                                   parent_session_id=data.get("parent_session_id", None)),
+                                                   streaming_callback=streaming_callback)
 
     async def _raise_history_delta(self, messages, **data):
         """
