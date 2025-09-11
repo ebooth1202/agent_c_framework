@@ -3,25 +3,28 @@
  * Central export for all test utilities, mocks, and factories
  */
 
-// WebSocket Mocks
-export {
-  MockWebSocket,
-  mockWebSocketConstructor,
-  WebSocketMock,
-  createMockWebSocket,
-  setupWebSocketMock
-} from './mocks/mock-websocket';
+// Export new mocks
+export * from './mocks';
 
-// Audio Mocks
-export {
-  MockAudioContext,
-  MockAudioBuffer,
-  MockMediaStream,
-  MockMediaStreamTrack,
-  MockMediaRecorder,
-  mockGetUserMedia,
-  setupAudioMocks
-} from './mocks/audio-mocks';
+// TODO: Legacy mock exports - to be migrated
+// The following exports are commented out as the files don't exist yet
+// export {
+//   MockWebSocket,
+//   mockWebSocketConstructor,
+//   WebSocketMock,
+//   createMockWebSocket,
+//   setupWebSocketMock
+// } from './mocks/mock-websocket';
+
+// export {
+//   MockAudioContext,
+//   MockAudioBuffer,
+//   MockMediaStream,
+//   MockMediaStreamTrack,
+//   MockMediaRecorder,
+//   mockGetUserMedia,
+//   setupAudioMocks
+// } from './mocks/audio-mocks';
 
 // Test Helpers
 export {
@@ -90,5 +93,6 @@ export {
 } from './utils/msw-utils';
 
 // MSW handlers and server
-export { handlers, authHandlers, sessionHandlers, userHandlers, errorHandlers, scenarioHandlers } from './mocks/handlers';
-export { server, serverLifecycle, useHandlers, replaceAllHandlers, waitForRequest, expectRequest } from './mocks/server';
+// TODO: MSW exports - to be implemented
+// export { handlers, authHandlers, sessionHandlers, userHandlers, errorHandlers, scenarioHandlers } from './mocks/handlers';
+// export { server, serverLifecycle, useHandlers, replaceAllHandlers, waitForRequest, expectRequest } from './mocks/server';
