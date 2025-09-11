@@ -1,42 +1,101 @@
 /**
- * Tests for AudioAgentCBridge
+ * AudioAgentCBridge Unit Tests
+ * Level 1 Simplicity - Focus on bridging behavior and turn management
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { AudioAgentCBridge } from '../AudioAgentCBridge';
-import { RealtimeClient } from '../../client/RealtimeClient';
-import { mockWebSocketConstructor } from '../../test/mocks/mock-websocket';
+import { AudioService } from '../AudioService';
+import type { RealtimeClient } from '../../client/RealtimeClient';
+import type { TurnManager } from '../../session/TurnManager';
+
+// Mock AudioService
+vi.mock('../AudioService', () => ({
+  AudioService: {
+    getInstance: vi.fn()
+  }
+}));
 
 describe('AudioAgentCBridge', () => {
   let bridge: AudioAgentCBridge;
-  let mockClient: RealtimeClient;
-  let mockWS: ReturnType<typeof mockWebSocketConstructor>;
+  let mockAudioService: {
+    onAudioChunk: ReturnType<typeof vi.fn>;
+    getStatus: ReturnType<typeof vi.fn>;
+  };
+  let mockRealtimeClient: {
+    isConnected: ReturnType<typeof vi.fn>;
+    sendBinaryFrame: ReturnType<typeof vi.fn>;
+    getTurnManager: ReturnType<typeof vi.fn>;
+  };
+  let mockTurnManager: {
+    canSendInput: boolean;
+    on: ReturnType<typeof vi.fn>;
+    off: ReturnType<typeof vi.fn>;
+  };
+  let audioChunkCallback: ((chunk: ArrayBuffer) => void) | null = null;
+  let unsubscribeAudio: ReturnType<typeof vi.fn>;
+
+  // Helper to simulate audio chunks
+  const simulateAudioChunk = (size: number = 1024) => {
+    const chunk = new ArrayBuffer(size);
+    audioChunkCallback?.(chunk);
+  };
+
+  // Helper to simulate turn state change
+  const simulateTurnChange = (canSendInput: boolean) => {
+    mockTurnManager.canSendInput = canSendInput;
+    const handler = mockTurnManager.on.mock.calls
+      .find(call => call[0] === 'turn-state-changed')?.[1];
+    handler?.({ canSendInput });
+  };
 
   beforeEach(() => {
-    // Mock WebSocket
-    mockWS = mockWebSocketConstructor();
-    global.WebSocket = mockWS as any;
+    vi.clearAllMocks();
     
-    // Create mock client
-    mockClient = new RealtimeClient({
-      apiUrl: 'ws://localhost:8080/test',
-      authToken: 'test-token',
-      autoReconnect: false
-    });
+    // Reset singleton
+    AudioAgentCBridge.resetInstance();
     
-    // Get singleton instance
+    // Setup mock AudioService
+    unsubscribeAudio = vi.fn();
+    mockAudioService = {
+      onAudioChunk: vi.fn((callback) => {
+        audioChunkCallback = callback;
+        return unsubscribeAudio;
+      }),
+      getStatus: vi.fn().mockReturnValue({
+        isRecording: false,
+        state: 'idle'
+      })
+    };
+    
+    // Setup mock TurnManager
+    mockTurnManager = {
+      canSendInput: false,
+      on: vi.fn(),
+      off: vi.fn()
+    };
+    
+    // Setup mock RealtimeClient
+    mockRealtimeClient = {
+      isConnected: vi.fn().mockReturnValue(true),
+      sendBinaryFrame: vi.fn(),
+      getTurnManager: vi.fn().mockReturnValue(mockTurnManager)
+    };
+    
+    // Configure AudioService mock
+    vi.mocked(AudioService.getInstance).mockReturnValue(mockAudioService as any);
+    
+    // Get bridge instance
     bridge = AudioAgentCBridge.getInstance();
   });
 
   afterEach(() => {
-    bridge.stop();
+    vi.restoreAllMocks();
     AudioAgentCBridge.resetInstance();
-    mockClient.destroy();
-    vi.clearAllMocks();
   });
 
   describe('Singleton Pattern', () => {
-    it('should return the same instance', () => {
+    it('should return same instance', () => {
       const instance1 = AudioAgentCBridge.getInstance();
       const instance2 = AudioAgentCBridge.getInstance();
       
@@ -50,484 +109,549 @@ describe('AudioAgentCBridge', () => {
       
       expect(instance1).not.toBe(instance2);
     });
+
+    it('should cleanup on reset', () => {
+      bridge.setClient(mockRealtimeClient as unknown as RealtimeClient);
+      bridge.startStreaming();
+      
+      AudioAgentCBridge.resetInstance();
+      
+      expect(unsubscribeAudio).toHaveBeenCalled();
+      expect(mockTurnManager.off).toHaveBeenCalled();
+    });
   });
 
-  describe('Initialization', () => {
-    it('should initialize with client and default config', () => {
-      bridge.initialize(mockClient);
-      
-      expect(bridge['client']).toBe(mockClient);
-      expect(bridge['config'].respectTurnState).toBe(true);
-      expect(bridge['config'].bufferSize).toBe(4096);
-    });
-
-    it('should initialize with custom config', () => {
-      bridge.initialize(mockClient, {
-        respectTurnState: false,
-        bufferSize: 8192,
-        sendInterval: 50
+  describe('Client Management', () => {
+    describe('setClient()', () => {
+      it('should set client and subscribe to turn manager', () => {
+        bridge.setClient(mockRealtimeClient as unknown as RealtimeClient);
+        
+        expect(mockRealtimeClient.getTurnManager).toHaveBeenCalled();
+        expect(mockTurnManager.on).toHaveBeenCalledWith(
+          'turn-state-changed',
+          expect.any(Function)
+        );
       });
-      
-      expect(bridge['config'].respectTurnState).toBe(false);
-      expect(bridge['config'].bufferSize).toBe(8192);
-      expect(bridge['config'].sendInterval).toBe(50);
+
+      it('should handle null client as disconnect', () => {
+        // First set a client
+        bridge.setClient(mockRealtimeClient as unknown as RealtimeClient);
+        bridge.startStreaming();
+        
+        // Then set null
+        bridge.setClient(null);
+        
+        expect(unsubscribeAudio).toHaveBeenCalled();
+        expect(mockTurnManager.off).toHaveBeenCalled();
+      });
+
+      it('should replace existing client', () => {
+        // Set first client
+        bridge.setClient(mockRealtimeClient as unknown as RealtimeClient);
+        
+        // Create second client
+        const mockClient2 = {
+          ...mockRealtimeClient,
+          getTurnManager: vi.fn().mockReturnValue(mockTurnManager)
+        };
+        
+        // Replace client
+        bridge.setClient(mockClient2 as unknown as RealtimeClient);
+        
+        // Should unsubscribe from first and subscribe to second
+        expect(mockTurnManager.off).toHaveBeenCalled();
+        expect(mockClient2.getTurnManager).toHaveBeenCalled();
+      });
+
+      it('should handle client without turn manager', () => {
+        mockRealtimeClient.getTurnManager.mockReturnValue(null);
+        
+        // Should not throw
+        expect(() => {
+          bridge.setClient(mockRealtimeClient as unknown as RealtimeClient);
+        }).not.toThrow();
+      });
+    });
+  });
+
+  describe('Streaming Control', () => {
+    beforeEach(() => {
+      bridge.setClient(mockRealtimeClient as unknown as RealtimeClient);
     });
 
-    it('should register event listeners on initialization', () => {
-      const onSpy = vi.spyOn(mockClient, 'on');
-      
-      bridge.initialize(mockClient);
-      
-      expect(onSpy).toHaveBeenCalledWith('user_turn_start', expect.any(Function));
-      expect(onSpy).toHaveBeenCalledWith('user_turn_end', expect.any(Function));
-      expect(onSpy).toHaveBeenCalledWith('agent_turn_start', expect.any(Function));
-      expect(onSpy).toHaveBeenCalledWith('agent_turn_end', expect.any(Function));
+    describe('startStreaming()', () => {
+      it('should subscribe to audio chunks', () => {
+        bridge.startStreaming();
+        
+        expect(mockAudioService.onAudioChunk).toHaveBeenCalledWith(
+          expect.any(Function)
+        );
+      });
+
+      it('should throw error when no client', () => {
+        bridge.setClient(null);
+        
+        expect(() => bridge.startStreaming()).toThrow('No client connected');
+      });
+
+      it('should be idempotent', () => {
+        bridge.startStreaming();
+        bridge.startStreaming(); // Second call
+        
+        // Should only subscribe once
+        expect(mockAudioService.onAudioChunk).toHaveBeenCalledTimes(1);
+      });
+
+      it('should emit status event', () => {
+        const statusSpy = vi.fn();
+        bridge.on('status', statusSpy);
+        
+        bridge.startStreaming();
+        
+        expect(statusSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            isStreaming: true,
+            isConnected: true
+          })
+        );
+      });
     });
 
-    it('should throw error if initialized without client', () => {
-      expect(() => bridge.initialize(null as any)).toThrow();
+    describe('stopStreaming()', () => {
+      beforeEach(() => {
+        bridge.startStreaming();
+      });
+
+      it('should unsubscribe from audio chunks', () => {
+        bridge.stopStreaming();
+        
+        expect(unsubscribeAudio).toHaveBeenCalled();
+      });
+
+      it('should be idempotent', () => {
+        bridge.stopStreaming();
+        
+        unsubscribeAudio.mockClear();
+        
+        bridge.stopStreaming(); // Second call
+        
+        // Should not try to unsubscribe again
+        expect(unsubscribeAudio).not.toHaveBeenCalled();
+      });
+
+      it('should log statistics', () => {
+        const consoleLog = vi.spyOn(console, 'log').mockImplementation();
+        
+        // Send some chunks
+        simulateAudioChunk();
+        simulateAudioChunk();
+        
+        bridge.stopStreaming();
+        
+        expect(consoleLog).toHaveBeenCalledWith(
+          expect.stringContaining('Audio streaming stopped'),
+          expect.objectContaining({
+            streamed_chunks: expect.any(Number),
+            suppressed_chunks: expect.any(Number)
+          })
+        );
+      });
+
+      it('should emit status event', () => {
+        const statusSpy = vi.fn();
+        bridge.on('status', statusSpy);
+        
+        bridge.stopStreaming();
+        
+        expect(statusSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            isStreaming: false
+          })
+        );
+      });
+    });
+  });
+
+  describe('Audio Chunk Bridging', () => {
+    beforeEach(() => {
+      bridge.setClient(mockRealtimeClient as unknown as RealtimeClient);
+      bridge.startStreaming();
+    });
+
+    it('should send chunks when user has turn', () => {
+      mockTurnManager.canSendInput = true;
+      
+      simulateAudioChunk(1024);
+      
+      expect(mockRealtimeClient.sendBinaryFrame).toHaveBeenCalledWith(
+        expect.any(ArrayBuffer)
+      );
+    });
+
+    it('should suppress chunks when user does not have turn', () => {
+      mockTurnManager.canSendInput = false;
+      
+      simulateAudioChunk(1024);
+      
+      expect(mockRealtimeClient.sendBinaryFrame).not.toHaveBeenCalled();
+    });
+
+    it('should handle zero-byte chunks', () => {
+      mockTurnManager.canSendInput = true;
+      
+      simulateAudioChunk(0);
+      
+      expect(mockRealtimeClient.sendBinaryFrame).toHaveBeenCalledWith(
+        expect.any(ArrayBuffer)
+      );
+    });
+
+    it('should handle large chunks', () => {
+      mockTurnManager.canSendInput = true;
+      
+      simulateAudioChunk(1024 * 1024); // 1MB
+      
+      expect(mockRealtimeClient.sendBinaryFrame).toHaveBeenCalledWith(
+        expect.any(ArrayBuffer)
+      );
+    });
+
+    it('should check connection before sending', () => {
+      mockTurnManager.canSendInput = true;
+      mockRealtimeClient.isConnected.mockReturnValue(false);
+      
+      simulateAudioChunk(1024);
+      
+      expect(mockRealtimeClient.sendBinaryFrame).not.toHaveBeenCalled();
     });
   });
 
   describe('Turn State Management', () => {
     beforeEach(() => {
-      bridge.initialize(mockClient);
+      bridge.setClient(mockRealtimeClient as unknown as RealtimeClient);
+      bridge.startStreaming();
     });
 
-    it('should update turn state on user_turn_start', () => {
-      expect(bridge['currentUserHasTurn']).toBe(false);
-      
-      mockClient.emit('user_turn_start', { type: 'user_turn_start' });
-      
-      expect(bridge['currentUserHasTurn']).toBe(true);
+    describe('respectTurnState enabled (default)', () => {
+      it('should respect turn state changes', () => {
+        // Start with no turn
+        mockTurnManager.canSendInput = false;
+        simulateAudioChunk();
+        expect(mockRealtimeClient.sendBinaryFrame).not.toHaveBeenCalled();
+        
+        // Get turn
+        simulateTurnChange(true);
+        simulateAudioChunk();
+        expect(mockRealtimeClient.sendBinaryFrame).toHaveBeenCalledTimes(1);
+        
+        // Lose turn
+        simulateTurnChange(false);
+        simulateAudioChunk();
+        expect(mockRealtimeClient.sendBinaryFrame).toHaveBeenCalledTimes(1); // No new calls
+      });
+
+      it('should track suppressed chunks', () => {
+        mockTurnManager.canSendInput = false;
+        
+        simulateAudioChunk();
+        simulateAudioChunk();
+        
+        const status = bridge.getStatus();
+        expect(status.statistics.suppressed_chunks).toBe(2);
+        expect(status.statistics.streamed_chunks).toBe(0);
+      });
     });
 
-    it('should update turn state on user_turn_end', () => {
-      bridge['currentUserHasTurn'] = true;
-      
-      mockClient.emit('user_turn_end', { type: 'user_turn_end' });
-      
-      expect(bridge['currentUserHasTurn']).toBe(false);
+    describe('respectTurnState disabled', () => {
+      beforeEach(() => {
+        bridge.updateConfig({ respectTurnState: false });
+      });
+
+      it('should ignore turn state', () => {
+        mockTurnManager.canSendInput = false;
+        
+        simulateAudioChunk();
+        
+        expect(mockRealtimeClient.sendBinaryFrame).toHaveBeenCalled();
+      });
+
+      it('should not track suppressed chunks', () => {
+        mockTurnManager.canSendInput = false;
+        
+        simulateAudioChunk();
+        simulateAudioChunk();
+        
+        const status = bridge.getStatus();
+        expect(status.statistics.suppressed_chunks).toBe(0);
+        expect(status.statistics.streamed_chunks).toBe(2);
+      });
     });
 
-    it('should update agent turn state on agent_turn_start', () => {
-      expect(bridge['agentIsSpeaking']).toBe(false);
-      
-      mockClient.emit('agent_turn_start', { type: 'agent_turn_start' });
-      
-      expect(bridge['agentIsSpeaking']).toBe(true);
-    });
+    describe('configuration changes', () => {
+      it('should apply config changes immediately', () => {
+        // Start with respectTurnState enabled
+        mockTurnManager.canSendInput = false;
+        simulateAudioChunk();
+        expect(mockRealtimeClient.sendBinaryFrame).not.toHaveBeenCalled();
+        
+        // Disable respectTurnState
+        bridge.updateConfig({ respectTurnState: false });
+        simulateAudioChunk();
+        expect(mockRealtimeClient.sendBinaryFrame).toHaveBeenCalled();
+      });
 
-    it('should update agent turn state on agent_turn_end', () => {
-      bridge['agentIsSpeaking'] = true;
-      
-      mockClient.emit('agent_turn_end', { type: 'agent_turn_end' });
-      
-      expect(bridge['agentIsSpeaking']).toBe(false);
-    });
-  });
-
-  describe('Audio Processing', () => {
-    beforeEach(async () => {
-      bridge.initialize(mockClient);
-      
-      // Connect client
-      const connectPromise = mockClient.connect();
-      const wsInstance = mockWS.lastInstance();
-      wsInstance.readyState = 1; // OPEN
-      wsInstance.simulateOpen();
-      await connectPromise;
-    });
-
-    it('should process audio data when user has turn', () => {
-      bridge['currentUserHasTurn'] = true;
-      const sendSpy = vi.spyOn(mockClient, 'sendBinaryFrame');
-      
-      const audioData = new ArrayBuffer(256);
-      bridge.processAudioData(audioData);
-      
-      // Should accumulate in buffer
-      expect(bridge['audioBuffer'].length).toBeGreaterThan(0);
-    });
-
-    it('should not process audio when user does not have turn', () => {
-      bridge['currentUserHasTurn'] = false;
-      bridge['config'].respectTurnState = true;
-      
-      const audioData = new ArrayBuffer(256);
-      bridge.processAudioData(audioData);
-      
-      // Should not accumulate
-      expect(bridge['audioBuffer'].length).toBe(0);
-    });
-
-    it('should process audio regardless of turn when respectTurnState is false', () => {
-      bridge['currentUserHasTurn'] = false;
-      bridge['config'].respectTurnState = false;
-      
-      const audioData = new ArrayBuffer(256);
-      bridge.processAudioData(audioData);
-      
-      // Should accumulate
-      expect(bridge['audioBuffer'].length).toBeGreaterThan(0);
-    });
-
-    it('should send buffered audio when buffer is full', () => {
-      bridge['currentUserHasTurn'] = true;
-      const sendSpy = vi.spyOn(mockClient, 'sendBinaryFrame');
-      
-      // Fill buffer beyond threshold
-      const chunkSize = 1024;
-      for (let i = 0; i < 5; i++) {
-        const audioData = new ArrayBuffer(chunkSize);
-        bridge.processAudioData(audioData);
-      }
-      
-      // Should have sent data
-      expect(sendSpy).toHaveBeenCalled();
-    });
-
-    it('should clear buffer after sending', () => {
-      bridge['currentUserHasTurn'] = true;
-      
-      // Fill buffer
-      const audioData = new ArrayBuffer(bridge['config'].bufferSize + 100);
-      bridge.processAudioData(audioData);
-      
-      // Trigger send
-      bridge['sendBufferedAudio']();
-      
-      // Buffer should be cleared
-      expect(bridge['audioBuffer'].length).toBe(0);
+      it('should emit status on config change', () => {
+        const statusSpy = vi.fn();
+        bridge.on('status', statusSpy);
+        
+        bridge.updateConfig({ respectTurnState: false });
+        
+        expect(statusSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            config: expect.objectContaining({
+              respectTurnState: false
+            })
+          })
+        );
+      });
     });
   });
 
-  describe('Start/Stop', () => {
-    beforeEach(() => {
-      bridge.initialize(mockClient);
+  describe('Status and Events', () => {
+    describe('getStatus()', () => {
+      it('should return complete status', () => {
+        bridge.setClient(mockRealtimeClient as unknown as RealtimeClient);
+        bridge.startStreaming();
+        
+        const status = bridge.getStatus();
+        
+        expect(status).toEqual({
+          isStreaming: true,
+          isConnected: true,
+          hasClient: true,
+          audioServiceStatus: {
+            isRecording: false,
+            state: 'idle'
+          },
+          statistics: {
+            streamed_chunks: 0,
+            suppressed_chunks: 0
+          },
+          config: {
+            respectTurnState: true,
+            debug: false
+          }
+        });
+      });
+
+      it('should update audio service status', () => {
+        mockAudioService.getStatus.mockReturnValue({
+          isRecording: true,
+          state: 'recording'
+        });
+        
+        const status = bridge.getStatus();
+        
+        expect(status.audioServiceStatus).toEqual({
+          isRecording: true,
+          state: 'recording'
+        });
+      });
+
+      it('should reflect connection state', () => {
+        bridge.setClient(mockRealtimeClient as unknown as RealtimeClient);
+        mockRealtimeClient.isConnected.mockReturnValue(false);
+        
+        const status = bridge.getStatus();
+        
+        expect(status.isConnected).toBe(false);
+      });
     });
 
-    it('should start processing', () => {
-      bridge.start();
-      
-      expect(bridge['isProcessing']).toBe(true);
-    });
+    describe('resetStats()', () => {
+      it('should reset statistics', () => {
+        bridge.setClient(mockRealtimeClient as unknown as RealtimeClient);
+        bridge.startStreaming();
+        
+        // Generate some stats
+        mockTurnManager.canSendInput = true;
+        simulateAudioChunk();
+        mockTurnManager.canSendInput = false;
+        simulateAudioChunk();
+        
+        let status = bridge.getStatus();
+        expect(status.statistics.streamed_chunks).toBe(1);
+        expect(status.statistics.suppressed_chunks).toBe(1);
+        
+        // Reset
+        bridge.resetStats();
+        
+        status = bridge.getStatus();
+        expect(status.statistics.streamed_chunks).toBe(0);
+        expect(status.statistics.suppressed_chunks).toBe(0);
+      });
 
-    it('should stop processing', () => {
-      bridge.start();
-      bridge.stop();
-      
-      expect(bridge['isProcessing']).toBe(false);
-    });
-
-    it('should clear interval on stop', () => {
-      bridge.start();
-      const intervalId = bridge['sendIntervalId'];
-      
-      bridge.stop();
-      
-      expect(bridge['sendIntervalId']).toBeNull();
-    });
-
-    it('should send remaining buffer on stop', () => {
-      bridge['currentUserHasTurn'] = true;
-      bridge.start();
-      
-      // Add some data to buffer
-      const audioData = new ArrayBuffer(256);
-      bridge.processAudioData(audioData);
-      
-      const sendSpy = vi.spyOn(bridge as any, 'sendBufferedAudio');
-      
-      bridge.stop();
-      
-      expect(sendSpy).toHaveBeenCalled();
-    });
-
-    it('should handle multiple start calls', () => {
-      bridge.start();
-      const firstIntervalId = bridge['sendIntervalId'];
-      
-      bridge.start();
-      const secondIntervalId = bridge['sendIntervalId'];
-      
-      // Should not create multiple intervals
-      expect(firstIntervalId).toBe(secondIntervalId);
-    });
-  });
-
-  describe('Buffer Management', () => {
-    beforeEach(() => {
-      bridge.initialize(mockClient, { bufferSize: 1024 });
-      bridge['currentUserHasTurn'] = true;
-    });
-
-    it('should accumulate audio in buffer', () => {
-      const chunk1 = new ArrayBuffer(256);
-      const chunk2 = new ArrayBuffer(256);
-      
-      bridge.processAudioData(chunk1);
-      bridge.processAudioData(chunk2);
-      
-      expect(bridge['audioBuffer'].length).toBe(512);
-    });
-
-    it('should combine buffer into single ArrayBuffer for sending', () => {
-      const chunk1 = new Uint8Array([1, 2, 3, 4]);
-      const chunk2 = new Uint8Array([5, 6, 7, 8]);
-      
-      bridge['audioBuffer'].push(...chunk1);
-      bridge['audioBuffer'].push(...chunk2);
-      
-      const combined = bridge['getCombinedBuffer']();
-      const view = new Uint8Array(combined);
-      
-      expect(view.length).toBe(8);
-      expect(Array.from(view)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
-    });
-
-    it('should respect buffer size limit', () => {
-      const sendSpy = vi.spyOn(bridge as any, 'sendBufferedAudio');
-      
-      // Add data exceeding buffer size
-      const largeChunk = new ArrayBuffer(2048);
-      bridge.processAudioData(largeChunk);
-      
-      // Should trigger send
-      expect(sendSpy).toHaveBeenCalled();
-    });
-
-    it('should handle empty buffer', () => {
-      const sendSpy = vi.spyOn(mockClient, 'sendBinaryFrame');
-      
-      bridge['sendBufferedAudio']();
-      
-      // Should not send empty buffer
-      expect(sendSpy).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('Connection State Handling', () => {
-    beforeEach(() => {
-      bridge.initialize(mockClient);
-    });
-
-    it('should only send when client is connected', async () => {
-      const sendSpy = vi.spyOn(mockClient, 'sendBinaryFrame');
-      
-      // Try to send while disconnected
-      bridge['audioBuffer'] = [1, 2, 3, 4];
-      bridge['sendBufferedAudio']();
-      
-      expect(sendSpy).not.toHaveBeenCalled();
-      
-      // Connect client
-      const connectPromise = mockClient.connect();
-      const wsInstance = mockWS.lastInstance();
-      wsInstance.readyState = 1; // OPEN
-      wsInstance.simulateOpen();
-      await connectPromise;
-      
-      // Now should be able to send
-      bridge['audioBuffer'] = [1, 2, 3, 4];
-      bridge['sendBufferedAudio']();
-      
-      expect(sendSpy).toHaveBeenCalled();
-    });
-
-    it('should handle disconnection during processing', async () => {
-      // Connect first
-      const connectPromise = mockClient.connect();
-      const wsInstance = mockWS.lastInstance();
-      wsInstance.readyState = 1;
-      wsInstance.simulateOpen();
-      await connectPromise;
-      
-      bridge.start();
-      bridge['currentUserHasTurn'] = true;
-      
-      // Add audio data
-      bridge.processAudioData(new ArrayBuffer(256));
-      
-      // Disconnect
-      mockClient.disconnect();
-      
-      // Try to send
-      const sendSpy = vi.spyOn(mockClient, 'sendBinaryFrame');
-      bridge['sendBufferedAudio']();
-      
-      // Should not send when disconnected
-      expect(sendSpy).not.toHaveBeenCalled();
+      it('should emit status event on reset', () => {
+        const statusSpy = vi.fn();
+        bridge.on('status', statusSpy);
+        
+        bridge.resetStats();
+        
+        expect(statusSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            statistics: {
+              streamed_chunks: 0,
+              suppressed_chunks: 0
+            }
+          })
+        );
+      });
     });
   });
 
   describe('Error Handling', () => {
-    beforeEach(async () => {
-      bridge.initialize(mockClient);
-      
-      // Connect client
-      const connectPromise = mockClient.connect();
-      const wsInstance = mockWS.lastInstance();
-      wsInstance.readyState = 1;
-      wsInstance.simulateOpen();
-      await connectPromise;
+    beforeEach(() => {
+      bridge.setClient(mockRealtimeClient as unknown as RealtimeClient);
+      bridge.startStreaming();
     });
 
     it('should handle send errors gracefully', () => {
-      bridge['currentUserHasTurn'] = true;
-      
-      // Mock sendBinaryFrame to throw
-      vi.spyOn(mockClient, 'sendBinaryFrame').mockImplementation(() => {
+      mockTurnManager.canSendInput = true;
+      mockRealtimeClient.sendBinaryFrame.mockImplementation(() => {
         throw new Error('Send failed');
       });
       
-      const errorHandler = vi.fn();
-      bridge.on('error', errorHandler);
+      // Should not throw
+      expect(() => simulateAudioChunk()).not.toThrow();
       
-      // Add data and try to send
-      bridge.processAudioData(new ArrayBuffer(256));
-      bridge['sendBufferedAudio']();
-      
-      expect(errorHandler).toHaveBeenCalledWith(expect.any(Error));
+      // Should still track as streamed (attempted)
+      const status = bridge.getStatus();
+      expect(status.statistics.streamed_chunks).toBe(1);
     });
 
-    it('should continue processing after errors', () => {
-      bridge['currentUserHasTurn'] = true;
-      bridge.start();
+    it('should handle missing turn manager', () => {
+      // Create client without turn manager
+      const clientNoTurn = {
+        isConnected: vi.fn().mockReturnValue(true),
+        sendBinaryFrame: vi.fn(),
+        getTurnManager: vi.fn().mockReturnValue(null)
+      };
       
-      // Mock sendBinaryFrame to throw once, then succeed
-      const sendSpy = vi.spyOn(mockClient, 'sendBinaryFrame');
-      sendSpy.mockImplementationOnce(() => {
-        throw new Error('Send failed');
-      });
+      bridge.setClient(clientNoTurn as unknown as RealtimeClient);
+      bridge.startStreaming();
       
-      // First send fails
-      bridge.processAudioData(new ArrayBuffer(256));
-      bridge['sendBufferedAudio']();
+      // Should still work, always send chunks
+      simulateAudioChunk();
       
-      // Should clear buffer even on error
-      expect(bridge['audioBuffer'].length).toBe(0);
-      
-      // Second send should work
-      bridge.processAudioData(new ArrayBuffer(256));
-      bridge['sendBufferedAudio']();
-      
-      expect(sendSpy).toHaveBeenCalledTimes(2);
-    });
-  });
-
-  describe('Configuration Options', () => {
-    it('should respect custom send interval', () => {
-      vi.useFakeTimers();
-      
-      bridge.initialize(mockClient, { sendInterval: 100 });
-      bridge.start();
-      
-      const sendSpy = vi.spyOn(bridge as any, 'sendBufferedAudio');
-      
-      vi.advanceTimersByTime(100);
-      expect(sendSpy).toHaveBeenCalledTimes(1);
-      
-      vi.advanceTimersByTime(100);
-      expect(sendSpy).toHaveBeenCalledTimes(2);
-      
-      vi.useRealTimers();
+      expect(clientNoTurn.sendBinaryFrame).toHaveBeenCalled();
     });
 
-    it('should handle zero send interval', () => {
-      bridge.initialize(mockClient, { sendInterval: 0 });
-      bridge.start();
+    it('should handle client disconnection during streaming', () => {
+      mockTurnManager.canSendInput = true;
       
-      // Should still create interval with minimum value
-      expect(bridge['sendIntervalId']).not.toBeNull();
-    });
-
-    it('should handle negative buffer size', () => {
-      bridge.initialize(mockClient, { bufferSize: -1 });
+      // Disconnect client
+      bridge.setClient(null);
       
-      // Should use default or minimum value
-      expect(bridge['config'].bufferSize).toBeGreaterThan(0);
+      // Should have stopped streaming
+      expect(unsubscribeAudio).toHaveBeenCalled();
+      
+      // New chunks should not cause errors
+      expect(() => simulateAudioChunk()).not.toThrow();
     });
   });
 
-  describe('Event Emitter Integration', () => {
-    beforeEach(() => {
-      bridge.initialize(mockClient);
+  describe('Debug Mode', () => {
+    it('should log debug messages when enabled', () => {
+      const consoleLog = vi.spyOn(console, 'log').mockImplementation();
+      
+      bridge.updateConfig({ debug: true });
+      bridge.setClient(mockRealtimeClient as unknown as RealtimeClient);
+      bridge.startStreaming();
+      
+      mockTurnManager.canSendInput = true;
+      simulateAudioChunk(1024);
+      
+      expect(consoleLog).toHaveBeenCalledWith(
+        expect.stringContaining('[AudioAgentCBridge]'),
+        expect.stringContaining('Audio chunk')
+      );
     });
 
-    it('should emit processing events', () => {
-      const startHandler = vi.fn();
-      const stopHandler = vi.fn();
+    it('should not log debug messages when disabled', () => {
+      const consoleLog = vi.spyOn(console, 'log').mockImplementation();
       
-      bridge.on('processing-started', startHandler);
-      bridge.on('processing-stopped', stopHandler);
+      bridge.setClient(mockRealtimeClient as unknown as RealtimeClient);
+      bridge.startStreaming();
       
-      bridge.start();
-      expect(startHandler).toHaveBeenCalled();
+      mockTurnManager.canSendInput = true;
+      simulateAudioChunk(1024);
       
-      bridge.stop();
-      expect(stopHandler).toHaveBeenCalled();
-    });
-
-    it('should emit data-sent events', async () => {
-      const dataSentHandler = vi.fn();
-      bridge.on('data-sent', dataSentHandler);
+      // Only end-of-streaming log, no debug logs
+      bridge.stopStreaming();
       
-      // Connect client
-      const connectPromise = mockClient.connect();
-      const wsInstance = mockWS.lastInstance();
-      wsInstance.readyState = 1;
-      wsInstance.simulateOpen();
-      await connectPromise;
-      
-      bridge['currentUserHasTurn'] = true;
-      bridge['audioBuffer'] = [1, 2, 3, 4];
-      bridge['sendBufferedAudio']();
-      
-      expect(dataSentHandler).toHaveBeenCalledWith(expect.objectContaining({
-        size: 4
-      }));
+      expect(consoleLog).toHaveBeenCalledTimes(1);
+      expect(consoleLog).toHaveBeenCalledWith(
+        expect.stringContaining('Audio streaming stopped')
+      );
     });
   });
 
-  describe('Cleanup', () => {
-    it('should cleanup event listeners on destroy', () => {
-      bridge.initialize(mockClient);
-      const offSpy = vi.spyOn(mockClient, 'off');
+  describe('Integration Scenarios', () => {
+    it('should handle full streaming lifecycle', () => {
+      // Connect
+      bridge.setClient(mockRealtimeClient as unknown as RealtimeClient);
       
-      bridge.destroy();
+      // Start streaming
+      bridge.startStreaming();
       
-      expect(offSpy).toHaveBeenCalledWith('user_turn_start', expect.any(Function));
-      expect(offSpy).toHaveBeenCalledWith('user_turn_end', expect.any(Function));
-      expect(offSpy).toHaveBeenCalledWith('agent_turn_start', expect.any(Function));
-      expect(offSpy).toHaveBeenCalledWith('agent_turn_end', expect.any(Function));
+      // User gets turn
+      simulateTurnChange(true);
+      
+      // Stream some chunks
+      simulateAudioChunk();
+      simulateAudioChunk();
+      
+      expect(mockRealtimeClient.sendBinaryFrame).toHaveBeenCalledTimes(2);
+      
+      // Agent takes turn
+      simulateTurnChange(false);
+      
+      // Chunks suppressed
+      simulateAudioChunk();
+      
+      expect(mockRealtimeClient.sendBinaryFrame).toHaveBeenCalledTimes(2);
+      
+      // Stop streaming
+      bridge.stopStreaming();
+      
+      const status = bridge.getStatus();
+      expect(status.statistics.streamed_chunks).toBe(2);
+      expect(status.statistics.suppressed_chunks).toBe(1);
     });
 
-    it('should stop processing on destroy', () => {
-      bridge.initialize(mockClient);
-      bridge.start();
+    it('should handle reconnection scenario', () => {
+      // Initial connection
+      bridge.setClient(mockRealtimeClient as unknown as RealtimeClient);
+      bridge.startStreaming();
       
-      bridge.destroy();
+      // Disconnect
+      bridge.setClient(null);
       
-      expect(bridge['isProcessing']).toBe(false);
-      expect(bridge['sendIntervalId']).toBeNull();
-    });
-
-    it('should clear buffer on destroy', () => {
-      bridge.initialize(mockClient);
-      bridge['audioBuffer'] = [1, 2, 3, 4];
+      // Reconnect with new client
+      const newClient = {
+        isConnected: vi.fn().mockReturnValue(true),
+        sendBinaryFrame: vi.fn(),
+        getTurnManager: vi.fn().mockReturnValue(mockTurnManager)
+      };
       
-      bridge.destroy();
+      bridge.setClient(newClient as unknown as RealtimeClient);
+      bridge.startStreaming();
       
-      expect(bridge['audioBuffer'].length).toBe(0);
-    });
-
-    it('should reset client reference on destroy', () => {
-      bridge.initialize(mockClient);
+      // Should work with new client
+      mockTurnManager.canSendInput = true;
+      simulateAudioChunk();
       
-      bridge.destroy();
-      
-      expect(bridge['client']).toBeNull();
+      expect(newClient.sendBinaryFrame).toHaveBeenCalled();
     });
   });
 });

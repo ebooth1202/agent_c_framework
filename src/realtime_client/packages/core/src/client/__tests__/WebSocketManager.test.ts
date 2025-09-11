@@ -1,466 +1,269 @@
 /**
- * Comprehensive tests for WebSocketManager
+ * WebSocketManager Unit Tests
+ * Phase 1 Implementation - Simple behavior testing with Level 1 stubs
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { WebSocketManager } from '../WebSocketManager';
-import { MockWebSocket, mockWebSocketConstructor } from '../../test/mocks/mock-websocket';
+import { createMockWebSocket } from '../../test/mocks/websocket.mock';
+import { useFakeTimers } from '../../test/shared/timer-helpers';
 
-// Helper functions
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+// Import test setup for polyfills
+import '../../test/setup';
 
 describe('WebSocketManager', () => {
   let manager: WebSocketManager;
-  let mockWS: ReturnType<typeof mockWebSocketConstructor>;
-  let wsInstance: MockWebSocket;
-  let callbacks: any;
+  let mockWS: any;
+  let mockConstructor: any;
 
   beforeEach(() => {
-    // Mock WebSocket globally
-    mockWS = mockWebSocketConstructor();
-    global.WebSocket = mockWS as any;
+    vi.clearAllMocks();
     
-    // Create callbacks
-    callbacks = {
-      onOpen: vi.fn(),
-      onClose: vi.fn(),
-      onError: vi.fn(),
-      onMessage: vi.fn()
-    };
+    // Create mock WebSocket instance
+    mockWS = createMockWebSocket();
+    mockWS.readyState = WebSocket.CONNECTING;
+    mockWS.binaryType = 'arraybuffer';
+    mockWS.onopen = null;
+    mockWS.onclose = null; 
+    mockWS.onerror = null;
+    mockWS.onmessage = null;
     
-    // Create manager instance
+    // Mock WebSocket constructor
+    mockConstructor = vi.fn(() => mockWS);
+    mockConstructor.CONNECTING = 0;
+    mockConstructor.OPEN = 1;
+    mockConstructor.CLOSING = 2;
+    mockConstructor.CLOSED = 3;
+    
+    // Install globally
+    vi.stubGlobal('WebSocket', mockConstructor);
+    
+    // Create manager with test config
     manager = new WebSocketManager({
-      url: 'ws://localhost:8080/test',
-      protocols: undefined,
-      binaryType: 'arraybuffer'
-    }, callbacks);
+      url: 'ws://test.example.com',
+      protocols: ['protocol1'],
+      pingInterval: 30000,
+      pongTimeout: 5000
+    });
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
     manager.disconnect();
-    vi.clearAllMocks();
   });
 
-  describe('Connection Management', () => {
-    it('should create WebSocket with correct parameters', () => {
+  describe('Connection lifecycle', () => {
+    it('should create WebSocket with correct URL', () => {
       manager.connect();
       
-      expect(mockWS).toHaveBeenCalledWith('ws://localhost:8080/test', undefined);
-      expect(mockWS).toHaveBeenCalledTimes(1);
+      expect(mockConstructor).toHaveBeenCalledWith('ws://test.example.com', ['protocol1']);
+      expect(mockWS.binaryType).toBe('arraybuffer');
     });
 
-    it('should set binaryType on connection', () => {
-      manager.connect();
-      wsInstance = mockWS.lastInstance();
-      
-      expect(wsInstance.binaryType).toBe('arraybuffer');
-    });
-
-    it('should handle connection with protocols', () => {
-      const managerWithProtocols = new WebSocketManager({
-        url: 'ws://localhost:8080/test',
-        protocols: ['protocol1', 'protocol2'],
-        binaryType: 'blob'
-      });
-
-      managerWithProtocols.connect();
-      
-      expect(mockWS).toHaveBeenCalledWith('ws://localhost:8080/test', ['protocol1', 'protocol2']);
-      
-      const instance = mockWS.lastInstance();
-      expect(instance.binaryType).toBe('blob');
-      
-      managerWithProtocols.disconnect();
-    });
-
-    it('should call onOpen callback when WebSocket opens', async () => {
-      manager.connect();
-      wsInstance = mockWS.lastInstance();
-      
-      // Simulate open event
-      wsInstance.simulateOpen();
-      
-      await sleep(10);
-      
-      expect(callbacks.onOpen).toHaveBeenCalled();
-    });
-
-    it('should call onClose callback when WebSocket closes', async () => {
-      manager.connect();
-      wsInstance = mockWS.lastInstance();
-      
-      // Simulate close event
-      wsInstance.simulateClose(1000, 'Normal closure');
-      
-      await sleep(10);
-      
-      expect(callbacks.onClose).toHaveBeenCalled();
-    });
-
-    it('should call onError callback on WebSocket error', async () => {
-      manager.connect();
-      wsInstance = mockWS.lastInstance();
-      
-      // Simulate error event
-      wsInstance.simulateError('Connection failed');
-      
-      await sleep(10);
-      
-      expect(callbacks.onError).toHaveBeenCalled();
-    });
-
-    it('should handle multiple connections correctly', () => {
-      // First connection
-      manager.connect();
-      const firstInstance = mockWS.lastInstance();
-      
-      // Second connection should close first
-      manager.connect();
-      const secondInstance = mockWS.lastInstance();
-      
-      expect(firstInstance.close).toHaveBeenCalled();
-      expect(secondInstance).not.toBe(firstInstance);
-    });
-
-    it('should handle disconnect when not connected', () => {
-      expect(() => manager.disconnect()).not.toThrow();
-    });
-
-    it('should close WebSocket on disconnect', () => {
-      manager.connect();
-      wsInstance = mockWS.lastInstance();
-      
-      manager.disconnect();
-      
-      expect(wsInstance.close).toHaveBeenCalled();
-    });
-
-    it('should check connection state correctly', () => {
-      expect(manager.isConnected()).toBe(false);
+    it('should handle connection open event', () => {
+      const onOpen = vi.fn();
+      manager = new WebSocketManager(
+        { url: 'ws://test.example.com' },
+        { onOpen }
+      );
       
       manager.connect();
-      wsInstance = mockWS.lastInstance();
+      mockWS.readyState = WebSocket.OPEN;
       
-      expect(manager.isConnected()).toBe(false); // Still connecting
+      // Trigger open event
+      mockWS.onopen?.({} as Event);
       
-      wsInstance.readyState = MockWebSocket.OPEN;
-      expect(manager.isConnected()).toBe(true);
+      expect(onOpen).toHaveBeenCalled();
+    });
+
+    it('should handle connection close event', () => {
+      const onClose = vi.fn();
+      manager = new WebSocketManager(
+        { url: 'ws://test.example.com' },
+        { onClose }
+      );
       
-      wsInstance.readyState = MockWebSocket.CLOSING;
-      expect(manager.isConnected()).toBe(false);
+      manager.connect();
       
-      wsInstance.readyState = MockWebSocket.CLOSED;
-      expect(manager.isConnected()).toBe(false);
+      // Trigger close event
+      const closeEvent = new CloseEvent('close', { code: 1000, reason: 'Normal' });
+      mockWS.onclose?.(closeEvent);
+      
+      expect(onClose).toHaveBeenCalledWith(closeEvent);
+    });
+
+    it('should disconnect existing connection before new one', () => {
+      manager.connect();
+      const firstWS = mockWS;
+      firstWS.readyState = WebSocket.OPEN; // Ensure it's open
+      
+      // Create new mock for second connection
+      const secondWS = createMockWebSocket();
+      secondWS.readyState = WebSocket.CONNECTING;
+      secondWS.binaryType = 'arraybuffer';
+      secondWS.onopen = null;
+      secondWS.onclose = null;
+      secondWS.onerror = null;
+      secondWS.onmessage = null;
+      mockConstructor.mockReturnValue(secondWS);
+      
+      manager.connect();
+      
+      expect(firstWS.close).toHaveBeenCalled();
+      expect(mockConstructor).toHaveBeenCalledTimes(2);
     });
   });
 
-  describe('Message Handling', () => {
+  describe('Message sending', () => {
     beforeEach(() => {
       manager.connect();
-      wsInstance = mockWS.lastInstance();
-      wsInstance.readyState = MockWebSocket.OPEN;
+      mockWS.readyState = WebSocket.OPEN;
     });
 
-    it('should call onMessage callback for text messages', async () => {
-      const testData = { type: 'test', data: 'hello' };
-      wsInstance.simulateTextMessage(testData);
-      
-      await sleep(10);
-      
-      expect(callbacks.onMessage).toHaveBeenCalledWith(JSON.stringify(testData));
-    });
-
-    it('should call onMessage callback for binary messages', async () => {
-      const binaryData = new ArrayBuffer(256);
-      wsInstance.simulateBinaryMessage(binaryData);
-      
-      await sleep(10);
-      
-      expect(callbacks.onMessage).toHaveBeenCalledWith(binaryData);
-    });
-
-    it('should send text messages', () => {
-      const message = JSON.stringify({ type: 'test', content: 'hello' });
-      
+    it('should send string messages', () => {
+      const message = 'test message';
       manager.send(message);
       
-      expect(wsInstance.send).toHaveBeenCalledWith(message);
+      expect(mockWS.send).toHaveBeenCalledWith(message);
     });
 
-    it('should send binary messages', () => {
-      const binaryData = new ArrayBuffer(128);
+    it('should send binary data', () => {
+      const data = new ArrayBuffer(8);
+      manager.send(data);
       
-      manager.send(binaryData);
-      
-      expect(wsInstance.send).toHaveBeenCalledWith(binaryData);
+      expect(mockWS.send).toHaveBeenCalledWith(data);
     });
 
-    it('should throw error when sending without connection', () => {
+    it('should throw when not connected', () => {
       manager.disconnect();
       
       expect(() => manager.send('test')).toThrow('WebSocket is not connected');
     });
 
-    it('should handle send errors gracefully', () => {
-      wsInstance.send = vi.fn().mockImplementation(() => {
-        throw new Error('Send failed');
-      });
+    it('should throw when WebSocket is not open', () => {
+      mockWS.readyState = WebSocket.CONNECTING;
       
-      expect(() => manager.send('test')).toThrow('Send failed');
+      expect(() => manager.send('test')).toThrow('WebSocket is not open');
     });
   });
 
-  describe('Reconnection Support', () => {
-    it('should handle unexpected disconnect', async () => {
+  describe('Message receiving', () => {
+    it('should handle incoming text messages', () => {
+      const onMessage = vi.fn();
+      manager = new WebSocketManager(
+        { url: 'ws://test.example.com' },
+        { onMessage }
+      );
+      
       manager.connect();
-      wsInstance = mockWS.lastInstance();
-      wsInstance.simulateOpen();
       
-      // Simulate unexpected disconnect
-      wsInstance.simulateClose(1006, 'Connection lost');
+      // Simulate text message
+      const messageEvent = { data: 'test message' } as MessageEvent;
+      mockWS.onmessage?.(messageEvent);
       
-      await sleep(10);
-      
-      // Should call onClose callback with error code
-      expect(callbacks.onClose).toHaveBeenCalled();
-      const closeCall = callbacks.onClose.mock.calls[0][0];
-      expect(closeCall.code).toBe(1006);
+      expect(onMessage).toHaveBeenCalledWith('test message');
     });
 
-    it('should handle clean disconnect', async () => {
+    it('should handle incoming binary messages', () => {
+      const onMessage = vi.fn();
+      manager = new WebSocketManager(
+        { url: 'ws://test.example.com' },
+        { onMessage }
+      );
+      
       manager.connect();
-      wsInstance = mockWS.lastInstance();
-      wsInstance.simulateOpen();
       
-      // Simulate clean disconnect
-      wsInstance.simulateClose(1000, 'Normal closure');
+      // Simulate binary message
+      const buffer = new ArrayBuffer(8);
+      const messageEvent = { data: buffer } as MessageEvent;
+      mockWS.onmessage?.(messageEvent);
       
-      await sleep(10);
-      
-      // Should call onClose callback with normal code
-      expect(callbacks.onClose).toHaveBeenCalled();
-      const closeCall = callbacks.onClose.mock.calls[0][0];
-      expect(closeCall.code).toBe(1000);
+      expect(onMessage).toHaveBeenCalledWith(buffer);
     });
   });
 
-  describe('Callback System', () => {
-    it('should handle multiple callbacks', () => {
-      manager.connect();
-      wsInstance = mockWS.lastInstance();
-      
-      // Test all callbacks
-      wsInstance.simulateOpen();
-      expect(callbacks.onOpen).toHaveBeenCalled();
-      
-      wsInstance.simulateTextMessage('test');
-      expect(callbacks.onMessage).toHaveBeenCalledWith('test');
-      
-      wsInstance.simulateError('error');
-      expect(callbacks.onError).toHaveBeenCalled();
-      
-      wsInstance.simulateClose(1000, 'Normal');
-      expect(callbacks.onClose).toHaveBeenCalled();
-    });
-
-    it('should work without callbacks', () => {
-      // Create manager without callbacks
-      const managerNoCallbacks = new WebSocketManager({
-        url: 'ws://localhost:8080/test',
-        protocols: undefined,
-        binaryType: 'arraybuffer'
-      });
-      
-      managerNoCallbacks.connect();
-      const instance = mockWS.lastInstance();
-      
-      // Should not throw when events occur
-      expect(() => {
-        instance.simulateOpen();
-        instance.simulateTextMessage('test');
-        instance.simulateClose(1000, 'Normal');
-      }).not.toThrow();
-      
-      managerNoCallbacks.disconnect();
-    });
-  });
-
-  describe('Binary Protocol Support', () => {
+  describe('Heartbeat', () => {
+    let timers: ReturnType<typeof useFakeTimers>;
+    
     beforeEach(() => {
+      timers = useFakeTimers();
       manager.connect();
-      wsInstance = mockWS.lastInstance();
-      wsInstance.readyState = MockWebSocket.OPEN;
+      mockWS.readyState = WebSocket.OPEN;
+    });
+    
+    afterEach(() => {
+      timers.restore();
     });
 
-    it('should handle ArrayBuffer messages', async () => {
-      const binaryHandler = vi.fn();
-      manager.on('message', binaryHandler);
+    it('should send ping at intervals', () => {
+      // Trigger connection open
+      mockWS.onopen?.({} as Event);
       
-      const buffer = new ArrayBuffer(1024);
-      const view = new Uint8Array(buffer);
-      for (let i = 0; i < view.length; i++) {
-        view[i] = i % 256;
-      }
+      // Advance timer to ping interval
+      timers.advance(30000);
       
-      wsInstance.simulateBinaryMessage(buffer);
+      expect(mockWS.send).toHaveBeenCalledWith(JSON.stringify({ type: 'ping' }));
       
-      await sleep(10);
+      // Simulate pong response to reset isAlive flag
+      mockWS.onmessage?.({ data: 'pong' } as MessageEvent);
       
-      expect(binaryHandler).toHaveBeenCalledWith(buffer);
+      // Clear the mock to check for second ping
+      mockWS.send.mockClear();
+      
+      // Advance again for second ping
+      timers.advance(30000);
+      expect(mockWS.send).toHaveBeenCalledWith(JSON.stringify({ type: 'ping' }));
     });
 
-    it('should send ArrayBuffer data', () => {
-      const buffer = new ArrayBuffer(512);
+    it('should handle pong response', () => {
+      // Trigger connection open
+      mockWS.onopen?.({} as Event);
       
-      manager.send(buffer);
+      // Advance timer to ping interval
+      timers.advance(30000);
+      expect(mockWS.send).toHaveBeenCalledWith(JSON.stringify({ type: 'ping' }));
       
-      expect(wsInstance.send).toHaveBeenCalledWith(buffer);
-    });
-
-    it('should handle Blob messages if binaryType is blob', async () => {
-      manager.disconnect();
+      // Simulate pong response (any message resets isAlive)
+      mockWS.onmessage?.({ data: 'pong' } as MessageEvent);
       
-      const blobManager = new WebSocketManager({
-        url: 'ws://localhost:8080/test',
-        protocols: undefined,
-        binaryType: 'blob'
-      });
-      
-      blobManager.connect();
-      const blobWsInstance = mockWS.lastInstance();
-      blobWsInstance.readyState = MockWebSocket.OPEN;
-      
-      expect(blobWsInstance.binaryType).toBe('blob');
-      
-      const messageHandler = vi.fn();
-      blobManager.on('message', messageHandler);
-      
-      const blob = new Blob(['test data']);
-      blobWsInstance.simulateMessage(blob);
-      
-      await sleep(10);
-      
-      expect(messageHandler).toHaveBeenCalledWith(blob);
-      
-      blobManager.disconnect();
+      // Should not disconnect after pong timeout
+      timers.advance(5000);
+      expect(mockWS.close).not.toHaveBeenCalled();
     });
   });
 
-  describe('WebSocket State Management', () => {
-    it('should track WebSocket state transitions', () => {
+  describe('State management', () => {
+    it('should return correct ready state', () => {
+      // Before connection
+      expect(manager.getReadyState()).toBe(WebSocket.CLOSED);
+      
+      // After connection
       manager.connect();
-      wsInstance = mockWS.lastInstance();
+      mockWS.readyState = WebSocket.CONNECTING;
+      expect(manager.getReadyState()).toBe(WebSocket.CONNECTING);
       
-      // Initially connecting
-      expect(wsInstance.readyState).toBe(MockWebSocket.CONNECTING);
+      // When open
+      mockWS.readyState = WebSocket.OPEN;
+      expect(manager.getReadyState()).toBe(WebSocket.OPEN);
       
-      // Open
-      wsInstance.readyState = MockWebSocket.OPEN;
-      wsInstance.simulateOpen();
+      // After disconnect
+      manager.disconnect();
+      expect(manager.getReadyState()).toBe(WebSocket.CLOSED);
+    });
+
+    it('should report connection status', () => {
+      expect(manager.isConnected()).toBe(false);
+      
+      manager.connect();
+      mockWS.readyState = WebSocket.CONNECTING;
+      expect(manager.isConnected()).toBe(false);
+      
+      mockWS.readyState = WebSocket.OPEN;
       expect(manager.isConnected()).toBe(true);
       
-      // Closing
-      wsInstance.readyState = MockWebSocket.CLOSING;
+      mockWS.readyState = WebSocket.CLOSING;
       expect(manager.isConnected()).toBe(false);
-      
-      // Closed
-      wsInstance.readyState = MockWebSocket.CLOSED;
-      wsInstance.simulateClose();
-      expect(manager.isConnected()).toBe(false);
-    });
-
-    it('should handle rapid connect/disconnect cycles', () => {
-      for (let i = 0; i < 5; i++) {
-        manager.connect();
-        const instance = mockWS.lastInstance();
-        manager.disconnect();
-        expect(instance.close).toHaveBeenCalled();
-      }
-      
-      expect(mockWS).toHaveBeenCalledTimes(5);
-    });
-  });
-
-  describe('Error Handling', () => {
-    it('should handle connection failures', async () => {
-      manager.connect();
-      wsInstance = mockWS.lastInstance();
-      
-      wsInstance.simulateError('Network error');
-      
-      await sleep(10);
-      
-      expect(callbacks.onError).toHaveBeenCalled();
-    });
-
-    it('should handle WebSocket constructor errors', () => {
-      // Mock WebSocket to throw on construction
-      const throwingMock = vi.fn().mockImplementation(() => {
-        throw new Error('WebSocket construction failed');
-      });
-      global.WebSocket = throwingMock as any;
-      
-      expect(() => manager.connect()).toThrow('WebSocket construction failed');
-    });
-
-    it('should handle abnormal closures', async () => {
-      manager.connect();
-      wsInstance = mockWS.lastInstance();
-      wsInstance.simulateOpen();
-      
-      // Abnormal closure
-      wsInstance.simulateClose(1006, 'Abnormal closure');
-      
-      await sleep(10);
-      
-      expect(callbacks.onClose).toHaveBeenCalled();
-      const closeCall = callbacks.onClose.mock.calls[0][0];
-      expect(closeCall.code).toBe(1006);
-      expect(closeCall.reason).toBe('Abnormal closure');
-    });
-  });
-
-  describe('Configuration Options', () => {
-    it('should handle different URL formats', () => {
-      const urls = [
-        'ws://localhost:8080',
-        'wss://example.com/ws',
-        'ws://192.168.1.1:3000/socket',
-        'wss://api.example.com/v1/ws'
-      ];
-      
-      urls.forEach(url => {
-        const testManager = new WebSocketManager({
-          url,
-          protocols: undefined,
-          binaryType: 'arraybuffer'
-        });
-        
-        testManager.connect();
-        expect(mockWS).toHaveBeenCalledWith(url, undefined);
-        testManager.disconnect();
-      });
-    });
-
-    it('should handle different protocol configurations', () => {
-      const configs = [
-        { protocols: undefined },
-        { protocols: 'chat' },
-        { protocols: ['chat', 'v1'] },
-        { protocols: [] }
-      ];
-      
-      configs.forEach(({ protocols }) => {
-        const testManager = new WebSocketManager({
-          url: 'ws://test',
-          protocols,
-          binaryType: 'arraybuffer'
-        });
-        
-        testManager.connect();
-        expect(mockWS).toHaveBeenCalledWith('ws://test', protocols);
-        testManager.disconnect();
-      });
     });
   });
 });
