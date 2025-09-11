@@ -24,10 +24,16 @@ class DynamicCommandTools(Toolset):
         policies: Dict[str, Dict[str, Any]] = self.policy_provider.get_all_policies() or {}
 
         # Build a command→description map from policy (fallback to a sensible default)
-        self.whitelisted_commands = {
-            base: {"description": self.policy_provider.build_command_instructions(base, spec)}
-            for base, spec in sorted(policies.items())
-        }
+        self.whitelisted_commands = {}
+        for base, spec in sorted(policies.items()):
+            try:
+                description = self.policy_provider.build_command_instructions(base, spec)
+                self.whitelisted_commands[base] = {"description": description}
+            except Exception as e:
+                self.logger.error(f"Failed to load policy for command '{base}': {e}")
+                # Optionally include it with an error description:
+                # self.whitelisted_commands[base] = {"description": f"ERROR: {e}"}
+                continue
 
         self._create_dynamic_tools()
 
