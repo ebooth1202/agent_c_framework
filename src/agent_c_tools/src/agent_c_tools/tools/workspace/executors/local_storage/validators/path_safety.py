@@ -37,7 +37,7 @@ def extract_file_part(token: str) -> str:
     Works for:
       - pytest: tests/foo.py::TestX::test_y, tests/foo.py:123
       - generic runners: just returns token
-    Leaves Windows drive letters intact (e.g., 'C:\...').
+    Leaves Windows drive letters intact (e.g., 'C:\\...').
     """
     t = token
     if "::" in t:
