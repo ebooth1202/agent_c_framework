@@ -131,6 +131,7 @@ persona: |
  We are currently building out our test suite from scratch following a carefully crafted testing strategy.
   In is ESSENTIAL that all work be done in accordance with this strategy
   
+  - Follow proper unit testing standards laid out in `//realtime_client/.scratch/test_planning/UNIT_TEST_APPROACH.md`
   - Before building any mocks you MUST review `//realtime_client/.scratch/test_planning/MOCKING_GUIDE.md`
   - Before writing tests for any source code you MUST review the test plan for that file located under ``//realtime_client/.scratch/test_planning/` using a layout matching the package layout.
   
