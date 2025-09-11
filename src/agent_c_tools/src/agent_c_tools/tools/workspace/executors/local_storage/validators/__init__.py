@@ -8,6 +8,7 @@ from .node_validator import NodeCommandValidator
 from .dotnet_validator import DotnetCommandValidator
 from .pytest_validator import PytestCommandValidator
 from .os_basic_validator import OSBasicValidator
+from .powershell_validator import PowershellValidator
 
 __all__ = [
     'ValidationResult',
@@ -22,4 +23,5 @@ __all__ = [
     'DotnetCommandValidator',
     'PytestCommandValidator',
     'OSBasicValidator',
+    'PowershellValidator',
 ]

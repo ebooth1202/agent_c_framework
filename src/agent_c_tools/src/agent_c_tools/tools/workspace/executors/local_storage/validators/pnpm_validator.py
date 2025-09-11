@@ -1,6 +1,7 @@
 from typing import Dict, Any, List, Mapping
 import os
 from .base_validator import ValidationResult, CommandValidator
+from .path_safety import is_within_workspace, looks_like_path, extract_file_part
 
 class PnpmCommandValidator(CommandValidator):
     """
@@ -59,17 +60,13 @@ class PnpmCommandValidator(CommandValidator):
                 base = self._flag_base(f)
                 if base not in root_flags and f not in root_flags:
                     return ValidationResult(False, f"Root flag not allowed: {f}")
-            # Disallow any stray non-flags in flags-only mode
             non_flags = [p for p in parts[1:] if not p.startswith("-")]
             if non_flags:
                 return ValidationResult(False, f"Unexpected args: {' '.join(non_flags[:3])}")
-            return ValidationResult(True, "OK", timeout=policy.get("default_timeout"))
+            return ValidationResult(True, "OK", timeout=policy.get("default_timeout"), policy_spec=None)
 
-        # Case B: subcommand mode
-        raw_sub = parts[1].lower()
-        # normalize aliases (e.g., pnpm i == pnpm install, pnpm add == pnpm install)
-        alias_map = {"i": "install", "add": "install"}
-        sub = alias_map.get(raw_sub, raw_sub)
+        # Case B: subcommand mode - MUCH SIMPLER!
+        sub = parts[1].lower()
 
         if sub in deny_subs:
             return ValidationResult(False, f"Subcommand not allowed: {sub}")
@@ -78,57 +75,47 @@ class PnpmCommandValidator(CommandValidator):
         if spec is None:
             return ValidationResult(False, f"Subcommand not allowed: {sub}")
 
-        # Helper views over tokens
+        # Standard flag validation
         after = parts[2:]
         used_flags = [p for p in after if p.startswith("-")]
-        positionals = [p for p in after if not p.startswith("-")]
-
-        # Common: check allowed flags (if provided)
         allowed_flags = set(self._get_allowed_flags(spec))
+
         if allowed_flags:
             for f in used_flags:
                 base = self._flag_base(f)
                 if base not in allowed_flags and f not in allowed_flags:
                     return ValidationResult(False, f"Flag not allowed for {sub}: {f}")
 
-        # Special handling per subcommand
-        if sub == "run":
-            allowed_scripts = set(spec.get("allowed_scripts") or [])
-            if not positionals:
-                return ValidationResult(False, "pnpm run requires a script name")
-            script = positionals[0]
-            if script not in allowed_scripts:
-                return ValidationResult(False, f"Script not allowed: {script}")
+        # Path safety validation for commands that accept file arguments
+        if not spec.get("deny_args", True):  # If args are allowed
+            workspace_root = (
+                    policy.get("workspace_root")
+                    or os.environ.get("WORKSPACE_ROOT")
+                    or os.getcwd()
+            )
 
-            if spec.get("deny_args"):
-                # forbid anything beyond the script, including '--' passthrough
-                extra = after[after.index(script) + 1:] if script in after else after[1:]
-                if extra:
-                    return ValidationResult(False, f"Extra args not allowed after script: {' '.join(extra[:3])}")
+            positionals = [p for p in after if not p.startswith("-")]
 
-        elif sub == "install":
-            if not spec.get("enabled", False):
-                return ValidationResult(False, f"Subcommand disabled by policy: {sub}")
+            if spec.get("allow_test_paths", False):
+                # Validate that any path-like arguments are within workspace
+                from .path_safety import is_within_workspace, looks_like_path, extract_file_part
 
-            if spec.get("require_no_packages"):
-                # Any positional arg means they tried to install a package name
-                if positionals:
-                    return ValidationResult(False, f"{sub} with package names is not allowed")
+                bad = next(
+                    (a for a in positionals
+                     if looks_like_path(a)
+                     and not is_within_workspace(workspace_root, extract_file_part(a))),
+                    None
+                )
+                if bad:
+                    return ValidationResult(False, f"Unsafe path outside workspace: {bad}")
+            elif positionals:
+                # If test paths not enabled but we have positional args, block them
+                return ValidationResult(False, f"Arguments not allowed for {sub}: {' '.join(positionals[:3])}")
 
-            # NOTE: require_flags will be auto-injected in adjust_arguments.
-            # We do not fail validation here if they're missing, so injection can occur.
-
-        elif sub == "config":
-            # Only allow: pnpm config get <key>
-            if spec.get("get_only"):
-                # find the first non-flag token
-                first_nonflag = positionals[0].lower() if positionals else None
-                if first_nonflag != "get":
-                    return ValidationResult(False, "Only 'pnpm config get <key>' is allowed")
-                # no further checks; keys are read-only
-
-        # All good
-        return ValidationResult(True, "OK", timeout=spec.get("timeout") or policy.get("default_timeout"))
+        # Simple return with spec
+        return ValidationResult(True, "OK",
+                                timeout=spec.get("timeout") or policy.get("default_timeout"),
+                                policy_spec=spec)
 
     def adjust_arguments(self, parts: List[str], policy: Mapping[str, Any]) -> List[str]:
         """
@@ -164,15 +151,6 @@ class PnpmCommandValidator(CommandValidator):
 
         return parts
 
-    def adjust_environment(self, base_env: Dict[str, str], parts: List[str], policy: Mapping[str, Any]) -> Dict[str, str]:
-        env = dict(base_env)
-        env.update(policy.get("env_overrides") or {})
-        
-        # Prepend node_modules/.bin to PATH if workspace root is available
-        workspace_root = base_env.get("WORKSPACE_ROOT")
-        if workspace_root:
-            node_modules_bin = os.path.join(workspace_root, "node_modules", ".bin")
-            if os.path.exists(node_modules_bin):
-                env["PATH_PREPEND"] = node_modules_bin
-                
+    def adjust_environment(self, base_env, parts, policy):
+        env = super().adjust_environment(base_env, parts, policy)
         return env

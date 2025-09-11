@@ -11,15 +11,14 @@ from typing import Dict, Any, List, Optional, Mapping, Tuple, Callable, Protocol
 from dataclasses import dataclass
 
 from agent_c.util.logging_utils import LoggingManager
+from .validators import LernaCommandValidator, NpxCommandValidator, PnpmCommandValidator
 from .validators.base_validator import BasicCommandValidator, CommandValidator, ValidationResult
 from .validators.dotnet_validator import DotnetCommandValidator
 from .validators.git_validator import GitCommandValidator
 from .validators.node_validator import NodeCommandValidator
 from .validators.npm_validator import NpmCommandValidator
-from .validators.npx_validator import NpxCommandValidator
-from .validators.pnpm_validator import PnpmCommandValidator
-from .validators.lerna_validator import LernaCommandValidator
 from .validators.os_basic_validator import OSBasicValidator
+from .validators.powershell_validator import PowershellValidator
 from .validators.pytest_validator import PytestCommandValidator
 
 # ANSI stripping Regex
@@ -27,7 +26,7 @@ ANSI_RE = re.compile(r'\x1b\[[0-9;?]*[ -/]*[@-~]')
 
 @dataclass
 class CommandExecutionResult:
-    status: str  # "success", "error", "timeout", "blocked"
+    status: str  # "success", "error", "timeout", "blocked", "failed"
     return_code: Optional[int]
     stdout: str
     stderr: str
@@ -37,6 +36,7 @@ class CommandExecutionResult:
     duration_ms: Optional[int] = None
     truncated_stdout: Optional[bool] = None
     truncated_stderr: Optional[bool] = None
+    suppress_success_output: bool = False
 
     # The class modifications I added (to_dict() and to_yaml() methods) are optional conveniences.
     # The dataclass will work with yaml.dump(asdict(result)) without any modifications.
@@ -135,7 +135,7 @@ class CommandExecutionResult:
     @property
     def is_error(self) -> bool:
         """Check if command failed"""
-        return self.status in ["error", "timeout", "blocked"]
+        return self.status in ["error", "timeout", "blocked", "failed"]
 
     def to_friendly_string(self, success_prefix: str = "OK") -> str:
         """
@@ -224,17 +224,20 @@ class SecureCommandExecutor:
             "os_basic": OSBasicValidator(),
             "node": NodeCommandValidator(),
             "npm": NpmCommandValidator(),
+            "dotnet": DotnetCommandValidator(),
+            "powershell": PowershellValidator(),
             "npx": NpxCommandValidator(),
             "pnpm": PnpmCommandValidator(),
             "lerna": LernaCommandValidator(),
-            "dotnet": DotnetCommandValidator(),
         }
 
+        if self.policy_provider:
+            self._prime_validators_from_policy()
+
         # Logging setup
-        if log_output:
-            self.log_output = log_output
-            logging_manager = LoggingManager(self.__class__.__name__)
-            self.logger = logging_manager.get_logger()
+        self.log_output = bool(log_output)
+        logging_manager = LoggingManager(self.__class__.__name__)
+        self.logger = logging_manager.get_logger()
 
     @staticmethod
     def has_ansi(s: str) -> bool:
@@ -261,6 +264,19 @@ class SecureCommandExecutor:
                 return "pytest"
         return base
 
+    def _prime_validators_from_policy(self) -> None:
+        """For each policy key, ensure we have *some* validator registered.
+        If a specific one isn't known, fall back to BasicCommandValidator."""
+        try:
+            all_policies = self.policy_provider.get_all_policies() or {}
+        except Exception:
+            all_policies = {}
+
+        for base_cmd, spec in all_policies.items():
+            key = (spec.get("validator") or base_cmd).lower()
+            # If a custom validator wasn’t registered, use the generic safe validator
+            self.validators.setdefault(key, self.basic_validator)
+
     def _resolve_executable(self, cmd: str, env: Dict[str, str]) -> Optional[str]:
         """Resolve an executable using PATH/PATHEXT from the provided environment."""
         exe = shutil.which(cmd, path=env.get("PATH"))
@@ -274,6 +290,18 @@ class SecureCommandExecutor:
                     return exe
         return None
 
+    @staticmethod
+    def _policy_suppress_flag(
+            policy: Mapping[str, Any],
+            vres: ValidationResult
+    ) -> bool:
+        # command-level default
+        val = bool(policy.get("suppress_success_output", False))
+        # prefer the matched node if provided
+        if vres.policy_spec is not None:
+            return bool(vres.policy_spec.get("suppress_success_output", False) or val)
+        return val
+
     def _log_command_execution(self, command: str, result: CommandExecutionResult):
         log_entry = {
             'timestamp': datetime.now().isoformat(),
@@ -283,9 +311,11 @@ class SecureCommandExecutor:
             'working_directory': result.working_directory
         }
 
-        # Only log output if explicitly enabled and not too large
+        # Always include the key; populate only if small enough AND logging enabled
+        stdout_preview = ""
         if self.log_output and len(result.stdout) < 1024:
-            log_entry['stdout_preview'] = result.stdout[:500]
+            stdout_preview = result.stdout[:500]
+        log_entry['stdout_preview'] = stdout_preview
 
         self.logger.info(json.dumps(log_entry))
 
@@ -295,7 +325,8 @@ class SecureCommandExecutor:
     async def execute_command(self, command: str,
                               working_directory: str = None,
                               override_env: Optional[Dict[str, str]] = None,
-                              timeout: Optional[int] = None) -> CommandExecutionResult:
+                              timeout: Optional[int] = None,
+                              suppress_success_output: Optional[bool] = None) -> CommandExecutionResult:
         """
         Execute a single command under policy control.
 
@@ -304,6 +335,7 @@ class SecureCommandExecutor:
           working_directory: absolute path; caller owns sandboxing
           override_env: base environment for the process (merged with validator's overrides)
           timeout: fallback timeout if neither per-command nor executor default is provided
+          suppress_success_output: if True, suppress stdout on success (overrides policy). Must be optional and None as a default of False would override policy.
         """
         start_ms = time.time()
 
@@ -321,16 +353,23 @@ class SecureCommandExecutor:
         if not base:
             return self._error(command, working_directory, "Unable to resolve base command")
 
-        # Must be in the allowlist of base commands - meaning if they submit a command that we don't have a policy for, it's blocked
-        policy = self.policy_provider.get_policy(base, parts)
+        # Try to get policy if provider exists
+        policy = self.policy_provider.get_policy(base, parts) if self.policy_provider else None
+
+        # Work out validator key even if policy is missing (fallback to base)
+        validator_key = (policy.get("validator") if (policy and policy.get("validator")) else base).lower()
+        validator = self.validators.get(validator_key)
+
+        # If there is NO policy but there IS a registered validator, fall back to a minimal safe policy.
+        # This treats "explicit validator registration" as an allow-list action, but still keeps defaults constrained.
+        if policy is None and validator is not None:
+            policy = {"default_timeout": self.default_timeout, "safe_env": {}}
+
+        # If we still don't have a policy, block (no allowlisting at all)
         if not policy:
             return self._blocked(command, working_directory, f"No policy for '{base}'")
 
-        # Now get the validator for that command - if we don't have a validator, block it.
-        # We can create a validator that inherits from BasicCommandValidator if we want to have a generic validator for commands without a custom handler.
-        # by forcing us to create one, we ensure we don't just allow arbitrary commands through without review.
-        validator_key = (policy.get("validator") or base).lower()
-        validator = self.validators.get(validator_key)
+        # If we have a policy but no validator, it's a configuration error
         if validator is None:
             return self._error(command, working_directory, f"No validator registered for '{base}'")
 
@@ -338,6 +377,14 @@ class SecureCommandExecutor:
         vres: ValidationResult = validator.validate(parts, policy)
         if not vres.allowed:
             return self._blocked(command, working_directory, vres.reason or "Validation failed")
+
+        # DRY: compute unified suppression once, for every validator
+        policy_suppress = self._policy_suppress_flag(policy, vres)
+        effective_suppress = (
+            suppress_success_output  # per-call override wins if provided
+            if suppress_success_output is not None
+            else (vres.suppress_success_output or policy_suppress)
+        )
 
         # Override-or-append required flags as per `require_flags`, and normalize verbosity flags. Used by DOTNET validator
         # In future, we may want to do this prior to validator.validate
@@ -350,36 +397,50 @@ class SecureCommandExecutor:
 
         # Build env
         effective_env = dict(os.environ)
-        # Apply policy-provided safe env first
+
+        # 1) policy "safe_env" (static, lowest precedence)
         safe_env = policy.get("safe_env") or {}
         effective_env.update({k: str(v) for (k, v) in safe_env.items()})
 
+        # 2) workspace-provided overrides (e.g., WORKSPACE_ROOT, CWD) — make these visible to validators
         if override_env:
             effective_env.update(override_env)
 
-        # Let validator override / adjust environment
+        # 3) let the validator add/adjust (may set PATH_PREPEND using WORKSPACE_ROOT/CWD, etc.)
         if hasattr(validator, "adjust_environment"):
-            # type: ignore[attr-defined]
-            effective_env = validator.adjust_environment(effective_env, parts, policy)  # noqa
+            pre_env = effective_env
+            try:
+                adjusted = validator.adjust_environment(pre_env, parts, policy)
+            except Exception:
+                adjusted = None
+            effective_env = adjusted if isinstance(adjusted, dict) else pre_env
 
-        # Ensure Windows can resolve .cmd/.bat if caller didn't supply PATHEXT
+        effective_env = {str(k): str(v) for k, v in (effective_env or {}).items() if v is not None}
+
+        # (optional) if you want "caller wins" semantics for most keys without clobbering PATH:
+        if override_env:
+            for k, v in override_env.items():
+                if k not in ("PATH", "PATH_PREPEND"):  # don't stomp what validator composed
+                    effective_env[k] = v
+
+        # Windows helpers + PATH_PREPEND handling (unchanged)
         if self.is_windows:
             effective_env.setdefault("PATHEXT", ".COM;.EXE;.BAT;.CMD")
-
-        # Optional: allow PATH_PREPEND if a validator/policy wants to inject it
         path_prepend = effective_env.pop("PATH_PREPEND", None)
         if path_prepend:
             sep = ";" if self.is_windows else ":"
             effective_env["PATH"] = f"{path_prepend}{sep}{effective_env.get('PATH', '')}"
 
         # Final timeout: arg > per-command > executor default
-        effective_timeout = int(vres.timeout or timeout or policy.get("default_timeout", self.default_timeout))
+        if timeout is not None:
+            effective_timeout = int(timeout)
+        elif vres.timeout is not None:
+            effective_timeout = int(vres.timeout)
+        else:
+            effective_timeout = int(policy.get("default_timeout", self.default_timeout))
 
         # Resolve the executable using the effective PATH/PATHEXT
         resolved = self._resolve_executable(parts[0], effective_env)
-        if parts[0] == 'npm':
-            parts.append('--no-color')
-
 
         if not resolved:
             return self._failed(command, working_directory, f"Executable not found: {parts[0]}")
@@ -392,6 +453,8 @@ class SecureCommandExecutor:
             )
             duration = int((time.time() - start_ms) * 1000)
             status = "success" if rc == 0 else "failed"
+
+            # Grab real result for potential logging
             result = CommandExecutionResult(
                 status=status,
                 return_code=rc,
@@ -403,8 +466,15 @@ class SecureCommandExecutor:
                 duration_ms=duration,
                 truncated_stdout=truncated_out,
                 truncated_stderr=truncated_err,
+                suppress_success_output=effective_suppress,
             )
+            # Log actual command and results
             self._log_command_execution(command, result)
+
+            # Now apply output suppression if enabled and command succeeded
+            if result.suppress_success_output and result.status == "success":
+                result.stdout = "Command executed successfully."
+
             return result
         except asyncio.TimeoutError:
             duration = int((time.time() - start_ms) * 1000)
