@@ -8,6 +8,29 @@ import { ConnectionState } from '@agentc/realtime-core';
 import { useRealtimeClientSafe, useAgentCContext } from '../providers/AgentCContext';
 
 /**
+ * String literal type for connection state (lowercase version)
+ */
+export type ConnectionStateString = 'connected' | 'disconnected' | 'connecting' | 'reconnecting' | 'error';
+
+/**
+ * Helper to convert ConnectionState enum to lowercase string literal
+ */
+export function getConnectionStateString(state: ConnectionState): ConnectionStateString {
+  switch(state) {
+    case ConnectionState.CONNECTED:
+      return 'connected';
+    case ConnectionState.DISCONNECTED:
+      return 'disconnected';
+    case ConnectionState.CONNECTING:
+      return 'connecting';
+    case ConnectionState.RECONNECTING:
+      return 'reconnecting';
+    default:
+      return 'disconnected';
+  }
+}
+
+/**
  * Connection statistics
  */
 export interface ConnectionStats {
@@ -28,6 +51,21 @@ export interface ConnectionStats {
   
   /** Current session duration in milliseconds */
   sessionDuration: number;
+  
+  /** Current latency in milliseconds */
+  latency: number;
+  
+  /** Total messages received */
+  messagesReceived: number;
+  
+  /** Total messages sent */
+  messagesSent: number;
+  
+  /** Total bytes received */
+  bytesReceived: number;
+  
+  /** Total bytes sent */
+  bytesSent: number;
 }
 
 /**
@@ -92,7 +130,12 @@ export function useConnection(): UseConnectionReturn {
     failedConnections: 0,
     lastConnectedAt: null,
     lastDisconnectedAt: null,
-    sessionDuration: 0
+    sessionDuration: 0,
+    latency: 0,
+    messagesReceived: 0,
+    messagesSent: 0,
+    bytesReceived: 0,
+    bytesSent: 0
   });
   
   // Session duration tracking
@@ -236,17 +279,66 @@ export function useConnection(): UseConnectionReturn {
       }));
     };
     
+    // TODO: Implement message statistics tracking when core events are available
+    // These handlers will track:
+    // - messagesSent/bytesSent via 'message:sent' event
+    // - messagesReceived/bytesReceived via 'message:received' event
+    // - latency via 'latency:update' event (from ping/pong measurements)
+    //
+    // const handleMessageSent = (data?: { size?: number }) => {
+    //   setStats(prev => ({
+    //     ...prev,
+    //     messagesSent: prev.messagesSent + 1,
+    //     bytesSent: prev.bytesSent + (data?.size || 0)
+    //   }));
+    // };
+    //
+    // const handleMessageReceived = (data?: { size?: number }) => {
+    //   setStats(prev => ({
+    //     ...prev,
+    //     messagesReceived: prev.messagesReceived + 1,
+    //     bytesReceived: prev.bytesReceived + (data?.size || 0)
+    //   }));
+    // };
+    //
+    // const handleLatencyUpdate = (latency: number) => {
+    //   setStats(prev => ({
+    //     ...prev,
+    //     latency
+    //   }));
+    // };
+    
     // Subscribe to events
     client.on('connected', handleConnected);
     client.on('disconnected', handleDisconnected);
     client.on('reconnecting', handleReconnecting);
     client.on('error', handleError);
     
+    // TODO: Subscribe to message tracking events when implemented in core
+    // These events need to be added to RealtimeEventMap in the core package:
+    // - 'message:sent': Track outgoing messages and bytes
+    // - 'message:received': Track incoming messages and bytes  
+    // - 'latency:update': Track connection latency
+    // 
+    // For now, these stats will remain at 0 until the core events are implemented
+    // if (client.on) {
+    //   client.on('message:sent', handleMessageSent);
+    //   client.on('message:received', handleMessageReceived);
+    //   client.on('latency:update', handleLatencyUpdate);
+    // }
+    
     return () => {
       client.off('connected', handleConnected);
       client.off('disconnected', handleDisconnected);
       client.off('reconnecting', handleReconnecting);
       client.off('error', handleError);
+      
+      // TODO: Unsubscribe when events are implemented
+      // if (client.off) {
+      //   client.off('message:sent', handleMessageSent);
+      //   client.off('message:received', handleMessageReceived);
+      //   client.off('latency:update', handleLatencyUpdate);
+      // }
     };
   }, [client, updateConnectionState]);
   

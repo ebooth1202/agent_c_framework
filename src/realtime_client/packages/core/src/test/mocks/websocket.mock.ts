@@ -11,7 +11,7 @@ export const mockWebSocket = {
   removeEventListener: vi.fn(),
   
   // Properties that tests can set directly
-  readyState: WebSocket.OPEN,
+  readyState: 1, // WebSocket.OPEN value
   binaryType: 'arraybuffer' as BinaryType,
   
   // Event handlers that tests can override
@@ -43,7 +43,7 @@ export const resetWebSocketMock = () => {
   mockWebSocket.onclose.mockReset();
   mockWebSocket.onerror.mockReset();
   mockWebSocket.onmessage.mockReset();
-  mockWebSocket.readyState = WebSocket.OPEN;
+  mockWebSocket.readyState = MockWebSocketConstructor.OPEN;
   mockWebSocket.binaryType = 'arraybuffer';
   MockWebSocketConstructor.mockClear();
 };

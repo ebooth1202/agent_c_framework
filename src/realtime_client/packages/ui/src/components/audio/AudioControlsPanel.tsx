@@ -96,7 +96,7 @@ export const AudioControlsPanel = React.forwardRef<HTMLDivElement, AudioControls
     // Debounced volume update
     const debouncedVolumeChange = React.useMemo(
       () => {
-        let timeoutId: NodeJS.Timeout
+        let timeoutId: ReturnType<typeof setTimeout>
         return (value: number[]) => {
           clearTimeout(timeoutId)
           timeoutId = setTimeout(() => handleVolumeChange(value), 100)

@@ -14,7 +14,17 @@
     "strict": true
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.tsx"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/*.test.tsx",
+    "**/*.spec.tsx",
+    "src/test/**/*",
+    "src/__tests__/**/*",
+    "src/**/__tests__/**/*"
+  ],
   "references": [
     { "path": "../core" },
     { "path": "../react" }
