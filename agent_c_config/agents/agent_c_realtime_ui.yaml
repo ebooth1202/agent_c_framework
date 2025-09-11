@@ -8,7 +8,7 @@ tools:
   - ThinkTools
   - WorkspaceTools
   - AgentCloneTools
-  - DynamicCommandToolset
+  - DynamicCommandTools
   - AgentTeamTools
 agent_params:
   budget_tokens: 20000

@@ -174,8 +174,9 @@ class YamlPolicyProvider(ConfigLoader):
         """Get the resolved policy file path."""
         return self._policy_file_path
 
-    @staticmethod
+
     def build_command_instructions(
+            self,
             base_cmd: str,
             spec: Mapping[str, Any],
             *,
@@ -250,18 +251,25 @@ class YamlPolicyProvider(ConfigLoader):
 
         # A few short, safe examples
         examples = []
-        if root_flags:
-            examples.append(f"{base_cmd} {root_flags[0]}")
-        if sub:
-            for s in list(sub)[:3]:
-                if "allowed_scripts" in sub[s]:
-                    examples.append(f"{base_cmd} {s} {sub[s]['allowed_scripts'][0]}")
-                elif (sub[s].get("require_flags")):
-                    examples.append(f"{base_cmd} {s}  # required flags auto-added")
-                else:
-                    examples.append(f"{base_cmd} {s}")
-        if base_cmd == "npx" and spec.get("allowed_packages"):
-            examples.append(f"npx --yes {spec['allowed_packages'][0]} --version")
+        try:
+            if root_flags:
+                examples.append(f"{base_cmd} {root_flags[0]}")
+
+
+            if sub:
+                for s in list(sub)[:3]:
+                    if "allowed_scripts" in sub[s]:
+                        examples.append(f"{base_cmd} {s} {sub[s]['allowed_scripts'][0]}")
+                    elif (sub[s].get("require_flags")):
+                        examples.append(f"{base_cmd} {s}  # required flags auto-added")
+                    else:
+                        examples.append(f"{base_cmd} {s}")
+
+            if base_cmd == "npx" and spec.get("allowed_packages"):
+                examples.append(f"npx --yes {spec['allowed_packages'][0]} --version")
+        except Exception as e:
+            self.logger.exception(f"Failed to build examples for {base_cmd}, {e}")
+
         if examples:
             lines += ["", "Examples:", *[f"  • {e}" for e in examples]]
 
