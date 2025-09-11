@@ -24,8 +24,8 @@ export { useChat } from './useChat';
 export type { UseChatOptions, UseChatReturn } from './useChat';
 
 // Connection management
-export { useConnection } from './useConnection';
-export type { UseConnectionReturn, ConnectionStats } from './useConnection';
+export { useConnection, getConnectionStateString } from './useConnection';
+export type { UseConnectionReturn, ConnectionStats, ConnectionStateString } from './useConnection';
 
 // Avatar management
 export { useAvatar } from './useAvatar';

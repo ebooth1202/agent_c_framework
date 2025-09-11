@@ -38,6 +38,18 @@ export interface UseAudioReturn {
   /** Current audio input level (0.0 to 1.0) */
   audioLevel: number;
   
+  /** Current output volume (0-100) */
+  volume: number;
+  
+  /** Whether audio output is muted */
+  isMuted: boolean;
+  
+  /** Currently selected input device ID */
+  inputDevice: string;
+  
+  /** Available input devices */
+  availableDevices: MediaDeviceInfo[];
+  
   // Control methods
   /** Start recording from microphone */
   startRecording: () => Promise<void>;
@@ -54,8 +66,17 @@ export interface UseAudioReturn {
   /** Request microphone permission */
   requestPermission: () => Promise<boolean>;
   
-  /** Set audio output volume (0.0 to 1.0) */
+  /** Set audio output volume (0-100) */
   setVolume: (volume: number) => void;
+  
+  /** Set mute state */
+  setMuted: (muted: boolean) => void;
+  
+  /** Toggle mute state */
+  toggleMute: () => void;
+  
+  /** Set input device */
+  setInputDevice: (deviceId: string) => Promise<void>;
   
   // Derived states
   /** Whether recording can be started (connected and not recording) */
@@ -106,6 +127,14 @@ export function useAudio(options: UseAudioOptions = {}): UseAudioReturn {
   const [status, setStatus] = useState<AudioStatus>(DEFAULT_AUDIO_STATUS);
   const [canSendInput, setCanSendInput] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
+  
+  // Mute state management (separate from volume)
+  const [isMuted, setIsMuted] = useState(false);
+  const [previousVolume, setPreviousVolume] = useState(100);
+  
+  // Device management
+  const [inputDevice, setInputDeviceState] = useState('default');
+  const [availableDevices, setAvailableDevices] = useState<MediaDeviceInfo[]>([]);
   
   // Refs for cleanup
   const intervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
@@ -220,19 +249,90 @@ export function useAudio(options: UseAudioOptions = {}): UseAudioReturn {
       return;
     }
     
-    if (volume < 0 || volume > 1) {
-      console.error('Volume must be between 0 and 1');
-      return;
-    }
+    // Convert from 0-100 range to 0-1 range for the client
+    const normalizedVolume = Math.max(0, Math.min(100, volume)) / 100;
     
     try {
-      client.setAudioVolume(volume);
+      client.setAudioVolume(normalizedVolume);
+      
+      // If setting volume > 0 and we're muted, unmute
+      if (volume > 0 && isMuted) {
+        setIsMuted(false);
+      }
+      
+      // Store the volume for unmute restoration
+      if (volume > 0) {
+        setPreviousVolume(volume);
+      }
+      
       updateStatus();
     } catch (error) {
       console.error('Failed to set volume:', error);
       setErrorMessage(error instanceof Error ? error.message : 'Failed to set volume');
     }
-  }, [client, updateStatus]);
+  }, [client, isMuted, updateStatus]);
+  
+  const setMuted = useCallback((muted: boolean) => {
+    if (!client) {
+      console.warn('Client not available');
+      return;
+    }
+    
+    try {
+      if (muted) {
+        // Store current volume before muting
+        const currentVolume = status.volume * 100;
+        if (currentVolume > 0) {
+          setPreviousVolume(currentVolume);
+        }
+        client.setAudioVolume(0);
+      } else {
+        // Restore previous volume
+        client.setAudioVolume(previousVolume / 100);
+      }
+      
+      setIsMuted(muted);
+      updateStatus();
+    } catch (error) {
+      console.error('Failed to set mute state:', error);
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to set mute state');
+    }
+  }, [client, status.volume, previousVolume, updateStatus]);
+  
+  const toggleMute = useCallback(() => {
+    setMuted(!isMuted);
+  }, [isMuted, setMuted]);
+  
+  const setInputDevice = useCallback(async (deviceId: string): Promise<void> => {
+    if (!client) {
+      throw new Error('Client not available');
+    }
+    
+    try {
+      // Stop current recording if active
+      const wasRecording = status.isRecording;
+      if (wasRecording) {
+        client.stopAudioRecording();
+      }
+      
+      // Update the device ID
+      setInputDeviceState(deviceId);
+      
+      // TODO: When AudioManager supports device selection, call client.setAudioInputDevice(deviceId)
+      // For now, this is just tracking the selected device in the UI
+      
+      // Restart recording if it was active
+      if (wasRecording) {
+        await client.startAudioRecording();
+      }
+      
+      updateStatus();
+    } catch (error) {
+      console.error('Failed to set input device:', error);
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to set input device');
+      throw error;
+    }
+  }, [client, status.isRecording, updateStatus]);
   
   // Subscribe to turn state changes
   useEffect(() => {
@@ -291,6 +391,28 @@ export function useAudio(options: UseAudioOptions = {}): UseAudioReturn {
     }
   }, [autoStart, client, status.isRecording, startRecording]);
   
+  // Enumerate audio devices
+  useEffect(() => {
+    const loadDevices = async () => {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const audioInputs = devices.filter(device => device.kind === 'audioinput');
+        setAvailableDevices(audioInputs);
+      } catch (error) {
+        console.error('Failed to enumerate audio devices:', error);
+      }
+    };
+    
+    loadDevices();
+    
+    // Listen for device changes
+    navigator.mediaDevices?.addEventListener('devicechange', loadDevices);
+    
+    return () => {
+      navigator.mediaDevices?.removeEventListener('devicechange', loadDevices);
+    };
+  }, []);
+  
   // Cleanup on unmount
   useEffect(() => {
     isMountedRef.current = true;
@@ -329,6 +451,10 @@ export function useAudio(options: UseAudioOptions = {}): UseAudioReturn {
     isStreaming: status.isStreaming,
     canSendInput,
     audioLevel: status.currentLevel,
+    volume: isMuted ? 0 : Math.round(status.volume * 100),
+    isMuted,
+    inputDevice,
+    availableDevices,
     
     // Control methods
     startRecording,
@@ -337,6 +463,9 @@ export function useAudio(options: UseAudioOptions = {}): UseAudioReturn {
     stopStreaming,
     requestPermission,
     setVolume,
+    setMuted,
+    toggleMute,
+    setInputDevice,
     
     // Derived states
     canStartRecording,

@@ -4,7 +4,7 @@ import * as React from 'react'
 import { Mic, MicOff, Loader2 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { Button } from '../ui/button'
-import { useAudio, useConnection } from '@agentc/realtime-react'
+import { useAudio, useConnection, getConnectionStateString } from '@agentc/realtime-react'
 
 export interface RecordingButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   /**
@@ -27,7 +27,8 @@ export const RecordingButton = React.forwardRef<HTMLButtonElement, RecordingButt
     const { isConnected, connectionState } = useConnection()
     const [error, setError] = React.useState<string | null>(null)
     
-    const isDisabled = disabled || !isConnected || connectionState === 'connecting'
+    const connectionStateString = getConnectionStateString(connectionState)
+    const isDisabled = disabled || !isConnected || connectionStateString === 'connecting'
     
     const handleClick = React.useCallback(async () => {
       setError(null)
@@ -69,10 +70,10 @@ export const RecordingButton = React.forwardRef<HTMLButtonElement, RecordingButt
           disabled={isDisabled}
           aria-label={isRecording ? 'Stop recording' : 'Start recording'}
           aria-pressed={isRecording}
-          aria-busy={connectionState === 'connecting'}
+          aria-busy={connectionStateString === 'connecting'}
           {...props}
         >
-          {connectionState === 'connecting' ? (
+          {connectionStateString === 'connecting' ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
               <span className="sr-only" role="status">Connecting...</span>

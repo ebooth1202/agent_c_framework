@@ -101,6 +101,9 @@ export {
 // Skeleton
 export { Skeleton } from './components/ui/skeleton';
 
+// Slider
+export { Slider } from './components/ui/slider';
+
 // Tabs
 export { Tabs, TabsList, TabsTrigger, TabsContent } from './components/ui/tabs';
 

@@ -35,5 +35,13 @@
     "allowSyntheticDefaultImports": true
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "src/test/**/*",
+    "src/__tests__/**/*",
+    "src/**/__tests__/**/*"
+  ]
 }

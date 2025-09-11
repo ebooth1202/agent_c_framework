@@ -117,8 +117,8 @@ describe('Mock Usage Examples', () => {
       expect(stream.getAudioTracks()).toHaveLength(1);
     });
 
-    it('should allow track manipulation', () => {
-      const stream = mockNavigator.mediaDevices.getUserMedia({ audio: true });
+    it('should allow track manipulation', async () => {
+      const stream = await mockNavigator.mediaDevices.getUserMedia({ audio: true });
       const tracks = stream.getTracks();
       
       tracks[0].stop();

@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { cn } from '../../lib/utils'
-import { useConnection } from '@agentc/realtime-react'
+import { useConnection, getConnectionStateString } from '@agentc/realtime-react'
 import {
   Tooltip,
   TooltipContent,
@@ -40,6 +40,8 @@ export const ConnectionIndicator = React.forwardRef<HTMLDivElement, ConnectionIn
   }, ref) => {
     const { isConnected, connectionState, error, stats } = useConnection()
     
+    const connectionStateString = getConnectionStateString(connectionState)
+    
     const indicatorSize = {
       small: 'h-2 w-2',
       default: 'h-3 w-3',
@@ -47,30 +49,29 @@ export const ConnectionIndicator = React.forwardRef<HTMLDivElement, ConnectionIn
     }[size]
     
     const indicatorColor = React.useMemo(() => {
-      switch (connectionState) {
+      switch (connectionStateString) {
         case 'connected':
           return 'bg-green-500'
         case 'connecting':
+        case 'reconnecting':
           return 'bg-yellow-500 animate-pulse'
-        case 'error':
-          return 'bg-destructive'
         default:
           return 'bg-gray-400'
       }
-    }, [connectionState])
+    }, [connectionStateString])
     
     const statusText = React.useMemo(() => {
-      switch (connectionState) {
+      switch (connectionStateString) {
         case 'connected':
           return 'Connected'
         case 'connecting':
           return 'Connecting'
-        case 'error':
-          return 'Error'
+        case 'reconnecting':
+          return 'Reconnecting'
         default:
           return 'Disconnected'
       }
-    }, [connectionState])
+    }, [connectionStateString])
     
     const indicator = (
       <div
@@ -113,7 +114,7 @@ export const ConnectionIndicator = React.forwardRef<HTMLDivElement, ConnectionIn
             <div className="space-y-1 text-xs">
               <p className="font-semibold">{statusText}</p>
               {error && (
-                <p className="text-destructive">Error: {error}</p>
+                <p className="text-destructive">Error: {error.message}</p>
               )}
               {showStats && stats && isConnected && (
                 <>

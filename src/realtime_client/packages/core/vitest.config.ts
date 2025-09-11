@@ -5,7 +5,7 @@ import { resolve } from 'path';
 export default defineConfig({
   test: {
     globals: true,
-    environment: 'node', // Core package uses node environment
+    environment: 'happy-dom', // Use happy-dom for browser API mocking
     setupFiles: ['./src/test/setup.ts'],
     coverage: {
       provider: 'v8',
