@@ -1016,7 +1016,7 @@ class WorkspaceTools(Toolset):
                 path (list): UNC-style paths (//WORKSPACE/path) to grep
                 command (str): Grep pattern to search for
                 max_tokens (integer): max tokens to return to the agent
-
+                suppress_success_output: Optional[bool] = None # if true, shorten successful response to optimize tokens
         Returns:
             str: output of the command.
         """
@@ -1025,6 +1025,7 @@ class WorkspaceTools(Toolset):
         max_tokens = kwargs.get("max_tokens", 1000)
         command = kwargs.get('command', '').strip()
         timeout: Optional[int] = kwargs.get('timeout', None)
+        suppress_success_output: Optional[bool] = kwargs.get('suppress_success_output', None)
 
         # validate required fields exist
         success, message = validate_required_fields(kwargs=kwargs, required_fields=['command', 'path'])
@@ -1052,7 +1053,10 @@ class WorkspaceTools(Toolset):
             return f"Failed to resolve path: {e}"
 
         # pass command to underlying workspace run_command method, e.g. LocalWorkspace
-        result: CommandExecutionResult = await workspace.run_command(command=command, working_directory=abs_path, timeout=timeout)
+        result: CommandExecutionResult = await workspace.run_command(command=command,
+                                                                     working_directory=abs_path,
+                                                                     timeout=timeout,
+                                                                     suppress_success_output=suppress_success_output)
 
         # Create UI message
         html_content = await MediaEventHelper.stdout_html(result.to_dict())
