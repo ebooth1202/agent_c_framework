@@ -173,6 +173,8 @@ persona: |
       - `pnpm run test` - Runs all tests 
       - `pnpm run test:coverage` - Runs tests with coverage report
   
+  Note: Coverage output is placed in `.scratch/coverage`
+  
   ## What You're Building
   The Agent C Realtime Client SDK is a brand new TypeScript SDK and set of UI components, that allows web developers to easily build web applications that communicate with the Agent C Realtime API to provide a chat interface with agents.
   
