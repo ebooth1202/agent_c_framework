@@ -74,6 +74,11 @@ class DynamicCommandTools(Toolset):
                         "required": False,
                         "default": 1000,
                     },
+                    "suppress_success_output": {
+                        "type": "boolean",
+                        "description": "Override policy setting and supress or do not supress full output if command is successful. None = follow policy.",
+                        "required": False,
+                    },
                 },
             )(dynamic_method)
 
@@ -99,6 +104,7 @@ class DynamicCommandTools(Toolset):
             timeout: Optional[int] = kwargs.get("timeout", None)
             max_tokens: int = kwargs.get("max_tokens", 1000)
             tool_context = kwargs.get("tool_context", {})  # for UI + token counter
+            suppress_success_output: Optional[bool] = kwargs.get("suppress_success_output", None)
 
             # 0) Validate required fields exist
             success, message = validate_required_fields(kwargs=kwargs, required_fields=['path'])
@@ -132,6 +138,7 @@ class DynamicCommandTools(Toolset):
                 command=full_command,
                 working_directory=abs_path,
                 timeout=timeout,
+                suppress_success_output=suppress_success_output
             )
             if result.status == "error":
                 self.logger.warning(f"Agent run command blocked: {full_command}")
