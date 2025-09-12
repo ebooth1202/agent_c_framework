@@ -722,7 +722,7 @@ export const OutputSelector = React.forwardRef<HTMLButtonElement, OutputSelector
      * Sends 'none' as voice_id to disable audio output
      */
     const handleTextOnly = React.useCallback(async () => {
-      if (!client) return
+      if (!client || isChanging) return
       
       setIsChanging(true)
       setError(null)
@@ -730,6 +730,8 @@ export const OutputSelector = React.forwardRef<HTMLButtonElement, OutputSelector
       
       try {
         await client.setAgentVoice('none')
+        // Small delay to ensure loading message is visible to screen readers
+        await new Promise(resolve => setTimeout(resolve, 10))
         setAnnouncement('Text-only mode activated')
       } catch (error) {
         const errorMessage = 'Failed to set text mode'
@@ -739,14 +741,14 @@ export const OutputSelector = React.forwardRef<HTMLButtonElement, OutputSelector
       } finally {
         setIsChanging(false)
       }
-    }, [client])
+    }, [client, isChanging])
 
     /**
      * Handle voice selection
      * @param {string} voiceId - The ID of the voice to select
      */
     const handleVoiceSelect = React.useCallback(async (voiceId: string) => {
-      if (!client) return
+      if (!client || isChanging) return
       
       const voice = filteredVoices.find(v => v.voice_id === voiceId)
       const voiceLabel = formatVoiceDescription(voice || { voice_id: voiceId, vendor: 'Unknown' } as Voice)
@@ -757,6 +759,8 @@ export const OutputSelector = React.forwardRef<HTMLButtonElement, OutputSelector
       
       try {
         await client.setAgentVoice(voiceId)
+        // Small delay to ensure loading message is visible to screen readers
+        await new Promise(resolve => setTimeout(resolve, 10))
         setAnnouncement(`Voice changed to ${voiceLabel}`)
       } catch (error) {
         const errorMessage = `Failed to set voice: ${voiceId}`
@@ -766,7 +770,7 @@ export const OutputSelector = React.forwardRef<HTMLButtonElement, OutputSelector
       } finally {
         setIsChanging(false)
       }
-    }, [client, filteredVoices])
+    }, [client, filteredVoices, isChanging])
 
     /**
      * Handle avatar selection (currently deferred)
@@ -875,12 +879,14 @@ export const OutputSelector = React.forwardRef<HTMLButtonElement, OutputSelector
               {buttonLabel}
             </span>
           </span>
-          <ChevronDown 
-            className={cn(
-              "h-4 w-4 opacity-50 transition-transform duration-200",
-              open && "rotate-180"
-            )} 
-          />
+          {showIcon && (
+            <ChevronDown 
+              className={cn(
+                "h-4 w-4 opacity-50 transition-transform duration-200",
+                open && "rotate-180"
+              )} 
+            />
+          )}
         </Button>
         
         <OutputSelectorPopover

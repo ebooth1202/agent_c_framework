@@ -1,6 +1,6 @@
 /**
  * Test Setup for UI Package
- * Configure testing environment for UI components
+ * Configure testing environment for UI components with jsdom
  */
 
 import '@testing-library/jest-dom';
@@ -36,6 +36,8 @@ afterAll(() => {
   server.close();
 });
 
+// Standard browser API mocks (still needed with jsdom)
+
 // Mock IntersectionObserver
 global.IntersectionObserver = vi.fn().mockImplementation(() => ({
   observe: vi.fn(),
@@ -47,12 +49,14 @@ global.IntersectionObserver = vi.fn().mockImplementation(() => ({
   thresholds: []
 }));
 
-// Mock ResizeObserver
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn()
-}));
+// Mock ResizeObserver - Required for Radix UI components
+class ResizeObserverMock {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+}
+
+global.ResizeObserver = ResizeObserverMock as any;
 
 // Mock matchMedia for responsive design testing
 Object.defineProperty(window, 'matchMedia', {
@@ -79,14 +83,25 @@ Object.defineProperty(window, 'scrollTo', {
 global.requestAnimationFrame = vi.fn((cb) => setTimeout(cb, 0));
 global.cancelAnimationFrame = vi.fn((id) => clearTimeout(id));
 
-// Mock getComputedStyle for style testing
-window.getComputedStyle = vi.fn().mockImplementation(() => ({
-  getPropertyValue: vi.fn().mockReturnValue(''),
-  ...window.getComputedStyle
-}));
-
 // Mock CSS.supports for feature detection
 if (!global.CSS) {
   global.CSS = {} as any;
 }
 global.CSS.supports = vi.fn().mockReturnValue(true);
+
+// Mock navigator.mediaDevices for audio recording tests
+if (!navigator.mediaDevices) {
+  Object.defineProperty(navigator, 'mediaDevices', {
+    writable: true,
+    value: {
+      getUserMedia: vi.fn().mockResolvedValue({
+        getTracks: () => [],
+        getAudioTracks: () => [],
+        getVideoTracks: () => [],
+        stop: vi.fn(),
+      }),
+      enumerateDevices: vi.fn().mockResolvedValue([]),
+      getSupportedConstraints: vi.fn().mockReturnValue({}),
+    },
+  });
+}

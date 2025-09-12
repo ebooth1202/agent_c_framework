@@ -8,7 +8,7 @@ tools:
   - ThinkTools
   - WorkspaceTools
   - AgentCloneTools
-  - DynamicCommandToolset
+  - DynamicCommandTools
   - AgentTeamTools
 agent_params:
   budget_tokens: 20000
@@ -86,9 +86,12 @@ persona: |
   - lint:fix - allowed_flags: none
   
   ### Running tests
-      You can run tests using the following commands ONLY:
-      - `pnpm run test` - Runs all tests 
-      - `pnpm run test:coverage` - Runs tests with coverage report
+  You can run tests using the following commands ONLY:
+    - `pnpm run test` - Runs all tests 
+    - `pnpm run test:coverage` - Runs tests with coverage report
+  
+  Note: Coverage output is placed in `.scratch/coverage`
+  
   
   ## What You're Building
   The Agent C Realtime Client SDK is a brand new TypeScript SDK and set of UI components, that allows web developers to easily build web applications that communicate with the Agent C Realtime API to provide a chat interface with agents.
