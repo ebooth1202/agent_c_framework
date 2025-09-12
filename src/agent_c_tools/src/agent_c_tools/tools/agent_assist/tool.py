@@ -3,6 +3,8 @@ import re
 import markdown
 import yaml
 
+from agent_c.models.agent_config import CurrentAgentConfiguration
+from agent_c.models.events.chat import SubsessionStartedEvent, SubsessionEndedEvent
 from agent_c.toolsets import Toolset, json_schema
 from .base import AgentAssistToolBase
 from .prompt import AgentAssistSection
@@ -19,6 +21,8 @@ class AgentAssistTools(AgentAssistToolBase):
 
         super().__init__( **kwargs)
         self.section = AgentAssistSection(tool=self)
+
+
 
     @staticmethod
     def fix_markdown_formatting(text: str) -> str:
@@ -85,22 +89,32 @@ class AgentAssistTools(AgentAssistToolBase):
                         f"The agent is delegating a task for YOU to perform.\n\n---\n\n{kwargs.get('request')}\n")
         tool_context: Dict[str, Any] = kwargs.get('tool_context')
         process_context: Optional[str] = kwargs.get('process_context')
+        calling_agent_config: CurrentAgentConfiguration = tool_context.get('agent_config', tool_context.get('active_agent'))
+
+        user_session_id = tool_context.get('user_session_id', tool_context['session_id'])
+        parent_session_id = tool_context.get('session_id')
+
         try:
             agent_config = self.agent_loader.catalog[kwargs.get('agent_key')]
         except FileNotFoundError:
             return f"Error: Agent {kwargs.get('agent_key')} not found in catalog."
 
-        await self._raise_render_media(
-            sent_by_class=self.__class__.__name__,
-            sent_by_function='oneshot',
-            content_type="text/html",
-            content=self.fix_markdown_formatting(f"**Domo** agent requesting assistance from '*{agent_config.name}*':\n\n{request})\n\n"),
-            tool_context=tool_context
-        )
+        content = f"**Prime agent** requesting assistance:\n\n{request}"
 
-        messages = await self.agent_oneshot(request, agent_config, tool_context['session_id'], tool_context,
+        # await self._raise_render_media(
+        #     sent_by_class=self.__class__.__name__,
+        #     sent_by_function='oneshot',
+        #     content_type="text/html",
+        #     content=self.fix_markdown_formatting(f"**Prime** agent requesting assistance from '*{agent_config.name}*':\n\n{request})\n\n"),
+        #     tool_context=tool_context
+        # )
+
+        messages = await self.agent_oneshot(content, agent_config, tool_context['session_id'], tool_context,
                                              process_context=process_context,
-                                             client_wants_cancel=tool_context.get('client_wants_cancel', None))
+                                             client_wants_cancel=tool_context.get('client_wants_cancel', None),
+                                             user_session_id=user_session_id, parent_session_id=parent_session_id,
+                                             sub_agent_type="assist", prime_agent_key=calling_agent_config.key)
+
         await self._raise_render_media(
             sent_by_class=self.__class__.__name__,
             sent_by_function='chat',
@@ -158,31 +172,29 @@ class AgentAssistTools(AgentAssistToolBase):
         except FileNotFoundError:
             return f"Error: Agent {kwargs.get('agent_key')} not found in catalog."
 
-        # TODO: FYI, the 'message' is a string of markdown. It's not rendered well to html.  I've tried replacing
-        # --- with ***.  It helps prevent "The following chat message..." being rendered as H2.
-        # I've also tried adding \n.
-        # The display results in compressed text, not all lists are rendered as bullets.  It's just not pretty.
-        # temp_text=f"**Domo agent** requesting assistance from '*{agent_config.name}*': \n\n{message}"
-        # content=markdown.markdown(temp_text, extensions=['markdown.extensions.nl2br', 'markdown.extensions.tables'])
-        # more research seems that the message is removing some newlines, so nl2br should help - but not in all cases.
-        # list in particular end up with stripped newlines.
-        # A way to fix is implemented via self.fix_markdown_formatting
-        content = self.fix_markdown_formatting(
-                f"**Domo agent** requesting assistance from '*{agent_config.name}*': \n\n{message}")
-        await self._raise_render_media(
-            sent_by_class=self.__class__.__name__,
-            sent_by_function='chat',
-            content_type="text/html",
-            content=content,
-            tool_context=tool_context
-        )
+        calling_agent_config: CurrentAgentConfiguration = tool_context.get('agent_config', tool_context.get('active_agent'))
+        user_session_id = tool_context.get('user_session_id', tool_context['session_id'])
+        parent_session_id = tool_context.get('session_id')
 
-        agent_session_id, messages = await self.agent_chat(message, agent_config,
+        content = f"**Prime agent** requesting assistance:\n\n{message}"
+
+        # await self._raise_render_media(
+        #     sent_by_class=self.__class__.__name__,
+        #     sent_by_function='chat',
+        #     content_type="text/html",
+        #     content=content,
+        #     tool_context=tool_context
+        # )
+
+        agent_session_id, messages = await self.agent_chat(content, agent_config,
                                                            tool_context['session_id'],
-                                                           agent_session_id,
+                                                           user_session_id,
                                                            tool_context,
                                                            process_context=process_context,
-                                                           client_wants_cancel=tool_context.get('client_wants_cancel', None))
+                                                           client_wants_cancel=tool_context.get('client_wants_cancel', None),
+                                                           agent_session_id=agent_session_id, parent_session_id=parent_session_id,
+                                                           sub_agent_type="assist", prime_agent_key=calling_agent_config.key
+                                                           )
         await self._raise_render_media(
             sent_by_class=self.__class__.__name__,
             sent_by_function='chat',

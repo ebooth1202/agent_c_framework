@@ -1,13 +1,11 @@
 import pytest
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, patch, MagicMock
-from fastapi.responses import StreamingResponse
-from uuid import UUID, uuid4
+from unittest.mock import  patch
+from uuid import  uuid4
 
 from agent_c_api.api.v2.history.services import EventService
-from agent_c_api.api.v2.models.history_models import StoredEvent, HistoryEventUnion, EventFilter, ReplayStatus, ReplayControl
+from agent_c_api.api.v2.models.history_models import StoredEvent,  ReplayStatus
 from agent_c.models.events.chat import MessageEvent
-from agent_c.models.events.session_event import SessionEvent
 from agent_c_api.api.v2.models.response_models import APIResponse, PaginatedResponse, PaginationMeta, APIStatus
 
 # Test data

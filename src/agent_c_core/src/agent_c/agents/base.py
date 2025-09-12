@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Union, Optional, Callable, Awaitable, Tuple
 from agent_c.models.chat_history.chat_session import ChatSession
 
 from agent_c.models import ImageInput
-from agent_c.models.events.chat import ThoughtDeltaEvent, HistoryDeltaEvent, CompleteThoughtEvent, SystemPromptEvent, UserRequestEvent
+from agent_c.models.events.chat import ThoughtDeltaEvent, HistoryDeltaEvent, CompleteThoughtEvent, SystemPromptEvent, UserRequestEvent, UserMessageEvent
 from agent_c.models.input import FileInput, AudioInput
 from agent_c.models.events import ToolCallEvent, InteractionEvent, TextDeltaEvent, HistoryEvent, CompletionEvent, ToolCallDeltaEvent, SystemMessageEvent, SessionEvent
 from agent_c.prompting.prompt_builder import PromptBuilder
@@ -17,6 +17,7 @@ from agent_c.toolsets.tool_chest import ToolChest
 from agent_c.util.slugs import MnemonicSlugs
 from agent_c.util.logging_utils import LoggingManager
 from agent_c.util.token_counter import TokenCounter
+
 
 
 class BaseAgent:
@@ -122,6 +123,8 @@ class BaseAgent:
         tool_call_context['streaming_callback'] = kwargs.get("streaming_callback", self.streaming_callback)
         tool_call_context['calling_model_name'] = kwargs.get("model_name", self.model_name)
         tool_call_context['client_wants_cancel'] = kwargs.get("client_wants_cancel")
+        tool_call_context['user_session_id'] = kwargs.get("user_session_id", kwargs.get('session_id', 'unknown'))
+        tool_call_context['parent_session_id'] = kwargs.get("parent_session_id", None)
         prompt_context = kwargs.get("prompt_metadata", {})
         prompt_builder: Optional[PromptBuilder] = kwargs.get("prompt_builder", self.prompt_builder)
 
@@ -148,11 +151,14 @@ class BaseAgent:
         chat_session: Optional[ChatSession] = kwargs.get("chat_session", None)
 
         if chat_session is not None:
-            session_id = chat_session.session_id
+            cs_id = chat_session.session_id
         else:
-            session_id = kwargs.get("session_id", "unknown")
+            cs_id = kwargs.get("session_id", "unknown")
 
-        opts = {'session_id': session_id, 'role': agent_role}
+        opts = {'session_id': cs_id, 'role': agent_role,
+                'user_session_id': kwargs.get("user_session_id", cs_id),
+                'parent_session_id': kwargs.get("parent_session_id", None) }
+
 
         callback = kwargs.get("streaming_callback", None)
         if callback is not None:
@@ -261,6 +267,10 @@ class BaseAgent:
     async def _raise_user_request(self, request: str, **data):
         streaming_callback = data.pop('streaming_callback', None)
         await self._raise_event(UserRequestEvent(data={"message": request}, **data), streaming_callback=streaming_callback )
+
+    async def _raise_user_message_event(self, event, streaming_callback):
+        await self._raise_event(event, streaming_callback=streaming_callback)
+
 
     async def _raise_tool_call_delta(self, tool_calls, **data):
         streaming_callback = data.pop('streaming_callback', None)

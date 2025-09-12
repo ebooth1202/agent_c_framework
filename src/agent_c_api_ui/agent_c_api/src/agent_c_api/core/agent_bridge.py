@@ -3,16 +3,14 @@ import json
 import asyncio
 import threading
 import traceback
-from typing import Any, Dict, List, Union, Optional, AsyncGenerator
+from typing import Any, Dict, List, Union, Optional, AsyncGenerator, TYPE_CHECKING
 from datetime import datetime, timezone
 
-from agent_c.chat import ChatSessionManager
+
 from agent_c.config import ModelConfigurationLoader
-from agent_c.models.agent_config import AgentConfiguration
 from agent_c.models.context.interaction_context import InteractionContext
 from agent_c.models.input import AudioInput
 from agent_c.agents.gpt import GPTChatAgent, AzureGPTChatAgent
-from agent_c.models.events import SessionEvent
 from agent_c.toolsets import ToolChest, ToolCache
 from agent_c_api.config.env_config import settings
 from agent_c.models.input.file_input import FileInput
@@ -29,6 +27,13 @@ from agent_c.agents.claude import ClaudeChatAgent, ClaudeBedrockChatAgent
 from agent_c.util.event_session_logger_factory import create_with_callback
 from agent_c_tools.tools.workspace.base import BaseWorkspace
 from agent_c_tools.tools.workspace.local_storage import LocalProjectWorkspace
+
+if TYPE_CHECKING:
+    from agent_c.models.events import SessionEvent, SystemMessageEvent
+    from agent_c.models.agent_config import CurrentAgentConfiguration
+    from agent_c.chat import ChatSessionManager
+
+
 
 # Constants
 DEFAULT_BACKEND = 'claude'
@@ -69,7 +74,7 @@ class AgentBridge:
     def __init__(
         self,
         chat_session: ChatSession,
-        session_manager: ChatSessionManager,
+        session_manager: 'ChatSessionManager',
         file_handler: Optional[FileHandler] = None
     ) -> None:
         """
@@ -132,14 +137,14 @@ class AgentBridge:
         self.image_inputs: List[ImageInput] = []
         self.audio_inputs: List[AudioInput] = []
 
-    def runtime_for_agent(self, agent_config: AgentConfiguration):
+    def runtime_for_agent(self, agent_config: 'CurrentAgentConfiguration'):
         if agent_config.key in self.runtime_cache:
             return self.runtime_cache[agent_config.key]
         else:
             self.runtime_cache[agent_config.key] = self._runtime_for_agent(agent_config)
             return self.runtime_cache[agent_config.key]
 
-    def _runtime_for_agent(self, agent_config: AgentConfiguration) -> BaseAgent:
+    def _runtime_for_agent(self, agent_config: 'CurrentAgentConfiguration') -> BaseAgent:
         model_config = self.model_configs[agent_config.model_id]
         runtime_cls = self.__vendor_agent_map[model_config["vendor"]]
 
@@ -384,7 +389,8 @@ class AgentBridge:
             "persona_prompt": self.chat_session.agent_config.persona,
             "agent_config": self.chat_session.agent_config,
             "timestamp": datetime.now().isoformat(),
-            "env_name": os.getenv('ENV_NAME', DEFAULT_ENV_NAME)
+            "env_name": os.getenv('ENV_NAME', DEFAULT_ENV_NAME),
+            "user_session_id": self.chat_session.session_id,
         } | agent_meta
 
     @staticmethod
@@ -460,7 +466,7 @@ class AgentBridge:
             raise ValueError(f"Error converting input to string: {str(e)}") from e
 
     @staticmethod
-    async def _handle_message(event: SessionEvent) -> str:
+    async def _handle_message(event: 'SessionEvent') -> str:
         """
         Handle message events from the model.
 
@@ -483,7 +489,7 @@ class AgentBridge:
         return payload
 
     @staticmethod
-    async def _handle_system_message(event: SessionEvent) -> str:
+    async def _handle_system_message(event: 'SystemMessageEvent') -> str:
         """
         Handle system message events.
         
@@ -502,7 +508,7 @@ class AgentBridge:
         }) + "\n"
 
     @staticmethod
-    async def _ignore_event(_: SessionEvent) -> None:
+    async def _ignore_event(_: 'SessionEvent') -> None:
         """
         Ignore certain event types that don't require processing.
         
@@ -514,7 +520,7 @@ class AgentBridge:
         """
         return None
 
-    async def _handle_tool_select_delta(self, event: SessionEvent) -> str:
+    async def _handle_tool_select_delta(self, event: 'SessionEvent') -> str:
         """
         Handle tool selection events from the agent.
         
@@ -536,7 +542,7 @@ class AgentBridge:
         }) + "\n"
         return payload
 
-    async def _handle_tool_call_delta(self, event: SessionEvent) -> str:
+    async def _handle_tool_call_delta(self, event: 'SessionEvent') -> str:
         """
         Handle tool call delta events from the agent.
         
@@ -558,7 +564,7 @@ class AgentBridge:
         }) + "\n"
         return payload
 
-    async def _handle_text_delta(self, event: SessionEvent) -> str:
+    async def _handle_text_delta(self, event: 'SessionEvent') -> str:
         """
         Handle text delta events from the agent/tools.
         
@@ -582,7 +588,7 @@ class AgentBridge:
         return payload
 
     @staticmethod
-    async def _handle_tool_call(event: SessionEvent) -> str:
+    async def _handle_tool_call(event: 'SessionEvent') -> str:
         """
         Unified tool call handler that checks the vendor to determine how to send messages.
         The front end expects a schema: tool_calls has id, name, arguments.  tool_results has role, tool_call_id, name, and content.
@@ -658,7 +664,7 @@ class AgentBridge:
             raise ValueError(f"Unsupported vendor: {event.vendor}")
 
     @staticmethod
-    async def _handle_render_media(event: SessionEvent) -> str:
+    async def _handle_render_media(event: 'SessionEvent') -> str:
         """
         Handle media render events from tools.
         
@@ -701,7 +707,7 @@ class AgentBridge:
         }) + "\n"
         return payload
 
-    async def _handle_history(self, event: SessionEvent) -> str:
+    async def _handle_history(self, event: 'SessionEvent') -> str:
         """
         Handle history events which update the chat log.
         
@@ -729,7 +735,7 @@ class AgentBridge:
         return payload
 
     @staticmethod
-    async def _handle_audio_delta(_: SessionEvent) -> None:
+    async def _handle_audio_delta(_: 'SessionEvent') -> None:
         """
         Handle audio events if voice features are enabled.
         
@@ -744,7 +750,7 @@ class AgentBridge:
         return None
 
 
-    async def _handle_completion(self, event: SessionEvent) -> str:
+    async def _handle_completion(self, event: 'SessionEvent') -> str:
         """
         Handle completion events from the agent.
         
@@ -775,7 +781,7 @@ class AgentBridge:
         return payload
 
     @staticmethod
-    async def _handle_interaction(event: SessionEvent) -> str:
+    async def _handle_interaction(event: 'SessionEvent') -> str:
         """
         Handle interaction state events.
         
@@ -802,7 +808,7 @@ class AgentBridge:
             }) + "\n"
         return payload
 
-    async def _handle_thought_delta(self, event: SessionEvent) -> str:
+    async def _handle_thought_delta(self, event: 'SessionEvent') -> str:
         """
         Handle thinking process events.
         
@@ -840,7 +846,7 @@ class AgentBridge:
         await self.initialize_agent_parameters()
 
 
-    async def consolidated_streaming_callback(self, event: SessionEvent) -> None:
+    async def consolidated_streaming_callback(self, event: 'SessionEvent') -> None:
         """
         Process and route various types of session events through appropriate handlers.
 

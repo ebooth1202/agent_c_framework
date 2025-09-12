@@ -14,6 +14,7 @@ from anthropic import AsyncAnthropic, APITimeoutError, Anthropic, RateLimitError
 
 from agent_c.agents.base import BaseAgent
 from agent_c.chat.session_manager import ChatSessionManager
+from agent_c.models.events.chat import AnthropicUserMessageEvent
 from agent_c.models.input import FileInput
 from agent_c.models.input.audio_input import AudioInput
 from agent_c.models.input.image_input import ImageInput
@@ -163,7 +164,7 @@ class ClaudeChatAgent(BaseAgent):
         session_manager: Union[ChatSessionManager, None] = kwargs.get("session_manager", None)
         messages = opts["completion_opts"]["messages"]
         await self._raise_system_prompt(opts["completion_opts"]["system"], **callback_opts)
-        await self._raise_user_request(kwargs.get('user_message', ''), **callback_opts)
+        await self._raise_user_message(messages[-1], **callback_opts)
         delay = 1  # Initial delay between retries
         async with (self.semaphore):
             interaction_id = await self._raise_interaction_start(**callback_opts)
@@ -227,6 +228,18 @@ class ClaudeChatAgent(BaseAgent):
         """Handle retryable errors with exponential backoff."""
         await self._exponential_backoff(delay)
         return delay * 2  # Return the new delay for the next attempt
+
+    async def _raise_user_message(self, message, **opts):
+        streaming_callback = opts.pop('streaming_callback', None)
+
+        try:
+            event = AnthropicUserMessageEvent(message=message, **opts)
+        except Exception as e:
+            self.logger.exception(f"Error creating AnthropicUserMessageEvent: {e}", exc_info=True)
+            return
+
+        await self._raise_user_message_event(event, streaming_callback=streaming_callback)
+
 
 
     async def _handle_claude_stream(self, completion_opts, tool_chest, session_manager,

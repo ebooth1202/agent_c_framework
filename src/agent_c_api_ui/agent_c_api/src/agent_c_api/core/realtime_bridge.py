@@ -1,4 +1,5 @@
 import asyncio
+import copy
 import json
 import threading
 import traceback
@@ -321,40 +322,16 @@ class RealtimeBridge(AgentBridge):
         await self.send_event(event)
 
     @handle_runtime_event.register
-    async def _(self, event: CompletionEvent):
+    async def _(self, event: HistoryEvent):
+        self.chat_session.messages = copy.deepcopy(event.messages)
         await self.send_event(event)
 
-    @handle_runtime_event.register
-    async def _(self, event: TextDeltaEvent):
-        await self.send_event(event)
+
 
     @property
     def avatar_think_message(self) -> str:
         # Placeholder for avatar thinking message
         return "Let me think about that..."
-
-    @handle_runtime_event.register
-    async def _(self, event: ThoughtDeltaEvent):
-        """Handle thought events from the agent"""
-        #await self._handle_agent_thought_token()
-        await self.send_event(event)
-
-    async def _handle_agent_thought_token(self):
-        """Handle agent thought messages"""
-        if not self._avatar_did_think:
-            self._avatar_did_think = True
-            try:
-                await self.avatar_client.send_task(self.avatar_think_message)
-            except Exception as e:
-                self.logger.error(f"RealtimeBridge {self.chat_session.session_id}: Failed to send message to avatar: {e}")
-
-    async def _handle_partial_agent_message(self):
-        if "\n" not in self._partial_agent_message:
-            return
-
-        left, right = self._partial_agent_message.rsplit("\n", 1)
-        self._partial_agent_message = right
-        await self.avatar_say(left + "\n", role="assistant")
 
     async def avatar_say(self, text: str, role: str = "assistant"):
         if not self.avatar_session and not self.avatar_session_id:
@@ -573,7 +550,7 @@ class RealtimeBridge(AgentBridge):
             return
 
         try:
-            await self.session_manager.flush(self.chat_session.session_id, self.chat_session.user_id)
+            await self.flush_session()
             await self.send_user_turn_start()
 
         except Exception as e:

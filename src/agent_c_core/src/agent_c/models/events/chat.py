@@ -1,5 +1,5 @@
 from pydantic import Field
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Literal
 
 from agent_c.models.events import BaseEvent
 from agent_c.models.events.session_event import SessionEvent
@@ -19,10 +19,22 @@ class UserRequestEvent(SessionEvent):
     Sent to notify the UI that a user request has been initiated.
     This is typically used to indicate that the user has requested a new interaction.
     """
-    def __init__(self, **data):
-        super().__init__(type = "user_request", **data)
-
     data: Dict[str, Any] = Field(..., description="The data associated with the user request, such as the input text or other parameters")
+
+
+class UserMessageEvent(SessionEvent):
+    """
+    Sent to notify the UI that a user message has been added to the chat session.
+    """
+    vendor: str = Field(..., description="The vendor of the model being used for the user request, e.g., 'openai', 'anthropic', etc.")
+
+class OpenAIUserMessageEvent(UserMessageEvent):
+    vendor: str = Field( "openai", description="The vendor of the model being used for the user request, e.g., 'openai', 'anthropic', etc.")
+    message: Dict[str, Any] = Field(..., description="The user message that was added to the chat session")
+
+class AnthropicUserMessageEvent(UserMessageEvent):
+    vendor: str = Field( "anthropic", description="The vendor of the model being used for the user request, e.g., 'openai', 'anthropic', etc.")
+    message: Dict[str, Any] = Field(..., description="The user message that was added to the chat session")
 
 class InteractionEvent(SessionEvent):
     """
@@ -131,3 +143,26 @@ class HistoryDeltaEvent(SessionEvent):
         super().__init__(type = "history_delta", **data)
 
     messages: List[dict] = Field(..., description="The list of messages that have been added to the history")
+
+class SubsessionStartedEvent(SessionEvent):
+    """
+    Set to notify the UI that a subsession has started.
+
+    Events that follow this, until the SubsessionEndedEvent, are part of the subsession, not the user session
+    - The client should display these events, as typical chat events, with  an indicator that they're from a subsession.
+    - The server will not add these events to the user session, but will maintain them as part of the subsession.
+
+    Note: Subsessions are often nested. There will be a matching end for each start.
+    """
+    sub_session_type: Literal["chat", "oneshot"] = Field(..., description="The type of the subsession, either 'chat' or 'oneshot'")
+    sub_agent_type: Literal["clone", "team", "assist", "tool"] = Field(..., description="The type of the sub-agent that started the subsession, either 'clone', 'team', 'assist', or 'tool'")
+    prime_agent_key: str = Field(..., description="The key of the prime agent that started the subsession, if applicable")
+    sub_agent_key: str = Field(..., description="The key of the sub-agent that the prime is talking to in  the subsession")
+
+class SubsessionEndedEvent(SessionEvent):
+    """
+    Set to notify the UI that a subsession has ended.
+
+    Note: Subsessions are often nested. There will be a matching end for each start.
+    """
+    pass
