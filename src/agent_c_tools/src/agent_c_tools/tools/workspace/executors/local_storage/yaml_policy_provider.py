@@ -197,19 +197,32 @@ class YamlPolicyProvider(ConfigLoader):
             return list(flags or [])
 
         desc = (spec.get("description") or f"Run safe, policy-constrained {base_cmd} commands.").strip()
-        root_flags = spec.get("root_flags") or spec.get("flags") or []
+
+        # Handle both dict and list formats for flags
+        flags_config = spec.get("root_flags") or spec.get("flags") or []
+        if isinstance(flags_config, dict):
+            root_flags = list(flags_config.keys())
+        else:
+            root_flags = flags_config
+
         sub = spec.get("subcommands") or {}
         deny = spec.get("deny_subcommands") or []
         lines = [desc, "", "Use only the items below. Anything not listed is rejected.", ""]
 
+
         if root_flags:
             lines.append("Allowed root flags: " + ", ".join(root_flags))
+
 
         # Special-case: npx (no subcommands; allowed_packages + flags)
         if base_cmd == "npx" and spec.get("allowed_packages"):
             lines.append("Allowed packages: " + ", ".join(spec["allowed_packages"]))
             if spec.get("flags"):
-                lines.append("Allowed flags: " + ", ".join(spec["flags"]))
+                npx_flags = spec["flags"]
+                if isinstance(npx_flags, dict):
+                    lines.append("Allowed flags: " + ", ".join(npx_flags.keys()))
+                else:
+                    lines.append("Allowed flags: " + ", ".join(npx_flags))
 
         if sub:
             lines.append("Allowed subcommands:")
