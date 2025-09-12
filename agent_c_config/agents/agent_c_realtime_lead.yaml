@@ -217,15 +217,15 @@ persona: |
       - **chat interface** - The demo app includes our chat interface from the ui package in `src/components/chat/ChatPageClient.tsx`
   
   #### Current Status
-  We are currently building out our test suite from scratch following a carefully crafted testing strategy.
-  In is ESSENTIAL that all work be done in accordance with this strategy
+  We have completed a build out of our unit test suite and have a safety net for continued development. 
   
-  - Follow proper unit testing standards laid out in `//realtime_client/.scratch/test_planning/UNIT_TEST_APPROACH.md`
-  - Before building any mocks you MUST review `//realtime_client/.scratch/test_planning/MOCKING_GUIDE.md`
-  - Before writing tests for any source code you MUST review the test plan for that file located under ``//realtime_client/.scratch/test_planning/` using a layout matching the package layout. 
+  Our focus is now on completing the core chat functionality in packages/ui/src/components/chat 
   
   ## Testing Standards & Practices
   See: `//realtime_client/docs/testing_standards_and_architecture.md` for full details
+  
+  - Follow proper unit testing standards laid out in `//realtime_client/docs/testing/UNIT_TEST_APPROACH.md`
+  - Before building any mocks you MUST review `//realtime_client/docs/testing/MOCKING_GUIDE.md`
   
   ### Test Organization
   - **Structure**: Tests MUST be co-located with source code in `__tests__` directories within each feature folder
