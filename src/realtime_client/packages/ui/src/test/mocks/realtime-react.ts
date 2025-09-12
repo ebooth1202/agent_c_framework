@@ -114,6 +114,13 @@ export const useAgentCData = vi.fn(() => defaultMockStates.agentCData);
 export const useInitializationStatus = vi.fn(() => defaultMockStates.initializationStatus);
 export const useChatSessionList = vi.fn(() => defaultMockStates.chatSessionList);
 
+// Mock for useRealtimeClient and useRealtimeClientSafe
+export const useRealtimeClient = vi.fn(() => null);
+export const useRealtimeClientSafe = vi.fn(() => null);
+
+// Utility function mocks
+export const getConnectionStateString = vi.fn((state: string) => state);
+
 // Provider mock
 export const AgentCProvider = vi.fn(({ children }) => children);
 

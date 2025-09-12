@@ -8,13 +8,10 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
 // import userEvent from '@testing-library/user-event'; // Not used - using fireEvent instead
 import { ConnectionButton } from '../ConnectionButton';
-import { useConnection } from '@agentc/realtime-react';
+import { updateMockState, useConnection } from '../../../test/mocks/realtime-react';
 import { ConnectionState } from '@agentc/realtime-core';
 
-// Mock the useConnection hook
-vi.mock('@agentc/realtime-react', () => ({
-  useConnection: vi.fn()
-}));
+// Note: @agentc/realtime-react is globally mocked in vitest.setup.ts
 
 // Mock the ConnectionState enum from core
 vi.mock('@agentc/realtime-core', () => ({
@@ -50,7 +47,7 @@ describe('ConnectionButton', () => {
     
     // Reset mock to default state
     mockUseConnection = createMockUseConnection();
-    (useConnection as any).mockReturnValue(mockUseConnection);
+    updateMockState('connection', mockUseConnection);
     
     // Mock console.error to prevent test output noise
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -94,7 +91,7 @@ describe('ConnectionButton', () => {
     it('should show "Connect" when disconnected', () => {
       mockUseConnection.connectionState = ConnectionState.DISCONNECTED;
       mockUseConnection.isConnected = false;
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       
       const { container } = render(<ConnectionButton />);
       const button = container.querySelector('button');
@@ -107,7 +104,7 @@ describe('ConnectionButton', () => {
     it('should show "Disconnect" when connected', () => {
       mockUseConnection.connectionState = ConnectionState.CONNECTED;
       mockUseConnection.isConnected = true;
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       
       const { container } = render(<ConnectionButton />);
       const button = container.querySelector('button');
@@ -120,7 +117,7 @@ describe('ConnectionButton', () => {
     it('should show "Connecting..." with loader when connecting', () => {
       mockUseConnection.connectionState = ConnectionState.CONNECTING;
       mockUseConnection.isConnected = false;
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       
       const { container, getByTestId } = render(<ConnectionButton />);
       const button = container.querySelector('button');
@@ -134,7 +131,7 @@ describe('ConnectionButton', () => {
     it('should handle reconnecting state', () => {
       mockUseConnection.connectionState = ConnectionState.RECONNECTING;
       mockUseConnection.isConnected = false;
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       
       const { container } = render(<ConnectionButton />);
       const indicator = container.querySelector('.bg-yellow-500.animate-pulse');
@@ -147,7 +144,7 @@ describe('ConnectionButton', () => {
     it('should call connect when clicking while disconnected', async () => {
       mockUseConnection.isConnected = false;
       mockUseConnection.connect.mockResolvedValueOnce(undefined);
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       
       const { container } = render(<ConnectionButton />);
       const button = container.querySelector('button')!;
@@ -161,7 +158,7 @@ describe('ConnectionButton', () => {
     it('should call disconnect when clicking while connected', async () => {
       mockUseConnection.isConnected = true;
       mockUseConnection.connectionState = ConnectionState.CONNECTED;
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       
       const { container } = render(<ConnectionButton />);
       const button = container.querySelector('button')!;
@@ -175,7 +172,7 @@ describe('ConnectionButton', () => {
     it('should handle connection errors gracefully', async () => {
       const error = new Error('Connection failed');
       mockUseConnection.connect.mockRejectedValueOnce(error);
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       
       const { container } = render(<ConnectionButton />);
       const button = container.querySelector('button')!;
@@ -194,7 +191,7 @@ describe('ConnectionButton', () => {
       mockUseConnection.disconnect.mockImplementation(() => {
         throw error;
       });
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       
       const { container } = render(<ConnectionButton />);
       const button = container.querySelector('button')!;
@@ -209,7 +206,7 @@ describe('ConnectionButton', () => {
 
     it('should not allow clicks while connecting', () => {
       mockUseConnection.connectionState = ConnectionState.CONNECTING;
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       
       const { container } = render(<ConnectionButton />);
       const button = container.querySelector('button')!;
@@ -234,7 +231,7 @@ describe('ConnectionButton', () => {
       // Simulate connection success
       mockUseConnection.isConnected = true;
       mockUseConnection.connectionState = ConnectionState.CONNECTED;
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       rerender(<ConnectionButton />);
       
       // Click to disconnect
@@ -244,7 +241,7 @@ describe('ConnectionButton', () => {
       // Simulate disconnection
       mockUseConnection.isConnected = false;
       mockUseConnection.connectionState = ConnectionState.DISCONNECTED;
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       rerender(<ConnectionButton />);
       
       // Click to connect again
@@ -256,7 +253,7 @@ describe('ConnectionButton', () => {
   describe('Button Variants', () => {
     it('should use outline variant when disconnected by default', () => {
       mockUseConnection.isConnected = false;
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       
       const { container } = render(<ConnectionButton />);
       const button = container.querySelector('button')!;
@@ -266,7 +263,7 @@ describe('ConnectionButton', () => {
 
     it('should use secondary variant when connected', () => {
       mockUseConnection.isConnected = true;
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       
       const { container } = render(<ConnectionButton />);
       const button = container.querySelector('button')!;
@@ -276,7 +273,7 @@ describe('ConnectionButton', () => {
 
     it('should use destructive variant when error exists', () => {
       mockUseConnection.error = new Error('Connection error');
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       
       const { container } = render(<ConnectionButton />);
       const button = container.querySelector('button')!;
@@ -286,7 +283,7 @@ describe('ConnectionButton', () => {
 
     it('should allow custom variant override when disconnected', () => {
       mockUseConnection.isConnected = false;
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       
       const { container } = render(<ConnectionButton variant="ghost" />);
       const button = container.querySelector('button')!;
@@ -296,7 +293,7 @@ describe('ConnectionButton', () => {
 
     it('should ignore custom variant when connected', () => {
       mockUseConnection.isConnected = true;
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       
       const { container } = render(<ConnectionButton variant="ghost" />);
       const button = container.querySelector('button')!;
@@ -307,7 +304,7 @@ describe('ConnectionButton', () => {
 
     it('should apply loading state classes when connecting', () => {
       mockUseConnection.connectionState = ConnectionState.CONNECTING;
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       
       const { container } = render(<ConnectionButton />);
       const button = container.querySelector('button')!;
@@ -440,32 +437,32 @@ describe('ConnectionButton', () => {
       
       // Disconnected - gray
       mockUseConnection.connectionState = ConnectionState.DISCONNECTED;
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       rerender(<ConnectionButton />);
       expect(container.querySelector('.bg-gray-400')).toBeInTheDocument();
       
       // Connecting - yellow with pulse
       mockUseConnection.connectionState = ConnectionState.CONNECTING;
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       rerender(<ConnectionButton />);
       expect(container.querySelector('.bg-yellow-500.animate-pulse')).toBeInTheDocument();
       
       // Connected - green
       mockUseConnection.connectionState = ConnectionState.CONNECTED;
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       rerender(<ConnectionButton />);
       expect(container.querySelector('.bg-green-500')).toBeInTheDocument();
       
       // Reconnecting - yellow with pulse
       mockUseConnection.connectionState = ConnectionState.RECONNECTING;
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       rerender(<ConnectionButton />);
       expect(container.querySelector('.bg-yellow-500.animate-pulse')).toBeInTheDocument();
     });
 
     it('should not show indicator during connecting state with loader', () => {
       mockUseConnection.connectionState = ConnectionState.CONNECTING;
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       
       const { container, getByTestId } = render(
         <ConnectionButton showStatus={true} statusPosition="left" />
@@ -499,7 +496,7 @@ describe('ConnectionButton', () => {
   describe('Loading State', () => {
     it('should show loader icon when connecting', () => {
       mockUseConnection.connectionState = ConnectionState.CONNECTING;
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       
       const { getByTestId } = render(<ConnectionButton />);
       const loader = getByTestId('loader-icon');
@@ -510,7 +507,7 @@ describe('ConnectionButton', () => {
 
     it('should disable button when connecting', () => {
       mockUseConnection.connectionState = ConnectionState.CONNECTING;
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       
       const { container } = render(<ConnectionButton />);
       const button = container.querySelector('button')!;
@@ -521,7 +518,7 @@ describe('ConnectionButton', () => {
 
     it('should show "Connecting..." text when connecting', () => {
       mockUseConnection.connectionState = ConnectionState.CONNECTING;
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       
       const { container } = render(<ConnectionButton />);
       const button = container.querySelector('button')!;
@@ -531,7 +528,7 @@ describe('ConnectionButton', () => {
 
     it('should apply loading state variant classes', () => {
       mockUseConnection.connectionState = ConnectionState.CONNECTING;
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       
       const { container } = render(<ConnectionButton />);
       const button = container.querySelector('button')!;
@@ -546,13 +543,13 @@ describe('ConnectionButton', () => {
       
       // Disconnected
       mockUseConnection.isConnected = false;
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       rerender(<ConnectionButton />);
       expect(container.querySelector('button')!).toHaveAttribute('aria-label', 'Connect');
       
       // Connected
       mockUseConnection.isConnected = true;
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       rerender(<ConnectionButton />);
       expect(container.querySelector('button')!).toHaveAttribute('aria-label', 'Disconnect');
     });
@@ -598,7 +595,7 @@ describe('ConnectionButton', () => {
 
     it('should have proper disabled state for screen readers', () => {
       mockUseConnection.connectionState = ConnectionState.CONNECTING;
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       
       const { container } = render(<ConnectionButton />);
       const button = container.querySelector('button')!;
@@ -686,7 +683,7 @@ describe('ConnectionButton', () => {
   describe('Error Handling', () => {
     it('should show destructive variant on error', () => {
       mockUseConnection.error = new Error('WebSocket connection failed');
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       
       const { container } = render(<ConnectionButton />);
       const button = container.querySelector('button')!;
@@ -696,7 +693,7 @@ describe('ConnectionButton', () => {
 
     it('should maintain error variant even with custom variant prop', () => {
       mockUseConnection.error = new Error('Connection error');
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       
       const { container } = render(<ConnectionButton variant="ghost" />);
       const button = container.querySelector('button')!;
@@ -708,14 +705,14 @@ describe('ConnectionButton', () => {
     it('should clear error variant when error is resolved', () => {
       // Start with error
       mockUseConnection.error = new Error('Connection error');
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       
       const { container, rerender } = render(<ConnectionButton />);
       expect(container.querySelector('button')!).toHaveClass('bg-destructive');
       
       // Clear error
       mockUseConnection.error = null;
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       rerender(<ConnectionButton />);
       
       expect(container.querySelector('button')!).not.toHaveClass('bg-destructive');
@@ -726,7 +723,7 @@ describe('ConnectionButton', () => {
   describe('Edge Cases', () => {
     it('should handle missing connection context gracefully', () => {
       // Mock useConnection to return undefined
-      (useConnection as any).mockReturnValue(undefined);
+      vi.mocked(useConnection).mockReturnValue(undefined as any);
       
       // Should not crash
       expect(() => render(<ConnectionButton />)).toThrow();
@@ -747,7 +744,7 @@ describe('ConnectionButton', () => {
       states.forEach(state => {
         mockUseConnection.connectionState = state;
         mockUseConnection.isConnected = state === ConnectionState.CONNECTED;
-        (useConnection as any).mockReturnValue(mockUseConnection);
+        updateMockState('connection', mockUseConnection);
         
         expect(() => {
           rerender(<ConnectionButton />);
@@ -773,7 +770,7 @@ describe('ConnectionButton', () => {
 
     it('should handle connect returning undefined', () => {
       mockUseConnection.connect.mockResolvedValueOnce(undefined);
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       
       const { container } = render(<ConnectionButton />);
       const button = container.querySelector('button')!;
@@ -787,7 +784,7 @@ describe('ConnectionButton', () => {
     it('should handle disconnect returning undefined', () => {
       mockUseConnection.isConnected = true;
       mockUseConnection.disconnect.mockReturnValue(undefined);
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       
       const { container } = render(<ConnectionButton />);
       const button = container.querySelector('button')!;
@@ -811,7 +808,7 @@ describe('ConnectionButton', () => {
       mockUseConnection.connectionState = ConnectionState.DISCONNECTED;
       mockUseConnection.isConnected = false;
       mockUseConnection.error = null;
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       
       const { container, rerender } = render(
         <ConnectionButton
@@ -845,7 +842,7 @@ describe('ConnectionButton', () => {
       
       // Simulate connecting state
       mockUseConnection.connectionState = ConnectionState.CONNECTING;
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       rerender(<ConnectionButton />);
       
       expect(container.querySelector('button')!).toBeDisabled();
@@ -855,7 +852,7 @@ describe('ConnectionButton', () => {
       // Simulate connected state
       mockUseConnection.connectionState = ConnectionState.CONNECTED;
       mockUseConnection.isConnected = true;
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       rerender(<ConnectionButton />);
       
       expect(container.querySelector('button')!).toHaveTextContent('Disconnect');
@@ -868,7 +865,7 @@ describe('ConnectionButton', () => {
       
       // Simulate error state
       mockUseConnection.error = new Error('Connection lost');
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       rerender(<ConnectionButton />);
       
       expect(container.querySelector('button')!).toHaveClass('bg-destructive');
@@ -877,7 +874,7 @@ describe('ConnectionButton', () => {
       mockUseConnection.error = null;
       mockUseConnection.connectionState = ConnectionState.DISCONNECTED;
       mockUseConnection.isConnected = false;
-      (useConnection as any).mockReturnValue(mockUseConnection);
+      updateMockState('connection', mockUseConnection);
       rerender(<ConnectionButton />);
       
       expect(container.querySelector('button')!).toHaveTextContent('Connect');
