@@ -322,18 +322,10 @@ class RealtimeBridge(AgentBridge):
 
     @handle_runtime_event.register
     async def _(self, event: CompletionEvent):
-        # if event.running == False and len(self._partial_agent_message.rstrip()):
-        #     # Send any remaining partial message
-        #     await self.avatar_say(self._partial_agent_message, role="assistant")
-        #     self._partial_agent_message = ""
-
         await self.send_event(event)
 
     @handle_runtime_event.register
     async def _(self, event: TextDeltaEvent):
-        # self._avatar_did_think = False
-        # self._partial_agent_message += event.content
-        # await self._handle_partial_agent_message()
         await self.send_event(event)
 
     @property
