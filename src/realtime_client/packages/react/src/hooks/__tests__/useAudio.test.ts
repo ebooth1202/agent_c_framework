@@ -101,10 +101,10 @@ const setupMediaDevicesMock = (devices: MediaDeviceInfo[] = []) => {
 };
 
 // Helper to trigger events within act()
-const triggerEvent = (event: string, ...args: any[]) => {
+const triggerEvent = async (event: string, ...args: any[]) => {
   const handlers = eventHandlers.get(event);
   if (handlers) {
-    act(() => {
+    await act(async () => {
       handlers.forEach(handler => handler(...args));
     });
   }
@@ -199,12 +199,12 @@ describe('useAudio', () => {
         expect(result.current.errorMessage).toBe(errorMessage);
       });
 
-      it('stops recording successfully', () => {
+      it('stops recording successfully', async () => {
         // Arrange
         const { result } = renderHook(() => useAudio());
         
         // Act - Stop recording
-        act(() => {
+        await act(async () => {
           result.current.stopRecording();
         });
         
@@ -213,13 +213,13 @@ describe('useAudio', () => {
         expect(mockClient.getAudioStatus).toHaveBeenCalled(); // Status update after stopping
       });
 
-      it('handles stopRecording when client is null', () => {
+      it('handles stopRecording when client is null', async () => {
         // Arrange
         mockUseRealtimeClientSafe.mockReturnValue(null);
         const { result } = renderHook(() => useAudio());
         
         // Act - Try to stop recording
-        act(() => {
+        await act(async () => {
           result.current.stopRecording();
         });
         
@@ -317,12 +317,12 @@ describe('useAudio', () => {
         expect(mockClient.startAudioStreaming).toHaveBeenCalledTimes(1);
       });
 
-      it('stops streaming successfully', () => {
+      it('stops streaming successfully', async () => {
         // Arrange
         const { result } = renderHook(() => useAudio());
         
         // Act - Stop streaming
-        act(() => {
+        await act(async () => {
           result.current.stopStreaming();
         });
         
@@ -344,12 +344,12 @@ describe('useAudio', () => {
     });
 
     describe('Volume and Mute Management', () => {
-      it('sets volume with normalization for values above 100', () => {
+      it('sets volume with normalization for values above 100', async () => {
         // Arrange
         const { result } = renderHook(() => useAudio());
         
         // Act - Set volume above max
-        act(() => {
+        await act(async () => {
           result.current.setVolume(150);
         });
         
@@ -357,12 +357,12 @@ describe('useAudio', () => {
         expect(mockClient.setAudioVolume).toHaveBeenCalledWith(1);
       });
 
-      it('sets volume with normalization for negative values', () => {
+      it('sets volume with normalization for negative values', async () => {
         // Arrange
         const { result } = renderHook(() => useAudio());
         
         // Act - Set negative volume
-        act(() => {
+        await act(async () => {
           result.current.setVolume(-10);
         });
         
@@ -370,12 +370,12 @@ describe('useAudio', () => {
         expect(mockClient.setAudioVolume).toHaveBeenCalledWith(0);
       });
 
-      it('sets volume correctly for normal values', () => {
+      it('sets volume correctly for normal values', async () => {
         // Arrange
         const { result } = renderHook(() => useAudio());
         
         // Act - Set volume to 50%
-        act(() => {
+        await act(async () => {
           result.current.setVolume(50);
         });
         
@@ -383,18 +383,18 @@ describe('useAudio', () => {
         expect(mockClient.setAudioVolume).toHaveBeenCalledWith(0.5);
       });
 
-      it('unmutes when setting volume > 0 while muted', () => {
+      it('unmutes when setting volume > 0 while muted', async () => {
         // Arrange
         const { result } = renderHook(() => useAudio());
         
         // Mute first
-        act(() => {
+        await act(async () => {
           result.current.setMuted(true);
         });
         expect(result.current.isMuted).toBe(true);
         
         // Act - Set volume while muted
-        act(() => {
+        await act(async () => {
           result.current.setVolume(50);
         });
         
@@ -403,12 +403,12 @@ describe('useAudio', () => {
         expect(mockClient.setAudioVolume).toHaveBeenCalledWith(0.5);
       });
 
-      it('stores previous volume for unmute', () => {
+      it('stores previous volume for unmute', async () => {
         // Arrange
         const { result } = renderHook(() => useAudio());
         
         // Act - Set volume to 75
-        act(() => {
+        await act(async () => {
           result.current.setVolume(75);
         });
         
@@ -416,7 +416,7 @@ describe('useAudio', () => {
         vi.clearAllMocks();
         
         // Mute - this should store the current volume (75%)
-        act(() => {
+        await act(async () => {
           result.current.setMuted(true);
         });
         
@@ -427,7 +427,7 @@ describe('useAudio', () => {
         vi.clearAllMocks();
         
         // Unmute - should restore to 75%
-        act(() => {
+        await act(async () => {
           result.current.setMuted(false);
         });
         
@@ -435,7 +435,7 @@ describe('useAudio', () => {
         expect(mockClient.setAudioVolume).toHaveBeenCalledWith(0.75);
       });
 
-      it('mutes by setting volume to 0', () => {
+      it('mutes by setting volume to 0', async () => {
         // Arrange
         mockAudioStatus.volume = 0.8;
         mockClient = createMockClient(mockAudioStatus, mockTurnManager);
@@ -444,7 +444,7 @@ describe('useAudio', () => {
         const { result } = renderHook(() => useAudio());
         
         // Act - Mute
-        act(() => {
+        await act(async () => {
           result.current.setMuted(true);
         });
         
@@ -453,17 +453,17 @@ describe('useAudio', () => {
         expect(result.current.isMuted).toBe(true);
       });
 
-      it('unmutes by restoring previous volume', () => {
+      it('unmutes by restoring previous volume', async () => {
         // Arrange
         const { result } = renderHook(() => useAudio());
         
         // Set initial volume
-        act(() => {
+        await act(async () => {
           result.current.setVolume(60);
         });
         
         // Mute
-        act(() => {
+        await act(async () => {
           result.current.setMuted(true);
         });
         
@@ -471,7 +471,7 @@ describe('useAudio', () => {
         vi.clearAllMocks();
         
         // Act - Unmute
-        act(() => {
+        await act(async () => {
           result.current.setMuted(false);
         });
         
@@ -480,7 +480,7 @@ describe('useAudio', () => {
         expect(result.current.isMuted).toBe(false);
       });
 
-      it('toggles mute state', () => {
+      it('toggles mute state', async () => {
         // Arrange
         const { result } = renderHook(() => useAudio());
         
@@ -488,7 +488,7 @@ describe('useAudio', () => {
         expect(result.current.isMuted).toBe(false);
         
         // Act - Toggle mute on
-        act(() => {
+        await act(async () => {
           result.current.toggleMute();
         });
         
@@ -496,7 +496,7 @@ describe('useAudio', () => {
         expect(result.current.isMuted).toBe(true);
         
         // Act - Toggle mute off
-        act(() => {
+        await act(async () => {
           result.current.toggleMute();
         });
         
@@ -504,13 +504,13 @@ describe('useAudio', () => {
         expect(result.current.isMuted).toBe(false);
       });
 
-      it('handles volume operations without client', () => {
+      it('handles volume operations without client', async () => {
         // Arrange
         mockUseRealtimeClientSafe.mockReturnValue(null);
         const { result } = renderHook(() => useAudio());
         
         // Act - Try to set volume
-        act(() => {
+        await act(async () => {
           result.current.setVolume(50);
         });
         
@@ -635,7 +635,7 @@ describe('useAudio', () => {
     });
 
     describe('Status Polling', () => {
-      it('polls audio status every 100ms', () => {
+      it('polls audio status every 100ms', async () => {
         // Arrange
         const { result } = renderHook(() => useAudio());
         
@@ -643,7 +643,7 @@ describe('useAudio', () => {
         vi.clearAllMocks();
         
         // Act - Advance time by 500ms
-        act(() => {
+        await act(async () => {
           vi.advanceTimersByTime(500);
         });
         
@@ -651,7 +651,7 @@ describe('useAudio', () => {
         expect(mockClient.getAudioStatus).toHaveBeenCalledTimes(5);
       });
 
-      it('clears interval on unmount', () => {
+      it('clears interval on unmount', async () => {
         // Arrange
         const { unmount } = renderHook(() => useAudio());
         
@@ -662,7 +662,7 @@ describe('useAudio', () => {
         unmount();
         
         // Advance time
-        act(() => {
+        await act(async () => {
           vi.advanceTimersByTime(500);
         });
         
@@ -670,7 +670,7 @@ describe('useAudio', () => {
         expect(mockClient.getAudioStatus).not.toHaveBeenCalled();
       });
 
-      it('prevents updates after unmount', () => {
+      it('prevents updates after unmount', async () => {
         // Arrange
         const { result, unmount } = renderHook(() => useAudio());
         
@@ -686,7 +686,7 @@ describe('useAudio', () => {
         });
         
         // Act - Try to advance timers (which would trigger polling)
-        act(() => {
+        await act(async () => {
           vi.advanceTimersByTime(100);
         });
         
@@ -694,7 +694,7 @@ describe('useAudio', () => {
         expect(result.current.errorMessage).toBe(initialErrorState);
       });
 
-      it('updates status from polling', () => {
+      it('updates status from polling', async () => {
         // Arrange
         const { result } = renderHook(() => useAudio());
         
@@ -706,7 +706,7 @@ describe('useAudio', () => {
         (mockClient.getAudioStatus as any).mockImplementation(() => newStatus);
         
         // Act - Advance time to trigger polling
-        act(() => {
+        await act(async () => {
           vi.advanceTimersByTime(100);
         });
         
@@ -714,7 +714,7 @@ describe('useAudio', () => {
         expect(result.current.audioLevel).toBe(0.8);
       });
 
-      it('handles polling errors gracefully', () => {
+      it('handles polling errors gracefully', async () => {
         // Arrange
         const { result } = renderHook(() => useAudio());
         
@@ -725,7 +725,7 @@ describe('useAudio', () => {
         });
         
         // Act - Advance time to trigger polling
-        act(() => {
+        await act(async () => {
           vi.advanceTimersByTime(100);
         });
         
@@ -738,29 +738,29 @@ describe('useAudio', () => {
 
   describe('Part 2: Advanced Features', () => {
     describe('100ms Status Polling Interval', () => {
-      it('maintains exact 100ms polling interval', () => {
+      it('maintains exact 100ms polling interval', async () => {
         // Arrange
         const { result } = renderHook(() => useAudio());
         vi.clearAllMocks();
         
         // Act - Test exact 100ms boundaries
-        act(() => {
+        await act(async () => {
           vi.advanceTimersByTime(99); // Just before interval
         });
         expect(mockClient.getAudioStatus).not.toHaveBeenCalled();
         
-        act(() => {
+        await act(async () => {
           vi.advanceTimersByTime(1); // Exactly 100ms
         });
         expect(mockClient.getAudioStatus).toHaveBeenCalledTimes(1);
         
-        act(() => {
+        await act(async () => {
           vi.advanceTimersByTime(100); // Another 100ms
         });
         expect(mockClient.getAudioStatus).toHaveBeenCalledTimes(2);
       });
 
-      it('continues polling through multiple status changes', () => {
+      it('continues polling through multiple status changes', async () => {
         // Arrange
         const { result } = renderHook(() => useAudio());
         
@@ -776,28 +776,28 @@ describe('useAudio', () => {
         (mockClient.getAudioStatus as any).mockImplementation(() => statusSequence[statusIndex]);
         
         // Act & Assert - Verify each status update
-        act(() => {
+        await act(async () => {
           vi.advanceTimersByTime(100);
         });
         expect(result.current.isRecording).toBe(false);
         expect(result.current.audioLevel).toBe(0.2);
         
         statusIndex = 1;
-        act(() => {
+        await act(async () => {
           vi.advanceTimersByTime(100);
         });
         expect(result.current.isRecording).toBe(true);
         expect(result.current.audioLevel).toBe(0.5);
         
         statusIndex = 2;
-        act(() => {
+        await act(async () => {
           vi.advanceTimersByTime(100);
         });
         expect(result.current.isStreaming).toBe(true);
         expect(result.current.audioLevel).toBe(0.8);
         
         statusIndex = 3;
-        act(() => {
+        await act(async () => {
           vi.advanceTimersByTime(100);
         });
         expect(result.current.isRecording).toBe(false);
@@ -805,7 +805,7 @@ describe('useAudio', () => {
         expect(result.current.audioLevel).toBe(0.1);
       });
 
-      it('recovers from transient polling errors', () => {
+      it('recovers from transient polling errors', async () => {
         // Arrange
         const { result } = renderHook(() => useAudio());
         vi.clearAllMocks();
@@ -821,14 +821,14 @@ describe('useAudio', () => {
         });
         
         // Act - First poll should error
-        act(() => {
+        await act(async () => {
           vi.advanceTimersByTime(100);
         });
         expect(result.current.hasError).toBe(true);
         expect(result.current.errorMessage).toBe('Transient error');
         
         // Second poll should recover
-        act(() => {
+        await act(async () => {
           vi.advanceTimersByTime(100);
         });
         expect(result.current.hasError).toBe(false);
@@ -836,13 +836,13 @@ describe('useAudio', () => {
         expect(result.current.audioLevel).toBe(0.7);
       });
 
-      it('stops polling when client becomes null', () => {
+      it('stops polling when client becomes null', async () => {
         // Arrange
         const { result, rerender } = renderHook(() => useAudio());
         vi.clearAllMocks();
         
         // Verify initial polling works
-        act(() => {
+        await act(async () => {
           vi.advanceTimersByTime(100);
         });
         expect(mockClient.getAudioStatus).toHaveBeenCalledTimes(1);
@@ -853,7 +853,7 @@ describe('useAudio', () => {
         
         // Clear previous calls and advance time
         vi.clearAllMocks();
-        act(() => {
+        await act(async () => {
           vi.advanceTimersByTime(500);
         });
         
@@ -874,7 +874,7 @@ describe('useAudio', () => {
         );
       });
 
-      it('updates canSendInput based on turn state changes', () => {
+      it('updates canSendInput based on turn state changes', async () => {
         // Arrange
         mockTurnManager.canSendInput = true;
         const { result } = renderHook(() => useAudio({ respectTurnState: true }));
@@ -883,13 +883,13 @@ describe('useAudio', () => {
         expect(result.current.canSendInput).toBe(true);
         
         // Act - Simulate turn state change to false
-        triggerEvent('turn-state-changed', { canSendInput: false });
+        await triggerEvent('turn-state-changed', { canSendInput: false });
         
         // Assert
         expect(result.current.canSendInput).toBe(false);
         
         // Act - Simulate turn state change back to true
-        triggerEvent('turn-state-changed', { canSendInput: true });
+        await triggerEvent('turn-state-changed', { canSendInput: true });
         
         // Assert
         expect(result.current.canSendInput).toBe(true);
@@ -912,7 +912,7 @@ describe('useAudio', () => {
         vi.clearAllMocks();
         
         // Act - Lose turn
-        triggerEvent('turn-state-changed', { canSendInput: false });
+        await triggerEvent('turn-state-changed', { canSendInput: false });
         
         // Assert - Should stop streaming
         expect(mockClient.stopAudioStreaming).toHaveBeenCalledTimes(1);
@@ -935,7 +935,7 @@ describe('useAudio', () => {
         vi.clearAllMocks();
         
         // Act - Lose turn
-        triggerEvent('turn-state-changed', { canSendInput: false });
+        await triggerEvent('turn-state-changed', { canSendInput: false });
         
         // Assert - Should NOT stop streaming
         expect(mockClient.stopAudioStreaming).not.toHaveBeenCalled();
@@ -1184,7 +1184,7 @@ describe('useAudio', () => {
         expect(mockClient.stopAudioStreaming).not.toHaveBeenCalled();
       });
 
-      it('clears all intervals on unmount', () => {
+      it('clears all intervals on unmount', async () => {
         // Arrange
         const clearIntervalSpy = vi.spyOn(global, 'clearInterval');
         const { unmount } = renderHook(() => useAudio());
@@ -1197,7 +1197,7 @@ describe('useAudio', () => {
         
         // Verify no more polling happens
         vi.clearAllMocks();
-        act(() => {
+        await act(async () => {
           vi.advanceTimersByTime(500);
         });
         expect(mockClient.getAudioStatus).not.toHaveBeenCalled();
