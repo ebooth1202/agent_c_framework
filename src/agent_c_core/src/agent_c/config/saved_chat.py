@@ -410,13 +410,19 @@ class SavedChatLoader(ConfigLoader):
                     try:
                         # Load the session to get the user_id
                         with open(json_file, 'r', encoding='utf-8') as f:
-                            session_data = json.load(f)
+                            session_data: Dict = json.load(f)
+
+                        if 'vendor' in session_data:
+                            session_data.pop('vendor')  # Remove computed field if present
+
+                        if 'display_name' in session_data:
+                            session_data.pop('display_name')
 
                         session = ChatSession.model_validate(session_data)
                         if session.user_id is None or session.user_id.lower() == "agent c user":
                             session.user_id = "admin"  # Migrate old single user account to 'admin'
                             with open(json_file, 'w', encoding='utf-8') as f:
-                                json.dump(session.model_dump(), f, indent=4)
+                                json.dump(session.model_dump(exclude={"vendor", "display_name"}), f, indent=4)
 
                         user_folder = self._get_user_folder(session.user_id)
                         user_folder.mkdir(parents=True, exist_ok=True)
