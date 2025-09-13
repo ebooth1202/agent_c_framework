@@ -3,8 +3,9 @@ import copy
 import asyncio
 
 from asyncio import Semaphore
+from fnmatch import fnmatch
 
-from typing import Any, Dict, List, Union, Optional, Callable, Awaitable, Tuple
+from typing import Any, Dict, List, Union, Optional, Callable, Awaitable, Tuple, TYPE_CHECKING
 
 from agent_c.models.chat_history.chat_session import ChatSession
 
@@ -17,6 +18,9 @@ from agent_c.toolsets.tool_chest import ToolChest
 from agent_c.util.slugs import MnemonicSlugs
 from agent_c.util.logging_utils import LoggingManager
 from agent_c.util.token_counter import TokenCounter
+
+if TYPE_CHECKING:
+    from agent_c.models.agent_config import CurrentAgentConfiguration
 
 
 
@@ -391,3 +395,4 @@ class BaseAgent:
             message_array.append({"role": "user", "content": user_message})
 
         return message_array
+

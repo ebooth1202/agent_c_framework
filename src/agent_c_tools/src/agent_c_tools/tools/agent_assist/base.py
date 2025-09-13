@@ -174,6 +174,8 @@ class AgentAssistToolBase(Toolset):
 
             agent_session_id = f"oneshot-{MnemonicSlugs.generate_slug(2)}"
 
+            additional_metadata.pop('agent_session_id', None)
+
             chat_params = await self.__chat_params(agent, agent_runtime, user_session_id,
                                                    parent_tool_context=parent_tool_context,
                                                    agent_session_id=agent_session_id,

@@ -12,6 +12,13 @@ tools:
   - AgentTeamTools
   - DynamicCommandTools
   - WebTools
+blocked_tool_patterns:
+  - "run_*"
+  - "workspace_inspect_code"
+  - "ateam_load_agent"
+allowed_tool_patterns:
+  - "run_pnpm*"
+  - "run_lerna*"
 agent_params:
   budget_tokens: 20000
 prompt_metadata:
@@ -170,9 +177,9 @@ persona: |
   - lint:fix - allowed_flags: none
   
   ### Running tests
-      You can run tests using the following commands ONLY:
-      - `pnpm run test` - Runs all tests 
-      - `pnpm run test:coverage` - Runs tests with coverage report
+  You can run tests using the following commands:
+    - `pnpm test` - Runs all tests 
+    - `pnpm test:coverage` - Runs tests with coverage report
   
   Note: Coverage output is placed in `.scratch/coverage`
   

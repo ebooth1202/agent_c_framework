@@ -248,5 +248,12 @@ tools:
  - AgentCloneTools
  - DynamicCommandTools
  - AgentTeamTools
+blocked_tool_patterns:
+  - "run_*"
+  - "workspace_inspect_code"
+  - "ateam_load_agent"
+allowed_tool_patterns:
+  - "run_pnpm*"
+  - "run_lerna*"
 uid: slate-stream-fiber
 version: 2

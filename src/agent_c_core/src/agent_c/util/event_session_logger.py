@@ -13,8 +13,8 @@ import os
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Optional, Dict, Union, Awaitable
-from agent_c.models.events.session_event import SessionEvent, SemiSessionEvent
+from typing import Any, Callable, Optional, Dict, Union, Awaitable, TYPE_CHECKING
+
 from .logging_utils import LoggingManager
 from .transport_exceptions import (
     EventSessionLoggerError, LocalLoggingError, TransportError, 
@@ -22,6 +22,8 @@ from .transport_exceptions import (
 )
 from .transports import TransportInterface
 
+if TYPE_CHECKING:
+    from agent_c.models.events.session_event import SessionEvent, SemiSessionEvent
 
 class EventSessionLogger:
     """
@@ -146,10 +148,12 @@ class EventSessionLogger:
         """
         # Extract session_id
         session_id = "unknown"
-        if hasattr(event, 'session_id') and event.session_id:
+        if hasattr(event, 'user_session_id') and event.user_session_id:
+            session_id = event.user_session_id
+        elif hasattr(event, 'session_id') and event.session_id:
             session_id = event.session_id
-        elif isinstance(event, dict) and event.get('session_id'):
-            session_id = event['session_id']
+        elif isinstance(event, dict):
+            session_id = event.get('user_session_id', event['session_id'])
         
         # Generate unique session_id for unknown sessions
         if session_id == "unknown":

@@ -171,7 +171,7 @@ npm:
 
 pnpm:
   validator: pnpm
-  root_flags: ["-v","--version","--help"]
+  root_flags: ["-v","--version","--help", "--filter"]
   subcommands:
       view:   { allowed_flags: ["--json"] }
       list:   { allowed_flags: ["--depth","--json","--long"] }
@@ -193,6 +193,15 @@ pnpm:
       lint:   { allowed_flags: ["--fix"], deny_args: false, allow_test_paths: true }
       "lint:fix": { allowed_flags: [], deny_args: false, allow_test_paths: true }
       "install:clean": { allowed_flags: [] }
+      run:
+          build: { suppress_success_output: true, allow_test_mode: true, deny_args: false }
+          test: { suppress_success_output: true, allow_test_mode: true, deny_args: false }
+          "test:debug": { suppress_success_output: true, allow_test_mode: true, deny_args: false }
+          "type-check": { suppress_success_output: false, allow_test_mode: true, deny_args: false }
+          "test:ui": { suppress_success_output: true, allow_test_mode: true, deny_args: false }
+          "test:coverage": { suppress_success_output: false, allow_test_mode: true, deny_args: false }
+          "clean": { suppress_success_output: false, allow_test_mode: true, deny_args: false }
+          "install:clean": { suppress_success_output: false, allow_test_mode: true, deny_args: false }
 
       # Only allow "pnpm config get <key>"
       config:
@@ -203,13 +212,13 @@ pnpm:
       install:
         enabled: true
         require_no_packages: true
-        require_flags: ["--ignore-scripts"]
+        require_flags: []
         allowed_flags: ["--ignore-scripts","--prefer-offline","--frozen-lockfile","--reporter","--dev","--prod"]
         suppress_success_output: true
 
   # pnpm doesn't have ci command like npm, but has similar restrictions
   # keep 'i' and 'add' denied unless you want them—the validator aliases them to 'install'
-  deny_subcommands: ["exec","publish","update","audit","login","adduser","whoami","pack","link","unlink","patch","patch-commit"]
+  deny_subcommands: ["exec","publish","update","login","adduser","pack","link","unlink","patch","patch-commit"]
 
   default_timeout: 120
   env_overrides:
@@ -217,7 +226,6 @@ pnpm:
     PNPM_CONFIG_PROGRESS: "false"   # no progress bars
     PNPM_CONFIG_LOGLEVEL: "warn"    # or "error" to be even quieter
     NO_COLOR: "1"                   # many tools respect this
-    FORCE_COLOR: "0"                # chalk/colorette/etc. honor this
     NODE_DISABLE_COLORS: "1"        # belt-and-suspenders for some libs
     CI: "1"                         # many CLIs reduce interactivity/spinners
     PNPM_CONFIG_FUND: "false"

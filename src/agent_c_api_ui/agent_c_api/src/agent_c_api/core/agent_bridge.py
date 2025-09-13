@@ -910,8 +910,7 @@ class AgentBridge:
                     await self._stream_queue.put(payload)
 
                     # If this is the end-of-stream event, push final payload and then a termination marker.
-                    if event.type == "interaction" and not event.started:
-                        await self._stream_queue.put(payload)
+                    if event.type == "interaction" and not event.started and event.session_id == self.chat_session.session_id:
                         await self._stream_queue.put(None)
 
 
@@ -978,6 +977,7 @@ class AgentBridge:
             if len(self.chat_session.agent_config.tools):
                 await self.tool_chest.initialize_toolsets(self.chat_session.agent_config.tools)
                 tool_params = self.tool_chest.get_inference_data(self.chat_session.agent_config.tools, agent_runtime.tool_format)
+                tool_params['schemas'] = self.chat_session.agent_config.filter_allowed_tools(tool_params['schemas'])
                 tool_params["toolsets"] = self.chat_session.agent_config.tools
 
             if self.sections is not None:
