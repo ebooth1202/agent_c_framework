@@ -6,6 +6,7 @@ import yaml
 from agent_c.models.agent_config import CurrentAgentConfiguration
 from agent_c.models.events.chat import SubsessionStartedEvent, SubsessionEndedEvent
 from agent_c.toolsets import Toolset, json_schema
+from agent_c.util import MnemonicSlugs
 from .base import AgentAssistToolBase
 from .prompt import AgentAssistSection
 
@@ -101,18 +102,19 @@ class AgentAssistTools(AgentAssistToolBase):
 
         content = f"**Prime agent** requesting assistance:\n\n{request}"
 
-        # await self._raise_render_media(
-        #     sent_by_class=self.__class__.__name__,
-        #     sent_by_function='oneshot',
-        #     content_type="text/html",
-        #     content=self.fix_markdown_formatting(f"**Prime** agent requesting assistance from '*{agent_config.name}*':\n\n{request})\n\n"),
-        #     tool_context=tool_context
-        # )
+        await self._raise_render_media(
+            sent_by_class=self.__class__.__name__,
+            sent_by_function='oneshot',
+            content_type="text/html",
+            content=self.fix_markdown_formatting(f"**Prime** agent requesting assistance from '*{agent_config.name}*':\n\n{request})\n\n"),
+            tool_context=tool_context
+        )
 
-        messages = await self.agent_oneshot(content, agent_config, tool_context['session_id'], tool_context,
+        messages = await self.agent_oneshot(content, agent_config, user_session_id, tool_context,
                                              process_context=process_context,
                                              client_wants_cancel=tool_context.get('client_wants_cancel', None),
-                                             user_session_id=user_session_id, parent_session_id=parent_session_id,
+                                             parent_session_id=parent_session_id,
+                                             agent_session_id=MnemonicSlugs.generate_slug(2),
                                              sub_agent_type="assist", prime_agent_key=calling_agent_config.key)
 
         await self._raise_render_media(
@@ -178,22 +180,23 @@ class AgentAssistTools(AgentAssistToolBase):
 
         content = f"**Prime agent** requesting assistance:\n\n{message}"
 
-        # await self._raise_render_media(
-        #     sent_by_class=self.__class__.__name__,
-        #     sent_by_function='chat',
-        #     content_type="text/html",
-        #     content=content,
-        #     tool_context=tool_context
-        # )
+        await self._raise_render_media(
+            sent_by_class=self.__class__.__name__,
+            sent_by_function='chat',
+            content_type="text/html",
+            content=content,
+            tool_context=tool_context
+        )
 
         agent_session_id, messages = await self.agent_chat(content, agent_config,
-                                                           tool_context['session_id'],
                                                            user_session_id,
+                                                           agent_session_id,
                                                            tool_context,
                                                            process_context=process_context,
                                                            client_wants_cancel=tool_context.get('client_wants_cancel', None),
-                                                           agent_session_id=agent_session_id, parent_session_id=parent_session_id,
-                                                           sub_agent_type="assist", prime_agent_key=calling_agent_config.key
+                                                           parent_session_id=parent_session_id,
+                                                           sub_agent_type="assist",
+                                                           prime_agent_key=calling_agent_config.key
                                                            )
         await self._raise_render_media(
             sent_by_class=self.__class__.__name__,

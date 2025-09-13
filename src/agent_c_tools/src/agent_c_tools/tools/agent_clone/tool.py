@@ -151,9 +151,9 @@ class AgentCloneTools(AgentAssistToolBase):
 
             self.agent_loader.catalog[agent_key] = clone_config
 
-        # await self._render_media_markdown(markdown.markdown(f"**Prime** agent requesting assistance from clone:\n\n{orig_message}\n\n## Clone context:\n{process_context}"),
-        #                                                     "chat",
-        #                                                     tool_context=tool_context)
+        await self._render_media_markdown(markdown.markdown(f"**Prime** agent requesting assistance from clone:\n\n{orig_message}\n\n## Clone context:\n{process_context}"),
+                                                            "chat",
+                                                            tool_context=tool_context)
         content = f"**Prime agent** requesting assistance:\n\n{message}"
         user_session_id = tool_context.get('user_session_id', tool_context['session_id'])
         parent_session_id = tool_context.get('session_id')

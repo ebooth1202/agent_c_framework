@@ -172,7 +172,7 @@ class AgentAssistToolBase(Toolset):
             self.logger.info(f"Running one-shot with persona: {agent.key}, user session: {user_session_id}")
             agent_runtime = await self.runtime_for_agent(agent)
 
-            agent_session_id = f"oneshot-{MnemonicSlugs.generate_id_slug(2)}"
+            agent_session_id = f"oneshot-{MnemonicSlugs.generate_slug(2)}"
 
             chat_params = await self.__chat_params(agent, agent_runtime, user_session_id,
                                                    parent_tool_context=parent_tool_context,
@@ -233,13 +233,10 @@ class AgentAssistToolBase(Toolset):
         """
         self.logger.info(f"Running chat with persona: {agent.name}, user session: {user_session_id}")
         agent_runtime = await self.runtime_for_agent(agent)
-        agent_session_id = agent_session_id,
-        user_session_id = user_session_id,
-        prime_agent_key = prime_agent_key,
-        parent_session_id = parent_session_id,
+
 
         if agent_session_id is None:
-            agent_session_id = MnemonicSlugs.generate_id_slug(2)
+            agent_session_id = MnemonicSlugs.generate_slug(2)
 
         session = self.session_cache.get(agent_session_id)
         if session is None:
