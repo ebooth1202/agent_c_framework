@@ -62,6 +62,17 @@ export interface SessionManagerEventMap {
     source?: string;
     timestamp: string;
   };
+  'user-message': {
+    vendor: string;
+    message?: Record<string, any>;
+  };
+  'subsession-started': {
+    subSessionType: 'chat' | 'oneshot';
+    subAgentType: 'clone' | 'team' | 'assist' | 'tool';
+    primeAgentKey: string;
+    subAgentKey: string;
+  };
+  'subsession-ended': Record<string, never>;
 }
 
 /**

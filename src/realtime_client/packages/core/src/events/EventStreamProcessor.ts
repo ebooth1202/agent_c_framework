@@ -19,7 +19,12 @@ import {
   SystemMessageEvent,
   ErrorEvent,
   HistoryDeltaEvent,
-  ChatSessionChangedEvent
+  ChatSessionChangedEvent,
+  UserMessageEvent,
+  OpenAIUserMessageEvent,
+  AnthropicUserMessageEvent,
+  SubsessionStartedEvent,
+  SubsessionEndedEvent
 } from './types/ServerEvents';
 import { Message, MessageContent, ContentPart } from './types/CommonTypes';
 import { ChatSession } from '../types/chat-session';
@@ -214,6 +219,15 @@ export class EventStreamProcessor {
         break;
       case 'chat_session_changed':
         this.handleChatSessionChanged(event);
+        break;
+      case 'user_message':
+        this.handleUserMessage(event as UserMessageEvent);
+        break;
+      case 'subsession_started':
+        this.handleSubsessionStarted(event as SubsessionStartedEvent);
+        break;
+      case 'subsession_ended':
+        this.handleSubsessionEnded(event as SubsessionEndedEvent);
         break;
       // Other events are handled elsewhere or don't require processing here
       default:
@@ -460,6 +474,39 @@ export class EventStreamProcessor {
         messages: session.messages
       });
     }
+  }
+  
+  /**
+   * Handle user message events (vendor-specific format)
+   */
+  private handleUserMessage(event: UserMessageEvent | OpenAIUserMessageEvent | AnthropicUserMessageEvent): void {
+    // Emit the user message event for UI consumption
+    // The UI can handle vendor-specific formatting as needed
+    this.sessionManager.emit('user-message', {
+      vendor: event.vendor,
+      message: 'message' in event ? (event as any).message : undefined
+    });
+  }
+  
+  /**
+   * Handle subsession started events
+   */
+  private handleSubsessionStarted(event: SubsessionStartedEvent): void {
+    // Emit subsession start event for UI tracking
+    this.sessionManager.emit('subsession-started', {
+      subSessionType: event.sub_session_type,
+      subAgentType: event.sub_agent_type,
+      primeAgentKey: event.prime_agent_key,
+      subAgentKey: event.sub_agent_key
+    });
+  }
+  
+  /**
+   * Handle subsession ended events
+   */
+  private handleSubsessionEnded(_event: SubsessionEndedEvent): void {
+    // Emit subsession end event for UI tracking
+    this.sessionManager.emit('subsession-ended', {});
   }
   
   /**

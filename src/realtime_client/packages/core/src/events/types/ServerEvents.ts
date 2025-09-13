@@ -340,6 +340,53 @@ export interface UserRequestEvent extends BaseServerEvent {
 }
 
 /**
+ * Base user message event with vendor information
+ * Replaces UserRequestEvent for vendor-specific message formats
+ */
+export interface UserMessageEvent extends BaseServerEvent {
+  type: 'user_message';
+  vendor: string;
+}
+
+/**
+ * OpenAI-specific user message event
+ */
+export interface OpenAIUserMessageEvent extends UserMessageEvent {
+  type: 'user_message';
+  vendor: 'openai';
+  message: Record<string, any>; // OpenAI message format
+}
+
+/**
+ * Anthropic-specific user message event
+ */
+export interface AnthropicUserMessageEvent extends UserMessageEvent {
+  type: 'user_message';
+  vendor: 'anthropic';
+  message: Record<string, any>; // Anthropic message format
+}
+
+/**
+ * Notification that a subsession has started
+ * Events between this and SubsessionEndedEvent are part of the subsession
+ */
+export interface SubsessionStartedEvent extends BaseServerEvent {
+  type: 'subsession_started';
+  sub_session_type: 'chat' | 'oneshot';
+  sub_agent_type: 'clone' | 'team' | 'assist' | 'tool';
+  prime_agent_key: string;
+  sub_agent_key: string;
+}
+
+/**
+ * Notification that a subsession has ended
+ * Matches with a previous SubsessionStartedEvent
+ */
+export interface SubsessionEndedEvent extends BaseServerEvent {
+  type: 'subsession_ended';
+}
+
+/**
  * Union type of all server events
  */
 export type ServerEvent =
@@ -374,7 +421,12 @@ export type ServerEvent =
   | RenderMediaEvent
   | HistoryDeltaEvent
   | SystemPromptEvent
-  | UserRequestEvent;
+  | UserRequestEvent
+  | UserMessageEvent
+  | OpenAIUserMessageEvent
+  | AnthropicUserMessageEvent
+  | SubsessionStartedEvent
+  | SubsessionEndedEvent;
 
 /**
  * Type guard to check if an object is a server event
@@ -412,6 +464,9 @@ export function isServerEvent(obj: unknown): obj is ServerEvent {
     'render_media',
     'history_delta',
     'system_prompt',
-    'user_request'
+    'user_request',
+    'user_message',
+    'subsession_started',
+    'subsession_ended'
   ].includes((obj as any).type);
 }

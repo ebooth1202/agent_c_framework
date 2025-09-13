@@ -57,6 +57,11 @@ import {
   HistoryDeltaEvent,
   SystemPromptEvent,
   UserRequestEvent,
+  UserMessageEvent,
+  OpenAIUserMessageEvent,
+  AnthropicUserMessageEvent,
+  SubsessionStartedEvent,
+  SubsessionEndedEvent,
   ServerEvent
 } from './types/ServerEvents';
 
@@ -119,6 +124,9 @@ export interface ServerEventMap {
   'history_delta': HistoryDeltaEvent;
   'system_prompt': SystemPromptEvent;
   'user_request': UserRequestEvent;
+  'user_message': UserMessageEvent | OpenAIUserMessageEvent | AnthropicUserMessageEvent;
+  'subsession_started': SubsessionStartedEvent;
+  'subsession_ended': SubsessionEndedEvent;
 }
 
 /**
@@ -213,7 +221,10 @@ export class EventRegistry {
     'render_media',
     'history_delta',
     'system_prompt',
-    'user_request'
+    'user_request',
+    'user_message',
+    'subsession_started',
+    'subsession_ended'
   ]);
 
   /**
