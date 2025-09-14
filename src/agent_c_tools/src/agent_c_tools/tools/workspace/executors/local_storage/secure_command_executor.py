@@ -373,8 +373,37 @@ class SecureCommandExecutor:
         if validator is None:
             return self._error(command, working_directory, f"No validator registered for '{base}'")
 
+        #### Temporarily compute the environment here, so that the validator can validate what it will look like
+        #### we'll clean out and reform it again later.
+        # --- Build a minimal env snapshot for VALIDATION ---
+        pre_env = dict(os.environ)
+        try:
+            # what we know pre-validation
+            # if working directory is passed in, use it, otherwise fallback to os.getcwd()
+            cwd_abs = working_directory or os.getcwd()
+            ws_root = (
+                    (policy or {}).get("workspace_root") # Allows a policy override
+                    or (override_env or {}).get("WORKSPACE_ROOT") # Allows a caller override
+                    or os.environ.get("WORKSPACE_ROOT") # Allows an existing env override
+                    or cwd_abs # Or use the working director/CWD fallback if no overrides
+            )
+
+            # make these visible to validators / path-safety
+            os.environ["CWD"] = cwd_abs
+            os.environ.setdefault("WORKSPACE_ROOT", ws_root)
+
+            # also apply any static safe env the policy defines
+            for k, v in (policy.get("safe_env") or {}).items():
+                os.environ[str(k)] = str(v)
+
+            # Validate with computed env available
+            vres: ValidationResult = validator.validate(parts, policy)
+        finally:
+            # restore original environment
+            os.environ.clear()
+            os.environ.update(pre_env)
+
         # validate the command and its args against the policy. If not allowed, block it.
-        vres: ValidationResult = validator.validate(parts, policy)
         if not vres.allowed:
             return self._blocked(command, working_directory, vres.reason or "Validation failed")
 
