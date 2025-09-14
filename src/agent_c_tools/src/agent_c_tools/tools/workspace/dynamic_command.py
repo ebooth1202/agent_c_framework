@@ -24,10 +24,16 @@ class DynamicCommandTools(Toolset):
         policies: Dict[str, Dict[str, Any]] = self.policy_provider.get_all_policies() or {}
 
         # Build a command→description map from policy (fallback to a sensible default)
-        self.whitelisted_commands = {
-            base: {"description": self.policy_provider.build_command_instructions(base, spec)}
-            for base, spec in sorted(policies.items())
-        }
+        self.whitelisted_commands = {}
+        for base, spec in sorted(policies.items()):
+            try:
+                description = self.policy_provider.build_command_instructions(base, spec)
+                self.whitelisted_commands[base] = {"description": description}
+            except Exception as e:
+                self.logger.error(f"Failed to load policy for command '{base}': {e}")
+                # Optionally include it with an error description:
+                # self.whitelisted_commands[base] = {"description": f"ERROR: {e}"}
+                continue
 
         self._create_dynamic_tools()
 
@@ -68,6 +74,11 @@ class DynamicCommandTools(Toolset):
                         "required": False,
                         "default": 1000,
                     },
+                    "suppress_success_output": {
+                        "type": "boolean",
+                        "description": "Override policy setting and supress or do not supress full output if command is successful. None = follow policy.",
+                        "required": False,
+                    },
                 },
             )(dynamic_method)
 
@@ -93,6 +104,7 @@ class DynamicCommandTools(Toolset):
             timeout: Optional[int] = kwargs.get("timeout", None)
             max_tokens: int = kwargs.get("max_tokens", 1000)
             tool_context = kwargs.get("tool_context", {})  # for UI + token counter
+            suppress_success_output: Optional[bool] = kwargs.get("suppress_success_output", None)
 
             # 0) Validate required fields exist
             success, message = validate_required_fields(kwargs=kwargs, required_fields=['path'])
@@ -126,6 +138,7 @@ class DynamicCommandTools(Toolset):
                 command=full_command,
                 working_directory=abs_path,
                 timeout=timeout,
+                suppress_success_output=suppress_success_output
             )
             if result.status == "error":
                 self.logger.warning(f"Agent run command blocked: {full_command}")

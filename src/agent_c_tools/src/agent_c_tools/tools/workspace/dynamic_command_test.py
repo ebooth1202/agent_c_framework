@@ -40,7 +40,8 @@ async def run_example():
     result_pnpm = await tester.run_tool_test(
         tool_name='run_pnpm',
         tool_params={"path": "//deep_code",
-                     "args": "--version",}
+                     "args": "--version",
+                     "suppress_success_output": True}
     )
     
     # Test both results
