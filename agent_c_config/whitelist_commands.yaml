@@ -172,6 +172,13 @@ npm:
 pnpm:
   validator: pnpm
   root_flags: ["-v","--version","--help"]
+  global_flags_before_subcommand:
+    # boolean means “takes the value next”
+    # adding global flags here allows us to use commands like 'pnpm --filter @agentc/realtime-ui test' before the subcommand
+    # So, setting --filter: true means filter on @agentc/realtime-ui, and false means no value allowed
+    "--filter": true
+    "--silent": false
+    "-r": false            # --recursive
   subcommands:
     # This is in effect allowing us to call 'pnpm run build' or 'pnpm build' - it's double mapping, but pnpm allows both, so here we are.
     # This does mean you can have separate policies for 'pnpm run <script>' and 'pnpm <script>' if you want.

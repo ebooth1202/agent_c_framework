@@ -127,9 +127,38 @@ class PnpmCommandValidator(CommandValidator):
         root_flags = set(policy.get("root_flags") or [])
         subs: Mapping[str, Any] = policy.get("subcommands", {}) or {}
         deny_subs = set((policy.get("deny_subcommands") or []))
+        global_before = dict(policy.get("global_flags_before_subcommand") or {})
 
-        # Case A: root-flags-only usage (e.g., pnpm -v)
-        if len(parts) == 1 or parts[1].startswith("-"):
+        # --- Consume allowed global flags that may appear before the subcommand
+        i = 1
+        consumed_global = False
+        while i < len(parts) and parts[i].startswith("-"):
+            tok = parts[i]
+            base = self._flag_base(tok)  # turns --filter=@x into --filter
+
+            if base in global_before:
+                consumed_global = True
+                takes_val = bool(global_before[base])
+
+                # equals form: --filter=@scope/pkg (value inline)
+                if "=" in tok:
+                    i += 1
+                    continue
+
+                # space form: --filter @scope/pkg
+                i += 1
+                if takes_val:
+                    if i >= len(parts):
+                        return ValidationResult(False, f"Missing value for global flag: {base}")
+                    # treat next token as the value even if it looks like a flag
+                    i += 1
+                continue
+            break
+
+        # Root-flags-only mode applies only if the *first* token was a flag and
+        # we didn't accept it as an allowed global flag.
+        # Root-flags-only usage (e.g., pnpm -v) is only valid if we didn't consume any global-before flags
+        if i == 1 and (len(parts) == 1 or parts[1].startswith("-")) and not consumed_global:
             used_flags = [p for p in parts[1:] if p.startswith("-")]
             for f in used_flags:
                 base = self._flag_base(f)
@@ -140,9 +169,11 @@ class PnpmCommandValidator(CommandValidator):
                 return ValidationResult(False, f"Unexpected args: {' '.join(non_flags[:3])}")
             return ValidationResult(True, "OK", timeout=policy.get("default_timeout"), policy_spec=None)
 
-        # Case B: subcommand mode
-        sub = parts[1].lower()
+        # From here, the subcommand is at index i (after any allowed global flags)
+        if i >= len(parts):
+            return ValidationResult(False, "Missing subcommand")
 
+        sub = parts[i].lower()
         if sub in deny_subs:
             return ValidationResult(False, f"Subcommand not allowed: {sub}")
 
@@ -150,13 +181,12 @@ class PnpmCommandValidator(CommandValidator):
         if spec is None:
             return ValidationResult(False, f"Subcommand not allowed: {sub}")
 
-        after = parts[2:]
+        after = parts[i + 1:]
 
         # Special handling: `pnpm run <script> ...`
         # this section should return a ValidationResult.  Regular subcommands are handled after this block.
         if sub == "run":
             scripts = (spec.get("scripts") or {})
-            after = parts[2:]
 
             # Find the script name:
             # - Prefer the first non-flag token BEFORE a `--` if present

@@ -246,3 +246,108 @@ def test_script_name_that_looks_like_flag(pnpm_policy_factory, validator_pnpm):
     # With separator, we can explicitly pass the script name after '--'
     ok = validator_pnpm.validate(["pnpm","run","--","--report"], pol)
     assert ok.allowed
+
+# --- Global flags before subcommand: behavior tests ---
+
+def _policy_with_globals(extra: dict = None):
+    base = {
+        "pnpm": {
+            "global_flags_before_subcommand": {
+                "--filter": True,            # requires a value
+                "--workspace-root": False,   # boolean (no value)
+                "-r": False,                 # alias for --recursive
+            },
+            "subcommands": {}
+        }
+    }
+    if extra:
+        # shallow merge for convenience in tests
+        base["pnpm"]["subcommands"].update(extra.get("pnpm", {}).get("subcommands", {}))
+        # allow test to override/extend global flags too
+        gf = extra.get("pnpm", {}).get("global_flags_before_subcommand")
+        if gf:
+            base["pnpm"]["global_flags_before_subcommand"].update(gf)
+    return base
+
+
+def test_global_flag_filter_then_subcommand_ok(pnpm_policy_factory, validator_pnpm):
+    pol_top = pnpm_policy_factory(_policy_with_globals({
+        "pnpm": {"subcommands": {"test": {"allow_test_paths": True, "deny_args": False}}}
+    }))
+    pol = pol_top["pnpm"]
+
+    # space form
+    r1 = validator_pnpm.validate(["pnpm", "--filter", "@agentc/realtime-ui", "test", "src/foo.test.ts"], pol)
+    assert r1.allowed
+
+    # equals form
+    r2 = validator_pnpm.validate(["pnpm", "--filter=@agentc/realtime-ui", "test"], pol)
+    assert r2.allowed
+
+
+def test_multiple_globals_then_run_script_args_ok(pnpm_policy_factory, validator_pnpm):
+    pol_top = pnpm_policy_factory(_policy_with_globals({
+        "pnpm": {"subcommands": {
+            "run": {"scripts": {"s": {"deny_args": False}}}
+        }}
+    }))
+    pol = pol_top["pnpm"]
+
+    cmd = ["pnpm", "--workspace-root", "--filter", "@agentc/realtime-ui", "run", "s", "--", "arg1"]
+    r = validator_pnpm.validate(cmd, pol)
+    assert r.allowed
+
+
+def test_missing_value_for_global_flag_is_error(pnpm_policy_factory, validator_pnpm):
+    pol_top = pnpm_policy_factory(_policy_with_globals({
+        "pnpm": {"subcommands": {"test": {}}}
+    }))
+    pol = pol_top["pnpm"]
+
+    # --filter requires a value; here it's missing (next token is the subcommand)
+    r = validator_pnpm.validate(["pnpm", "--filter", "test"], pol)
+    assert not r.allowed
+
+
+def test_disallowed_global_flag_rejected(pnpm_policy_factory, validator_pnpm):
+    # No global_flags_before_subcommand -> treat --filter as a root flag (not in root_flags) -> reject
+    pol_top = pnpm_policy_factory({
+        "pnpm": {
+            "root_flags": ["-v", "--version", "--help"],
+            "subcommands": {"test": {}}
+        }
+    })
+    pol = pol_top["pnpm"]
+
+    r = validator_pnpm.validate(["pnpm", "--filter", "@agentc/realtime-ui", "test"], pol)
+    assert not r.allowed
+
+
+def test_globals_do_not_merge_policies(pnpm_policy_factory, validator_pnpm):
+    # Top-level build forbids flags (allowed_flags: []), run:build allows --ok-flag only
+    pol_top = pnpm_policy_factory(_policy_with_globals({
+        "pnpm": {"subcommands": {
+            "build": {"allowed_flags": []},
+            "run":   {"scripts": {"build": {"allowed_flags": ["--ok-flag"], "deny_args": False}}}
+        }}
+    }))
+    pol = pol_top["pnpm"]
+
+    ok = validator_pnpm.validate(["pnpm", "--filter", "@scope/pkg", "run", "build", "--ok-flag"], pol)
+    assert ok.allowed
+
+    bad = validator_pnpm.validate(["pnpm", "--filter", "@scope/pkg", "build", "--ok-flag"], pol)
+    assert not bad.allowed  # still top-level build policy (no flags), not merged
+
+
+def test_globals_preserve_deny_args_for_run_scripts(pnpm_policy_factory, validator_pnpm):
+    pol_top = pnpm_policy_factory(_policy_with_globals({
+        "pnpm": {"subcommands": {
+            "run": {"scripts": {"s": {"deny_args": True}}}
+        }}
+    }))
+    pol = pol_top["pnpm"]
+
+    # Positionals after script (even after '--') are rejected when deny_args: true
+    r = validator_pnpm.validate(["pnpm", "--filter", "@agentc/realtime-ui", "run", "s", "--", "pos"], pol)
+    assert not r.allowed
