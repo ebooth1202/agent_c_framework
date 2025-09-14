@@ -2,9 +2,8 @@ import os
 import glob
 import json
 import asyncio
-import time
 from datetime import datetime
-from typing import List, Dict, Any, Optional, AsyncGenerator
+from typing import List, Dict, Any, Optional
 from fastapi import BackgroundTasks
 from agent_c_api.api.v1.interactions.interaction_models.event_model import Event, EventType
 from agent_c_api.api.v1.interactions.utils.file_utils import read_jsonl_file, get_session_directory

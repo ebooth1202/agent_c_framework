@@ -39,6 +39,15 @@ class EventType(str, Enum):
     COMPLETION_OPTIONS = "completion_options"  # deprecated: not used in core
     USER_REQUEST = "user_request"  # deprecated: not used in core
 
+    # Subsesssions
+    SUBSESSION_START = "subsession_started"
+    SUBSESSION_END = "subsession_ended"
+
+    # User message events
+    ANTHROPIC_USER_MESSAGE = "anthropic_user_message"
+    OPENAI_USER_MESSAGE = "openai_user_message"
+
+
 class Event(BaseModel):
     # whenever you do a model_dump here, ensure you do mode='json', so that datetime objects are serialized
     timestamp: datetime
