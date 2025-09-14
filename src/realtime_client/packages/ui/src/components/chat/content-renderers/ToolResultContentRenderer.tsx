@@ -2,10 +2,11 @@
 
 import * as React from 'react'
 import { cn } from '../../../lib/utils'
-import { CheckCircle, XCircle, ChevronRight, AlertCircle } from 'lucide-react'
+import { CheckCircle, XCircle, ChevronRight, AlertCircle, Copy, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { ContentPart } from '@agentc/realtime-core'
 import { ContentPartRenderer } from '../MessageContentRenderer'
+import { Button } from '../../ui/button'
 
 export interface ToolResultContentRendererProps {
   /**
@@ -43,6 +44,7 @@ export const ToolResultContentRenderer: React.FC<ToolResultContentRendererProps>
 }) => {
   // Auto-expand successful results, collapse errors by default
   const [isExpanded, setIsExpanded] = React.useState(!isError)
+  const [isCopied, setIsCopied] = React.useState(false)
   
   // Determine styling based on success/error state
   const statusColor = isError 
@@ -85,6 +87,38 @@ export const ToolResultContentRenderer: React.FC<ToolResultContentRendererProps>
     if (Array.isArray(content)) return content.length > 0
     return false
   }, [content])
+  
+  // Get content as string for copying
+  const getContentAsString = React.useCallback(() => {
+    if (typeof content === 'string') {
+      return content
+    }
+    if (Array.isArray(content)) {
+      // Extract text from content parts
+      return content.map(part => {
+        if (part.type === 'text' && 'text' in part) {
+          return part.text
+        }
+        if (part.type === 'tool_result' && 'content' in part && typeof part.content === 'string') {
+          return part.content
+        }
+        // For other types, return a placeholder
+        return `[${part.type} content]`
+      }).join('\n')
+    }
+    return ''
+  }, [content])
+  
+  // Handle copy action
+  const handleCopy = React.useCallback(() => {
+    const textToCopy = getContentAsString()
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      setIsCopied(true)
+      setTimeout(() => setIsCopied(false), 2000)
+    }).catch(err => {
+      console.error('Failed to copy tool result:', err)
+    })
+  }, [getContentAsString])
   
   return (
     <div 
@@ -146,6 +180,30 @@ export const ToolResultContentRenderer: React.FC<ToolResultContentRendererProps>
             className="overflow-hidden"
           >
             <div className="px-3 pb-3">
+              {/* Copy button for tool result content */}
+              {hasContent && (
+                <div className="flex justify-end mb-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2"
+                    onClick={handleCopy}
+                    aria-label={isCopied ? 'Copied to clipboard' : 'Copy tool result to clipboard'}
+                  >
+                    {isCopied ? (
+                      <>
+                        <Check className="h-3 w-3 mr-1" aria-hidden="true" />
+                        <span className="text-xs">Copied</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3 w-3 mr-1" aria-hidden="true" />
+                        <span className="text-xs">Copy</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
               {hasContent ? (
                 <div 
                   className="bg-background/60 rounded p-3 border border-border/50"

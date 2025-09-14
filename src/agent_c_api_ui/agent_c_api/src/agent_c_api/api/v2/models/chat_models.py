@@ -11,7 +11,7 @@ from agent_c.models.events.chat import (
     SystemMessageEvent, TextDeltaEvent, ThoughtDeltaEvent,
     HistoryEvent
 )
-from agent_c.models.events.tool_calls import ToolCallEvent, ToolCallDeltaEvent
+from agent_c.models.events.tool_calls import ToolCallEvent, ToolSelectDeltaEvent
 
 # Import core content block models
 from agent_c.models.common_chat import TextContentBlock as TextBlock, ImageContentBlock as ImageBlock, BaseContentBlock
@@ -27,7 +27,7 @@ from .tool_models import ToolCall, ToolResult
 ChatEventUnion = Union[
     InteractionEvent, CompletionEvent, MessageEvent, 
     SystemMessageEvent, TextDeltaEvent, ThoughtDeltaEvent,
-    HistoryEvent, ToolCallEvent, ToolCallDeltaEvent
+    HistoryEvent, ToolCallEvent, ToolSelectDeltaEvent
 ]
 
 # Type alias for all possible content block types
@@ -368,6 +368,6 @@ class ChatEventType(str, Enum):
     TEXT_DELTA = "text_delta"  # TextDeltaEvent
     THOUGHT_DELTA = "thought_delta"  # ThoughtDeltaEvent
     TOOL_CALL = "tool_call"    # ToolCallEvent
-    TOOL_CALL_DELTA = "tool_select_delta"  # ToolCallDeltaEvent
+    TOOL_CALL_DELTA = "tool_select_delta"  # ToolSelectDeltaEvent
     HISTORY = "history"        # HistoryEvent
     

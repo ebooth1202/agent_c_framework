@@ -39,6 +39,9 @@ export const defaultMockStates = {
     clearMessages: vi.fn(),
     updateMessage: vi.fn(),
     deleteMessage: vi.fn(),
+    isSubSessionMessage: vi.fn(() => false),
+    isAgentTyping: false,
+    streamingMessage: null,
   },
   turnState: {
     currentState: 'idle' as const,
@@ -75,7 +78,7 @@ export const defaultMockStates = {
     agents: [],
     voices: [],
     avatars: [],
-    toolsets: [],
+    tools: [],
     selectedAgent: null,
     selectAgent: vi.fn(),
     isLoading: false,

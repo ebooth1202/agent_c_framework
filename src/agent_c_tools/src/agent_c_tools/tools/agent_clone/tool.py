@@ -9,7 +9,7 @@ from agent_c.toolsets.tool_set import Toolset
 from agent_c_tools.tools.think.prompt import ThinkSection
 from agent_c_tools.tools.agent_clone.prompt import AgentCloneSection, CloneBehaviorSection
 from agent_c.models.completion import ClaudeReasoningParams
-from agent_c.models.agent_config import AgentConfigurationV2, AgentConfiguration
+from agent_c.models.agent_config import AgentConfigurationV2, AgentConfiguration, CurrentAgentConfiguration
 from agent_c_tools.tools.agent_assist.base import AgentAssistToolBase
 from agent_c.prompting.basic_sections.persona import DynamicPersonaSection
 
@@ -52,9 +52,10 @@ class AgentCloneTools(AgentAssistToolBase):
                         f"Your prime is delegating a 'oneshot' task for YOU (the clone) to perform:\n\n{orig_request}")
         process_context: Optional[str] = kwargs.get('process_context')
         tool_context: Dict[str, Any] = kwargs.get('tool_context')
-        calling_agent_config: AgentConfiguration = tool_context.get('agent_config', tool_context.get('active_agent'))
+        calling_agent_config: CurrentAgentConfiguration = tool_context.get('agent_config', tool_context.get('active_agent'))
         if calling_agent_config is None:
             return f"**ERROR**: No agent configuration found in tool context. This tool requires an active agent configuration to function."
+
         clone_persona: str = calling_agent_config.persona
 
         if process_context:
@@ -63,21 +64,25 @@ class AgentCloneTools(AgentAssistToolBase):
             enhanced_persona =clone_persona
 
         slug = MnemonicSlugs.generate_id_slug(2)
-        clone_config = AgentConfigurationV2.model_validate(calling_agent_config.model_dump())
+        clone_config = CurrentAgentConfiguration.model_validate(calling_agent_config.model_dump())
 
         clone_tools = [tool for tool in clone_config.tools if tool != 'AgentCloneTools']
         clone_config.persona = enhanced_persona
         clone_config.name = f"{calling_agent_config.name} Clone - {slug}"
         clone_config.model_id = tool_context['calling_model_name']
         clone_config.tools = clone_tools
+        content = f"**Prime agent** requesting assistance:\n\n{request}"
+        # await self._render_media_markdown(f"**Prime** agent requesting assistance from clone:\n\n{orig_request}\n\n## Clone context:\n{process_context}", "oneshot",tool_context=tool_context)
 
-        await self._render_media_markdown(f"**Prime** agent requesting assistance from clone:\n\n{orig_request}\n\n## Clone context:\n{process_context}", "oneshot",tool_context=tool_context)
+        user_session_id = tool_context.get('user_session_id', tool_context ['session_id'])
+        parent_session_id = tool_context.get('session_id')
 
-
-        messages =  await self.agent_oneshot(request, clone_config, tool_context['session_id'],
+        messages =  await self.agent_oneshot(content, clone_config, user_session_id,
                                              tool_context, client_wants_cancel=tool_context.get('client_wants_cancel', None),
-                                             process_context=process_context
+                                             process_context=process_context, parent_session_id=parent_session_id,
+                                             sub_agent_type="clone",  prime_agent_key=calling_agent_config.key
                                              )
+
         await self._render_media_markdown(f"Interaction complete for Agent Clone oneshot. Control returned to prime agent.", "oneshot", tool_context=tool_context)
 
         last_message = messages[-1] if messages else None
@@ -149,11 +154,20 @@ class AgentCloneTools(AgentAssistToolBase):
         await self._render_media_markdown(markdown.markdown(f"**Prime** agent requesting assistance from clone:\n\n{orig_message}\n\n## Clone context:\n{process_context}"),
                                                             "chat",
                                                             tool_context=tool_context)
+        content = f"**Prime agent** requesting assistance:\n\n{message}"
+        user_session_id = tool_context.get('user_session_id', tool_context['session_id'])
+        parent_session_id = tool_context.get('session_id')
 
-        agent_session_id, messages = await self.agent_chat(message, clone_config, tool_context['session_id'],
-                                                           agent_session_id, tool_context,
-                                                           process_context=process_context,
-                                                           client_wants_cancel=tool_context.get('client_wants_cancel', None))
+        agent_session_id, messages = await self.agent_chat(content, clone_config, tool_context['session_id'],
+                                                           user_session_id, tool_context,
+                                                           process_context=process_context, agent_session_id=agent_session_id,
+                                                           client_wants_cancel=tool_context.get('client_wants_cancel', None),
+                                                           user_session_id=user_session_id, parent_session_id=parent_session_id,
+                                                           sub_agent_type="clone", prime_agent_key=calling_agent_config.key
+                                                           )
+
+
+
         await self._render_media_markdown(markdown.markdown(f"Interaction complete for Agent Clone Session ID: {agent_session_id}. Control returned to prime agent."),
                                                             "chat",
                                                             tool_context=tool_context)

@@ -28,6 +28,10 @@ export interface InputAreaProps {
   avatarOptions?: OutputOption[]
   onAgentChange?: (agent: Agent) => void
   onOutputModeChange?: (mode: OutputMode, option?: OutputOption) => void
+  // Additional props for test compatibility
+  compact?: boolean
+  disabled?: boolean
+  orientation?: 'horizontal' | 'vertical'
 }
 
 const InputArea: React.FC<InputAreaProps> = ({
@@ -38,7 +42,10 @@ const InputArea: React.FC<InputAreaProps> = ({
   voiceOptions: propVoiceOptions,
   avatarOptions: propAvatarOptions,
   onAgentChange,
-  onOutputModeChange
+  onOutputModeChange,
+  compact = false,
+  disabled = false,
+  orientation = 'horizontal'
 }) => {
   // SDK hooks
   const { messages, sendMessage, isAgentTyping } = useChat()
@@ -174,7 +181,7 @@ const InputArea: React.FC<InputAreaProps> = ({
 
   // Handle text submission
   const handleSendText = useCallback(async () => {
-    if (!canSendInput || !content.trim()) return
+    if (!canSendInput || !content.trim() || disabled) return
     
     try {
       // Stop recording if active
@@ -193,11 +200,11 @@ const InputArea: React.FC<InputAreaProps> = ({
       setError('Failed to send message. Please try again.')
       // Keep content for retry
     }
-  }, [canSendInput, content, isStreaming, stopStreaming, sendMessage])
+  }, [canSendInput, content, isStreaming, stopStreaming, sendMessage, disabled])
 
   // Handle recording start
   const handleStartRecording = useCallback(async () => {
-    if (!canSendInput) {
+    if (!canSendInput || disabled) {
       setError("Can't start recording - wait for your turn")
       return
     }
@@ -215,7 +222,7 @@ const InputArea: React.FC<InputAreaProps> = ({
         }
       }
     }
-  }, [canSendInput, startStreaming])
+  }, [canSendInput, startStreaming, disabled])
 
   // Handle recording stop
   const handleStopRecording = useCallback(async () => {
@@ -237,15 +244,24 @@ const InputArea: React.FC<InputAreaProps> = ({
   // Note: Output option changes are now handled internally by the OutputSelector component
   // which uses SDK hooks directly for state management
 
-  // Stop recording if turn is lost
+  // Stop recording if turn is lost or disabled
   useEffect(() => {
-    if (isStreaming && !canSendInput) {
+    if (isStreaming && (!canSendInput || disabled)) {
       handleStopRecording()
     }
-  }, [isStreaming, canSendInput, handleStopRecording])
+  }, [isStreaming, canSendInput, disabled, handleStopRecording])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (isStreaming) {
+        stopStreaming()
+      }
+    }
+  }, [isStreaming, stopStreaming])
 
   // Determine if input should be disabled
-  const isInputDisabled = !canSendInput || isAgentTyping
+  const isInputDisabled = disabled || !canSendInput || isAgentTyping
 
   return (
     <div className={cn("w-full", className)}>
@@ -260,7 +276,10 @@ const InputArea: React.FC<InputAreaProps> = ({
       )}
       
       {/* Main input area */}
-      <InputContainer maxHeight={maxHeight}>
+      <InputContainer maxHeight={maxHeight} className={cn(
+        orientation === 'horizontal' && !compact && 'gap-2',
+        compact && 'py-2'
+      )}>
         <RichTextEditor
           value={content}
           onChange={setContent}
@@ -271,12 +290,15 @@ const InputArea: React.FC<InputAreaProps> = ({
               ? (isAgentTyping ? "Agent is typing..." : "Wait for your turn...")
               : placeholder
           }
-          className="flex-1"
+          className={cn(
+            "flex-1",
+            compact && "py-2"
+          )}
         />
         
         <InputToolbar
           onSend={handleSendText}
-          canSend={content.trim().length > 0 && canSendInput}
+          canSend={content.trim().length > 0 && canSendInput && !disabled}
           isRecording={isStreaming}
           onStartRecording={handleStartRecording}
           onStopRecording={handleStopRecording}

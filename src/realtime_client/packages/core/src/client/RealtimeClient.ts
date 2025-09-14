@@ -7,8 +7,6 @@ import {
     RealtimeEventMap,
     ClientEventMap,
     ChatSessionChangedEvent,
-    TextDeltaEvent,
-    CompletionEvent,
     ChatSessionNameChangedEvent,
     AgentVoiceChangedEvent,
     TextInputEvent,
@@ -31,7 +29,7 @@ import { TurnManager, SessionManager } from '../session';
 import { AudioService, AudioAgentCBridge, AudioOutputService } from '../audio';
 import type { AudioStatus, VoiceModel } from '../audio/types';
 import { VoiceManager } from '../voice';
-import type { Voice, Message, User, Agent, AgentConfiguration, Avatar, Toolset } from '../events/types/CommonTypes';
+import type { Voice, Message, User, Agent, AgentConfiguration, Avatar, Tool } from '../events/types/CommonTypes';
 import { AvatarManager } from '../avatar';
 
 /**
@@ -62,7 +60,7 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
     private agents: Agent[] = [];
     private avatars: Avatar[] = [];
     private voices: Voice[] = [];
-    private toolsets: Toolset[] = [];
+    private tools: Tool[] = [];
     private initializationState: Set<string> = new Set();
     private isInitialized: boolean = false;
 
@@ -194,29 +192,8 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
             }
         });
         
-        // Handle text delta events for accumulation
-        this.on('text_delta', (event: TextDeltaEvent) => {
-            // Process through EventStreamProcessor for proper message building
-            if (this.eventStreamProcessor) {
-                this.eventStreamProcessor.processEvent(event);
-            }
-            // Also handle in session manager for backward compatibility
-            if (event.content) {
-                this.sessionManager!.handleTextDelta(event.content);
-            }
-        });
-        
-        // Handle completion events to finalize text
-        this.on('completion', (event: CompletionEvent) => {
-            // Process through EventStreamProcessor to finalize messages
-            if (this.eventStreamProcessor) {
-                this.eventStreamProcessor.processEvent(event);
-            }
-            // Also handle in session manager for backward compatibility
-            if (event.running === false) {
-                this.sessionManager!.handleTextDone();
-            }
-        });
+        // Note: Text delta and completion events are exclusively handled by EventStreamProcessor
+        // to prevent duplicate event emission and ensure proper message building
         
         // Handle session name changes
         this.on('chat_session_name_changed', (event: ChatSessionNameChangedEvent) => {
@@ -349,12 +326,12 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
         
         // Handle tool catalog event
         this.on('tool_catalog', (event: any) => {
-            if (event.toolsets) {
-                this.toolsets = event.toolsets;
+            if (event.tools) {
+                this.tools = event.tools;
                 this.initializationState.add('tool_catalog');
                 
                 if (this.config.debug) {
-                    console.debug('Received toolsets:', event.toolsets.length);
+                    console.debug('Received tools:', event.tools.length);
                 }
                 
                 this.checkInitializationComplete();
@@ -680,28 +657,50 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
     }
 
     /**
+     * Set the avatar for the current session.
+     * This creates a new HeyGen avatar session with the specified avatar.
+     * 
+     * @param avatarId - The ID of the avatar to set
+     * @param quality - Optional quality setting (default: "auto")
+     * @param videoEncoding - Optional video encoding (default: "H265")
+     */
+    setAvatar(avatarId: string, quality?: string, videoEncoding?: string): void {
+        // Send event to Agent C to create avatar session
+        this.sendEvent({
+            type: 'set_avatar',
+            avatar_id: avatarId,
+            quality: quality,
+            video_encoding: videoEncoding
+        });
+        
+        if (this.config.debug) {
+            console.debug('Setting avatar:', { avatarId, quality, videoEncoding });
+        }
+    }
+    
+    /**
      * Set avatar session after HeyGen STREAM_READY event.
      * This notifies Agent C that an avatar session is active.
      * 
-     * @param sessionId - HeyGen session ID from StreamingEvents.STREAM_READY
-     * @param avatarId - Avatar ID that was used to create the session
+     * @param accessToken - HeyGen access token for the session
+     * @param avatarSessionId - HeyGen avatar session ID
      */
-    setAvatarSession(sessionId: string, avatarId: string): void {
+    setAvatarSession(accessToken: string, avatarSessionId: string): void {
         // Update avatar manager state
         if (this.avatarManager) {
-            this.avatarManager.setAvatarSession(sessionId, avatarId);
+            this.avatarManager.setAvatarSession(avatarSessionId, avatarSessionId);
         }
         
-        // Send event to Agent C with avatar_id included
+        // Send event to Agent C with correct field names from API spec
         this.sendEvent({
             type: 'set_avatar_session',
-            session_id: sessionId,
-            avatar_id: avatarId
+            access_token: accessToken,
+            avatar_session_id: avatarSessionId
         });
         
         // Voice manager will automatically switch to avatar voice when server responds
         if (this.config.debug) {
-            // console.debug('Avatar session set:', { sessionId, avatarId });
+            // console.debug('Avatar session set:', { accessToken, avatarSessionId });
         }
     }
     
@@ -738,13 +737,12 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
 
     /**
      * Send text input to the agent
+     * 
+     * Note: The user message will be added to the session when the server
+     * responds with a UserMessageEvent, maintaining the server as the
+     * single source of truth for message history.
      */
     sendText(text: string, fileIds?: string[]): void {
-        // Add user message to session history
-        if (this.sessionManager) {
-            this.sessionManager.addUserMessage(text);
-        }
-        
         const event: TextInputEvent = { type: 'text_input', text };
         if (fileIds && fileIds.length > 0) {
             event.file_ids = fileIds;
@@ -954,10 +952,10 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
     }
     
     /**
-     * Get available toolsets from initialization events
+     * Get available tools from initialization events
      */
-    getToolsets(): Toolset[] {
-        return this.toolsets;
+    getTools(): Tool[] {
+        return this.tools;
     }
     
     /**
@@ -1182,6 +1180,7 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
                     }
                     
                     // Process events through EventStreamProcessor if applicable
+                    let processedByEventStream = false;
                     if (this.eventStreamProcessor) {
                         const eventTypesToProcess = [
                             'interaction',
@@ -1199,11 +1198,15 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
                         
                         if (eventTypesToProcess.includes(event.type)) {
                             this.eventStreamProcessor.processEvent(event);
+                            processedByEventStream = true;
                         }
                     }
                     
-                    // Emit the specific event
-                    this.emit(event.type as keyof RealtimeEventMap, event as RealtimeEventMap[keyof RealtimeEventMap]);
+                    // Only emit events that weren't processed by EventStreamProcessor
+                    // EventStreamProcessor handles its own event emission for streaming events
+                    if (!processedByEventStream) {
+                        this.emit(event.type as keyof RealtimeEventMap, event as RealtimeEventMap[keyof RealtimeEventMap]);
+                    }
                     
                     if (this.config.debug) {
                         // console.debug('Received event:', event.type, event);

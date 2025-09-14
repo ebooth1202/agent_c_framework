@@ -7,10 +7,17 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import type { ChatSession, Message } from '@agentc/realtime-core';
 import { ensureMessagesFormat } from '@agentc/realtime-core';
 import { Logger } from '../utils/logger';
-
-// Define ChatMessage as alias for Message for consistency
-type ChatMessage = Message;
 import { useRealtimeClientSafe } from '../providers/AgentCContext';
+
+// Extended message type to include sub-session metadata
+interface ExtendedMessage extends Message {
+  isSubSession?: boolean;
+  metadata?: {
+    sessionId: string;
+    parentSessionId?: string;
+    userSessionId?: string;
+  };
+}
 
 /**
  * Options for the useChat hook
@@ -28,7 +35,7 @@ export interface UseChatOptions {
  */
 export interface UseChatReturn {
   /** Current chat messages */
-  messages: ChatMessage[];
+  messages: ExtendedMessage[];
   
   /** Current session information */
   currentSession: ChatSession | null;
@@ -48,17 +55,20 @@ export interface UseChatReturn {
   /** Whether the agent is currently typing/processing */
   isAgentTyping: boolean;
   
-  /** Current partial message from agent (if streaming) */
-  partialMessage: string;
+  /** Current streaming message from agent */
+  streamingMessage: ExtendedMessage | null;
   
   /** Error state */
   error: string | null;
   
   /** Get the last message */
-  lastMessage: ChatMessage | null;
+  lastMessage: ExtendedMessage | null;
   
   /** Get messages from a specific role */
-  getMessagesByRole: (role: 'user' | 'assistant' | 'system') => ChatMessage[];
+  getMessagesByRole: (role: 'user' | 'assistant' | 'system') => ExtendedMessage[];
+  
+  /** Check if a message is from a sub-session */
+  isSubSessionMessage: (message: ExtendedMessage) => boolean;
 }
 
 /**
@@ -70,17 +80,16 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
   const client = useRealtimeClientSafe();
   
   // State
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ExtendedMessage[]>([]);
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [isAgentTyping, setIsAgentTyping] = useState(false);
-  const [partialMessage, setPartialMessage] = useState('');
+  const [streamingMessage, setStreamingMessage] = useState<ExtendedMessage | null>(null);
   const [error, setError] = useState<string | null>(null);
   
-  // Refs for tracking message assembly
-  const messageBufferRef = useRef<string>('');
-  const currentMessageIdRef = useRef<string | null>(null);
+  // Track the current streaming message ID to avoid duplicates
+  const streamingMessageIdRef = useRef<string | null>(null);
   
   // Update session and messages from client
   const updateChatInfo = useCallback(() => {
@@ -114,7 +123,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
       console.error('Failed to get chat information:', err);
       setError(err instanceof Error ? err.message : 'Failed to get chat information');
     }
-  }, [client, maxMessages]);
+  }, [client]);
   
   // Send message
   const sendMessage = useCallback(async (text: string): Promise<void> => {
@@ -134,25 +143,11 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     setError(null);
     
     try {
-      // Use sendText method instead of textInput
+      // Use sendText method - EventStreamProcessor will handle the message events
       client.sendText(text);
       
-      // Add user message to local state immediately for responsiveness
-      const userMessage: ChatMessage = {
-        role: 'user',
-        content: text,
-        timestamp: new Date().toISOString(),
-        format: 'text'
-      };
-      
-      setMessages(prev => {
-        const newMessages = [...prev, userMessage];
-        // Limit messages if needed
-        if (maxMessages && newMessages.length > maxMessages) {
-          return newMessages.slice(-maxMessages);
-        }
-        return newMessages;
-      });
+      // Don't add user message locally - EventStreamProcessor will emit message-added event
+      // This ensures we get the proper sub-session metadata if applicable
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to send message';
       setError(errorMessage);
@@ -160,86 +155,98 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     } finally {
       setIsSending(false);
     }
-  }, [client, maxMessages]);
+  }, [client]);
   
   // Clear messages (client-side only)
   const clearMessages = useCallback(() => {
     setMessages([]);
-    setPartialMessage('');
-    messageBufferRef.current = '';
-    currentMessageIdRef.current = null;
+    setStreamingMessage(null);
+    streamingMessageIdRef.current = null;
   }, []);
   
   // Get messages by role
-  const getMessagesByRole = useCallback((role: 'user' | 'assistant' | 'system'): ChatMessage[] => {
+  const getMessagesByRole = useCallback((role: 'user' | 'assistant' | 'system'): ExtendedMessage[] => {
     return messages.filter(msg => msg.role === role);
   }, [messages]);
+  
+  // Check if a message is from a sub-session
+  const isSubSessionMessage = useCallback((message: ExtendedMessage): boolean => {
+    return message.isSubSession === true;
+  }, []);
   
   // Subscribe to chat events
   useEffect(() => {
     if (!client) return;
     
+    const sessionManager = client.getSessionManager();
+    
     // Initial update
     updateChatInfo();
     
-    // Handle text delta events (streaming text from agent)
-    const handleTextDelta = (event: unknown) => {
-      setIsAgentTyping(true);
+    // Handle message-added events (complete messages from EventStreamProcessor)
+    const handleMessageAdded = (event: unknown) => {
+      const messageEvent = event as { sessionId: string; message: ExtendedMessage };
+      Logger.debug('[useChat] Message added event:', messageEvent);
       
-      // Type guard for event properties
-      const textEvent = event as { text?: string; item_id?: string };
+      setMessages(prev => {
+        const newMessages = [...prev, messageEvent.message];
+        // Limit messages if needed
+        if (maxMessages && maxMessages > 0 && newMessages.length > maxMessages) {
+          return newMessages.slice(-maxMessages);
+        }
+        return newMessages;
+      });
       
-      // Update partial message
-      messageBufferRef.current += textEvent.text || '';
-      setPartialMessage(messageBufferRef.current);
-      
-      // Store message ID for completion
-      if (textEvent.item_id) {
-        currentMessageIdRef.current = textEvent.item_id;
-      }
-    };
-    
-    // Handle completion events (when agent is done)
-    const handleCompletion = (event: unknown) => {
-      // Type guard for event properties
-      const completionEvent = event as { running?: boolean };
-      
-      if (completionEvent.running === false && messageBufferRef.current) {
+      // Clear streaming state if this was the streaming message
+      if (streamingMessageIdRef.current === messageEvent.sessionId) {
+        setStreamingMessage(null);
+        streamingMessageIdRef.current = null;
         setIsAgentTyping(false);
-        
-        // Create complete message
-        const agentMessage: ChatMessage = {
-          role: 'assistant',
-          content: messageBufferRef.current,
-          timestamp: new Date().toISOString(),
-          format: 'text'
-        };
-        
-        setMessages(prev => {
-          const newMessages = [...prev, agentMessage];
-          // Limit messages if needed
-          if (maxMessages && newMessages.length > maxMessages) {
-            return newMessages.slice(-maxMessages);
-          }
-          return newMessages;
-        });
-        
-        // Clear partial message
-        setPartialMessage('');
-        messageBufferRef.current = '';
-        currentMessageIdRef.current = null;
       }
     };
     
-    // Handle turn events from server
+    // Handle message-streaming events (partial messages being built)
+    const handleMessageStreaming = (event: unknown) => {
+      const streamEvent = event as { sessionId: string; message?: ExtendedMessage };
+      Logger.debug('[useChat] Message streaming event:', streamEvent);
+      
+      // Only update if we have a valid message
+      if (streamEvent.message) {
+        setIsAgentTyping(true);
+        setStreamingMessage(streamEvent.message);
+        streamingMessageIdRef.current = streamEvent.sessionId;
+      }
+    };
+    
+    // Handle message-complete events (finalized messages)
+    const handleMessageComplete = (event: unknown) => {
+      const completeEvent = event as { sessionId: string; message: ExtendedMessage };
+      Logger.debug('[useChat] Message complete event:', completeEvent);
+      
+      // Add the completed message to the messages array
+      setMessages(prev => {
+        const newMessages = [...prev, completeEvent.message];
+        // Limit messages if needed
+        if (maxMessages && maxMessages > 0 && newMessages.length > maxMessages) {
+          return newMessages.slice(-maxMessages);
+        }
+        return newMessages;
+      });
+      
+      // Clear streaming state
+      setStreamingMessage(null);
+      streamingMessageIdRef.current = null;
+      setIsAgentTyping(false);
+    };
+    
+    // Handle turn events from server for typing indicators
     const handleUserTurnStart = () => {
       setIsAgentTyping(false);
     };
     
     const handleUserTurnEnd = () => {
-      setIsAgentTyping(true);
-      
-      // Agent is now typing
+      // Don't automatically set typing - wait for actual message streaming
+      // This prevents false typing indicators
     };
     
     // Handle session change events
@@ -253,35 +260,29 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         setCurrentSession(sessionEvent.chat_session);
         setCurrentSessionId(sessionEvent.chat_session.session_id);
         
-        // Load existing messages from the session and ensure proper format
+        // Load messages from the session if present (for backward compatibility)
         if (sessionEvent.chat_session.messages && sessionEvent.chat_session.messages.length > 0) {
-          Logger.debug('[useChat] First 3 raw messages:', sessionEvent.chat_session.messages.slice(0, 3));
-          
           const formattedMessages = ensureMessagesFormat(sessionEvent.chat_session.messages);
-          Logger.debug('[useChat] After ensureMessagesFormat:', formattedMessages.length, 'messages');
-          Logger.debug('[useChat] First 3 formatted messages:', formattedMessages.slice(0, 3));
-          
-          const messagesToSet = formattedMessages.slice(-maxMessages);
-          Logger.debug('[useChat] After slice(-maxMessages):', messagesToSet.length, 'messages');
-          Logger.debug('[useChat] maxMessages value:', maxMessages);
-          Logger.debug('[useChat] Setting messages - first 3:', messagesToSet.slice(0, 3));
-          
-          setMessages(messagesToSet);
-          // Clear any partial message when switching sessions
-          setPartialMessage('');
-          messageBufferRef.current = '';
-          currentMessageIdRef.current = null;
+          const messagesToSet = maxMessages && maxMessages > 0 
+            ? formattedMessages.slice(-maxMessages)
+            : formattedMessages;
+          setMessages(messagesToSet as ExtendedMessage[]);
         } else {
-          Logger.debug('[useChat] No messages in session, clearing');
-          // Clear messages if new session has no messages
-          clearMessages();
+          // Clear messages if session has no messages
+          setMessages([]);
         }
+        
+        // Clear any streaming state when switching sessions
+        setStreamingMessage(null);
+        streamingMessageIdRef.current = null;
+        setIsAgentTyping(false);
       }
+      // If no chat_session provided, don't update state (maintain existing messages)
     };
     
     // Handle session messages loaded event (from EventStreamProcessor)
     const handleSessionMessagesLoaded = (event: unknown) => {
-      const messagesEvent = event as { sessionId?: string; messages?: Message[] };
+      const messagesEvent = event as { sessionId?: string; messages?: ExtendedMessage[] };
       Logger.debug('[useChat] Session messages loaded event');
       Logger.debug('[useChat] Event data:', messagesEvent);
       
@@ -289,52 +290,56 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         Logger.debug('[useChat] Messages from event:', messagesEvent.messages.length, 'messages');
         Logger.debug('[useChat] First 3 messages from event:', messagesEvent.messages.slice(0, 3));
         
-        // Update messages with the loaded messages, ensuring proper format
-        const formattedMessages = ensureMessagesFormat(messagesEvent.messages);
-        Logger.debug('[useChat] After format:', formattedMessages.length, 'messages');
-        
-        const messagesToSet = formattedMessages.slice(-maxMessages);
+        // Messages come from EventStreamProcessor already formatted with sub-session metadata
+        const messagesToSet = maxMessages && maxMessages > 0
+          ? messagesEvent.messages.slice(-maxMessages)
+          : messagesEvent.messages;
         Logger.debug('[useChat] After slice for loaded messages:', messagesToSet.length, 'messages');
         Logger.debug('[useChat] Setting loaded messages - first 3:', messagesToSet.slice(0, 3));
         
-        setMessages(messagesToSet);
-        // Clear any partial message
-        setPartialMessage('');
-        messageBufferRef.current = '';
-        currentMessageIdRef.current = null;
+        setMessages(messagesToSet as ExtendedMessage[]);
+        // Clear any streaming state
+        setStreamingMessage(null);
+        streamingMessageIdRef.current = null;
+        setIsAgentTyping(false);
       }
     };
     
-    // Subscribe to events
-    client.on('text_delta', handleTextDelta);
-    client.on('completion', handleCompletion);
+    // Subscribe to turn events on client for typing indicators
+    // These are always subscribed if client exists
     client.on('user_turn_start', handleUserTurnStart);
     client.on('user_turn_end', handleUserTurnEnd);
     client.on('chat_session_changed', handleSessionChanged);
     
-    // Subscribe to SessionManager events if available
-    const sessionManager = client.getSessionManager();
+    // Subscribe to SessionManager events for message handling (only if sessionManager exists)
     if (sessionManager) {
+      sessionManager.on('message-added', handleMessageAdded);
+      sessionManager.on('message-streaming', handleMessageStreaming);
+      sessionManager.on('message-complete', handleMessageComplete);
       sessionManager.on('session-messages-loaded', handleSessionMessagesLoaded);
     }
     
     return () => {
-      client.off('text_delta', handleTextDelta);
-      client.off('completion', handleCompletion);
-      client.off('user_turn_start', handleUserTurnStart);
-      client.off('user_turn_end', handleUserTurnEnd);
-      client.off('chat_session_changed', handleSessionChanged);
+      // client and sessionManager must be accessible in closure
+      if (client) {
+        client.off('user_turn_start', handleUserTurnStart);
+        client.off('user_turn_end', handleUserTurnEnd);
+        client.off('chat_session_changed', handleSessionChanged);
+      }
       
-      // Unsubscribe from SessionManager events
-      const sessionManager = client.getSessionManager();
-      if (sessionManager) {
-        sessionManager.off('session-messages-loaded', handleSessionMessagesLoaded);
+      // Get sessionManager again in cleanup to ensure it's available
+      const cleanupSessionManager = client?.getSessionManager();
+      if (cleanupSessionManager) {
+        cleanupSessionManager.off('message-added', handleMessageAdded);
+        cleanupSessionManager.off('message-streaming', handleMessageStreaming);
+        cleanupSessionManager.off('message-complete', handleMessageComplete);
+        cleanupSessionManager.off('session-messages-loaded', handleSessionMessagesLoaded);
       }
     };
-  }, [client, maxMessages, updateChatInfo, clearMessages]);
+  }, [client, maxMessages, updateChatInfo]);
   
   // Computed properties
-  const lastMessage: ChatMessage | null = messages.length > 0 ? messages[messages.length - 1]! : null;
+  const lastMessage: ExtendedMessage | null = messages.length > 0 ? messages[messages.length - 1]! : null;
   
   return {
     messages,
@@ -344,9 +349,10 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     clearMessages,
     isSending,
     isAgentTyping,
-    partialMessage,
+    streamingMessage,
     error,
     lastMessage,
-    getMessagesByRole
+    getMessagesByRole,
+    isSubSessionMessage
   };
 }

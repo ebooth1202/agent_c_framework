@@ -15,7 +15,7 @@ from typing import Any, Dict, List, Union, Optional, Tuple
 from agent_c.chat.session_manager import ChatSessionManager
 from agent_c.models.input import FileInput
 from agent_c.models.input.audio_input import AudioInput
-from agent_c.models.events.chat import ReceivedAudioDeltaEvent
+from agent_c.models.events.chat import ReceivedAudioDeltaEvent, OpenAIUserMessageEvent
 from agent_c.models.input.image_input import ImageInput
 from agent_c.util.token_counter import TokenCounter
 from agent_c.agents.base import BaseAgent
@@ -47,7 +47,7 @@ class GPTChatAgent(BaseAgent):
         """
         kwargs['model_name']: str = kwargs.get('model_name')
         kwargs['token_counter'] = kwargs.get('token_counter', TikTokenTokenCounter())
-        super().__init__(**kwargs)
+        super().__init__(**kwargs, vendor=openai)
         self.schemas: Union[None, List[Dict[str, Any]]] = None
 
         # Initialize logger
@@ -248,6 +248,8 @@ class GPTChatAgent(BaseAgent):
             self.logger.debug("Starting Interaction")
             interaction_id = await self._raise_interaction_start(**callback_opts)
 
+            await self._raise_user_message(messages[-1], **callback_opts)
+
             # Main loop - continues until we get a complete response or fail
             while delay <= self.max_delay:
                 try:
@@ -373,6 +375,10 @@ class GPTChatAgent(BaseAgent):
         )
 
         return messages, state
+
+    async def _raise_user_message(self, message, **opts):
+        streaming_callback = opts.pop('streaming_callback', None)
+        await self._raise_user_message_event(OpenAIUserMessageEvent(message=message, **opts), streaming_callback=streaming_callback )
 
     async def _process_stream_chunk(self, chunk, state, tool_chest, session_manager,
                                     messages, callback_opts):

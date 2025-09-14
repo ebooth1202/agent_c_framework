@@ -109,11 +109,13 @@ describe('InputArea', () => {
     })
     
     updateMockState('audio', {
-      isRecording: false,
+      isStreaming: false,
       audioLevel: 0,
       isMuted: false,
-      startRecording: mockStartStreaming,
-      stopRecording: mockStopStreaming,
+      canSendInput: true,
+      errorMessage: null,
+      startStreaming: mockStartStreaming,
+      stopStreaming: mockStopStreaming,
       toggleMute: vi.fn(),
       setMuted: vi.fn()
     })
@@ -123,6 +125,7 @@ describe('InputArea', () => {
       isUserTurn: true,
       isAgentTurn: false,
       canInterrupt: true,
+      canSendInput: true,
       turnCount: 0,
       lastTurnTimestamp: null
     })
@@ -510,7 +513,7 @@ describe('InputArea', () => {
     })
 
     it('should clear error after 5 seconds', async () => {
-      vi.useFakeTimers()
+      // Use real timers for this test
       mockSendMessage.mockRejectedValue(new Error('Network error'))
       
       render(<InputArea />)
@@ -526,14 +529,14 @@ describe('InputArea', () => {
         expect(screen.getByText('Failed to send message. Please try again.')).toBeInTheDocument()
       })
       
-      // Advance timers and flush promises
-      await vi.advanceTimersByTimeAsync(5000)
+      // Verify error is present
+      expect(screen.getByText('Failed to send message. Please try again.')).toBeInTheDocument()
       
-      // Check error is cleared
-      expect(screen.queryByText('Failed to send message. Please try again.')).not.toBeInTheDocument()
-      
-      vi.useRealTimers()
-    })
+      // Wait for error to be cleared (with a slightly longer timeout to be safe)
+      await waitFor(() => {
+        expect(screen.queryByText('Failed to send message. Please try again.')).not.toBeInTheDocument()
+      }, { timeout: 6000 })
+    }, 10000)
   })
 
   describe('Agent/voice/avatar selection', () => {

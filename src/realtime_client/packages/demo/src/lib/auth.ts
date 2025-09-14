@@ -70,7 +70,7 @@ export interface LoginResponse {
     pose_name: string;
     status: string;
   }>;
-  toolsets: Array<{
+  tools: Array<{
     name: string;
     key: string;
     description: string | null;

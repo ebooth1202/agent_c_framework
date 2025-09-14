@@ -1,4 +1,5 @@
-from typing import Optional, List, Any, Union, Literal
+from fnmatch import fnmatch
+from typing import Optional, List, Any, Union, Literal, Dict
 from pydantic import Field, ConfigDict
 
 from agent_c.models.base import BaseModel
@@ -10,32 +11,90 @@ class AgentCatalogEntry(BaseModel):
     key: str = Field(..., description="Key for the agent configuration, used for identification")
     agent_description: Optional[str] = Field(None, description="A description of the agent's purpose and capabilities")
     category: List[str] = Field(default_factory=list, description="A list of categories this agent belongs to from most to least general")
+    toolsets: List[str] = Field(default_factory=list, description="List of enabled toolset names the agent can use")
 
-class AgentConfigurationV1(BaseModel):
-    """Version 1 of the Agent Configuration"""
-    version: Literal[1] = Field(1, description="Configuration version")
-    name: str = Field(..., description="Name of the persona file")
-    model_id: str = Field(..., description="ID of the LLM model being used by the agent")
+class AgentConfigurationBase(BaseModel):
+    version: int = Field(..., description="Configuration version")
+    name: str = Field(..., description="Name of the agent")
     agent_description: Optional[str] = Field(None, description="A description of the agent's purpose and capabilities")
     tools: List[str] = Field(default_factory=list, description="List of enabled toolset names the agent can use")
+    blocked_tool_patterns: List[str] = Field(default_factory=list, description="A list of patterns for blocking individual tools like `run_*`")
+    allowed_tool_patterns: List[str] = Field(default_factory=list, description="A list of patterns for allowing individual tools like `run_pnpm` (overrides blocks)")
+
+    def filter_allowed_tools(self, schemas: List[Dict[str, any]]) -> List[Dict[str, Any]]:
+        """
+        Filter tools based on name patterns.
+
+        A tool is removed if:
+        - Its name matches any blocked pattern AND
+        - Its name does not match any allowed pattern
+
+        Args:
+            schemas (List[Dict[str, any]]): List of tool schemas with 'name' keys
+
+        Returns:
+            Filtered list of tools
+
+        Example:
+            tools = [
+                {"name": "run_npm", "description": "..."},
+                {"name": "run_pytest", "description": "..."},
+                {"name": "run_pnpm", "description": "..."},
+                {"name": "run_git", "description": "..."},
+                {"name": "other_tool", "description": "..."}
+            ]
+
+            filtered = filter_allowed_tools(
+                tools,
+                allowed_patterns=["run_pnpm", "run_git"],
+                blocked_patterns=["run_*"]
+            )
+            # Result: run_pnpm, run_git, and other_tool remain
+        """
+
+        def matches_any_pattern(name: str, patterns: List[str]) -> bool:
+            """Check if name matches any of the given patterns."""
+            return any(fnmatch(name, pattern) for pattern in patterns)
+
+        filtered_tools = []
+
+        for tool in schemas:
+            tool_name = tool.get("name", "")
+
+            # Check if tool matches any blocked pattern
+            is_blocked = matches_any_pattern(tool_name, self.blocked_tool_patterns)
+
+            if is_blocked:
+                # If blocked, check if it's also allowed (allowed overrides blocked)
+                is_allowed = matches_any_pattern(tool_name, self.allowed_tool_patterns)
+                if is_allowed:
+                    filtered_tools.append(tool)
+                # If blocked and not allowed, skip this tool
+            else:
+                # If not blocked, keep the tool
+                filtered_tools.append(tool)
+
+        return filtered_tools
+
+class AgentConfigurationV1(AgentConfigurationBase):
+    """Version 1 of the Agent Configuration"""
+    version: Literal[1] = Field(1, description="Configuration version")
+    model_id: str = Field(..., description="ID of the LLM model being used by the agent")
     agent_params: Optional[CompletionParams] = Field(None, description="Parameters for the interaction with the agent")
     prompt_metadata: Optional[dict[str, Any]] = Field(None, description="Metadata for the prompt, such as versioning or author information")
     persona: str = Field(..., description="Persona prompt of the persona defining the agent's behavior")
     uid: Optional[str] = Field(None, description="Unique identifier for the configuration")
 
 
-class AgentConfigurationV2(BaseModel):
+class AgentConfigurationV2(AgentConfigurationBase):
     """Version 2 of the Agent Configuration - example with new fields"""
     version: Literal[2] = Field(2, description="Configuration version")
-    name: str = Field(..., description="Name of the persona file")
     key: str = Field(..., description="Key for the agent configuration, used for identification")
-    model_id: str = Field(..., description="ID of the LLM model being used by the agent")
-    agent_description: Optional[str] = Field(None, description="A description of the agent's purpose and capabilities")
-    tools: List[str] = Field(default_factory=list, description="List of enabled toolset names the agent can use")
+    model_id: str = Field(..., description="ID of the model being used by the agent, looked up from the model configs on the server side")
     agent_params: Optional[CompletionParams] = Field(None, description="Parameters for the interaction with the agent")
-    prompt_metadata: Optional[dict[str, Any]] = Field(None, description="Metadata for the prompt")
-    persona: str = Field(..., description="Persona prompt of the persona defining the agent's behavior")
-    uid: Optional[str] = Field(None, description="Unique identifier for the configuration")
+    prompt_metadata: Optional[dict[str, Any]] = Field(None, description="Metadata for prompt generation, allows for `$variable` in the person, that are replaced with content from this table. Also used by some tools")
+    persona: str = Field(..., description="The core instructions for the agent.")
+    uid: Optional[str] = Field(None, description="Unique identifier for the configuration in slug form")
 
     category: List[str] = Field(default_factory=list, description="A list of categories this agent belongs to from most to least general" )
 
@@ -45,7 +104,8 @@ class AgentConfigurationV2(BaseModel):
             name=self.name,
             key=self.key,
             agent_description=self.agent_description,
-            category=self.category
+            category=self.category,
+            toolsets=self.tools
         )
 
     def __init__(self, **data) -> None:

@@ -43,10 +43,31 @@ The initial implementation focuses on integration with HeyGen's streaming avatar
 
 1. **Authentication**: Client connects to `/api/avatar/ws` with JWT token
 2. **Session Initialization**: API validates token and creates avatar session
-3. **Initial Setup**: Bridge sends available agents and avatars to client
-4. **Configuration**: Client selects agent and avatar via events
-5. **Active Session**: Bi-directional event streaming begins
-6. **Cleanup**: Connection cleanup when client disconnects
+3. **Automatic Initialization**: Bridge automatically sends initialization events (see sequence below)
+4. **Ready Signal**: Server sends UserTurnStartEvent indicating client can begin sending input
+5. **Configuration**: Client selects agent and avatar via events
+6. **Active Session**: Bi-directional event streaming begins
+7. **Cleanup**: Connection cleanup when client disconnects
+
+### Initialization Event Sequence
+
+When a client successfully connects, the server **automatically** sends a precise sequence of initialization events to provide the client with all necessary session data. This happens immediately after authentication, without any client action required:
+
+1. **ChatUserDataEvent** - Provides user profile and session context information
+2. **AvatarListEvent** - Lists all available avatars for the session
+3. **VoiceListEvent** - Lists all available voice options for avatar speech
+4. **AgentListEvent** - Lists all available agents the client can interact with
+5. **ToolCatalogEvent** - Provides catalog of available tools and their capabilities
+6. **ChatSessionChangedEvent** - Establishes the initial chat session context
+7. **UserTurnStartEvent** - **Critical signal** that initialization is complete and the client may now send input
+
+**Important Notes:**
+- This sequence is **automatic** - no client action triggers it
+- Events are sent in this exact order every time
+- **UserTurnStartEvent is the definitive signal** that the client can begin sending messages
+- All events follow the BaseEvent structure (see [Client Events Reference](realtime_api_client_events.md))
+- Clients should wait for UserTurnStartEvent before enabling user input
+- The initialization data enables immediate agent/avatar selection without additional API calls
 
 ## Event System
 

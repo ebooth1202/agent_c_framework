@@ -14,13 +14,18 @@ import type { Message as SDKMessage, MessageContent, ContentPart } from '@agentc
 import { MessageContentRenderer } from './MessageContentRenderer'
 import { Logger } from '../../utils/logger'
 
-export interface MessageData extends Omit<SDKMessage, 'timestamp'> {
+export interface MessageData extends SDKMessage {
   id?: string  // Optional ID for keying
-  timestamp: Date | string
   status?: 'sending' | 'sent' | 'error'
   error?: string
   isThought?: boolean  // Flag for thought messages
+  // Support both SessionEvent metadata and token metadata
   metadata?: {
+    // Session-related metadata from ExtendedMessage
+    sessionId?: string
+    parentSessionId?: string
+    userSessionId?: string
+    // Token-related metadata for usage tracking
     inputTokens?: number
     outputTokens?: number
   }
@@ -69,6 +74,10 @@ export interface MessageProps extends React.HTMLAttributes<HTMLDivElement> {
    * Message is currently streaming
    */
   isStreaming?: boolean
+  /**
+   * Message is from a sub-session (agent-to-agent)
+   */
+  isSubSession?: boolean
   /**
    * Custom avatar component
    */
@@ -233,6 +242,7 @@ const Message = React.forwardRef<HTMLDivElement, MessageProps>(
     message,
     showTimestamp = true,
     isStreaming = false,
+    isSubSession = false,
     avatarComponent,
     onEdit,
     showFooter = true,
@@ -270,14 +280,18 @@ const Message = React.forwardRef<HTMLDivElement, MessageProps>(
     // Format timestamp
     const formattedTime = React.useMemo(() => {
       if (!showTimestamp || !message.timestamp) return null
-      const date = message.timestamp instanceof Date 
-        ? message.timestamp 
-        : new Date(message.timestamp)
-      return date.toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
-        minute: '2-digit',
-        hour12: true 
-      })
+      try {
+        // timestamp is always a string according to the Message interface
+        const date = new Date(message.timestamp)
+        if (isNaN(date.getTime())) return null // Invalid date
+        return date.toLocaleTimeString('en-US', { 
+          hour: 'numeric', 
+          minute: '2-digit',
+          hour12: true 
+        })
+      } catch {
+        return null // Invalid timestamp format
+      }
     }, [message.timestamp, showTimestamp])
     
     // Avatar component
@@ -358,9 +372,17 @@ const Message = React.forwardRef<HTMLDivElement, MessageProps>(
         
         {/* Message content */}
         <div className={cn(
-          "flex-1 max-w-[75ch] space-y-2",
+          "flex-1 max-w-full space-y-2",
           isUser && "flex flex-col items-end"
         )}>
+          {/* Sub-session indicator */}
+          {isSubSession && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+              <ChevronRight className="h-3 w-3" />
+              <span>Sub-session message</span>
+            </div>
+          )}
+          
           {/* Message bubble */}
           <div
             className={cn(
@@ -369,7 +391,8 @@ const Message = React.forwardRef<HTMLDivElement, MessageProps>(
                 ? "bg-muted" 
                 : "bg-background",
               isError && "bg-destructive/10 border border-destructive",
-              isStreaming && "after:content-[''] after:inline-block after:w-1.5 after:h-4 after:ml-1 after:bg-current after:animate-pulse after:rounded-full"
+              isStreaming && "after:content-[''] after:inline-block after:w-1.5 after:h-4 after:ml-1 after:bg-current after:animate-pulse after:rounded-full",
+              isSubSession && "border-l-2 border-primary/30"
             )}
           >
             {/* Error message */}
@@ -415,20 +438,7 @@ const Message = React.forwardRef<HTMLDivElement, MessageProps>(
                 </span>
               </div>
             )}
-            
-            {/* User message hover actions */}
-            {isUser && !isEditing && (
-              <div className="absolute -bottom-1 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2 text-xs"
-                  onClick={() => setIsEditing(true)}
-                >
-                  Edit
-                </Button>
-              </div>
-            )}
+
           </div>
           
           {/* Message Footer for assistant messages */}

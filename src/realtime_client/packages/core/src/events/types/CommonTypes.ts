@@ -91,9 +91,9 @@ export interface Voice {
 }
 
 /**
- * Toolset information
+ * Tool information
  */
-export interface Toolset {
+export interface Tool {
   name: string;
   description: string;
   schemas: Record<string, ToolSchema>;
@@ -261,7 +261,7 @@ export type MessageFormat = 'text' | 'markdown';
 /**
  * Login response structure
  * NOTE: Breaking change - login now only returns tokens and session ID.
- * All configuration data (user, agents, avatars, voices, toolsets, sessions) 
+ * All configuration data (user, agents, avatars, voices, tools, sessions) 
  * now comes through WebSocket events after connection.
  */
 export interface LoginResponse {

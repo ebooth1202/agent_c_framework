@@ -43,22 +43,7 @@ export const TextContentRenderer: React.FC<TextContentRendererProps> = ({
     })
   }, [])
   
-  // For user messages, render as plain text with line breaks
-  if (role === 'user') {
-    return (
-      <div 
-        className={cn(
-          "whitespace-pre-wrap break-words",
-          className
-        )}
-        aria-label="User message text"
-      >
-        {content}
-      </div>
-    )
-  }
-  
-  // Markdown components configuration for assistant/system messages
+  // Markdown components configuration for all messages
   const markdownComponents = {
     // Code blocks with copy functionality
     code({ inline, className: codeClassName, children, ...props }: any) {
@@ -68,7 +53,7 @@ export const TextContentRenderer: React.FC<TextContentRendererProps> = ({
       
       if (!inline && language) {
         return (
-          <div className="relative group my-4">
+          <div className="relative group my-4 max-w-full">
             <div className="absolute right-2 top-2 z-10">
               <Button
                 variant="ghost"
@@ -91,7 +76,7 @@ export const TextContentRenderer: React.FC<TextContentRendererProps> = ({
               </Button>
             </div>
             <pre 
-              className="bg-muted rounded-md p-4 overflow-x-auto"
+              className="bg-muted rounded-md p-4 overflow-x-auto max-w-full"
               aria-label={`Code block in ${language}`}
             >
               <code className="text-sm font-mono" {...props}>

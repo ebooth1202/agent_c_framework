@@ -322,7 +322,7 @@ describe('AgentCProvider', () => {
 
       act(() => {
         triggerEvent('tool_catalog', { 
-          toolsets: [{ id: 'tool1', name: 'Tool 1' }] 
+          tools: [{ id: 'tool1', name: 'Tool 1' }] 
         } as ToolCatalogEvent);
       });
       expect(getByTestId('events-count').textContent).toBe('5');
@@ -351,7 +351,7 @@ describe('AgentCProvider', () => {
         triggerEvent('agent_list', { agents: [] });
         triggerEvent('avatar_list', { avatars: [] });
         triggerEvent('voice_list', { voices: [] });
-        triggerEvent('tool_catalog', { toolsets: [] });
+        triggerEvent('tool_catalog', { tools: [] });
         triggerEvent('chat_session_changed', { chat_session: null });
       });
 
@@ -608,7 +608,7 @@ describe('AgentCProvider', () => {
         triggerEvent('agent_list', { agents: [] });
         triggerEvent('avatar_list', { avatars: [] });
         triggerEvent('voice_list', { voices: [] });
-        triggerEvent('tool_catalog', { toolsets: [] });
+        triggerEvent('tool_catalog', { tools: [] });
         triggerEvent('chat_session_changed', { chat_session: null });
       });
 
@@ -644,7 +644,7 @@ describe('AgentCProvider', () => {
         triggerEvent('agent_list', { agents: [] });
         triggerEvent('avatar_list', { avatars: [] });
         triggerEvent('voice_list', { voices: [] });
-        triggerEvent('tool_catalog', { toolsets: [] });
+        triggerEvent('tool_catalog', { tools: [] });
         triggerEvent('chat_session_changed', { chat_session: null });
       });
 

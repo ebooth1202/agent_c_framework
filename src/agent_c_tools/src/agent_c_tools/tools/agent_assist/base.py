@@ -3,14 +3,13 @@ import threading
 
 from datetime import datetime
 from functools import partial
-from typing import Any, Dict, List, Optional, cast, Tuple
-
+from typing import Any, Dict, List, Optional, cast, Tuple, Literal
 
 from agent_c.prompting.prompt_section import PromptSection
 from agent_c.config.model_config_loader import ModelConfigurationLoader
 from agent_c.config.agent_config_loader import AgentConfigLoader
 from agent_c.models.events import SessionEvent
-from agent_c.models.events.chat import HistoryDeltaEvent, CompleteThoughtEvent
+from agent_c.models.events.chat import HistoryDeltaEvent, CompleteThoughtEvent, SubsessionEndedEvent, SubsessionStartedEvent
 from agent_c.util.slugs import MnemonicSlugs
 from agent_c.toolsets.tool_set import Toolset
 from agent_c.models.agent_config import AgentConfiguration
@@ -59,6 +58,16 @@ class AgentAssistToolBase(Toolset):
             content=markdown.markdown(content),
             tool_context=tool_context)
 
+    async def _raise_event(self, event):
+        if self.streaming_callback:
+            await self.streaming_callback(event)
+
+    async def _raise_subsession_start(self, event: SubsessionStartedEvent):
+        await self._raise_event(event)
+
+    async def _raise_subsession_end(self, event: SubsessionEndedEvent):
+        await self._raise_event(event)
+
     async def _handle_history_delta(self, agent, event: HistoryDeltaEvent):
         content = []
         for message in event.messages:
@@ -74,8 +83,7 @@ class AgentAssistToolBase(Toolset):
         await self._emit_content_from_agent(agent, event.content, name=f"{agent.name} (thinking)")
 
     async def _streaming_callback_for_subagent(self, agent: AgentConfiguration, parent_streaming_callback, parent_session_id, event: SessionEvent):
-        if event.type not in [ 'interaction', 'history'] and parent_streaming_callback is not None:
-            event.session_id = parent_session_id
+        if event.type not in [ 'history_delta', 'history'] and parent_streaming_callback is not None:
             await parent_streaming_callback(event)
 
     async def post_init(self):
@@ -105,7 +113,8 @@ class AgentAssistToolBase(Toolset):
 
         return runtime_cls(model_name=model_config["id"], client=client,prompt_builder=PromptBuilder(sections=agent_sections))
 
-    async def __chat_params(self, agent: AgentConfiguration, agent_runtime: BaseAgent, user_session_id: Optional[str] = None, **opts) -> Dict[str, Any]:
+    async def __chat_params(self, agent: AgentConfiguration, agent_runtime: BaseAgent,
+                            user_session_id: Optional[str] = None, **opts) -> Dict[str, Any]:
         tool_params = {}
         client_wants_cancel = opts.get('client_wants_cancel')
         parent_streaming_callback = self.streaming_callback
@@ -120,12 +129,16 @@ class AgentAssistToolBase(Toolset):
             tool_context['active_agent'] = agent
             opts['tool_call_context'] = tool_context
 
+        agent_session_id = opts.get('agent_session_id', MnemonicSlugs.generate_id_slug(2))
+        parent_session_id = opts.get('parent_session_id', None)
 
         prompt_metadata = await self.__build_prompt_metadata(agent, user_session_id, **opts)
         chat_params = {"prompt_metadata": prompt_metadata, "output_format": 'raw',
                        "streaming_callback": partial(self._streaming_callback_for_subagent, agent, parent_streaming_callback, user_session_id),
                        "client_wants_cancel": client_wants_cancel, "tool_chest": self.tool_chest,
-                       "prompt_builder": PromptBuilder(sections=self.sections)
+                       "prompt_builder": PromptBuilder(sections=self.sections),
+                       "session_id": agent_session_id, "parent_session_id": parent_session_id,
+                       "user_session_id": user_session_id
                        }
 
         if len(agent.tools):
@@ -142,27 +155,52 @@ class AgentAssistToolBase(Toolset):
     @staticmethod
     async def __build_prompt_metadata(agent_config: AgentConfiguration, user_session_id: Optional[str] = None, **opts) -> Dict[str, Any]:
         agent_props = agent_config.prompt_metadata if agent_config.prompt_metadata else {}
-
-        return {"session_id": user_session_id, "persona_prompt": agent_config.persona,
-                "agent_config": agent_config,
+        agent_session_id = opts.get('agent_session_id', MnemonicSlugs.generate_id_slug(2))
+        parent_session_id = opts.get('parent_session_id', None)
+        return {"session_id": agent_session_id, "persona_prompt": agent_config.persona,
+                "agent_config": agent_config, "user_session_id": user_session_id, "parent_session_id": parent_session_id,
                 "timestamp": datetime.now().isoformat()} | agent_props | opts
 
     async def agent_oneshot(self, user_message: str, agent: AgentConfiguration, user_session_id: Optional[str] = None,
                             parent_tool_context: Optional[Dict[str, Any]] = None,
-                            prompt_builder: Optional[PromptBuilder] = None,
+                            prime_agent_key: Optional[str] = None,
+                            parent_session_id: Optional[str] = None,
+                            sub_agent_type: Literal["clone", "team", "assist", "tool"] = "assist",
                             **additional_metadata) -> Optional[List[Dict[str, Any]]]:
 
         try:
             self.logger.info(f"Running one-shot with persona: {agent.key}, user session: {user_session_id}")
             agent_runtime = await self.runtime_for_agent(agent)
 
+            agent_session_id = f"oneshot-{MnemonicSlugs.generate_slug(2)}"
+
+            additional_metadata.pop('agent_session_id', None)
+
             chat_params = await self.__chat_params(agent, agent_runtime, user_session_id,
                                                    parent_tool_context=parent_tool_context,
+                                                   agent_session_id=agent_session_id,
+                                                   prime_agent_key=prime_agent_key,
+                                                   parent_session_id=parent_session_id,
                                                    **additional_metadata)
+
+            await self._raise_subsession_start(SubsessionStartedEvent(session_id=agent_session_id,
+                                                                      user_session_id=user_session_id,
+                                                                      parent_session_id=user_session_id,
+                                                                      sub_session_type="oneshot",
+                                                                      sub_agent_type=sub_agent_type,
+                                                                      prime_agent_key=prime_agent_key,
+                                                                      sub_agent_key=agent.key,
+                                                                      role="system"))
             messages = await agent_runtime.one_shot(user_message=user_message, **chat_params)
+
+            await self._raise_subsession_end(SubsessionEndedEvent(session_id=agent_session_id, user_session_id=user_session_id,
+                                                                  parent_session_id=user_session_id, role="system"))
+
             return messages
         except Exception as e:
             self.logger.exception(f"Error during one-shot with persona {agent.name}: {e}", exc_info=True)
+            await self._raise_subsession_end(SubsessionEndedEvent(session_id=agent_session_id, user_session_id=user_session_id,
+                                                                  parent_session_id=user_session_id, role="system"))
             return None
 
     async def parallel_agent_oneshots(self, user_messages: List[str], persona: AgentConfiguration, user_session_id: Optional[str] = None,
@@ -188,6 +226,9 @@ class AgentAssistToolBase(Toolset):
                          user_session_id: Optional[str] = None,
                          agent_session_id: Optional[str] = None,
                          tool_context: Optional[Dict[str, Any]] = None,
+                         prime_agent_key: Optional[str] = None,
+                         parent_session_id: Optional[str] = None,
+                         sub_agent_type: Literal["clone", "team", "assist", "tool"] = "assist",
                          **additional_metadata) -> Tuple[str, List[Dict[str, Any]]]:
         """
         Chat with a persona, maintaining conversation history.
@@ -195,24 +236,50 @@ class AgentAssistToolBase(Toolset):
         self.logger.info(f"Running chat with persona: {agent.name}, user session: {user_session_id}")
         agent_runtime = await self.runtime_for_agent(agent)
 
+
         if agent_session_id is None:
-            agent_session_id = MnemonicSlugs.generate_id_slug(2)
+            agent_session_id = MnemonicSlugs.generate_slug(2)
 
         session = self.session_cache.get(agent_session_id)
         if session is None:
             session = await self._new_agent_session(agent, user_session_id, agent_session_id=agent_session_id)
+
         try:
-            chat_params = await self.__chat_params(agent, agent_runtime, user_session_id, parent_tool_context=tool_context, agent_session_id=agent_session_id, **additional_metadata)
+            chat_params = await self.__chat_params(agent, agent_runtime, user_session_id,
+                                                   parent_tool_context=tool_context,
+                                                   agent_session_id=agent_session_id,
+                                                   parent_session_id=parent_session_id,
+                                                   sub_session_type="oneshot",
+                                                   sub_agent_type=sub_agent_type,
+                                                   prime_agent_key=prime_agent_key,
+                                                   sub_agent_key=agent.key,
+                                                   **additional_metadata)
+
             chat_params['messages'] = session['messages']
-            #chat_params['allow_server_tools'] = True  # Allow server tools to be used in the chat
-            # Use non-streaming chat to avoid flooding the event stream
+
+            await self._raise_subsession_start(SubsessionStartedEvent(session_id=agent_session_id,
+                                                                      user_session_id=user_session_id,
+                                                                      parent_session_id=user_session_id,
+                                                                      sub_session_type="oneshot",
+                                                                      sub_agent_type=sub_agent_type,
+                                                                      prime_agent_key=prime_agent_key,
+                                                                      sub_agent_key=agent.key,
+                                                                      role="system"))
+
             messages = await agent_runtime.chat(user_message=user_message, **chat_params)
             if messages is not None:
                 session['messages'] = messages
                 await self.session_cache.set(agent_session_id, session)
+
         except Exception as e:
             self.logger.exception(f"Error during chat with persona {agent.name}: {e}", exc_info=True)
+            await self._raise_subsession_end(SubsessionEndedEvent(session_id=agent_session_id, user_session_id=user_session_id,
+                                                                  parent_session_id=user_session_id, role="system"))
+
             return agent_session_id, [{'role': 'error', 'content': str(e)}]
+
+        await self._raise_subsession_end(SubsessionEndedEvent(session_id=agent_session_id, user_session_id=user_session_id,
+                                                              parent_session_id=user_session_id, role="system"))
 
         if messages is None or len(messages) == 0:
             self.logger.error(f"No messages returned from chat with persona {agent.name}.")

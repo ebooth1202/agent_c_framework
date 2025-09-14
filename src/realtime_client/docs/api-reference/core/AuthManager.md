@@ -74,7 +74,7 @@ interface LoginResponse {
   agents: Agent[];          // Available agents
   voices: Voice[];          // Available TTS voices
   avatars?: Avatar[];       // Available avatars (if configured)
-  toolsets: Toolset[];      // Available toolsets
+  tools: Tool[];            // Available tools
   sessions: ChatSession[];  // User's chat sessions
   expires_at: number;       // Token expiration timestamp
 }
@@ -105,8 +105,8 @@ interface Avatar {
   preview_url?: string;     // Preview image URL
 }
 
-interface Toolset {
-  toolset_id: string;
+interface Tool {
+  tool_id: string;
   name: string;
   description?: string;
 }
@@ -453,7 +453,7 @@ const loginData = authManager.getLoginResponse();
 if (loginData) {
   console.log('User:', loginData.user);
   console.log('Available agents:', loginData.agents.length);
-  console.log('Available toolsets:', loginData.toolsets.length);
+  console.log('Available tools:', loginData.tools.length);
 }
 ```
 
@@ -829,7 +829,7 @@ process.on('SIGINT', () => {
    - heygen_token
    - websocket_url
    - user info
-   - available agents, voices, avatars, toolsets
+   - available agents, voices, avatars, tools
 4. AuthManager stores tokens and metadata
 5. Before token expiry (based on buffer):
    - GET /rt/refresh_token with Bearer token
@@ -851,7 +851,7 @@ import {
   Avatar,
   Agent,
   User,
-  Toolset
+  Tool
 } from '@agentc/realtime-core';
 ```
 

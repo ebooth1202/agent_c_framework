@@ -543,7 +543,7 @@ Sends newly added messages to the history.
 
 ### ToolCallEvent
 
-Indicates tool calls are being executed.
+Sent when tool calls are initiated or completed during agent interactions. This is a session event that maintains full session correlation.
 
 **Event Type**: `tool_call`
 
@@ -552,32 +552,91 @@ Indicates tool calls are being executed.
 ```json
 {
   "type": "tool_call",
-  "session_id": "string",
+  "session_id": "sess_abc123",
+  "role": "assistant",
+  "parent_session_id": null,
+  "user_session_id": "sess_abc123", 
+  "active": true,
+  "vendor": "anthropic",
   "tool_calls": [
     {
-      "id": "string",
-      "name": "string",
-      "arguments": {}
+      "type": "tool_use",
+      "id": "toolu_01A2B3C4D5E6F7G8H9I0J1K2",
+      "name": "web_search",
+      "input": {
+        "query": "Python best practices"
+      }
     }
   ],
-  "vendor": "string"
+  "tool_results": [
+    {
+      "type": "tool_result",
+      "tool_use_id": "toolu_01A2B3C4D5E6F7G8H9I0J1K2",
+      "content": [
+        {
+          "type": "text",
+          "text": "Search results found..."
+        }
+      ]
+    }
+  ]
 }
 ```
 
 **Fields**:
 
-- `tool_calls` (array): List of tools being called
-- `vendor` (string): LLM provider ("open_ai", "anthropic", etc.)
+- `session_id` (string): Current session identifier
+- `role` (string): Role that triggered the event
+- `parent_session_id` (string, optional): Parent session ID for subsessions
+- `user_session_id` (string, optional): Root user session ID
+- `active` (boolean): If `true`, tools will be executed immediately after the event
+- `vendor` (string): LLM provider format indicator ("anthropic", "openai")
+- `tool_calls` (array): Tool calls in vendor-specific format (**CRITICAL**: Always vendor format, never generic)
+- `tool_results` (array, optional): Tool execution results in vendor format (present when execution is complete)
+
+**Vendor Format Notes**:
+- **Anthropic**: Uses `type: "tool_use"` with `id`, `name`, and `input` fields
+- **OpenAI**: Uses `type: "function"` with `id` and `function` object containing `name` and `arguments`
 
 ---
 
-### ToolCallDeltaEvent
+### ToolSelectDeltaEvent
 
-Streams tool call execution progress.
+Sent during streaming when tool calls are being assembled. Shows tools being selected and constructed in real-time during LLM completion.
 
-**Event Type**: `tool_call_delta`
+**Event Type**: `tool_select_delta`
 
-**Payload**: Similar to `ToolCallEvent` but for streaming updates.
+**Payload**:
+
+```json
+{
+  "type": "tool_select_delta",
+  "session_id": "sess_abc123",
+  "role": "assistant",
+  "parent_session_id": null,
+  "user_session_id": "sess_abc123",
+  "tool_calls": [
+    {
+      "type": "tool_use",
+      "id": "toolu_123",
+      "name": "web_search",
+      "input": {
+        "query": "Python"
+      }
+    }
+  ]
+}
+```
+
+**Fields**:
+
+- `session_id` (string): Current session identifier
+- `role` (string): Role that triggered the event
+- `parent_session_id` (string, optional): Parent session ID for subsessions
+- `user_session_id` (string, optional): Root user session ID
+- `tool_calls` (array): Current state of tool calls being assembled in vendor format
+
+**Usage**: Multiple events show incremental tool call construction, followed by final `tool_call` event with complete tool calls ready for execution.
 
 ## Error Events
 
@@ -617,47 +676,471 @@ Reports errors and exceptional conditions.
 }
 ```
 
-## Event Flow Examples
+## Subsession Events
 
-### Typical Interaction Flow
+Subsession events manage agent-to-agent communication within the context of user sessions. These events enable complex multi-agent workflows while maintaining complete transparency for clients.
 
-1. **User sends text input**
-2. **Interaction starts**:
-   
-   ```json
-   {"type": "interaction", "started": true, "id": "int_123"}
+### SubsessionStartedEvent
+
+Signals the beginning of a new subsession where agents will collaborate or delegate work to specialized assistants.
+
+**Event Type**: `subsession_started`
+
+**Payload**:
+
+```json
+{
+  "type": "subsession_started",
+  "session_id": "sess_parent_123",
+  "role": "assistant",
+  "parent_session_id": null,
+  "user_session_id": "sess_parent_123",
+  "sub_session_type": "agent_collaboration",
+  "sub_agent_type": "math_specialist",
+  "prime_agent_key": "helpful_assistant",
+  "sub_agent_key": "math_expert"
+}
+```
+
+**Fields**:
+
+- **`sub_session_type`** (string): Category of subsession for client styling and behavior
+  - `"agent_collaboration"` - Agents working together on a problem
+  - `"task_delegation"` - Primary agent delegating specific tasks
+  - `"tool_execution"` - Complex tool usage requiring agent interaction
+  - `"clone_execution"` - Agent spawning clones for parallel work
+
+- **`sub_agent_type`** (string): Type of agent being used in the subsession
+  - `"specialist"` - Domain-specific expert agent
+  - `"clone"` - Copy of an existing agent for parallel processing
+  - `"tool_agent"` - Agent specifically for tool interaction
+  - `"coordinator"` - Agent for managing other agents
+
+- **`prime_agent_key`** (string): The agent key that initiated the subsession
+
+- **`sub_agent_key`** (string): The agent key for the subsession agent
+
+**Client Handling**:
+- Apply appropriate visual styling based on `sub_session_type`
+- Track agent hierarchy for display purposes
+- Prepare UI for receiving events with different `session_id` values
+- Events following this will be from the subsession until `subsession_ended`
+
+**Example**:
+
+```json
+{
+  "type": "subsession_started",
+  "session_id": "sess_user_123",
+  "role": "assistant",
+  "parent_session_id": null,
+  "user_session_id": "sess_user_123",
+  "sub_session_type": "agent_collaboration",
+  "sub_agent_type": "specialist", 
+  "prime_agent_key": "helpful_assistant",
+  "sub_agent_key": "math_expert"
+}
+```
+
+---
+
+### SubsessionEndedEvent
+
+Signals the completion of a subsession and return to parent session context.
+
+**Event Type**: `subsession_ended`
+
+**Payload**:
+
+```json
+{
+  "type": "subsession_ended",
+  "session_id": "sess_parent_123",
+  "role": "assistant",
+  "parent_session_id": null,
+  "user_session_id": "sess_parent_123"
+}
+```
+
+**Fields**:
+- Standard session event fields (session_id, role, parent_session_id, user_session_id)
+- No additional subsession-specific fields
+
+**Client Handling**:
+- Remove subsession visual indicators
+- Return to parent session styling
+- Update agent hierarchy displays
+- Events following this will be from the parent session context
+
+**Example**:
+
+```json
+{
+  "type": "subsession_ended",
+  "session_id": "sess_user_123",
+  "role": "assistant",
+  "parent_session_id": null,
+  "user_session_id": "sess_user_123"
+}
+```
+
+### Subsession Event Correlation
+
+**Critical Implementation Note**: Events that occur within subsessions will have different `session_id` values than the parent session. Clients must use the `parent_session_id` and `user_session_id` fields to properly correlate subsession events back to the user's chat session.
+
+**Example Event Flow**:
+
+```json
+// 1. Subsession starts in parent session
+{
+  "type": "subsession_started",
+  "session_id": "sess_user_123",
+  "parent_session_id": null,
+  "user_session_id": "sess_user_123"
+}
+
+// 2. Subsequent events use different session_id but maintain correlation
+{
+  "type": "text_delta",
+  "session_id": "sess_sub_456",  // Different session ID!
+  "parent_session_id": "sess_user_123",  // Points to parent
+  "user_session_id": "sess_user_123",    // Points to user session
+  "role": "assistant",
+  "content": "Calculating the integral..."
+}
+
+// 3. Subsession ends, back to parent session_id
+{
+  "type": "subsession_ended",
+  "session_id": "sess_user_123",  // Back to parent session_id
+  "parent_session_id": null,
+  "user_session_id": "sess_user_123"
+}
+```
+
+**Nesting Support**: Subsessions can be nested multiple levels deep. Each level maintains proper `parent_session_id` and `user_session_id` correlation, enabling complex agent hierarchies while preserving event traceability.
+
+## Chat Streaming Event Sequences
+
+This section provides the complete, precise event sequences that occur during user/agent interactions. Understanding these sequences is critical for proper client implementation.
+
+### Basic Agent Turn Flow
+
+When a user submits input and the agent responds, the following event sequence occurs **exactly** in this order:
+
+1. **`interaction`** (with `started: true`) - Signals the beginning of agent processing
+2. **Vendor-specific user message event** - Either `anthropic_user_message` or `open_ai_user_message` depending on the LLM provider
+3. **`system_prompt`** - Contains the system prompt used for this interaction
+4. **`completion`** (with `running: true`) - Indicates the LLM completion process has started
+5. **Content streaming events** - Multiple `text_delta` and/or `thought_delta` events containing partial agent responses
+6. **`completion`** (with `running: false`) - Indicates the LLM completion process has finished
+7. **`history_delta`** - Contains the new messages added to the chat history
+8. **`history`** - Contains the complete updated chat history
+9. **`interaction`** (with `started: false`) - Signals the end of agent processing
+10. **`user_turn_start`** - Indicates the client may now send input again
+
+#### Example Basic Agent Turn
+
+```json
+// 1. Interaction start
+{
+  "type": "interaction",
+  "session_id": "session_123",
+  "started": true,
+  "id": "interaction_456"
+}
+
+// 2. User message (vendor-specific)
+{
+  "type": "anthropic_user_message",
+  "session_id": "session_123",
+  "vendor": "anthropic",
+  "message": {
+    "role": "user",
+    "content": "What is quantum entanglement?"
+  }
+}
+
+// 3. System prompt
+{
+  "type": "system_prompt",
+  "session_id": "session_123",
+  "content": "You are a helpful AI assistant...",
+  "format": "markdown"
+}
+
+// 4. Completion start
+{
+  "type": "completion",
+  "session_id": "session_123",
+  "running": true,
+  "completion_options": {"model": "claude-3-sonnet", "temperature": 0.7}
+}
+
+// 5. Content streaming (multiple events)
+{
+  "type": "text_delta",
+  "session_id": "session_123",
+  "role": "assistant",
+  "content": "Quantum entanglement is",
+  "format": "markdown"
+}
+
+{
+  "type": "text_delta",
+  "session_id": "session_123",
+  "role": "assistant",
+  "content": " a fascinating phenomenon...",
+  "format": "markdown"
+}
+
+// 6. Completion end
+{
+  "type": "completion",
+  "session_id": "session_123",
+  "running": false,
+  "stop_reason": "stop",
+  "input_tokens": 150,
+  "output_tokens": 200
+}
+
+// 7. History delta
+{
+  "type": "history_delta",
+  "session_id": "session_123",
+  "vendor": "anthropic",
+  "messages": [
+    {
+      "role": "user",
+      "content": "What is quantum entanglement?",
+      "timestamp": "2024-01-15T10:30:00Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Quantum entanglement is a fascinating phenomenon...",
+      "timestamp": "2024-01-15T10:30:05Z"
+    }
+  ]
+}
+
+// 8. Complete history
+{
+  "type": "history",
+  "session_id": "session_123",
+  "vendor": "anthropic",
+  "messages": [
+    // ... complete conversation history
+  ]
+}
+
+// 9. Interaction end
+{
+  "type": "interaction",
+  "session_id": "session_123",
+  "started": false,
+  "id": "interaction_456"
+}
+
+// 10. User turn start
+{
+  "type": "user_turn_start",
+  "session_id": "session_123"
+}
+```
+
+### Tool-Enhanced Agent Turn Flow
+
+When an agent needs to use tools during its response, additional events are inserted into the sequence:
+
+#### Additional Tool Events
+
+- **`tool_select_delta`** - Streamed while the agent is formulating tool calls. Contains the partially assembled tool call in vendor format. Clients can display "Agent is using [tool_name]" messages.
+- **`tool_call`** (with `active: true`) - Indicates tool methods are being executed
+- **`tool_call`** (with `active: false`) - Indicates tool execution is complete, with results in the `tool_results` field
+
+#### Complete Tool Usage Sequence
+
+1. **`interaction`** (with `started: true`)
+2. **Vendor-specific user message event**
+3. **`system_prompt`**
+4. **`completion`** (with `running: true`)
+5. **`text_delta`/`thought_delta`** events (agent reasoning)
+6. **`tool_select_delta`** events (agent formulating tool calls)
+7. **`tool_call`** (with `active: true`) - Tool execution begins
+8. **`tool_call`** (with `active: false`) - Tool execution complete with results
+9. **`text_delta`** events (agent incorporating tool results)
+10. **`completion`** (with `running: false`)
+11. **`history_delta`**
+12. **`history`**
+13. **`interaction`** (with `started: false`)
+14. **`user_turn_start`**
+
+#### Example Tool Usage
+
+```json
+// ... standard flow events 1-5 ...
+
+// 6. Tool selection deltas
+{
+  "type": "tool_select_delta",
+  "session_id": "session_123",
+  "tool_calls": [
+    {
+      "id": "call_abc123",
+      "type": "function",
+      "function": {
+        "name": "web_search",
+        "arguments": "{\"query\": \"latest quantum computing research\"}"
+      }
+    }
+  ]
+}
+
+// 7. Tool execution start
+{
+  "type": "tool_call",
+  "session_id": "session_123",
+  "active": true,
+  "vendor": "openai",
+  "tool_calls": [
+    {
+      "id": "call_abc123",
+      "type": "function",
+      "function": {
+        "name": "web_search",
+        "arguments": "{\"query\": \"latest quantum computing research\"}"
+      }
+    }
+  ]
+}
+
+// 8. Tool execution complete
+{
+  "type": "tool_call",
+  "session_id": "session_123",
+  "active": false,
+  "vendor": "openai",
+  "tool_calls": [
+    {
+      "id": "call_abc123",
+      "type": "function",
+      "function": {
+        "name": "web_search",
+        "arguments": "{\"query\": \"latest quantum computing research\"}"
+      }
+    }
+  ],
+  "tool_results": [
+    {
+      "tool_call_id": "call_abc123",
+      "content": "Recent research shows..."
+    }
+  ]
+}
+
+// 9. Agent continues with tool results
+{
+  "type": "text_delta",
+  "session_id": "session_123",
+  "role": "assistant",
+  "content": "Based on the latest research, ",
+  "format": "markdown"
+}
+
+// ... remainder of standard flow ...
+```
+
+### User Turn Management
+
+The system manages user/agent turns to ensure proper conversation flow:
+
+#### User Input Processing
+
+- **During user's turn**: Clients send input via audio data or `TextInputEvent`
+- **Turn transition**: Clients receive `UserTurnEndEvent` when the server has received input and transitions to agent processing
+- **Agent processing**: The complete agent turn flow executes (events 1-10 above)
+- **Turn completion**: `user_turn_start` event signals the client may send input again
+
+#### User Turn Event
+
+```json
+// Sent when server receives user input and starts agent processing
+{
+  "type": "user_turn_end",
+  "session_id": "session_123"
+}
+```
+
+### Implementation Guidance for Clients
+
+#### Essential Event Handling
+
+1. **Track Interaction State**
+   ```javascript
+   if (event.type === 'interaction' && event.started) {
+     // Disable user input, show "Agent is thinking"
+     setInputDisabled(true);
+   } else if (event.type === 'interaction' && !event.started) {
+     // Re-enable user input
+     setInputDisabled(false);
+   }
    ```
-3. **Completion begins**:
-   
-   ```json
-   {"type": "completion", "running": true, ...}
+
+2. **Buffer Text Deltas**
+   ```javascript
+   if (event.type === 'text_delta') {
+     // Accumulate deltas by role within current interaction
+     appendToMessage(event.role, event.content);
+   }
    ```
-4. **Agent thinks** (if using thinking tools):
-   
-   ```json
-   {"type": "thought_delta", "content": "Let me analyze...", ...}
+
+3. **Handle Tool Usage Feedback**
+   ```javascript
+   if (event.type === 'tool_select_delta' && event.tool_calls?.length > 0) {
+     const toolName = event.tool_calls[0].function?.name;
+     showToolUsage(`Agent is using ${toolName}...`);
+   }
    ```
-5. **Agent responds**:
-   
-   ```json
-   {"type": "text_delta", "content": "Based on your question", ...}
-   {"type": "text_delta", "content": " about quantum physics...", ...}
+
+4. **Wait for Turn Signals**
+   ```javascript
+   if (event.type === 'user_turn_start') {
+     // Safe to enable user input
+     enableUserInput();
+   }
    ```
-6. **Completion ends**:
-   
-   ```json
-   {"type": "completion", "running": false, "stop_reason": "stop", ...}
-   ```
-7. **History updated**:
-   
-   ```json
-   {"type": "history_delta", "messages": [...], ...}
-   ```
-8. **Interaction ends**:
-   
-   ```json
-   {"type": "interaction", "started": false, "id": "int_123"}
-   ```
+
+#### Critical Implementation Rules
+
+- **Never enable user input** until receiving `user_turn_start` event
+- **Always buffer text deltas** by role within each interaction
+- **Display tool usage feedback** from `tool_select_delta` events
+- **Handle vendor differences** in user message events (`anthropic_user_message` vs `open_ai_user_message`)
+- **Separate thought display** from regular message content
+- **Track completion tokens** for usage monitoring
+
+### Debugging and Validation
+
+#### Expected Event Counts
+
+For a basic agent turn without tools:
+- Exactly **1** `interaction` event with `started: true`
+- Exactly **1** vendor-specific user message event
+- Exactly **1** `system_prompt` event
+- Exactly **1** `completion` event with `running: true`
+- **1 or more** `text_delta`/`thought_delta` events
+- Exactly **1** `completion` event with `running: false`
+- Exactly **1** `history_delta` event
+- Exactly **1** `history` event
+- Exactly **1** `interaction` event with `started: false`
+- Exactly **1** `user_turn_start` event
+
+#### Common Issues
+
+- **Missing `user_turn_start`**: Client input remains disabled
+- **Unhandled vendor differences**: User message events not processed correctly
+- **Text delta buffer overflow**: Not clearing buffers between interactions
+- **Tool feedback missing**: Users don't see tool usage indicators
 
 ### Avatar-Specific Behavior
 

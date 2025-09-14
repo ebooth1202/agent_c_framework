@@ -823,9 +823,15 @@ describe('AudioControlsPanel', () => {
       const meter = container.querySelector('[role="meter"]');
       const bar = meter?.firstChild as HTMLElement;
       
-      // Component renders negative * 100 = -50%
-      // CSS will handle the overflow/clipping
-      expect(bar?.style?.width).toBe('-50%');
+      // When setting negative width values, browsers treat them as invalid
+      // and typically return an empty string for the style.width property
+      // The component still sets style={{ width: `${audioLevel * 100}%` }}
+      // but the browser sanitizes this to an empty string
+      expect(bar?.style?.width).toBe('');
+      
+      // Verify the meter still has proper ARIA attributes
+      // The aria-valuenow reflects the actual audio level * 100 (even if negative)
+      expect(meter?.getAttribute('aria-valuenow')).toBe('-50');
     });
 
     it('should handle audio levels above 1', () => {

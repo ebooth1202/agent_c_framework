@@ -1,9 +1,10 @@
 import asyncio
+import copy
 import json
 import threading
 import traceback
 from contextlib import suppress
-from typing import List, Optional, Any, Dict, AsyncGenerator, AsyncIterator
+from typing import List, Optional, Any, Dict, AsyncIterator
 
 from fastapi import WebSocket, WebSocketDisconnect
 from functools import singledispatchmethod
@@ -11,17 +12,17 @@ from functools import singledispatchmethod
 from agent_c.chat import ChatSessionManager
 from agent_c.config.agent_config_loader import AgentConfigLoader
 from agent_c.models import ChatSession, ChatUser
-from agent_c.models.events import BaseEvent, TextDeltaEvent, CompletionEvent, HistoryEvent
-from agent_c.models.events.chat import ThoughtDeltaEvent, AudioInputDeltaEvent
+from agent_c.models.events import BaseEvent, TextDeltaEvent,  HistoryEvent
+from agent_c.models.events.chat import AudioInputDeltaEvent
 from agent_c.models.heygen import HeygenAvatarSessionData, NewSessionRequest
 from agent_c.toolsets import Toolset
 from agent_c.util.heygen_streaming_avatar_client import HeyGenStreamingClient
 from agent_c.util.registries.event import EventRegistry
-from agent_c_api.api.rt.models.client_events import GetAgentsEvent, ErrorEvent, AgentListEvent, GetAvatarsEvent, AvatarListEvent, TextInputEvent, SetAvatarEvent, AvatarConnectionChangedEvent, \
-    SetAgentEvent, AgentConfigurationChangedEvent, SetAvatarSessionEvent, ChatSessionChangedEvent, SessionMetadataChangedEvent, ChatSessionNameChangedEvent, ResumeChatSessionEvent, \
+from agent_c_api.api.rt.models.control_events import GetAgentsEvent, ErrorEvent, AgentListEvent, GetAvatarsEvent, AvatarListEvent, TextInputEvent, SetAvatarEvent, AvatarConnectionChangedEvent, \
+    SetAgentEvent, AgentConfigurationChangedEvent, SetAvatarSessionEvent, ChatSessionChangedEvent,  ResumeChatSessionEvent, \
     NewChatSessionEvent, SetAgentVoiceEvent, AgentVoiceChangedEvent, UserTurnStartEvent, UserTurnEndEvent, GetUserSessionsEvent, GetUserSessionsResponseEvent, PingEvent, PongEvent, \
     GetToolCatalogEvent, ToolCatalogEvent, ChatUserDataEvent, GetVoicesEvent, VoiceListEvent
-from agent_c_api.api.rt.models.client_events import SetChatSessionNameEvent, SetSessionMessagesEvent, ChatSessionNameChangedEvent, SetSessionMetadataEvent, SessionMetadataChangedEvent
+from agent_c_api.api.rt.models.control_events import SetChatSessionNameEvent, SetSessionMessagesEvent, ChatSessionNameChangedEvent, SetSessionMetadataEvent, SessionMetadataChangedEvent
 from agent_c_api.core.agent_bridge import AgentBridge
 from agent_c.models.input import AudioInput
 
@@ -61,10 +62,10 @@ class RealtimeBridge(AgentBridge):
         self._voices = open_ai_voice_models
         self._voice: AvailableVoiceModel = no_voice_model
 
-    async def flush_session(self):
+    async def flush_session(self, touch: bool = True) -> None:
         """Flush the current chat session to persistent storage"""
         if self.chat_session:
-            await self.session_manager.flush(self.chat_session.session_id, self.chat_session.user_id)
+            await self.session_manager.flush_session(self.chat_session, touch)
 
     # Handlers for events coming from the client websocket
     @singledispatchmethod
@@ -186,6 +187,7 @@ class RealtimeBridge(AgentBridge):
     async def set_chat_session_name(self, session_name: str) -> None:
         """Set the name of the current chat session"""
         self.chat_session.session_name = session_name
+        await self.flush_session(False)
         self.logger.info(f"RealtimeBridge {self.chat_session.session_id}: Session name set to '{session_name}'")
         await self.send_chat_session_name()
 
@@ -291,6 +293,7 @@ class RealtimeBridge(AgentBridge):
         """Send event to the client"""
         try:
             await self.websocket.send_text(event.model_dump_json())
+            self.logger.info(f"Sent event {event.type} to {self.chat_session.session_id}")
         except Exception as e:
             self.logger.exception(f"Failed to send event to {self.chat_session.session_id}: {e}")
             self.is_running = False
@@ -309,10 +312,11 @@ class RealtimeBridge(AgentBridge):
         if self.chat_session:
             await self.send_event(SessionMetadataChangedEvent(meta=self.chat_session.metadata))
 
-    async def send_chat_session_name(self):
+    async def send_chat_session_name(self, session: Optional[ChatSession] = None):
         """Send the current chat session name to the client"""
-        if self.chat_session and self.chat_session.session_name:
-            await self.send_event(ChatSessionNameChangedEvent(session_name=self.chat_session.session_name))
+        chat_session = session or self.chat_session
+        if chat_session:
+            await self.send_event(ChatSessionNameChangedEvent(session_name=chat_session.name, session_id=chat_session.session_id))
 
     # Handlers for runtime events coming over the callback
     @singledispatchmethod
@@ -321,48 +325,15 @@ class RealtimeBridge(AgentBridge):
         await self.send_event(event)
 
     @handle_runtime_event.register
-    async def _(self, event: CompletionEvent):
-        # if event.running == False and len(self._partial_agent_message.rstrip()):
-        #     # Send any remaining partial message
-        #     await self.avatar_say(self._partial_agent_message, role="assistant")
-        #     self._partial_agent_message = ""
+    async def _(self, event: HistoryEvent):
+        if event.session_id == self.chat_session.session_id:
+            self.chat_session.messages = copy.deepcopy(event.messages)
 
-        await self.send_event(event)
-
-    @handle_runtime_event.register
-    async def _(self, event: TextDeltaEvent):
-        # self._avatar_did_think = False
-        # self._partial_agent_message += event.content
-        # await self._handle_partial_agent_message()
-        await self.send_event(event)
 
     @property
     def avatar_think_message(self) -> str:
         # Placeholder for avatar thinking message
         return "Let me think about that..."
-
-    @handle_runtime_event.register
-    async def _(self, event: ThoughtDeltaEvent):
-        """Handle thought events from the agent"""
-        #await self._handle_agent_thought_token()
-        await self.send_event(event)
-
-    async def _handle_agent_thought_token(self):
-        """Handle agent thought messages"""
-        if not self._avatar_did_think:
-            self._avatar_did_think = True
-            try:
-                await self.avatar_client.send_task(self.avatar_think_message)
-            except Exception as e:
-                self.logger.error(f"RealtimeBridge {self.chat_session.session_id}: Failed to send message to avatar: {e}")
-
-    async def _handle_partial_agent_message(self):
-        if "\n" not in self._partial_agent_message:
-            return
-
-        left, right = self._partial_agent_message.rsplit("\n", 1)
-        self._partial_agent_message = right
-        await self.avatar_say(left + "\n", role="assistant")
 
     async def avatar_say(self, text: str, role: str = "assistant"):
         if not self.avatar_session and not self.avatar_session_id:
@@ -523,6 +494,7 @@ class RealtimeBridge(AgentBridge):
             if len(self.chat_session.agent_config.tools):
                 await self.tool_chest.initialize_toolsets(self.chat_session.agent_config.tools)
                 tool_params = self.tool_chest.get_inference_data(self.chat_session.agent_config.tools, agent_runtime.tool_format)
+                tool_params['schemas'] = self.chat_session.agent_config.filter_allowed_tools(tool_params['schemas'])
                 tool_params["toolsets"] = self.chat_session.agent_config.tools
 
             if self.sections is not None:
@@ -581,7 +553,7 @@ class RealtimeBridge(AgentBridge):
             return
 
         try:
-            await self.session_manager.flush(self.chat_session.session_id, self.chat_session.user_id)
+            await self.flush_session()
             await self.send_user_turn_start()
 
         except Exception as e:

@@ -145,7 +145,7 @@ describe('Message Component - Basic Rendering', () => {
       const { container } = render(<Message message={baseMessage} />);
       
       // Check for flex alignment classes
-      const contentWrapper = container.querySelector('.flex-1.max-w-\\[75ch\\]');
+      const contentWrapper = container.querySelector('.flex-1.max-w-full');
       expect(contentWrapper).toHaveClass('flex', 'flex-col', 'items-end');
     });
   });
@@ -200,7 +200,7 @@ describe('Message Component - Basic Rendering', () => {
       const { container } = render(<Message message={assistantMessage} />);
       
       // Check that it doesn't have right alignment classes
-      const contentWrapper = container.querySelector('.flex-1.max-w-\\[75ch\\]');
+      const contentWrapper = container.querySelector('.flex-1.max-w-full');
       expect(contentWrapper).not.toHaveClass('items-end');
     });
 
@@ -573,7 +573,7 @@ describe('Message Component - Basic Rendering', () => {
       expect(avatarContainer).toBeInTheDocument();
       
       // Content container
-      const contentContainer = mainContainer?.querySelector('.flex-1.max-w-\\[75ch\\]');
+      const contentContainer = mainContainer?.querySelector('.flex-1.max-w-full');
       expect(contentContainer).toBeInTheDocument();
       
       // Message bubble

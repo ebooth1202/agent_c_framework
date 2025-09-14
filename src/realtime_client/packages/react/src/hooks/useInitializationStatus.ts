@@ -40,7 +40,7 @@ export interface UseInitializationStatusReturn {
  * 2. avatar_list - Available avatars
  * 3. voice_list - Available voices
  * 4. agent_list - Available agents
- * 5. tool_catalog - Available toolsets
+ * 5. tool_catalog - Available tools
  * 6. chat_session_changed - Current session
  * 
  * @example

@@ -10,7 +10,7 @@ import type {
   Avatar,
   Voice,
   User,
-  Toolset,
+  Tool,
   ChatSession
 } from '@agentc/realtime-core';
 
@@ -30,8 +30,8 @@ export interface InitializationState {
   avatars: Avatar[];
   /** Available voices from voice_list event */
   voices: Voice[];
-  /** Available toolsets from tool_catalog event */
-  toolsets: Toolset[];
+  /** Available tools from tool_catalog event */
+  tools: Tool[];
   /** Current chat session from chat_session_changed event */
   currentSession: ChatSession | null;
 }
@@ -120,7 +120,7 @@ export function useRealtimeClientSafe(): RealtimeClient | null {
 }
 
 /**
- * Custom hook to access Agent C configuration data (users, agents, avatars, voices, toolsets)
+ * Custom hook to access Agent C configuration data (users, agents, avatars, voices, tools)
  * This data is populated from WebSocket events after connection
  */
 export function useAgentCData() {
@@ -138,7 +138,7 @@ export function useAgentCData() {
     agents: context.initialization.agents,
     avatars: context.initialization.avatars,
     voices: context.initialization.voices,
-    toolsets: context.initialization.toolsets,
+    tools: context.initialization.tools,
     currentSession: context.initialization.currentSession
   };
 }
