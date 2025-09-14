@@ -983,7 +983,7 @@ print(f"Hit rate: {summary['hit_rate']:.2%}")
 
 ## See Also
 
-- [Config Loader Singleton Conversion Guide](config_loader_singleton_conversion.md)
-- [Agent C Architecture Documentation](../README.md)
+- [Config Loader Singleton Conversion Guide](../config_loader_singleton_conversion.md)
+- [Agent C Architecture Documentation](../../README.md)
 - [Model Configuration Schema](model_configuration_schema.md)
 - [Agent Configuration Schema](agent_configuration_schema.md)
