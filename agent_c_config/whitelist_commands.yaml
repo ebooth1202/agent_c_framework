@@ -172,40 +172,67 @@ npm:
 pnpm:
   validator: pnpm
   root_flags: ["-v","--version","--help"]
+  global_flags_before_subcommand:
+    # boolean means “takes the value next”
+    # adding global flags here allows us to use commands like 'pnpm --filter @agentc/realtime-ui test' before the subcommand
+    # So, setting --filter: true means filter on @agentc/realtime-ui, and false means no value allowed
+    "--filter": true
+    "--silent": false
+    "-r": false            # --recursive
   subcommands:
-      view:   { allowed_flags: ["--json"] }
-      list:   { allowed_flags: ["--depth","--json","--long"] }
-      ping:   { allowed_flags: [] }
-      outdated: { allowed_flags: [] }
-      test:   { allowed_flags: [], deny_args: false, allow_test_paths: true, suppress_success_output: true }
-      "test:run": { allowed_flags: [], deny_args: false, allow_test_paths: true, suppress_success_output: true }
-      "test:watch": { allowed_flags: [], deny_args: false, allow_test_paths: true, suppress_success_output: true }
-      "test:coverage": { allowed_flags: [], deny_args: false, allow_test_paths: true, suppress_success_output: true }
-      "test:ui": { allowed_flags: [], deny_args: false, allow_test_paths: true, suppress_success_output: true }
-      "test:debug": { allowed_flags: [], deny_args: false, allow_test_paths: true, suppress_success_output: true }
-      "type-check": { allowed_flags: [] }
-      "clean": { allowed_flags: [] }
-      type_check:   { allowed_flags: [] }
-      ls:   { allowed_flags: [] }
-      build:   { allowed_flags: [], suppress_success_output: true }
-      why:    { allowed_flags: ["--json","--long"] }
-      licenses: { allowed_flags: ["--json","--long"] }
-      lint:   { allowed_flags: ["--fix"], deny_args: false, allow_test_paths: true }
-      "lint:fix": { allowed_flags: [], deny_args: false, allow_test_paths: true }
-      "install:clean": { allowed_flags: [] }
+    # This is in effect allowing us to call 'pnpm run build' or 'pnpm build' - it's double mapping, but pnpm allows both, so here we are.
+    # This does mean you can have separate policies for 'pnpm run <script>' and 'pnpm <script>' if you want.
+    # FYI, allowed_flags: [] means no flags allowed, not "all flags allowed". If you want to allow all flags, remove allowed_flags empty array.
+    # allow_test_paths: true enables workspace-relative test paths for scripts, guards against arbitrary file selectors
+    # deny_args: false allows arbitrary args to be passed to the script (e.g., 'pnpm test -- --watch')
+    # suppress_success_output: true reduces noise from successful runs; false shows full output
+    run:
+      scripts:
+        build: { suppress_success_output: true,  allow_test_mode: true, deny_args: false }
+        test: { allowed_flags: [], deny_args: false, allow_test_paths: true, suppress_success_output: true }
+        "test:run": { allowed_flags: [], deny_args: false, allow_test_paths: true, suppress_success_output: true }
+        "test:debug": { allowed_flags: [], deny_args: false, allow_test_paths: true, suppress_success_output: false }
+        "type-check": { allowed_flags: [], suppress_success_output: false, allow_test_mode: true, deny_args: false }
+        "typecheck": { allowed_flags: [ ], suppress_success_output: false, allow_test_mode: true, deny_args: false }
+        "type_check": { allowed_flags: [ ], suppress_success_output: false, allow_test_mode: true, deny_args: false }
+        "test:ui": { allowed_flags: [], deny_args: false, allow_test_paths: true, suppress_success_output: true }
+        "test:coverage": { allowed_flags: [], deny_args: false, allow_test_paths: true, suppress_success_output: false }
+        "clean": { suppress_success_output: false, allow_test_mode: true, deny_args: false }
+        "install:clean": { suppress_success_output: false, allow_test_mode: true, deny_args: false }
+    view: { allowed_flags: ["--json"] }
+    list: { allowed_flags: ["--depth","--json","--long"] }
+    ping: { allowed_flags: [] }
+    outdated: { allowed_flags: [] }
+    test: { allowed_flags: [], deny_args: false, allow_test_paths: true, suppress_success_output: true }
+    "test:run": { allowed_flags: [], deny_args: false, allow_test_paths: true, suppress_success_output: true }
+    "test:watch": { allowed_flags: [], deny_args: false, allow_test_paths: true, suppress_success_output: true }
+    "test:coverage": { allowed_flags: [], deny_args: false, allow_test_paths: true, suppress_success_output: false }
+    "test:ui": { allowed_flags: [], deny_args: false, allow_test_paths: true, suppress_success_output: true }
+    "test:debug": { allowed_flags: [], deny_args: false, allow_test_paths: true, suppress_success_output: true }
+    "clean": { suppress_success_output: false, allow_test_mode: true, deny_args: false }
+    "type-check": { allowed_flags: [], suppress_success_output: false, allow_test_mode: true, deny_args: false }
+    "typecheck": { allowed_flags: [], suppress_success_output: false, allow_test_mode: true, deny_args: false }
+    "type_check": { allowed_flags: [], suppress_success_output: false, allow_test_mode: true, deny_args: false }
+    ls: { allowed_flags: [] }
+    build: { allowed_flags: [], suppress_success_output: true }
+    why: { allowed_flags: ["--json","--long"] }
+    licenses: { allowed_flags: ["--json","--long"] }
+    lint: { allowed_flags: ["--fix"], deny_args: false, allow_test_paths: true }
+    "lint:fix": { allowed_flags: [], deny_args: false, allow_test_paths: true }
+    "install:clean": { suppress_success_output: false, allow_test_mode: true, deny_args: false }
 
-      # Only allow "pnpm config get <key>"
-      config:
-        get_only: true
-        allowed_flags: []       # keep empty; we gate on 'get'
+    # Only allow "pnpm config get <key>"
+    config:
+      get_only: true
+      allowed_flags: []       # keep empty; we gate on 'get'
 
-      # --- Safe, lockfile-based install ---
-      install:
-        enabled: true
-        require_no_packages: true
-        require_flags: ["--ignore-scripts"]
-        allowed_flags: ["--ignore-scripts","--prefer-offline","--frozen-lockfile","--reporter","--dev","--prod"]
-        suppress_success_output: true
+    # --- Safe, lockfile-based install ---
+    install:
+      enabled: true
+      require_no_packages: true
+      require_flags: ["--ignore-scripts"]
+      allowed_flags: ["--ignore-scripts","--prefer-offline","--frozen-lockfile","--reporter","--dev","--prod"]
+      suppress_success_output: true
 
   # pnpm doesn't have ci command like npm, but has similar restrictions
   # keep 'i' and 'add' denied unless you want them—the validator aliases them to 'install'

@@ -1,5 +1,6 @@
-from typing import Dict, Any, List, Optional, Protocol, Mapping
+from typing import Dict, Any, List, Optional, Protocol, Mapping, runtime_checkable
 from dataclasses import dataclass, field
+import logging
 
 @dataclass
 class ValidationResult:
@@ -11,11 +12,14 @@ class ValidationResult:
     suppress_success_output: bool = False # validator forced edge cases only
     policy_spec: Optional[Mapping[str, Any]] = None # used by executor for suppression of output
 
+@runtime_checkable
 class CommandValidator(Protocol):
     """
     Interface for per-command validators.
     Implementations must be stateless or side-effect free.
     """
+    logger: logging.Logger  # required logging surface
+    DEBUG: bool  # common debug toggle
     def validate(self, parts: List[str], policy: Mapping[str, Any]) -> ValidationResult: ...
     def adjust_environment(self, base_env: Dict[str, str], parts: List[str], policy: Mapping[str, Any]) -> Dict[str, str]: ...
 
