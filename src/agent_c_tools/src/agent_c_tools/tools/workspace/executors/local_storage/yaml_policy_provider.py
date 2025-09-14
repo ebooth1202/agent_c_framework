@@ -1,4 +1,6 @@
 import os
+import textwrap
+
 import yaml
 from pathlib import Path
 from typing import List, Dict, Optional, Mapping, Any
@@ -174,119 +176,231 @@ class YamlPolicyProvider(ConfigLoader):
         """Get the resolved policy file path."""
         return self._policy_file_path
 
+    # inside class YamlPolicyProvider
+    from typing import Mapping, Optional, Any, List
+    import textwrap
 
+    @staticmethod
     def build_command_instructions(
-            self,
-            base_cmd: str,
-            spec: Mapping[str, Any],
+            command_name: str,
+            policy: Mapping[str, Any],
             *,
-            max_examples: int = 6,
-            max_chars: int = 1400
+            subcommand: str | None = None,  # nice, high-level selector
+            spec: Mapping[str, Any] | None = None,  # raw override (advanced)
+            max_chars: int | None = None,
+            description: str | None = None,
     ) -> str:
-        import textwrap
+        """Build human-readable instructions for a command based on a policy.
 
-        def _fmt_list(items):
-            return ", ".join(items) if items else "—"
+        Back-compat: callers may pass only (command_name, policy).
+        Enhancement: callers may target a single subcommand via subcommand=...,
+        or pass a raw spec=... dict directly.
+        """
 
-        def _coerce_flags(entry):
-            # Accept either "flags" or "allowed_flags"
-            if not isinstance(entry, dict):
+        def _coerce_list(v) -> List[str]:
+            if v is None:
                 return []
-            flags = entry.get("allowed_flags")
-            if flags is None:
-                flags = entry.get("flags")
-            return list(flags or [])
+            if isinstance(v, (list, tuple, set)):
+                return [str(x) for x in v]
+            if isinstance(v, dict):
+                return list(v.keys())
+            return [str(v)]
 
-        desc = (spec.get("description") or f"Run safe, policy-constrained {base_cmd} commands.").strip()
+        def _coerce_flags(entry: Mapping[str, Any] | None) -> List[str]:
+            if not isinstance(entry, Mapping):
+                return []
+            flags = entry.get("allowed_flags", entry.get("flags"))
+            return _coerce_list(flags)
 
-        # Handle both dict and list formats for flags
-        flags_config = spec.get("root_flags") or spec.get("flags") or []
-        if isinstance(flags_config, dict):
-            root_flags = list(flags_config.keys())
-        else:
-            root_flags = flags_config
+        def _format_require_flags(entry: Mapping[str, Any] | None) -> List[str]:
+            if not isinstance(entry, Mapping):
+                return []
+            rf = entry.get("require_flags")
+            if not rf:
+                return []
+            out: List[str] = []
+            if isinstance(rf, list):
+                out.extend(map(str, rf))
+            elif isinstance(rf, dict):
+                for k, v in rf.items():
+                    if v is True:
+                        out.append(str(k))
+                    elif isinstance(v, (list, tuple, set)):
+                        inner = ", ".join(map(str, v))
+                        out.append(f"{k}={{{{ {inner} }}}}")
+                    else:
+                        out.append(f"{k}={v}")
+            else:
+                out.append(str(rf))
+            return out
 
-        sub = spec.get("subcommands") or {}
-        deny = spec.get("deny_subcommands") or []
-        lines = [desc, "", "Use only the items below. Anything not listed is rejected.", ""]
+        def _append_global_flags_before(lines: List[str], gb: Mapping[str, Any]):
+            if not gb:
+                return
+            items = []
+            for k, takes_val in gb.items():
+                items.append(f"{k}{' <val>' if bool(takes_val) else ''}")
+            lines.append("Global flags (pre-subcommand): " + ", ".join(items))
 
+        desc = (description
+                or policy.get("description")
+                or f"Run safe, policy-constrained {command_name} commands."
+                ).strip()
+
+        # Root flags (list or dict accepted)
+        root_flags_cfg = policy.get("root_flags", policy.get("flags", []))
+        root_flags = _coerce_list(root_flags_cfg)
+
+        subcommands = policy.get("subcommands")
+        deny_sub = _coerce_list(policy.get("deny_subcommands"))
+        global_before = policy.get("global_flags_before_subcommand") or {}
+        default_timeout = policy.get("default_timeout")
+
+        lines: List[str] = [desc, "", "Use only the items below. Anything not listed is rejected.", ""]
 
         if root_flags:
             lines.append("Allowed root flags: " + ", ".join(root_flags))
+        _append_global_flags_before(lines, global_before)
+        if deny_sub:
+            lines.append("Disallowed subcommands: " + ", ".join(deny_sub))
+        if default_timeout is not None:
+            lines.append(f"Default timeout: {default_timeout}s")
 
+        # ---------- Resolve target (spec or policy summary) ----------
+        target_spec: Optional[Mapping[str, Any]] = None
+        target_label: Optional[str] = None
 
-        # Special-case: npx (no subcommands; allowed_packages + flags)
-        if base_cmd == "npx" and spec.get("allowed_packages"):
-            lines.append("Allowed packages: " + ", ".join(spec["allowed_packages"]))
-            if spec.get("flags"):
-                npx_flags = spec["flags"]
-                if isinstance(npx_flags, dict):
-                    lines.append("Allowed flags: " + ", ".join(npx_flags.keys()))
-                else:
-                    lines.append("Allowed flags: " + ", ".join(npx_flags))
+        if spec is not None:
+            target_spec = spec
+            target_label = subcommand or "<spec>"
+        elif subcommand and isinstance(subcommands, dict) and subcommand in subcommands:
+            target_spec = subcommands[subcommand] or {}
+            target_label = subcommand
 
-        if sub:
-            lines.append("Allowed subcommands:")
-            for name, info in sub.items():
-                info = info or {}
-                flags = info.get("allowed_flags") or info.get("flags") or []
-                bits = []
+        # ---------- Render a single spec (if requested) ----------
+        if target_spec is not None:
+            lines.append("")
+            lines.append(f"Subcommand: {target_label}")
+
+            flags = _coerce_flags(target_spec)
+            req_flags = _format_require_flags(target_spec)
+            deny_args = target_spec.get("deny_args")
+            allow_test_paths = target_spec.get("allow_test_paths")
+            get_only = target_spec.get("get_only")
+            require_no_packages = target_spec.get("require_no_packages")
+            enabled = target_spec.get("enabled")
+            timeout = target_spec.get("timeout")
+
+            if flags:
+                lines.append("  • Allowed flags: " + ", ".join(flags))
+            if req_flags:
+                lines.append("  • Auto-added flags: " + ", ".join(req_flags))
+            if deny_args is not None:
+                lines.append(f"  • deny_args: {bool(deny_args)}")
+            if allow_test_paths:
+                lines.append("  • path-fencing: enabled")
+            if get_only:
+                lines.append("  • only: get")
+            if require_no_packages:
+                lines.append("  • no package names allowed")
+            if enabled is False:
+                lines.append("  • DISABLED")
+            if timeout is not None:
+                lines.append(f"  • timeout: {timeout}s")
+
+            # scripts (supports either legacy allowed_scripts or new scripts dict)
+            scripts = target_spec.get("allowed_scripts")
+            if not scripts and isinstance(target_spec.get("scripts"), Mapping):
+                scripts = list((target_spec["scripts"] or {}).keys())
+            if scripts:
+                lines.append("  • scripts: " + ", ".join(map(str, scripts)))
+
+        # ---------- Otherwise, render a summary of the whole policy ----------
+        else:
+            # npx special case
+            if command_name == "npx" and policy.get("allowed_packages"):
+                lines.append("Allowed packages: " + ", ".join(policy["allowed_packages"]))
+                flags = _coerce_flags(policy)
                 if flags:
-                    bits.append("flags: " + ", ".join(flags))
-                if "allowed_scripts" in info:
-                    bits.append("scripts: " + ", ".join(info["allowed_scripts"]))
-                if info.get("get_only"):
-                    bits.append("only: get")
-                if "require_flags" in info:
-                    # render auto-required flags succinctly
-                    req = info["require_flags"]
-                    if isinstance(req, dict):
-                        req_list = []
-                        for k, v in req.items():
-                            if v is True:
-                                req_list.append(k)
-                            elif isinstance(v, list):
-                                req_list.append(f"{k}={{{{ {', '.join(v)} }}}}")
-                            else:
-                                req_list.append(f"{k}={v}")
-                        bits.append("auto-added: " + ", ".join(req_list))
-                    elif isinstance(req, list):
+                    lines.append("Allowed flags: " + ", ".join(flags))
+
+            # Subcommand listing
+            if isinstance(subcommands, dict) and subcommands:
+                lines.append("")
+                lines.append("Allowed subcommands:")
+                for name, info in subcommands.items():
+                    info = info or {}
+                    flags = _coerce_flags(info)
+                    req = _format_require_flags(info)
+                    bits: List[str] = []
+                    if flags:
+                        bits.append("flags: " + ", ".join(flags))
+                    if req:
                         bits.append("auto-added: " + ", ".join(req))
-                if info.get("require_no_packages"):
-                    bits.append("no package names allowed")
-                if info.get("enabled") is False:
-                    bits.append("DISABLED")
-                line = f"  • {name}" + (": " + "; ".join(bits) if bits else "")
-                lines.append(line)
+                    if info.get("deny_args") is not None:
+                        bits.append(f"deny_args: {bool(info.get('deny_args'))}")
+                    if info.get("allow_test_paths"):
+                        bits.append("path-fencing: enabled")
+                    if info.get("get_only"):
+                        bits.append("only: get")
+                    if info.get("require_no_packages"):
+                        bits.append("no package names allowed")
+                    if info.get("enabled") is False:
+                        bits.append("DISABLED")
+                    # scripts: legacy list or new dict under run.scripts
+                    scripts = info.get("allowed_scripts")
+                    if not scripts and isinstance(info.get("scripts"), Mapping):
+                        scripts = list((info["scripts"] or {}).keys())
+                    if scripts:
+                        bits.append("scripts: " + ", ".join(map(str, scripts)))
+                    lines.append("  • " + name + (": " + "; ".join(bits) if bits else ""))
 
-        if deny:
-            lines.append("Disallowed subcommands: " + ", ".join(deny))
-
-        # A few short, safe examples
-        examples = []
+        # ---------- Examples (best-effort, safe) ----------
+        examples: List[str] = []
         try:
             if root_flags:
-                examples.append(f"{base_cmd} {root_flags[0]}")
+                examples.append(f"{command_name} {root_flags[0]}")
 
-
-            if sub:
-                for s in list(sub)[:3]:
-                    if "allowed_scripts" in sub[s]:
-                        examples.append(f"{base_cmd} {s} {sub[s]['allowed_scripts'][0]}")
-                    elif (sub[s].get("require_flags")):
-                        examples.append(f"{base_cmd} {s}  # required flags auto-added")
+            if target_spec is not None:
+                # Single-subcommand example
+                if target_label:
+                    if target_spec.get("require_flags"):
+                        examples.append(f"{command_name} {target_label}  # required flags auto-added")
+                    elif target_spec.get("allowed_scripts"):
+                        ex_script = target_spec["allowed_scripts"][0]
+                        examples.append(f"{command_name} {target_label} {ex_script}")
+                    elif isinstance(target_spec.get("scripts"), Mapping):
+                        keys = list(target_spec["scripts"].keys())
+                        if keys:
+                            examples.append(f"{command_name} {target_label} {keys[0]}")
                     else:
-                        examples.append(f"{base_cmd} {s}")
+                        examples.append(f"{command_name} {target_label}")
+            else:
+                # Policy-level examples
+                if isinstance(subcommands, dict) and subcommands:
+                    for sname, sinfo in list(subcommands.items())[:3]:
+                        if sinfo and sinfo.get("allowed_scripts"):
+                            examples.append(f"{command_name} {sname} {sinfo['allowed_scripts'][0]}")
+                        elif sinfo and isinstance(sinfo.get("scripts"), Mapping):
+                            skeys = list((sinfo["scripts"] or {}).keys())
+                            if skeys:
+                                examples.append(f"{command_name} {sname} {skeys[0]}")
+                        elif sinfo and sinfo.get("require_flags"):
+                            examples.append(f"{command_name} {sname}  # required flags auto-added")
+                        else:
+                            examples.append(f"{command_name} {sname}")
 
-            if base_cmd == "npx" and spec.get("allowed_packages"):
-                examples.append(f"npx --yes {spec['allowed_packages'][0]} --version")
-        except Exception as e:
-            self.logger.exception(f"Failed to build examples for {base_cmd}, {e}")
+            if command_name == "npx" and policy.get("allowed_packages"):
+                examples.append(f"npx --yes {policy['allowed_packages'][0]} --version")
+        except Exception:
+            # keep examples best-effort and non-fatal
+            pass
 
         if examples:
             lines += ["", "Examples:", *[f"  • {e}" for e in examples]]
 
         text = "\n".join(lines).strip()
-        if max_chars and len(text) > max_chars:
+        if isinstance(max_chars, int) and max_chars > 0 and len(text) > max_chars:
             text = textwrap.shorten(text, width=max_chars, placeholder="…")
         return text
+
