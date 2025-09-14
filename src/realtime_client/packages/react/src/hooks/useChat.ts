@@ -179,7 +179,6 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     if (!client) return;
     
     const sessionManager = client.getSessionManager();
-    if (!sessionManager) return;
     
     // Initial update
     updateChatInfo();
@@ -307,15 +306,18 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     };
     
     // Subscribe to turn events on client for typing indicators
+    // These are always subscribed if client exists
     client.on('user_turn_start', handleUserTurnStart);
     client.on('user_turn_end', handleUserTurnEnd);
     client.on('chat_session_changed', handleSessionChanged);
     
-    // Subscribe to SessionManager events for message handling
-    sessionManager.on('message-added', handleMessageAdded);
-    sessionManager.on('message-streaming', handleMessageStreaming);
-    sessionManager.on('message-complete', handleMessageComplete);
-    sessionManager.on('session-messages-loaded', handleSessionMessagesLoaded);
+    // Subscribe to SessionManager events for message handling (only if sessionManager exists)
+    if (sessionManager) {
+      sessionManager.on('message-added', handleMessageAdded);
+      sessionManager.on('message-streaming', handleMessageStreaming);
+      sessionManager.on('message-complete', handleMessageComplete);
+      sessionManager.on('session-messages-loaded', handleSessionMessagesLoaded);
+    }
     
     return () => {
       // client and sessionManager must be accessible in closure

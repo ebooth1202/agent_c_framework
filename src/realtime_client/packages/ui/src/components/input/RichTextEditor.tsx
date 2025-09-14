@@ -3,7 +3,7 @@
 import * as React from "react"
 import { cn } from "../../lib/utils"
 import { MarkdownEditorClient } from "../editor/MarkdownEditorClient"
-import { useChat, useTurnState } from "@agentc/realtime-react"
+import { useTurnState } from "@agentc/realtime-react"
 
 /**
  * RichTextEditor component
@@ -72,7 +72,6 @@ const RichTextEditor = React.forwardRef<HTMLDivElement, RichTextEditorProps>(
     ...props 
   }, ref) => {
     // SDK hooks
-    const { sendMessage, isSending, error } = useChat()
     const { canSendInput, hasTurnManager } = useTurnState()
     
     // State for internal management
@@ -88,14 +87,14 @@ const RichTextEditor = React.forwardRef<HTMLDivElement, RichTextEditorProps>(
       
       // If there's a turn manager, respect turn state
       if (hasTurnManager) {
-        return !canSendInput || isSending || isSubmitting
+        return !canSendInput || isSubmitting
       }
       
       // Otherwise, only disable during submission
-      return isSending || isSubmitting
-    }, [disabled, hasTurnManager, canSendInput, isSending, isSubmitting])
+      return isSubmitting
+    }, [disabled, hasTurnManager, canSendInput, isSubmitting])
     
-    // Handle submission with SDK integration
+    // Handle submission - delegate actual sending to parent
     const handleSubmit = React.useCallback(async (text?: string) => {
       // Use provided text or current value
       const messageText = text || value
@@ -114,23 +113,23 @@ const RichTextEditor = React.forwardRef<HTMLDivElement, RichTextEditorProps>(
       setSubmitError(null)
       
       try {
-        // Send message through SDK
-        await sendMessage(messageText)
+        // NOTE: Parent component (InputArea) handles the actual sendMessage call
+        // We only handle editor-specific logic here
         
-        // Clear the editor on successful submission
+        // Clear the editor on submission
         onChange("")
         
-        // Call the onSubmit callback
+        // Call the onSubmit callback to notify parent
         onSubmit()
       } catch (err) {
         // Handle submission error
-        const errorMessage = err instanceof Error ? err.message : "Failed to send message"
+        const errorMessage = err instanceof Error ? err.message : "Failed to submit message"
         setSubmitError(errorMessage)
         console.error("Failed to submit message:", err)
       } finally {
         setIsSubmitting(false)
       }
-    }, [value, isDisabled, sendMessage, onChange, onSubmit])
+    }, [value, isDisabled, onChange, onSubmit])
     
     // Handle Enter key for submission (without Shift)
     const handleKeyDown = React.useCallback((event: KeyboardEvent) => {
@@ -157,10 +156,10 @@ const RichTextEditor = React.forwardRef<HTMLDivElement, RichTextEditorProps>(
         // Visual feedback for disabled state
         isDisabled && "opacity-60 cursor-not-allowed",
         // Error state styling
-        (error || submitError) && "border-destructive",
+        submitError && "border-destructive",
         className
       )
-    }), [value, onChange, placeholder, isDisabled, handleSubmit, maxHeight, className, error, submitError])
+    }), [value, onChange, placeholder, isDisabled, handleSubmit, maxHeight, className, submitError])
     
     return (
       <div className="relative w-full">
@@ -172,13 +171,13 @@ const RichTextEditor = React.forwardRef<HTMLDivElement, RichTextEditorProps>(
         />
         
         {/* Error message display */}
-        {(error || submitError) && (
+        {submitError && (
           <div 
             className="mt-2 text-sm text-destructive"
             role="alert"
             aria-live="polite"
           >
-            {error || submitError}
+            {submitError}
           </div>
         )}
         

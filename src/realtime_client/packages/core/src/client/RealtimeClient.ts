@@ -760,13 +760,12 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
 
     /**
      * Send text input to the agent
+     * 
+     * Note: The user message will be added to the session when the server
+     * responds with a UserMessageEvent, maintaining the server as the
+     * single source of truth for message history.
      */
     sendText(text: string, fileIds?: string[]): void {
-        // Add user message to session history
-        if (this.sessionManager) {
-            this.sessionManager.addUserMessage(text);
-        }
-        
         const event: TextInputEvent = { type: 'text_input', text };
         if (fileIds && fileIds.length > 0) {
             event.file_ids = fileIds;

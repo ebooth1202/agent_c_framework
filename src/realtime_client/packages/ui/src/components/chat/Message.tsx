@@ -438,20 +438,7 @@ const Message = React.forwardRef<HTMLDivElement, MessageProps>(
                 </span>
               </div>
             )}
-            
-            {/* User message hover actions */}
-            {isUser && !isEditing && (
-              <div className="absolute -bottom-1 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2 text-xs"
-                  onClick={() => setIsEditing(true)}
-                >
-                  Edit
-                </Button>
-              </div>
-            )}
+
           </div>
           
           {/* Message Footer for assistant messages */}

@@ -230,6 +230,16 @@ describe('useChat - Part 1: Message Management', () => {
       // User message is not added locally anymore - EventStreamProcessor will emit message-added
       // So messages should still be empty after sendMessage
       expect(result.current.messages).toHaveLength(0);
+
+      // Simulate server responding with UserMessageEvent (handled by EventStreamProcessor)
+      emitSessionEvent('message-added', {
+        sessionId: 'msg-1',
+        message: createMessage('user', 'Hello world')
+      });
+
+      // Now the message should appear
+      expect(result.current.messages).toHaveLength(1);
+      expect(result.current.messages[0]?.content).toBe('Hello world');
     });
 
     it('throws error when client not available', async () => {
@@ -286,6 +296,15 @@ describe('useChat - Part 1: Message Management', () => {
       expect(result.current.isSending).toBe(false);
       // Note: message is not added locally anymore, EventStreamProcessor will emit message-added
       expect(result.current.messages).toHaveLength(0);
+
+      // Simulate server response
+      emitSessionEvent('message-added', {
+        sessionId: 'msg-1',
+        message: createMessage('user', 'Test')
+      });
+
+      // Now message should appear
+      expect(result.current.messages).toHaveLength(1);
     });
 
     it('limits messages to maxMessages when message-added events are emitted', async () => {
@@ -523,10 +542,13 @@ describe('useChat - Part 1: Message Management', () => {
     it('clears messages on session change without messages', () => {
       const { result } = renderHook(() => useChat());
 
-      // Add some existing messages
-      act(() => {
-        result.current.sendMessage('Existing message');
+      // Add some existing messages via server event
+      emitSessionEvent('message-added', {
+        sessionId: 'msg-1',
+        message: createMessage('user', 'Existing message')
       });
+
+      expect(result.current.messages).toHaveLength(1);
 
       // Emit session change with no messages
       const emptySession = createTestSession('empty-session', []);
@@ -1049,9 +1071,11 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
     it('handles session change with invalid data', () => {
       const { result } = renderHook(() => useChat());
 
-      // Add initial message
-      emitClientEvent('text_delta', { text: 'Initial' });
-      emitClientEvent('completion', { running: false });
+      // Add initial message via server event
+      emitSessionEvent('message-added', {
+        sessionId: 'msg-1',
+        message: createMessage('user', 'Initial')
+      });
       expect(result.current.messages).toHaveLength(1);
 
       // Invalid session change (no chat_session) - implementation doesn't update state
@@ -1099,9 +1123,11 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
     it('handles maxMessages of 0', () => {
       const { result } = renderHook(() => useChat({ maxMessages: 0 }));
 
-      // Try to add messages
-      emitClientEvent('text_delta', { text: 'Test' });
-      emitClientEvent('completion', { running: false });
+      // Try to add messages via server event
+      emitSessionEvent('message-added', {
+        sessionId: 'msg-1',
+        message: createMessage('user', 'Test')
+      });
 
       // Note: The current implementation doesn't special-case maxMessages=0
       // It will still add the message because the check is:
@@ -1114,17 +1140,31 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
     it('handles maxMessages of 1', async () => {
       const { result } = renderHook(() => useChat({ maxMessages: 1 }));
 
-      // Add first message
+      // Send first message
       await act(async () => {
         await result.current.sendMessage('First');
       });
+      
+      // Simulate server response for first message
+      emitSessionEvent('message-added', {
+        sessionId: 'msg-1',
+        message: createMessage('user', 'First')
+      });
+      
       expect(result.current.messages).toHaveLength(1);
       expect(result.current.messages[0]?.content).toBe('First');
 
-      // Add second message
+      // Send second message
       await act(async () => {
         await result.current.sendMessage('Second');
       });
+      
+      // Simulate server response for second message
+      emitSessionEvent('message-added', {
+        sessionId: 'msg-2',
+        message: createMessage('user', 'Second')
+      });
+      
       expect(result.current.messages).toHaveLength(1);
       expect(result.current.messages[0]?.content).toBe('Second');
     });
@@ -1167,9 +1207,21 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
         await result.current.sendMessage('User new');
       });
 
+      // Simulate server response for user message
+      emitSessionEvent('message-added', {
+        sessionId: 'msg-user',
+        message: createMessage('user', 'User new')
+      });
+
       // Stream assistant message
-      emitClientEvent('text_delta', { text: 'Assistant new' });
-      emitClientEvent('completion', { running: false });
+      emitSessionEvent('message-streaming', {
+        sessionId: 'stream-1',
+        message: createMessage('assistant', 'Assistant new')
+      });
+      emitSessionEvent('message-complete', {
+        sessionId: 'stream-1', 
+        message: createMessage('assistant', 'Assistant new')
+      });
 
       // Should only have last 3 messages
       expect(result.current.messages).toHaveLength(3);
@@ -1184,10 +1236,12 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
         { initialProps: { maxMessages: 5 } }
       );
 
-      // Add 5 messages
+      // Add 5 messages via server events
       for (let i = 1; i <= 5; i++) {
-        emitClientEvent('text_delta', { text: `Message ${i}` });
-        emitClientEvent('completion', { running: false });
+        emitSessionEvent('message-added', {
+          sessionId: `msg-${i}`,
+          message: createMessage('user', `Message ${i}`)
+        });
       }
       expect(result.current.messages).toHaveLength(5);
 
@@ -1199,8 +1253,10 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
       expect(result.current.messages).toHaveLength(5);
 
       // Add a new message - NOW it should trim to maxMessages
-      emitClientEvent('text_delta', { text: 'Message 6' });
-      emitClientEvent('completion', { running: false });
+      emitSessionEvent('message-added', {
+        sessionId: 'msg-6',
+        message: createMessage('user', 'Message 6')
+      });
 
       // Should only keep last 2 messages
       expect(result.current.messages).toHaveLength(2);
@@ -1357,27 +1413,50 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
     it('returns last message from array', async () => {
       const { result } = renderHook(() => useChat());
 
+      // Send first message
       await act(async () => {
         await result.current.sendMessage('First');
       });
+      
+      // Simulate server response
+      emitSessionEvent('message-added', {
+        sessionId: 'msg-1',
+        message: createMessage('user', 'First')
+      });
       expect(result.current.lastMessage?.content).toBe('First');
 
+      // Send second message
       await act(async () => {
         await result.current.sendMessage('Second');
       });
+      
+      // Simulate server response
+      emitSessionEvent('message-added', {
+        sessionId: 'msg-2',
+        message: createMessage('user', 'Second')
+      });
       expect(result.current.lastMessage?.content).toBe('Second');
 
-      emitClientEvent('text_delta', { text: 'Third' });
-      emitClientEvent('completion', { running: false });
+      // Add third message via streaming
+      emitSessionEvent('message-streaming', {
+        sessionId: 'stream-1',
+        message: createMessage('assistant', 'Third')
+      });
+      emitSessionEvent('message-complete', {
+        sessionId: 'stream-1',
+        message: createMessage('assistant', 'Third')
+      });
       expect(result.current.lastMessage?.content).toBe('Third');
     });
 
     it('updates when messages are cleared', () => {
       const { result } = renderHook(() => useChat());
 
-      // Add messages
-      emitClientEvent('text_delta', { text: 'Message' });
-      emitClientEvent('completion', { running: false });
+      // Add message via server event
+      emitSessionEvent('message-added', {
+        sessionId: 'msg-1',
+        message: createMessage('user', 'Message')
+      });
       expect(result.current.lastMessage?.content).toBe('Message');
 
       // Clear via session change
@@ -1421,6 +1500,12 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
       await act(async () => {
         await result.current.sendMessage('Before error');
       });
+      
+      // Simulate server response for first message
+      emitSessionEvent('message-added', {
+        sessionId: 'msg-1',
+        message: createMessage('user', 'Before error')
+      });
       expect(result.current.messages).toHaveLength(1);
 
       // Cause an error
@@ -1436,7 +1521,7 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
         }
       });
 
-      // Messages should not include failed message
+      // Messages should not include failed message (server never sent response)
       expect(result.current.messages).toHaveLength(1);
       expect(result.current.messages[0]?.content).toBe('Before error');
 
@@ -1445,6 +1530,13 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
       await act(async () => {
         await result.current.sendMessage('After error');
       });
+      
+      // Simulate server response for message after error
+      emitSessionEvent('message-added', {
+        sessionId: 'msg-2',
+        message: createMessage('user', 'After error')
+      });
+      
       expect(result.current.messages).toHaveLength(2);
       expect(result.current.messages[1]?.content).toBe('After error');
     });

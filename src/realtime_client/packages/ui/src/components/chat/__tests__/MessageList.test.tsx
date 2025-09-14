@@ -51,12 +51,14 @@ const createMockUseChat = () => ({
   messages: [] as ChatMessage[],
   isAgentTyping: false,
   partialMessage: null as string | null,
+  streamingMessage: null as string | null,
   sendMessage: vi.fn(),
   clearMessages: vi.fn(),
   isLoading: false,
   error: null,
   updateMessage: vi.fn(),
-  deleteMessage: vi.fn()
+  deleteMessage: vi.fn(),
+  isSubSessionMessage: vi.fn(() => false)
 });
 
 describe('MessageList', () => {
