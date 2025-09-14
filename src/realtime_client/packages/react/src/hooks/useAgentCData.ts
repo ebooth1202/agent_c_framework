@@ -7,13 +7,13 @@
  * - avatar_list (available avatars)
  * - voice_list (available voices)
  * - agent_list (available agents)
- * - tool_catalog (available toolsets)
+ * - tool_catalog (available tools)
  * - chat_session_changed (current session)
  */
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRealtimeClientSafe } from '../providers/AgentCContext';
-import type { User, Agent, AgentConfiguration, Voice, Avatar, Toolset } from '@agentc/realtime-core';
+import type { User, Agent, AgentConfiguration, Voice, Avatar, Tool } from '@agentc/realtime-core';
 
 /**
  * All configuration data from WebSocket initialization
@@ -35,7 +35,7 @@ export interface AgentCData {
   avatars: Avatar[];
   
   /** Available tool sets */
-  toolsets: Toolset[];
+  tools: Tool[];
 }
 
 /**
@@ -79,7 +79,7 @@ export interface UseAgentCDataReturn {
  *       <p>Available agents: {data.agents.length}</p>
  *       <p>Available voices: {data.voices.length}</p>
  *       <p>Available avatars: {data.avatars.length}</p>
- *       <p>Available toolsets: {data.toolsets.length}</p>
+ *       <p>Available tools: {data.tools.length}</p>
  *     </div>
  *   );
  * }
@@ -95,7 +95,7 @@ export function useAgentCData(): UseAgentCDataReturn {
     agents: [],
     currentAgentConfig: null,
     avatars: [],
-    toolsets: []
+    tools: []
   });
   
   const [isLoading, setIsLoading] = useState(true);
@@ -111,7 +111,7 @@ export function useAgentCData(): UseAgentCDataReturn {
         agents: [],
         currentAgentConfig: null,
         avatars: [],
-        toolsets: []
+        tools: []
       });
       setIsLoading(false);
       setIsInitialized(false);
@@ -127,7 +127,7 @@ export function useAgentCData(): UseAgentCDataReturn {
         agents: client.getAgentsList(),
         currentAgentConfig: client.getCurrentAgentConfig(),
         avatars: client.getAvailableAvatars(),
-        toolsets: client.getToolsets()
+        tools: client.getTools()
       };
       
       setData(newData);
@@ -186,8 +186,8 @@ export function useAgentCData(): UseAgentCDataReturn {
     };
     
     const handleToolCatalog = (event: any) => {
-      if (event.toolsets) {
-        setData(prev => ({ ...prev, toolsets: event.toolsets }));
+      if (event.tools) {
+        setData(prev => ({ ...prev, tools: event.tools }));
       }
     };
     
@@ -269,4 +269,4 @@ export function useAgentCData(): UseAgentCDataReturn {
 }
 
 // Re-export types for convenience
-export type { User, Agent, AgentConfiguration, Voice, Avatar, Toolset };
+export type { User, Agent, AgentConfiguration, Voice, Avatar, Tool };

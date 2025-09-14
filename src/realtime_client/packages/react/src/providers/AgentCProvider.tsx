@@ -80,7 +80,7 @@ export function AgentCProvider({
     agents: [],
     avatars: [],
     voices: [],
-    toolsets: [],
+    tools: [],
     currentSession: null
   });
   
@@ -185,7 +185,7 @@ export function AgentCProvider({
               newState.voices = data.voices;
               break;
             case 'tool_catalog':
-              newState.toolsets = data.toolsets;
+              newState.tools = data.tools;
               break;
             case 'chat_session_changed':
               newState.currentSession = data.chat_session;

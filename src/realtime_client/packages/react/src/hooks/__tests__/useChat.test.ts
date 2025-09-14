@@ -157,7 +157,7 @@ describe('useChat - Part 1: Message Management', () => {
       expect(result.current.currentSessionId).toBeNull();
       expect(result.current.isSending).toBe(false);
       expect(result.current.isAgentTyping).toBe(false);
-      expect(result.current.partialMessage).toBe('');
+      expect(result.current.streamingMessage).toBeNull();
       expect(result.current.error).toBeNull();
       expect(result.current.lastMessage).toBeNull();
     });
@@ -186,18 +186,16 @@ describe('useChat - Part 1: Message Management', () => {
     it('subscribes to all required events', () => {
       renderHook(() => useChat());
 
-      // Verify client events
-      expect(mockClient.on).toHaveBeenCalledWith('text_delta', expect.any(Function));
-      expect(mockClient.on).toHaveBeenCalledWith('completion', expect.any(Function));
+      // Verify client events for turn management
       expect(mockClient.on).toHaveBeenCalledWith('user_turn_start', expect.any(Function));
       expect(mockClient.on).toHaveBeenCalledWith('user_turn_end', expect.any(Function));
       expect(mockClient.on).toHaveBeenCalledWith('chat_session_changed', expect.any(Function));
 
-      // Verify SessionManager events
-      expect(mockSessionManager.on).toHaveBeenCalledWith(
-        'session-messages-loaded',
-        expect.any(Function)
-      );
+      // Verify SessionManager events for message handling
+      expect(mockSessionManager.on).toHaveBeenCalledWith('message-added', expect.any(Function));
+      expect(mockSessionManager.on).toHaveBeenCalledWith('message-streaming', expect.any(Function));
+      expect(mockSessionManager.on).toHaveBeenCalledWith('message-complete', expect.any(Function));
+      expect(mockSessionManager.on).toHaveBeenCalledWith('session-messages-loaded', expect.any(Function));
     });
 
     it('unsubscribes all events on unmount', () => {
@@ -205,18 +203,16 @@ describe('useChat - Part 1: Message Management', () => {
 
       unmount();
 
-      // Verify client event cleanup
-      expect(mockClient.off).toHaveBeenCalledWith('text_delta', expect.any(Function));
-      expect(mockClient.off).toHaveBeenCalledWith('completion', expect.any(Function));
+      // Verify client event cleanup for turn management
       expect(mockClient.off).toHaveBeenCalledWith('user_turn_start', expect.any(Function));
       expect(mockClient.off).toHaveBeenCalledWith('user_turn_end', expect.any(Function));
       expect(mockClient.off).toHaveBeenCalledWith('chat_session_changed', expect.any(Function));
 
-      // Verify SessionManager event cleanup
-      expect(mockSessionManager.off).toHaveBeenCalledWith(
-        'session-messages-loaded',
-        expect.any(Function)
-      );
+      // Verify SessionManager event cleanup for message handling
+      expect(mockSessionManager.off).toHaveBeenCalledWith('message-added', expect.any(Function));
+      expect(mockSessionManager.off).toHaveBeenCalledWith('message-streaming', expect.any(Function));
+      expect(mockSessionManager.off).toHaveBeenCalledWith('message-complete', expect.any(Function));
+      expect(mockSessionManager.off).toHaveBeenCalledWith('session-messages-loaded', expect.any(Function));
     });
   });
 
@@ -231,14 +227,9 @@ describe('useChat - Part 1: Message Management', () => {
       // Verify client.sendText was called
       expect(mockClient.sendText).toHaveBeenCalledWith('Hello world');
 
-      // Verify user message was added
-      expect(result.current.messages).toHaveLength(1);
-      expect(result.current.messages[0]).toMatchObject({
-        role: 'user',
-        content: 'Hello world',
-        format: 'text'
-      });
-      expect(result.current.messages[0]?.timestamp).toBeDefined();
+      // User message is not added locally anymore - EventStreamProcessor will emit message-added
+      // So messages should still be empty after sendMessage
+      expect(result.current.messages).toHaveLength(0);
     });
 
     it('throws error when client not available', async () => {
@@ -293,17 +284,18 @@ describe('useChat - Part 1: Message Management', () => {
       expect(mockClient.sendText).toHaveBeenCalledWith('Test');
       // Verify isSending is false after completion  
       expect(result.current.isSending).toBe(false);
-      // Verify message was added
-      expect(result.current.messages).toHaveLength(1);
+      // Note: message is not added locally anymore, EventStreamProcessor will emit message-added
+      expect(result.current.messages).toHaveLength(0);
     });
 
-    it('limits messages to maxMessages', async () => {
+    it('limits messages to maxMessages when message-added events are emitted', async () => {
       const { result } = renderHook(() => useChat({ maxMessages: 3 }));
 
-      // Send multiple messages
+      // Emit message-added events to simulate messages being added
       for (let i = 1; i <= 5; i++) {
-        await act(async () => {
-          await result.current.sendMessage(`Message ${i}`);
+        emitSessionEvent('message-added', {
+          sessionId: `session-${i}`,
+          message: createMessage('user', `Message ${i}`)
         });
       }
 
@@ -346,52 +338,71 @@ describe('useChat - Part 1: Message Management', () => {
   });
 
   describe('Text Streaming', () => {
-    it('handles text_delta events', () => {
+    it('handles message-streaming events', () => {
       const { result } = renderHook(() => useChat());
 
-      // Emit first text_delta
-      emitClientEvent('text_delta', { text: 'Hello' });
+      // Emit first message-streaming
+      emitSessionEvent('message-streaming', { 
+        sessionId: 'stream-1',
+        message: createMessage('assistant', 'Hello')
+      });
 
       expect(result.current.isAgentTyping).toBe(true);
-      expect(result.current.partialMessage).toBe('Hello');
+      expect(result.current.streamingMessage?.content).toBe('Hello');
 
-      // Emit second text_delta
-      emitClientEvent('text_delta', { text: ' world' });
+      // Emit second message-streaming with accumulated text
+      emitSessionEvent('message-streaming', { 
+        sessionId: 'stream-1',
+        message: createMessage('assistant', 'Hello world')
+      });
 
-      expect(result.current.partialMessage).toBe('Hello world');
+      expect(result.current.streamingMessage?.content).toBe('Hello world');
       expect(result.current.isAgentTyping).toBe(true);
     });
 
-    it('stores item_id from text_delta', () => {
+    it('tracks sessionId during streaming', () => {
       const { result } = renderHook(() => useChat());
 
-      // Emit text_delta with item_id
-      emitClientEvent('text_delta', { 
-        text: 'Hi there',
-        item_id: 'msg-123'
+      // Emit message-streaming with sessionId
+      emitSessionEvent('message-streaming', { 
+        sessionId: 'msg-123',
+        message: createMessage('assistant', 'Hi there')
       });
 
-      expect(result.current.partialMessage).toBe('Hi there');
+      expect(result.current.streamingMessage?.content).toBe('Hi there');
 
-      // Complete the message to verify item_id was stored
-      emitClientEvent('completion', { running: false });
+      // Complete the message with the same sessionId
+      emitSessionEvent('message-complete', { 
+        sessionId: 'msg-123',
+        message: createMessage('assistant', 'Hi there')
+      });
 
       expect(result.current.messages).toHaveLength(1);
       expect(result.current.messages[0]?.content).toBe('Hi there');
+      expect(result.current.streamingMessage).toBeNull();
     });
 
-    it('completes message on completion event', () => {
+    it('completes message on message-complete event', () => {
       const { result } = renderHook(() => useChat());
 
-      // Build up partial message
-      emitClientEvent('text_delta', { text: 'Complete' });
-      emitClientEvent('text_delta', { text: ' message' });
+      // Stream a message
+      emitSessionEvent('message-streaming', { 
+        sessionId: 'stream-1',
+        message: createMessage('assistant', 'Complete')
+      });
+      emitSessionEvent('message-streaming', { 
+        sessionId: 'stream-1',
+        message: createMessage('assistant', 'Complete message')
+      });
 
-      expect(result.current.partialMessage).toBe('Complete message');
+      expect(result.current.streamingMessage?.content).toBe('Complete message');
       expect(result.current.isAgentTyping).toBe(true);
 
-      // Emit completion
-      emitClientEvent('completion', { running: false });
+      // Emit message-complete
+      emitSessionEvent('message-complete', { 
+        sessionId: 'stream-1',
+        message: createMessage('assistant', 'Complete message')
+      });
 
       // Verify message was added
       expect(result.current.messages).toHaveLength(1);
@@ -402,18 +413,22 @@ describe('useChat - Part 1: Message Management', () => {
       });
 
       // Verify state was cleared
-      expect(result.current.partialMessage).toBe('');
+      expect(result.current.streamingMessage).toBeNull();
       expect(result.current.isAgentTyping).toBe(false);
     });
 
-    it('ignores completion if no buffered message', () => {
+    it('handles message-complete without prior streaming', () => {
       const { result } = renderHook(() => useChat());
 
-      // Emit completion without any text_delta
-      emitClientEvent('completion', { running: false });
+      // Emit message-complete without any message-streaming
+      emitSessionEvent('message-complete', { 
+        sessionId: 'complete-1',
+        message: createMessage('assistant', 'Direct complete message')
+      });
 
-      // Verify no message was added
-      expect(result.current.messages).toHaveLength(0);
+      // Message should still be added
+      expect(result.current.messages).toHaveLength(1);
+      expect(result.current.messages[0]?.content).toBe('Direct complete message');
       expect(result.current.isAgentTyping).toBe(false);
     });
 
@@ -421,17 +436,35 @@ describe('useChat - Part 1: Message Management', () => {
       const { result } = renderHook(() => useChat());
 
       // First streaming sequence
-      emitClientEvent('text_delta', { text: 'First' });
-      emitClientEvent('text_delta', { text: ' message' });
-      emitClientEvent('completion', { running: false });
+      emitSessionEvent('message-streaming', { 
+        sessionId: 'stream-1',
+        message: createMessage('assistant', 'First')
+      });
+      emitSessionEvent('message-streaming', { 
+        sessionId: 'stream-1',
+        message: createMessage('assistant', 'First message')
+      });
+      emitSessionEvent('message-complete', { 
+        sessionId: 'stream-1',
+        message: createMessage('assistant', 'First message')
+      });
 
       expect(result.current.messages).toHaveLength(1);
       expect(result.current.messages[0]?.content).toBe('First message');
 
       // Second streaming sequence
-      emitClientEvent('text_delta', { text: 'Second' });
-      emitClientEvent('text_delta', { text: ' message' });
-      emitClientEvent('completion', { running: false });
+      emitSessionEvent('message-streaming', { 
+        sessionId: 'stream-2',
+        message: createMessage('assistant', 'Second')
+      });
+      emitSessionEvent('message-streaming', { 
+        sessionId: 'stream-2',
+        message: createMessage('assistant', 'Second message')
+      });
+      emitSessionEvent('message-complete', { 
+        sessionId: 'stream-2',
+        message: createMessage('assistant', 'Second message')
+      });
 
       expect(result.current.messages).toHaveLength(2);
       expect(result.current.messages[1]?.content).toBe('Second message');
@@ -442,8 +475,14 @@ describe('useChat - Part 1: Message Management', () => {
 
       // Stream three messages
       for (let i = 1; i <= 3; i++) {
-        emitClientEvent('text_delta', { text: `Message ${i}` });
-        emitClientEvent('completion', { running: false });
+        emitSessionEvent('message-streaming', { 
+          sessionId: `stream-${i}`,
+          message: createMessage('assistant', `Message ${i}`)
+        });
+        emitSessionEvent('message-complete', { 
+          sessionId: `stream-${i}`,
+          message: createMessage('assistant', `Message ${i}`)
+        });
       }
 
       // Should only keep last 2 messages
@@ -477,8 +516,8 @@ describe('useChat - Part 1: Message Management', () => {
       expect(mockEnsureMessagesFormat).toHaveBeenCalledWith(existingMessages);
       expect(result.current.messages).toEqual(existingMessages);
 
-      // Verify partial message was cleared
-      expect(result.current.partialMessage).toBe('');
+      // Verify streaming state was cleared
+      expect(result.current.streamingMessage).toBeNull();
     });
 
     it('clears messages on session change without messages', () => {
@@ -497,7 +536,7 @@ describe('useChat - Part 1: Message Management', () => {
 
       // Verify messages were cleared
       expect(result.current.messages).toEqual([]);
-      expect(result.current.partialMessage).toBe('');
+      expect(result.current.streamingMessage).toBeNull();
     });
 
     it('handles session-messages-loaded event', () => {
@@ -514,10 +553,10 @@ describe('useChat - Part 1: Message Management', () => {
         messages: loadedMessages
       });
 
-      // Verify messages were formatted and set
-      expect(mockEnsureMessagesFormat).toHaveBeenCalledWith(loadedMessages);
+      // Messages from EventStreamProcessor come already formatted
+      // So ensureMessagesFormat is not called in the new implementation
       expect(result.current.messages).toEqual(loadedMessages);
-      expect(result.current.partialMessage).toBe('');
+      expect(result.current.streamingMessage).toBeNull();
     });
 
     it('limits loaded messages to maxMessages', () => {
@@ -540,12 +579,15 @@ describe('useChat - Part 1: Message Management', () => {
       expect(result.current.messages[2]?.content).toBe('Message 10');
     });
 
-    it('clears partial message when loading session messages', () => {
+    it('clears streaming message when loading session messages', () => {
       const { result } = renderHook(() => useChat());
 
       // Start streaming a message
-      emitClientEvent('text_delta', { text: 'Partial' });
-      expect(result.current.partialMessage).toBe('Partial');
+      emitSessionEvent('message-streaming', { 
+        sessionId: 'stream-1',
+        message: createMessage('assistant', 'Partial')
+      });
+      expect(result.current.streamingMessage?.content).toBe('Partial');
 
       // Load session messages
       const messages = [createMessage('user', 'Loaded message')];
@@ -554,60 +596,90 @@ describe('useChat - Part 1: Message Management', () => {
         messages
       });
 
-      // Verify partial was cleared
-      expect(result.current.partialMessage).toBe('');
+      // Verify streaming was cleared
+      expect(result.current.streamingMessage).toBeNull();
       expect(result.current.messages).toEqual(messages);
     });
   });
 
   describe('Message Buffering and Assembly', () => {
-    it('accumulates text deltas correctly', () => {
+    it('updates streaming message correctly', () => {
       const { result } = renderHook(() => useChat());
 
-      const chunks = ['This', ' is', ' a', ' longer', ' message'];
+      const chunks = ['This', 'This is', 'This is a', 'This is a longer', 'This is a longer message'];
       
-      chunks.forEach((chunk) => {
-        emitClientEvent('text_delta', { text: chunk });
+      chunks.forEach((text, index) => {
+        emitSessionEvent('message-streaming', { 
+          sessionId: 'stream-1',
+          message: createMessage('assistant', text)
+        });
       });
 
-      expect(result.current.partialMessage).toBe('This is a longer message');
+      expect(result.current.streamingMessage?.content).toBe('This is a longer message');
 
       // Complete the message
-      emitClientEvent('completion', { running: false });
+      emitSessionEvent('message-complete', { 
+        sessionId: 'stream-1',
+        message: createMessage('assistant', 'This is a longer message')
+      });
 
       expect(result.current.messages[0]?.content).toBe('This is a longer message');
     });
 
-    it('handles empty text in text_delta', () => {
+    it('handles message-streaming with unchanged content', () => {
       const { result } = renderHook(() => useChat());
 
-      emitClientEvent('text_delta', { text: 'Start' });
-      emitClientEvent('text_delta', { text: '' });
-      emitClientEvent('text_delta', { text: 'End' });
+      emitSessionEvent('message-streaming', { 
+        sessionId: 'stream-1',
+        message: createMessage('assistant', 'Start')
+      });
+      // Same content - simulating no change
+      emitSessionEvent('message-streaming', { 
+        sessionId: 'stream-1',
+        message: createMessage('assistant', 'Start')
+      });
+      emitSessionEvent('message-streaming', { 
+        sessionId: 'stream-1',
+        message: createMessage('assistant', 'StartEnd')
+      });
 
-      expect(result.current.partialMessage).toBe('StartEnd');
+      expect(result.current.streamingMessage?.content).toBe('StartEnd');
     });
 
     it('preserves message order with mixed user and assistant messages', async () => {
       const { result } = renderHook(() => useChat());
 
-      // User message
-      await act(async () => {
-        await result.current.sendMessage('Question 1');
+      // User message (emitted by EventStreamProcessor)
+      emitSessionEvent('message-added', {
+        sessionId: 'msg-1',
+        message: createMessage('user', 'Question 1')
       });
 
       // Assistant response (streamed)
-      emitClientEvent('text_delta', { text: 'Answer 1' });
-      emitClientEvent('completion', { running: false });
+      emitSessionEvent('message-streaming', { 
+        sessionId: 'stream-1',
+        message: createMessage('assistant', 'Answer 1')
+      });
+      emitSessionEvent('message-complete', { 
+        sessionId: 'stream-1',
+        message: createMessage('assistant', 'Answer 1')
+      });
 
       // Another user message
-      await act(async () => {
-        await result.current.sendMessage('Question 2');
+      emitSessionEvent('message-added', {
+        sessionId: 'msg-2',
+        message: createMessage('user', 'Question 2')
       });
 
       // Another assistant response
-      emitClientEvent('text_delta', { text: 'Answer 2' });
-      emitClientEvent('completion', { running: false });
+      emitSessionEvent('message-streaming', { 
+        sessionId: 'stream-2',
+        message: createMessage('assistant', 'Answer 2')
+      });
+      emitSessionEvent('message-complete', { 
+        sessionId: 'stream-2',
+        message: createMessage('assistant', 'Answer 2')
+      });
 
       expect(result.current.messages).toHaveLength(4);
       expect(result.current.messages[0]?.role).toBe('user');
@@ -620,22 +692,34 @@ describe('useChat - Part 1: Message Management', () => {
       expect(result.current.messages[3]?.content).toBe('Answer 2');
     });
 
-    it('resets buffer state correctly between messages', () => {
+    it('resets streaming state correctly between messages', () => {
       const { result } = renderHook(() => useChat());
 
       // First message
-      emitClientEvent('text_delta', { text: 'First', item_id: 'msg-1' });
-      emitClientEvent('completion', { running: false });
+      emitSessionEvent('message-streaming', { 
+        sessionId: 'msg-1',
+        message: createMessage('assistant', 'First')
+      });
+      emitSessionEvent('message-complete', { 
+        sessionId: 'msg-1',
+        message: createMessage('assistant', 'First')
+      });
 
       // Verify first message
       expect(result.current.messages[0]?.content).toBe('First');
-      expect(result.current.partialMessage).toBe('');
+      expect(result.current.streamingMessage).toBeNull();
 
       // Second message should start fresh
-      emitClientEvent('text_delta', { text: 'Second', item_id: 'msg-2' });
-      expect(result.current.partialMessage).toBe('Second');
+      emitSessionEvent('message-streaming', { 
+        sessionId: 'msg-2',
+        message: createMessage('assistant', 'Second')
+      });
+      expect(result.current.streamingMessage?.content).toBe('Second');
 
-      emitClientEvent('completion', { running: false });
+      emitSessionEvent('message-complete', { 
+        sessionId: 'msg-2',
+        message: createMessage('assistant', 'Second')
+      });
       expect(result.current.messages[1]?.content).toBe('Second');
     });
   });
@@ -765,72 +849,104 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
   });
 
   describe('Agent Typing State Management', () => {
-    it('sets isAgentTyping true on first text_delta', () => {
+    it('sets isAgentTyping true on first message-streaming', () => {
       const { result } = renderHook(() => useChat());
 
       expect(result.current.isAgentTyping).toBe(false);
 
-      emitClientEvent('text_delta', { text: 'Starting...' });
+      emitSessionEvent('message-streaming', { 
+        sessionId: 'stream-1',
+        message: createMessage('assistant', 'Starting...')
+      });
 
       expect(result.current.isAgentTyping).toBe(true);
     });
 
-    it('maintains isAgentTyping during multiple text_deltas', () => {
+    it('maintains isAgentTyping during multiple message-streaming events', () => {
       const { result } = renderHook(() => useChat());
 
-      emitClientEvent('text_delta', { text: 'Part 1' });
+      emitSessionEvent('message-streaming', { 
+        sessionId: 'stream-1',
+        message: createMessage('assistant', 'Part 1')
+      });
       expect(result.current.isAgentTyping).toBe(true);
 
-      emitClientEvent('text_delta', { text: ' Part 2' });
+      emitSessionEvent('message-streaming', { 
+        sessionId: 'stream-1',
+        message: createMessage('assistant', 'Part 1 Part 2')
+      });
       expect(result.current.isAgentTyping).toBe(true);
 
-      emitClientEvent('text_delta', { text: ' Part 3' });
+      emitSessionEvent('message-streaming', { 
+        sessionId: 'stream-1',
+        message: createMessage('assistant', 'Part 1 Part 2 Part 3')
+      });
       expect(result.current.isAgentTyping).toBe(true);
     });
 
-    it('sets isAgentTyping false on completion', () => {
+    it('sets isAgentTyping false on message-complete', () => {
       const { result } = renderHook(() => useChat());
 
-      emitClientEvent('text_delta', { text: 'Message' });
+      emitSessionEvent('message-streaming', { 
+        sessionId: 'stream-1',
+        message: createMessage('assistant', 'Message')
+      });
       expect(result.current.isAgentTyping).toBe(true);
 
-      emitClientEvent('completion', { running: false });
+      emitSessionEvent('message-complete', { 
+        sessionId: 'stream-1',
+        message: createMessage('assistant', 'Message')
+      });
       expect(result.current.isAgentTyping).toBe(false);
     });
 
-    it('clears partial message on session change but maintains typing state', () => {
+    it('clears streaming message on session change and resets typing state', () => {
       const { result } = renderHook(() => useChat());
 
       // Start typing
-      emitClientEvent('text_delta', { text: 'In progress...' });
+      emitSessionEvent('message-streaming', { 
+        sessionId: 'stream-1',
+        message: createMessage('assistant', 'In progress...')
+      });
       expect(result.current.isAgentTyping).toBe(true);
-      expect(result.current.partialMessage).toBe('In progress...');
+      expect(result.current.streamingMessage?.content).toBe('In progress...');
 
       // Change session
       const newSession = createTestSession('new-session');
       emitClientEvent('chat_session_changed', { chat_session: newSession });
 
-      // Partial message should be cleared but typing state is not reset in implementation
-      expect(result.current.partialMessage).toBe('');
-      // Note: isAgentTyping is NOT reset on session change in the current implementation
-      expect(result.current.isAgentTyping).toBe(true);
+      // Streaming message should be cleared and typing state reset
+      expect(result.current.streamingMessage).toBeNull();
+      expect(result.current.isAgentTyping).toBe(false);
     });
 
     it('handles rapid typing state changes', () => {
       const { result } = renderHook(() => useChat());
 
       // Rapid sequence of messages
-      emitClientEvent('text_delta', { text: 'Quick' });
+      emitSessionEvent('message-streaming', { 
+        sessionId: 'stream-1',
+        message: createMessage('assistant', 'Quick')
+      });
       expect(result.current.isAgentTyping).toBe(true);
 
-      emitClientEvent('completion', { running: false });
+      emitSessionEvent('message-complete', { 
+        sessionId: 'stream-1',
+        message: createMessage('assistant', 'Quick')
+      });
       expect(result.current.isAgentTyping).toBe(false);
 
       // Immediately start new message
-      emitClientEvent('text_delta', { text: 'Another' });
+      emitSessionEvent('message-streaming', { 
+        sessionId: 'stream-2',
+        message: createMessage('assistant', 'Another')
+      });
       expect(result.current.isAgentTyping).toBe(true);
 
-      emitClientEvent('completion', { running: false });
+      emitSessionEvent('message-complete', { 
+        sessionId: 'stream-2',
+        message: createMessage('assistant', 'Another')
+      });
       expect(result.current.isAgentTyping).toBe(false);
     });
 
@@ -838,75 +954,85 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
       const { result } = renderHook(() => useChat());
 
       // Agent starts typing
-      emitClientEvent('text_delta', { text: 'Agent typing...' });
+      emitSessionEvent('message-streaming', { 
+        sessionId: 'stream-1',
+        message: createMessage('assistant', 'Agent typing...')
+      });
       expect(result.current.isAgentTyping).toBe(true);
 
       // User turn start stops agent typing
       emitClientEvent('user_turn_start');
       expect(result.current.isAgentTyping).toBe(false);
 
-      // User turn end starts agent typing
+      // User turn end doesn't automatically start typing in new implementation
       emitClientEvent('user_turn_end');
+      // Wait for actual message streaming to set typing
+      expect(result.current.isAgentTyping).toBe(false);
+
+      // Start new streaming
+      emitSessionEvent('message-streaming', { 
+        sessionId: 'stream-2',
+        message: createMessage('assistant', 'New message')
+      });
       expect(result.current.isAgentTyping).toBe(true);
 
-      // Completion stops typing
-      emitClientEvent('completion', { running: false });
+      // Complete stops typing
+      emitSessionEvent('message-complete', { 
+        sessionId: 'stream-2',
+        message: createMessage('assistant', 'New message')
+      });
       expect(result.current.isAgentTyping).toBe(false);
     });
   });
 
   describe('Event Subscription Edge Cases', () => {
-    it('handles malformed text_delta events', () => {
+    it('handles malformed message-streaming events', () => {
       const { result } = renderHook(() => useChat());
 
-      // Missing text property
-      emitClientEvent('text_delta', {});
-      expect(result.current.partialMessage).toBe('');
+      // Missing message property
+      emitSessionEvent('message-streaming', { sessionId: 'test' });
+      expect(result.current.streamingMessage).toBeNull();
 
-      // Null text
-      emitClientEvent('text_delta', { text: null });
-      expect(result.current.partialMessage).toBe('');
+      // Null message
+      emitSessionEvent('message-streaming', { sessionId: 'test', message: null });
+      expect(result.current.streamingMessage).toBeNull();
 
-      // Undefined text
-      emitClientEvent('text_delta', { text: undefined });
-      expect(result.current.partialMessage).toBe('');
-
-      // Valid text after malformed
-      emitClientEvent('text_delta', { text: 'Valid' });
-      expect(result.current.partialMessage).toBe('Valid');
+      // Valid message after malformed
+      emitSessionEvent('message-streaming', { 
+        sessionId: 'stream-1',
+        message: createMessage('assistant', 'Valid')
+      });
+      expect(result.current.streamingMessage?.content).toBe('Valid');
     });
 
-    it('handles completion with running: true', () => {
+    it('handles message-complete directly without streaming', () => {
       const { result } = renderHook(() => useChat());
 
-      emitClientEvent('text_delta', { text: 'Message' });
-      expect(result.current.isAgentTyping).toBe(true);
+      // Direct message-complete without prior streaming
+      emitSessionEvent('message-complete', { 
+        sessionId: 'complete-1',
+        message: createMessage('assistant', 'Direct complete')
+      });
 
-      // Completion with running: true should not complete message
-      emitClientEvent('completion', { running: true });
-      expect(result.current.isAgentTyping).toBe(true);
-      expect(result.current.partialMessage).toBe('Message');
-      expect(result.current.messages).toHaveLength(0);
-
-      // Only running: false should complete
-      emitClientEvent('completion', { running: false });
       expect(result.current.isAgentTyping).toBe(false);
+      expect(result.current.streamingMessage).toBeNull();
       expect(result.current.messages).toHaveLength(1);
+      expect(result.current.messages[0]?.content).toBe('Direct complete');
     });
 
     it('handles duplicate event subscriptions', () => {
       const { rerender } = renderHook(() => useChat());
 
       // Initial render subscribes events
-      expect(mockClient.on).toHaveBeenCalledTimes(5);
-      expect(mockSessionManager.on).toHaveBeenCalledTimes(1);
+      expect(mockClient.on).toHaveBeenCalledTimes(3); // user_turn_start, user_turn_end, chat_session_changed
+      expect(mockSessionManager.on).toHaveBeenCalledTimes(4); // message-added, message-streaming, message-complete, session-messages-loaded
 
       // Rerender should not duplicate subscriptions
       rerender();
 
       // Should still have same number of subscriptions
-      expect(mockClient.on).toHaveBeenCalledTimes(5);
-      expect(mockSessionManager.on).toHaveBeenCalledTimes(1);
+      expect(mockClient.on).toHaveBeenCalledTimes(3);
+      expect(mockSessionManager.on).toHaveBeenCalledTimes(4);
     });
 
     it('handles events when sessionManager is null', () => {
@@ -914,12 +1040,10 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
 
       const { result } = renderHook(() => useChat());
 
-      // Client events should still work
-      emitClientEvent('text_delta', { text: 'Test' });
-      expect(result.current.partialMessage).toBe('Test');
-
-      emitClientEvent('completion', { running: false });
-      expect(result.current.messages).toHaveLength(1);
+      // When sessionManager is null, no events are subscribed
+      expect(result.current.messages).toEqual([]);
+      expect(result.current.streamingMessage).toBeNull();
+      expect(result.current.isAgentTyping).toBe(false);
     });
 
     it('handles session change with invalid data', () => {
@@ -949,18 +1073,25 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
     it('handles rapid event firing', () => {
       const { result } = renderHook(() => useChat());
 
-      // Fire many events rapidly
+      // Fire many streaming events rapidly with accumulated text
+      let accumulated = '';
       for (let i = 0; i < 100; i++) {
-        emitClientEvent('text_delta', { text: `${i}` });
+        accumulated += `${i}`;
+        emitSessionEvent('message-streaming', { 
+          sessionId: 'rapid-stream',
+          message: createMessage('assistant', accumulated)
+        });
       }
 
-      // Should accumulate all
-      const expected = Array.from({ length: 100 }, (_, i) => `${i}`).join('');
-      expect(result.current.partialMessage).toBe(expected);
+      // Should have the final accumulated message
+      expect(result.current.streamingMessage?.content).toBe(accumulated);
 
       // Complete
-      emitClientEvent('completion', { running: false });
-      expect(result.current.messages[0]?.content).toBe(expected);
+      emitSessionEvent('message-complete', { 
+        sessionId: 'rapid-stream',
+        message: createMessage('assistant', accumulated)
+      });
+      expect(result.current.messages[0]?.content).toBe(accumulated);
     });
   });
 
@@ -1096,23 +1227,25 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
       unmount();
 
       // Verify all client handlers were removed
-      ['text_delta', 'completion', 'user_turn_start', 'user_turn_end', 'chat_session_changed'].forEach(event => {
+      ['user_turn_start', 'user_turn_end', 'chat_session_changed'].forEach(event => {
         expect(mockClient.off).toHaveBeenCalledWith(event, clientHandlers.get(event));
       });
 
-      // Verify session handler was removed
-      expect(mockSessionManager.off).toHaveBeenCalledWith(
-        'session-messages-loaded',
-        sessionHandlers.get('session-messages-loaded')
-      );
+      // Verify all session handlers were removed
+      ['message-added', 'message-streaming', 'message-complete', 'session-messages-loaded'].forEach(event => {
+        expect(mockSessionManager.off).toHaveBeenCalledWith(event, sessionHandlers.get(event));
+      });
     });
 
     it('stops processing events after unmount', () => {
       const { result, unmount } = renderHook(() => useChat());
 
       // Start streaming
-      emitClientEvent('text_delta', { text: 'Before unmount' });
-      expect(result.current.partialMessage).toBe('Before unmount');
+      emitSessionEvent('message-streaming', { 
+        sessionId: 'stream-1',
+        message: createMessage('assistant', 'Before unmount')
+      });
+      expect(result.current.streamingMessage?.content).toBe('Before unmount');
 
       unmount();
 
@@ -1121,21 +1254,24 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
       sessionEventHandlers.clear();
 
       // Try to emit events after unmount
-      const handler = eventHandlers.get('text_delta');
+      const handler = sessionEventHandlers.get('message-streaming');
       expect(handler).toBeUndefined();
     });
 
-    it('cleans up partial message state on unmount', () => {
+    it('cleans up streaming message state on unmount', () => {
       const { unmount } = renderHook(() => useChat());
 
       // Start streaming
-      emitClientEvent('text_delta', { text: 'Partial' });
+      emitSessionEvent('message-streaming', { 
+        sessionId: 'stream-1',
+        message: createMessage('assistant', 'Partial')
+      });
 
       unmount();
 
       // Remount should start fresh
       const { result: newResult } = renderHook(() => useChat());
-      expect(newResult.current.partialMessage).toBe('');
+      expect(newResult.current.streamingMessage).toBeNull();
       expect(newResult.current.isAgentTyping).toBe(false);
     });
 
@@ -1143,7 +1279,10 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
       const { unmount } = renderHook(() => useChat());
 
       // Start streaming
-      emitClientEvent('text_delta', { text: 'Streaming...' });
+      emitSessionEvent('message-streaming', { 
+        sessionId: 'stream-1',
+        message: createMessage('assistant', 'Streaming...')
+      });
 
       // Unmount while streaming
       expect(() => unmount()).not.toThrow();
@@ -1162,7 +1301,7 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
       expect(() => unmount()).not.toThrow();
 
       // Client events should still be cleaned up
-      expect(mockClient.off).toHaveBeenCalledTimes(5);
+      expect(mockClient.off).toHaveBeenCalledTimes(3); // user_turn_start, user_turn_end, chat_session_changed
     });
 
     it('properly cleans up after error state', async () => {
@@ -1204,8 +1343,8 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
       unmount();
 
       // All handlers should be removed
-      expect(mockClient.off.mock.calls.length).toBe(5);
-      expect(mockSessionManager.off.mock.calls.length).toBe(1);
+      expect(mockClient.off.mock.calls.length).toBe(3); // user_turn_start, user_turn_end, chat_session_changed
+      expect(mockSessionManager.off.mock.calls.length).toBe(4); // message-added, message-streaming, message-complete, session-messages-loaded
     });
   });
 

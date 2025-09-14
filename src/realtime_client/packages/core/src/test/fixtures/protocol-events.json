@@ -262,7 +262,7 @@
     },
     "tool_catalog": {
       "type": "tool_catalog",
-      "toolsets": [
+      "tools": [
         {
           "name": "ThinkTools",
           "description": "Tools for thinking and reasoning",

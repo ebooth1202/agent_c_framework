@@ -21,7 +21,7 @@ import {
   Severity,
   MessageFormat,
   User,
-  Toolset
+  Tool
 } from './CommonTypes';
 
 /**
@@ -29,6 +29,22 @@ import {
  */
 export interface BaseServerEvent {
   type: string;
+}
+
+/**
+ * Session events are generated within a chat session and always include session tracking fields.
+ * All runtime events that are part of the interaction flow inherit from this base.
+ * This matches the Python SessionEvent base class.
+ */
+export interface SessionEvent extends BaseServerEvent {
+  /** The session ID for this event */
+  session_id: string;
+  /** The role that triggered this event */
+  role: string;
+  /** The parent session ID, if this session is a child session */
+  parent_session_id?: string;
+  /** The top level user session ID, if this session is a child session */
+  user_session_id?: string;
 }
 
 /**
@@ -92,9 +108,8 @@ export interface SessionMetadataChangedEvent extends BaseServerEvent {
 /**
  * Streaming text content from the agent
  */
-export interface TextDeltaEvent extends BaseServerEvent {
+export interface TextDeltaEvent extends SessionEvent {
   type: 'text_delta';
-  session_id: string;
   role: 'assistant';
   content: string;
   format: MessageFormat;
@@ -103,9 +118,8 @@ export interface TextDeltaEvent extends BaseServerEvent {
 /**
  * Streaming thought content from the agent
  */
-export interface ThoughtDeltaEvent extends BaseServerEvent {
+export interface ThoughtDeltaEvent extends SessionEvent {
   type: 'thought_delta';
-  session_id: string;
   role: 'assistant (thought)';
   content: string;
   format: MessageFormat;
@@ -114,9 +128,8 @@ export interface ThoughtDeltaEvent extends BaseServerEvent {
 /**
  * Completion status updates
  */
-export interface CompletionEvent extends BaseServerEvent {
+export interface CompletionEvent extends SessionEvent {
   type: 'completion';
-  session_id: string;
   role: 'assistant';
   running: boolean;
   completion_options: CompletionOptions;
@@ -128,9 +141,8 @@ export interface CompletionEvent extends BaseServerEvent {
 /**
  * Interaction lifecycle events
  */
-export interface InteractionEvent extends BaseServerEvent {
+export interface InteractionEvent extends SessionEvent {
   type: 'interaction';
-  session_id: string;
   role: 'assistant';
   started: boolean;
   id: string;
@@ -139,19 +151,18 @@ export interface InteractionEvent extends BaseServerEvent {
 /**
  * Complete message history update
  */
-export interface HistoryEvent extends BaseServerEvent {
+export interface HistoryEvent extends SessionEvent {
   type: 'history';
-  session_id: string;
   role: 'system';
+  vendor: string;
   messages: Message[];
 }
 
 /**
  * Tool execution events
  */
-export interface ToolCallEvent extends BaseServerEvent {
+export interface ToolCallEvent extends SessionEvent {
   type: 'tool_call';
-  session_id: string;
   role: 'assistant';
   active: boolean;
   vendor: string;
@@ -162,9 +173,8 @@ export interface ToolCallEvent extends BaseServerEvent {
 /**
  * System notifications and errors
  */
-export interface SystemMessageEvent extends BaseServerEvent {
+export interface SystemMessageEvent extends SessionEvent {
   type: 'system_message';
-  session_id: string;
   role: 'system';
   content: string;
   format: MessageFormat;
@@ -230,11 +240,10 @@ export interface VoiceListEvent extends BaseServerEvent {
 
 /**
  * Tool catalog sent during initialization or in response to get_tool_catalog
- * Note: Event name is tool_catalog but contains toolsets array
  */
 export interface ToolCatalogEvent extends BaseServerEvent {
   type: 'tool_catalog';
-  toolsets: Toolset[];
+  tools: Tool[];
 }
 
 /**
@@ -282,9 +291,8 @@ export interface ChatSessionDeletedEvent extends BaseServerEvent {
  * Fired when a tool is selected BEFORE parameters have streamed
  * Important for showing UI feedback that a tool is about to be used
  */
-export interface ToolSelectDeltaEvent extends BaseServerEvent {
+export interface ToolSelectDeltaEvent extends SessionEvent {
   type: 'tool_select_delta';
-  session_id: string;
   role: 'assistant';
   tool_calls: ToolCall[];
 }
@@ -293,23 +301,25 @@ export interface ToolSelectDeltaEvent extends BaseServerEvent {
  * Special media rendering event from tools
  * Used when tools need to display rich media content beyond text
  */
-export interface RenderMediaEvent extends BaseServerEvent {
+export interface RenderMediaEvent extends SessionEvent {
   type: 'render_media';
-  session_id: string;
   role: 'assistant';
   content_type: string;  // e.g., "text/html", "image/svg+xml"
   content: string;       // The media content
   sent_by_class: string; // Tool class that sent the event
   sent_by_function: string; // Specific function that generated the event
+  foreign_content: boolean; // SECURITY: Indicates if content is from external sources
+  url?: string;          // Optional: URL source of the content
+  name?: string;         // Optional: Name/title of the media content
+  content_bytes?: number; // Optional: Size of the content in bytes
 }
 
 /**
  * Incremental history update
  * Updates to the conversation history with the agent's response
  */
-export interface HistoryDeltaEvent extends BaseServerEvent {
+export interface HistoryDeltaEvent extends SessionEvent {
   type: 'history_delta';
-  session_id: string;
   role: 'assistant';
   messages: Message[];   // Array of message objects with content and citations
 }
@@ -318,9 +328,8 @@ export interface HistoryDeltaEvent extends BaseServerEvent {
  * System prompt initialization event
  * Initializes the agent with system instructions, persona, and available tools
  */
-export interface SystemPromptEvent extends BaseServerEvent {
+export interface SystemPromptEvent extends SessionEvent {
   type: 'system_prompt';
-  session_id: string;
   role: 'system';
   content: string;       // Full markdown content containing agent instructions
   format: MessageFormat; // Content format (typically "markdown")
@@ -330,9 +339,8 @@ export interface SystemPromptEvent extends BaseServerEvent {
  * User request event
  * Generated by the agent runtime when processing user input
  */
-export interface UserRequestEvent extends BaseServerEvent {
+export interface UserRequestEvent extends SessionEvent {
   type: 'user_request';
-  session_id: string;
   role: 'user';
   data: {
     message: string;     // The user's message text
@@ -343,7 +351,7 @@ export interface UserRequestEvent extends BaseServerEvent {
  * Base user message event with vendor information
  * Replaces UserRequestEvent for vendor-specific message formats
  */
-export interface UserMessageEvent extends BaseServerEvent {
+export interface UserMessageEvent extends SessionEvent {
   type: 'user_message';
   vendor: string;
 }
@@ -351,8 +359,8 @@ export interface UserMessageEvent extends BaseServerEvent {
 /**
  * OpenAI-specific user message event
  */
-export interface OpenAIUserMessageEvent extends UserMessageEvent {
-  type: 'user_message';
+export interface OpenAIUserMessageEvent extends SessionEvent {
+  type: 'openai_user_message';
   vendor: 'openai';
   message: Record<string, any>; // OpenAI message format
 }
@@ -360,8 +368,8 @@ export interface OpenAIUserMessageEvent extends UserMessageEvent {
 /**
  * Anthropic-specific user message event
  */
-export interface AnthropicUserMessageEvent extends UserMessageEvent {
-  type: 'user_message';
+export interface AnthropicUserMessageEvent extends SessionEvent {
+  type: 'anthropic_user_message';
   vendor: 'anthropic';
   message: Record<string, any>; // Anthropic message format
 }
@@ -370,7 +378,7 @@ export interface AnthropicUserMessageEvent extends UserMessageEvent {
  * Notification that a subsession has started
  * Events between this and SubsessionEndedEvent are part of the subsession
  */
-export interface SubsessionStartedEvent extends BaseServerEvent {
+export interface SubsessionStartedEvent extends SessionEvent {
   type: 'subsession_started';
   sub_session_type: 'chat' | 'oneshot';
   sub_agent_type: 'clone' | 'team' | 'assist' | 'tool';
@@ -382,7 +390,7 @@ export interface SubsessionStartedEvent extends BaseServerEvent {
  * Notification that a subsession has ended
  * Matches with a previous SubsessionStartedEvent
  */
-export interface SubsessionEndedEvent extends BaseServerEvent {
+export interface SubsessionEndedEvent extends SessionEvent {
   type: 'subsession_ended';
 }
 
@@ -466,6 +474,8 @@ export function isServerEvent(obj: unknown): obj is ServerEvent {
     'system_prompt',
     'user_request',
     'user_message',
+    'anthropic_user_message',
+    'openai_user_message',
     'subsession_started',
     'subsession_ended'
   ].includes((obj as any).type);

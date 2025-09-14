@@ -10,9 +10,9 @@ from typing import Any, Dict, List, Union, Optional, Callable, Awaitable, Tuple,
 from agent_c.models.chat_history.chat_session import ChatSession
 
 from agent_c.models import ImageInput
-from agent_c.models.events.chat import ThoughtDeltaEvent, HistoryDeltaEvent, CompleteThoughtEvent, SystemPromptEvent, UserRequestEvent, UserMessageEvent
+from agent_c.models.events.chat import ThoughtDeltaEvent, HistoryDeltaEvent, CompleteThoughtEvent, SystemPromptEvent, UserMessageEvent
 from agent_c.models.input import FileInput, AudioInput
-from agent_c.models.events import ToolCallEvent, InteractionEvent, TextDeltaEvent, HistoryEvent, CompletionEvent, ToolCallDeltaEvent, SystemMessageEvent, SessionEvent
+from agent_c.models.events import ToolCallEvent, InteractionEvent, TextDeltaEvent, HistoryEvent, CompletionEvent, ToolSelectDeltaEvent, SystemMessageEvent, SessionEvent
 from agent_c.prompting.prompt_builder import PromptBuilder
 from agent_c.toolsets.tool_chest import ToolChest
 from agent_c.util.slugs import MnemonicSlugs
@@ -55,6 +55,7 @@ class BaseAgent:
             Maximum delay for exponential backoff.
         """
         self.model_name: str = kwargs.get("model_name")
+        self.vendor: str = kwargs.get("vendor", "unknown")
         self.temperature: float = kwargs.get("temperature", 1)
         self.max_delay: int = kwargs.get("max_delay", 120)
         self.concurrency_limit: int = kwargs.get("concurrency_limit", 3)
@@ -235,7 +236,7 @@ class BaseAgent:
         data['role'] = data.get('role', 'assistant')
         data['session_id'] = data.get("session_id", "none")
         streaming_callback = data.pop('streaming_callback', None)
-        await self._raise_event(HistoryDeltaEvent(messages=messages, **data), streaming_callback=streaming_callback)
+        await self._raise_event(HistoryDeltaEvent(messages=messages, vendor=self.vendor, **data), streaming_callback=streaming_callback)
 
     async def _raise_completion_start(self, comp_options, **data):
         """
@@ -268,17 +269,13 @@ class BaseAgent:
         streaming_callback = data.pop('streaming_callback', None)
         await self._raise_event(SystemPromptEvent(content=prompt, **data), streaming_callback=streaming_callback )
 
-    async def _raise_user_request(self, request: str, **data):
-        streaming_callback = data.pop('streaming_callback', None)
-        await self._raise_event(UserRequestEvent(data={"message": request}, **data), streaming_callback=streaming_callback )
-
     async def _raise_user_message_event(self, event, streaming_callback):
         await self._raise_event(event, streaming_callback=streaming_callback)
 
 
     async def _raise_tool_call_delta(self, tool_calls, **data):
         streaming_callback = data.pop('streaming_callback', None)
-        await self._raise_event(ToolCallDeltaEvent(tool_calls=tool_calls, **data), streaming_callback=streaming_callback)
+        await self._raise_event(ToolSelectDeltaEvent(tool_calls=tool_calls, **data), streaming_callback=streaming_callback)
 
     async def _raise_tool_call_end(self, tool_calls, tool_results, **data):
         streaming_callback = data.pop('streaming_callback', None)
@@ -311,7 +308,7 @@ class BaseAgent:
 
     async def _raise_history_event(self, messages: List[dict[str, Any]], **data):
         streaming_callback = data.pop('streaming_callback', None)
-        await self._raise_event(HistoryEvent(messages=messages, **data), streaming_callback=streaming_callback)
+        await self._raise_event(HistoryEvent(messages=messages, vendor=self.vendor,  **data ), streaming_callback=streaming_callback)
 
     async def _exponential_backoff(self, delay: int) -> None:
         """

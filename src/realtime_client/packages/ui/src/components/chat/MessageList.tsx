@@ -36,7 +36,7 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
     emptyStateComponent,
     ...props 
   }, ref) => {
-    const { messages, isAgentTyping, partialMessage } = useChat()
+    const { messages, isAgentTyping, streamingMessage, isSubSessionMessage } = useChat()
     const scrollContainerRef = React.useRef<HTMLDivElement>(null)
     const [isLoading, setIsLoading] = React.useState(false)
     
@@ -126,31 +126,26 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
               {visibleMessages.map((message, index) => (
                 <Message
                   key={`message-${index}-${message.timestamp || index}`}
-                  message={{
-                    ...message,
-                    timestamp: message.timestamp || new Date().toISOString()
-                  }}
+                  message={message}
                   showTimestamp={showTimestamps}
+                  isSubSession={isSubSessionMessage(message)}
                   className="animate-in slide-in-from-bottom-2 duration-200"
                 />
               ))}
               
               {/* Current streaming response */}
-              {partialMessage && (
+              {streamingMessage && (
                 <Message
-                  message={{
-                    role: 'assistant',
-                    content: partialMessage,
-                    timestamp: new Date().toISOString()
-                  }}
+                  message={streamingMessage}
                   showTimestamp={showTimestamps}
                   isStreaming
+                  isSubSession={streamingMessage.isSubSession}
                   className="animate-in slide-in-from-bottom-2 duration-200"
                 />
               )}
               
               {/* Typing indicator */}
-              {isAgentTyping && !partialMessage && (
+              {isAgentTyping && !streamingMessage && (
                 <div className="flex items-start gap-3 animate-in slide-in-from-bottom-2 duration-200">
                   <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
                     <span className="text-xs font-medium text-primary">AI</span>

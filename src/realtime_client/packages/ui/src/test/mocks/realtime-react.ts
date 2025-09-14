@@ -75,7 +75,7 @@ export const defaultMockStates = {
     agents: [],
     voices: [],
     avatars: [],
-    toolsets: [],
+    tools: [],
     selectedAgent: null,
     selectAgent: vi.fn(),
     isLoading: false,

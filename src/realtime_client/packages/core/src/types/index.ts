@@ -15,5 +15,11 @@ export interface ErrorDetails {
 // Export chat session types
 export * from './chat-session';
 
-// Export message param types
+// Export Anthropic message param types
 export * from './message-params';
+
+// Export OpenAI message param types
+export * from './openai-message-params';
+
+// Export unified chat types
+export * from './ChatTypes';

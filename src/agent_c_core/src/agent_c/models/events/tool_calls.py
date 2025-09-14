@@ -14,12 +14,8 @@ class ToolCallEvent(SessionEvent):
     def __init__(self, **data):
         super().__init__(type = "tool_call", **data)
 
-class ToolCallDeltaEvent(SessionEvent):
+class ToolSelectDeltaEvent(SessionEvent):
     """
     Sent to notify the UI that a chunk of tool_calls content has been received.
-    - Clients should handle this event by appending the content to the current message,
     """
-    def __init__(self, **data):
-        super().__init__(type = "tool_select_delta", **data)
-
     tool_calls: Optional[list[dict]] = Field(..., description="The current tool calls list.")

@@ -7,6 +7,7 @@ import {
   GetAgentsEvent,
   SetAgentEvent,
   GetAvatarsEvent,
+  SetAvatarEvent,
   SetAvatarSessionEvent,
   ClearAvatarSessionEvent,
   SetAgentVoiceEvent,
@@ -72,6 +73,7 @@ export interface ClientEventMap {
   'get_agents': GetAgentsEvent;
   'set_agent': SetAgentEvent;
   'get_avatars': GetAvatarsEvent;
+  'set_avatar': SetAvatarEvent;
   'set_avatar_session': SetAvatarSessionEvent;
   'clear_avatar_session': ClearAvatarSessionEvent;
   'set_agent_voice': SetAgentVoiceEvent;
@@ -124,7 +126,9 @@ export interface ServerEventMap {
   'history_delta': HistoryDeltaEvent;
   'system_prompt': SystemPromptEvent;
   'user_request': UserRequestEvent;
-  'user_message': UserMessageEvent | OpenAIUserMessageEvent | AnthropicUserMessageEvent;
+  'user_message': UserMessageEvent;
+  'anthropic_user_message': AnthropicUserMessageEvent;
+  'openai_user_message': OpenAIUserMessageEvent;
   'subsession_started': SubsessionStartedEvent;
   'subsession_ended': SubsessionEndedEvent;
 }
@@ -173,6 +177,7 @@ export class EventRegistry {
     'get_agents',
     'set_agent',
     'get_avatars',
+    'set_avatar',
     'set_avatar_session',
     'clear_avatar_session',
     'set_agent_voice',
@@ -223,6 +228,8 @@ export class EventRegistry {
     'system_prompt',
     'user_request',
     'user_message',
+    'anthropic_user_message',
+    'openai_user_message',
     'subsession_started',
     'subsession_ended'
   ]);

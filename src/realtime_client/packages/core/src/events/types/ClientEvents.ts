@@ -35,12 +35,22 @@ export interface GetAvatarsEvent extends BaseClientEvent {
 }
 
 /**
+ * Set the avatar for the current session
+ */
+export interface SetAvatarEvent extends BaseClientEvent {
+  type: 'set_avatar';
+  avatar_id: string;           // The ID of the avatar to set
+  quality?: string;            // Optional quality setting (default: "auto")
+  video_encoding?: string;     // Optional video encoding (default: "H265")
+}
+
+/**
  * Connect to an existing avatar session
  */
 export interface SetAvatarSessionEvent extends BaseClientEvent {
   type: 'set_avatar_session';
-  session_id: string;  // HeyGen session ID
-  avatar_id: string;   // Avatar ID used to create the session
+  access_token: string;      // HeyGen access token for the session
+  avatar_session_id: string;  // HeyGen avatar session ID
 }
 
 /**
@@ -180,6 +190,7 @@ export type ClientEvent =
   | GetAgentsEvent
   | SetAgentEvent
   | GetAvatarsEvent
+  | SetAvatarEvent
   | SetAvatarSessionEvent
   | ClearAvatarSessionEvent
   | SetAgentVoiceEvent
@@ -206,6 +217,7 @@ export function isClientEvent(obj: unknown): obj is ClientEvent {
     'get_agents',
     'set_agent',
     'get_avatars',
+    'set_avatar',
     'set_avatar_session',
     'clear_avatar_session',
     'set_agent_voice',

@@ -8,10 +8,12 @@
  */
 
 import type { MessageParam } from './message-params';
+import type { ChatCompletionMessageParam } from './openai-message-params';
+import type { UnifiedMessageParam } from './ChatTypes';
 
 // Re-import Message type from CommonTypes for compatibility
 // The Message type is the runtime version with additional fields
-// MessageParam is the server data structure
+// UnifiedMessageParam is the server data structure that supports both Anthropic and OpenAI
 import type { Message } from '../events/types/CommonTypes';
 
 // Core ChatSession Interfaces
@@ -49,8 +51,9 @@ export interface ChatSession {
 }
 
 /**
- * Server version of ChatSession with MessageParam[]
+ * Server version of ChatSession with UnifiedMessageParam[]
  * Used when receiving raw data from the server
+ * Supports both Anthropic (MessageParam) and OpenAI (ChatCompletionMessageParam) formats
  */
 export interface ServerChatSession {
   version: number;
@@ -63,9 +66,9 @@ export interface ServerChatSession {
   deleted_at?: string | null;
   user_id?: string;
   metadata?: Record<string, any>;
-  messages: MessageParam[]; // Server sends MessageParam structure
+  messages: UnifiedMessageParam[]; // Server sends UnifiedMessageParam structure (Anthropic or OpenAI)
   agent_config?: CurrentAgentConfiguration;
-  vendor: string;
+  vendor: string; // Determines message format: "anthropic" or "openai"
   display_name: string;
 }
 
@@ -99,7 +102,9 @@ export interface AgentConfigurationV2 {
   key: string; // Key for the agent configuration, used for identification (defaults to name if not provided)
   model_id: string; // ID of the LLM model being used by the agent
   agent_description?: string; // A description of the agent's purpose and capabilities
-  tools: string[]; // List of enabled toolset names the agent can use (defaults to empty array)
+  tools: string[]; // List of enabled tool names the agent can use (defaults to empty array)
+  blocked_tool_patterns?: string[]; // Patterns for tools that should be blocked for this agent (security control)
+  allowed_tool_patterns?: string[]; // Patterns for tools that are explicitly allowed for this agent (security control)
   agent_params?: CompletionParams; // Parameters for the interaction with the agent
   prompt_metadata?: Record<string, any>; // Metadata for the prompt
   persona: string; // Persona prompt defining the agent's behavior
@@ -240,47 +245,150 @@ export function getDisplayName(session: Partial<ChatSession>): string {
 }
 
 /**
- * Convert a MessageParam to a Message (runtime type)
+ * Convert a UnifiedMessageParam to a Message (runtime type)
  * Adds runtime fields like timestamp and format
+ * Handles both Anthropic and OpenAI message formats
  */
-export function messageParamToMessage(param: MessageParam): Message {
+export function unifiedMessageParamToMessage(param: UnifiedMessageParam): Message {
+  // Extract role and content based on message format
+  let role: 'user' | 'assistant' | 'system' | 'assistant (thought)';
+  let content: any;
+  
+  if ('role' in param) {
+    // Map OpenAI roles to Message roles
+    switch (param.role) {
+      case 'user':
+        role = 'user';
+        break;
+      case 'assistant':
+        role = 'assistant';
+        break;
+      case 'system':
+      case 'developer': // Map developer to system
+        role = 'system';
+        break;
+      case 'tool':
+      case 'function':
+        // Tool and function messages are treated as assistant messages
+        role = 'assistant';
+        break;
+      default:
+        // Fallback to user for any unexpected role
+        role = 'user';
+    }
+    
+    // Handle different content formats
+    if ('content' in param) {
+      content = param.content;
+    } else {
+      // Some OpenAI message types (like assistant) can have optional content
+      content = null;
+    }
+  } else {
+    // Fallback for any unexpected format
+    role = 'user';
+    content = '';
+  }
+  
   return {
-    role: param.role,
-    content: param.content as any, // The types are compatible at runtime
+    role,
+    content: content as any,
     timestamp: new Date().toISOString(),
     format: 'text' as const
   };
 }
 
 /**
- * Convert a Message to a MessageParam (server type)
- * Strips runtime-only fields
+ * Convert a Message to a UnifiedMessageParam (server type)
+ * Strips runtime-only fields and returns appropriate format based on vendor
+ */
+export function messageToUnifiedMessageParam(message: Message, vendor: string): UnifiedMessageParam {
+  // Based on vendor, create appropriate message format
+  if (vendor === 'openai') {
+    // Map Message roles to OpenAI roles
+    let openAIRole: 'user' | 'assistant' | 'system' | 'developer';
+    switch (message.role) {
+      case 'user':
+        openAIRole = 'user';
+        break;
+      case 'assistant':
+      case 'assistant (thought)':
+        openAIRole = 'assistant';
+        break;
+      case 'system':
+        openAIRole = 'system';
+        break;
+      default:
+        openAIRole = 'user'; // Fallback
+    }
+    
+    // Create OpenAI format message
+    const openAIMessage: ChatCompletionMessageParam = {
+      role: openAIRole,
+      content: message.content === null ? '' : message.content as any
+    } as ChatCompletionMessageParam;
+    return openAIMessage;
+  } else {
+    // Map Message roles to Anthropic roles (only user/assistant supported)
+    let anthropicRole: 'user' | 'assistant';
+    switch (message.role) {
+      case 'user':
+      case 'system': // System messages become user messages in Anthropic
+        anthropicRole = 'user';
+        break;
+      case 'assistant':
+      case 'assistant (thought)':
+        anthropicRole = 'assistant';
+        break;
+      default:
+        anthropicRole = 'user'; // Fallback
+    }
+    
+    // Default to Anthropic format
+    const anthropicMessage: MessageParam = {
+      role: anthropicRole,
+      content: message.content === null ? '' : message.content as any
+    };
+    return anthropicMessage;
+  }
+}
+
+/**
+ * Legacy function for backward compatibility
+ * @deprecated Use unifiedMessageParamToMessage instead
+ */
+export function messageParamToMessage(param: MessageParam): Message {
+  return unifiedMessageParamToMessage(param);
+}
+
+/**
+ * Legacy function for backward compatibility
+ * @deprecated Use messageToUnifiedMessageParam instead
  */
 export function messageToMessageParam(message: Message): MessageParam {
-  return {
-    role: message.role as 'user' | 'assistant',
-    content: message.content === null ? '' : message.content as any
-  };
+  return messageToUnifiedMessageParam(message, 'anthropic') as MessageParam;
 }
 
 /**
  * Convert a ServerChatSession to a ChatSession
- * Transforms MessageParam[] to Message[] and adds runtime fields
+ * Transforms UnifiedMessageParam[] to Message[] and adds runtime fields
  */
 export function serverChatSessionToRuntimeSession(serverSession: ServerChatSession): ChatSession {
   return {
     ...serverSession,
-    messages: serverSession.messages.map(messageParamToMessage)
+    messages: serverSession.messages.map(unifiedMessageParamToMessage)
   };
 }
 
 /**
  * Convert a ChatSession to a ServerChatSession
- * Transforms Message[] to MessageParam[] for server communication
+ * Transforms Message[] to UnifiedMessageParam[] for server communication
+ * Uses the vendor field to determine the correct message format
  */
 export function runtimeSessionToServerChatSession(session: ChatSession): ServerChatSession {
+  const vendor = session.vendor || getVendorFromModelId(session.agent_config?.model_id);
   return {
     ...session,
-    messages: session.messages.map(messageToMessageParam)
+    messages: session.messages.map(msg => messageToUnifiedMessageParam(msg, vendor))
   };
 }

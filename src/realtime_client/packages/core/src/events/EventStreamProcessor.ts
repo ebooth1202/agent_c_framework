@@ -47,12 +47,38 @@ export class EventStreamProcessor {
   private toolCallManager: ToolCallManager;
   private richMediaHandler: RichMediaHandler;
   private sessionManager: SessionManager;
+  private userSessionId: string | null = null;
   
   constructor(sessionManager: SessionManager) {
     this.sessionManager = sessionManager;
     this.messageBuilder = new MessageBuilder();
     this.toolCallManager = new ToolCallManager();
     this.richMediaHandler = new RichMediaHandler();
+  }
+  
+  /**
+   * Set the user session ID for sub-session detection
+   */
+  setUserSessionId(id: string): void {
+    this.userSessionId = id;
+    Logger.debug(`[EventStreamProcessor] User session ID set: ${id}`);
+  }
+  
+  /**
+   * Check if an event represents a sub-session
+   */
+  private isSubSession(event: any): boolean {
+    // Primary check: use event fields if available
+    if (event.user_session_id && event.session_id) {
+      return event.session_id !== event.user_session_id;
+    }
+    
+    // Fallback: use stored user session ID
+    if (this.userSessionId && event.session_id) {
+      return event.session_id !== this.userSessionId;
+    }
+    
+    return false;
   }
   
   /**
@@ -184,6 +210,14 @@ export class EventStreamProcessor {
    * Process incoming server events
    */
   processEvent(event: ServerEvent): void {
+    // Filter out ignored events early
+    const IGNORED_EVENTS = ['history', 'history_delta', 'complete_thought', 'system_prompt'];
+    
+    if (IGNORED_EVENTS.includes(event.type)) {
+      Logger.debug(`[EventStreamProcessor] Ignoring event type: ${event.type}`);
+      return;
+    }
+    
     Logger.debug(`[EventStreamProcessor] Processing event: ${event.type}`);
     
     switch (event.type) {
@@ -222,6 +256,9 @@ export class EventStreamProcessor {
         break;
       case 'user_message':
         this.handleUserMessage(event as UserMessageEvent);
+        break;
+      case 'anthropic_user_message':
+        this.handleAnthropicUserMessage(event as AnthropicUserMessageEvent);
         break;
       case 'subsession_started':
         this.handleSubsessionStarted(event as SubsessionStartedEvent);
@@ -454,6 +491,16 @@ export class EventStreamProcessor {
       return;
     }
     
+    // Extract user_session_id if available for sub-session detection
+    // ChatSessionChangedEvent doesn't extend SessionEvent, so check if it exists
+    const eventWithSessionInfo = event as any;
+    if (eventWithSessionInfo.user_session_id) {
+      this.setUserSessionId(eventWithSessionInfo.user_session_id);
+    } else if (event.chat_session.session_id) {
+      // If no explicit user_session_id, assume the current session is the user session
+      this.setUserSessionId(event.chat_session.session_id);
+    }
+    
     // Convert the server session to runtime ChatSession with normalized messages
     const session = this.convertServerSession(event.chat_session);
     
@@ -477,11 +524,138 @@ export class EventStreamProcessor {
   }
   
   /**
+   * Handle Anthropic-specific user message events with sub-session detection
+   */
+  private handleAnthropicUserMessage(event: AnthropicUserMessageEvent): void {
+    // Convert the Anthropic message to our normalized format
+    const messageParam = event.message as any;
+    let message: Message;
+    
+    // Check if it has the expected MessageParam structure
+    if (messageParam && messageParam.content !== undefined && messageParam.role !== undefined) {
+      message = this.convertMessageParam(messageParam);
+    } else {
+      // Fallback for malformed messages
+      message = {
+        role: 'user',
+        content: JSON.stringify(messageParam) || '[User message]',
+        timestamp: new Date().toISOString(),
+        format: 'text'
+      };
+    }
+    
+    // Check for sub-session using SessionEvent fields
+    if (this.isSubSession(event)) {
+      // Add sub-session metadata to the message
+      (message as any).isSubSession = true;
+      (message as any).metadata = {
+        sessionId: event.session_id,
+        parentSessionId: event.parent_session_id,
+        userSessionId: event.user_session_id
+      };
+      
+      Logger.debug(`[EventStreamProcessor] Sub-session detected: ${event.session_id} (parent: ${event.parent_session_id})`);
+    }
+    
+    // Add to current session
+    const session = this.sessionManager.getCurrentSession();
+    if (session) {
+      session.messages.push(message);
+      session.updated_at = new Date().toISOString();
+      
+      // Emit for UI consumption
+      this.sessionManager.emit('message-added', {
+        sessionId: session.session_id,
+        message
+      });
+    }
+    
+    // Also emit the original user-message event for backward compatibility
+    this.sessionManager.emit('user-message', {
+      vendor: event.vendor,
+      message: event.message
+    });
+  }
+  
+  /**
    * Handle user message events (vendor-specific format)
    */
   private handleUserMessage(event: UserMessageEvent | OpenAIUserMessageEvent | AnthropicUserMessageEvent): void {
-    // Emit the user message event for UI consumption
-    // The UI can handle vendor-specific formatting as needed
+    // Delegate to specific handler if it's an Anthropic message
+    if (event.type === 'anthropic_user_message') {
+      this.handleAnthropicUserMessage(event as AnthropicUserMessageEvent);
+      return;
+    }
+    
+    // Convert based on vendor
+    let message: Message;
+    
+    if ('message' in event && event.vendor === 'openai') {
+      // Handle OpenAI format if needed
+      const openAiEvent = event as OpenAIUserMessageEvent;
+      const openAiMessage = openAiEvent.message;
+      
+      // Try to extract content from OpenAI format
+      if (typeof openAiMessage === 'string') {
+        message = {
+          role: 'user',
+          content: openAiMessage,
+          timestamp: new Date().toISOString(),
+          format: 'text'
+        };
+      } else if (openAiMessage && typeof openAiMessage === 'object') {
+        // Handle structured OpenAI message
+        message = {
+          role: 'user',
+          content: (openAiMessage as any).content || JSON.stringify(openAiMessage),
+          timestamp: new Date().toISOString(),
+          format: 'text'
+        };
+      } else {
+        message = {
+          role: 'user',
+          content: '[User message]',
+          timestamp: new Date().toISOString(),
+          format: 'text'
+        };
+      }
+    } else {
+      // Handle generic user message format
+      message = {
+        role: 'user',
+        content: '[User message]',
+        timestamp: new Date().toISOString(),
+        format: 'text'
+      };
+    }
+    
+    // Check for sub-session using SessionEvent fields (all UserMessageEvents extend SessionEvent)
+    if (this.isSubSession(event)) {
+      // Add sub-session metadata to the message
+      (message as any).isSubSession = true;
+      (message as any).metadata = {
+        sessionId: event.session_id,
+        parentSessionId: event.parent_session_id,
+        userSessionId: event.user_session_id
+      };
+      
+      Logger.debug(`[EventStreamProcessor] Sub-session detected in generic handler: ${event.session_id}`);
+    }
+    
+    // Add to session
+    const session = this.sessionManager.getCurrentSession();
+    if (session) {
+      session.messages.push(message);
+      session.updated_at = new Date().toISOString();
+      
+      // Emit for UI consumption
+      this.sessionManager.emit('message-added', {
+        sessionId: session.session_id,
+        message
+      });
+    }
+    
+    // Also emit the original user-message event for backward compatibility
     this.sessionManager.emit('user-message', {
       vendor: event.vendor,
       message: 'message' in event ? (event as any).message : undefined

@@ -90,11 +90,11 @@ class AgentConfigurationV2(AgentConfigurationBase):
     """Version 2 of the Agent Configuration - example with new fields"""
     version: Literal[2] = Field(2, description="Configuration version")
     key: str = Field(..., description="Key for the agent configuration, used for identification")
-    model_id: str = Field(..., description="ID of the LLM model being used by the agent")
+    model_id: str = Field(..., description="ID of the model being used by the agent, looked up from the model configs on the server side")
     agent_params: Optional[CompletionParams] = Field(None, description="Parameters for the interaction with the agent")
-    prompt_metadata: Optional[dict[str, Any]] = Field(None, description="Metadata for the prompt")
-    persona: str = Field(..., description="Persona prompt of the persona defining the agent's behavior")
-    uid: Optional[str] = Field(None, description="Unique identifier for the configuration")
+    prompt_metadata: Optional[dict[str, Any]] = Field(None, description="Metadata for prompt generation, allows for `$variable` in the person, that are replaced with content from this table. Also used by some tools")
+    persona: str = Field(..., description="The core instructions for the agent.")
+    uid: Optional[str] = Field(None, description="Unique identifier for the configuration in slug form")
 
     category: List[str] = Field(default_factory=list, description="A list of categories this agent belongs to from most to least general" )
 

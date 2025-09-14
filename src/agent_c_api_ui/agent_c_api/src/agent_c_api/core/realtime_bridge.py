@@ -18,11 +18,11 @@ from agent_c.models.heygen import HeygenAvatarSessionData, NewSessionRequest
 from agent_c.toolsets import Toolset
 from agent_c.util.heygen_streaming_avatar_client import HeyGenStreamingClient
 from agent_c.util.registries.event import EventRegistry
-from agent_c_api.api.rt.models.client_events import GetAgentsEvent, ErrorEvent, AgentListEvent, GetAvatarsEvent, AvatarListEvent, TextInputEvent, SetAvatarEvent, AvatarConnectionChangedEvent, \
+from agent_c_api.api.rt.models.control_events import GetAgentsEvent, ErrorEvent, AgentListEvent, GetAvatarsEvent, AvatarListEvent, TextInputEvent, SetAvatarEvent, AvatarConnectionChangedEvent, \
     SetAgentEvent, AgentConfigurationChangedEvent, SetAvatarSessionEvent, ChatSessionChangedEvent, SessionMetadataChangedEvent, ChatSessionNameChangedEvent, ResumeChatSessionEvent, \
     NewChatSessionEvent, SetAgentVoiceEvent, AgentVoiceChangedEvent, UserTurnStartEvent, UserTurnEndEvent, GetUserSessionsEvent, GetUserSessionsResponseEvent, PingEvent, PongEvent, \
     GetToolCatalogEvent, ToolCatalogEvent, ChatUserDataEvent, GetVoicesEvent, VoiceListEvent
-from agent_c_api.api.rt.models.client_events import SetChatSessionNameEvent, SetSessionMessagesEvent, ChatSessionNameChangedEvent, SetSessionMetadataEvent, SessionMetadataChangedEvent
+from agent_c_api.api.rt.models.control_events import SetChatSessionNameEvent, SetSessionMessagesEvent, ChatSessionNameChangedEvent, SetSessionMetadataEvent, SessionMetadataChangedEvent
 from agent_c_api.core.agent_bridge import AgentBridge
 from agent_c.models.input import AudioInput
 

@@ -47,7 +47,7 @@ class GPTChatAgent(BaseAgent):
         """
         kwargs['model_name']: str = kwargs.get('model_name')
         kwargs['token_counter'] = kwargs.get('token_counter', TikTokenTokenCounter())
-        super().__init__(**kwargs)
+        super().__init__(**kwargs, vendor=openai)
         self.schemas: Union[None, List[Dict[str, Any]]] = None
 
         # Initialize logger

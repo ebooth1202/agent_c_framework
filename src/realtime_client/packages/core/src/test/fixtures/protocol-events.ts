@@ -370,7 +370,7 @@ export const serverEventFixtures = {
 
   toolCatalog: {
     type: 'tool_catalog',
-    toolsets: [
+    tools: [
       {
         name: 'math_tools',
         description: 'Mathematical tools',
@@ -591,8 +591,8 @@ export const clientEventFixtures = {
 
   setAvatarSession: {
     type: 'set_avatar_session',
-    session_id: 'avatar-session-xyz',
-    avatar_id: 'avatar-1',
+    access_token: 'avatar-access-token-xyz',
+    avatar_session_id: 'avatar-session-xyz',
   } as SetAvatarSessionEvent,
 
   clearAvatarSession: {

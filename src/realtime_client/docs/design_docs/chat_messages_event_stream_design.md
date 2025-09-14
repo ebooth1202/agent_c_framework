@@ -1,20 +1,24 @@
-# Chat Messages and Event Stream Design Document
+# Chat Messages and Event Stream Design Document (v2.0)
 
 ## Executive Summary
 
-This document outlines the comprehensive architecture for implementing chat message display and real-time event stream processing in the Agent C Realtime SDK. The implementation spans both core SDK components for event processing and UI components for rich message display, supporting streaming text, thoughts, tool calls, rich media, and message editing capabilities.
+This document outlines the comprehensive architecture for implementing chat message display and real-time event stream processing in the Agent C Realtime SDK. The implementation spans both core SDK components for event processing and UI components for rich message display, supporting streaming text, thoughts, tool calls, rich media, MultiModal content, and message editing capabilities.
 
 ## Requirements Overview
 
 ### Core Requirements
 1. **Initial message population** from ChatSessionChangedEvent
-2. **Incremental message building** from event stream
-3. **Support for multiple message types** (assistant, user, thought)
-4. **Rich message display** with Markdown, footers, and interactive elements
-5. **Message editing capability** with history truncation
-6. **Real-time tool usage notifications**
-7. **Rich media rendering** (HTML, SVG)
-8. **System notifications and error display**
+2. **Real-time user message display** from anthropic_user_message events
+3. **Parallel accumulation** of thought and text deltas
+4. **Support for multiple message types** (assistant, user, thought)
+5. **MultiModal content support** (text, images, tool calls)
+6. **Sub-session handling** for agent-to-agent conversations
+7. **Rich message display** with Markdown, footers, and interactive elements
+8. **Message editing capability** with history truncation
+9. **Real-time tool usage notifications**
+10. **Rich media rendering** (HTML, SVG)
+11. **System notifications and error display**
+12. **Event filtering** for ignored event types
 
 ## Data Models
 
@@ -86,63 +90,44 @@ export interface ToolResultBlockParam {
   is_error?: boolean;
   cache_control?: CacheControlEphemeral;
 }
-
-// OpenAI format (when vendor === 'openai') - for future support
-export interface OpenAIMessageParam {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  // Additional OpenAI-specific fields
-}
 ```
 
-### Content Normalization Process
-
-The EventStreamProcessor must normalize vendor-specific content into a consistent format for UI consumption:
+### Server Event Types
 
 ```typescript
-export class EventStreamProcessor {
-  private normalizeMessageContent(message: MessageParam): string {
-    // Handle string content directly
-    if (typeof message.content === 'string') {
-      return message.content;
-    }
-    
-    // Handle ContentBlockParam array
-    if (Array.isArray(message.content)) {
-      return message.content
-        .map(block => {
-          switch (block.type) {
-            case 'text':
-              return block.text;
-            case 'tool_use':
-              return `[Tool: ${block.name}]`;
-            case 'tool_result':
-              // Recursively normalize tool result content
-              if (typeof block.content === 'string') {
-                return block.content;
-              }
-              if (Array.isArray(block.content)) {
-                return this.normalizeContentBlocks(block.content);
-              }
-              return '[Tool Result]';
-            case 'image':
-              return '[Image]';
-            default:
-              return '';
-          }
-        })
-        .join('\n');
-    }
-    
-    return '';
-  }
-  
-  private normalizeContentBlocks(blocks: ContentBlockParam[]): string {
-    return blocks
-      .filter(block => block.type === 'text')
-      .map(block => (block as TextBlockParam).text)
-      .join('\n');
-  }
+// User message event (real-time)
+export interface AnthropicUserMessageEvent {
+  type: 'anthropic_user_message';
+  session_id: string;
+  role: 'assistant';  // Always 'assistant' for routing
+  parent_session_id: string | null;
+  user_session_id: string;
+  vendor: 'anthropic';
+  message: {
+    role: 'user';
+    content: string | ContentBlockParam[];
+  };
+}
+
+// Streaming events
+export interface TextDeltaEvent {
+  type: 'text_delta';
+  session_id: string;
+  content: string;
+  format?: 'markdown';
+}
+
+export interface ThoughtDeltaEvent {
+  type: 'thought_delta';
+  session_id: string;
+  content: string;
+  format?: 'markdown';
+}
+
+// Events to ignore
+export interface IgnoredEvents {
+  type: 'history' | 'history_delta' | 'complete_thought' | 'system_prompt';
+  // These events should be filtered out
 }
 ```
 
@@ -151,65 +136,213 @@ export class EventStreamProcessor {
 After normalization, the UI works with consistent structures:
 
 ```typescript
-// Normalized message for UI consumption
-export interface NormalizedMessage {
+// Enhanced message for UI consumption
+export interface EnhancedMessage {
   id: string;
   role: 'user' | 'assistant';
-  content: string;  // Always normalized to string
+  content: string;  // Text representation for display
+  multiModalContent?: ContentBlockParam[];  // Preserved structured content
   timestamp: string;
   type: 'message' | 'thought' | 'media' | 'notification';
   status: 'streaming' | 'complete' | 'error';
+  isSubSession?: boolean;  // True if session_id !== user_session_id
   metadata?: {
     vendor?: 'anthropic' | 'openai';
     displayName?: string;
-    originalContent?: MessageParam['content'];  // Preserve original for debugging
+    sessionId?: string;  // Original session_id for sub-sessions
+    parentSessionId?: string;
     inputTokens?: number;
     outputTokens?: number;
     stopReason?: string;
   };
   toolCalls?: ToolCall[];
+  isCollapsed?: boolean; // For thoughts
 }
 ```
 
-### Vendor-Specific Handling
+## Architecture Overview
 
-The system must handle vendor differences:
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Event Stream                         │
+│  (TextDelta, ThoughtDelta, ToolCall, RenderMedia, etc.) │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│              EventStreamProcessor                       │
+│  - Routes events to appropriate handlers                │
+│  - Filters ignored events                              │
+│  - Detects sub-sessions                               │
+│  - Coordinates message building                        │
+└────────────────────┬────────────────────────────────────┘
+                     │
+         ┌───────────┴───────────┬─────────────┐
+         ▼                       ▼             ▼
+┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
+│ DualMessageBuilder│  │ ToolCallManager │  │ RichMediaHandler │
+│  - Parallel       │  │ - Tracks tools   │  │ - Processes      │
+│    accumulation   │  │ - Notifications  │  │   media events   │
+└──────────────────┘  └──────────────────┘  └──────────────────┘
+         │                       │             │
+         └───────────┬───────────┴─────────────┘
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│              Enhanced SessionManager                    │
+│  - Maintains message history                           │
+│  - Handles message mutations                           │
+│  - Tracks sub-sessions                                │
+│  - Emits UI update events                             │
+└─────────────────────────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│                  UI Components                         │
+│  - MessageList, Message, ThoughtMessage                │
+│  - ImageDisplay, MultiModalContent                     │
+│  - ToolCallDisplay, RichMediaDisplay                   │
+│  - SubSessionIndicator, SystemNotification             │
+└─────────────────────────────────────────────────────────┘
+```
+
+## Core SDK Components
+
+### 1. EventStreamProcessor
+
+**Purpose:** Central coordinator for processing incoming events with proper filtering and routing
 
 ```typescript
-export class VendorAdapter {
-  static normalizeSession(session: ChatSession): NormalizedSession {
-    return {
-      sessionId: session.session_id,
-      createdAt: session.created_at,
-      updatedAt: session.updated_at,
-      title: session.title,
-      deleted: session.deleted,
-      vendor: session.vendor || 'anthropic',  // Default to anthropic
-      displayName: session.display_name,
-      messages: session.messages.map(msg => 
-        this.normalizeMessage(msg, session.vendor)
-      )
-    };
+export class EventStreamProcessor {
+  private messageBuilder: DualMessageBuilder;
+  private toolCallManager: ToolCallManager;
+  private richMediaHandler: RichMediaHandler;
+  private sessionManager: SessionManager;
+  private currentVendor: 'anthropic' | 'openai' = 'anthropic';
+  private userSessionId: string;
+  
+  // Events to explicitly ignore
+  private readonly IGNORED_EVENTS = [
+    'history',
+    'history_delta',
+    'complete_thought',
+    'system_prompt'
+  ];
+  
+  constructor(sessionManager: SessionManager, userSessionId: string) {
+    this.sessionManager = sessionManager;
+    this.userSessionId = userSessionId;
+    this.messageBuilder = new DualMessageBuilder();
+    this.toolCallManager = new ToolCallManager();
+    this.richMediaHandler = new RichMediaHandler();
   }
   
-  static normalizeMessage(
-    message: MessageParam, 
-    vendor?: string
-  ): NormalizedMessage {
-    const normalized: NormalizedMessage = {
+  processEvent(event: ServerEvent): void {
+    // Filter ignored events
+    if (this.IGNORED_EVENTS.includes(event.type)) {
+      return; // Silently ignore
+    }
+    
+    // Detect sub-session (agent-to-agent conversation)
+    const isSubSession = this.isSubSessionEvent(event);
+    
+    switch (event.type) {
+      case 'chat_session_changed':
+        this.handleSessionChanged(event);
+        break;
+      case 'anthropic_user_message':
+        this.handleUserMessage(event);
+        break;
+      case 'text_delta':
+        this.handleTextDelta(event, isSubSession);
+        break;
+      case 'thought_delta':
+        this.handleThoughtDelta(event, isSubSession);
+        break;
+      case 'completion':
+        this.handleCompletion(event, isSubSession);
+        break;
+      case 'tool_select_delta':
+        this.handleToolSelect(event);
+        break;
+      case 'tool_call':
+        this.handleToolCall(event);
+        break;
+      case 'render_media':
+        this.handleRenderMedia(event);
+        break;
+      case 'interaction':
+        this.handleInteraction(event);
+        break;
+      // ... other events
+    }
+  }
+  
+  private isSubSessionEvent(event: any): boolean {
+    return event.session_id && 
+           event.user_session_id && 
+           event.session_id !== event.user_session_id;
+  }
+  
+  private handleSessionChanged(event: ChatSessionChangedEvent): void {
+    const session = event.chat_session;
+    this.currentVendor = session.vendor || 'anthropic';
+    
+    // Normalize all messages in the session
+    const normalizedMessages = session.messages.map(msg => 
+      this.normalizeMessage(msg, session.vendor, session.display_name)
+    );
+    
+    // Update session with normalized messages
+    this.sessionManager.setSession({
+      ...session,
+      messages: normalizedMessages
+    });
+  }
+  
+  private handleUserMessage(event: AnthropicUserMessageEvent): void {
+    // Handle real-time user message display
+    const message = this.normalizeMessage(
+      event.message,
+      event.vendor,
+      null,
+      event.session_id,
+      event.parent_session_id
+    );
+    
+    // Mark as sub-session if applicable
+    if (this.isSubSessionEvent(event)) {
+      message.isSubSession = true;
+      message.metadata!.sessionId = event.session_id;
+      message.metadata!.parentSessionId = event.parent_session_id;
+    }
+    
+    this.sessionManager.addMessage(message);
+  }
+  
+  private normalizeMessage(
+    message: MessageParam,
+    vendor?: string,
+    displayName?: string | null,
+    sessionId?: string,
+    parentSessionId?: string | null
+  ): EnhancedMessage {
+    const normalized: EnhancedMessage = {
       id: generateMessageId(),
       role: message.role,
-      content: this.extractContent(message.content),
+      content: this.extractTextContent(message.content),
+      multiModalContent: Array.isArray(message.content) ? message.content : undefined,
       timestamp: new Date().toISOString(),
       type: 'message',
       status: 'complete',
       metadata: {
         vendor: vendor as 'anthropic' | 'openai',
-        originalContent: message.content
+        displayName: displayName || undefined,
+        sessionId,
+        parentSessionId: parentSessionId || undefined
       }
     };
     
-    // Extract tool calls if present in content blocks
+    // Extract tool calls if present
     if (Array.isArray(message.content)) {
       normalized.toolCalls = this.extractToolCalls(message.content);
     }
@@ -217,22 +350,79 @@ export class VendorAdapter {
     return normalized;
   }
   
-  private static extractContent(
-    content: string | ContentBlockParam[]
-  ): string {
+  private extractTextContent(content: string | ContentBlockParam[]): string {
     if (typeof content === 'string') {
       return content;
     }
     
-    return content
-      .filter(block => block.type === 'text')
-      .map(block => (block as TextBlockParam).text)
-      .join('\n');
+    // Extract text and provide placeholders for other content
+    return content.map(block => {
+      switch (block.type) {
+        case 'text':
+          return block.text;
+        case 'image':
+          return '[Image]'; // Placeholder, actual image in multiModalContent
+        case 'tool_use':
+          return `[Tool: ${block.name}]`;
+        case 'tool_result':
+          if (typeof block.content === 'string') {
+            return block.content;
+          }
+          if (Array.isArray(block.content)) {
+            return this.extractTextContent(block.content);
+          }
+          return '[Tool Result]';
+        default:
+          return '';
+      }
+    }).join('\n');
   }
   
-  private static extractToolCalls(
-    content: ContentBlockParam[]
-  ): ToolCall[] | undefined {
+  private handleTextDelta(event: TextDeltaEvent, isSubSession: boolean): void {
+    this.messageBuilder.appendText(event.content, isSubSession);
+    const message = this.messageBuilder.getCurrentAssistantMessage();
+    if (message) {
+      this.sessionManager.updateStreamingMessage(message);
+    }
+  }
+  
+  private handleThoughtDelta(event: ThoughtDeltaEvent, isSubSession: boolean): void {
+    this.messageBuilder.appendThought(event.content, isSubSession);
+    const message = this.messageBuilder.getCurrentThoughtMessage();
+    if (message) {
+      this.sessionManager.updateStreamingMessage(message);
+    }
+  }
+  
+  private handleCompletion(event: CompletionEvent, isSubSession: boolean): void {
+    // Filter out completion_opts
+    const { completion_options, ...relevantData } = event;
+    
+    if (!event.running) {
+      // Finalize all active messages
+      const messages = this.messageBuilder.finalizeAll({
+        inputTokens: event.input_tokens,
+        outputTokens: event.output_tokens,
+        stopReason: event.stop_reason,
+        vendor: this.currentVendor
+      }, isSubSession);
+      
+      messages.forEach(msg => {
+        this.sessionManager.finalizeMessage(msg);
+      });
+      
+      this.messageBuilder.reset();
+    }
+  }
+  
+  private handleInteraction(event: InteractionEvent): void {
+    if (event.started) {
+      // New interaction starting, prepare for messages
+      this.messageBuilder.reset();
+    }
+  }
+  
+  private extractToolCalls(content: ContentBlockParam[]): ToolCall[] | undefined {
     const toolCalls = content
       .filter(block => block.type === 'tool_use')
       .map(block => {
@@ -251,143 +441,9 @@ export class VendorAdapter {
 }
 ```
 
-## Architecture Overview
+### 2. DualMessageBuilder
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    Event Stream                         │
-│  (TextDelta, ThoughtDelta, ToolCall, RenderMedia, etc.) │
-└────────────────────┬────────────────────────────────────┘
-                     │
-                     ▼
-┌─────────────────────────────────────────────────────────┐
-│              EventStreamProcessor                       │
-│  - Routes events to appropriate handlers                │
-│  - Coordinates message building                         │
-│  - Manages state transitions                           │
-└────────────────────┬────────────────────────────────────┘
-                     │
-         ┌───────────┴───────────┬─────────────┐
-         ▼                       ▼             ▼
-┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
-│  MessageBuilder  │  │ ToolCallManager │  │ RichMediaHandler │
-│  - Accumulates   │  │ - Tracks tools   │  │ - Processes      │
-│    text/thoughts │  │ - Notifications  │  │   media events   │
-└──────────────────┘  └──────────────────┘  └──────────────────┘
-         │                       │             │
-         └───────────┬───────────┴─────────────┘
-                     ▼
-┌─────────────────────────────────────────────────────────┐
-│              Enhanced SessionManager                    │
-│  - Maintains message history                           │
-│  - Handles message mutations                           │
-│  - Emits UI update events                             │
-└─────────────────────────────────────────────────────────┘
-                     │
-                     ▼
-┌─────────────────────────────────────────────────────────┐
-│                  UI Components                         │
-│  - MessageList, Message, ThoughtMessage                │
-│  - ToolCallDisplay, RichMediaDisplay                   │
-│  - SystemNotification                                  │
-└─────────────────────────────────────────────────────────┘
-```
-
-## Core SDK Components
-
-### 1. EventStreamProcessor
-
-**Purpose:** Central coordinator for processing incoming events and building messages with vendor normalization
-
-```typescript
-export class EventStreamProcessor {
-  private messageBuilder: MessageBuilder;
-  private toolCallManager: ToolCallManager;
-  private richMediaHandler: RichMediaHandler;
-  private sessionManager: SessionManager;
-  private currentVendor: 'anthropic' | 'openai' = 'anthropic';
-  
-  constructor(sessionManager: SessionManager) {
-    this.sessionManager = sessionManager;
-    this.messageBuilder = new MessageBuilder();
-    this.toolCallManager = new ToolCallManager();
-    this.richMediaHandler = new RichMediaHandler();
-  }
-  
-  processEvent(event: ServerEvent): void {
-    switch (event.type) {
-      case 'chat_session_changed':
-        this.handleSessionChanged(event);
-        break;
-      case 'text_delta':
-        this.handleTextDelta(event);
-        break;
-      case 'thought_delta':
-        this.handleThoughtDelta(event);
-        break;
-      case 'completion':
-        this.handleCompletion(event);
-        break;
-      case 'tool_select_delta':
-        this.handleToolSelect(event);
-        break;
-      case 'tool_call':
-        this.handleToolCall(event);
-        break;
-      case 'render_media':
-        this.handleRenderMedia(event);
-        break;
-      // ... other events
-    }
-  }
-  
-  private handleSessionChanged(event: ChatSessionChangedEvent): void {
-    const session = event.chat_session;
-    // Store vendor for content normalization
-    this.currentVendor = session.vendor || 'anthropic';
-    
-    // Normalize all messages in the session
-    const normalizedMessages = session.messages.map(msg => 
-      this.normalizeMessage(msg)
-    );
-    
-    // Update session with normalized messages
-    this.sessionManager.setSession({
-      ...session,
-      messages: normalizedMessages,
-      displayName: session.display_name
-    });
-  }
-  
-  private normalizeMessage(message: MessageParam): NormalizedMessage {
-    return VendorAdapter.normalizeMessage(message, this.currentVendor);
-  }
-  
-  private handleTextDelta(event: TextDeltaEvent): void {
-    this.messageBuilder.appendText(event.content);
-    this.sessionManager.updateStreamingMessage(
-      this.messageBuilder.getCurrentMessage()
-    );
-  }
-  
-  private handleCompletion(event: CompletionEvent): void {
-    if (!event.running) {
-      const message = this.messageBuilder.finalize({
-        inputTokens: event.input_tokens,
-        outputTokens: event.output_tokens,
-        stopReason: event.stop_reason,
-        vendor: this.currentVendor
-      });
-      this.sessionManager.finalizeMessage(message);
-      this.messageBuilder.reset();
-    }
-  }
-}
-```
-
-### 2. MessageBuilder
-
-**Purpose:** Accumulates streaming content and builds complete messages
+**Purpose:** Supports parallel accumulation of thought and text content with proper transition handling
 
 ```typescript
 export interface MessageMetadata {
@@ -397,58 +453,112 @@ export interface MessageMetadata {
   toolCalls?: ToolCall[];
   vendor?: 'anthropic' | 'openai';
   displayName?: string;
-  originalContent?: string | ContentBlockParam[];
+  sessionId?: string;
+  parentSessionId?: string;
 }
 
-export class MessageBuilder {
-  private currentMessage: Partial<EnhancedMessage> | null = null;
-  private messageType: 'assistant' | 'thought' | 'user' = 'assistant';
-  private content: string = '';
+export class DualMessageBuilder {
+  private thoughtMessage: Partial<EnhancedMessage> | null = null;
+  private assistantMessage: Partial<EnhancedMessage> | null = null;
+  private thoughtContent: string = '';
+  private assistantContent: string = '';
   
-  startMessage(type: 'assistant' | 'thought' | 'user'): void {
-    this.currentMessage = {
+  appendThought(delta: string, isSubSession: boolean = false): void {
+    if (!this.thoughtMessage) {
+      this.startThoughtMessage(isSubSession);
+    }
+    this.thoughtContent += delta;
+    if (this.thoughtMessage) {
+      this.thoughtMessage.content = this.thoughtContent;
+    }
+  }
+  
+  appendText(delta: string, isSubSession: boolean = false): void {
+    // If we have an unfinalized thought, keep it active
+    // Both can accumulate in parallel
+    if (!this.assistantMessage) {
+      this.startAssistantMessage(isSubSession);
+    }
+    this.assistantContent += delta;
+    if (this.assistantMessage) {
+      this.assistantMessage.content = this.assistantContent;
+    }
+  }
+  
+  private startThoughtMessage(isSubSession: boolean): void {
+    this.thoughtMessage = {
       id: generateMessageId(),
-      role: type === 'thought' ? 'assistant' : type,
+      role: 'assistant',
       content: '',
       timestamp: new Date().toISOString(),
-      type: type === 'thought' ? 'thought' : 'message',
-      status: 'streaming'
+      type: 'thought',
+      status: 'streaming',
+      isSubSession,
+      isCollapsed: true // Thoughts start collapsed
     };
-    this.messageType = type;
-    this.content = '';
+    this.thoughtContent = '';
   }
   
-  appendText(delta: string): void {
-    this.content += delta;
-    if (this.currentMessage) {
-      this.currentMessage.content = this.content;
-    }
+  private startAssistantMessage(isSubSession: boolean): void {
+    this.assistantMessage = {
+      id: generateMessageId(),
+      role: 'assistant',
+      content: '',
+      timestamp: new Date().toISOString(),
+      type: 'message',
+      status: 'streaming',
+      isSubSession
+    };
+    this.assistantContent = '';
   }
   
-  finalize(metadata?: MessageMetadata): EnhancedMessage {
-    if (!this.currentMessage) {
-      throw new Error('No message to finalize');
-    }
-    
-    return {
-      ...this.currentMessage,
-      content: this.content,
-      status: 'complete',
-      metadata: metadata || {},
-      toolCalls: metadata?.toolCalls
-    } as EnhancedMessage;
-  }
-  
-  getCurrentMessage(): Partial<EnhancedMessage> | null {
-    return this.currentMessage ? {
-      ...this.currentMessage,
-      content: this.content
+  getCurrentThoughtMessage(): Partial<EnhancedMessage> | null {
+    return this.thoughtMessage ? {
+      ...this.thoughtMessage,
+      content: this.thoughtContent
     } : null;
   }
   
+  getCurrentAssistantMessage(): Partial<EnhancedMessage> | null {
+    return this.assistantMessage ? {
+      ...this.assistantMessage,
+      content: this.assistantContent
+    } : null;
+  }
+  
+  finalizeAll(metadata: MessageMetadata, isSubSession: boolean = false): EnhancedMessage[] {
+    const messages: EnhancedMessage[] = [];
+    
+    // Finalize thought if exists
+    if (this.thoughtMessage) {
+      messages.push({
+        ...this.thoughtMessage,
+        content: this.thoughtContent,
+        status: 'complete',
+        metadata: { ...metadata },
+        isSubSession
+      } as EnhancedMessage);
+    }
+    
+    // Finalize assistant message if exists
+    if (this.assistantMessage) {
+      messages.push({
+        ...this.assistantMessage,
+        content: this.assistantContent,
+        status: 'complete',
+        metadata: { ...metadata },
+        isSubSession
+      } as EnhancedMessage);
+    }
+    
+    return messages;
+  }
+  
   reset(): void {
-    this.currentMessage = null;
-    this.content = '';
+    this.thoughtMessage = null;
+    this.assistantMessage = null;
+    this.thoughtContent = '';
+    this.assistantContent = '';
   }
 }
 ```
@@ -567,79 +677,22 @@ export class RichMediaHandler {
 }
 ```
 
-### 5. MessageEditManager
-
-**Purpose:** Handles message editing with history truncation
-
-```typescript
-export class MessageEditManager {
-  constructor(
-    private sessionManager: SessionManager,
-    private client: RealtimeClient
-  ) {}
-  
-  async editMessage(
-    messageId: string, 
-    newContent: string
-  ): Promise<void> {
-    // Get current message history
-    const session = this.sessionManager.getCurrentSession();
-    if (!session) throw new Error('No active session');
-    
-    // Find the message to edit
-    const messageIndex = session.messages.findIndex(
-      m => m.id === messageId
-    );
-    if (messageIndex === -1) throw new Error('Message not found');
-    
-    // Truncate history at edit point
-    const truncatedMessages = session.messages.slice(0, messageIndex);
-    
-    // Send SetSessionMessagesEvent
-    await this.client.setSessionMessages(truncatedMessages);
-    
-    // Wait for history event confirmation
-    await this.waitForHistoryUpdate();
-    
-    // Send new user message with edited content
-    await this.client.sendMessage(newContent);
-  }
-  
-  private waitForHistoryUpdate(): Promise<void> {
-    return new Promise((resolve) => {
-      const handler = () => {
-        this.client.off('history', handler);
-        resolve();
-      };
-      this.client.once('history', handler);
-    });
-  }
-}
-```
-
-### 6. Enhanced SessionManager
+### 5. Enhanced SessionManager
 
 **Additions to existing SessionManager:**
 
 ```typescript
-export interface EnhancedMessage extends Message {
-  id: string;
-  type: 'message' | 'thought' | 'media' | 'notification';
-  status: 'streaming' | 'complete' | 'error';
-  metadata?: MessageMetadata;
-  toolCalls?: ToolCall[];
-  isCollapsed?: boolean; // For thoughts
-}
-
-// Additional methods for SessionManager
 class SessionManager {
   // ... existing code ...
   
-  private streamingMessage: Partial<EnhancedMessage> | null = null;
+  private streamingMessages: Map<string, Partial<EnhancedMessage>> = new Map();
   private toolNotifications: Map<string, ToolNotification> = new Map();
+  private subSessions: Set<string> = new Set();
   
   updateStreamingMessage(message: Partial<EnhancedMessage>): void {
-    this.streamingMessage = message;
+    if (!message.id) return;
+    
+    this.streamingMessages.set(message.id, message);
     this.emit('message-streaming', {
       sessionId: this.currentSessionId!,
       message
@@ -649,6 +702,14 @@ class SessionManager {
   finalizeMessage(message: EnhancedMessage): void {
     const session = this.getCurrentSession();
     if (!session) return;
+    
+    // Remove from streaming
+    this.streamingMessages.delete(message.id);
+    
+    // Track sub-sessions
+    if (message.isSubSession && message.metadata?.sessionId) {
+      this.subSessions.add(message.metadata.sessionId);
+    }
     
     // Replace or add the finalized message
     const existingIndex = session.messages.findIndex(
@@ -661,11 +722,29 @@ class SessionManager {
       session.messages.push(message);
     }
     
-    this.streamingMessage = null;
     this.emit('message-complete', {
       sessionId: session.session_id,
       message
     });
+  }
+  
+  addMessage(message: EnhancedMessage): void {
+    const session = this.getCurrentSession();
+    if (!session) return;
+    
+    session.messages.push(message);
+    this.emit('message-added', {
+      sessionId: session.session_id,
+      message
+    });
+  }
+  
+  getStreamingMessages(): Partial<EnhancedMessage>[] {
+    return Array.from(this.streamingMessages.values());
+  }
+  
+  isSubSession(sessionId: string): boolean {
+    return this.subSessions.has(sessionId);
   }
   
   addToolNotification(notification: ToolNotification): void {
@@ -687,10 +766,9 @@ class SessionManager {
       role: 'assistant',
       type: 'media',
       content: media.content,
-      contentType: media.type,
       timestamp: media.metadata.timestamp.toISOString(),
       status: 'complete',
-      metadata: media.metadata
+      metadata: media.metadata as any
     };
     
     session.messages.push(mediaMessage);
@@ -724,6 +802,7 @@ export const Message: React.FC<MessageProps> = ({
   const [editContent, setEditContent] = useState(message.content);
   const [showToolCalls, setShowToolCalls] = useState(false);
   
+  // Handle different message types
   if (message.type === 'thought') {
     return <ThoughtMessage message={message} />;
   }
@@ -733,7 +812,14 @@ export const Message: React.FC<MessageProps> = ({
   }
   
   return (
-    <div className="message-container">
+    <div className={`message-container ${message.isSubSession ? 'sub-session' : ''}`}>
+      {message.isSubSession && (
+        <SubSessionIndicator 
+          sessionId={message.metadata?.sessionId} 
+          parentSessionId={message.metadata?.parentSessionId}
+        />
+      )}
+      
       <div className="message-content">
         {isEditing ? (
           <MessageEditor
@@ -745,7 +831,17 @@ export const Message: React.FC<MessageProps> = ({
             onCancel={() => setIsEditing(false)}
           />
         ) : (
-          <MarkdownRenderer content={message.content} />
+          <>
+            {/* Render MultiModal content */}
+            {message.multiModalContent ? (
+              <MultiModalContent 
+                content={message.multiModalContent}
+                textContent={message.content}
+              />
+            ) : (
+              <MarkdownRenderer content={message.content} />
+            )}
+          </>
         )}
       </div>
       
@@ -765,17 +861,142 @@ export const Message: React.FC<MessageProps> = ({
 };
 ```
 
-### 2. ThoughtMessage Component
+### 2. MultiModalContent Component
+
+```tsx
+export const MultiModalContent: React.FC<{
+  content: ContentBlockParam[];
+  textContent: string;
+}> = ({ content, textContent }) => {
+  return (
+    <div className="multimodal-content">
+      {content.map((block, index) => {
+        switch (block.type) {
+          case 'text':
+            return (
+              <div key={index} className="text-block">
+                <MarkdownRenderer content={block.text} />
+              </div>
+            );
+            
+          case 'image':
+            return (
+              <ImageDisplay 
+                key={index}
+                source={block.source}
+                className="message-image"
+              />
+            );
+            
+          case 'tool_use':
+            return (
+              <div key={index} className="tool-use-block">
+                <span className="tool-badge">Tool: {block.name}</span>
+              </div>
+            );
+            
+          case 'tool_result':
+            return (
+              <div key={index} className="tool-result-block">
+                {typeof block.content === 'string' ? (
+                  <MarkdownRenderer content={block.content} />
+                ) : (
+                  <MultiModalContent 
+                    content={block.content || []} 
+                    textContent=""
+                  />
+                )}
+              </div>
+            );
+            
+          default:
+            return null;
+        }
+      })}
+    </div>
+  );
+};
+```
+
+### 3. ImageDisplay Component
+
+```tsx
+export const ImageDisplay: React.FC<{
+  source: {
+    type: 'base64';
+    media_type: string;
+    data: string;
+  };
+  className?: string;
+}> = ({ source, className }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const imageUrl = `data:${source.media_type};base64,${source.data}`;
+  
+  return (
+    <div className={`image-display ${className || ''}`}>
+      <img
+        src={imageUrl}
+        alt="User uploaded image"
+        className={isExpanded ? 'expanded' : 'thumbnail'}
+        onClick={() => setIsExpanded(!isExpanded)}
+      />
+      <div className="image-controls">
+        <button 
+          onClick={() => setIsExpanded(!isExpanded)}
+          aria-label={isExpanded ? 'Collapse' : 'Expand'}
+        >
+          {isExpanded ? <CollapseIcon /> : <ExpandIcon />}
+        </button>
+        <button 
+          onClick={() => downloadImage(imageUrl, source.media_type)}
+          aria-label="Download"
+        >
+          <DownloadIcon />
+        </button>
+      </div>
+    </div>
+  );
+};
+```
+
+### 4. SubSessionIndicator Component
+
+```tsx
+export const SubSessionIndicator: React.FC<{
+  sessionId?: string;
+  parentSessionId?: string;
+}> = ({ sessionId, parentSessionId }) => {
+  return (
+    <div className="sub-session-indicator">
+      <span className="sub-session-badge">
+        Agent-to-Agent
+      </span>
+      <span className="session-info">
+        Session: {sessionId?.slice(0, 8)}...
+      </span>
+    </div>
+  );
+};
+```
+
+### 5. ThoughtMessage Component
 
 ```tsx
 export const ThoughtMessage: React.FC<{ message: EnhancedMessage }> = ({
   message
 }) => {
-  const [isCollapsed, setIsCollapsed] = useState(true);
+  const [isCollapsed, setIsCollapsed] = useState(message.isCollapsed ?? true);
   const firstLine = message.content.split('\n')[0];
   
   return (
-    <div className="thought-message">
+    <div className={`thought-message ${message.isSubSession ? 'sub-session' : ''}`}>
+      {message.isSubSession && (
+        <SubSessionIndicator 
+          sessionId={message.metadata?.sessionId} 
+          parentSessionId={message.metadata?.parentSessionId}
+        />
+      )}
+      
       <button
         className="thought-toggle"
         onClick={() => setIsCollapsed(!isCollapsed)}
@@ -801,158 +1022,6 @@ export const ThoughtMessage: React.FC<{ message: EnhancedMessage }> = ({
 };
 ```
 
-### 3. MessageFooter Component
-
-```tsx
-export const MessageFooter: React.FC<{
-  message: EnhancedMessage;
-  onEdit?: () => void;
-  onCopy?: () => void;
-  onToggleToolCalls?: () => void;
-  showTokenCounts?: boolean;
-}> = ({
-  message,
-  onEdit,
-  onCopy,
-  onToggleToolCalls,
-  showTokenCounts
-}) => {
-  const isUser = message.role === 'user';
-  const isAssistant = message.role === 'assistant';
-  const hasToolCalls = message.toolCalls && message.toolCalls.length > 0;
-  
-  return (
-    <div className="message-footer">
-      <div className="footer-left">
-        {showTokenCounts && message.metadata?.inputTokens && (
-          <span className="token-count">
-            {message.metadata.inputTokens} → {message.metadata.outputTokens}
-          </span>
-        )}
-        
-        {hasToolCalls && (
-          <button
-            className="tool-calls-toggle"
-            onClick={onToggleToolCalls}
-          >
-            <ToolIcon className="icon" />
-            {message.toolCalls!.length} tool{message.toolCalls!.length > 1 ? 's' : ''}
-          </button>
-        )}
-      </div>
-      
-      <div className="footer-right">
-        {isUser && (
-          <button
-            className="edit-button"
-            onClick={onEdit}
-            aria-label="Edit message"
-          >
-            <EditIcon className="icon" />
-          </button>
-        )}
-        
-        <button
-          className="copy-button"
-          onClick={onCopy}
-          aria-label="Copy message"
-        >
-          <CopyIcon className="icon" />
-        </button>
-      </div>
-    </div>
-  );
-};
-```
-
-### 4. ToolNotification Component
-
-```tsx
-export const ToolNotification: React.FC<{
-  notification: ToolNotification;
-}> = ({ notification }) => {
-  const getMessage = () => {
-    switch (notification.status) {
-      case 'preparing':
-        return `Agent is preparing to use ${notification.toolName}...`;
-      case 'executing':
-        return `Agent is using ${notification.toolName}...`;
-      default:
-        return '';
-    }
-  };
-  
-  return (
-    <div className="tool-notification">
-      <LoadingSpinner className="notification-spinner" />
-      <span className="notification-text">{getMessage()}</span>
-    </div>
-  );
-};
-```
-
-### 5. RichMediaDisplay Component
-
-```tsx
-export const RichMediaDisplay: React.FC<{
-  message: EnhancedMessage;
-}> = ({ message }) => {
-  const renderContent = () => {
-    switch (message.contentType) {
-      case 'html':
-        return (
-          <div 
-            className="rich-html"
-            dangerouslySetInnerHTML={{ __html: message.content }}
-          />
-        );
-      
-      case 'svg':
-        return (
-          <div 
-            className="rich-svg"
-            dangerouslySetInnerHTML={{ __html: message.content }}
-          />
-        );
-      
-      default:
-        return <div>Unsupported media type</div>;
-    }
-  };
-  
-  return (
-    <div className="rich-media-container">
-      {renderContent()}
-      <div className="media-attribution">
-        Sent by {message.metadata?.sentByClass}.{message.metadata?.sentByFunction}
-      </div>
-    </div>
-  );
-};
-```
-
-### 6. SystemNotification Component
-
-```tsx
-export const SystemNotification: React.FC<{
-  event: SystemMessageEvent | ErrorEvent;
-}> = ({ event }) => {
-  const severity = 'severity' in event ? event.severity : 'error';
-  const content = 'content' in event ? event.content : event.message;
-  
-  return (
-    <div className={`system-notification severity-${severity}`}>
-      <div className="notification-icon">
-        {severity === 'error' ? <ErrorIcon /> : <InfoIcon />}
-      </div>
-      <div className="notification-content">
-        {content}
-      </div>
-    </div>
-  );
-};
-```
-
 ## Event Flow Sequences
 
 ### 1. Session Initialization Flow
@@ -961,31 +1030,56 @@ export const SystemNotification: React.FC<{
 1. ChatSessionChangedEvent received with vendor and display_name
    → EventStreamProcessor.handleSessionChanged()
    → Store vendor for normalization
-   → Normalize all MessageParam objects
-   → Convert content (string | ContentBlockParam[]) to string
+   → Normalize all MessageParam objects (preserve MultiModal content)
    → SessionManager.setSession() with normalized data
-   → UI receives consistent message format
+   → UI receives messages with proper MultiModal content
 ```
 
-### 2. Standard Text Response Flow
+### 2. Real-time User Message Flow
+
+```
+1. User sends message with image
+2. AnthropicUserMessageEvent received
+   → EventStreamProcessor.handleUserMessage()
+   → Normalize message (preserve image in multiModalContent)
+   → Detect if sub-session
+   → SessionManager.addMessage()
+   → UI immediately displays user's MultiModal message
+```
+
+### 3. Parallel Thought + Text Response Flow
 
 ```
 1. User sends message → TextInputEvent
 2. Server responds with InteractionEvent (started: true)
 3. CompletionEvent (running: true)
-4. TextDeltaEvent stream begins
-   → EventStreamProcessor.handleTextDelta()
-   → MessageBuilder.appendText()
-   → SessionManager.updateStreamingMessage()
-   → UI updates with streaming text
-5. CompletionEvent (running: false) with token counts
-   → MessageBuilder.finalize() with vendor metadata
-   → SessionManager.finalizeMessage()
-   → UI shows complete message with footer
-6. InteractionEvent (started: false)
+4. ThoughtDeltaEvent stream begins
+   → DualMessageBuilder.appendThought()
+   → SessionManager.updateStreamingMessage() for thought
+   → UI shows collapsible thought streaming
+5. TextDeltaEvent stream begins (parallel with thought)
+   → DualMessageBuilder.appendText()
+   → SessionManager.updateStreamingMessage() for text
+   → UI shows assistant message streaming
+6. CompletionEvent (running: false) with token counts
+   → DualMessageBuilder.finalizeAll() returns both messages
+   → SessionManager.finalizeMessage() for each
+   → UI shows both complete messages with footers
+7. InteractionEvent (started: false)
 ```
 
-### 3. Tool Usage Flow
+### 4. Sub-Session Flow
+
+```
+1. Event received with session_id !== user_session_id
+   → EventStreamProcessor.isSubSessionEvent() returns true
+   → Message marked with isSubSession: true
+   → Metadata includes original session_id and parent_session_id
+   → UI displays with SubSessionIndicator
+   → Message only visible during live session (not in resume)
+```
+
+### 5. Tool Usage Flow
 
 ```
 1. ToolSelectDeltaEvent received
@@ -1001,20 +1095,6 @@ export const SystemNotification: React.FC<{
    → Tool calls added to message footer
 ```
 
-### 4. Message Editing Flow
-
-```
-1. User clicks edit on their message
-2. UI enters edit mode
-3. User modifies content and saves
-4. MessageEditManager.editMessage() called
-   → Truncates message history
-   → Sends SetSessionMessagesEvent
-5. Server responds with HistoryEvent
-6. New TextInputEvent sent with edited content
-7. Normal response flow continues
-```
-
 ## React Hook Integration
 
 ### useMessages Hook
@@ -1023,19 +1103,42 @@ export const SystemNotification: React.FC<{
 export const useMessages = () => {
   const client = useRealtimeClient();
   const [messages, setMessages] = useState<EnhancedMessage[]>([]);
-  const [streamingMessage, setStreamingMessage] = useState<Partial<EnhancedMessage> | null>(null);
+  const [streamingMessages, setStreamingMessages] = useState<Map<string, Partial<EnhancedMessage>>>(new Map());
   const [toolNotifications, setToolNotifications] = useState<ToolNotification[]>([]);
   
   useEffect(() => {
     const sessionManager = client.getSessionManager();
     
     const handleMessageStreaming = ({ message }: any) => {
-      setStreamingMessage(message);
+      setStreamingMessages(prev => {
+        const newMap = new Map(prev);
+        if (message.id) {
+          newMap.set(message.id, message);
+        }
+        return newMap;
+      });
     };
     
     const handleMessageComplete = ({ message }: any) => {
+      setMessages(prev => {
+        const index = prev.findIndex(m => m.id === message.id);
+        if (index >= 0) {
+          const newMessages = [...prev];
+          newMessages[index] = message;
+          return newMessages;
+        }
+        return [...prev, message];
+      });
+      
+      setStreamingMessages(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(message.id);
+        return newMap;
+      });
+    };
+    
+    const handleMessageAdded = ({ message }: any) => {
       setMessages(prev => [...prev, message]);
-      setStreamingMessage(null);
     };
     
     const handleToolNotification = (notification: ToolNotification) => {
@@ -1044,11 +1147,13 @@ export const useMessages = () => {
     
     sessionManager.on('message-streaming', handleMessageStreaming);
     sessionManager.on('message-complete', handleMessageComplete);
+    sessionManager.on('message-added', handleMessageAdded);
     sessionManager.on('tool-notification', handleToolNotification);
     
     return () => {
       sessionManager.off('message-streaming', handleMessageStreaming);
       sessionManager.off('message-complete', handleMessageComplete);
+      sessionManager.off('message-added', handleMessageAdded);
       sessionManager.off('tool-notification', handleToolNotification);
     };
   }, [client]);
@@ -1061,144 +1166,109 @@ export const useMessages = () => {
     await editManager.editMessage(messageId, content);
   }, [client]);
   
+  // Combine finalized and streaming messages for display
+  const allMessages = useMemo(() => {
+    const combined = [...messages];
+    streamingMessages.forEach(streamingMsg => {
+      if (!messages.find(m => m.id === streamingMsg.id)) {
+        combined.push(streamingMsg as EnhancedMessage);
+      }
+    });
+    return combined;
+  }, [messages, streamingMessages]);
+  
   return {
-    messages,
-    streamingMessage,
+    messages: allMessages,
+    streamingMessages: Array.from(streamingMessages.values()),
     toolNotifications,
     editMessage
   };
 };
 ```
 
-## Type Definitions
-
-```typescript
-// Enhanced types for the implementation
-export interface EnhancedMessage extends Message {
-  id: string;
-  type: 'message' | 'thought' | 'media' | 'notification';
-  status: 'streaming' | 'complete' | 'error';
-  contentType?: 'text' | 'html' | 'svg';
-  metadata?: {
-    inputTokens?: number;
-    outputTokens?: number;
-    stopReason?: string;
-    sentByClass?: string;
-    sentByFunction?: string;
-  };
-  toolCalls?: Array<{
-    id: string;
-    function: {
-      name: string;
-      arguments: string;
-    };
-    result?: any;
-  }>;
-  isCollapsed?: boolean;
-}
-
-export interface MessageStreamState {
-  messages: EnhancedMessage[];
-  streamingMessage: Partial<EnhancedMessage> | null;
-  toolNotifications: ToolNotification[];
-  activeInteraction: string | null;
-}
-```
-
 ## Implementation Phases
 
 ### Phase 1: Core SDK Components
-1. Implement EventStreamProcessor with vendor normalization
-2. Create VendorAdapter for content normalization
-3. Create MessageBuilder class with vendor awareness
-4. Implement ToolCallManager
-5. Add RichMediaHandler
-6. Enhance SessionManager with new methods
+1. Implement DualMessageBuilder with parallel accumulation
+2. Update EventStreamProcessor with:
+   - Event filtering for ignored types
+   - anthropic_user_message handler
+   - Sub-session detection
+3. Enhance SessionManager with streaming support
 
-### Phase 2: Basic UI Components
-1. Create enhanced Message component
-2. Implement MessageFooter with actions
-3. Add basic MarkdownRenderer
-4. Create SystemNotification component
+### Phase 2: Data Structure Updates
+1. Add multiModalContent field to EnhancedMessage
+2. Update normalization to preserve images
+3. Add sub-session tracking
 
-### Phase 3: Advanced Features
-1. Implement ThoughtMessage with collapsing
-2. Add ToolCallDisplay component
-3. Create RichMediaDisplay component
-4. Implement MessageEditManager
-5. Add ToolNotification component
+### Phase 3: Basic UI Components
+1. Create ImageDisplay component
+2. Create MultiModalContent component
+3. Add SubSessionIndicator component
+4. Update Message component for MultiModal
 
-### Phase 4: Integration & Polish
-1. Create useMessages hook
-2. Integrate with existing ChatMessagesView
-3. Add animations and transitions
-4. Implement keyboard shortcuts
-5. Add accessibility features
+### Phase 4: Advanced Features
+1. Implement parallel thought/text display
+2. Add message editing with MultiModal support
+3. Create comprehensive test suite
+4. Add performance optimizations
 
 ## Testing Strategy
 
 ### Unit Tests
-- EventStreamProcessor event routing
-- VendorAdapter content normalization (string and ContentBlockParam[])
-- MessageBuilder accumulation and finalization
-- ToolCallManager state transitions
-- MessageEditManager truncation logic
-- Vendor-specific message parsing
+- DualMessageBuilder parallel accumulation
+- Event filtering in EventStreamProcessor
+- MultiModal content preservation
+- Sub-session detection logic
+- Image data handling
 
 ### Integration Tests
-- Full event stream to UI flow
-- Message editing with server round-trip
-- Tool notification lifecycle
-- Rich media rendering
+- Full event stream with thought + text
+- MultiModal user message flow
+- Sub-session message handling
+- Tool usage with parallel messages
 
 ### E2E Tests
-- Complete conversation flow
-- Message editing user journey
-- Tool usage visualization
-- Error handling and recovery
+- Complete conversation with images
+- Agent-to-agent conversation display
+- Message editing with MultiModal content
+- Performance with large images
 
 ## Performance Considerations
 
-1. **Message Virtualization**: For long conversations, implement virtual scrolling
-2. **Debounced Updates**: Batch streaming updates to avoid excessive re-renders
-3. **Lazy Loading**: Load message history on demand
-4. **Memoization**: Use React.memo for message components
-5. **Content Sanitization**: Cache sanitized HTML/SVG content
+1. **Image Optimization**: Lazy load images, use thumbnails for initial display
+2. **Message Virtualization**: Implement virtual scrolling for long conversations
+3. **Streaming Optimization**: Batch streaming updates to avoid excessive re-renders
+4. **Memory Management**: Clean up base64 image data when messages scroll out of view
+5. **Sub-session Filtering**: Provide UI toggle to show/hide sub-session messages
 
 ## Security Considerations
 
-1. **HTML Sanitization**: Use DOMPurify for RenderMediaEvent HTML content
-2. **SVG Validation**: Validate SVG structure before rendering
-3. **XSS Prevention**: Never use dangerouslySetInnerHTML without sanitization
-4. **Content Security Policy**: Implement CSP headers for the application
+1. **Image Validation**: Validate base64 image data before rendering
+2. **Content Security**: Sanitize all HTML/SVG content
+3. **Size Limits**: Enforce maximum image size limits
+4. **MIME Type Validation**: Verify image MIME types match content
 
-## Key Considerations
+## Migration Notes
 
-### Vendor Compatibility
+### Breaking Changes from v1.0
+1. MessageBuilder replaced with DualMessageBuilder
+2. New multiModalContent field in EnhancedMessage
+3. Additional event handlers required (anthropic_user_message)
+4. Sub-session support requires UI updates
 
-The system is designed to handle multiple LLM vendors with different message formats:
-
-1. **Anthropic Format**: Supports rich content blocks including text, images, tool use, and tool results
-2. **OpenAI Format**: Currently supports basic text content (extensible for future requirements)
-3. **Normalization Layer**: All vendor-specific formats are normalized to a consistent UI format
-4. **Metadata Preservation**: Original content is preserved in metadata for debugging and future needs
-
-### Content Type Handling
-
-1. **String Content**: Passed through directly
-2. **ContentBlockParam Arrays**: 
-   - Text blocks are extracted and concatenated
-   - Tool use blocks are converted to tool calls
-   - Images are marked with placeholders
-   - Tool results are recursively processed
-
-### Display Name Integration
-
-The `display_name` field from ChatSession is used to:
-- Show user identification in the UI
-- Personalize the chat experience
-- Track message attribution in multi-user scenarios
+### Backward Compatibility
+- Text-only messages continue to work unchanged
+- Existing tool call handling remains compatible
+- SessionManager API mostly unchanged (additions only)
 
 ## Conclusion
 
-This design provides a comprehensive architecture for handling the complex requirements of chat message display and event stream processing, with special attention to vendor-specific data formats and content normalization. The modular approach allows for incremental implementation while maintaining clear separation of concerns between SDK event processing and UI rendering. The vendor adapter pattern ensures that the UI always receives consistent data regardless of the backend LLM provider. The system is designed to be extensible, performant, and secure while providing a rich user experience with real-time updates, interactive features, and support for diverse content types.
+This redesigned architecture addresses all critical gaps identified in the original design:
+- **Parallel accumulation** of thought and text through DualMessageBuilder
+- **MultiModal content** preservation and display
+- **Event filtering** for ignored event types
+- **Sub-session handling** for agent-to-agent conversations
+- **Real-time user message** display support
+
+The modular approach maintains separation of concerns while providing the flexibility needed for the complex real-world event patterns observed in the Agent C Realtime system.

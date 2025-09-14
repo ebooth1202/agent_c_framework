@@ -43,7 +43,7 @@ from agent_c.models.events.chat import (
     HistoryEvent, SystemMessageEvent
 )
 from agent_c.models.events.render_media import RenderMediaEvent
-from agent_c.models.events.tool_calls import ToolCallEvent, ToolCallDeltaEvent
+from agent_c.models.events.tool_calls import ToolCallEvent, ToolSelectDeltaEvent
 
 
 class TestResults:
@@ -321,7 +321,7 @@ async def test_event_model_integration():
             SystemMessageEvent(session_id="integration_test", role="system", content="System message"),
             RenderMediaEvent(session_id="integration_test", role="assistant", **{"content-type": "image/png"}),
             ToolCallEvent(session_id="integration_test", role="assistant", active=True, vendor="test", tool_calls=[]),
-            ToolCallDeltaEvent(session_id="integration_test", role="assistant", tool_calls=[])
+            ToolSelectDeltaEvent(session_id="integration_test", role="assistant", tool_calls=[])
         ]
 
         # Process all events

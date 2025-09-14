@@ -51,7 +51,7 @@ Agent C is designed to be wrapped by your application's authentication layer. He
 **ChatUsers** are Agent C platform accounts that your backend manages:
 
 - Created and managed by your backend using Agent C library functions
-- Have access to agents, voices, avatars, and toolsets
+- Have access to agents, voices, avatars, and tools
 - Can be shared across multiple application users (pooling)
 - Or mapped 1:1 with application users (dedicated)
 - **Never exposed to frontend applications**
@@ -538,7 +538,7 @@ export class TenantChatUserManager {
         password: this.generateSecurePassword(),
         agents: config.agents,
         voices: config.voices,
-        toolsets: config.toolsets,
+        tools: config.tools,
         metadata: {
           tenant_id: tenantId,
           tenant_name: config.name

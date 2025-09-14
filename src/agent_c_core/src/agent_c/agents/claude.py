@@ -65,7 +65,7 @@ class ClaudeChatAgent(BaseAgent):
             The maximum number of tokens to generate in the response.
         """
         kwargs['token_counter'] = kwargs.get('token_counter', ClaudeChatAgent.ClaudeTokenCounter())
-        super().__init__(**kwargs)
+        super().__init__(**kwargs, vendor="anthropic")
         self.client: Union[AsyncAnthropic,AsyncAnthropicBedrock] = kwargs.get("client", self.__class__.client())
         self.supports_multimodal = True
         self.can_use_tools = True

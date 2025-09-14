@@ -21,7 +21,7 @@ export function InitializationWrapper({
 }: InitializationWrapperProps) {
   const { isInitialized, isLoading, connectionState } = useInitializationStatus();
   const { data } = useAgentCData();
-  const { user, agents, avatars, voices, toolsets } = data;
+  const { user, agents, avatars, voices, tools } = data;
   
   // Log initialization state for debugging
   useEffect(() => {
@@ -34,10 +34,10 @@ export function InitializationWrapper({
         agentsCount: agents.length,
         avatarsCount: avatars.length,
         voicesCount: voices.length,
-        toolsetsCount: toolsets.length
+        toolsCount: tools.length
       });
     }
-  }, [isInitialized, isLoading, connectionState, user, agents, avatars, voices, toolsets, showDebug]);
+  }, [isInitialized, isLoading, connectionState, user, agents, avatars, voices, tools, showDebug]);
   
   // Show loading state while initializing
   if (!isInitialized) {
@@ -76,7 +76,7 @@ export function InitializationWrapper({
             <InitStatusItem 
               name="Tool Catalog" 
               eventKey="tool_catalog"
-              received={toolsets.length > 0} 
+              received={tools.length > 0} 
             />
             <InitStatusItem 
               name="Chat Session" 
@@ -106,7 +106,7 @@ export function InitializationWrapper({
             <div>Agents: {agents.length}</div>
             <div>Avatars: {avatars.length}</div>
             <div>Voices: {voices.length}</div>
-            <div>Toolsets: {toolsets.length}</div>
+            <div>Tools: {tools.length}</div>
           </div>
         </div>
         {children}

@@ -51,7 +51,7 @@ async function initializeFromBackend() {
   await authManager.initializeFromPayload(payloadFromBackend, wsUrl);
 
   // NOTE: Configuration data is no longer available from authManager
-  // Data like agents, voices, avatars, toolsets, and sessions now come
+  // Data like agents, voices, avatars, tools, and sessions now come
   // through WebSocket events after connection.
   
   const token = authManager.getAgentCToken();
