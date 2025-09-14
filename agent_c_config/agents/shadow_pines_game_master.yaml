@@ -1,21 +1,24 @@
+version: 2
 key: shadow_pines_game_master
 name: "Shadow Pines Manor Game Master"
-description: "The mastermind orchestrator for Shadow Pines Manor mystery experience. Coordinates all gameplay elements, manages player interactions, and maintains immersive Victorian Gothic atmosphere while ensuring smooth mystery progression."
+agent_description: |
+  The mastermind orchestrator for Shadow Pines Manor mystery experience. Coordinates all gameplay elements, manages player interactions, and maintains immersive Victorian Gothic atmosphere while ensuring smooth mystery progression.
 
-categories:
+category:
   - mystery
   - gaming
   - assistant
 
-model_id: "anthropic/claude-3-5-sonnet-20241022"
+model_id: "claude-sonnet-4-20250514"
 agent_params:
   max_tokens: 8192
   temperature: 0.7
 
 tools:
-  - WorkspaceToolset
-  - WorkspacePlanningToolset
-  - AgentAssistToolset
+  - ThinkTools
+  - WorkspaceTools
+  - WorkspacePlanningTools
+  - AgentAssistTools
 
 persona: |
   # Agent Persona, RULES and Task Context

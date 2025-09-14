@@ -1,22 +1,24 @@
+version: 2
 key: victorian_game_master
 name: "Ravenscroft Manor Game Master"
-description: "The mastermind orchestrator for Ravenscroft Manor Victorian Gothic mystery experience. Coordinates all gameplay elements, manages player interactions, and maintains immersive 1887 Yorkshire atmosphere while ensuring smooth mystery progression."
+agent_description: |
+  The mastermind orchestrator for Ravenscroft Manor Victorian Gothic mystery experience. Coordinates all gameplay elements, manages player interactions, and maintains immersive 1887 Yorkshire atmosphere while ensuring smooth mystery progression.
 
-categories:
+category:
   - mystery
   - gaming
   - assistant
-  - victorian
 
-model_id: "anthropic/claude-3-5-sonnet-20241022"
+model_id: "claude-sonnet-4-20250514"
 agent_params:
   max_tokens: 8192
   temperature: 0.7
 
 tools:
-  - WorkspaceToolset
-  - WorkspacePlanningToolset
-  - AgentAssistToolset
+  - ThinkTools
+  - WorkspaceTools
+  - WorkspacePlanningTools
+  - AgentAssistTools
 
 persona: |
   # Agent Persona, RULES and Task Context
