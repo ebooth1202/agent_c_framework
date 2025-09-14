@@ -208,13 +208,26 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     // Handle message-streaming events (partial messages being built)
     const handleMessageStreaming = (event: unknown) => {
       const streamEvent = event as { sessionId: string; message?: ExtendedMessage };
-      Logger.debug('[useChat] Message streaming event:', streamEvent);
+      Logger.debug('[useChat] Message streaming event received');
+      Logger.debug('[useChat] Stream event structure:', {
+        hasSessionId: 'sessionId' in (streamEvent as any),
+        hasMessage: 'message' in (streamEvent as any),
+        messageType: streamEvent.message ? typeof streamEvent.message : 'undefined',
+        messageContent: streamEvent.message?.content,
+        messageRole: streamEvent.message?.role
+      });
       
       // Only update if we have a valid message
       if (streamEvent.message) {
+        Logger.debug('[useChat] Setting streaming message:', streamEvent.message);
+        
+        // Keep isAgentTyping true during streaming
+        // The UI will show the streaming message instead of typing indicator when streamingMessage exists
         setIsAgentTyping(true);
         setStreamingMessage(streamEvent.message);
         streamingMessageIdRef.current = streamEvent.sessionId;
+      } else {
+        Logger.warn('[useChat] Message streaming event received without message property');
       }
     };
     
@@ -233,20 +246,24 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         return newMessages;
       });
       
-      // Clear streaming state
+      // Clear all streaming/typing state
       setStreamingMessage(null);
       streamingMessageIdRef.current = null;
       setIsAgentTyping(false);
+      Logger.debug('[useChat] Message complete - cleared streaming and typing state');
     };
     
     // Handle turn events from server for typing indicators
     const handleUserTurnStart = () => {
+      // User is speaking/typing, agent is not
       setIsAgentTyping(false);
     };
     
     const handleUserTurnEnd = () => {
-      // Don't automatically set typing - wait for actual message streaming
-      // This prevents false typing indicators
+      // User's turn has ended, agent is about to respond
+      // Show typing indicator until actual content arrives
+      setIsAgentTyping(true);
+      Logger.debug('[useChat] User turn ended, showing typing indicator');
     };
     
     // Handle session change events

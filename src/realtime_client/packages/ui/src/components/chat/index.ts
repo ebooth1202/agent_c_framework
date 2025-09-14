@@ -30,3 +30,6 @@ export type { ScrollAnchorProps } from './ScrollAnchor'
 
 export { ChatMessagesView } from './ChatMessagesView'
 export type { ChatMessagesViewProps } from './ChatMessagesView'
+
+export { SubsessionDivider } from './SubsessionDivider'
+export type { SubsessionDividerProps } from './SubsessionDivider'

@@ -5,6 +5,7 @@ import { useChat } from '@agentc/realtime-react'
 import { cn } from '../../lib/utils'
 import { Message } from './Message'
 import { TypingIndicator } from './TypingIndicator'
+import { SubsessionDivider } from './SubsessionDivider'
 import { Loader2, MessageSquare } from 'lucide-react'
 import { Logger } from '../../utils/logger'
 
@@ -123,15 +124,56 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
             <EmptyState />
           ) : (
             <>
-              {visibleMessages.map((message, index) => (
-                <Message
-                  key={`message-${index}-${message.timestamp || index}`}
-                  message={message}
-                  showTimestamp={showTimestamps}
-                  isSubSession={isSubSessionMessage(message)}
-                  className="animate-in slide-in-from-bottom-2 duration-200"
+              {visibleMessages.map((message, index) => {
+                const isSubSession = isSubSessionMessage(message)
+                const previousMessage = index > 0 ? visibleMessages[index - 1] : null
+                const isPreviousSubSession = previousMessage ? isSubSessionMessage(previousMessage) : false
+                
+                // Check for subsession transitions
+                const isSubSessionStart = isSubSession && !isPreviousSubSession
+                const isSubSessionEnd = !isSubSession && isPreviousSubSession
+                
+                return (
+                  <React.Fragment key={`message-${index}-${message.timestamp || index}`}>
+                    {/* Subsession start divider */}
+                    {isSubSessionStart && (
+                      <SubsessionDivider 
+                        type="start"
+                        timestamp={message.timestamp}
+                        className="my-2"
+                      />
+                    )}
+                    
+                    {/* Subsession end divider */}
+                    {isSubSessionEnd && (
+                      <SubsessionDivider 
+                        type="end"
+                        timestamp={previousMessage?.timestamp}
+                        className="my-2"
+                      />
+                    )}
+                    
+                    {/* Message */}
+                    <Message
+                      message={message}
+                      showTimestamp={showTimestamps}
+                      isSubSession={isSubSession}
+                      className="animate-in slide-in-from-bottom-2 duration-200"
+                    />
+                  </React.Fragment>
+                )
+              })}
+              
+              {/* Check if we need an end divider for the last message */}
+              {visibleMessages.length > 0 && 
+               isSubSessionMessage(visibleMessages[visibleMessages.length - 1]) && 
+               !streamingMessage && (
+                <SubsessionDivider 
+                  type="end"
+                  timestamp={visibleMessages[visibleMessages.length - 1].timestamp}
+                  className="my-2"
                 />
-              ))}
+              )}
               
               {/* Current streaming response */}
               {streamingMessage && (

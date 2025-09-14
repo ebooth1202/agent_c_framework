@@ -4,8 +4,6 @@ import * as React from "react"
 import { cn } from "../../lib/utils"
 import { MessageList } from "./MessageList"
 import { ScrollAnchor } from "./ScrollAnchor"
-import { TypingIndicator } from "./TypingIndicator"
-import { useChat } from "@agentc/realtime-react"
 
 export interface ChatMessagesViewProps {
   className?: string
@@ -18,7 +16,6 @@ export interface ChatMessagesViewProps {
 export const ChatMessagesView = React.forwardRef<HTMLDivElement, ChatMessagesViewProps>(
   ({ className }, ref) => {
     const scrollRef = React.useRef<HTMLDivElement>(null)
-    const { messages, isAgentTyping } = useChat()
 
     return (
       <div
@@ -38,13 +35,6 @@ export const ChatMessagesView = React.forwardRef<HTMLDivElement, ChatMessagesVie
             className="max-w-4xl mx-auto px-4 py-4"
             maxHeight="none"
           />
-          
-          {/* Typing indicator */}
-          {isAgentTyping && (
-            <div className="px-4 pb-2">
-              <TypingIndicator />
-            </div>
-          )}
           
           {/* Scroll anchor for auto-scrolling */}
           <ScrollAnchor scrollContainerRef={scrollRef} />

@@ -140,8 +140,9 @@ const ThoughtMessage: React.FC<ThoughtMessageProps> = ({
   return (
     <div className={cn(
       "rounded-lg border border-border/50 my-2",
+      "bg-muted/30",
       "transition-all duration-200 ease-out",
-      "hover:bg-muted/20 hover:border-border/70"
+      "hover:bg-muted/40 hover:border-border/70"
     )}>
       <button
         className={cn(
@@ -277,23 +278,6 @@ const Message = React.forwardRef<HTMLDivElement, MessageProps>(
     const isAssistant = message.role === 'assistant'
     const isError = message.status === 'error'
     
-    // Format timestamp
-    const formattedTime = React.useMemo(() => {
-      if (!showTimestamp || !message.timestamp) return null
-      try {
-        // timestamp is always a string according to the Message interface
-        const date = new Date(message.timestamp)
-        if (isNaN(date.getTime())) return null // Invalid date
-        return date.toLocaleTimeString('en-US', { 
-          hour: 'numeric', 
-          minute: '2-digit',
-          hour12: true 
-        })
-      } catch {
-        return null // Invalid timestamp format
-      }
-    }, [message.timestamp, showTimestamp])
-    
     // Avatar component
     const Avatar = () => {
       if (avatarComponent) return <>{avatarComponent}</>
@@ -372,24 +356,18 @@ const Message = React.forwardRef<HTMLDivElement, MessageProps>(
         
         {/* Message content */}
         <div className={cn(
-          "flex-1 max-w-full space-y-2",
+          "flex-1 max-w-full space-y-2 overflow-hidden",
           isUser && "flex flex-col items-end"
         )}>
-          {/* Sub-session indicator */}
-          {isSubSession && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
-              <ChevronRight className="h-3 w-3" />
-              <span>Sub-session message</span>
-            </div>
-          )}
+          {/* Sub-session indicator - removed text label, keeping visual border only */}
           
           {/* Message bubble */}
           <div
             className={cn(
-              "relative rounded-xl px-4 py-2.5 transition-all duration-200",
+              "relative rounded-xl px-4 py-2.5 transition-all duration-200 overflow-hidden",
               isUser 
                 ? "bg-muted" 
-                : "bg-background",
+                : "bg-card border border-border/50",
               isError && "bg-destructive/10 border border-destructive",
               isStreaming && "after:content-[''] after:inline-block after:w-1.5 after:h-4 after:ml-1 after:bg-current after:animate-pulse after:rounded-full",
               isSubSession && "border-l-2 border-primary/30"
@@ -445,6 +423,7 @@ const Message = React.forwardRef<HTMLDivElement, MessageProps>(
           {isAssistant && showFooter && !isStreaming && (
             <MessageFooter 
               message={message}
+              showTimestamp={showTimestamp}
             />
           )}
           
@@ -453,29 +432,23 @@ const Message = React.forwardRef<HTMLDivElement, MessageProps>(
             <MessageFooter 
               message={message}
               onEdit={() => setIsEditing(true)}
+              showTimestamp={showTimestamp}
             />
           )}
           
-          {/* Metadata */}
-          <div className="flex items-center gap-2 px-1">
-            {/* Timestamp */}
-            {formattedTime && showTimestamp && (
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {formattedTime}
-              </span>
-            )}
-            
-            {/* Status indicator */}
-            {message.status === 'sending' && (
-              <span className="text-xs text-muted-foreground">
-                Sending...
-              </span>
-            )}
-            {message.status === 'sent' && !isError && (
-              <Check className="h-3 w-3 text-muted-foreground" />
-            )}
-          </div>
+          {/* Status indicator */}
+          {(message.status === 'sending' || message.status === 'sent') && (
+            <div className="flex items-center gap-2 px-1">
+              {message.status === 'sending' && (
+                <span className="text-xs text-muted-foreground">
+                  Sending...
+                </span>
+              )}
+              {message.status === 'sent' && !isError && (
+                <Check className="h-3 w-3 text-muted-foreground" />
+              )}
+            </div>
+          )}
         </div>
       </div>
     )

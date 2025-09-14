@@ -4,7 +4,7 @@ import * as React from 'react'
 import { cn } from '../../lib/utils'
 import { 
   Copy, Check, Hash, ArrowRight, Wrench, 
-  ChevronDown, RefreshCw, Edit2 
+  ChevronDown, RefreshCw, Edit2, Clock 
 } from 'lucide-react'
 import { Button } from '../ui/button'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -24,6 +24,10 @@ export interface MessageFooterProps extends React.HTMLAttributes<HTMLDivElement>
    * Callback for regenerating message
    */
   onRegenerate?: () => void
+  /**
+   * Whether to show timestamp
+   */
+  showTimestamp?: boolean
 }
 
 interface ToolCallDisplayProps {
@@ -118,7 +122,7 @@ const ToolCallDisplay: React.FC<ToolCallDisplayProps> = ({
 }
 
 export const MessageFooter = React.forwardRef<HTMLDivElement, MessageFooterProps>(
-  ({ className, message, onEdit, onRegenerate, ...props }, ref) => {
+  ({ className, message, onEdit, onRegenerate, showTimestamp = true, ...props }, ref) => {
     const [copied, setCopied] = React.useState(false)
     const [showToolCalls, setShowToolCalls] = React.useState(false)
     
@@ -145,9 +149,27 @@ export const MessageFooter = React.forwardRef<HTMLDivElement, MessageFooterProps
     const hasToolCalls = message.toolCalls && message.toolCalls.length > 0
     const hasTokenCounts = message.metadata?.inputTokens || message.metadata?.outputTokens
     const isUserMessage = message.role === 'user'
+    const isAssistantMessage = message.role === 'assistant'
     
-    // Don't show footer if there's nothing to display
-    if (!hasTokenCounts && !hasToolCalls && !onRegenerate && !isUserMessage) {
+    // Format timestamp
+    const formattedTime = React.useMemo(() => {
+      if (!showTimestamp || !message.timestamp) return null
+      try {
+        const date = new Date(message.timestamp)
+        if (isNaN(date.getTime())) return null
+        return date.toLocaleTimeString('en-US', { 
+          hour: 'numeric', 
+          minute: '2-digit',
+          hour12: true 
+        })
+      } catch {
+        return null
+      }
+    }, [message.timestamp, showTimestamp])
+    
+    // Always show footer for assistant messages (for copy button)
+    // For other messages, only show if there's content to display
+    if (!isAssistantMessage && !hasTokenCounts && !hasToolCalls && !onRegenerate && !isUserMessage && !formattedTime) {
       return null
     }
     
@@ -191,8 +213,16 @@ export const MessageFooter = React.forwardRef<HTMLDivElement, MessageFooterProps
             </Button>
           )}
           
-          {/* Action Buttons */}
-          <div className="flex items-center gap-1 ml-auto">
+          {/* Action Buttons and Timestamp - aligned on same line */}
+          <div className="flex items-center gap-2 ml-auto">
+            {/* Timestamp */}
+            {formattedTime && (
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                {formattedTime}
+              </span>
+            )}
+            
             {/* Copy Button */}
             <Button
               variant="ghost"

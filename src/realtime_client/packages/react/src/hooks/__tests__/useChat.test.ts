@@ -46,6 +46,7 @@ describe('useChat - Part 1: Message Management', () => {
   let mockLogger: {
     debug: Mock;
     error: Mock;
+    warn: Mock;
   };
 
   let eventHandlers: Map<string, (event?: unknown) => void>;
@@ -124,7 +125,8 @@ describe('useChat - Part 1: Message Management', () => {
     mockEnsureMessagesFormat = vi.fn((messages: Message[]) => messages);
     mockLogger = {
       debug: vi.fn(),
-      error: vi.fn()
+      error: vi.fn(),
+      warn: vi.fn()
     };
 
     // Apply mocks
@@ -137,6 +139,7 @@ describe('useChat - Part 1: Message Management', () => {
     const loggerModule = await import('../../utils/logger');
     (loggerModule.Logger as any).debug = mockLogger.debug;
     (loggerModule.Logger as any).error = mockLogger.error;
+    (loggerModule.Logger as any).warn = mockLogger.warn;
 
     vi.clearAllMocks();
   });
@@ -771,6 +774,7 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
   let mockLogger: {
     debug: Mock;
     error: Mock;
+    warn: Mock;
   };
 
   let eventHandlers: Map<string, (event?: unknown) => void>;
@@ -849,7 +853,8 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
     mockEnsureMessagesFormat = vi.fn((messages: Message[]) => messages);
     mockLogger = {
       debug: vi.fn(),
-      error: vi.fn()
+      error: vi.fn(),
+      warn: vi.fn()
     };
 
     // Apply mocks
@@ -862,6 +867,7 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
     const loggerModule = await import('../../utils/logger');
     (loggerModule.Logger as any).debug = mockLogger.debug;
     (loggerModule.Logger as any).error = mockLogger.error;
+    (loggerModule.Logger as any).warn = mockLogger.warn;
 
     vi.clearAllMocks();
   });
@@ -986,10 +992,10 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
       emitClientEvent('user_turn_start');
       expect(result.current.isAgentTyping).toBe(false);
 
-      // User turn end doesn't automatically start typing in new implementation
+      // User turn end now immediately shows typing indicator (agent is thinking)
       emitClientEvent('user_turn_end');
-      // Wait for actual message streaming to set typing
-      expect(result.current.isAgentTyping).toBe(false);
+      // Typing indicator shows immediately when agent's turn begins
+      expect(result.current.isAgentTyping).toBe(true);
 
       // Start new streaming
       emitSessionEvent('message-streaming', { 
