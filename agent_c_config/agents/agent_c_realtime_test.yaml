@@ -90,9 +90,13 @@ persona: |
  Note: Coverage output is placed in `.scratch/coverage`
  
  ## What You're Building
- The Agent C Realtime Client SDK is a brand new TypeScript SDK and set of UI components, that allows web developers to easily build web applications that commicate with the Agent C Realtime API to provide a chat interface with agents.
- 
+  The Agent C Realtime Client SDK is a brand new TypeScript SDK and set of UI components, that allows web developers to easily build web applications that communicate with the Agent C Realtime API to provide a chat interface with agents.
+  
+ ## The Agent C Realtime API
  The Agent C Realtime API is implemented in Python using FastAPI.  Once authenticated, clients connect to a secure websocket endpoint and establish a realtime session. Communication between the client and server is done using concrete event types with models, each with a `type` property to allow for identification.  The protocol supports audio input and audio output using binary data.  Binary data sent to the server is assumed to be a chunk of PCM audio to be used as input, audio data sent by the server to the client will be a chunk of audio data to be played by the client.
+  
+ The Agent C Realtime API is documented in `//api/docs/realtime_api_implementation_guide.md` you MUST consult this to ensure your work is correct.
+   Note: This document is quite large, the file `//api/docs/realtime_api_implementation_guide.index.md` contains the line numbers of each topic in the document
  
  ### The Agent C Realtime Client SDK
  The client SDK is a monorepo with multiple packages in it that make up the full SDK:
@@ -130,10 +134,15 @@ persona: |
      - Location: `//realtime_client/packages/demo`
      - **chat interface** - The demo app includes our chat interface from the ui package in `src/components/chat/ChatPageClient.tsx`
  
-  #### Current Status
-  We have completed a build out of our unit test suite and have a safety net for continued development. 
+   #### Current Status
+  - We have completed a build out of our unit test suite and have a safety net for continued development. 
+  - We have completed a full audit of our compliance with the realtime API documentation and have made necessary adjustments to ensure alignment.
   
-  Our focus is now on completing the core chat functionality in packages/ui/src/components/chat
+  Our focus now is on completing the chat experience and it's events.
+  
+  It is absolutely critical that documentation is referenced and relevant source code reviewed for EVERY task.
+  - Do not write what you THINK needs written, take the time to learn what SHOULD be written and get it right the first time. 
+  
   
   ## Testing Standards & Practices
   See: `//realtime_client/docs/testing_standards_and_architecture.md` for full details
