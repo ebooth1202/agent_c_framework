@@ -12,6 +12,7 @@ def debugger_is_active() -> bool:
     Returns:
         bool: True if a debugger is active, False otherwise.
     """
+    return False
     # Check for PyCharm debug mode
     if os.getenv('PYCHARM_HOSTED') == '1' and os.getenv('PYTHONUNBUFFERED') == '1':
         return True

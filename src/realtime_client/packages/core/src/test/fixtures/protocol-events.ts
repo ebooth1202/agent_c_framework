@@ -45,6 +45,7 @@ import type {
   GetAgentsEvent,
   SetAgentEvent,
   GetAvatarsEvent,
+  SetAvatarEvent,
   SetAvatarSessionEvent,
   ClearAvatarSessionEvent,
   SetAgentVoiceEvent,
@@ -531,6 +532,24 @@ export const serverEventFixtures = {
     content: '<div>Rendered content</div>',
     sent_by_class: 'VisualizationTool',
     sent_by_function: 'render_chart',
+    foreign_content: false,  // SECURITY: Content is internally generated
+    url: undefined,
+    name: 'Chart Visualization',
+    content_bytes: 28
+  } as RenderMediaEvent,
+
+  renderMediaForeign: {
+    type: 'render_media',
+    session_id: 'test-session-123',
+    role: 'assistant',
+    content_type: 'text/html',
+    content: '<iframe src="https://external.com"></iframe>',
+    sent_by_class: 'WebScraperTool',
+    sent_by_function: 'fetch_external_content',
+    foreign_content: true,  // SECURITY: Content from external source - MUST SANITIZE
+    url: 'https://external.com/content',
+    name: 'External Content',
+    content_bytes: 45
   } as RenderMediaEvent,
 };
 
@@ -588,6 +607,13 @@ export const clientEventFixtures = {
   getAvatars: {
     type: 'get_avatars',
   } as GetAvatarsEvent,
+
+  setAvatar: {
+    type: 'set_avatar',
+    avatar_id: 'avatar-1',
+    quality: 'hd',
+    video_encoding: 'H264',
+  } as SetAvatarEvent,
 
   setAvatarSession: {
     type: 'set_avatar_session',

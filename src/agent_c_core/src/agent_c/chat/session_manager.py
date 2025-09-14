@@ -127,6 +127,28 @@ class ChatSessionManager:
             
         await self._loader.save_session(session)
 
+    async def flush_session(self, session: ChatSession, touch: bool = True) -> None:
+        """
+        Flushes a session to storage.
+
+        Args:
+            session: The ChatSession to flush
+            touch: Whether to update the session's updated_at timestamp (default True)
+        """
+        if session.user_id not in self._session_cache:
+            self._session_cache[session.user_id] = {}
+
+        self._session_cache[session.user_id][session.session_id] = session
+
+        if  len(session.messages) == 0:
+            self.logger.warning(f"Session {session.session_id} for user {session.user_id} is empty or not found, skipping flush.")
+            return
+
+        if touch:
+            session.touch()
+
+        await self._loader.save_session(session)
+
     async def get_user_sessions(self, user_id: str, offset: int = 0, limit: int = 50) -> ChatSessionQueryResponse:
         """
         Get paginated chat sessions for a user, sorted by updated_at descending.

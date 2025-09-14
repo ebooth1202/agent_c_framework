@@ -62,10 +62,10 @@ class RealtimeBridge(AgentBridge):
         self._voices = open_ai_voice_models
         self._voice: AvailableVoiceModel = no_voice_model
 
-    async def flush_session(self):
+    async def flush_session(self, touch: bool = True) -> None:
         """Flush the current chat session to persistent storage"""
         if self.chat_session:
-            await self.session_manager.flush(self.chat_session.session_id, self.chat_session.user_id)
+            await self.session_manager.flush_session(self.chat_session, touch)
 
     # Handlers for events coming from the client websocket
     @singledispatchmethod
@@ -187,6 +187,7 @@ class RealtimeBridge(AgentBridge):
     async def set_chat_session_name(self, session_name: str) -> None:
         """Set the name of the current chat session"""
         self.chat_session.session_name = session_name
+        await self.flush_session(False)
         self.logger.info(f"RealtimeBridge {self.chat_session.session_id}: Session name set to '{session_name}'")
         await self.send_chat_session_name()
 
