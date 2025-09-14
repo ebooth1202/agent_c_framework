@@ -54,9 +54,22 @@ export const AudioControlsPanel = React.forwardRef<HTMLDivElement, AudioControls
     const [permissionError, setPermissionError] = React.useState<string | null>(null)
     
     // Detect if on mobile
-    const isMobile = React.useMemo(() => {
+    const [isMobile, setIsMobile] = React.useState(() => {
       if (typeof window === 'undefined') return false
       return window.innerWidth < 768
+    })
+    
+    // Handle window resize
+    React.useEffect(() => {
+      const handleResize = () => {
+        setIsMobile(window.innerWidth < 768)
+      }
+      
+      window.addEventListener('resize', handleResize)
+      
+      return () => {
+        window.removeEventListener('resize', handleResize)
+      }
     }, [])
     
     // Load audio devices

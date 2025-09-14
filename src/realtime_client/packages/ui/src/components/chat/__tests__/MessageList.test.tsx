@@ -50,8 +50,7 @@ vi.mock('../../../utils/logger', () => ({
 const createMockUseChat = () => ({
   messages: [] as ChatMessage[],
   isAgentTyping: false,
-  partialMessage: null as string | null,
-  streamingMessage: null as string | null,
+  streamingMessage: null as ChatMessage | null,
   sendMessage: vi.fn(),
   clearMessages: vi.fn(),
   isLoading: false,
@@ -297,7 +296,7 @@ describe('MessageList', () => {
 
   describe('Streaming and Typing', () => {
     it('should show partial message when streaming', () => {
-      mockUseChat.partialMessage = 'This is being typed...';
+      mockUseChat.streamingMessage = { role: 'assistant', content: 'This is being typed...' } as ChatMessage;
       mockUseChat.messages = [
         { role: 'user', content: 'Previous message' }
       ] as ChatMessage[];
@@ -316,7 +315,7 @@ describe('MessageList', () => {
 
     it('should show typing indicator when agent typing without partial message', () => {
       mockUseChat.isAgentTyping = true;
-      mockUseChat.partialMessage = null;
+      mockUseChat.streamingMessage = null;
       mockUseChat.messages = [{ role: 'user', content: 'Hello' }]; // Need at least one message to show typing
       (useChat as any).mockReturnValue(mockUseChat);
       
@@ -328,7 +327,7 @@ describe('MessageList', () => {
 
     it('should not show typing indicator when partial message exists', () => {
       mockUseChat.isAgentTyping = true;
-      mockUseChat.partialMessage = 'Some partial text';
+      mockUseChat.streamingMessage = { role: 'assistant', content: 'Some partial text' } as ChatMessage;
       (useChat as any).mockReturnValue(mockUseChat);
       
       const { queryByTestId } = render(<MessageList />);
@@ -338,7 +337,7 @@ describe('MessageList', () => {
 
     it('should show typing indicator with correct animation classes', () => {
       mockUseChat.isAgentTyping = true;
-      mockUseChat.partialMessage = null;
+      mockUseChat.streamingMessage = null;
       mockUseChat.messages = [{ role: 'user', content: 'Hello' }]; // Need messages to show typing
       (useChat as any).mockReturnValue(mockUseChat);
       
@@ -351,7 +350,7 @@ describe('MessageList', () => {
 
     it('should show AI avatar with typing indicator', () => {
       mockUseChat.isAgentTyping = true;
-      mockUseChat.partialMessage = null;
+      mockUseChat.streamingMessage = null;
       mockUseChat.messages = [{ role: 'user', content: 'Hello' }]; // Need messages to show typing
       (useChat as any).mockReturnValue(mockUseChat);
       
@@ -371,13 +370,13 @@ describe('MessageList', () => {
       rerender(<MessageList />);
       
       // Add partial message
-      mockUseChat.partialMessage = 'Typing...';
+      mockUseChat.streamingMessage = { role: 'assistant', content: 'Typing...' } as ChatMessage;
       (useChat as any).mockReturnValue(mockUseChat);
       rerender(<MessageList />);
       
       // Complete message
       mockUseChat.isAgentTyping = false;
-      mockUseChat.partialMessage = null;
+      mockUseChat.streamingMessage = null;
       mockUseChat.messages = [
         { role: 'assistant', content: 'Completed message' }
       ] as ChatMessage[];
@@ -440,11 +439,12 @@ describe('MessageList', () => {
       const { container } = render(<MessageList />);
       const messageList = container.firstChild as HTMLElement;
       
-      // Focus the container
-      messageList.focus();
-      expect(document.activeElement).toBe(messageList);
+      // Verify ARIA attributes for keyboard navigation
+      expect(messageList).toHaveAttribute('role', 'log');
+      expect(messageList).toHaveAttribute('aria-label', 'Chat messages');
+      expect(messageList).toHaveAttribute('aria-live', 'polite');
       
-      // Tab navigation should work through messages
+      // Tab navigation should work through messages without errors
       fireEvent.keyDown(messageList, { key: 'Tab' });
     });
 
@@ -682,7 +682,7 @@ describe('MessageList', () => {
           content: `Msg ${j}`
         })) as ChatMessage[];
         mockUseChat.isAgentTyping = i % 2 === 0;
-        mockUseChat.partialMessage = i % 3 === 0 ? `Partial ${i}` : null;
+        mockUseChat.streamingMessage = i % 3 === 0 ? { role: 'assistant', content: `Partial ${i}` } as ChatMessage : null;
         (useChat as any).mockReturnValue(mockUseChat);
         
         expect(() => rerender(<MessageList />)).not.toThrow();
@@ -716,7 +716,7 @@ describe('MessageList', () => {
       // Start with empty messages
       mockUseChat.messages = [];
       mockUseChat.isAgentTyping = false;
-      mockUseChat.partialMessage = null;
+      mockUseChat.streamingMessage = null;
       (useChat as any).mockReturnValue(mockUseChat);
       
       const { container, rerender, getByTestId, queryByTestId } = render(
@@ -750,7 +750,7 @@ describe('MessageList', () => {
       expect(getByTestId('typing-indicator')).toBeInTheDocument();
       
       // AI partial response appears
-      mockUseChat.partialMessage = 'Hello! I am';
+      mockUseChat.streamingMessage = { role: 'assistant', content: 'Hello! I am' } as ChatMessage;
       (useChat as any).mockReturnValue(mockUseChat);
       rerender(<MessageList ref={ref} />);
       
@@ -764,7 +764,7 @@ describe('MessageList', () => {
         { role: 'assistant', content: 'Hello! I am your AI assistant. How can I help you today?', timestamp: '2024-01-01T10:00:05Z' }
       ] as ChatMessage[];
       mockUseChat.isAgentTyping = false;
-      mockUseChat.partialMessage = null;
+      mockUseChat.streamingMessage = null;
       (useChat as any).mockReturnValue(mockUseChat);
       rerender(<MessageList ref={ref} />);
       

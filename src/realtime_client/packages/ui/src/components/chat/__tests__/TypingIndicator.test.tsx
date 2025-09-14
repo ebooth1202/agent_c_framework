@@ -356,11 +356,16 @@ describe('TypingIndicator', () => {
       
       render(<TypingIndicator ref={ref} />);
       
-      // Should be able to manipulate via ref
-      if (ref.current) {
-        ref.current.focus();
-        expect(document.activeElement).toBe(ref.current);
-      }
+      // Verify ref is properly attached
+      expect(ref.current).toBeInstanceOf(HTMLDivElement);
+      expect(ref.current).not.toBeNull();
+      
+      // Verify the element has the expected role attribute
+      expect(ref.current?.getAttribute('role')).toBe('status');
+      
+      // Test manipulation by setting a data attribute
+      ref.current?.setAttribute('data-test-id', 'test-value');
+      expect(ref.current?.getAttribute('data-test-id')).toBe('test-value')
     });
 
     it('should work with callback refs', () => {

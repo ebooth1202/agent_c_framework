@@ -293,6 +293,7 @@ class RealtimeBridge(AgentBridge):
         """Send event to the client"""
         try:
             await self.websocket.send_text(event.model_dump_json())
+            self.logger.info(f"Sent event {event.type} to {self.chat_session.session_id}")
         except Exception as e:
             self.logger.exception(f"Failed to send event to {self.chat_session.session_id}: {e}")
             self.is_running = False
