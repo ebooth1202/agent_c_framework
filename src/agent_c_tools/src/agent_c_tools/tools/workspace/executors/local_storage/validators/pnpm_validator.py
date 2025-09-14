@@ -1,9 +1,13 @@
-from typing import Dict, Any, List, Mapping
 import os
+import logging
+from typing import Dict, Any, List, Mapping
+
 from .base_validator import ValidationResult, CommandValidator
 from .path_safety import is_within_workspace, looks_like_path, extract_file_part
 
 class PnpmCommandValidator(CommandValidator):
+    logger = logging.getLogger("agent_c.validators.pnpm")
+    DEBUG = False
     """
     Hardened pnpm validator with support for:
       - root flags only (e.g., -v, --version)
@@ -125,6 +129,24 @@ class PnpmCommandValidator(CommandValidator):
             return ValidationResult(False, "Not a pnpm command")
 
         root_flags = set(policy.get("root_flags") or [])
+        if self.DEBUG:
+            workspace_root = (
+                    policy.get("workspace_root")
+                    or os.environ.get("WORKSPACE_ROOT")
+                    or os.environ.get("CWD")  # optional fallback you already use elsewhere
+                    or os.getcwd()
+            )
+            cwd = os.environ.get("CWD") or os.getcwd()
+            self.logger.debug(
+                "pnpm.validate: workspace_root=%s cwd=%s "
+                "(policy.workspace_root=%s env.WORKSPACE_ROOT=%s env.CWD=%s)",
+                workspace_root,
+                cwd,
+                policy.get("workspace_root"),
+                os.environ.get("WORKSPACE_ROOT"),
+                os.environ.get("CWD"),
+            )
+
         subs: Mapping[str, Any] = policy.get("subcommands", {}) or {}
         deny_subs = set((policy.get("deny_subcommands") or []))
         global_before = dict(policy.get("global_flags_before_subcommand") or {})
