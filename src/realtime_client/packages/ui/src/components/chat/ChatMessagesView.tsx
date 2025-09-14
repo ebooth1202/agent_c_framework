@@ -35,7 +35,7 @@ export const ChatMessagesView = React.forwardRef<HTMLDivElement, ChatMessagesVie
         >
           {/* Message list - remove fixed height, let it grow naturally */}
           <MessageList 
-            className="px-4 py-4"
+            className="max-w-4xl mx-auto px-4 py-4"
             maxHeight="none"
           />
           

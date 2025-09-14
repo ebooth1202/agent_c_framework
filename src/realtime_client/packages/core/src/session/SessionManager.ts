@@ -248,6 +248,7 @@ export class SessionManager extends EventEmitter<SessionManagerEventMap> {
 
   /**
    * Handle text delta from assistant (accumulate text)
+   * @deprecated Use EventStreamProcessor for delta handling. This method is no longer called by RealtimeClient.
    * @param delta - Text chunk to accumulate
    */
   handleTextDelta(delta: string): void {
@@ -271,6 +272,7 @@ export class SessionManager extends EventEmitter<SessionManagerEventMap> {
 
   /**
    * Finalize assistant message from accumulated text
+   * @deprecated Use EventStreamProcessor for message finalization. This method is no longer called by RealtimeClient.
    * @returns The created message or null if no accumulation or session
    * @emits message-added event
    */
@@ -328,6 +330,7 @@ export class SessionManager extends EventEmitter<SessionManagerEventMap> {
 
   /**
    * Get the current accumulated text
+   * @deprecated EventStreamProcessor now handles text accumulation
    * @returns Current accumulated text
    */
   getAccumulatedText(): string {
@@ -336,6 +339,7 @@ export class SessionManager extends EventEmitter<SessionManagerEventMap> {
 
   /**
    * Check if currently accumulating text
+   * @deprecated EventStreamProcessor now handles text accumulation
    * @returns True if accumulating
    */
   isAccumulatingText(): boolean {

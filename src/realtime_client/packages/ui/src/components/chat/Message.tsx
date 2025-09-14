@@ -372,7 +372,7 @@ const Message = React.forwardRef<HTMLDivElement, MessageProps>(
         
         {/* Message content */}
         <div className={cn(
-          "flex-1 max-w-[75ch] space-y-2",
+          "flex-1 max-w-full space-y-2",
           isUser && "flex flex-col items-end"
         )}>
           {/* Sub-session indicator */}

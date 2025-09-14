@@ -7,8 +7,6 @@ import {
     RealtimeEventMap,
     ClientEventMap,
     ChatSessionChangedEvent,
-    TextDeltaEvent,
-    CompletionEvent,
     ChatSessionNameChangedEvent,
     AgentVoiceChangedEvent,
     TextInputEvent,
@@ -194,29 +192,8 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
             }
         });
         
-        // Handle text delta events for accumulation
-        this.on('text_delta', (event: TextDeltaEvent) => {
-            // Process through EventStreamProcessor for proper message building
-            if (this.eventStreamProcessor) {
-                this.eventStreamProcessor.processEvent(event);
-            }
-            // Also handle in session manager for backward compatibility
-            if (event.content) {
-                this.sessionManager!.handleTextDelta(event.content);
-            }
-        });
-        
-        // Handle completion events to finalize text
-        this.on('completion', (event: CompletionEvent) => {
-            // Process through EventStreamProcessor to finalize messages
-            if (this.eventStreamProcessor) {
-                this.eventStreamProcessor.processEvent(event);
-            }
-            // Also handle in session manager for backward compatibility
-            if (event.running === false) {
-                this.sessionManager!.handleTextDone();
-            }
-        });
+        // Note: Text delta and completion events are exclusively handled by EventStreamProcessor
+        // to prevent duplicate event emission and ensure proper message building
         
         // Handle session name changes
         this.on('chat_session_name_changed', (event: ChatSessionNameChangedEvent) => {
@@ -1203,6 +1180,7 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
                     }
                     
                     // Process events through EventStreamProcessor if applicable
+                    let processedByEventStream = false;
                     if (this.eventStreamProcessor) {
                         const eventTypesToProcess = [
                             'interaction',
@@ -1220,11 +1198,15 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
                         
                         if (eventTypesToProcess.includes(event.type)) {
                             this.eventStreamProcessor.processEvent(event);
+                            processedByEventStream = true;
                         }
                     }
                     
-                    // Emit the specific event
-                    this.emit(event.type as keyof RealtimeEventMap, event as RealtimeEventMap[keyof RealtimeEventMap]);
+                    // Only emit events that weren't processed by EventStreamProcessor
+                    // EventStreamProcessor handles its own event emission for streaming events
+                    if (!processedByEventStream) {
+                        this.emit(event.type as keyof RealtimeEventMap, event as RealtimeEventMap[keyof RealtimeEventMap]);
+                    }
                     
                     if (this.config.debug) {
                         // console.debug('Received event:', event.type, event);

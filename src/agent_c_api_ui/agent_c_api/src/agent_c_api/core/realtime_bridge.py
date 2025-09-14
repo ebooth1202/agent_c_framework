@@ -4,7 +4,7 @@ import json
 import threading
 import traceback
 from contextlib import suppress
-from typing import List, Optional, Any, Dict, AsyncGenerator, AsyncIterator
+from typing import List, Optional, Any, Dict, AsyncIterator
 
 from fastapi import WebSocket, WebSocketDisconnect
 from functools import singledispatchmethod
@@ -12,14 +12,14 @@ from functools import singledispatchmethod
 from agent_c.chat import ChatSessionManager
 from agent_c.config.agent_config_loader import AgentConfigLoader
 from agent_c.models import ChatSession, ChatUser
-from agent_c.models.events import BaseEvent, TextDeltaEvent, CompletionEvent, HistoryEvent
-from agent_c.models.events.chat import ThoughtDeltaEvent, AudioInputDeltaEvent
+from agent_c.models.events import BaseEvent, TextDeltaEvent,  HistoryEvent
+from agent_c.models.events.chat import AudioInputDeltaEvent
 from agent_c.models.heygen import HeygenAvatarSessionData, NewSessionRequest
 from agent_c.toolsets import Toolset
 from agent_c.util.heygen_streaming_avatar_client import HeyGenStreamingClient
 from agent_c.util.registries.event import EventRegistry
 from agent_c_api.api.rt.models.control_events import GetAgentsEvent, ErrorEvent, AgentListEvent, GetAvatarsEvent, AvatarListEvent, TextInputEvent, SetAvatarEvent, AvatarConnectionChangedEvent, \
-    SetAgentEvent, AgentConfigurationChangedEvent, SetAvatarSessionEvent, ChatSessionChangedEvent, SessionMetadataChangedEvent, ChatSessionNameChangedEvent, ResumeChatSessionEvent, \
+    SetAgentEvent, AgentConfigurationChangedEvent, SetAvatarSessionEvent, ChatSessionChangedEvent,  ResumeChatSessionEvent, \
     NewChatSessionEvent, SetAgentVoiceEvent, AgentVoiceChangedEvent, UserTurnStartEvent, UserTurnEndEvent, GetUserSessionsEvent, GetUserSessionsResponseEvent, PingEvent, PongEvent, \
     GetToolCatalogEvent, ToolCatalogEvent, ChatUserDataEvent, GetVoicesEvent, VoiceListEvent
 from agent_c_api.api.rt.models.control_events import SetChatSessionNameEvent, SetSessionMessagesEvent, ChatSessionNameChangedEvent, SetSessionMetadataEvent, SessionMetadataChangedEvent
@@ -312,10 +312,11 @@ class RealtimeBridge(AgentBridge):
         if self.chat_session:
             await self.send_event(SessionMetadataChangedEvent(meta=self.chat_session.metadata))
 
-    async def send_chat_session_name(self):
+    async def send_chat_session_name(self, session: Optional[ChatSession] = None):
         """Send the current chat session name to the client"""
-        if self.chat_session and self.chat_session.session_name:
-            await self.send_event(ChatSessionNameChangedEvent(session_name=self.chat_session.session_name))
+        chat_session = session or self.chat_session
+        if chat_session:
+            await self.send_event(ChatSessionNameChangedEvent(session_name=chat_session.name, session_id=chat_session.session_id))
 
     # Handlers for runtime events coming over the callback
     @singledispatchmethod
@@ -325,9 +326,8 @@ class RealtimeBridge(AgentBridge):
 
     @handle_runtime_event.register
     async def _(self, event: HistoryEvent):
-        self.chat_session.messages = copy.deepcopy(event.messages)
-        await self.send_event(event)
-
+        if event.session_id == self.chat_session.session_id:
+            self.chat_session.messages = copy.deepcopy(event.messages)
 
 
     @property
