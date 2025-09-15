@@ -55,8 +55,11 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
       maxNotifications: 5
     })
     const scrollContainerRef = React.useRef<HTMLDivElement>(null)
+    const scrollSentinelRef = React.useRef<HTMLDivElement>(null)
     const [isLoading, setIsLoading] = React.useState(false)
     const [isAutoScrollEnabled, setIsAutoScrollEnabled] = React.useState(true)
+    const [hasCompletedInitialScroll, setHasCompletedInitialScroll] = React.useState(false)
+    const isInitialMount = React.useRef(true)
     const scrollThreshold = 50 // pixels from bottom to re-enable auto-scroll
     
     // Debug logging for messages
@@ -85,21 +88,23 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
     
     // Scroll to bottom function
     const scrollToBottom = React.useCallback((smooth = true) => {
-      if (!scrollContainerRef.current) return
+      if (!scrollSentinelRef.current) return
       
-      const scrollContainer = scrollContainerRef.current
-      const lastChild = scrollContainer.lastElementChild?.lastElementChild
-      
-      if (lastChild) {
-        lastChild.scrollIntoView({ 
-          behavior: smooth ? 'smooth' : 'auto',
-          block: 'end'
-        })
-      }
+      // Use the sentinel element as the scroll target
+      scrollSentinelRef.current.scrollIntoView({ 
+        behavior: smooth ? 'smooth' : 'auto',
+        block: 'end'
+      })
     }, [])
     
     // Handle scroll events to detect user scrolling
     const handleScroll = React.useCallback(() => {
+      // Ignore scroll events until initial scroll is complete
+      if (!hasCompletedInitialScroll) {
+        Logger.debug('[MessageList] Ignoring scroll event - initial scroll not complete')
+        return
+      }
+      
       const nearBottom = isNearBottom()
       
       // Re-enable auto-scroll if user scrolls back to bottom
@@ -112,7 +117,7 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
         Logger.debug('[MessageList] Disabling auto-scroll - user scrolled up')
         setIsAutoScrollEnabled(false)
       }
-    }, [isNearBottom, isAutoScrollEnabled])
+    }, [isNearBottom, isAutoScrollEnabled, hasCompletedInitialScroll])
     
     // Set up scroll event listener
     React.useEffect(() => {
@@ -126,17 +131,39 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
       }
     }, [handleScroll])
     
-    // Auto-scroll when new content arrives
+    // Handle initial mount scroll for session restoration
     React.useEffect(() => {
-      if (isAutoScrollEnabled) {
-        // Small delay to ensure DOM updates are complete
-        const timeoutId = setTimeout(() => {
-          scrollToBottom()
-        }, 100)
-        
-        return () => clearTimeout(timeoutId)
+      if (isInitialMount.current && messages.length > 0) {
+        Logger.debug('[MessageList] Initial mount with existing messages - scrolling after ref attachment')
+        // Use requestAnimationFrame to ensure ref is attached before scrolling
+        requestAnimationFrame(() => {
+          scrollToBottom(false) // Use instant scroll for initial mount
+          setHasCompletedInitialScroll(true)
+        })
+        isInitialMount.current = false
+      } else if (isInitialMount.current && messages.length === 0) {
+        // No messages on mount, mark initial scroll as complete
+        Logger.debug('[MessageList] Initial mount with no messages')
+        setHasCompletedInitialScroll(true)
+        isInitialMount.current = false
       }
-    }, [messages, streamingMessage, isAgentTyping, toolNotifications, isAutoScrollEnabled, scrollToBottom])
+    }, [messages.length, scrollToBottom])
+    
+    // Auto-scroll when new content arrives (after initial mount)
+    React.useEffect(() => {
+      // Skip if this is the initial mount or auto-scroll is disabled
+      if (!hasCompletedInitialScroll || !isAutoScrollEnabled) {
+        return
+      }
+      
+      // Small delay to ensure DOM updates are complete for new messages
+      const timeoutId = setTimeout(() => {
+        Logger.debug('[MessageList] Auto-scrolling for new content')
+        scrollToBottom()
+      }, 100)
+      
+      return () => clearTimeout(timeoutId)
+    }, [messages, streamingMessage, isAgentTyping, toolNotifications, isAutoScrollEnabled, scrollToBottom, hasCompletedInitialScroll])
     
     // Combine ref forwarding with internal ref
     React.useImperativeHandle(ref, () => scrollContainerRef.current as HTMLDivElement)
@@ -292,6 +319,14 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
             </>
           )}
         </div>
+        
+        {/* Sentinel element for scroll targeting */}
+        <div
+          ref={scrollSentinelRef}
+          data-testid="scroll-sentinel"
+          style={{ height: '1px', visibility: 'hidden' }}
+          aria-hidden="true"
+        />
       </div>
     )
   }
