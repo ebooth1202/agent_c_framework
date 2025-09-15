@@ -102,6 +102,15 @@ export const defaultMockStates = {
     selectSession: vi.fn(),
     selectedSessionId: null,
   },
+  toolNotifications: {
+    notifications: [],
+    completedToolCalls: [],
+    getNotification: vi.fn(),
+    clearNotifications: vi.fn(),
+    hasActiveTools: false,
+    isToolActive: vi.fn(() => false),
+    activeToolCount: 0,
+  },
 };
 
 // Hook mocks
@@ -116,6 +125,7 @@ export const useUserData = vi.fn(() => defaultMockStates.userData);
 export const useAgentCData = vi.fn(() => defaultMockStates.agentCData);
 export const useInitializationStatus = vi.fn(() => defaultMockStates.initializationStatus);
 export const useChatSessionList = vi.fn(() => defaultMockStates.chatSessionList);
+export const useToolNotifications = vi.fn(() => defaultMockStates.toolNotifications);
 
 // Mock for useRealtimeClient and useRealtimeClientSafe
 export const useRealtimeClient = vi.fn(() => null);
@@ -146,6 +156,7 @@ export function updateMockState(hook: string, newState: any) {
     agentCData: useAgentCData,
     initializationStatus: useInitializationStatus,
     chatSessionList: useChatSessionList,
+    toolNotifications: useToolNotifications,
   };
   
   const mockHook = hookMap[hook as keyof typeof hookMap];
@@ -170,4 +181,5 @@ export function resetAllMocks() {
   useAgentCData.mockReturnValue(defaultMockStates.agentCData);
   useInitializationStatus.mockReturnValue(defaultMockStates.initializationStatus);
   useChatSessionList.mockReturnValue(defaultMockStates.chatSessionList);
+  useToolNotifications.mockReturnValue(defaultMockStates.toolNotifications);
 }

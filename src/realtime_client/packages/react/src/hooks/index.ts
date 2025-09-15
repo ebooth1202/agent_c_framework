@@ -52,3 +52,12 @@ export type {
   SessionGroup,
   SessionGroupMeta 
 } from './useChatSessionList';
+
+// Tool notifications
+export { useToolNotifications } from './useToolNotifications';
+export type {
+  UseToolNotificationsOptions,
+  UseToolNotificationsReturn,
+  ToolNotification,
+  ToolCallResult
+} from './useToolNotifications';

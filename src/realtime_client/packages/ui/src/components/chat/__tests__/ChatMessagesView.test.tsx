@@ -149,7 +149,7 @@ describe('ChatMessagesView', () => {
   })
 
   describe('TypingIndicator Conditional Rendering', () => {
-    it('should show typing indicator when agent is typing', () => {
+    it('should pass typing state to MessageList', () => {
       updateMockState('chat', {
         ...defaultMockChatData,
         isAgentTyping: true
@@ -157,11 +157,12 @@ describe('ChatMessagesView', () => {
       
       render(<ChatMessagesView />)
       
-      const typingIndicator = screen.getByTestId('typing-indicator')
-      expect(typingIndicator).toBeInTheDocument()
+      // TypingIndicator is now handled within MessageList
+      const messageList = screen.getByTestId('message-list')
+      expect(messageList).toBeInTheDocument()
     })
 
-    it('should not show typing indicator when agent is not typing', () => {
+    it('should render MessageList regardless of typing state', () => {
       updateMockState('chat', {
         ...defaultMockChatData,
         isAgentTyping: false
@@ -169,11 +170,12 @@ describe('ChatMessagesView', () => {
       
       render(<ChatMessagesView />)
       
-      const typingIndicator = screen.queryByTestId('typing-indicator')
-      expect(typingIndicator).not.toBeInTheDocument()
+      // MessageList handles typing indicator internally
+      const messageList = screen.getByTestId('message-list')
+      expect(messageList).toBeInTheDocument()
     })
 
-    it('should wrap typing indicator with correct padding', () => {
+    it('should render MessageList with correct layout classes', () => {
       updateMockState('chat', {
         ...defaultMockChatData,
         isAgentTyping: true
@@ -181,19 +183,20 @@ describe('ChatMessagesView', () => {
       
       render(<ChatMessagesView />)
       
-      // Find the wrapper div around typing indicator
-      const typingIndicator = screen.getByTestId('typing-indicator')
-      const wrapper = typingIndicator.parentElement
+      // MessageList has the appropriate layout classes
+      const messageList = screen.getByTestId('message-list')
       
-      expect(wrapper).toHaveClass('px-4')
-      expect(wrapper).toHaveClass('pb-2')
+      expect(messageList).toHaveClass('max-w-4xl')
+      expect(messageList).toHaveClass('mx-auto')
+      expect(messageList).toHaveClass('px-4')
+      expect(messageList).toHaveClass('py-4')
     })
 
     it('should handle rapid typing state changes', async () => {
       const { rerender } = render(<ChatMessagesView />)
       
-      // Initially not typing
-      expect(screen.queryByTestId('typing-indicator')).not.toBeInTheDocument()
+      // MessageList is always present
+      expect(screen.getByTestId('message-list')).toBeInTheDocument()
       
       // Start typing
       updateMockState('chat', {
@@ -201,7 +204,7 @@ describe('ChatMessagesView', () => {
         isAgentTyping: true
       })
       rerender(<ChatMessagesView />)
-      expect(screen.getByTestId('typing-indicator')).toBeInTheDocument()
+      expect(screen.getByTestId('message-list')).toBeInTheDocument()
       
       // Stop typing
       updateMockState('chat', {
@@ -209,7 +212,7 @@ describe('ChatMessagesView', () => {
         isAgentTyping: false
       })
       rerender(<ChatMessagesView />)
-      expect(screen.queryByTestId('typing-indicator')).not.toBeInTheDocument()
+      expect(screen.getByTestId('message-list')).toBeInTheDocument()
       
       // Start typing again
       updateMockState('chat', {
@@ -217,17 +220,17 @@ describe('ChatMessagesView', () => {
         isAgentTyping: true
       })
       rerender(<ChatMessagesView />)
-      expect(screen.getByTestId('typing-indicator')).toBeInTheDocument()
+      expect(screen.getByTestId('message-list')).toBeInTheDocument()
     })
 
-    it('should maintain typing indicator during message updates', () => {
+    it('should maintain MessageList during message updates', () => {
       updateMockState('chat', {
         messages: defaultMockChatData.messages,
         isAgentTyping: true
       })
       
       const { rerender } = render(<ChatMessagesView />)
-      expect(screen.getByTestId('typing-indicator')).toBeInTheDocument()
+      expect(screen.getByTestId('message-list')).toBeInTheDocument()
       
       // Update messages while still typing
       updateMockState('chat', {
@@ -243,7 +246,7 @@ describe('ChatMessagesView', () => {
       })
       
       rerender(<ChatMessagesView />)
-      expect(screen.getByTestId('typing-indicator')).toBeInTheDocument()
+      expect(screen.getByTestId('message-list')).toBeInTheDocument()
     })
   })
 
@@ -280,7 +283,7 @@ describe('ChatMessagesView', () => {
       expect(lastChild).toHaveAttribute('data-testid', 'scroll-anchor')
     })
 
-    it('should maintain ScrollAnchor position with typing indicator', () => {
+    it('should maintain ScrollAnchor position with MessageList', () => {
       updateMockState('chat', {
         ...defaultMockChatData,
         isAgentTyping: true
@@ -291,10 +294,10 @@ describe('ChatMessagesView', () => {
       const scrollableArea = container.querySelector('.h-full.overflow-y-auto')
       const children = Array.from(scrollableArea?.children || [])
       
-      // Order should be: MessageList, TypingIndicator wrapper, ScrollAnchor
+      // Order should be: MessageList, ScrollAnchor
       expect(children[0]).toHaveAttribute('data-testid', 'message-list')
-      expect(children[1]).toHaveClass('px-4', 'pb-2') // Typing indicator wrapper
-      expect(children[2]).toHaveAttribute('data-testid', 'scroll-anchor')
+      expect(children[1]).toHaveAttribute('data-testid', 'scroll-anchor')
+      expect(children.length).toBe(2)
     })
   })
 
@@ -410,7 +413,7 @@ describe('ChatMessagesView', () => {
       expect(children[1]).toHaveAttribute('data-testid', 'scroll-anchor')
     })
 
-    it('should integrate all components when agent is typing', () => {
+    it('should integrate all components properly', () => {
       updateMockState('chat', {
         ...defaultMockChatData,
         isAgentTyping: true
@@ -421,11 +424,10 @@ describe('ChatMessagesView', () => {
       const scrollableArea = container.querySelector('.h-full.overflow-y-auto')
       const children = Array.from(scrollableArea?.children || [])
       
-      // With typing indicator: MessageList, TypingIndicator wrapper, ScrollAnchor
-      expect(children).toHaveLength(3)
+      // Components: MessageList and ScrollAnchor (typing indicator is inside MessageList)
+      expect(children).toHaveLength(2)
       expect(children[0]).toHaveAttribute('data-testid', 'message-list')
-      expect(children[1].querySelector('[data-testid="typing-indicator"]')).toBeInTheDocument()
-      expect(children[2]).toHaveAttribute('data-testid', 'scroll-anchor')
+      expect(children[1]).toHaveAttribute('data-testid', 'scroll-anchor')
     })
 
     it('should maintain proper nesting structure', () => {

@@ -9,18 +9,12 @@
 export { InputArea } from './InputArea'
 export type { InputAreaProps } from './InputArea'
 
-export { ChatInputArea, OutputModeSelector } from './ChatInputArea'
-export type { ChatInputAreaProps } from './ChatInputArea'
-
 // Individual components for advanced usage
 export { InputContainer } from './InputContainer'
 export type { InputContainerProps } from './InputContainer'
 
 export { RichTextEditor } from './RichTextEditor'
 export type { RichTextEditorProps } from './RichTextEditor'
-
-export { MarkdownEditor } from './MarkdownEditor'
-export type { MarkdownEditorProps } from './MarkdownEditor'
 
 export { InputToolbar } from './InputToolbar'
 export type { InputToolbarProps } from './InputToolbar'

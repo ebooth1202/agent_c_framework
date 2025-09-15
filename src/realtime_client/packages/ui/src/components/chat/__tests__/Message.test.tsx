@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Message, type MessageData } from '../Message';
 
@@ -24,15 +24,39 @@ vi.mock('../MessageContentRenderer', () => ({
 
 // Mock MessageFooter
 vi.mock('../MessageFooter', () => ({
-  MessageFooter: ({ message, onEdit }: any) => (
-    <div 
-      data-testid="message-footer"
-      data-role={message.role}
-      onClick={onEdit}
-    >
-      Footer for {message.role}
-    </div>
-  )
+  MessageFooter: ({ message, onEdit, showTimestamp }: any) => {
+    // Format timestamp if showTimestamp is true
+    const formattedTime = React.useMemo(() => {
+      if (!showTimestamp || !message.timestamp) return null;
+      try {
+        const date = new Date(message.timestamp);
+        if (isNaN(date.getTime())) return null;
+        return date.toLocaleTimeString('en-US', { 
+          hour: 'numeric', 
+          minute: '2-digit',
+          hour12: true 
+        });
+      } catch {
+        return null;
+      }
+    }, [message.timestamp, showTimestamp]);
+    
+    return (
+      <div 
+        data-testid="message-footer"
+        data-role={message.role}
+        onClick={onEdit}
+      >
+        Footer for {message.role}
+        {formattedTime && (
+          <span className="text-xs text-muted-foreground flex items-center gap-1">
+            <div data-testid="clock-icon" className="h-3 w-3" />
+            {formattedTime}
+          </span>
+        )}
+      </div>
+    );
+  }
 }));
 
 // Mock Logger
@@ -170,11 +194,11 @@ describe('Message Component - Basic Rendering', () => {
       expect(article).toHaveAttribute('aria-label', 'Message from assistant');
     });
 
-    it('should render assistant message with background color', () => {
+    it('should render assistant message with card background color', () => {
       const { container } = render(<Message message={assistantMessage} />);
       
-      // Check for bg-background class on message bubble
-      const bubble = container.querySelector('.bg-background');
+      // Check for bg-card class on message bubble
+      const bubble = container.querySelector('.bg-card');
       expect(bubble).toBeInTheDocument();
     });
 
@@ -259,28 +283,36 @@ describe('Message Component - Basic Rendering', () => {
   });
 
   describe('Timestamp Display', () => {
-    it('should display timestamp when showTimestamp is true', () => {
-      render(<Message message={baseMessage} showTimestamp={true} />);
+    it('should pass showTimestamp to MessageFooter', () => {
+      render(<Message message={baseMessage} showTimestamp={true} showFooter={true} />);
       
-      // Check for clock icon
-      const clockIcon = screen.getByTestId('clock-icon');
+      // Timestamp is now handled by MessageFooter
+      const footer = screen.getByTestId('message-footer');
+      expect(footer).toBeInTheDocument();
+      
+      // Check for clock icon in footer
+      const clockIcon = within(footer).getByTestId('clock-icon');
       expect(clockIcon).toBeInTheDocument();
       
-      // Check that a time is displayed (format may vary by locale)
-      const timeElements = screen.getAllByText(/\d{1,2}:\d{2}\s*(AM|PM)?/i);
+      // Check that a time is displayed in footer
+      const timeElements = within(footer).getAllByText(/\d{1,2}:\d{2}\s*(AM|PM)?/i);
       expect(timeElements.length).toBeGreaterThan(0);
     });
 
-    it('should hide timestamp when showTimestamp is false', () => {
-      render(<Message message={baseMessage} showTimestamp={false} />);
+    it('should not show timestamp when showTimestamp is false', () => {
+      render(<Message message={baseMessage} showTimestamp={false} showFooter={true} />);
       
-      // Clock icon should not be present
-      const clockIcon = screen.queryByTestId('clock-icon');
-      expect(clockIcon).not.toBeInTheDocument();
-      
-      // Time text should not be present
-      const timeText = screen.queryByText(/\d{1,2}:\d{2}\s*(AM|PM)?/i);
-      expect(timeText).toBeNull();
+      // Footer should exist but timestamp should not be shown
+      const footer = screen.queryByTestId('message-footer');
+      if (footer) {
+        // Clock icon should not be present in footer
+        const clockIcon = within(footer).queryByTestId('clock-icon');
+        expect(clockIcon).not.toBeInTheDocument();
+        
+        // Time text should not be present in footer
+        const timeText = within(footer).queryByText(/\d{1,2}:\d{2}\s*(AM|PM)?/i);
+        expect(timeText).toBeNull();
+      }
     });
 
     it('should format timestamp correctly for different times', () => {
@@ -289,9 +321,10 @@ describe('Message Component - Basic Rendering', () => {
         timestamp: new Date('2024-01-01T09:30:00Z')
       };
       
-      const { rerender } = render(<Message message={morningMessage} showTimestamp={true} />);
-      // Just check that a time is displayed
-      let timeElements = screen.getAllByText(/\d{1,2}:\d{2}\s*(AM|PM)?/i);
+      const { rerender } = render(<Message message={morningMessage} showTimestamp={true} showFooter={true} />);
+      // Check that a time is displayed in footer
+      const footer = screen.getByTestId('message-footer');
+      let timeElements = within(footer).getAllByText(/\d{1,2}:\d{2}\s*(AM|PM)?/i);
       expect(timeElements.length).toBeGreaterThan(0);
       
       const eveningMessage = {
@@ -299,9 +332,9 @@ describe('Message Component - Basic Rendering', () => {
         timestamp: new Date('2024-01-01T18:45:00Z')
       };
       
-      rerender(<Message message={eveningMessage} showTimestamp={true} />);
-      // Just check that a time is displayed
-      timeElements = screen.getAllByText(/\d{1,2}:\d{2}\s*(AM|PM)?/i);
+      rerender(<Message message={eveningMessage} showTimestamp={true} showFooter={true} />);
+      // Check that a time is displayed in footer
+      timeElements = within(footer).getAllByText(/\d{1,2}:\d{2}\s*(AM|PM)?/i);
       expect(timeElements.length).toBeGreaterThan(0);
     });
 
@@ -329,18 +362,17 @@ describe('Message Component - Basic Rendering', () => {
       expect(timeElements.length).toBeGreaterThan(0);
     });
 
-    it('should show timestamp in metadata section', () => {
-      const { container } = render(<Message message={baseMessage} showTimestamp={true} />);
+    it('should show timestamp in footer when showFooter is true', () => {
+      render(<Message message={baseMessage} showTimestamp={true} showFooter={true} />);
       
-      // Find the metadata section
-      const metadataSection = container.querySelector('.flex.items-center.gap-2.px-1');
-      expect(metadataSection).toBeInTheDocument();
+      // Timestamp is now in MessageFooter
+      const footer = screen.getByTestId('message-footer');
+      expect(footer).toBeInTheDocument();
       
-      // Check that timestamp is within metadata
-      const timestampElement = metadataSection?.querySelector('.text-xs.text-muted-foreground');
+      // Check that timestamp is within footer
+      const timestampElement = within(footer).getByText(/\d{1,2}:\d{2}\s*(AM|PM)?/i);
       expect(timestampElement).toBeInTheDocument();
-      // Check for time format
-      expect(timestampElement?.textContent).toMatch(/\d{1,2}:\d{2}\s*(AM|PM)?/i);
+      expect(timestampElement).toHaveClass('text-xs', 'text-muted-foreground');
     });
   });
 

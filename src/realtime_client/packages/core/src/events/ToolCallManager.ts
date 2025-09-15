@@ -46,17 +46,17 @@ export class ToolCallManager {
     
     const notification: ToolNotification = {
       id: toolCall.id,
-      toolName: toolCall.function.name,
+      toolName: toolCall.name,
       status: 'preparing',
       timestamp: new Date(),
-      arguments: toolCall.function.arguments
+      arguments: JSON.stringify(toolCall.input)
     };
     
     this.activeTools.set(toolCall.id, notification);
     
-    Logger.info(`[ToolCallManager] Tool selected: ${toolCall.function.name}`, {
+    Logger.info(`[ToolCallManager] Tool selected: ${toolCall.name}`, {
       id: toolCall.id,
-      arguments: toolCall.function.arguments
+      arguments: JSON.stringify(toolCall.input)
     });
     
     return notification;
@@ -88,15 +88,15 @@ export class ToolCallManager {
     // If we don't have a notification yet, create one
     const newNotification: ToolNotification = {
       id: toolCall.id,
-      toolName: toolCall.function.name,
+      toolName: toolCall.name,
       status: 'executing',
       timestamp: new Date(),
-      arguments: toolCall.function.arguments
+      arguments: JSON.stringify(toolCall.input)
     };
     
     this.activeTools.set(toolCall.id, newNotification);
     
-    Logger.info(`[ToolCallManager] Tool executing (no prior selection): ${toolCall.function.name}`, {
+    Logger.info(`[ToolCallManager] Tool executing (no prior selection): ${toolCall.name}`, {
       id: toolCall.id
     });
     
@@ -122,7 +122,7 @@ export class ToolCallManager {
       this.activeTools.delete(toolCall.id);
       
       // Find the result for this tool call
-      const result = event.tool_results?.find(r => r.call_id === toolCall.id);
+      const result = event.tool_results?.find(r => r.tool_use_id === toolCall.id);
       
       // Add to completed list
       const completedCall: ToolCallWithResult = {
@@ -133,10 +133,10 @@ export class ToolCallManager {
       this.completedToolCalls.push(completedCall);
       newlyCompleted.push(completedCall);
       
-      Logger.info(`[ToolCallManager] Tool completed: ${toolCall.function.name}`, {
+      Logger.info(`[ToolCallManager] Tool completed: ${toolCall.name}`, {
         id: toolCall.id,
         hasResult: !!result,
-        resultLength: result?.output?.length
+        resultLength: result?.content?.length
       });
     });
     

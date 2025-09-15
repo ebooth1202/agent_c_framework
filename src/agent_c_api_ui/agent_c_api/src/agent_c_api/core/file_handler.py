@@ -1,10 +1,9 @@
-import logging
 import mimetypes
-import os
 import shutil
+
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional, Union, Literal
+from typing import Dict, List, Optional, Union, Literal, TYPE_CHECKING
 
 from fastapi import UploadFile, HTTPException
 from pydantic import BaseModel, Field
@@ -16,6 +15,11 @@ from agent_c.models.input.file_input import FileInput
 from agent_c.models.input.image_input import ImageInput
 from agent_c.models.input.audio_input import AudioInput
 from agent_c_api.core.util.logging_utils import LoggingManager
+
+
+if TYPE_CHECKING:
+    from .realtime_bridge import RealtimeBridge
+
 
 # Optional document processing libraries
 try:
@@ -381,4 +385,49 @@ class FileHandler:
         if count > 0:
             self.logger.info(f"Cleaned up {count} expired files")
 
+        return count
+
+
+class RTFileHandler(FileHandler):
+    def __init__(self,
+                 bridge: 'RealtimeBridge',
+                 user_id: str,
+                 retention_days: int = 7):
+        base_dir = Path(f"uploads/{user_id}")
+        super().__init__(base_dir=base_dir, retention_days=retention_days)
+
+        self.bridge = bridge
+
+    async def save_file(self, file: UploadFile, _: str) -> FileMetadata:
+        chat_session = self.bridge.chat_session
+        file_data =  await super().save_file(file, chat_session.session_id)
+        session_files = chat_session.metadata.get("uploaded_files", {})
+        session_files[file_data.id] = file_data.model_dump()
+        chat_session.metadata["uploaded_files"] = session_files
+        await self.bridge.send_chat_session_meta()
+        return file_data
+
+    async def process_file(self, file_id: str, _: str) -> Optional[FileMetadata]:
+        chat_session = self.bridge.chat_session
+        file_data = await super().process_file(file_id, chat_session.session_id)
+        session_files = chat_session.metadata.get("uploaded_files", {})
+        session_files[file_data.id] = file_data.model_dump()
+        chat_session.metadata["uploaded_files"] = session_files
+        await self.bridge.send_chat_session_meta()
+        return file_data
+
+    def get_file_metadata(self, file_id: str, _: str) -> Optional[FileMetadata]:
+        return self.bridge.chat_session.metadata.get("uploaded_files", {}).get(file_id)
+
+    def get_session_files(self, _: str) -> List[FileMetadata]:
+        files = self.bridge.chat_session.metadata.get("uploaded_files", {})
+        return [FileMetadata.model_validate(f) for f in files.values()]
+
+    def get_file_as_input(self, file_id: str, _: str) -> Optional[Union[FileInput, ImageInput, AudioInput]]:
+        return super().get_file_as_input(file_id, self.bridge.chat_session.session_id)
+
+    def cleanup_session(self, _: str) -> int:
+        chat_session = self.bridge.chat_session
+        count = super().cleanup_session(chat_session.session_id)
+        chat_session.metadata["uploaded_files"] = {}
         return count

@@ -191,12 +191,8 @@ export function useAgentCData(): UseAgentCDataReturn {
       }
     };
     
-    // Handle session changes which include agent configuration
-    const handleSessionChanged = (event: any) => {
-      if (event.chat_session?.agent_config) {
-        setData(prev => ({ ...prev, currentAgentConfig: event.chat_session.agent_config }));
-      }
-    };
+    // Note: We no longer listen to raw chat_session_changed events because they are consumed by EventStreamProcessor
+    // Instead, we'll get the agent_config from SessionManager events or by calling updateData
     
     // Handle agent configuration changes
     const handleAgentConfigChanged = (event: any) => {
@@ -231,18 +227,39 @@ export function useAgentCData(): UseAgentCDataReturn {
       setIsLoading(false);
     };
     
+    // Get SessionManager to listen to session events
+    const sessionManager = client.getSessionManager();
+    
+    // Handle session changes from SessionManager (properly processed)
+    const handleSessionChangedFromManager = ({ currentSession }: any) => {
+      if (currentSession?.agent_config) {
+        setData(prev => ({ ...prev, currentAgentConfig: currentSession.agent_config }));
+      } else {
+        // Session changed but no agent_config (could be clearing)
+        setData(prev => ({ ...prev, currentAgentConfig: null }));
+      }
+      
+      // Also update other data from client
+      updateData();
+    };
+    
     // Subscribe to all events
     client.on('chat_user_data', handleUserData);
     client.on('avatar_list', handleAvatarList);
     client.on('voice_list', handleVoiceList);
     client.on('agent_list', handleAgentList);
     client.on('tool_catalog', handleToolCatalog);
-    client.on('chat_session_changed', handleSessionChanged);
+    // REMOVED: client.on('chat_session_changed', handleSessionChanged) - This event is consumed by EventStreamProcessor
     client.on('agent_configuration_changed', handleAgentConfigChanged);
     client.on('initialized' as any, handleInitialized);
     client.on('connected', handleConnect);
     client.on('disconnected', handleDisconnect);
     client.on('error', handleError);
+    
+    // Subscribe to SessionManager events for proper session updates
+    if (sessionManager) {
+      sessionManager.on('session-changed', handleSessionChangedFromManager);
+    }
     
     return () => {
       client.off('chat_user_data', handleUserData);
@@ -250,12 +267,17 @@ export function useAgentCData(): UseAgentCDataReturn {
       client.off('voice_list', handleVoiceList);
       client.off('agent_list', handleAgentList);
       client.off('tool_catalog', handleToolCatalog);
-      client.off('chat_session_changed', handleSessionChanged);
+      // REMOVED: client.off('chat_session_changed', handleSessionChanged);
       client.off('agent_configuration_changed', handleAgentConfigChanged);
       client.off('initialized' as any, handleInitialized);
       client.off('connected', handleConnect);
       client.off('disconnected', handleDisconnect);
       client.off('error', handleError);
+      
+      // Unsubscribe from SessionManager events
+      if (sessionManager) {
+        sessionManager.off('session-changed', handleSessionChangedFromManager);
+      }
     };
   }, [client, updateData]);
   

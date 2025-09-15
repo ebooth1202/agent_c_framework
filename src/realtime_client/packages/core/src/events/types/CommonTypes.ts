@@ -221,19 +221,18 @@ export type { ChatSession, ChatSessionIndexEntry, ChatSessionQueryResponse } fro
  */
 export interface ToolCall {
   id: string;
-  type: 'function';
-  function: {
-    name: string;
-    arguments: string;
-  };
+  type: 'tool_use';
+  name: string;
+  input: Record<string, unknown>;
 }
 
 /**
  * Tool result structure
  */
 export interface ToolResult {
-  call_id: string;
-  output: string;
+  type: 'tool_result';
+  tool_use_id: string;
+  content: string;
 }
 
 /**

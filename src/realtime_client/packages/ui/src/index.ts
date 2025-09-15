@@ -133,30 +133,19 @@ export type { MarkdownEditorProps as LegacyMarkdownEditorProps } from './compone
 export { 
   // Main integrated components
   InputArea,
-  ChatInputArea,
-  OutputModeSelector,
   // Individual components
   InputContainer, 
   RichTextEditor,
-  MarkdownEditor,
   InputToolbar,
   MicrophoneButton
-  // Note: AgentSelector has been removed from input components
-  // Use the fixed AgentSelector from controls instead
-  // Note: OutputSelector has been removed from input components
-  // Use the fixed OutputSelector from controls instead
 } from './components/input';
 
 export type { 
   InputAreaProps,
-  ChatInputAreaProps,
-  InputContainerProps, 
+  InputContainerProps,
   RichTextEditorProps,
-  MarkdownEditorProps,
   InputToolbarProps,
   MicrophoneButtonProps,
-  // AgentSelectorProps removed - use controls/AgentSelector
-  // OutputSelectorProps removed - use controls/OutputSelector
   Agent,
   OutputMode,
   OutputOption

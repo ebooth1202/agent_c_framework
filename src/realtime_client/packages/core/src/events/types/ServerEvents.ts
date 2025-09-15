@@ -354,6 +354,8 @@ export interface UserRequestEvent extends SessionEvent {
 export interface UserMessageEvent extends SessionEvent {
   type: 'user_message';
   vendor: string;
+  /** The message content - structure varies by vendor */
+  message?: string | Record<string, any>;
 }
 
 /**

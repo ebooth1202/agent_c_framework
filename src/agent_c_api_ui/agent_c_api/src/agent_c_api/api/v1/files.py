@@ -1,14 +1,12 @@
-import json
 import logging
 import traceback
-from typing import List, Optional
 
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, BackgroundTasks
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from agent_c_api.api.dependencies import get_agent_manager
-from agent_c_api.core.file_handler import FileHandler, FileMetadata
+from agent_c_api.core.file_handler import FileHandler
 
 
 router = APIRouter()

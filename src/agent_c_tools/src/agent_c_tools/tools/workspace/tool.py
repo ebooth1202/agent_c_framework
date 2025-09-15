@@ -743,7 +743,7 @@ class WorkspaceTools(Toolset):
             },
             'max_tokens': {
                 'type': 'integer',
-                'description': 'Maximum size in tokens for the response. Default is 2000.',
+                'description': 'Maximum size in tokens for the response. Default is 10000.',
                 'required': False
             }
         }
@@ -763,7 +763,7 @@ class WorkspaceTools(Toolset):
         """
         unc_paths = kwargs.get('paths', [])
         tool_context = kwargs.get("tool_context")
-        max_tokens = kwargs.get("max_tokens", 2000)
+        max_tokens = kwargs.get("max_tokens", 10000)
         if not isinstance(unc_paths, list):
             if isinstance(unc_paths, str):
                 unc_paths = [unc_paths]

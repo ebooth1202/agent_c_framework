@@ -293,19 +293,32 @@ export class EventStreamProcessor {
   private handleTextDelta(event: TextDeltaEvent): void {
     // Start a new message if needed
     if (!this.messageBuilder.hasCurrentMessage()) {
+      Logger.debug('[EventStreamProcessor] Starting new assistant message for text delta');
       this.messageBuilder.startMessage('assistant');
     }
     
     // Append the text delta
+    Logger.debug('[EventStreamProcessor] Appending text delta:', {
+      deltaContent: event.content,
+      deltaLength: event.content.length
+    });
     this.messageBuilder.appendText(event.content);
     
     // Update the streaming message in session manager
     const currentMessage = this.messageBuilder.getCurrentMessage();
     if (currentMessage) {
+      Logger.debug('[EventStreamProcessor] Emitting message-streaming:', {
+        sessionId: event.session_id,
+        messageContent: currentMessage.content,
+        messageRole: currentMessage.role,
+        messageStatus: currentMessage.status
+      });
       this.sessionManager.emit('message-streaming', {
         sessionId: event.session_id,
         message: currentMessage
       });
+    } else {
+      Logger.warn('[EventStreamProcessor] No current message after text delta');
     }
   }
   
@@ -324,6 +337,15 @@ export class EventStreamProcessor {
         });
       }
       this.messageBuilder.startMessage('thought');
+      
+      // Remove any "Agent is thinking..." notification when thought deltas start
+      // We check all active notifications for the think tool
+      const activeNotifications = this.toolCallManager.getActiveNotifications();
+      activeNotifications.forEach(notification => {
+        if (notification.toolName === 'think') {
+          this.sessionManager.emit('tool-notification-removed', notification.id);
+        }
+      });
     }
     
     // Append the thought delta
@@ -380,13 +402,37 @@ export class EventStreamProcessor {
    */
   private handleToolSelect(event: ToolSelectDeltaEvent): void {
     const notification = this.toolCallManager.onToolSelect(event);
-    this.sessionManager.emit('tool-notification', notification);
+    
+    // Special handling for the "think" tool
+    const toolCall = event.tool_calls[0];
+    if (toolCall && toolCall.name === 'think') {
+      // For the think tool, we emit a special notification
+      // The thought deltas will be handled separately
+      this.sessionManager.emit('tool-notification', {
+        ...notification,
+        toolName: 'think',
+        status: 'preparing' as const
+      });
+    } else {
+      this.sessionManager.emit('tool-notification', notification);
+    }
   }
   
   /**
    * Handle tool call events (during/after execution)
    */
   private handleToolCall(event: ToolCallEvent): void {
+    // Check if this is the think tool - if so, ignore it
+    const toolCall = event.tool_calls[0];
+    if (toolCall && toolCall.name === 'think') {
+      // For the think tool, we ignore the tool_call events
+      // as the content is already rendered via thought deltas
+      Logger.debug('[EventStreamProcessor] Ignoring tool_call event for think tool');
+      // Still remove the notification
+      this.sessionManager.emit('tool-notification-removed', toolCall.id);
+      return;
+    }
+    
     if (event.active) {
       // Tool is executing
       const notification = this.toolCallManager.onToolCallActive(event);
@@ -396,6 +442,12 @@ export class EventStreamProcessor {
     } else {
       // Tool completed
       this.toolCallManager.onToolCallComplete(event);
+      
+      // Emit tool-call-complete event for UI to track results
+      this.sessionManager.emit('tool-call-complete', {
+        toolCalls: event.tool_calls,
+        toolResults: event.tool_results
+      });
       
       // Remove notifications for completed tools
       event.tool_calls.forEach(tc => {
@@ -504,7 +556,7 @@ export class EventStreamProcessor {
     // Convert the server session to runtime ChatSession with normalized messages
     const session = this.convertServerSession(event.chat_session);
     
-    Logger.info(`[EventStreamProcessor] Processing session change: ${session.session_id} with ${session.messages?.length || 0} messages`);
+    Logger.info(`[EventStreamProcessor] Processing session change: ${session.session_id} with ${session.messages?.length || 0} messages and agent_config: ${session.agent_config?.key || 'none'}`);
     
     // Update the session in SessionManager with the converted version
     this.sessionManager.setCurrentSession(session);
@@ -512,15 +564,12 @@ export class EventStreamProcessor {
     // Reset the message builder for new session context
     this.messageBuilder.reset();
     
-    // Process existing messages to emit proper events for UI
-    if (session.messages && session.messages.length > 0) {
-      // Emit a session-messages-loaded event for bulk updates
-      // This is more appropriate for pre-existing messages
-      this.sessionManager.emit('session-messages-loaded', {
-        sessionId: session.session_id,
-        messages: session.messages
-      });
-    }
+    // ALWAYS emit session-messages-loaded event, even if messages array is empty
+    // This ensures the UI clears the chat display when switching to a new empty session
+    this.sessionManager.emit('session-messages-loaded', {
+      sessionId: session.session_id,
+      messages: session.messages || []  // Ensure we always pass an array
+    });
   }
   
   /**
@@ -621,12 +670,64 @@ export class EventStreamProcessor {
       }
     } else {
       // Handle generic user message format
-      message = {
-        role: 'user',
-        content: '[User message]',
-        timestamp: new Date().toISOString(),
-        format: 'text'
-      };
+      // The event likely has a message field that's not in the type definition
+      const eventWithMessage = event as any;
+      
+      if (eventWithMessage.message) {
+        // Extract content from the message field
+        if (typeof eventWithMessage.message === 'string') {
+          message = {
+            role: 'user',
+            content: eventWithMessage.message,
+            timestamp: new Date().toISOString(),
+            format: 'text'
+          };
+        } else if (eventWithMessage.message && typeof eventWithMessage.message === 'object') {
+          // Handle structured message - could be MessageParam format
+          const messageParam = eventWithMessage.message;
+          if (messageParam.content !== undefined) {
+            message = {
+              role: messageParam.role || 'user',
+              content: messageParam.content,
+              timestamp: new Date().toISOString(),
+              format: 'text'
+            };
+          } else {
+            // Fallback to stringifying the object
+            message = {
+              role: 'user',
+              content: JSON.stringify(eventWithMessage.message),
+              timestamp: new Date().toISOString(),
+              format: 'text'
+            };
+          }
+        } else {
+          // Fallback if message field exists but is neither string nor object
+          message = {
+            role: 'user',
+            content: '[User message]',
+            timestamp: new Date().toISOString(),
+            format: 'text'
+          };
+        }
+      } else if (eventWithMessage.text) {
+        // Try text field as fallback (might be present in some events)
+        message = {
+          role: 'user',
+          content: eventWithMessage.text,
+          timestamp: new Date().toISOString(),
+          format: 'text'
+        };
+      } else {
+        // Last resort fallback
+        Logger.warn('[EventStreamProcessor] UserMessageEvent missing message content', event);
+        message = {
+          role: 'user',
+          content: '[User message]',
+          timestamp: new Date().toISOString(),
+          format: 'text'
+        };
+      }
     }
     
     // Check for sub-session using SessionEvent fields (all UserMessageEvents extend SessionEvent)

@@ -354,7 +354,6 @@ export const AgentSelector = React.forwardRef<HTMLButtonElement, AgentSelectorPr
     const { data, isInitialized, isLoading } = useAgentCData()
     const { isConnected } = useConnection()
     
-    const [selectedAgent, setSelectedAgent] = React.useState<string>('')
     const [isChanging, setIsChanging] = React.useState(false)
     const [open, setOpen] = React.useState(false)
     const buttonRef = React.useRef<HTMLButtonElement>(null)
@@ -362,49 +361,8 @@ export const AgentSelector = React.forwardRef<HTMLButtonElement, AgentSelectorPr
     // Merge refs
     React.useImperativeHandle(ref, () => buttonRef.current!, [])
     
-    // Listen for agent configuration changes from server
-    React.useEffect(() => {
-      if (!client) return
-      
-      const handleAgentConfigChanged = (event: any) => {
-        if (event.agent_config?.key) {
-          setSelectedAgent(event.agent_config.key)
-        }
-      }
-      
-      const handleChatSessionChanged = (event: any) => {
-        if (event.chat_session?.agent_config?.key) {
-          setSelectedAgent(event.chat_session.agent_config.key)
-        }
-      }
-      
-      client.on('agent_configuration_changed' as any, handleAgentConfigChanged)
-      client.on('chat_session_changed' as any, handleChatSessionChanged)
-      
-      return () => {
-        client.off('agent_configuration_changed' as any, handleAgentConfigChanged)
-        client.off('chat_session_changed' as any, handleChatSessionChanged)
-      }
-    }, [client])
-    
-    // Initialize with current agent from session
-    React.useEffect(() => {
-      if (!client || !isInitialized) return
-      
-      const sessionManager = client.getSessionManager()
-      const currentSession = sessionManager?.getCurrentSession()
-      
-      if (currentSession?.agent_config?.key) {
-        setSelectedAgent(currentSession.agent_config.key)
-      }
-    }, [client, isInitialized])
-    
-    // Sync with currentAgentConfig from hook
-    React.useEffect(() => {
-      if (data.currentAgentConfig?.key) {
-        setSelectedAgent(data.currentAgentConfig.key)
-      }
-    }, [data.currentAgentConfig])
+    // Use currentAgentConfig from hook as single source of truth
+    const selectedAgent = data.currentAgentConfig?.key || ''
     
     const handleAgentSelect = async (agentKey: string) => {
       if (!client || agentKey === selectedAgent) return
@@ -413,8 +371,8 @@ export const AgentSelector = React.forwardRef<HTMLButtonElement, AgentSelectorPr
       setOpen(false)
       
       try {
+        // Just call setAgent - the hook will update when server confirms
         client.setAgent(agentKey)
-        setSelectedAgent(agentKey)
       } finally {
         setTimeout(() => setIsChanging(false), 300)
       }

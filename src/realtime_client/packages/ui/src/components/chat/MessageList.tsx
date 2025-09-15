@@ -1,10 +1,12 @@
 'use client'
 
 import * as React from 'react'
-import { useChat } from '@agentc/realtime-react'
+import { useChat, useToolNotifications } from '@agentc/realtime-react'
 import { cn } from '../../lib/utils'
 import { Message } from './Message'
 import { TypingIndicator } from './TypingIndicator'
+import { SubsessionDivider } from './SubsessionDivider'
+import { ToolNotificationList } from './ToolNotification'
 import { Loader2, MessageSquare } from 'lucide-react'
 import { Logger } from '../../utils/logger'
 
@@ -27,6 +29,17 @@ export interface MessageListProps extends React.HTMLAttributes<HTMLDivElement> {
   emptyStateComponent?: React.ReactNode
 }
 
+/**
+ * MessageList component with intelligent auto-scrolling behavior:
+ * 
+ * - Auto-scrolls to bottom when new messages, streaming content, or typing indicators appear
+ * - Disables auto-scroll when user manually scrolls up to review older messages
+ * - Re-enables auto-scroll when user scrolls back to within 50px of the bottom
+ * - Uses smooth scrolling for better UX
+ * 
+ * The auto-scroll state is managed internally and responds to user interaction patterns
+ * common in chat applications.
+ */
 const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
   ({ 
     className, 
@@ -37,8 +50,14 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
     ...props 
   }, ref) => {
     const { messages, isAgentTyping, streamingMessage, isSubSessionMessage } = useChat()
+    const { notifications: toolNotifications } = useToolNotifications({
+      autoRemoveCompleted: false, // We'll handle removal when tool completes
+      maxNotifications: 5
+    })
     const scrollContainerRef = React.useRef<HTMLDivElement>(null)
     const [isLoading, setIsLoading] = React.useState(false)
+    const [isAutoScrollEnabled, setIsAutoScrollEnabled] = React.useState(true)
+    const scrollThreshold = 50 // pixels from bottom to re-enable auto-scroll
     
     // Debug logging for messages
     React.useEffect(() => {
@@ -53,6 +72,71 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
         }))
       }
     }, [messages])
+    
+    // Check if scroll is near bottom
+    const isNearBottom = React.useCallback(() => {
+      if (!scrollContainerRef.current) return true
+      
+      const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight
+      
+      return distanceFromBottom <= scrollThreshold
+    }, [scrollThreshold])
+    
+    // Scroll to bottom function
+    const scrollToBottom = React.useCallback((smooth = true) => {
+      if (!scrollContainerRef.current) return
+      
+      const scrollContainer = scrollContainerRef.current
+      const lastChild = scrollContainer.lastElementChild?.lastElementChild
+      
+      if (lastChild) {
+        lastChild.scrollIntoView({ 
+          behavior: smooth ? 'smooth' : 'auto',
+          block: 'end'
+        })
+      }
+    }, [])
+    
+    // Handle scroll events to detect user scrolling
+    const handleScroll = React.useCallback(() => {
+      const nearBottom = isNearBottom()
+      
+      // Re-enable auto-scroll if user scrolls back to bottom
+      if (nearBottom && !isAutoScrollEnabled) {
+        Logger.debug('[MessageList] Re-enabling auto-scroll - user scrolled to bottom')
+        setIsAutoScrollEnabled(true)
+      }
+      // Disable auto-scroll if user scrolls away from bottom
+      else if (!nearBottom && isAutoScrollEnabled) {
+        Logger.debug('[MessageList] Disabling auto-scroll - user scrolled up')
+        setIsAutoScrollEnabled(false)
+      }
+    }, [isNearBottom, isAutoScrollEnabled])
+    
+    // Set up scroll event listener
+    React.useEffect(() => {
+      const container = scrollContainerRef.current
+      if (!container) return
+      
+      container.addEventListener('scroll', handleScroll, { passive: true })
+      
+      return () => {
+        container.removeEventListener('scroll', handleScroll)
+      }
+    }, [handleScroll])
+    
+    // Auto-scroll when new content arrives
+    React.useEffect(() => {
+      if (isAutoScrollEnabled) {
+        // Small delay to ensure DOM updates are complete
+        const timeoutId = setTimeout(() => {
+          scrollToBottom()
+        }, 100)
+        
+        return () => clearTimeout(timeoutId)
+      }
+    }, [messages, streamingMessage, isAgentTyping, toolNotifications, isAutoScrollEnabled, scrollToBottom])
     
     // Combine ref forwarding with internal ref
     React.useImperativeHandle(ref, () => scrollContainerRef.current as HTMLDivElement)
@@ -108,7 +192,7 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
       <div
         ref={scrollContainerRef}
         className={cn(
-          "relative flex flex-col",
+          "relative flex flex-col overflow-y-auto",
           className
         )}
         style={{ maxHeight: maxHeight === 'none' ? undefined : maxHeight }}
@@ -123,15 +207,56 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
             <EmptyState />
           ) : (
             <>
-              {visibleMessages.map((message, index) => (
-                <Message
-                  key={`message-${index}-${message.timestamp || index}`}
-                  message={message}
-                  showTimestamp={showTimestamps}
-                  isSubSession={isSubSessionMessage(message)}
-                  className="animate-in slide-in-from-bottom-2 duration-200"
+              {visibleMessages.map((message, index) => {
+                const isSubSession = isSubSessionMessage(message)
+                const previousMessage = index > 0 ? visibleMessages[index - 1] : null
+                const isPreviousSubSession = previousMessage ? isSubSessionMessage(previousMessage) : false
+                
+                // Check for subsession transitions
+                const isSubSessionStart = isSubSession && !isPreviousSubSession
+                const isSubSessionEnd = !isSubSession && isPreviousSubSession
+                
+                return (
+                  <React.Fragment key={`message-${index}-${message.timestamp || index}`}>
+                    {/* Subsession start divider */}
+                    {isSubSessionStart && (
+                      <SubsessionDivider 
+                        type="start"
+                        timestamp={message.timestamp}
+                        className="my-2"
+                      />
+                    )}
+                    
+                    {/* Subsession end divider */}
+                    {isSubSessionEnd && (
+                      <SubsessionDivider 
+                        type="end"
+                        timestamp={previousMessage?.timestamp}
+                        className="my-2"
+                      />
+                    )}
+                    
+                    {/* Message */}
+                    <Message
+                      message={message}
+                      showTimestamp={showTimestamps}
+                      isSubSession={isSubSession}
+                      className="animate-in slide-in-from-bottom-2 duration-200"
+                    />
+                  </React.Fragment>
+                )
+              })}
+              
+              {/* Check if we need an end divider for the last message */}
+              {visibleMessages.length > 0 && 
+               isSubSessionMessage(visibleMessages[visibleMessages.length - 1]) && 
+               !streamingMessage && (
+                <SubsessionDivider 
+                  type="end"
+                  timestamp={visibleMessages[visibleMessages.length - 1].timestamp}
+                  className="my-2"
                 />
-              ))}
+              )}
               
               {/* Current streaming response */}
               {streamingMessage && (
@@ -144,8 +269,17 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
                 />
               )}
               
-              {/* Typing indicator */}
-              {isAgentTyping && !streamingMessage && (
+              {/* Tool notifications */}
+              {toolNotifications.length > 0 && (
+                <ToolNotificationList
+                  notifications={toolNotifications}
+                  maxNotifications={3}
+                  className="animate-in slide-in-from-bottom-2 duration-200"
+                />
+              )}
+              
+              {/* Typing indicator - only show if no streaming message and no active tools */}
+              {isAgentTyping && !streamingMessage && toolNotifications.length === 0 && (
                 <div className="flex items-start gap-3 animate-in slide-in-from-bottom-2 duration-200">
                   <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
                     <span className="text-xs font-medium text-primary">AI</span>

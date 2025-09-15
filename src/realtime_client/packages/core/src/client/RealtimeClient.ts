@@ -1193,7 +1193,11 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
                             'system_message',
                             'error',
                             'history_delta',
-                            'chat_session_changed'
+                            'chat_session_changed',
+                            'user_message',
+                            'anthropic_user_message',
+                            'subsession_started',
+                            'subsession_ended'
                         ];
                         
                         if (eventTypesToProcess.includes(event.type)) {

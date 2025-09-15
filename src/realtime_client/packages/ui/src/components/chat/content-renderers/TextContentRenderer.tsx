@@ -53,7 +53,7 @@ export const TextContentRenderer: React.FC<TextContentRendererProps> = ({
       
       if (!inline && language) {
         return (
-          <div className="relative group my-4 max-w-full">
+          <div className="relative group my-4 w-full overflow-hidden">
             <div className="absolute right-2 top-2 z-10">
               <Button
                 variant="ghost"
@@ -76,10 +76,10 @@ export const TextContentRenderer: React.FC<TextContentRendererProps> = ({
               </Button>
             </div>
             <pre 
-              className="bg-muted rounded-md p-4 overflow-x-auto max-w-full"
+              className="bg-muted rounded-md p-4 overflow-x-auto w-full"
               aria-label={`Code block in ${language}`}
             >
-              <code className="text-sm font-mono" {...props}>
+              <code className="text-sm font-mono block min-w-0" {...props}>
                 {codeString}
               </code>
             </pre>
@@ -220,14 +220,14 @@ export const TextContentRenderer: React.FC<TextContentRendererProps> = ({
   return (
     <div 
       className={cn(
-        "prose prose-sm max-w-none",
+        "prose prose-sm max-w-none overflow-hidden",
         "prose-headings:text-foreground",
         "prose-p:text-foreground",
         "prose-strong:text-foreground",
         "prose-ul:text-foreground prose-ol:text-foreground",
         "prose-blockquote:text-muted-foreground",
         "prose-code:text-foreground prose-code:bg-muted",
-        "prose-pre:bg-muted",
+        "prose-pre:bg-muted prose-pre:overflow-x-auto",
         "prose-th:text-muted-foreground",
         "prose-td:text-foreground",
         "prose-a:text-primary",

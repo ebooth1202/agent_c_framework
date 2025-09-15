@@ -15,7 +15,10 @@ import {
   TextDeltaEvent,
   CompletionEvent,
   ChatSessionChangedEvent,
-  InteractionEvent
+  InteractionEvent,
+  ToolSelectDeltaEvent,
+  ToolCallEvent,
+  ThoughtDeltaEvent
 } from '../types/ServerEvents';
 import { ChatSession, Message } from '../types/CommonTypes';
 
@@ -645,6 +648,425 @@ describe('EventStreamProcessor - Streaming Delta Assembly', () => {
 
       const expectedContent = deltas.join('');
       expect(mockSession.messages[0].content).toBe(expectedContent);
+    });
+  });
+
+  describe('Tool Event Handling', () => {
+    describe('tool_select_delta events', () => {
+      it('should emit tool-notification for regular tools', () => {
+        const toolSelectEvent: ToolSelectDeltaEvent = {
+          type: 'tool_select_delta',
+          session_id: 'test-session-123',
+          role: 'assistant',
+          parent_session_id: null,
+          user_session_id: 'test-session-123',
+          tool_calls: [
+            {
+              id: 'tool-1',
+              type: 'tool_use',
+              name: 'calculator',
+              input: { operation: 'add', a: 5, b: 3 }
+            }
+          ]
+        };
+
+        processor.processEvent(toolSelectEvent);
+
+        expect(sessionManagerEmitSpy).toHaveBeenCalledWith('tool-notification', {
+          id: 'tool-1',
+          toolName: 'calculator',
+          status: 'preparing',
+          timestamp: expect.any(Date),
+          arguments: JSON.stringify({ operation: 'add', a: 5, b: 3 })
+        });
+      });
+
+      it('should handle think tool specially', () => {
+        const thinkSelectEvent: ToolSelectDeltaEvent = {
+          type: 'tool_select_delta',
+          session_id: 'test-session-123',
+          role: 'assistant',
+          parent_session_id: null,
+          user_session_id: 'test-session-123',
+          tool_calls: [
+            {
+              id: 'think-1',
+              type: 'tool_use',
+              name: 'think',
+              input: {}
+            }
+          ]
+        };
+
+        processor.processEvent(thinkSelectEvent);
+
+        expect(sessionManagerEmitSpy).toHaveBeenCalledWith('tool-notification', {
+          id: 'think-1',
+          toolName: 'think',
+          status: 'preparing',
+          timestamp: expect.any(Date),
+          arguments: '{}'
+        });
+      });
+    });
+
+    describe('tool_call events', () => {
+      it('should update notification when tool becomes active', () => {
+        // First select the tool
+        const selectEvent: ToolSelectDeltaEvent = {
+          type: 'tool_select_delta',
+          session_id: 'test-session-123',
+          role: 'assistant',
+          parent_session_id: null,
+          user_session_id: 'test-session-123',
+          tool_calls: [
+            {
+              id: 'tool-1',
+              type: 'tool_use',
+              name: 'web_search',
+              input: { query: 'test' }
+            }
+          ]
+        };
+        processor.processEvent(selectEvent);
+        sessionManagerEmitSpy.mockClear();
+
+        // Then mark as active
+        const activeEvent: ToolCallEvent = {
+          type: 'tool_call',
+          session_id: 'test-session-123',
+          role: 'assistant',
+          parent_session_id: null,
+          user_session_id: 'test-session-123',
+          active: true,
+          vendor: 'anthropic',
+          tool_calls: [
+            {
+              id: 'tool-1',
+              type: 'tool_use',
+              name: 'web_search',
+              input: { query: 'test' }
+            }
+          ]
+        };
+
+        processor.processEvent(activeEvent);
+
+        expect(sessionManagerEmitSpy).toHaveBeenCalledWith('tool-notification', {
+          id: 'tool-1',
+          toolName: 'web_search',
+          status: 'executing',
+          timestamp: expect.any(Date),
+          arguments: JSON.stringify({ query: 'test' })
+        });
+      });
+
+      it('should remove notification and handle results when tool completes', () => {
+        const completeEvent: ToolCallEvent = {
+          type: 'tool_call',
+          session_id: 'test-session-123',
+          role: 'assistant',
+          parent_session_id: null,
+          user_session_id: 'test-session-123',
+          active: false,
+          vendor: 'anthropic',
+          tool_calls: [
+            {
+              id: 'tool-1',
+              type: 'tool_use',
+              name: 'calculator',
+              input: { operation: 'multiply', a: 6, b: 7 }
+            }
+          ],
+          tool_results: [
+            {
+              type: 'tool_result',
+              tool_use_id: 'tool-1',
+              content: '{"result": 42}'
+            }
+          ]
+        };
+
+        processor.processEvent(completeEvent);
+
+        expect(sessionManagerEmitSpy).toHaveBeenCalledWith('tool-notification-removed', 'tool-1');
+      });
+
+      it('should ignore tool_call events for think tool', () => {
+        const thinkCallEvent: ToolCallEvent = {
+          type: 'tool_call',
+          session_id: 'test-session-123',
+          role: 'assistant',
+          parent_session_id: null,
+          user_session_id: 'test-session-123',
+          active: false,
+          vendor: 'anthropic',
+          tool_calls: [
+            {
+              id: 'think-1',
+              type: 'tool_use',
+              name: 'think',
+              input: {}
+            }
+          ],
+          tool_results: [
+            {
+              type: 'tool_result',
+              tool_use_id: 'think-1',
+              content: 'Agent thought process...'
+            }
+          ]
+        };
+
+        processor.processEvent(thinkCallEvent);
+
+        // Should only remove notification, not process the tool call
+        expect(sessionManagerEmitSpy).toHaveBeenCalledWith('tool-notification-removed', 'think-1');
+        expect(sessionManagerEmitSpy).not.toHaveBeenCalledWith('tool-notification', expect.anything());
+      });
+    });
+
+    describe('thought_delta with think tool interaction', () => {
+      it('should remove think tool notification when thought deltas start', () => {
+        // First, select the think tool
+        const thinkSelectEvent: ToolSelectDeltaEvent = {
+          type: 'tool_select_delta',
+          session_id: 'test-session-123',
+          role: 'assistant',
+          parent_session_id: null,
+          user_session_id: 'test-session-123',
+          tool_calls: [
+            {
+              id: 'think-1',
+              type: 'tool_use',
+              name: 'think',
+              input: {}
+            }
+          ]
+        };
+        processor.processEvent(thinkSelectEvent);
+        sessionManagerEmitSpy.mockClear();
+
+        // Then process a thought delta
+        const thoughtDeltaEvent: ThoughtDeltaEvent = {
+          type: 'thought_delta',
+          content: 'I need to analyze this...',
+          session_id: 'test-session-123'
+        };
+
+        processor.processEvent(thoughtDeltaEvent);
+
+        // Should remove the think tool notification
+        expect(sessionManagerEmitSpy).toHaveBeenCalledWith('tool-notification-removed', 'think-1');
+        
+        // And emit the thought streaming
+        expect(sessionManagerEmitSpy).toHaveBeenCalledWith('message-streaming', {
+          sessionId: 'test-session-123',
+          message: expect.objectContaining({
+            role: 'assistant',
+            type: 'thought',
+            content: 'I need to analyze this...'
+          })
+        });
+      });
+
+      it('should handle multiple thought deltas after think tool selection', () => {
+        // Select think tool
+        const thinkSelectEvent: ToolSelectDeltaEvent = {
+          type: 'tool_select_delta',
+          session_id: 'test-session-123',
+          role: 'assistant',
+          parent_session_id: null,
+          user_session_id: 'test-session-123',
+          tool_calls: [
+            {
+              id: 'think-2',
+              type: 'tool_use',
+              name: 'think',
+              input: {}
+            }
+          ]
+        };
+        processor.processEvent(thinkSelectEvent);
+
+        // Process multiple thought deltas
+        const thoughtDeltas = [
+          'Let me think about this problem. ',
+          'The user is asking about... ',
+          'I should consider...'
+        ];
+
+        thoughtDeltas.forEach((content, index) => {
+          sessionManagerEmitSpy.mockClear();
+          
+          processor.processEvent({
+            type: 'thought_delta',
+            content,
+            session_id: 'test-session-123'
+          } as ThoughtDeltaEvent);
+
+          // First delta should remove notification
+          if (index === 0) {
+            expect(sessionManagerEmitSpy).toHaveBeenCalledWith('tool-notification-removed', 'think-2');
+          }
+
+          // All deltas should emit streaming
+          expect(sessionManagerEmitSpy).toHaveBeenCalledWith('message-streaming', {
+            sessionId: 'test-session-123',
+            message: expect.objectContaining({
+              type: 'thought',
+              content: thoughtDeltas.slice(0, index + 1).join('')
+            })
+          });
+        });
+      });
+    });
+
+    describe('Complete tool flow sequences', () => {
+      it('should handle complete tool execution flow', () => {
+        const eventSequence: string[] = [];
+        sessionManagerEmitSpy.mockImplementation((eventName) => {
+          eventSequence.push(eventName);
+        });
+
+        // 1. Tool selection
+        processor.processEvent({
+          type: 'tool_select_delta',
+          session_id: 'test-session-123',
+          role: 'assistant',
+          parent_session_id: null,
+          user_session_id: 'test-session-123',
+          tool_calls: [
+            {
+              id: 'tool-flow-1',
+              type: 'tool_use',
+              name: 'weather_api',
+              input: { location: 'San Francisco' }
+            }
+          ]
+        } as ToolSelectDeltaEvent);
+
+        // 2. Tool becomes active
+        processor.processEvent({
+          type: 'tool_call',
+          session_id: 'test-session-123',
+          role: 'assistant',
+          parent_session_id: null,
+          user_session_id: 'test-session-123',
+          active: true,
+          vendor: 'anthropic',
+          tool_calls: [
+            {
+              id: 'tool-flow-1',
+              type: 'tool_use',
+              name: 'weather_api',
+              input: { location: 'San Francisco' }
+            }
+          ]
+        } as ToolCallEvent);
+
+        // 3. Tool completes with results
+        processor.processEvent({
+          type: 'tool_call',
+          session_id: 'test-session-123',
+          role: 'assistant',
+          parent_session_id: null,
+          user_session_id: 'test-session-123',
+          active: false,
+          vendor: 'anthropic',
+          tool_calls: [
+            {
+              id: 'tool-flow-1',
+              type: 'tool_use',
+              name: 'weather_api',
+              input: { location: 'San Francisco' }
+            }
+          ],
+          tool_results: [
+            {
+              type: 'tool_result',
+              tool_use_id: 'tool-flow-1',
+              content: '{"temperature": 72, "condition": "sunny"}'
+            }
+          ]
+        } as ToolCallEvent);
+
+        // Verify the sequence of events
+        expect(eventSequence).toEqual([
+          'tool-notification',  // Tool selected (preparing)
+          'tool-notification',  // Tool active (executing)
+          'tool-call-complete',  // Tool completed with results
+          'tool-notification-removed'  // Tool notification cleared
+        ]);
+      });
+
+      it('should handle think tool flow with thought deltas', () => {
+        const eventSequence: string[] = [];
+        sessionManagerEmitSpy.mockImplementation((eventName) => {
+          eventSequence.push(eventName);
+        });
+
+        // 1. Think tool selection
+        processor.processEvent({
+          type: 'tool_select_delta',
+          session_id: 'test-session-123',
+          role: 'assistant',
+          parent_session_id: null,
+          user_session_id: 'test-session-123',
+          tool_calls: [
+            {
+              id: 'think-flow-1',
+              type: 'tool_use',
+              name: 'think',
+              input: {}
+            }
+          ]
+        } as ToolSelectDeltaEvent);
+
+        // 2. Thought deltas start
+        processor.processEvent({
+          type: 'thought_delta',
+          content: 'Analyzing the request...',
+          session_id: 'test-session-123'
+        } as ThoughtDeltaEvent);
+
+        processor.processEvent({
+          type: 'thought_delta',
+          content: ' I should approach this by...',
+          session_id: 'test-session-123'
+        } as ThoughtDeltaEvent);
+
+        // 3. Tool call events (should be ignored)
+        processor.processEvent({
+          type: 'tool_call',
+          session_id: 'test-session-123',
+          role: 'assistant',
+          parent_session_id: null,
+          user_session_id: 'test-session-123',
+          active: false,
+          vendor: 'anthropic',
+          tool_calls: [
+            {
+              id: 'think-flow-1',
+              type: 'tool_use',
+              name: 'think',
+              input: {}
+            }
+          ],
+          tool_results: [
+            {
+              type: 'tool_result',
+              tool_use_id: 'think-flow-1',
+              content: 'Thought process completed'
+            }
+          ]
+        } as ToolCallEvent);
+
+        // Verify the sequence
+        expect(eventSequence).toContain('tool-notification');  // Think tool selected
+        expect(eventSequence).toContain('tool-notification-removed');  // Removed when deltas start
+        expect(eventSequence).toContain('message-streaming');  // Thought deltas
+      });
     });
   });
 });
