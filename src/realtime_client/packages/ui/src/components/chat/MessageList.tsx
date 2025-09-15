@@ -1,11 +1,12 @@
 'use client'
 
 import * as React from 'react'
-import { useChat } from '@agentc/realtime-react'
+import { useChat, useToolNotifications } from '@agentc/realtime-react'
 import { cn } from '../../lib/utils'
 import { Message } from './Message'
 import { TypingIndicator } from './TypingIndicator'
 import { SubsessionDivider } from './SubsessionDivider'
+import { ToolNotificationList } from './ToolNotification'
 import { Loader2, MessageSquare } from 'lucide-react'
 import { Logger } from '../../utils/logger'
 
@@ -38,6 +39,10 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
     ...props 
   }, ref) => {
     const { messages, isAgentTyping, streamingMessage, isSubSessionMessage } = useChat()
+    const { notifications: toolNotifications } = useToolNotifications({
+      autoRemoveCompleted: false, // We'll handle removal when tool completes
+      maxNotifications: 5
+    })
     const scrollContainerRef = React.useRef<HTMLDivElement>(null)
     const [isLoading, setIsLoading] = React.useState(false)
     
@@ -186,8 +191,17 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
                 />
               )}
               
-              {/* Typing indicator */}
-              {isAgentTyping && !streamingMessage && (
+              {/* Tool notifications */}
+              {toolNotifications.length > 0 && (
+                <ToolNotificationList
+                  notifications={toolNotifications}
+                  maxNotifications={3}
+                  className="animate-in slide-in-from-bottom-2 duration-200"
+                />
+              )}
+              
+              {/* Typing indicator - only show if no streaming message and no active tools */}
+              {isAgentTyping && !streamingMessage && toolNotifications.length === 0 && (
                 <div className="flex items-start gap-3 animate-in slide-in-from-bottom-2 duration-200">
                   <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
                     <span className="text-xs font-medium text-primary">AI</span>

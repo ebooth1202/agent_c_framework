@@ -51,6 +51,10 @@ export interface SessionManagerEventMap {
   };
   'tool-notification': ToolNotification;
   'tool-notification-removed': string; // Tool ID
+  'tool-call-complete': {
+    toolCalls: Array<{ id: string; name: string; input: any }>;
+    toolResults?: Array<{ tool_use_id: string; content: string; is_error?: boolean }>;
+  };
   'media-added': {
     sessionId: string;
     media: EnhancedMessage;

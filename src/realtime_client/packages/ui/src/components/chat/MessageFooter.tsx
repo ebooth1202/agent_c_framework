@@ -67,12 +67,12 @@ const ToolCallDisplay: React.FC<ToolCallDisplayProps> = ({
               className="flex items-center justify-between w-full px-2 py-1.5 text-left hover:bg-muted/50 transition-colors"
               onClick={() => toggleTool(tool.id)}
               aria-expanded={isExpanded}
-              aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${tool.function.name} details`}
+              aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${tool.name} details`}
             >
               <div className="flex items-center gap-2">
                 <Wrench className="h-3 w-3 text-muted-foreground" />
                 <span className="text-xs font-medium">
-                  {tool.function.name}
+                  {tool.name}
                 </span>
               </div>
               <ChevronDown className={cn(
@@ -92,21 +92,11 @@ const ToolCallDisplay: React.FC<ToolCallDisplayProps> = ({
                 >
                   <div className="px-2 pb-2 space-y-2">
                     {/* Parameters */}
-                    {tool.function.arguments && (
+                    {tool.input && (
                       <div className="pl-5">
                         <span className="text-xs text-muted-foreground">Parameters:</span>
                         <pre className="mt-1 p-2 bg-muted/30 rounded text-xs overflow-auto">
-                          {JSON.stringify(tool.function.arguments, null, 2)}
-                        </pre>
-                      </div>
-                    )}
-                    
-                    {/* Results */}
-                    {tool.results && (
-                      <div className="pl-5">
-                        <span className="text-xs text-muted-foreground">Result:</span>
-                        <pre className="mt-1 p-2 bg-muted/30 rounded text-xs overflow-auto">
-                          {JSON.stringify(tool.results, null, 2)}
+                          {JSON.stringify(tool.input, null, 2)}
                         </pre>
                       </div>
                     )}

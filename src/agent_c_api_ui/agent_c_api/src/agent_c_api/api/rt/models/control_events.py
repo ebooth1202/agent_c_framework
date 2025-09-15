@@ -88,7 +88,7 @@ class TextInputEvent(BaseEvent):
         text (str): The text input to send.
     """
     text: str
-    file_ids: List[str] =  Field(list)
+    file_ids: List[str] =  Field(default_factory=list)
 
 class ErrorEvent(BaseEvent):
     """

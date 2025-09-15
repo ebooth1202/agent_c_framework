@@ -337,6 +337,15 @@ export class EventStreamProcessor {
         });
       }
       this.messageBuilder.startMessage('thought');
+      
+      // Remove any "Agent is thinking..." notification when thought deltas start
+      // We check all active notifications for the think tool
+      const activeNotifications = this.toolCallManager.getActiveNotifications();
+      activeNotifications.forEach(notification => {
+        if (notification.toolName === 'think') {
+          this.sessionManager.emit('tool-notification-removed', notification.id);
+        }
+      });
     }
     
     // Append the thought delta
@@ -393,13 +402,37 @@ export class EventStreamProcessor {
    */
   private handleToolSelect(event: ToolSelectDeltaEvent): void {
     const notification = this.toolCallManager.onToolSelect(event);
-    this.sessionManager.emit('tool-notification', notification);
+    
+    // Special handling for the "think" tool
+    const toolCall = event.tool_calls[0];
+    if (toolCall && toolCall.name === 'think') {
+      // For the think tool, we emit a special notification
+      // The thought deltas will be handled separately
+      this.sessionManager.emit('tool-notification', {
+        ...notification,
+        toolName: 'think',
+        status: 'preparing' as const
+      });
+    } else {
+      this.sessionManager.emit('tool-notification', notification);
+    }
   }
   
   /**
    * Handle tool call events (during/after execution)
    */
   private handleToolCall(event: ToolCallEvent): void {
+    // Check if this is the think tool - if so, ignore it
+    const toolCall = event.tool_calls[0];
+    if (toolCall && toolCall.name === 'think') {
+      // For the think tool, we ignore the tool_call events
+      // as the content is already rendered via thought deltas
+      Logger.debug('[EventStreamProcessor] Ignoring tool_call event for think tool');
+      // Still remove the notification
+      this.sessionManager.emit('tool-notification-removed', toolCall.id);
+      return;
+    }
+    
     if (event.active) {
       // Tool is executing
       const notification = this.toolCallManager.onToolCallActive(event);
@@ -409,6 +442,12 @@ export class EventStreamProcessor {
     } else {
       // Tool completed
       this.toolCallManager.onToolCallComplete(event);
+      
+      // Emit tool-call-complete event for UI to track results
+      this.sessionManager.emit('tool-call-complete', {
+        toolCalls: event.tool_calls,
+        toolResults: event.tool_results
+      });
       
       // Remove notifications for completed tools
       event.tool_calls.forEach(tc => {
