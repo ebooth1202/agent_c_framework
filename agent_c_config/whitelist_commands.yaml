@@ -244,7 +244,6 @@ pnpm:
     PNPM_CONFIG_PROGRESS: "false"   # no progress bars
     PNPM_CONFIG_LOGLEVEL: "warn"    # or "error" to be even quieter
     NO_COLOR: "1"                   # many tools respect this
-    FORCE_COLOR: "0"                # chalk/colorette/etc. honor this
     NODE_DISABLE_COLORS: "1"        # belt-and-suspenders for some libs
     CI: "1"                         # many CLIs reduce interactivity/spinners
     PNPM_CONFIG_FUND: "false"
