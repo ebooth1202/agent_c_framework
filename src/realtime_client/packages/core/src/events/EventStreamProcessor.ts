@@ -556,7 +556,7 @@ export class EventStreamProcessor {
     // Convert the server session to runtime ChatSession with normalized messages
     const session = this.convertServerSession(event.chat_session);
     
-    Logger.info(`[EventStreamProcessor] Processing session change: ${session.session_id} with ${session.messages?.length || 0} messages`);
+    Logger.info(`[EventStreamProcessor] Processing session change: ${session.session_id} with ${session.messages?.length || 0} messages and agent_config: ${session.agent_config?.key || 'none'}`);
     
     // Update the session in SessionManager with the converted version
     this.sessionManager.setCurrentSession(session);
@@ -564,15 +564,12 @@ export class EventStreamProcessor {
     // Reset the message builder for new session context
     this.messageBuilder.reset();
     
-    // Process existing messages to emit proper events for UI
-    if (session.messages && session.messages.length > 0) {
-      // Emit a session-messages-loaded event for bulk updates
-      // This is more appropriate for pre-existing messages
-      this.sessionManager.emit('session-messages-loaded', {
-        sessionId: session.session_id,
-        messages: session.messages
-      });
-    }
+    // ALWAYS emit session-messages-loaded event, even if messages array is empty
+    // This ensures the UI clears the chat display when switching to a new empty session
+    this.sessionManager.emit('session-messages-loaded', {
+      sessionId: session.session_id,
+      messages: session.messages || []  // Ensure we always pass an array
+    });
   }
   
   /**

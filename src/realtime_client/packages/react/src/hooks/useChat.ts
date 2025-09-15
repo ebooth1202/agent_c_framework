@@ -303,18 +303,25 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
       Logger.debug('[useChat] Session messages loaded event');
       Logger.debug('[useChat] Event data:', messagesEvent);
       
-      if (messagesEvent.messages) {
+      // IMPORTANT: Handle both populated and empty message arrays
+      // An empty array means we need to clear the chat display
+      if (messagesEvent.messages !== undefined) {
         Logger.debug('[useChat] Messages from event:', messagesEvent.messages.length, 'messages');
-        Logger.debug('[useChat] First 3 messages from event:', messagesEvent.messages.slice(0, 3));
+        if (messagesEvent.messages.length > 0) {
+          Logger.debug('[useChat] First 3 messages from event:', messagesEvent.messages.slice(0, 3));
+        } else {
+          Logger.debug('[useChat] Empty messages array - clearing chat display');
+        }
         
         // Messages come from EventStreamProcessor already formatted with sub-session metadata
         const messagesToSet = maxMessages && maxMessages > 0
           ? messagesEvent.messages.slice(-maxMessages)
           : messagesEvent.messages;
         Logger.debug('[useChat] After slice for loaded messages:', messagesToSet.length, 'messages');
-        Logger.debug('[useChat] Setting loaded messages - first 3:', messagesToSet.slice(0, 3));
         
+        // Set messages - this will clear the display if messagesToSet is empty
         setMessages(messagesToSet as ExtendedMessage[]);
+        
         // Clear any streaming state
         setStreamingMessage(null);
         streamingMessageIdRef.current = null;
