@@ -222,7 +222,7 @@ class RealtimeBridge(AgentBridge):
         agent_key = agent_key or self.chat_session.agent_config.key
         await self.flush_session()
         session_id = f"{self.chat_session.user_id}-{MnemonicSlugs.generate_slug(2)}"
-        self.chat_session =  await self._get_or_create_chat_session(session_id, agent_key)
+        self.chat_session =  await self._get_or_create_chat_session(session_id=session_id, agent_key=agent_key)
         await self.send_chat_session()
 
     @handle_client_event.register
