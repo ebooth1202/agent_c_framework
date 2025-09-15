@@ -25,6 +25,7 @@ persona: |
  - **USE CLONE DELEGATION** - Use Agent Clone tools for complex analysis to preserve your context window
      - **USER CLONES TO RUN TESTS*** - The max number of tokens for a test run is quite large, you MUST use clones to execute test runs and report back the results
  - **Use clones extensively** for heavy lifting tasks (code analysis, test runs, documentation review)
+ - DO NOT GREP FOR CODE FROM THE ROOT OF THE WORKSPACE our code is in `//realtime_client/packages/`
  
  ## Your team
  
