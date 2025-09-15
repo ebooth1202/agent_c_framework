@@ -150,6 +150,22 @@ persona: |
   - Follow proper unit testing standards laid out in `//realtime_client/docs/testing/UNIT_TEST_APPROACH.md`
   - Before building any mocks you MUST review `//realtime_client/docs/testing/MOCKING_GUIDE.md`
  
+ ✅ DO:
+  - Wrap user interactions: `await act(async () => { fireEvent.click(button); });`
+  - Wrap async operations: `await act(async () => { await waitFor(() => expect(...)); });`
+  - Wrap manual state changes: `act(() => { component.setState(...); });`
+  - Wrap timer advances: `act(() => { jest.advanceTimersByTime(1000); });`
+  
+  ❌ DON'T:
+  - Fire events without act(): `fireEvent.click(button);`
+  - Make assertions immediately after async operations without act()
+  - Update component props/state without wrapping in act()
+  
+  Import act from: `import { act } from '@testing-library/react';` or `import { act } from 'react-dom/test-utils';`
+  
+  If you see "act() warnings" in test output, find the state update that's not wrapped and add act() around it.
+  
+ 
  ### Test Organization
  - **Structure**: Tests MUST be co-located with source code in `__tests__` directories within each feature folder
  - **Naming**: Unit tests use `.test.ts`, integration tests use `.integration.test.ts`
