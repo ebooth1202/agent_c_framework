@@ -4,6 +4,8 @@ import * as React from "react"
 import { Plus } from "lucide-react"
 import { Button } from "../ui/button"
 import { cn } from "../../lib/utils"
+import { useRealtimeClientSafe, useAgentCData } from "@agentc/realtime-react"
+import type { NewChatSessionEvent } from "@agentc/realtime-core"
 
 export interface SidebarTopMenuProps {
   onNewChat?: () => void
@@ -17,17 +19,25 @@ export interface SidebarTopMenuProps {
  */
 export const SidebarTopMenu = React.forwardRef<HTMLDivElement, SidebarTopMenuProps>(
   ({ onNewChat, isCollapsed, className }, ref) => {
+    const client = useRealtimeClientSafe()
+    const { data } = useAgentCData()
+
     const handleNewChat = React.useCallback(() => {
-      // Clear current session
-      // For now, we'll just refresh - actual implementation will come with session management
+      // Send the NewChatSessionEvent to the server
+      const event: NewChatSessionEvent = {
+        type: 'new_chat_session',
+        agent_key: data?.currentAgentConfig?.key
+      }
+      
+      // Send the event using the realtime client
+      client?.sendEvent(event)
+      
+      // Call the onNewChat callback after sending the event if provided
+      // This maintains backward compatibility
       if (onNewChat) {
         onNewChat()
-      } else {
-        // Default behavior: Clear messages and reset
-        // This will be connected to the actual chat context later
-        window.location.reload()
       }
-    }, [onNewChat])
+    }, [client, data?.currentAgentConfig?.key, onNewChat])
 
     return (
       <div

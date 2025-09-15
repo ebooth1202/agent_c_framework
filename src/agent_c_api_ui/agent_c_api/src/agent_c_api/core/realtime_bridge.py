@@ -16,6 +16,7 @@ from agent_c.models.events import BaseEvent, TextDeltaEvent,  HistoryEvent
 from agent_c.models.events.chat import AudioInputDeltaEvent
 from agent_c.models.heygen import HeygenAvatarSessionData, NewSessionRequest
 from agent_c.toolsets import Toolset
+from agent_c.util import MnemonicSlugs
 from agent_c.util.heygen_streaming_avatar_client import HeyGenStreamingClient
 from agent_c.util.registries.event import EventRegistry
 from agent_c_api.api.rt.models.control_events import GetAgentsEvent, ErrorEvent, AgentListEvent, GetAvatarsEvent, AvatarListEvent, TextInputEvent, SetAvatarEvent, AvatarConnectionChangedEvent, \
@@ -217,9 +218,11 @@ class RealtimeBridge(AgentBridge):
         await self.new_chat_session(event.agent_key)
 
     async def new_chat_session(self, agent_key: Optional[str] = None) -> None:
+        self.logger.info(f"Creating new chat session with {agent_key} from {self.chat_session.session_id}")
         agent_key = agent_key or self.chat_session.agent_config.key
         await self.flush_session()
-        self.chat_session =  await self._get_or_create_chat_session(agent_key=agent_key)
+        session_id = f"{self.chat_session.user_id}-{MnemonicSlugs.generate_slug(2)}"
+        self.chat_session =  await self._get_or_create_chat_session(session_id, agent_key)
         await self.send_chat_session()
 
     @handle_client_event.register
@@ -307,7 +310,7 @@ class RealtimeBridge(AgentBridge):
     async def send_chat_session(self):
         """Send the current chat session state to the client"""
         if self.chat_session:
-            await self.send_event(ChatSessionChangedEvent(chat_session=self.chat_session))
+                await self.send_event(ChatSessionChangedEvent(chat_session=self.chat_session))
 
     async def send_chat_session_meta(self):
         """Send the current chat session state to the client"""
