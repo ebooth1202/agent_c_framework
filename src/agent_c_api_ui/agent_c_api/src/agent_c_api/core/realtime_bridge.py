@@ -12,7 +12,6 @@ from functools import singledispatchmethod
 from agent_c.chat import ChatSessionManager
 from agent_c.config.agent_config_loader import AgentConfigLoader
 from agent_c.models import ChatSession, ChatUser
-from agent_c.models.chat_history.chat_session import ChatSessionIndexEntry
 from agent_c.models.events import BaseEvent, TextDeltaEvent,  HistoryEvent
 from agent_c.models.events.chat import AudioInputDeltaEvent
 from agent_c.models.heygen import HeygenAvatarSessionData, NewSessionRequest
@@ -23,7 +22,7 @@ from agent_c.util.registries.event import EventRegistry
 from agent_c_api.api.rt.models.control_events import GetAgentsEvent, ErrorEvent, AgentListEvent, GetAvatarsEvent, AvatarListEvent, TextInputEvent, SetAvatarEvent, AvatarConnectionChangedEvent, \
     SetAgentEvent, AgentConfigurationChangedEvent, SetAvatarSessionEvent, ChatSessionChangedEvent, ResumeChatSessionEvent, \
     NewChatSessionEvent, SetAgentVoiceEvent, AgentVoiceChangedEvent, UserTurnStartEvent, UserTurnEndEvent, GetUserSessionsEvent, GetUserSessionsResponseEvent, PingEvent, PongEvent, \
-    GetToolCatalogEvent, ToolCatalogEvent, ChatUserDataEvent, GetVoicesEvent, VoiceListEvent, ChatSessionAddedEvent
+    GetToolCatalogEvent, ToolCatalogEvent, ChatUserDataEvent, GetVoicesEvent, VoiceListEvent, ChatSessionAddedEvent, DeleteChatSessionEvent
 from agent_c_api.api.rt.models.control_events import SetChatSessionNameEvent, SetSessionMessagesEvent, ChatSessionNameChangedEvent, SetSessionMetadataEvent, SessionMetadataChangedEvent
 from agent_c_api.core.agent_bridge import AgentBridge
 from agent_c.models.input import AudioInput
@@ -87,6 +86,27 @@ class RealtimeBridge(AgentBridge):
     @handle_client_event.register
     async def _(self, _: GetAgentsEvent) -> None:
         await self.send_agent_list()
+
+    @handle_client_event.register
+    async def _(self, event: DeleteChatSessionEvent):
+        await self.delete_chat_session(event.session_id)
+
+    async def delete_chat_session(self, session_id: str) -> None:
+        if session_id is None:
+            session_id = self.chat_session.session_id
+
+        success = await self.chat_session_manager.delete_session(session_id, self.chat_user.user_id)
+        if success:
+            self.logger.info(f"RealtimeBridge {self.ui_session_id}: Deleted chat session {session_id}")
+        else:
+            self.logger.warning(f"RealtimeBridge {self.ui_session_id}: Failed to delete chat session {session_id}")
+
+        await self.send_event(DeleteChatSessionEvent(session_id=session_id))
+
+        if session_id == self.chat_session.session_id:
+            self.chat_session = None
+            await self.new_chat_session()
+
 
     @handle_client_event.register
     async def _(self, event: SetAgentVoiceEvent):
@@ -176,6 +196,7 @@ class RealtimeBridge(AgentBridge):
         await self.resume_chat_session(event.session_id)
 
     async def resume_chat_session(self, session_id: str) -> None:
+        await self.release_current_session()
         session_info = await self.chat_session_manager.get_session(session_id, self.chat_user.user_id)
         if not session_info or session_info.user_id != self.chat_user.user_id:
             await self.send_error(f"Session '{session_id}' not found", source="resume_chat_session")
@@ -226,10 +247,17 @@ class RealtimeBridge(AgentBridge):
     async def _(self, event: NewChatSessionEvent) -> None:
         await self.new_chat_session(event.agent_key)
 
+    async def release_current_session(self) -> None:
+        if self.chat_session is not None:
+            return
+        await self.chat_session_manager.release_session(self.chat_session.session_id, self.chat_session.user_id)
+
     async def new_chat_session(self, agent_key: Optional[str] = None) -> None:
         self.logger.info(f"Creating new chat session with {agent_key} from {self.chat_session.session_id}")
         agent_key = agent_key or self.chat_session.agent_config.key
         await self.flush_session()
+        await self.release_current_session()
+
         session_id = f"{self.chat_session.user_id}-{MnemonicSlugs.generate_slug(2)}"
         self.chat_session =  await self._get_or_create_chat_session(session_id=session_id, agent_key=agent_key)
         await self.send_chat_session()
