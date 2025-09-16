@@ -47,11 +47,22 @@ pnpm install
 # Build all packages
 pnpm build
 
+# Set up environment variables for the demo
+cp packages/demo/.env.example packages/demo/.env.local
+
 # Run the demo application
 pnpm dev
 ```
 
 The demo app will be available at `http://localhost:3000`
+
+### Default Login Credentials
+
+For new installations, use these credentials to log in:
+- **Username:** `admin`
+- **Password:** `changeme`
+
+> **Important:** Remember to change the admin password after your first login for security.
 
 ## Development Commands
 
@@ -207,8 +218,14 @@ This SDK connects to the Agent C Realtime API. Ensure your API server is running
 
 ```bash
 # In the main agent_c_framework directory
-cd api
-python -m uvicorn app:app --reload
+scripts/start_apir.sh
+```
+
+On windows:
+
+```powershell
+# In the main agent_c_framework directory
+.\scripts\start_api.bat
 ```
 
 The API provides:
