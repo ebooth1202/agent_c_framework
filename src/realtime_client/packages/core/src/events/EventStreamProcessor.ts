@@ -377,6 +377,11 @@ export class EventStreamProcessor {
         toolCalls: toolCalls.length > 0 ? toolCalls : undefined
       });
       
+      // Clear the completed tool calls after attaching them to the message
+      if (toolCalls.length > 0) {
+        this.toolCallManager.clearCompleted();
+      }
+      
       // Add to session and emit completion
       const session = this.sessionManager.getCurrentSession();
       if (session) {

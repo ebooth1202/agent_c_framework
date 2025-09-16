@@ -83,7 +83,7 @@ const LoadingFallback = React.forwardRef<HTMLDivElement, MarkdownEditorProps>(
           placeholder={placeholder || 'How can I help you today?'}
           disabled={disabled}
           className={cn(
-            'min-h-[120px] w-full resize-none rounded-md px-3 py-2',
+            'w-full resize-none rounded-md px-3 py-2',
             'bg-transparent placeholder:text-muted-foreground',
             'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
             'disabled:cursor-not-allowed disabled:opacity-50',

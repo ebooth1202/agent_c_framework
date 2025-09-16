@@ -6,6 +6,13 @@ import { MessageList } from '../MessageList'
 import { AgentCProvider } from '@agentc/realtime-react'
 import { RealtimeClient } from '@agentc/realtime-core'
 import type { ChatMessage } from '@agentc/realtime-core'
+import { 
+  createSentinelMocks, 
+  mockScrollMeasurements, 
+  createBulkMessages,
+  waitForScroll,
+  mockPerformanceTimer
+} from '../__mocks__/sentinelTestUtils'
 
 // Mock the Logger to prevent console output
 vi.mock('../../../utils/logger', () => ({
@@ -73,7 +80,10 @@ describe('MessageList Auto-Scroll Behavior', () => {
     vi.clearAllMocks()
   })
   
-  it('should auto-scroll to bottom when new messages arrive', async () => {
+  it('should auto-scroll to sentinel element when new messages arrive', async () => {
+    // Set up sentinel mocks
+    const { sentinel, scrollSpy, cleanup } = createSentinelMocks()
+    
     mockClient.chat.messages = mockMessages
     
     const { rerender } = render(
@@ -100,14 +110,19 @@ describe('MessageList Auto-Scroll Behavior', () => {
     
     // Wait for auto-scroll to trigger
     await waitFor(() => {
-      expect(Element.prototype.scrollIntoView).toHaveBeenCalled()
+      expect(scrollSpy).toHaveBeenCalled()
     }, { timeout: 200 })
     
-    // Verify smooth scrolling was used
-    expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
+    // Verify smooth scrolling was used on the sentinel
+    expect(scrollSpy).toHaveBeenCalledWith({
       behavior: 'smooth',
       block: 'end'
     })
+    
+    // Verify the sentinel was the target, not other elements
+    expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled()
+    
+    cleanup()
   })
   
   it('should disable auto-scroll when user scrolls up', async () => {
@@ -218,7 +233,9 @@ describe('MessageList Auto-Scroll Behavior', () => {
     }, { timeout: 200 })
   })
   
-  it('should auto-scroll when streaming message appears', async () => {
+  it('should auto-scroll to sentinel when streaming message appears', async () => {
+    const { sentinel, scrollSpy, cleanup } = createSentinelMocks()
+    
     mockClient.chat.messages = mockMessages
     mockClient.chat.streamingMessage = null
     
@@ -247,11 +264,21 @@ describe('MessageList Auto-Scroll Behavior', () => {
     
     // Wait for auto-scroll to trigger
     await waitFor(() => {
-      expect(Element.prototype.scrollIntoView).toHaveBeenCalled()
+      expect(scrollSpy).toHaveBeenCalled()
     }, { timeout: 200 })
+    
+    // Verify sentinel remains the scroll target during streaming
+    expect(scrollSpy).toHaveBeenCalledWith({
+      behavior: 'smooth',
+      block: 'end'
+    })
+    
+    cleanup()
   })
   
-  it('should auto-scroll when typing indicator appears', async () => {
+  it('should auto-scroll to sentinel when typing indicator appears', async () => {
+    const { sentinel, scrollSpy, cleanup } = createSentinelMocks()
+    
     mockClient.chat.messages = mockMessages
     mockClient.chat.isAgentTyping = false
     
@@ -276,7 +303,15 @@ describe('MessageList Auto-Scroll Behavior', () => {
     
     // Wait for auto-scroll to trigger
     await waitFor(() => {
-      expect(Element.prototype.scrollIntoView).toHaveBeenCalled()
+      expect(scrollSpy).toHaveBeenCalled()
     }, { timeout: 200 })
+    
+    // Verify sentinel is scroll target even with typing indicator
+    expect(scrollSpy).toHaveBeenCalledWith({
+      behavior: 'smooth',
+      block: 'end'
+    })
+    
+    cleanup()
   })
 })

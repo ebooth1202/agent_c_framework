@@ -4,7 +4,8 @@ import * as React from 'react'
 import { cn } from '../../lib/utils'
 import { 
   Copy, Check, Hash, ArrowRight, Wrench, 
-  ChevronDown, RefreshCw, Edit2, Clock 
+  ChevronDown, RefreshCw, Edit2, Clock,
+  FileInput, FileOutput, Equal
 } from 'lucide-react'
 import { Button } from '../ui/button'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -173,16 +174,36 @@ export const MessageFooter = React.forwardRef<HTMLDivElement, MessageFooterProps
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           {/* Token Counts */}
           {hasTokenCounts && (
-            <div className="flex items-center gap-1" title="Input → Output tokens">
-              <Hash className="h-3 w-3" />
-              {message.metadata?.inputTokens && (
-                <>
+            <>
+              {/* Input Tokens */}
+              {message.metadata?.inputTokens !== undefined && (
+                <div className="flex items-center gap-1" title="Input tokens">
+                  <FileInput className="h-3 w-3" />
                   <span>{message.metadata.inputTokens.toLocaleString()}</span>
-                  <ArrowRight className="h-3 w-3" />
-                </>
+                </div>
               )}
-              <span>{(message.metadata?.outputTokens || 0).toLocaleString()}</span>
-            </div>
+              
+              {/* Output Tokens */}
+              {message.metadata?.outputTokens !== undefined && (
+                <div className="flex items-center gap-1" title="Output tokens">
+                  <FileOutput className="h-3 w-3" />
+                  <span>{message.metadata.outputTokens.toLocaleString()}</span>
+                </div>
+              )}
+              
+              {/* Total Tokens */}
+              {(message.metadata?.inputTokens !== undefined || message.metadata?.outputTokens !== undefined) && (
+                <div className="flex items-center gap-1" title="Total tokens">
+                  <Equal className="h-3 w-3" />
+                  <span>
+                    {(
+                      (message.metadata?.inputTokens || 0) + 
+                      (message.metadata?.outputTokens || 0)
+                    ).toLocaleString()}
+                  </span>
+                </div>
+              )}
+            </>
           )}
           
           {/* Tool Calls Toggle */}
