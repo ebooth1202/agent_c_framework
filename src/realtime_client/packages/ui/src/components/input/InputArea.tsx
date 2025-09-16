@@ -308,25 +308,6 @@ const InputArea: React.FC<InputAreaProps> = ({
           onAgentChange={handleAgentChange}
         />
       </InputContainer>
-      
-      {/* Status indicators */}
-      {(isStreaming || isAgentTyping) && (
-        <div className="mt-2 px-2">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <div 
-              className={cn(
-                "h-2 w-2 rounded-full",
-                isStreaming && "bg-green-500 animate-pulse",
-                isAgentTyping && "bg-blue-500 animate-pulse"
-              )}
-            />
-            <span>
-              {isStreaming && "Recording..."}
-              {isAgentTyping && "Agent is typing..."}
-            </span>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

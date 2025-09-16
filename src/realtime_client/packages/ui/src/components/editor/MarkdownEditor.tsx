@@ -79,7 +79,7 @@ const MarkdownEditor = React.forwardRef<HTMLDivElement, MarkdownEditorProps>(
         attributes: {
           class: cn(
             'prose prose-sm max-w-none focus:outline-none',
-            'min-h-[100px] p-3',
+            'p-3',
             // Prose overrides for better markdown display
             'prose-headings:mt-2 prose-headings:mb-1',
             'prose-p:my-1',
