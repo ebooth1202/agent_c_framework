@@ -19,6 +19,11 @@
             "name": "ui",
             "workspace_path": "src/agent_c_api_ui/agent_c_react_client",
             "description": "Mapped to the source for the Agent C React UI"
+        },
+        {
+            "name": "realtime_client",
+            "workspace_path": "src/realtime_client",
+            "description": "Workspace for the realtime client SDK"
         }
     ]
 }
