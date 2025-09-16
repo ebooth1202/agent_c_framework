@@ -37,6 +37,8 @@ corepack prepare pnpm@latest --activate
 
 ## Getting Started
 
+The SDK includes a full-featured chat implementation in `packages/demo` that demonstrates all capabilities including voice, text, and avatar interactions.
+
 ```bash
 # Navigate to the realtime client directory
 cd realtime_client
@@ -54,7 +56,18 @@ cp packages/demo/.env.example packages/demo/.env.local
 pnpm dev
 ```
 
-The demo app will be available at `http://localhost:3000`
+The demo app will be available at **https://localhost:3000** (note: HTTPS)
+
+### HTTPS and Self-Signed Certificates
+
+**Important:** The demo runs on HTTPS (required for microphone access) using self-signed certificates loaded from the `agent_c_config` folder in the root of the Agent C repository.
+
+When you first access https://localhost:3000:
+- **Chrome/Edge:** Click "Advanced" → "Proceed to localhost (unsafe)"
+- **Firefox:** Click "Advanced" → "Accept the Risk and Continue"
+- **Safari:** Click "Show Details" → "visit this website"
+
+Alternatively, you can provide your own SSL certificates for development by placing them in the `agent_c_config` folder.
 
 ### Default Login Credentials
 
