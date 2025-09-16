@@ -23,7 +23,7 @@ def deep_investigation():
     ]
     
     for agent_file in agent_files:
-        full_path = os.path.join("..", agent_file)
+        full_path = os.path.join("../..", agent_file)
         if os.path.exists(full_path):
             try:
                 with open(full_path, 'r', encoding='utf-8') as f:
@@ -111,7 +111,7 @@ def deep_investigation():
     ]
     
     for config_path in config_paths:
-        full_path = os.path.join("..", config_path)
+        full_path = os.path.join("../..", config_path)
         if os.path.exists(full_path):
             if os.path.isfile(full_path):
                 try:

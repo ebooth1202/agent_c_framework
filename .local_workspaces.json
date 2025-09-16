@@ -17,12 +17,12 @@
         },
         {
             "name": "api",
-            "workspace_path": "src/agent_c_api_ui/agent_c_api",
+            "workspace_path": "agent_c_api_ui/agent_c_api",
             "description": "Mapped to the source for the Agent C React UI backend APIt"
         },
         {
             "name": "ui",
-            "workspace_path": "src/agent_c_api_ui/agent_c_react_client",
+            "workspace_path": "agent_c_api_ui/agent_c_react_client",
             "description": "Mapped to the source for the Agent C React UI"
         },
         {
@@ -47,8 +47,18 @@
         },
         {
             "name": "mystery",
-            "workspace_path": "src/mystery_world",
+            "workspace_path": "mystery_world",
             "description": "Mystery world workpath"
+        },
+        {
+            "name": "logistics_project",
+            "workspace_path": "Logistics_proj",
+            "description": "Logistics demo project work path"
+        },
+        {
+            "name": "prompt_reference",
+            "workspace_path": "reference_material/Prompt_Render_Guide_NEW",
+            "description": "Work path for the newly updated prompt render guide"
         }
     ]
 }

@@ -374,24 +374,24 @@
               "enabled": true,
               "budget_tokens": {
                 "min": 0,
-                "max": 24000,
+                "max": 150000,
                 "default": 10000
               },
               "required": true
             },
             "max_tokens": {
-              "default": 8192,
+              "default": 150000,
               "limits": {
                 "min": 1000,
                 "max": {
-                  "standard": 8192,
-                  "with_extended_thinking": 84000
+                  "standard": 150000,
+                  "with_extended_thinking": 150000
                 }
               },
               "required": true
             }
           },
-          "context_window": 200000,
+          "context_window": 350000,
           "capabilities": {
             "supports_tools": true,
             "multi_modal": true
@@ -413,24 +413,24 @@
               "enabled": true,
               "budget_tokens": {
                 "min": 0,
-                "max": 24000,
+                "max": 350000,
                 "default": 10000
               },
               "required": true
             },
             "max_tokens": {
-              "default": 64000,
+              "default": 350000,
               "limits": {
                 "min": 1000,
                 "max": {
-                  "standard": 64000,
-                  "with_extended_thinking": 64000
+                  "standard": 350000,
+                  "with_extended_thinking": 350000
                 }
               },
               "required": true
             }
           },
-          "context_window": 200000,
+          "context_window": 350000,
           "capabilities": {
             "supports_tools": true,
             "multi_modal": true
@@ -452,8 +452,8 @@
               "enabled": true,
               "budget_tokens": {
                 "min": 0,
-                "max": 24000,
-                "default": 10000
+                "max": 350000,
+                "default": 350000
               },
               "required": true
             },
@@ -462,14 +462,14 @@
               "limits": {
                 "min": 1000,
                 "max": {
-                  "standard": 8192,
-                  "with_extended_thinking": 84000
+                  "standard": 350000,
+                  "with_extended_thinking": 350000
                 }
               },
               "required": true
             }
           },
-          "context_window": 200000,
+          "context_window": 350000,
           "capabilities": {
             "supports_tools": true,
             "multi_modal": true
@@ -496,24 +496,24 @@
               "enabled": true,
               "budget_tokens": {
                 "min": 0,
-                "max": 24000,
-                "default": 10000
+                "max": 350000,
+                "default": 350000
               },
               "required": true
             },
             "max_tokens": {
-              "default": 8192,
+              "default": 350000,
               "limits": {
                 "min": 1000,
                 "max": {
-                  "standard": 8192,
-                  "with_extended_thinking": 84000
+                  "standard": 350000,
+                  "with_extended_thinking": 350000
                 }
               },
               "required": true
             }
           },
-          "context_window": 200000,
+          "context_window": 350000,
           "capabilities": {
             "supports_tools": true,
             "multi_modal": true
@@ -535,24 +535,24 @@
               "enabled": true,
               "budget_tokens": {
                 "min": 0,
-                "max": 24000,
-                "default": 10000
+                "max": 350000,
+                "default": 350000
               },
               "required": true
             },
             "max_tokens": {
-              "default": 8192,
+              "default": 350000,
               "limits": {
                 "min": 1000,
                 "max": {
-                  "standard": 8192,
-                  "with_extended_thinking": 84000
+                  "standard": 350000,
+                  "with_extended_thinking": 350000
                 }
               },
               "required": true
             }
           },
-          "context_window": 200000,
+          "context_window": 350000,
           "capabilities": {
             "supports_tools": true,
             "multi_modal": true
@@ -591,7 +591,7 @@
               "required": true
             }
           },
-          "context_window": 200000,
+          "context_window": 350000,
           "capabilities": {
             "supports_tools": true,
             "multi_modal": true

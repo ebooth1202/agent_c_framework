@@ -23,7 +23,7 @@ def post_fix_investigation():
     }
     
     for filename, agent_key in agent_files.items():
-        filepath = os.path.join("..", "agent_c_config", "agents", filename)
+        filepath = os.path.join("../..", "agent_c_config", "agents", filename)
         if os.path.exists(filepath):
             try:
                 with open(filepath, 'r', encoding='utf-8') as f:

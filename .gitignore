@@ -187,3 +187,5 @@ package-lock.json
 
 # Ignore all log files
 logs/
+/Logistics_proj/.scratch/
+/.scratch/
