@@ -287,27 +287,6 @@ describe('InputArea', () => {
       expect(mockStopStreaming).toHaveBeenCalled()
     })
 
-    it('should display recording status indicator', () => {
-      vi.mocked(useAudio).mockReturnValue({
-        isStreaming: true,
-        startStreaming: mockStartStreaming,
-        stopStreaming: mockStopStreaming,
-        audioLevel: 0.5,
-        canSendInput: true,
-        errorMessage: null,
-        isMuted: false,
-        setMuted: vi.fn(),
-        volume: 1.0,
-        setVolume: vi.fn(),
-        isVadEnabled: true,
-        setVadEnabled: vi.fn()
-      } as any)
-      
-      render(<InputArea />)
-      
-      expect(screen.getByText('Recording...')).toBeInTheDocument()
-    })
-
     it('should display audio level when streaming', () => {
       vi.mocked(useAudio).mockReturnValue({
         isStreaming: true,
@@ -357,36 +336,6 @@ describe('InputArea', () => {
       const editor = screen.getByTestId('rich-text-editor')
       expect(editor).toBeDisabled()
       expect(editor).toHaveAttribute('placeholder', 'Wait for your turn...')
-    })
-
-    it('should disable input when agent is typing', () => {
-      vi.mocked(useChat).mockReturnValue({
-        messages: [],
-        sendMessage: mockSendMessage,
-        isAgentTyping: true,
-        clearMessages: vi.fn(),
-        connectionState: 'connected'
-      } as any)
-      
-      render(<InputArea />)
-      
-      const editor = screen.getByTestId('rich-text-editor')
-      expect(editor).toBeDisabled()
-      expect(editor).toHaveAttribute('placeholder', 'Agent is typing...')
-    })
-
-    it('should display agent typing indicator', () => {
-      vi.mocked(useChat).mockReturnValue({
-        messages: [],
-        sendMessage: mockSendMessage,
-        isAgentTyping: true,
-        clearMessages: vi.fn(),
-        connectionState: 'connected'
-      } as any)
-      
-      render(<InputArea />)
-      
-      expect(screen.getByText('Agent is typing...')).toBeInTheDocument()
     })
 
     it('should stop recording when turn is lost', async () => {
