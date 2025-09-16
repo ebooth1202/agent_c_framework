@@ -188,14 +188,20 @@ class RealtimeBridge(AgentBridge):
 
     @handle_client_event.register
     async def _(self, event: SetChatSessionNameEvent) -> None:
-        await self.set_chat_session_name(event.session_name)
+        await self.set_chat_session_name(event.session_name, event.session_id)
 
-    async def set_chat_session_name(self, session_name: str) -> None:
+    async def rename_current_session(self, new_name: str):
+        await self.set_chat_session_name(new_name)
+
+    async def set_chat_session_name(self, session_name: str, session_id: Optional[str] = None) -> None:
         """Set the name of the current chat session"""
-        self.chat_session.session_name = session_name
-        await self.flush_session(False)
+        if session_id is None:
+            session_id = self.chat_session.session_id
+
+        entry = await self.chat_session_manager.rename_session(session_id, self.chat_session.user_id, session_name)
         self.logger.info(f"RealtimeBridge {self.chat_session.session_id}: Session name set to '{session_name}'")
-        await self.send_chat_session_name()
+
+        await self.send_event(ChatSessionNameChangedEvent(session_name=entry.session_name, session_id=entry.session_id))
 
     @handle_client_event.register
     async def _(self, event: GetUserSessionsEvent) -> None:
@@ -523,8 +529,9 @@ class RealtimeBridge(AgentBridge):
                 "prompt_metadata": prompt_metadata,
                 "client_wants_cancel": self.client_wants_cancel,
                 "streaming_callback": on_event  if on_event else self.runtime_callback,
-                'tool_call_context': {'active_agent': self.chat_session.agent_config},
-                'prompt_builder': PromptBuilder(sections=agent_sections)
+                'tool_context': {'active_agent': self.chat_session.agent_config},
+                'prompt_builder': PromptBuilder(sections=agent_sections),
+                'bridge': self
             }
 
             # Categorize file inputs by type to pass to appropriate parameters

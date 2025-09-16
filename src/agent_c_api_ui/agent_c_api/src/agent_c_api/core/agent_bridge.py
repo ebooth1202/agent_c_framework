@@ -191,6 +191,22 @@ class AgentBridge:
             # Local workspaces file is optional
             pass
 
+    async def rename_current_session(self, new_name: str) -> None:
+        """
+        Rename the current chat session.
+
+        Args:
+            new_name: The new name for the chat session.
+
+        Raises:
+            Exception: If there are errors during renaming or session flushing.
+        """
+        self.logger.info(
+            f"Renaming session {self.chat_session.session_id} to '{new_name}'"
+        )
+        self.chat_session.name = new_name
+
+
     @property
     def current_chat_log(self) -> List[Dict[str, Any]]:
         """
@@ -997,8 +1013,9 @@ class AgentBridge:
                 "output_format": DEFAULT_OUTPUT_FORMAT,
                 "client_wants_cancel": client_wants_cancel,
                 "streaming_callback": self.streaming_callback_with_logging,
-                'tool_call_context': {'active_agent': self.chat_session.agent_config},
-                'prompt_builder': PromptBuilder(sections=agent_sections)
+                'tool_context': {'active_agent': self.chat_session.agent_config},
+                'prompt_builder': PromptBuilder(sections=agent_sections),
+                'bridge': self
             }
 
             # Categorize file inputs by type to pass to appropriate parameters
