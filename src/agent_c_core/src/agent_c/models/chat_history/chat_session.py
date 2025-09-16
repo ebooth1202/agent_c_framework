@@ -48,6 +48,25 @@ class ChatSession(BaseModel):
     messages: List[dict[str, Any]] = Field(default_factory=list, description="List of messages in the session")
     agent_config: Optional[CurrentAgentConfiguration] = Field(None, description="Configuration for the agent associated with the session")
 
+
+    def as_index_entry(self) -> ChatSessionIndexEntry:
+        """
+        Converts the ChatSession to a ChatSessionIndexEntry for lightweight representation.
+        """
+        name = self.session_name
+        if name is None:
+            name = self.display_name
+
+        return ChatSessionIndexEntry(
+            session_id=self.session_id,
+            session_name=name,
+            created_at=self.created_at,
+            updated_at=self.updated_at,
+            user_id=self.user_id,
+            agent_key=self.agent_config.key if self.agent_config else None,
+            agent_name=self.agent_config.name if self.agent_config else None
+        )
+
     @computed_field
     @property
     def vendor(self) -> str:

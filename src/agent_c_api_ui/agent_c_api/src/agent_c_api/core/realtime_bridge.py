@@ -12,6 +12,7 @@ from functools import singledispatchmethod
 from agent_c.chat import ChatSessionManager
 from agent_c.config.agent_config_loader import AgentConfigLoader
 from agent_c.models import ChatSession, ChatUser
+from agent_c.models.chat_history.chat_session import ChatSessionIndexEntry
 from agent_c.models.events import BaseEvent, TextDeltaEvent,  HistoryEvent
 from agent_c.models.events.chat import AudioInputDeltaEvent
 from agent_c.models.heygen import HeygenAvatarSessionData, NewSessionRequest
@@ -20,9 +21,9 @@ from agent_c.util import MnemonicSlugs
 from agent_c.util.heygen_streaming_avatar_client import HeyGenStreamingClient
 from agent_c.util.registries.event import EventRegistry
 from agent_c_api.api.rt.models.control_events import GetAgentsEvent, ErrorEvent, AgentListEvent, GetAvatarsEvent, AvatarListEvent, TextInputEvent, SetAvatarEvent, AvatarConnectionChangedEvent, \
-    SetAgentEvent, AgentConfigurationChangedEvent, SetAvatarSessionEvent, ChatSessionChangedEvent,  ResumeChatSessionEvent, \
+    SetAgentEvent, AgentConfigurationChangedEvent, SetAvatarSessionEvent, ChatSessionChangedEvent, ResumeChatSessionEvent, \
     NewChatSessionEvent, SetAgentVoiceEvent, AgentVoiceChangedEvent, UserTurnStartEvent, UserTurnEndEvent, GetUserSessionsEvent, GetUserSessionsResponseEvent, PingEvent, PongEvent, \
-    GetToolCatalogEvent, ToolCatalogEvent, ChatUserDataEvent, GetVoicesEvent, VoiceListEvent
+    GetToolCatalogEvent, ToolCatalogEvent, ChatUserDataEvent, GetVoicesEvent, VoiceListEvent, ChatSessionAddedEvent
 from agent_c_api.api.rt.models.control_events import SetChatSessionNameEvent, SetSessionMessagesEvent, ChatSessionNameChangedEvent, SetSessionMetadataEvent, SessionMetadataChangedEvent
 from agent_c_api.core.agent_bridge import AgentBridge
 from agent_c.models.input import AudioInput
@@ -65,10 +66,12 @@ class RealtimeBridge(AgentBridge):
         self._voices = open_ai_voice_models
         self._voice: AvailableVoiceModel = no_voice_model
 
-    async def flush_session(self, touch: bool = True) -> None:
+    async def flush_session(self, touch: bool = True, chat_session: Optional[ChatSession] = None) -> None:
         """Flush the current chat session to persistent storage"""
-        if self.chat_session:
-            await self.session_manager.flush_session(self.chat_session, touch)
+        chat_session = chat_session or self.chat_session
+        if chat_session:
+            await self.session_manager.flush_session(chat_session, touch)
+
 
     # Handlers for events coming from the client websocket
     @singledispatchmethod
@@ -481,6 +484,9 @@ class RealtimeBridge(AgentBridge):
         await self.send_user_turn_end()
         try:
             await self.session_manager.update()
+            if len(self.chat_session.messages) == 0:
+                await self.send_event(ChatSessionAddedEvent(chat_session=self.chat_session.as_index_entry()))
+
             agent_runtime = self.runtime_for_agent(self.chat_session.agent_config)
             file_inputs = []
             if file_ids and self.file_handler:
