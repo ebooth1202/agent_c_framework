@@ -49,7 +49,7 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
     emptyStateComponent,
     ...props 
   }, ref) => {
-    const { messages, isAgentTyping, streamingMessage, isSubSessionMessage } = useChat()
+    const { messages, isAgentTyping, streamingMessage, isSubSessionMessage, currentSessionId } = useChat()
     const { notifications: toolNotifications } = useToolNotifications({
       autoRemoveCompleted: false, // We'll handle removal when tool completes
       maxNotifications: 5
@@ -59,6 +59,10 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
     const [isLoading, setIsLoading] = React.useState(false)
     const [isAutoScrollEnabled, setIsAutoScrollEnabled] = React.useState(true)
     const [hasCompletedInitialScroll, setHasCompletedInitialScroll] = React.useState(false)
+    const [isProgrammaticScroll, setIsProgrammaticScroll] = React.useState(false)
+    const programmaticScrollTimeout = React.useRef<NodeJS.Timeout>()
+    const previousSessionIdRef = React.useRef(currentSessionId)
+    const previousMessageCountRef = React.useRef(0)
     const isInitialMount = React.useRef(true)
     const scrollThreshold = 50 // pixels from bottom to re-enable auto-scroll
     
@@ -86,19 +90,50 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
       return distanceFromBottom <= scrollThreshold
     }, [scrollThreshold])
     
+    // Wait for DOM updates to complete
+    const waitForDOMUpdate = React.useCallback(() => {
+      return new Promise<void>(resolve => {
+        // Use double RAF to ensure layout is complete
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            resolve()
+          })
+        })
+      })
+    }, [])
+    
     // Scroll to bottom function
     const scrollToBottom = React.useCallback((smooth = true) => {
       if (!scrollSentinelRef.current) return
+      
+      // Mark as programmatic
+      setIsProgrammaticScroll(true)
+      
+      // Clear any existing timeout
+      if (programmaticScrollTimeout.current) {
+        clearTimeout(programmaticScrollTimeout.current)
+      }
       
       // Use the sentinel element as the scroll target
       scrollSentinelRef.current.scrollIntoView({ 
         behavior: smooth ? 'smooth' : 'auto',
         block: 'end'
       })
+      
+      // Reset flag after animation completes
+      const duration = smooth ? 600 : 50 // Smooth animations take ~500ms
+      programmaticScrollTimeout.current = setTimeout(() => {
+        setIsProgrammaticScroll(false)
+      }, duration)
     }, [])
     
     // Handle scroll events to detect user scrolling
     const handleScroll = React.useCallback(() => {
+      // Ignore if this is our own scroll
+      if (isProgrammaticScroll) {
+        return
+      }
+      
       // Ignore scroll events until initial scroll is complete
       if (!hasCompletedInitialScroll) {
         Logger.debug('[MessageList] Ignoring scroll event - initial scroll not complete')
@@ -117,7 +152,7 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
         Logger.debug('[MessageList] Disabling auto-scroll - user scrolled up')
         setIsAutoScrollEnabled(false)
       }
-    }, [isNearBottom, isAutoScrollEnabled, hasCompletedInitialScroll])
+    }, [isProgrammaticScroll, isNearBottom, isAutoScrollEnabled, hasCompletedInitialScroll])
     
     // Set up scroll event listener
     React.useEffect(() => {
@@ -131,39 +166,73 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
       }
     }, [handleScroll])
     
-    // Handle initial mount scroll for session restoration
+    // Track session changes and reset state
     React.useEffect(() => {
-      if (isInitialMount.current && messages.length > 0) {
-        Logger.debug('[MessageList] Initial mount with existing messages - scrolling after ref attachment')
-        // Use requestAnimationFrame to ensure ref is attached before scrolling
-        requestAnimationFrame(() => {
-          scrollToBottom(false) // Use instant scroll for initial mount
+      if (previousSessionIdRef.current !== currentSessionId && currentSessionId) {
+        // Session changed - reset all scroll state
+        Logger.debug('[MessageList] Session changed - resetting scroll state')
+        setHasCompletedInitialScroll(false)
+        setIsAutoScrollEnabled(true)
+        setIsProgrammaticScroll(false)
+        
+        // Clear any pending timeouts
+        if (programmaticScrollTimeout.current) {
+          clearTimeout(programmaticScrollTimeout.current)
+        }
+        
+        previousSessionIdRef.current = currentSessionId
+      }
+    }, [currentSessionId])
+    
+    // Handle initial mount - let auto-scroll effect handle the actual scrolling
+    React.useEffect(() => {
+      if (isInitialMount.current) {
+        if (messages.length === 0) {
+          // No messages on mount, mark initial scroll as complete
+          Logger.debug('[MessageList] Initial mount with no messages')
           setHasCompletedInitialScroll(true)
-        })
-        isInitialMount.current = false
-      } else if (isInitialMount.current && messages.length === 0) {
-        // No messages on mount, mark initial scroll as complete
-        Logger.debug('[MessageList] Initial mount with no messages')
-        setHasCompletedInitialScroll(true)
+        }
+        // If there are messages, the auto-scroll effect will handle them
         isInitialMount.current = false
       }
-    }, [messages.length, scrollToBottom])
+    }, [messages.length])
     
-    // Auto-scroll when new content arrives (after initial mount)
+    // Auto-scroll when new content arrives
     React.useEffect(() => {
-      // Skip if this is the initial mount or auto-scroll is disabled
-      if (!hasCompletedInitialScroll || !isAutoScrollEnabled) {
+      // Skip if auto-scroll is disabled
+      if (!isAutoScrollEnabled || messages.length === 0) {
+        previousMessageCountRef.current = messages.length
         return
       }
       
-      // Small delay to ensure DOM updates are complete for new messages
-      const timeoutId = setTimeout(() => {
-        Logger.debug('[MessageList] Auto-scrolling for new content')
-        scrollToBottom()
-      }, 100)
+      const hasNewContent = messages.length !== previousMessageCountRef.current
+      const isInitialLoad = previousMessageCountRef.current === 0 && messages.length > 0
       
-      return () => clearTimeout(timeoutId)
-    }, [messages, streamingMessage, isAgentTyping, toolNotifications, isAutoScrollEnabled, scrollToBottom, hasCompletedInitialScroll])
+      if (hasNewContent || streamingMessage || isAgentTyping || toolNotifications.length > 0) {
+        // Wait for DOM to update, then scroll
+        waitForDOMUpdate().then(() => {
+          // Use instant scroll for initial/bulk loads, smooth for incremental
+          const useSmooth = !isInitialLoad && messages.length - previousMessageCountRef.current <= 2
+          Logger.debug('[MessageList] Auto-scrolling for new content (smooth: ' + useSmooth + ')')
+          scrollToBottom(useSmooth)
+          
+          if (!hasCompletedInitialScroll) {
+            setHasCompletedInitialScroll(true)
+          }
+        })
+      }
+      
+      previousMessageCountRef.current = messages.length
+    }, [messages.length, streamingMessage, isAgentTyping, toolNotifications, isAutoScrollEnabled, scrollToBottom, waitForDOMUpdate, hasCompletedInitialScroll])
+    
+    // Cleanup timeout on unmount
+    React.useEffect(() => {
+      return () => {
+        if (programmaticScrollTimeout.current) {
+          clearTimeout(programmaticScrollTimeout.current)
+        }
+      }
+    }, [])
     
     // Combine ref forwarding with internal ref
     React.useImperativeHandle(ref, () => scrollContainerRef.current as HTMLDivElement)

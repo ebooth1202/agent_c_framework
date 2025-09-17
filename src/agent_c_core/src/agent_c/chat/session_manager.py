@@ -4,7 +4,7 @@ import yaml
 from typing import Optional, Dict, List
 
 from agent_c.config.saved_chat import SavedChatLoader
-from agent_c.models.chat_history.chat_session import ChatSession, ChatSessionQueryResponse
+from agent_c.models.chat_history.chat_session import ChatSession, ChatSessionQueryResponse, ChatSessionIndexEntry
 from agent_c.util.logging_utils import LoggingManager
 
 
@@ -74,7 +74,6 @@ class ChatSessionManager:
         self._session_cache[user_id][session.session_id] = session
         session.touch()
 
-
     async def get_session(self, session_id: str, user_id: str) -> Optional[ChatSession]:
         """
         Retrieves a chat session by its ID.
@@ -109,6 +108,10 @@ class ChatSessionManager:
         """
         pass
 
+    async def release_session(self, session_id: str, user_id: str):
+        if user_id in self._session_cache and session_id in self._session_cache[user_id]:
+            del self._session_cache[user_id][session_id]
+
     async def flush(self, session_id: str, user_id: str) -> None:
         """
         Flushes a session to storage.
@@ -126,6 +129,17 @@ class ChatSessionManager:
             return
             
         await self._loader.save_session(session)
+
+    async def flush_and_release(self, session_id: str, user_id: str) -> None:
+        """
+        Flushes a session to storage and then releases it from cache.
+
+        Args:
+            session_id: The session ID to flush and release
+            user_id: The user ID who owns the session
+        """
+        await self.flush(session_id, user_id)
+        await self.release_session(session_id, user_id)
 
     async def flush_session(self, session: ChatSession, touch: bool = True) -> None:
         """
@@ -148,6 +162,38 @@ class ChatSessionManager:
             session.touch()
 
         await self._loader.save_session(session)
+
+    async def flush_and_release_session(self, session: ChatSession, touch: bool = True) -> None:
+        """
+        Flushes a session to storage and then releases it from cache.
+
+        Args:
+            session: The ChatSession to flush and release
+            touch: Whether to update the session's updated_at timestamp (default True)
+        """
+        await self.flush_session(session, touch)
+        await self.release_session(session.session_id, session.user_id)
+
+    async def rename_session(self, session_id: str, user_id: str, new_name: str) -> Optional[ChatSessionIndexEntry]:
+        """
+        Renames a chat session.
+
+        Args:
+            session_id: The ID of the session to rename
+            user_id: The user ID who owns the session
+            new_name: The new name for the session
+
+        Returns:
+            The updated ChatSession if found, otherwise None
+        """
+        session = await self.get_session(session_id, user_id)
+        if not session:
+            return None
+
+        session.session_name = new_name
+        await self.flush_and_release_session(session, touch=False)
+
+        return session.as_index_entry()
 
     async def get_user_sessions(self, user_id: str, offset: int = 0, limit: int = 50) -> ChatSessionQueryResponse:
         """

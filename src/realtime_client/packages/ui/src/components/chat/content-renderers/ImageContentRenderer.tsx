@@ -120,8 +120,16 @@ export const ImageContentRenderer: React.FC<ImageContentRendererProps> = ({
       </span>
       
       {/* Image container with expand/collapse */}
-      <button
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setIsExpanded(!isExpanded)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            setIsExpanded(!isExpanded)
+          }
+        }}
         className={cn(
           "relative overflow-hidden rounded-lg border border-border",
           "transition-all duration-200 cursor-pointer",
@@ -202,7 +210,7 @@ export const ImageContentRenderer: React.FC<ImageContentRendererProps> = ({
             )}
           </div>
         </div>
-      </button>
+      </div>
       
       {/* Media type label */}
       {source.media_type && (
