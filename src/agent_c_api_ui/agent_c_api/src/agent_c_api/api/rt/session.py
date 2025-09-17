@@ -1,22 +1,19 @@
 from typing import Optional, Dict, Any, TYPE_CHECKING, List
 from fastapi import APIRouter, HTTPException, Depends, WebSocket, Request
+from fastapi.responses import JSONResponse
 
 
-
-from agent_c.models.client_tool_info import ClientToolInfo
-from agent_c.toolsets import Toolset
 from agent_c.util import MnemonicSlugs
 from agent_c.util.logging_utils import LoggingManager
-from agent_c_api.api.dependencies import get_auth_service, get_chat_session_manager, get_agent_config_loader, get_heygen_client, get_heygen_avatar_list
+from agent_c_api.api.dependencies import get_auth_service, get_heygen_client
 from agent_c_api.core.util.jwt import validate_request_jwt, create_jwt_token, verify_jwt_token
-from agent_c_api.core.voice.models import open_ai_voice_models, heygen_avatar_voice_model, no_voice_model
 from agent_c_api.models.auth_models import UserLoginRequest, RealtimeLoginResponse
 
 if TYPE_CHECKING:
     from agent_c.util.heygen_streaming_avatar_client import HeyGenStreamingClient
     from agent_c_api.core.services.auth_service import AuthService
-    from agent_c.config.agent_config_loader import AgentConfigLoader
-    from agent_c.chat import ChatSessionManager
+    from agent_c_api.core.realtime_session_manager import RealtimeSessionManager
+
 
 router = APIRouter()
 logger = LoggingManager(__name__).get_logger()
@@ -76,3 +73,34 @@ async def initialize_realtime_session(websocket: WebSocket,
     except Exception as e:
         logger.exception(f"Error during session initialization: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/cancel")
+async def cancel_chat(request: Request, ui_session_id: str):
+    """
+    Endpoint for cancelling an ongoing chat interaction.
+
+    Args
+        request: FastAPI request object
+        ui_session_id: Session ID
+    Returns:
+        JSONResponse: Status of the cancellation request
+    """
+    user_info = await validate_request_jwt(request)
+    if not user_info:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    logger.info(f"Received cancellation request for session: {ui_session_id}")
+    manager: RealtimeSessionManager = request.app.state.realtime_manager
+    ui_session = manager.get_user_session_data(ui_session_id, user_info['user_id'])
+
+    if not ui_session:
+        logger.error(f"No session found for session_id: {ui_session_id}")
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Trigger cancellation
+    await ui_session.bridge.cancel_interaction()
+    return JSONResponse({
+        "status": "success",
+        "message": f"Cancellation signal sent for session: {ui_session_id}"
+    })
