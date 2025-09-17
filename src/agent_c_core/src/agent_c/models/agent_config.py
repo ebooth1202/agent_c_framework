@@ -10,8 +10,8 @@ class AgentCatalogEntry(BaseModel):
     name: str = Field(..., description="Name of the agent configuration")
     key: str = Field(..., description="Key for the agent configuration, used for identification")
     agent_description: Optional[str] = Field(None, description="A description of the agent's purpose and capabilities")
-    category: List[str] = Field(default_factory=list, description="A list of categories this agent belongs to from most to least general")
-    toolsets: List[str] = Field(default_factory=list, description="List of enabled toolset names the agent can use")
+    category: List[str] = Field(default_factory=list, alias="categories", description="A list of categories this agent belongs to from most to least general")
+    toolsets: List[str] = Field(default_factory=list, alias="tools", description="List of enabled toolset names the agent can use")
 
 class AgentConfigurationBase(BaseModel):
     version: int = Field(..., description="Configuration version")
