@@ -26,7 +26,7 @@ import {
   SubsessionStartedEvent,
   SubsessionEndedEvent
 } from './types/ServerEvents';
-import { Message, MessageContent, ContentPart } from './types/CommonTypes';
+import { Message, MessageContent, ContentPart, ToolCall } from './types/CommonTypes';
 import { ChatSession } from '../types/chat-session';
 import { 
   MessageParam,
@@ -380,19 +380,32 @@ export class EventStreamProcessor {
    */
   private handleCompletion(event: CompletionEvent): void {
     if (!event.running && this.messageBuilder.hasCurrentMessage()) {
-      // Get any completed tool calls
-      const toolCalls = this.toolCallManager.getCompletedToolCalls();
+      // Get any completed tool calls (which may include results)
+      const completedToolCalls = this.toolCallManager.getCompletedToolCalls();
+      
+      // Separate tool calls from tool results
+      const toolCalls = completedToolCalls.map(tc => ({
+        id: tc.id,
+        type: tc.type,
+        name: tc.name,
+        input: tc.input
+      })) as ToolCall[];
+      
+      const toolResults = completedToolCalls
+        .filter(tc => tc.result)
+        .map(tc => tc.result!);
       
       // Finalize the message with metadata
       const message = this.messageBuilder.finalize({
         inputTokens: event.input_tokens,
         outputTokens: event.output_tokens,
         stopReason: event.stop_reason,
-        toolCalls: toolCalls.length > 0 ? toolCalls : undefined
+        toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+        toolResults: toolResults.length > 0 ? toolResults : undefined
       });
       
       // Clear the completed tool calls after attaching them to the message
-      if (toolCalls.length > 0) {
+      if (completedToolCalls.length > 0) {
         this.toolCallManager.clearCompleted();
       }
       

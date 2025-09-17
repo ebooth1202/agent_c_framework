@@ -5,7 +5,7 @@ import { cn } from '../../lib/utils'
 import { 
   Copy, Check, Hash, ArrowRight, Wrench, 
   ChevronDown, RefreshCw, Edit2, Clock,
-  FileInput, FileOutput, Equal
+  FileInput, FileOutput, Equal, Code2, ChevronRight
 } from 'lucide-react'
 import { Button } from '../ui/button'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -33,14 +33,32 @@ export interface MessageFooterProps extends React.HTMLAttributes<HTMLDivElement>
 
 interface ToolCallDisplayProps {
   toolCalls: NonNullable<MessageData['toolCalls']>
+  toolResults?: MessageData['toolResults']
   className?: string
 }
 
 const ToolCallDisplay: React.FC<ToolCallDisplayProps> = ({
   toolCalls,
+  toolResults = [],
   className
 }) => {
   const [expandedTools, setExpandedTools] = React.useState<Set<string>>(new Set())
+  const [copiedInputs, setCopiedInputs] = React.useState<Set<string>>(new Set())
+  const [copiedResults, setCopiedResults] = React.useState<Set<string>>(new Set())
+  
+  // Filter out think tool calls
+  const visibleToolCalls = React.useMemo(() => {
+    return toolCalls.filter(tc => tc.name !== 'think')
+  }, [toolCalls])
+  
+  // Create a map of results by tool_use_id for efficient lookup
+  const resultsMap = React.useMemo(() => {
+    const map = new Map<string, typeof toolResults[0]>()
+    toolResults?.forEach(result => {
+      map.set(result.tool_use_id, result)
+    })
+    return map
+  }, [toolResults])
   
   const toggleTool = (toolId: string) => {
     setExpandedTools(prev => {
@@ -54,51 +72,199 @@ const ToolCallDisplay: React.FC<ToolCallDisplayProps> = ({
     })
   }
   
+  const handleCopyInput = React.useCallback((toolId: string, input: string) => {
+    navigator.clipboard.writeText(input)
+    setCopiedInputs(prev => new Set(prev).add(toolId))
+    setTimeout(() => {
+      setCopiedInputs(prev => {
+        const next = new Set(prev)
+        next.delete(toolId)
+        return next
+      })
+    }, 2000)
+  }, [])
+  
+  const handleCopyResult = React.useCallback((toolId: string, result: string) => {
+    navigator.clipboard.writeText(result)
+    setCopiedResults(prev => new Set(prev).add(toolId))
+    setTimeout(() => {
+      setCopiedResults(prev => {
+        const next = new Set(prev)
+        next.delete(toolId)
+        return next
+      })
+    }, 2000)
+  }, [])
+  
+  if (visibleToolCalls.length === 0) {
+    return null
+  }
+  
   return (
     <div className={cn(
-      "rounded-lg border border-border/50 bg-muted/30 p-2 space-y-1",
+      "rounded-lg border border-border/50 bg-card/50 space-y-2",
       className
     )}>
-      {toolCalls.map((tool) => {
+      {visibleToolCalls.map((tool) => {
         const isExpanded = expandedTools.has(tool.id)
+        const toolResult = resultsMap.get(tool.id)
+        const hasCopiedInput = copiedInputs.has(tool.id)
+        const hasCopiedResult = copiedResults.has(tool.id)
+        
+        // Format the input arguments
+        const formattedInput = React.useMemo(() => {
+          try {
+            return JSON.stringify(tool.input, null, 2)
+          } catch {
+            return String(tool.input)
+          }
+        }, [tool.input])
+        
+        // Format the result content
+        const formattedResult = React.useMemo(() => {
+          if (!toolResult?.content) return 'No result available'
+          
+          try {
+            // Try to parse as JSON for better formatting
+            const parsed = JSON.parse(toolResult.content)
+            return JSON.stringify(parsed, null, 2)
+          } catch {
+            // If not JSON, return as is
+            return toolResult.content
+          }
+        }, [toolResult])
         
         return (
-          <div key={tool.id} className="rounded bg-background/50">
+          <div key={tool.id} className="rounded-lg hover:bg-muted/10 transition-all duration-200">
+            {/* Header - Always visible */}
             <button
-              className="flex items-center justify-between w-full px-2 py-1.5 text-left hover:bg-muted/50 transition-colors"
+              className={cn(
+                "group/tool flex w-full items-center justify-between",
+                "gap-4 rounded-t-lg px-4 py-3",
+                "text-foreground hover:bg-muted/30",
+                "transition-colors duration-200 cursor-pointer",
+                "focus-visible:outline-none focus-visible:ring-2",
+                "focus-visible:ring-ring focus-visible:ring-offset-2"
+              )}
               onClick={() => toggleTool(tool.id)}
               aria-expanded={isExpanded}
               aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${tool.name} details`}
             >
-              <div className="flex items-center gap-2">
-                <Wrench className="h-3 w-3 text-muted-foreground" />
-                <span className="text-xs font-medium">
-                  {tool.name}
-                </span>
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="flex-shrink-0">
+                  <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center">
+                    <Wrench className="h-4 w-4 text-primary" />
+                  </div>
+                </div>
+                <div className="flex flex-col items-start min-w-0">
+                  <span className="text-sm font-semibold">
+                    {tool.name}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {toolResult ? 'Tool executed successfully' : 'Tool called'}
+                  </span>
+                </div>
               </div>
-              <ChevronDown className={cn(
-                "h-3 w-3 text-muted-foreground transition-transform",
-                isExpanded && "rotate-180"
-              )} />
+              
+              <div className="flex items-center gap-2 shrink-0">
+                {toolResult && <Check className="h-4 w-4 text-green-600 dark:text-green-400" />}
+                <ChevronRight className={cn(
+                  "h-4 w-4 transition-transform duration-200 text-muted-foreground",
+                  isExpanded && "rotate-90"
+                )} />
+              </div>
             </button>
             
+            {/* Expandable Content */}
             <AnimatePresence>
               {isExpanded && (
                 <motion.div
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: "auto", opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.15 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
                   className="overflow-hidden"
                 >
-                  <div className="px-2 pb-2 space-y-2">
-                    {/* Parameters */}
-                    {tool.input && (
-                      <div className="pl-5">
-                        <span className="text-xs text-muted-foreground">Parameters:</span>
-                        <pre className="mt-1 p-2 bg-muted/30 rounded text-xs overflow-auto">
-                          {JSON.stringify(tool.input, null, 2)}
-                        </pre>
+                  <div className="px-4 pb-4 space-y-3">
+                    {/* Input Arguments */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-medium flex items-center gap-2">
+                          <Code2 className="h-3.5 w-3.5 text-muted-foreground" />
+                          Input Arguments
+                        </h4>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => handleCopyInput(tool.id, formattedInput)}
+                        >
+                          {hasCopiedInput ? (
+                            <>
+                              <Check className="h-3 w-3 mr-1" />
+                              Copied
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3 w-3 mr-1" />
+                              Copy
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                      <pre className={cn(
+                        "bg-muted/50 rounded-md p-3 overflow-x-auto",
+                        "text-xs font-mono text-muted-foreground",
+                        "border border-border/30"
+                      )}>
+                        <code>{formattedInput}</code>
+                      </pre>
+                    </div>
+                    
+                    {/* Result */}
+                    {toolResult && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-medium">Result</h4>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => handleCopyResult(tool.id, formattedResult)}
+                          >
+                            {hasCopiedResult ? (
+                              <>
+                                <Check className="h-3 w-3 mr-1" />
+                                Copied
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-3 w-3 mr-1" />
+                                Copy
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                        <div className={cn(
+                          "bg-muted/30 rounded-md p-3 overflow-x-auto",
+                          "text-sm text-foreground",
+                          "border border-border/30"
+                        )}>
+                          {formattedResult.length > 500 ? (
+                            <details>
+                              <summary className="cursor-pointer text-sm font-medium text-primary hover:underline">
+                                Show full result ({formattedResult.length} characters)
+                              </summary>
+                              <pre className="mt-2 text-xs font-mono whitespace-pre-wrap break-words">
+                                <code>{formattedResult}</code>
+                              </pre>
+                            </details>
+                          ) : (
+                            <pre className="text-xs font-mono whitespace-pre-wrap break-words">
+                              <code>{formattedResult}</code>
+                            </pre>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -296,6 +462,7 @@ export const MessageFooter = React.forwardRef<HTMLDivElement, MessageFooterProps
             >
               <ToolCallDisplay 
                 toolCalls={message.toolCalls!}
+                toolResults={message.toolResults}
                 className="mt-2"
               />
             </motion.div>
