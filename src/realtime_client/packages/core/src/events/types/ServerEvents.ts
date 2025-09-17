@@ -397,6 +397,14 @@ export interface SubsessionEndedEvent extends SessionEvent {
 }
 
 /**
+ * Notification that the current agent response has been cancelled
+ * Server sends this to confirm the cancellation requested by the client
+ */
+export interface CancelledEvent extends BaseServerEvent {
+  type: 'cancelled';
+}
+
+/**
  * Union type of all server events
  */
 export type ServerEvent =
@@ -436,7 +444,8 @@ export type ServerEvent =
   | OpenAIUserMessageEvent
   | AnthropicUserMessageEvent
   | SubsessionStartedEvent
-  | SubsessionEndedEvent;
+  | SubsessionEndedEvent
+  | CancelledEvent;
 
 /**
  * Type guard to check if an object is a server event
@@ -479,6 +488,7 @@ export function isServerEvent(obj: unknown): obj is ServerEvent {
     'anthropic_user_message',
     'openai_user_message',
     'subsession_started',
-    'subsession_ended'
+    'subsession_ended',
+    'cancelled'
   ].includes((obj as any).type);
 }

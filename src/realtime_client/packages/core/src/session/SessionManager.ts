@@ -77,6 +77,7 @@ export interface SessionManagerEventMap {
     subAgentKey: string;
   };
   'subsession-ended': Record<string, never>;
+  'response-cancelled': Record<string, never>;
 }
 
 /**

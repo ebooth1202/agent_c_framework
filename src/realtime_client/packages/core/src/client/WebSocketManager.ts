@@ -91,7 +91,21 @@ export class WebSocketManager {
       throw new Error('WebSocket is not open');
     }
 
+    // Log bufferedAmount before send for critical events
+    const dataStr = typeof data === 'string' ? data : null;
+    if (dataStr && dataStr.includes('client_wants_cancel')) {
+      console.debug(`[${Date.now()}] WebSocket.send() - bufferedAmount before: ${this.ws.bufferedAmount} bytes`);
+    }
+
     this.ws.send(data);
+    
+    // Log bufferedAmount after send for critical events
+    if (dataStr && dataStr.includes('client_wants_cancel')) {
+      console.debug(`[${Date.now()}] WebSocket.send() - bufferedAmount after: ${this.ws.bufferedAmount} bytes`);
+      if (this.ws.bufferedAmount > 0) {
+        console.warn(`[${Date.now()}] WARNING: WebSocket has ${this.ws.bufferedAmount} bytes buffered - cancel may be delayed!`);
+      }
+    }
   }
 
   /**
@@ -109,7 +123,19 @@ export class WebSocketManager {
    * Send JSON data through the WebSocket
    */
   sendJSON(data: unknown): void {
-    this.send(JSON.stringify(data));
+    const jsonString = JSON.stringify(data);
+    
+    // Debug logging for cancel events
+    if (typeof data === 'object' && data !== null && 'type' in data && data.type === 'client_wants_cancel') {
+      console.debug(`[${Date.now()}] WebSocketManager.sendJSON: Sending client_wants_cancel`);
+      console.debug(`[${Date.now()}] WebSocket bufferedAmount before send: ${this.ws?.bufferedAmount}`);
+    }
+    
+    this.send(jsonString);
+    
+    if (typeof data === 'object' && data !== null && 'type' in data && data.type === 'client_wants_cancel') {
+      console.debug(`[${Date.now()}] WebSocket bufferedAmount after send: ${this.ws?.bufferedAmount}`);
+    }
   }
 
   /**
@@ -241,5 +267,20 @@ export class WebSocketManager {
    */
   setUrl(url: string): void {
     this.options.url = url;
+  }
+
+  /**
+   * Get the current WebSocket bufferedAmount
+   * This indicates how many bytes are queued to be sent
+   */
+  getBufferedAmount(): number {
+    return this.ws?.bufferedAmount ?? 0;
+  }
+
+  /**
+   * Check if the WebSocket has buffered data
+   */
+  hasBufferedData(): boolean {
+    return this.getBufferedAmount() > 0;
   }
 }

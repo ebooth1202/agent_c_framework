@@ -848,6 +848,46 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
     ping(): void {
         this.sendEvent({ type: 'ping' });
     }
+    
+    /**
+     * Cancel the current agent response
+     * Sends a request to the server to cancel the ongoing agent response.
+     * Server will respond with a 'cancelled' event to confirm.
+     */
+    cancelResponse(): void {
+        const timestamp = Date.now();
+        const event = { type: 'client_wants_cancel' as const };
+        
+        if (this.config.debug) {
+            console.debug(`[${timestamp}] cancelResponse() called`);
+            console.debug(`[${timestamp}] WebSocket readyState: ${this.wsManager?.getReadyState?.() ?? 'unknown'}`);
+            
+            // Check if there's buffered data that might delay the cancel
+            const bufferedAmount = this.wsManager?.getBufferedAmount?.();
+            if (bufferedAmount && bufferedAmount > 0) {
+                console.warn(`[${timestamp}] WARNING: WebSocket has ${bufferedAmount} bytes buffered before cancel - this may delay the cancel event!`);
+            }
+        }
+        
+        try {
+            this.sendEvent(event);
+            
+            if (this.config.debug) {
+                console.debug(`[${timestamp}] client_wants_cancel event sent to WebSocket`);
+                
+                // Check buffered amount after send
+                const bufferedAfter = this.wsManager?.getBufferedAmount?.();
+                if (bufferedAfter && bufferedAfter > 0) {
+                    console.warn(`[${timestamp}] Post-send: WebSocket still has ${bufferedAfter} bytes buffered`);
+                }
+            }
+        } catch (error) {
+            if (this.config.debug) {
+                console.error(`[${timestamp}] Failed to send cancel event:`, error);
+            }
+            throw error;
+        }
+    }
 
     // Getters
 
@@ -1161,6 +1201,16 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
             try {
                 const event = JSON.parse(data);
                 if (event && typeof event.type === 'string') {
+                    // Debug logging for turn and cancel events
+                    if (this.config.debug && 
+                        (event.type === 'user_turn_start' || 
+                         event.type === 'user_turn_end' || 
+                         event.type === 'agent_turn_start' ||
+                         event.type === 'agent_turn_end' ||
+                         event.type === 'cancelled')) {
+                        console.debug(`[${Date.now()}] Received ${event.type} event from server`);
+                    }
+                    
                     // Handle ping events with pong response
                     if (event.type === 'ping') {
                         // Send pong directly via WebSocket, not through sendEvent
@@ -1197,7 +1247,8 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
                             'user_message',
                             'anthropic_user_message',
                             'subsession_started',
-                            'subsession_ended'
+                            'subsession_ended',
+                            'cancelled'
                         ];
                         
                         if (eventTypesToProcess.includes(event.type)) {
