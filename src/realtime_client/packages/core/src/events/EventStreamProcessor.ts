@@ -93,7 +93,21 @@ export class EventStreamProcessor {
     
     // Handle array of content blocks
     if (Array.isArray(content)) {
-      // Convert ContentBlockParam[] to ContentPart[] for UI compatibility
+      // First, check if all blocks are text blocks
+      // If so, concatenate them into a single string for proper markdown rendering
+      const allTextBlocks = content.every(block => isTextBlockParam(block));
+      
+      if (allTextBlocks) {
+        // Concatenate all text blocks into a single string
+        const concatenatedText = content
+          .filter(isTextBlockParam)
+          .map(block => block.text)
+          .join('');
+        
+        return concatenatedText;
+      }
+      
+      // For mixed content, convert ContentBlockParam[] to ContentPart[]
       const normalizedParts: ContentPart[] = [];
       
       for (const block of content) {
