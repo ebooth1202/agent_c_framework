@@ -41,6 +41,14 @@ class RealtimeSessionManager:
         """
         return self.ui_sessions.get(ui_session_id, None)
 
+    def get_user_session_data(self, ui_session_id: str, user_id: str) ->  Optional[RealtimeSession]:
+        session = self.get_session_data(ui_session_id)
+
+        if not session or session.user_id != user_id:
+            return None
+
+        return session
+
     async def get_or_create_realtime_session(self, user: ChatUser, session_id: Optional[str] = None) -> RealtimeSession:
         """
         Retrieve an existing session or create a new one if it doesn't exist.

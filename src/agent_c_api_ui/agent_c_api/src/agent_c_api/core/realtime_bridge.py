@@ -55,7 +55,9 @@ class RealtimeBridge(AgentBridge):
         self.agent_config_loader: AgentConfigLoader = AgentConfigLoader()
         self.heygen_client = HeyGenStreamingClient()
         self.avatar_client = self.heygen_client
-        self.client_wants_cancel = threading.Event()
+        self.client_wants_cancel = asyncio.Event()
+        self._active_interact_task: Optional[asyncio.Task] = None
+        self._send_lock = asyncio.Lock()
         self.avatar_session: Optional[HeygenAvatarSessionData] = None
         self.avatar_session_id: Optional[str] = None
         self.avatar_session_token: Optional[str] = None
@@ -89,6 +91,9 @@ class RealtimeBridge(AgentBridge):
 
     @handle_client_event.register
     async def _(self, _: ClientWantsCancelEvent) -> None:
+        await self.cancel_interaction()
+
+    async def cancel_interaction(self) -> None:
         self.client_wants_cancel.set()
         await self.send_event(CancelledEvent())
 
@@ -337,9 +342,18 @@ class RealtimeBridge(AgentBridge):
         await self.send_event(UserTurnEndEvent())
 
     async def send_event(self, event: BaseEvent):
-        """Send event to the client"""
+        if self.websocket is None:
+            return
+
+        model_dump = event.model_dump()
+        if 'session_id' in model_dump:
+            if self.chat_session.session_id not in [model_dump['session_id'], model_dump['user_session_id']]:
+                self.logger.warning(f"Event session_id {model_dump['session_id']} does not match current session {self.chat_session.session_id}")
+                return
+
         try:
-            await self.websocket.send_text(event.model_dump_json())
+            async with self._send_lock:
+                await self.websocket.send_text(json.dumps(model_dump))
             self.logger.info(f"Sent event {event.type} to {self.chat_session.session_id}")
         except Exception as e:
             self.logger.exception(f"Failed to send event to {self.chat_session.session_id}: {e}")
@@ -428,14 +442,26 @@ class RealtimeBridge(AgentBridge):
                     if message["type"] == "websocket.receive":
                         if "text" in message:
                             event = self.parse_event(json.loads(message["text"]))
+                            self.logger.info(f"Received event {event.type} from session {self.chat_session.session_id}")
+
+                            if self._active_interact_task and not self._active_interact_task.done():
+                                self.logger.warning(f"Session {self.chat_session.session_id} has an active interaction, shutting down interaction due to  new event {event.type}")
+                                if event.type not in ["ping", "pong", "client_wants_cancel"]:
+                                    self.client_wants_cancel.set()
+                                    self._active_interact_task.cancel()
+                                    with suppress(asyncio.CancelledError):
+                                        await self._active_interact_task
+
                             await self.handle_client_event(event)
                         elif "bytes" in message:
                             await self.voice_io_manager.add_audio(message["bytes"])
                     elif message["type"] == "websocket.disconnect":
+                        self.websocket = None
                         self.logger.info(f"Session {self.chat_session.session_id} disconnected normally")
                         break
 
                 except WebSocketDisconnect:
+                    self.websocket = None
                     self.logger.info(f"Session {self.ui_session_id} disconnected normally")
                     break
                 except json.JSONDecodeError:
@@ -562,9 +588,8 @@ class RealtimeBridge(AgentBridge):
                 "prompt_metadata": prompt_metadata,
                 "client_wants_cancel": self.client_wants_cancel,
                 "streaming_callback": on_event  if on_event else self.runtime_callback,
-                'tool_context': {'active_agent': self.chat_session.agent_config},
+                'tool_context': {'active_agent': self.chat_session.agent_config, 'bridge': self},
                 'prompt_builder': PromptBuilder(sections=agent_sections),
-                'bridge': self
             }
 
             # Categorize file inputs by type to pass to appropriate parameters
@@ -591,6 +616,7 @@ class RealtimeBridge(AgentBridge):
             error_traceback = traceback.format_exc()
             self.logger.error(f"Error preparing chat parameters: {error_type}: {str(e)}\n{error_traceback}")
             await self.send_error(f"Error preparing chat parameters: {error_type}: {str(e)}\n{error_traceback}")
+            await self.send_user_turn_start()
             return
 
         try:
@@ -612,6 +638,7 @@ class RealtimeBridge(AgentBridge):
             error_traceback = traceback.format_exc()
             self.logger.error(f"Error flushing session manager: {error_type}: {str(e)}\n{error_traceback}")
             await self.send_error(f"Error flushing session manager: {error_type}: {str(e)}\n{error_traceback}")
+            await self.send_user_turn_start()
             return
 
     async def _get_or_create_chat_session(self, session_id: Optional[str] = None, user_id: Optional[str] = None, agent_key: str = 'default_realtime') -> ChatSession:
