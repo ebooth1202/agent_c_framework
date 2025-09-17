@@ -3,15 +3,14 @@
 /**
  * TipTap v2 Compatible Version of MarkdownEditor.tsx
  * 
- * Key changes from v3:
+ * Key features:
  * - Import statements are cleaner
- * - No immediatelyRender prop (v2 doesn't have it)
+ * - SSR-safe with immediatelyRender: false to prevent hydration mismatches
  * - Better Next.js compatibility out of the box
  */
 import * as React from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import Placeholder from '@tiptap/extension-placeholder';
-import Typography from '@tiptap/extension-typography';
 import { cn } from '../../lib/utils';
 import type { MarkdownEditorProps } from './types';
 import { getMarkdownExtensions, keyboardShortcuts } from './markdownExtensions';
@@ -62,12 +61,12 @@ const MarkdownEditor = React.forwardRef<HTMLDivElement, MarkdownEditorProps>(
           placeholder,
           emptyEditorClass: 'is-editor-empty',
         }),
-        // Typography for smart quotes, dashes, and ellipsis
-        Typography,
+        // Typography is already included in getMarkdownExtensions(), no need to add it again
       ],
       content: value,
       editable: !disabled,
-      // Note: v2 doesn't have immediatelyRender prop
+      // Disable immediate rendering to prevent SSR hydration mismatches with Next.js
+      immediatelyRender: false,
       onUpdate: ({ editor }) => {
         // Get plain text content and notify parent component
         const text = editor.getText();
