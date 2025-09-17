@@ -1,6 +1,7 @@
 import asyncio
 import copy
 import json
+import os
 import traceback
 from contextlib import suppress
 from typing import List, Optional, Any, Dict, AsyncIterator
@@ -52,7 +53,11 @@ class RealtimeBridge(AgentBridge):
         self.websocket: Optional[WebSocket] = None
         self.is_running = False
         self.agent_config_loader: AgentConfigLoader = AgentConfigLoader()
-        self.heygen_client = HeyGenStreamingClient()
+        if os.environ.get("HEYGEN_API_KEY") is not None:
+            self.heygen_client = HeyGenStreamingClient()
+        else:
+            self.heygen_client = None
+
         self.avatar_client = self.heygen_client
         self.client_wants_cancel = asyncio.Event()
         self._active_interact_task: Optional[asyncio.Task] = None
@@ -158,7 +163,7 @@ class RealtimeBridge(AgentBridge):
         await self.send_avatar_list()
 
     async def send_avatar_list(self) -> None:
-        resp = await self.heygen_client.list_avatars()
+        resp = await self.heygen_client.list_avatars() if self.heygen_client else []
         await self.send_event(AvatarListEvent(avatars=resp.data))
 
     async def end_avatar_session(self) -> None:
@@ -601,7 +606,8 @@ class RealtimeBridge(AgentBridge):
                 "streaming_callback": on_event  if on_event else self.runtime_callback,
                 'tool_context': {'active_agent': self.chat_session.agent_config,
                                  'bridge': self,
-                                 "client_wants_cancel": self.client_wants_cancel},
+                                 "client_wants_cancel": self.client_wants_cancel,
+                                 "streaming_callback": on_event  if on_event else self.runtime_callback},
                 'prompt_builder': PromptBuilder(sections=agent_sections),
             }
 
