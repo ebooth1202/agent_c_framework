@@ -163,8 +163,11 @@ class RealtimeBridge(AgentBridge):
         await self.send_avatar_list()
 
     async def send_avatar_list(self) -> None:
-        resp = await self.heygen_client.list_avatars() if self.heygen_client else []
-        await self.send_event(AvatarListEvent(avatars=resp.data))
+        if self.heygen_client:
+            resp = await self.heygen_client.list_avatars()
+            await self.send_event(AvatarListEvent(avatars=resp.data))
+        else:
+            await self.send_event(AvatarListEvent(avatars=[]))
 
     async def end_avatar_session(self) -> None:
         """End the current avatar session if it exists"""
