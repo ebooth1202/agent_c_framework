@@ -159,7 +159,7 @@ class AgentCloneTools(AgentAssistToolBase):
         parent_session_id = tool_context.get('session_id')
 
         agent_session_id, messages = await self.agent_chat(content, clone_config, user_session_id, agent_session_id, tool_context,
-                                                           process_context=process_context, agent_session_id=agent_session_id,
+                                                           process_context=process_context,
                                                            client_wants_cancel=tool_context.get('client_wants_cancel', None),
                                                            user_session_id=user_session_id, parent_session_id=parent_session_id,
                                                            sub_agent_type="clone", prime_agent_key=calling_agent_config.key
