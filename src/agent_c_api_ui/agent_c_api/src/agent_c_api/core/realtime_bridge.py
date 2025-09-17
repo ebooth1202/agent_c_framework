@@ -1,7 +1,6 @@
 import asyncio
 import copy
 import json
-import threading
 import traceback
 from contextlib import suppress
 from typing import List, Optional, Any, Dict, AsyncIterator
@@ -137,7 +136,18 @@ class RealtimeBridge(AgentBridge):
 
     @handle_client_event.register
     async def _(self, event: TextInputEvent) -> None:
-        await self.interact(user_message=event.text, file_ids=event.file_ids)
+        if self._active_interact_task and not self._active_interact_task.done():
+            self.client_wants_cancel.set()
+            self._active_interact_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await self._active_interact_task
+
+        self.client_wants_cancel.clear()
+        # Fire-and-manage: don't await here, let run() keep reading the socket
+        self._active_interact_task = asyncio.create_task(
+            self.interact(user_message=event.text, file_ids=event.file_ids),
+            name=f"interact-{self.chat_session.session_id}"
+        )
 
     async def send_agent_list(self) -> None:
         catalog = self.agent_config_loader.client_catalog
@@ -417,6 +427,7 @@ class RealtimeBridge(AgentBridge):
         self.logger.debug(f"RealtimeBridge {self.chat_session.session_id}: Received runtime event: {event.type}")
         # These are already in model format and don't need parsed.
         await self.handle_runtime_event(event)
+        await asyncio.sleep(0)
 
     async def send_client_initial_data(self):
         await self.send_user_info()

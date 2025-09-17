@@ -1,3 +1,4 @@
+import asyncio
 import copy
 import json
 
@@ -287,6 +288,8 @@ class ClaudeChatAgent(BaseAgent):
 
                     await self._raise_history_event(messages, **callback_opts)
                     return  messages, state
+
+                await asyncio.sleep(0)
 
         return messages, state
 
