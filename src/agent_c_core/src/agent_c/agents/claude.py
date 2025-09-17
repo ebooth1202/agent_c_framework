@@ -88,10 +88,14 @@ class ClaudeChatAgent(BaseAgent):
         if model_name is None:
             raise ValueError('Claude agent is missing a model_name')
 
+        callback_opts = self._callback_opts(**kwargs)
+        messages = await self._construct_message_array(**kwargs)
+        await self._raise_user_message(messages[-1], **callback_opts)
+
         temperature: float = kwargs.get("temperature", self.temperature)
         max_tokens: int = kwargs.get("max_tokens", self.max_tokens)
         allow_server_tools: bool = kwargs.get("allow_server_tools", False)
-        callback_opts = self._callback_opts(**kwargs)
+
         tool_chest = kwargs.get("tool_chest", self.tool_chest)
         toolsets: List[str] = kwargs.get("toolsets", [])
         if len(toolsets) == 0:
@@ -101,7 +105,6 @@ class ClaudeChatAgent(BaseAgent):
             functions: List[Dict[str, Any]] = inference_data['schemas']
             kwargs['tool_sections'] = inference_data['sections']
 
-        messages = await self._construct_message_array(**kwargs)
         kwargs['prompt_metadata']['model_id'] = model_name
         (tool_context, prompt_context) = await self._render_contexts(**kwargs)
         sys_prompt: str = prompt_context["system_prompt"]
@@ -164,7 +167,6 @@ class ClaudeChatAgent(BaseAgent):
         session_manager: Union[ChatSessionManager, None] = kwargs.get("session_manager", None)
         messages = opts["completion_opts"]["messages"]
         interaction_id = await self._raise_interaction_start(**callback_opts)
-        await self._raise_user_message(messages[-1], **callback_opts)
         await self._raise_system_prompt(opts["completion_opts"]["system"], **callback_opts)
         delay = 1  # Initial delay between retries
         async with (self.semaphore):

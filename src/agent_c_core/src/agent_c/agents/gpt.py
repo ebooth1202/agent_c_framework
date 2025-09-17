@@ -326,7 +326,7 @@ class GPTChatAgent(BaseAgent):
                         state['stop_reason'] = "client_cancel"
 
                     # If we've completed processing and it's not a tool call, we're done
-                    if state['complete'] and not state['tool_calls_processed']:
+                    if state['complete'] and not state['tool_calls_processed'] and state['stop_reason'] != "client_cancel":
                         # Add the collected content to messages and finalize
                         output_text = "".join(state["collected_messages"])
                         if output_text.strip():  # Only add if there's actual content
@@ -345,6 +345,10 @@ class GPTChatAgent(BaseAgent):
                     # If we've completed and there are tool calls, process them
                     elif state['complete'] and state['tool_calls_processed']:
                         await self._process_tool_calls(state, tool_chest, session_manager, messages, callback_opts, tool_context)
+                        return messages, state
+                    elif state['complete'] and state['stop_reason'] == "client_cancel":
+                        await self._raise_system_event("The client cancelled the request.", **callback_opts)
+                        await self._raise_interaction_end(id=interaction_id, **callback_opts)
                         return messages, state
 
             except Exception as e:

@@ -389,7 +389,8 @@ class BaseAgent:
             multimodal_user_message = await self._generate_multi_modal_user_message(user_message, images, audio_clips, files)
             message_array += multimodal_user_message
         else:
-            message_array.append({"role": "user", "content": user_message})
+            msg = {"role": "user", "content": user_message}
+            message_array.append(msg)
 
         return message_array
 
