@@ -56,6 +56,9 @@ export const SessionNameDropdown = React.forwardRef<HTMLButtonElement, SessionNa
     const [isProcessing, setIsProcessing] = React.useState(false)
     const [dropdownOpen, setDropdownOpen] = React.useState(false)
     
+    // Use ref to track current sessionId for event handlers
+    const sessionIdRef = React.useRef<string | undefined>()
+    
     // Update from prop changes
     React.useEffect(() => {
       if (propSessionName) {
@@ -63,37 +66,63 @@ export const SessionNameDropdown = React.forwardRef<HTMLButtonElement, SessionNa
       }
     }, [propSessionName])
     
-    // Listen for session events
+    // Keep ref in sync with state
+    React.useEffect(() => {
+      sessionIdRef.current = sessionId
+    }, [sessionId])
+    
+    // Get initial session state on mount and listen for session events
     React.useEffect(() => {
       if (!client) return
       
-      // Handler for session changes
-      const handleSessionChanged = (event: ChatSessionChangedEvent) => {
-        if (event.chat_session) {
-          setSessionId(event.chat_session.session_id)
-          const name = event.chat_session.session_name || event.chat_session.display_name || "New Chat"
-          setCurrentSessionName(name)
+      // Get the SessionManager
+      const sessionManager = client.getSessionManager()
+      if (!sessionManager) return
+      
+      // Get the current session from SessionManager on mount
+      const currentSession = sessionManager.getCurrentSession()
+      if (currentSession) {
+        setSessionId(currentSession.session_id)
+        sessionIdRef.current = currentSession.session_id
+        const name = currentSession.session_name || currentSession.display_name || "New Chat"
+        setCurrentSessionName(name)
+      }
+      
+      // Handler for session changes from SessionManager - this is the proper event to listen to
+      // The EventStreamProcessor consumes chat_session_changed and the SessionManager emits session-changed
+      const handleSessionChanged = (event: { previousSession?: any; currentSession?: any }) => {
+        if (event.currentSession) {
+          // Always update both sessionId and name when this event fires
+          const newSessionId = event.currentSession.session_id
+          const newName = event.currentSession.session_name || event.currentSession.display_name || "New Chat"
+          
+          // Update state unconditionally - this event means the session has changed
+          setSessionId(newSessionId)
+          sessionIdRef.current = newSessionId
+          setCurrentSessionName(newName)
         }
       }
       
-      // Handler for session name changes
+      // Handler for session name changes from client events
       const handleSessionNameChanged = (event: ChatSessionNameChangedEvent) => {
         // Update the name if it's for the current session or no session_id is provided
-        if (!event.session_id || event.session_id === sessionId) {
+        if (!event.session_id || event.session_id === sessionIdRef.current) {
           setCurrentSessionName(event.session_name || "New Chat")
         }
       }
       
-      // Subscribe to events
-      client.on('chat_session_changed', handleSessionChanged)
+      // Subscribe to SessionManager events for session changes
+      sessionManager.on('session-changed', handleSessionChanged)
+      
+      // Subscribe to client events for session name changes (these are still emitted directly)
       client.on('chat_session_name_changed', handleSessionNameChanged)
       
       // Cleanup
       return () => {
-        client.off('chat_session_changed', handleSessionChanged)
+        sessionManager.off('session-changed', handleSessionChanged)
         client.off('chat_session_name_changed', handleSessionNameChanged)
       }
-    }, [client, sessionId])
+    }, [client]) // Remove sessionId from dependencies to prevent re-subscription
     
     // Handle rename action
     const handleRename = React.useCallback(() => {

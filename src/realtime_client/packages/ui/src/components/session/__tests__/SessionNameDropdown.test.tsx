@@ -29,11 +29,20 @@ describe('SessionNameDropdown', () => {
     // Reset all mocks
     vi.clearAllMocks()
     
+    // Create mock SessionManager
+    const mockSessionManager = {
+      getCurrentSession: vi.fn().mockReturnValue(null),
+      getSessionIds: vi.fn().mockReturnValue([]),
+      on: vi.fn(),
+      off: vi.fn()
+    }
+    
     // Create mock client
     mockClient = {
       on: vi.fn(),
       off: vi.fn(),
-      sendEvent: vi.fn().mockResolvedValue(undefined)
+      sendEvent: vi.fn().mockResolvedValue(undefined),
+      getSessionManager: vi.fn().mockReturnValue(mockSessionManager)
     }
     
     // Set up default mock return
@@ -79,27 +88,102 @@ describe('SessionNameDropdown', () => {
     expect(deleteItem).toHaveAttribute('aria-disabled', 'true')
   })
   
-  it('should handle session changed events', () => {
+  it('should get initial session from SessionManager on mount', () => {
+    // Set up mock session manager to return a current session
+    const mockCurrentSession = {
+      session_id: 'initial-session-123',
+      session_name: 'Initial Session Name',
+      display_name: 'Initial Display Name',
+      messages: [],
+      version: 1,
+      token_count: 0,
+      context_window_size: 0,
+      vendor: 'openai'
+    }
+    
+    const mockSessionManager = {
+      getCurrentSession: vi.fn().mockReturnValue(mockCurrentSession),
+      getSessionIds: vi.fn().mockReturnValue(['initial-session-123']),
+      on: vi.fn(),
+      off: vi.fn()
+    }
+    
+    vi.mocked(mockClient.getSessionManager!).mockReturnValue(mockSessionManager as any)
+    
     render(<SessionNameDropdown />)
     
-    // Verify event listeners were registered
-    expect(mockClient.on).toHaveBeenCalledWith('chat_session_changed', expect.any(Function))
+    // Verify that getSessionManager was called
+    expect(mockClient.getSessionManager).toHaveBeenCalled()
+    expect(mockSessionManager.getCurrentSession).toHaveBeenCalled()
+    
+    // Verify the initial session name is displayed
+    expect(screen.getByText('Initial Session Name')).toBeInTheDocument()
+  })
+  
+  it('should use display_name when session_name is null', () => {
+    // Set up mock session with null session_name but valid display_name
+    const mockCurrentSession = {
+      session_id: 'display-name-session',
+      session_name: null,
+      display_name: 'Fallback Display Name',
+      messages: [],
+      version: 1,
+      token_count: 0,
+      context_window_size: 0,
+      vendor: 'openai'
+    }
+    
+    const mockSessionManager = {
+      getCurrentSession: vi.fn().mockReturnValue(mockCurrentSession),
+      getSessionIds: vi.fn().mockReturnValue(['display-name-session']),
+      on: vi.fn(),
+      off: vi.fn()
+    }
+    
+    vi.mocked(mockClient.getSessionManager!).mockReturnValue(mockSessionManager as any)
+    
+    render(<SessionNameDropdown />)
+    
+    // Verify the display_name is shown when session_name is null
+    expect(screen.getByText('Fallback Display Name')).toBeInTheDocument()
+  })
+  
+  it('should handle session changed events', () => {
+    const mockSessionManager = {
+      getCurrentSession: vi.fn().mockReturnValue(null),
+      on: vi.fn(),
+      off: vi.fn()
+    }
+    
+    vi.mocked(mockClient.getSessionManager!).mockReturnValue(mockSessionManager as any)
+    
+    render(<SessionNameDropdown />)
+    
+    // Verify event listeners were registered on SessionManager and client
+    expect(mockSessionManager.on).toHaveBeenCalledWith('session-changed', expect.any(Function))
     expect(mockClient.on).toHaveBeenCalledWith('chat_session_name_changed', expect.any(Function))
   })
   
-  it('should update session name from ChatSessionChangedEvent', async () => {
+  it('should update session name from SessionManager session-changed event', async () => {
+    const mockSessionManager = {
+      getCurrentSession: vi.fn().mockReturnValue(null),
+      on: vi.fn(),
+      off: vi.fn()
+    }
+    
+    vi.mocked(mockClient.getSessionManager!).mockReturnValue(mockSessionManager as any)
+    
     const { rerender } = render(<SessionNameDropdown />)
     
-    // Get the event handler
-    const [[, handler]] = vi.mocked(mockClient.on!).mock.calls.filter(
-      ([event]) => event === 'chat_session_changed'
+    // Get the event handler for session-changed
+    const [[, handler]] = vi.mocked(mockSessionManager.on).mock.calls.filter(
+      ([event]) => event === 'session-changed'
     )
     
-    // Simulate event
+    // Simulate SessionManager session-changed event
     await act(async () => {
       handler({
-        type: 'chat_session_changed',
-        chat_session: {
+        currentSession: {
           session_id: 'test-123',
           session_name: 'Updated Session',
           messages: [],
@@ -108,7 +192,8 @@ describe('SessionNameDropdown', () => {
           context_window_size: 0,
           vendor: 'openai',
           display_name: 'Display Name'
-        }
+        },
+        previousSession: null
       })
     })
     
@@ -232,16 +317,25 @@ describe('SessionNameDropdown', () => {
   })
   
   it('should unsubscribe from events on unmount', () => {
+    const mockSessionManager = {
+      getCurrentSession: vi.fn().mockReturnValue(null),
+      on: vi.fn(),
+      off: vi.fn()
+    }
+    
+    vi.mocked(mockClient.getSessionManager!).mockReturnValue(mockSessionManager as any)
+    
     const { unmount } = render(<SessionNameDropdown />)
     
     // Verify subscriptions
+    expect(mockSessionManager.on).toHaveBeenCalled()
     expect(mockClient.on).toHaveBeenCalled()
     
     // Unmount
     unmount()
     
     // Verify cleanup
-    expect(mockClient.off).toHaveBeenCalledWith('chat_session_changed', expect.any(Function))
+    expect(mockSessionManager.off).toHaveBeenCalledWith('session-changed', expect.any(Function))
     expect(mockClient.off).toHaveBeenCalledWith('chat_session_name_changed', expect.any(Function))
   })
 })
