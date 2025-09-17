@@ -96,7 +96,6 @@ node:
   env_overrides:
     NODE_DISABLE_COLORS: "1"
     NO_COLOR: "1"
-    FORCE_COLOR: "0"
 nodejs:
   validator: node
   flags: [ "-v","--version","--help" ]
@@ -105,7 +104,6 @@ nodejs:
   env_overrides:
     NODE_DISABLE_COLORS: "1"
     NO_COLOR: "1"
-    FORCE_COLOR: "0"
 
 npm:
   validator: npm
@@ -158,7 +156,6 @@ npm:
     NPM_CONFIG_PROGRESS: "false"    # no progress bars
     NPM_CONFIG_LOGLEVEL: "warn"     # or "error" to be even quieter
     NO_COLOR: "1"                   # many tools respect this
-    FORCE_COLOR: "0"                # chalk/colorette/etc. honor this
     NODE_DISABLE_COLORS: "1"        # belt-and-suspenders for some libs
     CI: "1"                         # many CLIs reduce interactivity/spinners
     NPM_CONFIG_FUND: "false"
@@ -292,7 +289,6 @@ npx:
     NPM_CONFIG_COLOR: "false"
     NPM_CONFIG_PROGRESS: "false"
     NO_COLOR: "1"
-    FORCE_COLOR: "0"
     NODE_DISABLE_COLORS: "1"
     CI: "1"
     NPM_CONFIG_FUND: "false"
@@ -342,7 +338,6 @@ lerna:
     NPM_CONFIG_COLOR: "false"
     NPM_CONFIG_PROGRESS: "false"
     NO_COLOR: "1"
-    FORCE_COLOR: "0"
     NODE_DISABLE_COLORS: "1"
     CI: "1"
 
