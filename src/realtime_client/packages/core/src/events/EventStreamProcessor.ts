@@ -24,7 +24,8 @@ import {
   OpenAIUserMessageEvent,
   AnthropicUserMessageEvent,
   SubsessionStartedEvent,
-  SubsessionEndedEvent
+  SubsessionEndedEvent,
+  CancelledEvent
 } from './types/ServerEvents';
 import { Message, MessageContent, ContentPart, ToolCall } from './types/CommonTypes';
 import { ChatSession } from '../types/chat-session';
@@ -279,6 +280,9 @@ export class EventStreamProcessor {
         break;
       case 'subsession_ended':
         this.handleSubsessionEnded(event as SubsessionEndedEvent);
+        break;
+      case 'cancelled':
+        this.handleCancelled(event as CancelledEvent);
         break;
       // Other events are handled elsewhere or don't require processing here
       default:
@@ -814,6 +818,46 @@ export class EventStreamProcessor {
   private handleSubsessionEnded(_event: SubsessionEndedEvent): void {
     // Emit subsession end event for UI tracking
     this.sessionManager.emit('subsession-ended', {});
+  }
+  
+  /**
+   * Handle cancelled events
+   */
+  private handleCancelled(_event: CancelledEvent): void {
+    Logger.info('[EventStreamProcessor] Agent response cancelled');
+    
+    // If there's a message being built, mark it as cancelled and finalize
+    if (this.messageBuilder.hasCurrentMessage()) {
+      const message = this.messageBuilder.finalize({
+        stopReason: 'cancelled'
+      });
+      
+      // Add to session with cancelled status
+      const session = this.sessionManager.getCurrentSession();
+      if (session) {
+        session.messages.push(message);
+        session.updated_at = new Date().toISOString();
+      }
+      
+      // Emit the cancelled message
+      this.sessionManager.emit('message-complete', {
+        sessionId: session?.session_id || '',
+        message
+      });
+    }
+    
+    // Clear any active tool calls
+    const activeNotifications = this.toolCallManager.getActiveNotifications();
+    activeNotifications.forEach(notification => {
+      this.sessionManager.emit('tool-notification-removed', notification.id);
+    });
+    
+    // Reset state for clean slate
+    this.messageBuilder.reset();
+    this.toolCallManager.reset();
+    
+    // Emit cancellation event for UI to handle
+    this.sessionManager.emit('response-cancelled', {});
   }
   
   /**

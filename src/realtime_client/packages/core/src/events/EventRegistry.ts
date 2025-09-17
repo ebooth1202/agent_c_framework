@@ -22,6 +22,7 @@ import {
   GetToolCatalogEvent,
   PingEvent,
   DeleteChatSessionEvent,
+  ClientWantsCancelEvent,
   ClientEvent
 } from './types/ClientEvents';
 
@@ -63,6 +64,7 @@ import {
   AnthropicUserMessageEvent,
   SubsessionStartedEvent,
   SubsessionEndedEvent,
+  CancelledEvent,
   ServerEvent
 } from './types/ServerEvents';
 
@@ -88,6 +90,7 @@ export interface ClientEventMap {
   'get_tool_catalog': GetToolCatalogEvent;
   'ping': PingEvent;
   'delete_chat_session': DeleteChatSessionEvent;
+  'client_wants_cancel': ClientWantsCancelEvent;
 }
 
 /**
@@ -131,6 +134,7 @@ export interface ServerEventMap {
   'openai_user_message': OpenAIUserMessageEvent;
   'subsession_started': SubsessionStartedEvent;
   'subsession_ended': SubsessionEndedEvent;
+  'cancelled': CancelledEvent;
 }
 
 /**
@@ -191,7 +195,8 @@ export class EventRegistry {
     'get_voices',
     'get_tool_catalog',
     'ping',
-    'delete_chat_session'
+    'delete_chat_session',
+    'client_wants_cancel'
   ]);
 
   private static readonly serverEventTypes = new Set<string>([
@@ -231,7 +236,8 @@ export class EventRegistry {
     'anthropic_user_message',
     'openai_user_message',
     'subsession_started',
-    'subsession_ended'
+    'subsession_ended',
+    'cancelled'
   ]);
 
   /**
