@@ -341,3 +341,15 @@ class ChatSessionDeletedEvent(BaseEvent):
         session_id (Optional[str]): The ID of the session to rename, if not set the current session is used.
     """
     session_id: Optional[str] = None
+
+class ClientWantsCancelEvent(BaseEvent):
+    """
+    Event sent by the client to notify that it wants to cancel the current agent response.
+    """
+    pass
+
+class CancelledEvent(BaseEvent):
+    """
+    Event sent by the server to notify that the current agent response has been cancelled.
+    """
+    pass

@@ -22,7 +22,7 @@ from agent_c.util.registries.event import EventRegistry
 from agent_c_api.api.rt.models.control_events import GetAgentsEvent, ErrorEvent, AgentListEvent, GetAvatarsEvent, AvatarListEvent, TextInputEvent, SetAvatarEvent, AvatarConnectionChangedEvent, \
     SetAgentEvent, AgentConfigurationChangedEvent, SetAvatarSessionEvent, ChatSessionChangedEvent, ResumeChatSessionEvent, \
     NewChatSessionEvent, SetAgentVoiceEvent, AgentVoiceChangedEvent, UserTurnStartEvent, UserTurnEndEvent, GetUserSessionsEvent, GetUserSessionsResponseEvent, PingEvent, PongEvent, \
-    GetToolCatalogEvent, ToolCatalogEvent, ChatUserDataEvent, GetVoicesEvent, VoiceListEvent, ChatSessionAddedEvent, DeleteChatSessionEvent
+    GetToolCatalogEvent, ToolCatalogEvent, ChatUserDataEvent, GetVoicesEvent, VoiceListEvent, ChatSessionAddedEvent, DeleteChatSessionEvent, ClientWantsCancelEvent, CancelledEvent
 from agent_c_api.api.rt.models.control_events import SetChatSessionNameEvent, SetSessionMessagesEvent, ChatSessionNameChangedEvent, SetSessionMetadataEvent, SessionMetadataChangedEvent
 from agent_c_api.core.agent_bridge import AgentBridge
 from agent_c.models.input import AudioInput
@@ -86,6 +86,11 @@ class RealtimeBridge(AgentBridge):
     @handle_client_event.register
     async def _(self, _: GetAgentsEvent) -> None:
         await self.send_agent_list()
+
+    @handle_client_event.register
+    async def _(self, _: ClientWantsCancelEvent) -> None:
+        self.client_wants_cancel.set()
+        await self.send_event(CancelledEvent())
 
     @handle_client_event.register
     async def _(self, event: DeleteChatSessionEvent):
