@@ -13,7 +13,8 @@
     "dev": "lerna run --parallel dev",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "install:clean": "pnpm install --frozen-lockfile"
+    "install:clean": "pnpm install --frozen-lockfile",
+    "test:detailed": "vitest run --reporter verbose"
   },
   "devDependencies": {
     "@eslint/js": "^9.34.0",
