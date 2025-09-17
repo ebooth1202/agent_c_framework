@@ -1,5 +1,5 @@
-from typing import Optional, Dict, Any, TYPE_CHECKING, List
-from fastapi import APIRouter, HTTPException, Depends, WebSocket, Request
+from typing import Optional, Dict, Any, TYPE_CHECKING
+from fastapi import APIRouter, HTTPException, Depends, WebSocket, Request, Form
 from fastapi.responses import JSONResponse
 
 
@@ -33,7 +33,10 @@ async def login(login_request: UserLoginRequest,
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     # Get config data
-    heygen_token = await heygen_client.create_streaming_access_token()
+    if heygen_client is not None:
+        heygen_token = await heygen_client.create_streaming_access_token()
+    else:
+        heygen_token = None
 
     return RealtimeLoginResponse(agent_c_token=login_response.token,
                                  heygen_token=heygen_token,
@@ -76,7 +79,7 @@ async def initialize_realtime_session(websocket: WebSocket,
 
 
 @router.post("/cancel")
-async def cancel_chat(request: Request, ui_session_id: str):
+async def cancel_chat(request: Request, ui_session_id: str = Form(...)):
     """
     Endpoint for cancelling an ongoing chat interaction.
 
