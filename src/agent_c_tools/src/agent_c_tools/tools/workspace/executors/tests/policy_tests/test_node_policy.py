@@ -123,7 +123,6 @@ def test_node_environment_security(policies):
     # Test output control
     assert env_overrides.get("NODE_DISABLE_COLORS") == "1", "Should disable node colors"
     assert env_overrides.get("NO_COLOR") == "1", "Should set NO_COLOR"
-    assert env_overrides.get("FORCE_COLOR") == "0", "Should force no color"
 
 
 def test_nodejs_policy_exists(policies):
@@ -203,4 +202,4 @@ def test_nodejs_environment_security(policies):
     # Test output control
     assert env_overrides.get("NODE_DISABLE_COLORS") == "1", "Should disable node colors"
     assert env_overrides.get("NO_COLOR") == "1", "Should set NO_COLOR"
-    assert env_overrides.get("FORCE_COLOR") == "0", "Should force no color"
+

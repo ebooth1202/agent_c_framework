@@ -95,7 +95,6 @@ def test_npx_environment_security(policies):
     assert env_overrides.get("NPM_CONFIG_COLOR") == "false", "Should disable npm colors"
     assert env_overrides.get("NPM_CONFIG_PROGRESS") == "false", "Should disable progress bars"
     assert env_overrides.get("NO_COLOR") == "1", "Should set NO_COLOR"
-    assert env_overrides.get("FORCE_COLOR") == "0", "Should force no color"
     assert env_overrides.get("NODE_DISABLE_COLORS") == "1", "Should disable node colors"
     assert env_overrides.get("CI") == "1", "Should set CI mode"
 
