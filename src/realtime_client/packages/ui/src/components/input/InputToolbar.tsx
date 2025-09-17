@@ -1,3 +1,5 @@
+"use client"
+
 /**
  * InputToolbar Component
  * 
@@ -15,8 +17,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/
 import { 
   Paperclip, 
   Wrench, 
-  Send
+  Send,
+  Square
 } from "lucide-react"
+import { useRealtimeClient, useTurnState } from "@agentc/realtime-react"
 
 // Import actual components
 import { MicrophoneButton } from "./MicrophoneButton"
@@ -136,7 +140,7 @@ const ToolsButton: React.FC<{ onClick?: () => void }> = ({ onClick }) => (
  * Main toolbar with three sections:
  * - Left: Attachments, Tools, OutputSelector (controls how AGENT responds)
  * - Center: Microphone controls with audio level
- * - Right: AgentSelector (which agent to talk to) and Send button
+ * - Right: AgentSelector (which agent to talk to) and Send/Cancel button
  */
 export const InputToolbar = React.forwardRef<HTMLDivElement, InputToolbarProps>(
   ({ 
@@ -154,6 +158,97 @@ export const InputToolbar = React.forwardRef<HTMLDivElement, InputToolbarProps>(
     className,
     ...props 
   }, ref) => {
+    // Get the realtime client and turn state
+    const client = useRealtimeClient();
+    const { canSendInput } = useTurnState();
+    
+    // Track cancellation state
+    const [isCancelled, setIsCancelled] = React.useState(false);
+    
+    // Check if cancel functionality is available
+    const hasCancelSupport = React.useMemo(() => {
+      return client && typeof (client as any).cancelResponse === 'function';
+    }, [client]);
+    
+    // Listen for response-cancelled event
+    React.useEffect(() => {
+      if (!client) return;
+      
+      const handleResponseCancelled = () => {
+        setIsCancelled(true);
+      };
+      
+      // Reset cancelled state when turn changes to user
+      const handleTurnChange = () => {
+        if (canSendInput) {
+          setIsCancelled(false);
+        }
+      };
+      
+      // Listen for the response-cancelled event
+      // Note: This event may come from SessionManager or EventStreamProcessor
+      const sessionManager = client.getSessionManager();
+      if (sessionManager) {
+        // Try to listen for the event, but handle gracefully if not available
+        try {
+          (sessionManager as any).on('response-cancelled', handleResponseCancelled);
+        } catch (e) {
+          // Event may not be available yet
+          console.debug('response-cancelled event not available on SessionManager');
+        }
+      }
+      
+      // Also try listening directly on the client for the event
+      try {
+        (client as any).on('response-cancelled', handleResponseCancelled);
+      } catch (e) {
+        // Event may not be available yet
+        console.debug('response-cancelled event not available on client');
+      }
+      
+      // Clean up when turn changes
+      handleTurnChange();
+      
+      return () => {
+        if (sessionManager) {
+          try {
+            (sessionManager as any).off('response-cancelled', handleResponseCancelled);
+          } catch (e) {
+            // Ignore cleanup errors
+          }
+        }
+        try {
+          (client as any).off('response-cancelled', handleResponseCancelled);
+        } catch (e) {
+          // Ignore cleanup errors  
+        }
+      };
+    }, [client, canSendInput]);
+    
+    // Determine button state
+    const isAgentResponding = !canSendInput;
+    const showCancelButton = hasCancelSupport && (isAgentResponding || isCancelled);
+    
+    // Handle button click
+    const handleButtonClick = React.useCallback(() => {
+      if (showCancelButton && hasCancelSupport) {
+        // Cancel the agent response
+        console.debug(`[${Date.now()}] Cancel button clicked in UI`);
+        try {
+          (client as any).cancelResponse();
+          console.debug(`[${Date.now()}] cancelResponse() called from UI`);
+        } catch (e) {
+          console.error(`[${Date.now()}] Failed to cancel response:`, e);
+        }
+      } else {
+        // Send the message
+        onSend();
+      }
+    }, [showCancelButton, hasCancelSupport, client, onSend]);
+    
+    // Determine button variant and animation
+    const buttonVariant = showCancelButton ? "destructive" : "default";
+    const shouldPulse = isAgentResponding && !isCancelled && hasCancelSupport;
     return (
       <div
         ref={ref}
@@ -199,15 +294,22 @@ export const InputToolbar = React.forwardRef<HTMLDivElement, InputToolbarProps>(
             className="min-w-[150px] max-w-[200px]"
           />
           
-          {/* Send Button */}
+          {/* Send/Cancel Button */}
           <Button
-            variant="default"
+            variant={buttonVariant}
             size="icon"
-            onClick={onSend}
-            disabled={!canSend}
-            aria-label="Send message"
+            onClick={handleButtonClick}
+            disabled={!showCancelButton && !canSend}
+            aria-label={showCancelButton ? "Cancel response" : "Send message"}
+            className={cn(
+              shouldPulse && "animate-pulse"
+            )}
           >
-            <Send className="h-4 w-4" />
+            {showCancelButton ? (
+              <Square className="h-4 w-4" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
           </Button>
         </div>
       </div>

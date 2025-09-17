@@ -184,6 +184,14 @@ export interface DeleteChatSessionEvent extends BaseClientEvent {
 }
 
 /**
+ * Request to cancel the current agent response
+ * Client sends this to notify it wants to cancel the current agent response
+ */
+export interface ClientWantsCancelEvent extends BaseClientEvent {
+  type: 'client_wants_cancel';
+}
+
+/**
  * Union type of all client events
  */
 export type ClientEvent =
@@ -207,7 +215,8 @@ export type ClientEvent =
   | PushToTalkStartEvent
   | PushToTalkEndEvent
   | SetVoiceInputModeEvent
-  | DeleteChatSessionEvent;
+  | DeleteChatSessionEvent
+  | ClientWantsCancelEvent;
 
 /**
  * Type guard to check if an object is a client event
@@ -234,6 +243,7 @@ export function isClientEvent(obj: unknown): obj is ClientEvent {
     'ptt_start',
     'ptt_end',
     'set_voice_input_mode',
-    'delete_chat_session'
+    'delete_chat_session',
+    'client_wants_cancel'
   ].includes((obj as any).type);
 }

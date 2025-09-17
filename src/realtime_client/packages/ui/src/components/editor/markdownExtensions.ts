@@ -126,8 +126,11 @@ export function getMarkdownExtensions(options: {
   onImageUploadError?: (error: Error) => void;
 } = {}) {
   return [
-    // StarterKit bundles most of what we need - no configuration needed
-    StarterKit,
+    // StarterKit bundles most of what we need
+    // Disable codeBlock since we're using CodeBlockLowlight for syntax highlighting
+    StarterKit.configure({
+      codeBlock: false,  // Disable to avoid conflict with CodeBlockLowlight
+    }),
     
     // Typography extension for smart quotes and other text transformations
     Typography,

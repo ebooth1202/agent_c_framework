@@ -245,7 +245,7 @@ export interface CompletionOptions {
 /**
  * Stop reason for completions
  */
-export type StopReason = 'stop' | 'length' | 'tool_calls';
+export type StopReason = 'stop' | 'length' | 'tool_calls' | 'cancelled';
 
 /**
  * Severity levels for system messages

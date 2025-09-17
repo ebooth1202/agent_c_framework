@@ -3,7 +3,7 @@
  * Manages partial messages until CompletionEvent
  */
 
-import { Message, ToolCall, StopReason } from './types/CommonTypes';
+import { Message, ToolCall, ToolResult, StopReason } from './types/CommonTypes';
 import { Logger } from '../utils/logger';
 
 /**
@@ -16,6 +16,7 @@ export interface EnhancedMessage extends Message {
   contentType?: 'text' | 'html' | 'svg' | 'image' | 'unknown';
   metadata?: MessageMetadata;
   toolCalls?: ToolCall[];
+  toolResults?: ToolResult[];
   isCollapsed?: boolean; // For thoughts
 }
 
@@ -27,6 +28,7 @@ export interface MessageMetadata {
   outputTokens?: number;
   stopReason?: StopReason;
   toolCalls?: ToolCall[];
+  toolResults?: ToolResult[];
   sentByClass?: string;
   sentByFunction?: string;
   timestamp?: string;
@@ -106,7 +108,8 @@ export class MessageBuilder {
       status: 'complete',
       format: this.currentMessage.format || 'text',
       metadata: metadata || {},
-      toolCalls: metadata?.toolCalls
+      toolCalls: metadata?.toolCalls,
+      toolResults: metadata?.toolResults
     };
     
     // Set collapsed state for thoughts by default

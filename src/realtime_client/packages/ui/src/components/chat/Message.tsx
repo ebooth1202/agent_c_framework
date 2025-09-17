@@ -12,7 +12,6 @@ import remarkGfm from 'remark-gfm'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Message as SDKMessage, MessageContent, ContentPart } from '@agentc/realtime-core'
 import { MessageContentRenderer } from './MessageContentRenderer'
-import { ToolCallResultList } from './ToolCallResult'
 import { Logger } from '../../utils/logger'
 
 export interface MessageData extends SDKMessage {
@@ -390,16 +389,6 @@ const Message = React.forwardRef<HTMLDivElement, MessageProps>(
             <div className="text-[0.9375rem] leading-6 tracking-tight">
               {renderContent()}
             </div>
-            
-            {/* Tool call results - only for assistant messages */}
-            {isAssistant && message.toolCalls && message.toolCalls.length > 0 && (
-              <div className="mt-3">
-                <ToolCallResultList
-                  toolCalls={message.toolCalls}
-                  toolResults={message.toolResults}
-                />
-              </div>
-            )}
             
             {/* Edit controls for user messages */}
             {isEditing && isUser && (
