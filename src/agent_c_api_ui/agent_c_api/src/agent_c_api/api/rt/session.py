@@ -36,7 +36,7 @@ async def login(login_request: UserLoginRequest,
     if heygen_client is not None:
         heygen_token = await heygen_client.create_streaming_access_token()
     else:
-        heygen_token = None
+        heygen_token = "None"
 
     return RealtimeLoginResponse(agent_c_token=login_response.token,
                                  heygen_token=heygen_token,
