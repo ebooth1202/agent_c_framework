@@ -599,7 +599,9 @@ class RealtimeBridge(AgentBridge):
                 "prompt_metadata": prompt_metadata,
                 "client_wants_cancel": self.client_wants_cancel,
                 "streaming_callback": on_event  if on_event else self.runtime_callback,
-                'tool_context': {'active_agent': self.chat_session.agent_config, 'bridge': self},
+                'tool_context': {'active_agent': self.chat_session.agent_config,
+                                 'bridge': self,
+                                 "client_wants_cancel": self.client_wants_cancel},
                 'prompt_builder': PromptBuilder(sections=agent_sections),
             }
 
