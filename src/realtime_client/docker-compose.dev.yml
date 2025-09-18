@@ -1,0 +1,25 @@
+version: '3.8'
+
+# Development overrides for docker-compose.yml
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  demo-app:
+    # Build with development cache mount for faster rebuilds
+    build:
+      target: builder  # Stop at builder stage for development
+      cache_from:
+        - agentc-realtime-demo:dev-cache
+    image: agentc-realtime-demo:dev
+    environment:
+      - NODE_ENV=development
+      # Enable Next.js development features
+      - NEXT_TELEMETRY_DISABLED=1
+    # Mount source code for hot reload (if needed)
+    volumes:
+      # Bind mount source code for development
+      # Note: This requires rebuilding node_modules inside container
+      - ./packages/demo/src:/app/packages/demo/src:ro
+      - ./packages/demo/public:/app/packages/demo/public:ro
+    # Use development command
+    command: ["pnpm", "dev:http"]  # Use HTTP in Docker (HTTPS handled by reverse proxy)
