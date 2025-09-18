@@ -71,3 +71,16 @@ jobs:
             ghcr.io/${{ env.OWNER }}/agent_c_frontend_dev:build-${{ github.run_number }}
             ghcr.io/${{ env.OWNER }}/agent_c_frontend_dev:${{ env.SHORT_SHA }}
             ghcr.io/${{ env.OWNER }}/agent_c_frontend_dev:${{ env.DATE }}
+
+      - name: Build and push Realtime Client Demo image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./src/realtime_client
+          file: ./src/realtime_client/Dockerfile
+          # Only push when not a PR
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ghcr.io/${{ env.OWNER }}/agent_c_realtime_demo:latest
+            ghcr.io/${{ env.OWNER }}/agent_c_realtime_demo:build-${{ github.run_number }}
+            ghcr.io/${{ env.OWNER }}/agent_c_realtime_demo:${{ env.SHORT_SHA }}
+            ghcr.io/${{ env.OWNER }}/agent_c_realtime_demo:${{ env.DATE }}
