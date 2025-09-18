@@ -13,6 +13,19 @@ Core SDK for Agent C Realtime platform. Provides WebSocket-based real-time commu
 - 🔐 **Flexible Authentication** - Development and production patterns
 - ♻️ **Automatic Reconnection** - Resilient connection management
 
+## 📚 Documentation
+
+For comprehensive documentation, API reference, and advanced usage:
+
+- **[Complete API Reference](../../docs/api-reference/core/)** - Full documentation for all classes and methods
+- **[RealtimeClient Guide](../../docs/api-reference/core/RealtimeClient.md)** - Main client API and configuration
+- **[Authentication Guide](../../docs/api-reference/core/AuthManager.md)** - Authentication patterns and token management
+- **[Event System Reference](../../docs/api-reference/core/EventSystem.md)** - Complete event types and handlers
+- **[Audio System](../../docs/api-reference/core/AudioInput.md)** - Audio input, output, and processing
+- **[Turn Management](../../docs/api-reference/core/TurnManager.md)** - Conversation flow control
+- **[Session Management](../../docs/api-reference/core/SessionManager.md)** - Chat session handling
+- **[TypeScript Types](../../docs/api-reference/core/Types.md)** - Full type definitions
+
 ## Installation
 
 ```bash
@@ -140,130 +153,75 @@ client.on('audio:output', (audioData: ArrayBuffer) => {
 });
 ```
 
-## API Reference
+## Key APIs
 
 ### RealtimeClient
 
-Main client for WebSocket communication.
+The main client for WebSocket communication. [See full documentation →](../../docs/api-reference/core/RealtimeClient.md)
 
 ```typescript
-class RealtimeClient {
-  constructor(config: RealtimeConfig);
-  
-  // Connection
-  connect(): Promise<void>;
-  disconnect(): Promise<void>;
-  isConnected(): boolean;
-  
-  // Messaging
-  sendText(text: string): Promise<void>;
-  
-  // Audio
-  startAudioStream(): Promise<void>;
-  stopAudioStream(): Promise<void>;
-  
-  // Events
-  on(event: string, handler: Function): void;
-  off(event: string, handler: Function): void;
-  emit(event: string, data?: any): void;
-  
-  // Session
-  createSession(name?: string): Promise<ChatSession>;
-  switchSession(sessionId: string): Promise<void>;
-  
-  // Voice
-  setVoiceModel(voiceId: string): Promise<void>;
-  getVoiceModel(): string;
-}
+const client = new RealtimeClient({
+  apiUrl: string,
+  authManager: AuthManager,
+  audioConfig?: AudioConfig,
+  connectionConfig?: ConnectionConfig
+});
+
+// Core methods
+await client.connect();
+await client.sendText('Hello!');
+await client.startAudioStream();
 ```
 
 ### AuthManager
 
-Handles authentication and token management.
+Handles authentication and token lifecycle. [See full documentation →](../../docs/api-reference/core/AuthManager.md)
 
 ```typescript
-class AuthManager {
-  constructor(config?: AuthConfig);
-  
-  // Development mode - direct login
-  login(credentials: LoginCredentials): Promise<LoginResponse>;
-  
-  // Production mode - token initialization
-  initializeFromPayload(payload: TokenPayload): Promise<void>;
-  
-  // Token management
-  getToken(): string | null;
-  getWebSocketUrl(): string;
-  isAuthenticated(): boolean;
-  
-  // Events
-  on('token-expiring', handler: Function): void;
-  on('token-refreshed', handler: Function): void;
-}
+const authManager = new AuthManager({ apiUrl });
+
+// Development mode
+await authManager.login({ username, password });
+
+// Production mode
+await authManager.initializeFromPayload(tokenPayload);
 ```
 
 ### Event System
 
-Comprehensive event types for all interactions:
+Comprehensive typed events for all interactions. [See full event reference →](../../docs/api-reference/core/events.md)
 
 ```typescript
-// Connection events
-client.on('connected', (event: ConnectedEvent) => {});
-client.on('disconnected', (event: DisconnectedEvent) => {});
-client.on('error', (event: ErrorEvent) => {});
+// Message streaming
+client.on('text:delta', (event) => { /* partial text */ });
+client.on('text:complete', (event) => { /* full message */ });
 
-// Message events
-client.on('text:delta', (event: TextDeltaEvent) => {});
-client.on('text:complete', (event: TextCompleteEvent) => {});
-client.on('typing:start', (event: TypingStartEvent) => {});
-
-// Audio events
-client.on('audio:output', (data: ArrayBuffer) => {});
-client.on('audio:start', (event: AudioStartEvent) => {});
-client.on('audio:stop', (event: AudioStopEvent) => {});
+// Audio streaming
+client.on('audio:output', (data: ArrayBuffer) => { /* audio data */ });
 
 // Turn management
-client.on('user_turn_start', (event: UserTurnStartEvent) => {});
-client.on('agent_turn_start', (event: AgentTurnStartEvent) => {});
+client.on('user_turn_start', () => { /* user can speak */ });
+client.on('agent_turn_start', () => { /* agent speaking */ });
 ```
 
 ## Configuration
 
-### RealtimeConfig
+For detailed configuration options, see the [Client Configuration Guide](../../docs/api-reference/core/ClientConfig.md).
+
+### Basic Configuration
 
 ```typescript
-interface RealtimeConfig {
-  apiUrl: string;              // WebSocket URL
-  authManager: AuthManager;    // Auth manager instance
-  
-  audioConfig?: {
-    enableAudio?: boolean;      // Enable audio features
-    enableVAD?: boolean;        // Voice Activity Detection
-    vadThreshold?: number;      // VAD sensitivity (0-1)
-    sampleRate?: number;        // Audio sample rate
-    echoCancellation?: boolean; // Echo cancellation
-    noiseSuppression?: boolean; // Noise suppression
-  };
-  
-  connectionConfig?: {
-    autoReconnect?: boolean;    // Auto-reconnect on disconnect
-    maxReconnectAttempts?: number;
-    reconnectDelay?: number;    // Base delay in ms
-    heartbeatInterval?: number; // Keepalive interval
-  };
-  
-  debug?: boolean;              // Enable debug logging
-}
-```
-
-### AuthConfig
-
-```typescript
-interface AuthConfig {
-  apiUrl?: string;              // API base URL
-  tokenRefreshBuffer?: number;  // Seconds before expiry to refresh
-  storage?: 'memory' | 'session'; // Token storage location
-}
+const client = new RealtimeClient({
+  apiUrl: 'wss://api.agentc.ai/realtime',
+  authManager: authManager,
+  audioConfig: {
+    enableAudio: true,
+    enableVAD: true
+  },
+  connectionConfig: {
+    autoReconnect: true
+  }
+});
 ```
 
 ## Audio System
@@ -308,127 +266,29 @@ client.on('agent_turn_start', () => {
 });
 ```
 
-## Advanced Usage
+## Advanced Topics
 
-### Custom Event Handlers
+For advanced usage patterns and detailed guides:
 
-```typescript
-// Create event aggregator
-class MessageAggregator {
-  private chunks: Map<string, string[]> = new Map();
-  
-  constructor(client: RealtimeClient) {
-    client.on('text:delta', this.handleDelta.bind(this));
-    client.on('text:complete', this.handleComplete.bind(this));
-  }
-  
-  private handleDelta(event: TextDeltaEvent) {
-    if (!this.chunks.has(event.messageId)) {
-      this.chunks.set(event.messageId, []);
-    }
-    this.chunks.get(event.messageId)!.push(event.delta);
-  }
-  
-  private handleComplete(event: TextCompleteEvent) {
-    const chunks = this.chunks.get(event.messageId);
-    console.log('Full message:', chunks?.join(''));
-    this.chunks.delete(event.messageId);
-  }
-}
-```
-
-### Session Management
-
-```typescript
-// Create new session
-const session = await client.createSession('Customer Support');
-
-// List sessions
-const sessions = await client.getSessions();
-
-// Switch session
-await client.switchSession(session.id);
-
-// Session events
-client.on('session:created', (event) => {
-  console.log('New session:', event.session);
-});
-
-client.on('session:switched', (event) => {
-  console.log('Switched to:', event.session);
-});
-```
-
-### Voice Model Management
-
-```typescript
-// Get available voices
-client.on('voice_list', (event) => {
-  const voices = event.voices;
-  // [{ voice_id: 'nova', name: 'Nova', language: 'en-US' }, ...]
-});
-
-// Set voice model
-await client.setVoiceModel('nova');
-
-// Special modes
-await client.setVoiceModel('none');   // Text-only mode
-await client.setVoiceModel('avatar'); // Avatar handles audio
-```
-
-### Error Handling
-
-```typescript
-// Connection errors
-client.on('error', (event: ErrorEvent) => {
-  if (event.fatal) {
-    // Fatal error - requires user intervention
-    showErrorDialog(event.error);
-  } else {
-    // Non-fatal - will auto-retry
-    console.warn('Temporary error:', event.error);
-  }
-});
-
-// Reconnection handling
-client.on('reconnecting', (event) => {
-  showReconnectingUI(event.attempt, event.maxAttempts);
-});
-
-client.on('connected', () => {
-  hideReconnectingUI();
-  // Initialization events will follow
-});
-```
+- **[Message Handlers](../../docs/api-reference/core/AdvancedMessageHandlers.md)** - Custom message aggregation and processing
+- **[Session Management](../../docs/api-reference/core/SessionManager.md)** - Multi-session handling and persistence
+- **[Voice Management](../../docs/api-reference/core/VoiceManager.md)** - Voice model selection and configuration
+- **[Reconnection Strategies](../../docs/api-reference/core/ReconnectionManager.md)** - Connection resilience and recovery
+- **[Avatar Integration](../../docs/api-reference/core/AvatarManager.md)** - HeyGen avatar session management
+- **[Event Stream Processing](../../docs/api-reference/core/EventStreamProcessor.md)** - Advanced event handling patterns
 
 ## TypeScript Support
 
-Full TypeScript support with comprehensive types:
+Full TypeScript support with comprehensive type definitions. [See complete type reference →](../../docs/api-reference/core/Types.md)
 
 ```typescript
 import type {
   RealtimeClient,
   RealtimeConfig,
   AuthManager,
-  LoginCredentials,
-  LoginResponse,
-  TokenPayload,
   ChatMessage,
   ChatSession,
-  Voice,
-  Agent,
-  Avatar,
-  Tool,
-  UserProfile,
-  ConnectionState,
-  AudioState,
-  TurnState,
-  TextDeltaEvent,
-  TextCompleteEvent,
-  AudioOutputEvent,
-  ChatUserDataEvent,
-  VoiceListEvent,
-  AgentListEvent
+  // ... and many more
 } from '@agentc/realtime-core';
 ```
 
@@ -504,79 +364,42 @@ setInterval(() => {
 - Check authentication was successful
 - Verify WebSocket is connected
 
-## Examples
+## Example Usage
 
-### Simple Chat Bot
+For more examples and patterns, check the [examples directory](./examples) or see the comprehensive documentation.
 
-```typescript
-async function createChatBot() {
-  const authManager = new AuthManager();
-  await authManager.login({ username, password });
-  
-  const client = new RealtimeClient({
-    apiUrl: authManager.getWebSocketUrl(),
-    authManager
-  });
-  
-  await client.connect();
-  
-  // Wait for initialization
-  await new Promise(resolve => {
-    client.on('initialization:complete', resolve);
-  });
-  
-  // Chat bot logic
-  client.on('text:complete', async (event) => {
-    if (event.role === 'user') {
-      console.log('User said:', event.text);
-      
-      // Bot responds
-      if (event.text.toLowerCase().includes('help')) {
-        await client.sendText('How can I assist you today?');
-      }
-    }
-  });
-  
-  console.log('Chat bot ready!');
-}
-```
-
-### Voice Assistant
+### Voice-Enabled Chat
 
 ```typescript
-async function createVoiceAssistant() {
-  const client = new RealtimeClient({
-    apiUrl,
-    authManager,
-    audioConfig: {
-      enableAudio: true,
-      enableVAD: true,
-      vadThreshold: 0.3
-    }
-  });
-  
-  await client.connect();
-  
-  // Voice interaction
-  client.on('user_turn_start', () => {
-    console.log('Listening...');
-  });
-  
-  client.on('agent_turn_start', () => {
-    console.log('Agent speaking...');
-  });
-  
-  client.on('vad:speech_start', () => {
-    console.log('User started speaking');
-  });
-  
-  client.on('vad:speech_end', () => {
-    console.log('User stopped speaking');
-  });
-  
-  // Start listening
-  await client.startAudioStream();
-}
+import { AuthManager, RealtimeClient } from '@agentc/realtime-core';
+
+// Setup authentication
+const authManager = new AuthManager({ apiUrl: 'https://api.agentc.ai' });
+await authManager.login({ username, password });
+
+// Create client with voice support
+const client = new RealtimeClient({
+  apiUrl: authManager.getWebSocketUrl(),
+  authManager,
+  audioConfig: {
+    enableAudio: true,
+    enableVAD: true
+  }
+});
+
+// Connect and wait for initialization
+await client.connect();
+await new Promise(resolve => {
+  client.on('initialization:complete', resolve);
+});
+
+// Handle messages
+client.on('text:complete', (event) => {
+  console.log(`${event.role}: ${event.text}`);
+});
+
+// Start voice conversation
+await client.startAudioStream();
 ```
 
 ## Contributing
@@ -587,9 +410,10 @@ See [Contributing Guide](../../CONTRIBUTING.md) for development setup and guidel
 
 MIT
 
-## Support
+## Resources
 
-- [Documentation](../../docs)
-- [API Reference](../../docs/api-reference/core)
-- [Examples](./examples)
-- [Issue Tracker](https://github.com/agentc/realtime-sdk/issues)
+- **[📚 Full Documentation](../../docs/api-reference/core/)** - Complete API reference and guides
+- **[🎯 Quick Start Guide](../../docs/api-reference/core/index.md)** - Get up and running quickly
+- **[💡 Examples](./examples)** - Sample implementations and patterns
+- **[🧪 Testing Guide](../../docs/testing_standards_and_architecture.md)** - Testing approaches and standards
+- **[🔧 API Implementation Guide](../../docs/../api/docs/realtime_api_implementation_guide.md)** - Server API specification
