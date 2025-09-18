@@ -365,8 +365,7 @@ class RealtimeBridge(AgentBridge):
 
         model_dump = event.model_dump()
         if 'session_id' in model_dump:
-            if self.chat_session.session_id not in [model_dump['session_id'], model_dump['user_session_id']]:
-                self.logger.warning(f"Event session_id {model_dump['session_id']} does not match current session {self.chat_session.session_id}")
+            if self.chat_session.session_id not in [model_dump['session_id'], model_dump.get('user_session_id', "nousersession")]:
                 return
 
         try:
