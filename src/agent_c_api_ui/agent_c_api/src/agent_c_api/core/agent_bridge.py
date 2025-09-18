@@ -1013,7 +1013,7 @@ class AgentBridge:
                 "output_format": DEFAULT_OUTPUT_FORMAT,
                 "client_wants_cancel": client_wants_cancel,
                 "streaming_callback": self.streaming_callback_with_logging,
-                'tool_context': {'active_agent': self.chat_session.agent_config},
+                'tool_context': {'active_agent': self.chat_session.agent_config, 'client_wants_cancel': client_wants_cancel},
                 'prompt_builder': PromptBuilder(sections=agent_sections),
                 'bridge': self
             }

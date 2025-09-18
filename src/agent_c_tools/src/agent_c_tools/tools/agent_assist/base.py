@@ -119,20 +119,27 @@ class AgentAssistToolBase(Toolset):
         client_wants_cancel = opts.get('client_wants_cancel')
         parent_streaming_callback = self.streaming_callback
 
-        if opts:
-            parent_tool_context = opts.get('parent_tool_context', None)
-            if parent_tool_context is not None:
-                client_wants_cancel = opts['parent_tool_context'].get('client_wants_cancel', client_wants_cancel)
-                parent_streaming_callback = opts['parent_tool_context'].get('streaming_callback', self.streaming_callback)
 
-            tool_context = opts.get("tool_call_context", {})
-            tool_context['active_agent'] = agent
-            opts['tool_call_context'] = tool_context
+        parent_tool_context = opts.get('parent_tool_context', None)
+        if parent_tool_context is not None:
+            client_wants_cancel = opts['parent_tool_context'].get('client_wants_cancel', None)
+            parent_streaming_callback = opts['parent_tool_context'].get('streaming_callback', self.streaming_callback)
+
+        tool_context = opts.get("tool_context", {})
+        tool_context['active_agent'] = agent
+        tool_context['client_wants_cancel'] = client_wants_cancel
+        tool_context['streaming_callback'] = parent_streaming_callback
+
+        opts['tool_call_context'] = tool_context
+        if client_wants_cancel is None:
+            client_wants_cancel = tool_context.get('client_wants_cancel', None)
 
         agent_session_id = opts.get('agent_session_id', MnemonicSlugs.generate_id_slug(2))
         parent_session_id = opts.get('parent_session_id', None)
 
         prompt_metadata = await self.__build_prompt_metadata(agent, user_session_id, **opts)
+        prompt_metadata['tool_context'] = tool_context
+
         chat_params = {"prompt_metadata": prompt_metadata, "output_format": 'raw',
                        "streaming_callback": partial(self._streaming_callback_for_subagent, agent, parent_streaming_callback, user_session_id),
                        "client_wants_cancel": client_wants_cancel, "tool_chest": self.tool_chest,

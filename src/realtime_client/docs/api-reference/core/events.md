@@ -2,656 +2,440 @@
 
 ## Overview
 
-The Agent C Realtime SDK uses a comprehensive event-driven architecture. All data flows through events, from initialization to real-time interactions.
+The Agent C Realtime SDK uses a comprehensive event-driven architecture. All data flows through events, from authentication and initialization to real-time chat interactions and audio streaming.
 
-## Event Categories
+## Event Architecture
 
-### Initialization Events (Automatic)
+The SDK handles three types of events:
 
-These 6 events are automatically sent by the server immediately after WebSocket connection:
+1. **Server Events** - Events sent from the Agent C Realtime API to the client
+2. **Client Events** - Commands sent from the client to control the server
+3. **SDK Events** - Events emitted locally by the SDK for application use
 
-| Event | Description | Timing |
-|-------|-------------|--------|
-| `chat_user_data` | User profile information | ~100ms after connect |
-| `voice_list` | Available voice models | ~100ms after connect |
-| `agent_list` | Available agents | ~100ms after connect |
-| `avatar_list` | Available avatars | ~100ms after connect |
-| `tool_catalog` | Available tools | ~100ms after connect |
-| `chat_session_changed` | Current chat session | ~100ms after connect |
-| `initialization:complete` | All data received | After all above events |
+## Server → Client Events
 
-### Connection Events
+These events are sent from the Agent C Realtime API to update the client. They follow the BaseEvent/SessionEvent inheritance model.
 
-| Event | Description | Payload |
-|-------|-------------|---------|
-| `connecting` | WebSocket connecting | `{ attempt: number }` |
-| `connected` | WebSocket connected | `{ sessionId: string }` |
-| `disconnected` | WebSocket disconnected | `{ reason: string, code: number }` |
-| `reconnecting` | Attempting reconnection | `{ attempt: number, maxAttempts: number }` |
-| `error` | Connection error | `{ error: Error, fatal: boolean }` |
+### Control Events (BaseEvent)
 
-### Message Events
+Control events manage system configuration and session lifecycle. They inherit directly from BaseEvent.
+
+#### Initialization Events (Auto-sent on connect)
+
+The server automatically sends exactly 7 initialization events in sequence immediately after WebSocket connection:
 
 | Event | Description | Payload |
 |-------|-------------|---------|
-| `text:delta` | Streaming text chunk | `{ delta: string, messageId: string }` |
-| `text:complete` | Complete message | `{ text: string, messageId: string, role: 'user' \| 'agent' }` |
-| `typing:start` | Agent started typing | `{ agentId: string }` |
-| `typing:stop` | Agent stopped typing | `{ agentId: string }` |
-| `message:error` | Message send failed | `{ error: string, messageId: string }` |
+| `chat_user_data` | User profile information | `{ user: User }` |
+| `avatar_list` | Available HeyGen avatars | `{ avatars: Avatar[] }` |
+| `voice_list` | Available TTS voices | `{ voices: Voice[] }` |
+| `agent_list` | Available AI agents | `{ agents: Agent[] }` |
+| `tool_catalog` | Available agent tools | `{ tools: Tool[] }` |
+| `chat_session_changed` | Current chat session | `{ chat_session: ChatSession }` |
+| `user_turn_start` | **READY SIGNAL** - Server ready for input | `{}` |
 
-### Audio Events
+**⚠️ IMPORTANT:** Clients MUST wait for `user_turn_start` before sending any input (text or audio).
+
+#### Agent Events
 
 | Event | Description | Payload |
 |-------|-------------|---------|
-| `audio:output` | Binary audio frame | `ArrayBuffer` (PCM16 audio data) |
-| `audio:start` | Audio stream started | `{ sampleRate: number, channels: number }` |
-| `audio:stop` | Audio stream stopped | `{ duration: number }` |
-| `audio:error` | Audio error | `{ error: string, code: string }` |
-| `vad:speech_start` | Speech detected | `{ timestamp: number }` |
-| `vad:speech_end` | Speech ended | `{ timestamp: number, duration: number }` |
+| `agent_configuration_changed` | Agent config updated | `{ agent_config: AgentConfiguration }` |
+
+#### Avatar Events
+
+| Event | Description | Payload |
+|-------|-------------|---------|
+| `avatar_connection_changed` | Avatar session status changed | `{ avatar_session_request: AvatarSessionRequest, avatar_session: AvatarSession }` |
+
+#### Session Management Events
+
+| Event | Description | Payload |
+|-------|-------------|---------|
+| `chat_session_name_changed` | Session renamed | `{ session_name: string, session_id?: string }` |
+| `session_metadata_changed` | Metadata updated | `{ meta: Record<string, any> }` |
+| `chat_session_added` | New session created | `{ chat_session: ChatSessionIndexEntry }` |
+| `chat_session_deleted` | Session deleted | `{ session_id?: string }` |
+| `get_user_sessions_response` | Response to session list request | `{ sessions: ChatSessionQueryResponse }` |
+
+#### Voice Events
+
+| Event | Description | Payload |
+|-------|-------------|---------|
+| `agent_voice_changed` | Agent's TTS voice changed | `{ voice: Voice }` |
+| `voice_input_supported` | Supported input modes | `{ modes: ('ptt' \| 'vad')[] }` |
+| `server_listening` | Server listening for audio | `{}` |
+
+#### Connection Events
+
+| Event | Description | Payload |
+|-------|-------------|---------|
+| `pong` | Response to ping | `{}` |
+| `error` | Error notification | `{ message: string, source?: string }` |
+| `cancelled` | Response cancelled confirmation | `{}` |
+
+### Session Events (SessionEvent)
+
+Session events are generated during chat interactions and include session context fields:
+- `session_id` - Current chat session ID
+- `role` - Role that triggered the event
+- `parent_session_id` - Parent session ID (if nested)
+- `user_session_id` - Top-level user session ID (if nested)
+
+#### Message Streaming Events
+
+| Event | Description | Payload |
+|-------|-------------|---------|
+| `text_delta` | Streaming assistant text | `{ content: string, format: MessageFormat }` + session fields |
+| `thought_delta` | Streaming assistant thoughts | `{ content: string, format: MessageFormat }` + session fields |
+| `history_delta` | Incremental history update | `{ messages: Message[] }` + session fields |
+
+#### Completion Events
+
+| Event | Description | Payload |
+|-------|-------------|---------|
+| `completion` | Generation status | `{ running: boolean, completion_options: CompletionOptions, stop_reason?: StopReason, input_tokens?: number, output_tokens?: number }` + session fields |
+| `interaction` | Interaction lifecycle | `{ started: boolean, id: string }` + session fields |
+
+#### History Events
+
+| Event | Description | Payload |
+|-------|-------------|---------|
+| `history` | Full message history | `{ vendor: string, messages: Message[] }` + session fields |
+| `system_prompt` | System instructions | `{ content: string, format: MessageFormat }` + session fields |
+| `user_request` | User input echo | `{ data: { message: string } }` + session fields |
+| `user_message` | Vendor-specific user message | `{ vendor: string, message?: any }` + session fields |
+| `anthropic_user_message` | Anthropic user message | `{ vendor: 'anthropic', message: any }` + session fields |
+| `openai_user_message` | OpenAI user message | `{ vendor: 'openai', message: any }` + session fields |
+
+#### Tool Events
+
+| Event | Description | Payload |
+|-------|-------------|---------|
+| `tool_select_delta` | Tool being selected | `{ tool_calls: ToolCall[] }` + session fields |
+| `tool_call` | Tool execution | `{ active: boolean, vendor: string, tool_calls: ToolCall[], tool_results?: ToolResult[] }` + session fields |
+| `render_media` | Media content | `{ content_type: string, content: string, foreign_content: boolean, url?: string, name?: string }` + session fields |
+
+**⚠️ SECURITY:** The `foreign_content` field in `render_media` indicates untrusted third-party content requiring sandboxing.
+
+#### System Events
+
+| Event | Description | Payload |
+|-------|-------------|---------|
+| `system_message` | System notification | `{ content: string, format: MessageFormat, severity?: Severity }` + session fields |
+| `subsession_started` | Nested session started | `{ sub_session_type: string, sub_agent_type: string, prime_agent_key: string, sub_agent_key: string }` + session fields |
+| `subsession_ended` | Nested session ended | `{}` + session fields |
 
 ### Turn Management Events
 
 | Event | Description | Payload |
 |-------|-------------|---------|
-| `user_turn_start` | User can speak | `{ timestamp: number }` |
-| `user_turn_end` | User should stop | `{ timestamp: number }` |
-| `agent_turn_start` | Agent is speaking | `{ agentId: string, timestamp: number }` |
-| `agent_turn_end` | Agent finished | `{ agentId: string, timestamp: number }` |
-| `turn:processing` | Processing user input | `{ timestamp: number }` |
+| `user_turn_start` | Server ready for user input | `{}` |
+| `user_turn_end` | User input received, processing | `{}` |
 
-### Session Events
+## Binary Audio Frames
+
+Binary data sent over the WebSocket is handled specially:
+
+### Audio Output (Server → Client)
+- **Format:** Raw PCM16 audio data or format specified by voice model
+- **Event:** Emitted as `audio:output` in the SDK
+- **Legacy Event:** Also emitted as `binary_audio` for backward compatibility
+
+### Audio Input (Client → Server)
+- **Format:** Raw PCM16 audio chunks (16-bit, mono, 16kHz recommended)
+- **Method:** Send via `client.sendBinaryFrame(audioData)`
+- **Processing:** Real-time speech-to-text conversion by server
+
+## Client → Server Events
+
+Commands sent from the client to control the server.
+
+### Agent Management
 
 | Event | Description | Payload |
 |-------|-------------|---------|
-| `session:created` | New session created | `{ session: ChatSession }` |
-| `session:switched` | Session changed | `{ session: ChatSession, previousId: string }` |
-| `session:updated` | Session updated | `{ session: ChatSession, changes: string[] }` |
-| `session:deleted` | Session deleted | `{ sessionId: string }` |
+| `get_agents` | Request agent list | `{}` |
+| `set_agent` | Set active agent | `{ agent_key: string }` |
 
-## Event Payload Details
+### Avatar Management
 
-### chat_user_data
+| Event | Description | Payload |
+|-------|-------------|---------|
+| `get_avatars` | Request avatar list | `{}` |
+| `set_avatar` | Create avatar session | `{ avatar_id: string, quality?: string, video_encoding?: string }` |
+| `set_avatar_session` | Connect to avatar | `{ access_token: string, avatar_session_id: string }` |
+| `clear_avatar_session` | End avatar session | `{ session_id: string }` |
 
-```typescript
-interface ChatUserDataEvent {
-  type: 'chat_user_data';
-  user: {
-    user_id: string;
-    display_name: string;
-    email: string;
-    created_at: number;
-    updated_at: number;
-    avatar_url?: string;
-    metadata?: Record<string, any>;
-    preferences?: {
-      theme?: 'light' | 'dark';
-      language?: string;
-      timezone?: string;
-    };
-  };
-}
+### Voice Management
+
+| Event | Description | Payload |
+|-------|-------------|---------|
+| `get_voices` | Request voice list | `{}` |
+| `set_agent_voice` | Set TTS voice | `{ voice_id: string }` |
+
+### Chat Management
+
+| Event | Description | Payload |
+|-------|-------------|---------|
+| `text_input` | Send text message | `{ text: string, file_ids?: string[] }` |
+| `new_chat_session` | Create new session | `{ agent_key?: string }` |
+| `resume_chat_session` | Resume session | `{ session_id: string }` |
+| `set_chat_session_name` | Rename session | `{ session_name: string, session_id?: string }` |
+| `set_session_metadata` | Update metadata | `{ meta: Record<string, any> }` |
+| `set_session_messages` | Replace messages | `{ messages: Message[] }` |
+| `delete_chat_session` | Delete session | `{ session_id?: string }` |
+
+### Session Management
+
+| Event | Description | Payload |
+|-------|-------------|---------|
+| `get_user_sessions` | Request session list | `{ offset: number, limit: number }` |
+| `get_tool_catalog` | Request tool catalog | `{}` |
+
+### Audio Control
+
+| Event | Description | Payload |
+|-------|-------------|---------|
+| `ptt_start` | Start push-to-talk | `{}` |
+| `ptt_end` | End push-to-talk | `{}` |
+| `set_voice_input_mode` | Set input mode | `{ mode: 'ptt' \| 'vad' }` |
+
+### Connection Management
+
+| Event | Description | Payload |
+|-------|-------------|---------|
+| `ping` | Health check | `{}` |
+| `client_wants_cancel` | Cancel current response | `{}` |
+
+## SDK-Emitted Events
+
+Events generated locally by the SDK for application use.
+
+### Connection Lifecycle
+
+| Event | Description | Payload |
+|-------|-------------|---------|
+| `connected` | WebSocket connected | `undefined` |
+| `disconnected` | WebSocket disconnected | `{ code: number, reason: string }` |
+| `reconnecting` | Attempting reconnection | `{ attempt: number, delay: number }` |
+| `reconnected` | Successfully reconnected | `undefined` |
+| `initialized` | All initialization events received | `undefined` |
+
+### Session Manager Events
+
+| Event | Description | Payload |
+|-------|-------------|---------|
+| `session-changed` | Current session changed | `{ session: ChatSession, previousId?: string }` |
+| `sessions-updated` | Session list updated | `{ sessions: ChatSession[] }` |
+| `sessions-index-updated` | Session index updated | `{ index: ChatSessionQueryResponse }` |
+| `message-added` | Message added to session | `{ message: Message, sessionId: string }` |
+| `message-streaming` | Message being streamed | `{ content: string, messageId: string, role: string }` |
+| `message-complete` | Message completed | `{ message: Message, messageId: string }` |
+| `tool-notification` | Tool being executed | `{ id: string, name: string, status: string, args?: any }` |
+| `tool-notification-removed` | Tool completed | `string` (notification ID) |
+| `tool-call-complete` | Tool call finished | `{ toolCall: ToolCall, result?: ToolResult }` |
+| `media-added` | Media content added | `{ media: RenderMediaEvent }` |
+| `system-notification` | System message | `{ message: string, severity?: string }` |
+| `user-message` | User message added | `{ message: Message }` |
+| `response-cancelled` | Response was cancelled | `{}` |
+| `session-messages-loaded` | Messages loaded in bulk | `{ messages: Message[], sessionId: string }` |
+| `session-cleared` | Session cleared | `{ sessionId: string }` |
+| `all-sessions-cleared` | All sessions cleared | `undefined` |
+| `request-user-sessions` | Need more sessions | `{ offset: number, limit: number }` |
+| `subsession-started` | Nested session started | `{ type: string, agentType: string, primeKey: string, subKey: string }` |
+| `subsession-ended` | Nested session ended | `{}` |
+
+### Authentication Events
+
+| Event | Description | Payload |
+|-------|-------------|---------|
+| `auth:login` | Login successful | `{ user: User, tokens: TokenPair }` |
+| `auth:logout` | Logout completed | `undefined` |
+| `auth:tokens-refreshed` | Tokens refreshed | `{ agentCToken: string, heygenToken: string }` |
+| `auth:error` | Auth error occurred | `{ error: Error }` |
+| `auth:state-changed` | Auth state changed | `{ isAuthenticated: boolean, user?: User }` |
+
+### Voice Manager Events
+
+| Event | Description | Payload |
+|-------|-------------|---------|
+| `voices-updated` | Voice list updated | `{ voices: Voice[] }` |
+| `voice-changed` | Current voice changed | `{ currentVoice: Voice \| null, previousVoice: Voice \| null, source: 'client' \| 'server' }` |
+
+### Avatar Manager Events
+
+| Event | Description | Payload |
+|-------|-------------|---------|
+| `avatar-session-started` | Avatar session started | `{ sessionId: string, avatarId: string }` |
+| `avatar-session-ended` | Avatar session ended | `{ sessionId: string }` |
+| `avatar-state-changed` | Avatar state changed | `{ active: boolean }` |
+
+### Turn Manager Events
+
+| Event | Description | Payload |
+|-------|-------------|---------|
+| `turn-state-changed` | Turn state changed | `{ canSendInput: boolean }` |
+
+### Audio Events
+
+| Event | Description | Payload |
+|-------|-------------|---------|
+| `audio:output` | Audio frame from server | `ArrayBuffer` |
+| `binary_audio` | Legacy audio event | `ArrayBuffer` |
+
+## Event Sequences
+
+### Connection and Initialization
+
+```mermaid
+sequenceDiagram
+    participant App
+    participant SDK
+    participant Server
+    
+    App->>SDK: connect()
+    SDK->>Server: WebSocket connect
+    SDK-->>App: connected event
+    
+    Note over Server: Send 7 init events
+    Server-->>SDK: chat_user_data
+    Server-->>SDK: avatar_list
+    Server-->>SDK: voice_list
+    Server-->>SDK: agent_list
+    Server-->>SDK: tool_catalog
+    Server-->>SDK: chat_session_changed
+    Server-->>SDK: user_turn_start
+    
+    SDK-->>App: initialized event
+    Note over App: Ready for interaction
 ```
 
-### voice_list
+### Message Flow
 
-```typescript
-interface VoiceListEvent {
-  type: 'voice_list';
-  voices: Array<{
-    voice_id: string;
-    name: string;
-    language: string;
-    gender: 'male' | 'female' | 'neutral';
-    preview_url?: string;
-    sample_rate: number;
-    style?: string;
-    description?: string;
-    is_premium?: boolean;
-  }>;
-}
+```mermaid
+sequenceDiagram
+    participant App
+    participant SDK
+    participant Server
+    
+    App->>SDK: sendText("Hello")
+    SDK->>Server: text_input
+    Server-->>SDK: user_turn_end
+    Server-->>SDK: interaction (started)
+    Server-->>SDK: text_delta (multiple)
+    SDK-->>App: message-streaming
+    Server-->>SDK: completion
+    SDK-->>App: message-complete
+    Server-->>SDK: interaction (ended)
+    Server-->>SDK: user_turn_start
 ```
 
-### agent_list
+## Usage Examples
 
-```typescript
-interface AgentListEvent {
-  type: 'agent_list';
-  agents: Array<{
-    id: string;
-    name: string;
-    description?: string;
-    avatar_url?: string;
-    capabilities: string[];
-    tools: string[];
-    voice_id?: string;
-    personality?: string;
-    is_default?: boolean;
-  }>;
-}
-```
-
-### avatar_list
-
-```typescript
-interface AvatarListEvent {
-  type: 'avatar_list';
-  avatars: Array<{
-    id: string;
-    name: string;
-    provider: 'heygen' | 'synthesia' | 'custom';
-    thumbnail_url?: string;
-    preview_url?: string;
-    gender?: string;
-    style?: string;
-    is_premium?: boolean;
-  }>;
-}
-```
-
-### tool_catalog
-
-```typescript
-interface ToolCatalogEvent {
-  type: 'tool_catalog';
-  tools: Array<{
-    id: string;
-    name: string;
-    description: string;
-    category: string;
-    parameters?: Record<string, any>;
-    required_permissions?: string[];
-    is_enabled: boolean;
-  }>;
-}
-```
-
-### chat_session_changed
-
-```typescript
-interface ChatSessionChangedEvent {
-  type: 'chat_session_changed';
-  session: {
-    id: string;
-    name?: string;
-    created_at: number;
-    updated_at: number;
-    message_count: number;
-    agent_id?: string;
-    metadata?: Record<string, any>;
-    is_active: boolean;
-  };
-  previous_session_id?: string;
-  reason: 'created' | 'switched' | 'resumed' | 'auto';
-}
-```
-
-## Listening to Events
-
-### Using RealtimeClient
+### TypeScript with RealtimeClient
 
 ```typescript
 import { RealtimeClient } from '@agentc/realtime-core';
 
 const client = new RealtimeClient(config);
 
-// Listen to specific events
-client.on('chat_user_data', (event) => {
-  console.log('User data received:', event.user);
+// Wait for initialization
+await client.connect();
+await client.waitForInitialization();
+
+// Listen to streaming text
+client.on('text_delta', (event) => {
+  console.log('Streaming:', event.content);
 });
 
-client.on('text:delta', (event) => {
-  console.log('Streaming text:', event.delta);
-});
-
+// Listen to audio output
 client.on('audio:output', (audioData: ArrayBuffer) => {
-  // Handle binary audio data
-  console.log('Audio frame size:', audioData.byteLength);
+  // Play PCM16 audio
+  audioPlayer.play(audioData);
 });
 
-// Listen to all events
-client.on('*', (eventName, eventData) => {
-  console.log(`Event ${eventName}:`, eventData);
+// Session manager events
+const sessionManager = client.getSessionManager();
+sessionManager?.on('message-complete', (event) => {
+  console.log('Message completed:', event.message);
 });
 
-// Remove listener
-const handler = (event) => console.log(event);
-client.on('text:complete', handler);
-client.off('text:complete', handler);
+// Send text when ready
+client.on('user_turn_start', () => {
+  client.sendText('Hello, assistant!');
+});
 ```
 
-### Using React Hooks
+### React with Hooks
 
 ```tsx
-import { useEventListener } from '@agentc/realtime-react';
+import { useRealtimeClient, useEventListener } from '@agentc/realtime-react';
 
-function MyComponent() {
-  const [userData, setUserData] = useState(null);
+function ChatComponent() {
+  const client = useRealtimeClient();
+  const [messages, setMessages] = useState([]);
   
-  useEventListener('chat_user_data', (event) => {
-    setUserData(event.user);
+  // Listen to message completion
+  useEventListener('message-complete', (event) => {
+    setMessages(prev => [...prev, event.message]);
   });
   
-  useEventListener('text:delta', (event) => {
-    console.log('Text delta:', event.delta);
-  }, []); // Dependencies array like useEffect
-  
-  return <div>{userData?.display_name}</div>;
-}
-```
-
-## Event Timing and Sequencing
-
-### Connection and Initialization Sequence
-
-```mermaid
-sequenceDiagram
-    participant Client
-    participant Server
-    
-    Client->>Server: WebSocket connect
-    Server-->>Client: connected
-    
-    Note over Server: Send initialization events in parallel
-    
-    par Initialization
-        Server-->>Client: chat_user_data
-    and
-        Server-->>Client: voice_list
-    and
-        Server-->>Client: agent_list
-    and
-        Server-->>Client: avatar_list
-    and
-        Server-->>Client: tool_catalog
-    and
-        Server-->>Client: chat_session_changed
-    end
-    
-    Server-->>Client: initialization:complete
-    
-    Note over Client: Ready for interaction
-```
-
-### Message Flow Sequence
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Client
-    participant Server
-    participant Agent
-    
-    User->>Client: Send message
-    Client->>Server: text message
-    Server-->>Client: message:received
-    Server->>Agent: Process message
-    Server-->>Client: typing:start
-    Agent->>Server: Generate response
-    
-    loop Streaming
-        Server-->>Client: text:delta
-    end
-    
-    Server-->>Client: text:complete
-    Server-->>Client: typing:stop
-```
-
-### Audio Conversation Sequence
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Client
-    participant Server
-    participant Agent
-    
-    User->>Client: Start recording
-    Client->>Server: audio:start
-    Server-->>Client: user_turn_start
-    
-    loop Audio streaming
-        Client->>Server: audio frames
-        Server-->>Client: vad:speech_start/end
-    end
-    
-    Client->>Server: audio:stop
-    Server-->>Client: user_turn_end
-    Server-->>Client: turn:processing
-    
-    Server->>Agent: Process audio
-    Agent->>Server: Generate response
-    
-    Server-->>Client: agent_turn_start
-    
-    loop Audio output
-        Server-->>Client: audio:output
-    end
-    
-    Server-->>Client: agent_turn_end
-```
-
-## Event Patterns
-
-### Progressive Data Loading
-
-```typescript
-// Initialize with progressive loading
-let initializationState = {
-  userData: false,
-  voices: false,
-  agents: false,
-  avatars: false,
-  tools: false,
-  session: false
-};
-
-client.on('chat_user_data', (event) => {
-  initializationState.userData = true;
-  updateUI(event.user);
-});
-
-client.on('voice_list', (event) => {
-  initializationState.voices = true;
-  populateVoiceSelector(event.voices);
-});
-
-client.on('initialization:complete', () => {
-  console.log('All data loaded:', initializationState);
-  enableFullUI();
-});
-```
-
-### Event Aggregation
-
-```typescript
-// Aggregate streaming text
-let currentMessage = '';
-let messageId = null;
-
-client.on('text:delta', (event) => {
-  if (messageId !== event.messageId) {
-    currentMessage = '';
-    messageId = event.messageId;
-  }
-  currentMessage += event.delta;
-  updateMessageDisplay(currentMessage);
-});
-
-client.on('text:complete', (event) => {
-  finalizeMessage(event.text, event.messageId);
-  currentMessage = '';
-  messageId = null;
-});
-```
-
-### Error Recovery
-
-```typescript
-// Handle connection errors with retry
-client.on('error', (event) => {
-  if (!event.fatal) {
-    console.log('Non-fatal error, will retry:', event.error);
-    return;
-  }
-  
-  // Fatal error - need user intervention
-  showErrorDialog(event.error);
-});
-
-client.on('reconnecting', (event) => {
-  showReconnectingUI(event.attempt, event.maxAttempts);
-});
-
-client.on('connected', () => {
-  hideReconnectingUI();
-  // Initialization events will follow automatically
-});
-```
-
-### Turn Management
-
-```typescript
-// Respect turn state for audio
-let canSpeak = false;
-
-client.on('user_turn_start', () => {
-  canSpeak = true;
-  enableMicrophone();
-});
-
-client.on('user_turn_end', () => {
-  canSpeak = false;
-  disableMicrophone();
-});
-
-client.on('agent_turn_start', () => {
-  showSpeakingIndicator();
-});
-
-client.on('agent_turn_end', () => {
-  hideSpeakingIndicator();
-});
-```
-
-## Custom Events
-
-You can emit custom events for application-specific needs:
-
-```typescript
-// Emit custom event
-client.emit('custom:user_action', {
-  action: 'button_clicked',
-  value: 'help',
-  timestamp: Date.now()
-});
-
-// Listen for custom events
-client.on('custom:server_notification', (event) => {
-  showNotification(event.message);
-});
-```
-
-## Event Debugging
-
-### Enable Event Logging
-
-```typescript
-// Log all events for debugging
-if (process.env.NODE_ENV === 'development') {
-  client.on('*', (eventName, eventData) => {
-    console.group(`[Event] ${eventName}`);
-    console.log('Data:', eventData);
-    console.log('Timestamp:', new Date().toISOString());
-    console.groupEnd();
+  // Listen to streaming text
+  useEventListener('message-streaming', (event) => {
+    updateStreamingMessage(event.content);
   });
+  
+  // Listen to turn state
+  useEventListener('user_turn_start', () => {
+    setCanSendInput(true);
+  });
+  
+  useEventListener('user_turn_end', () => {
+    setCanSendInput(false);
+  });
+  
+  return <ChatInterface messages={messages} />;
 }
 ```
 
-### Event Inspector
+### Audio Streaming
 
 ```typescript
-class EventInspector {
-  private events: Array<{name: string, data: any, timestamp: number}> = [];
-  
-  constructor(client: RealtimeClient) {
-    client.on('*', (name, data) => {
-      this.events.push({
-        name,
-        data,
-        timestamp: Date.now()
-      });
-      
-      // Keep last 100 events
-      if (this.events.length > 100) {
-        this.events.shift();
-      }
-    });
-  }
-  
-  getEvents(filter?: string): typeof this.events {
-    if (!filter) return this.events;
-    return this.events.filter(e => e.name.includes(filter));
-  }
-  
-  getEventStats(): Record<string, number> {
-    const stats: Record<string, number> = {};
-    this.events.forEach(e => {
-      stats[e.name] = (stats[e.name] || 0) + 1;
-    });
-    return stats;
-  }
-}
+// Send audio input
+const audioData = new Uint16Array(pcmBuffer);
+client.sendBinaryFrame(audioData.buffer);
 
-// Use in development
-const inspector = new EventInspector(client);
-
-// Later, inspect events
-console.table(inspector.getEventStats());
-console.log('Text events:', inspector.getEvents('text:'));
-```
-
-## Performance Considerations
-
-### Event Throttling
-
-```typescript
-// Throttle high-frequency events
-import { throttle } from 'lodash';
-
-const throttledAudioHandler = throttle((audioData: ArrayBuffer) => {
-  updateAudioVisualization(audioData);
-}, 100); // Max once per 100ms
-
-client.on('audio:output', throttledAudioHandler);
-```
-
-### Event Batching
-
-```typescript
-// Batch multiple events for processing
-class EventBatcher {
-  private batch: any[] = [];
-  private timer: NodeJS.Timeout | null = null;
-  
-  constructor(
-    private processor: (events: any[]) => void,
-    private delay: number = 100
-  ) {}
-  
-  add(event: any) {
-    this.batch.push(event);
-    
-    if (this.timer) clearTimeout(this.timer);
-    
-    this.timer = setTimeout(() => {
-      this.processor(this.batch);
-      this.batch = [];
-      this.timer = null;
-    }, this.delay);
-  }
-}
-
-const textBatcher = new EventBatcher((events) => {
-  const fullText = events.map(e => e.delta).join('');
-  updateDisplay(fullText);
+// Handle audio output
+client.on('audio:output', (audioData: ArrayBuffer) => {
+  const pcm16Data = new Int16Array(audioData);
+  audioContext.playPCM16(pcm16Data);
 });
 
-client.on('text:delta', (event) => {
-  textBatcher.add(event);
+// Control audio streaming
+client.startAudioRecording();
+client.startAudioStreaming();
+
+// Stop when done
+client.stopAudioStreaming();
+client.stopAudioRecording();
+```
+
+### Cancel Response
+
+```typescript
+// Cancel the current agent response
+client.cancelResponse();
+
+// Listen for confirmation
+client.on('cancelled', () => {
+  console.log('Response cancelled successfully');
 });
-```
 
-### Memory Management
-
-```typescript
-// Clean up event listeners properly
-class ComponentWithEvents {
-  private handlers = new Map<string, Function>();
-  
-  constructor(private client: RealtimeClient) {
-    this.setupListeners();
-  }
-  
-  setupListeners() {
-    const userHandler = (event) => this.handleUser(event);
-    const textHandler = (event) => this.handleText(event);
-    
-    this.handlers.set('chat_user_data', userHandler);
-    this.handlers.set('text:complete', textHandler);
-    
-    this.client.on('chat_user_data', userHandler);
-    this.client.on('text:complete', textHandler);
-  }
-  
-  cleanup() {
-    // Remove all listeners
-    this.handlers.forEach((handler, event) => {
-      this.client.off(event, handler);
-    });
-    this.handlers.clear();
-  }
-  
-  private handleUser(event: any) { /* ... */ }
-  private handleText(event: any) { /* ... */ }
-}
-```
-
-## Best Practices
-
-### 1. Always Wait for Initialization
-
-```typescript
-// Don't access data immediately
-// ❌ Wrong
-client.connect();
-console.log(client.getUser()); // Will be undefined
-
-// ✅ Correct
-client.connect();
-client.on('initialization:complete', () => {
-  console.log(client.getUser()); // Data is ready
-});
-```
-
-### 2. Handle Events Defensively
-
-```typescript
-// Use optional chaining and defaults
-client.on('chat_user_data', (event) => {
-  const name = event?.user?.display_name || 'Guest';
-  const email = event?.user?.email || 'No email';
-  updateProfile(name, email);
-});
-```
-
-### 3. Clean Up Listeners
-
-```typescript
-// In React components
-useEffect(() => {
-  const handler = (event) => console.log(event);
-  client.on('text:complete', handler);
-  
-  return () => {
-    client.off('text:complete', handler);
-  };
-}, [client]);
-```
-
-### 4. Use Event Types
-
-```typescript
-import type { 
-  ChatUserDataEvent,
-  VoiceListEvent,
-  TextDeltaEvent 
-} from '@agentc/realtime-core';
-
-client.on('chat_user_data', (event: ChatUserDataEvent) => {
-  // TypeScript knows the event structure
-  console.log(event.user.display_name);
+// Session manager will emit response-cancelled
+sessionManager?.on('response-cancelled', () => {
+  // Clean up any streaming UI
+  clearStreamingMessage();
 });
 ```
 
@@ -661,44 +445,242 @@ All event types are exported from the core package:
 
 ```typescript
 import type {
-  // Initialization events
+  // Server events
   ChatUserDataEvent,
   VoiceListEvent,
   AgentListEvent,
   AvatarListEvent,
   ToolCatalogEvent,
   ChatSessionChangedEvent,
-  
-  // Connection events
-  ConnectedEvent,
-  DisconnectedEvent,
-  ReconnectingEvent,
-  ErrorEvent,
-  
-  // Message events
   TextDeltaEvent,
-  TextCompleteEvent,
-  TypingStartEvent,
-  TypingStopEvent,
-  
-  // Audio events
-  AudioOutputEvent,
-  AudioStartEvent,
-  AudioStopEvent,
-  VADSpeechStartEvent,
-  VADSpeechEndEvent,
-  
-  // Turn events
+  ThoughtDeltaEvent,
+  CompletionEvent,
+  InteractionEvent,
+  HistoryEvent,
+  ToolCallEvent,
+  ToolSelectDeltaEvent,
+  RenderMediaEvent,
+  SystemMessageEvent,
   UserTurnStartEvent,
   UserTurnEndEvent,
-  AgentTurnStartEvent,
-  AgentTurnEndEvent,
-  TurnProcessingEvent,
+  CancelledEvent,
   
-  // Session events
-  SessionCreatedEvent,
-  SessionSwitchedEvent,
-  SessionUpdatedEvent,
-  SessionDeletedEvent
+  // Client events
+  TextInputEvent,
+  SetAgentEvent,
+  SetAvatarEvent,
+  SetAvatarSessionEvent,
+  NewChatSessionEvent,
+  ResumeChatSessionEvent,
+  ClientWantsCancelEvent,
+  
+  // Common types
+  Voice,
+  Avatar,
+  Agent,
+  Tool,
+  Message,
+  ChatSession,
+  User
 } from '@agentc/realtime-core';
 ```
+
+## Best Practices
+
+### 1. Wait for Initialization
+
+```typescript
+// ❌ Wrong - sending too early
+client.connect();
+client.sendText('Hello'); // Server not ready!
+
+// ✅ Correct - wait for ready signal
+client.connect();
+await client.waitForInitialization();
+client.on('user_turn_start', () => {
+  client.sendText('Hello');
+});
+```
+
+### 2. Handle Streaming Events
+
+```typescript
+// Use SessionManager events for message handling
+const sessionManager = client.getSessionManager();
+
+// Streaming updates
+sessionManager.on('message-streaming', (event) => {
+  // Update UI with partial content
+  updateMessage(event.content);
+});
+
+// Final message
+sessionManager.on('message-complete', (event) => {
+  // Display complete message
+  addMessage(event.message);
+});
+```
+
+### 3. Respect Turn State
+
+```typescript
+// Use turn events to control input
+let canSend = false;
+
+client.on('user_turn_start', () => {
+  canSend = true;
+  enableInputUI();
+});
+
+client.on('user_turn_end', () => {
+  canSend = false;
+  disableInputUI();
+});
+
+function sendMessage(text: string) {
+  if (!canSend) {
+    console.warn('Cannot send - not user turn');
+    return;
+  }
+  client.sendText(text);
+}
+```
+
+### 4. Handle Binary Audio Properly
+
+```typescript
+// Audio output handling
+client.on('audio:output', (audioData: ArrayBuffer) => {
+  // Check voice model to determine format
+  const voiceManager = client.getVoiceManager();
+  const currentVoice = voiceManager?.getCurrentVoice();
+  
+  if (currentVoice?.output_format === 'pcm16') {
+    // Standard PCM16 audio
+    playPCM16Audio(audioData);
+  }
+});
+
+// Audio input - always PCM16
+const pcm16Buffer = recordAudio(); // Returns PCM16 data
+client.sendBinaryFrame(pcm16Buffer);
+```
+
+### 5. Security with Media Content
+
+```typescript
+client.on('render_media', (event: RenderMediaEvent) => {
+  if (event.foreign_content) {
+    // ⚠️ Untrusted content - sandbox it!
+    renderInSandbox(event.content, event.content_type);
+    showSecurityWarning('External content');
+  } else {
+    // Trusted internal content
+    renderDirectly(event.content, event.content_type);
+  }
+});
+```
+
+## Debugging Events
+
+### Enable Debug Logging
+
+```typescript
+const client = new RealtimeClient({
+  debug: true, // Enables detailed logging
+  // ... other config
+});
+
+// Log all events
+client.on('*' as any, (eventName: string, eventData: any) => {
+  console.log(`[Event] ${eventName}:`, eventData);
+});
+```
+
+### Monitor Event Flow
+
+```typescript
+// Track initialization
+const initEvents = new Set();
+['chat_user_data', 'voice_list', 'agent_list', 'avatar_list', 
+ 'tool_catalog', 'chat_session_changed'].forEach(event => {
+  client.on(event as any, () => {
+    initEvents.add(event);
+    console.log(`Init event ${initEvents.size}/6: ${event}`);
+  });
+});
+
+// Monitor turn state
+client.on('user_turn_start', () => console.log('🟢 User turn'));
+client.on('user_turn_end', () => console.log('🔴 Agent turn'));
+```
+
+## Performance Considerations
+
+### Throttle High-Frequency Events
+
+```typescript
+import { throttle } from 'lodash';
+
+// Throttle audio visualization updates
+const updateVisualization = throttle((audioData: ArrayBuffer) => {
+  drawWaveform(audioData);
+}, 100); // Max 10 updates per second
+
+client.on('audio:output', updateVisualization);
+```
+
+### Batch Message Updates
+
+```typescript
+let streamBuffer = '';
+let updateTimer: NodeJS.Timeout;
+
+sessionManager.on('message-streaming', (event) => {
+  streamBuffer = event.content;
+  
+  // Debounce UI updates
+  clearTimeout(updateTimer);
+  updateTimer = setTimeout(() => {
+    updateMessageUI(streamBuffer);
+  }, 50);
+});
+```
+
+### Clean Up Listeners
+
+```typescript
+// React component example
+useEffect(() => {
+  const handlers: Array<[string, Function]> = [];
+  
+  const addHandler = (event: string, handler: Function) => {
+    handlers.push([event, handler]);
+    client.on(event as any, handler as any);
+  };
+  
+  addHandler('text_delta', handleTextDelta);
+  addHandler('audio:output', handleAudio);
+  
+  return () => {
+    // Clean up all handlers
+    handlers.forEach(([event, handler]) => {
+      client.off(event as any, handler as any);
+    });
+  };
+}, [client]);
+```
+
+## Summary
+
+The Agent C Realtime SDK event system provides:
+
+- **43 server events** for receiving updates from the API
+- **24 client events** for sending commands to the server
+- **30+ SDK events** for local application state management
+- **Binary audio streaming** for real-time voice interactions
+- **Type-safe event definitions** with full TypeScript support
+- **Session management** with streaming and completion events
+- **Security controls** for foreign media content
+
+Understanding these events and their sequences is essential for building robust real-time applications with the Agent C Realtime SDK.

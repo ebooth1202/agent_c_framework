@@ -863,9 +863,11 @@ describe('useAudio', () => {
     });
 
     describe('Turn State Integration', () => {
-      it('registers turn state event listeners on mount', () => {
-        // Arrange & Act
-        renderHook(() => useAudio({ respectTurnState: true }));
+      it('registers turn state event listeners on mount', async () => {
+        // Arrange & Act - Wrap renderHook in act to handle initial state updates
+        await act(async () => {
+          renderHook(() => useAudio({ respectTurnState: true }));
+        });
         
         // Assert - Should register for turn-state-changed events
         expect(mockTurnManager.on).toHaveBeenCalledWith(
@@ -978,13 +980,17 @@ describe('useAudio', () => {
         );
       });
 
-      it('handles missing turn manager gracefully', () => {
+      it('handles missing turn manager gracefully', async () => {
         // Arrange
         mockClient = createMockClient(mockAudioStatus, null);
         mockUseRealtimeClientSafe.mockReturnValue(mockClient);
         
-        // Act
-        const { result } = renderHook(() => useAudio({ respectTurnState: true }));
+        // Act - Wrap renderHook in act to handle initial state updates
+        let result: any;
+        await act(async () => {
+          const hookResult = renderHook(() => useAudio({ respectTurnState: true }));
+          result = hookResult.result;
+        });
         
         // Assert - Should default to true when no turn manager
         expect(result.current.canSendInput).toBe(true);
