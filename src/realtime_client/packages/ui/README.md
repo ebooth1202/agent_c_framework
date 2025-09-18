@@ -2,6 +2,19 @@
 
 UI components for the Agent C Realtime SDK, built with shadcn/ui patterns and CenSuite compatibility.
 
+## Documentation
+
+📚 **[View Full Component Documentation →](./docs/api-reference/ui-components/)**
+
+Comprehensive documentation is available for all components including:
+- [Audio Components](./docs/api-reference/ui-components/audio-components.md) - Audio controls and visualizers
+- [Chat Components](./docs/api-reference/ui-components/chat-components.md) - Message display and chat interface
+- [Connection Components](./docs/api-reference/ui-components/connection-components.md) - Connection management UI
+- [Avatar Components](./docs/api-reference/ui-components/avatar-components.md) - HeyGen avatar integration
+- [Control Components](./docs/api-reference/ui-components/control-components.md) - Voice and output selectors
+- [Other Components](./docs/api-reference/ui-components/other-components.md) - Layout, input, and utility components
+- [Component Index](./docs/api-reference/ui-components/index.md) - Complete navigation guide
+
 ## Installation
 
 ```bash
@@ -79,240 +92,145 @@ module.exports = {
 }
 ```
 
-## Usage
+## Quick Start
 
 ```tsx
-import { ConnectionButton, MicrophoneButton, OutputSelector } from '@agentc/realtime-ui';
+import { ConnectionButton, MicrophoneButton, OutputSelector, ChatMessage } from '@agentc/realtime-ui';
 import { AgentCProvider } from '@agentc/realtime-react';
 
 function App() {
   return (
     <AgentCProvider>
-      <ConnectionButton />
-      <MicrophoneButton />
-      <OutputSelector />
+      <div className="flex flex-col gap-4 p-4">
+        {/* Connection Controls */}
+        <div className="flex items-center gap-2">
+          <ConnectionButton />
+          <MicrophoneButton />
+          <OutputSelector />
+        </div>
+        
+        {/* Chat Display */}
+        <div className="flex flex-col gap-2">
+          <ChatMessage
+            message={{
+              role: 'assistant',
+              content: 'Hello! How can I help you today?',
+              timestamp: new Date().toISOString()
+            }}
+          />
+        </div>
+      </div>
     </AgentCProvider>
   );
 }
 ```
 
-## Components
+## Component Overview
 
-### Core Controls
+### Core Components
 
-#### OutputSelector
+- **Connection Components** - Manage WebSocket connection state
+  - `ConnectionButton` - Connect/disconnect with status indicator
+  - `ConnectionStatus` - Display connection state
 
-A hierarchical dropdown menu component that allows users to select the output mode for agent responses. Supports three modes: Text Only (no audio), Voice (synthesized speech), and Avatar (HeyGen streaming avatar - implementation pending).
+- **Audio Components** - Handle audio input/output
+  - `MicrophoneButton` - Toggle audio input with visual feedback
+  - `AudioLevelIndicator` - Real-time audio level display
+  - `VolumeControl` - Output volume adjustment
 
-```tsx
-import { OutputSelector } from '@agentc/realtime-ui';
+- **Chat Components** - Display conversation interface
+  - `ChatMessage` - Message display with markdown support
+  - `ChatMessageList` - Scrollable message container
+  - `MessageInput` - Text input with send button
 
-// Basic usage
-<OutputSelector />
+- **Control Components** - Configure agent behavior
+  - `OutputSelector` - Choose text/voice/avatar output modes
+  - `AgentSelector` - Switch between available agents
+  - `VoiceSelector` - Select TTS voice
 
-// With custom props
-<OutputSelector
-  className="w-[250px]"
-  showIcon={true}
-  showErrorAlerts={true}
-  ariaLabel="Select output mode for agent responses"
-  disabled={false}
-/>
+- **Avatar Components** - HeyGen avatar integration
+  - `AvatarDisplay` - Render streaming avatar
+  - `AvatarControls` - Avatar configuration
 
-// Forward ref for imperative access
-const outputRef = useRef<HTMLButtonElement>(null);
-<OutputSelector ref={outputRef} />
-```
+- **Session Components** - Manage chat sessions
+  - `SessionList` - Display saved sessions
+  - `SessionManager` - Create/delete sessions
 
-**Props:**
+### Utility Components
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `className` | `string` | `undefined` | Additional CSS classes to apply to the root element |
-| `disabled` | `boolean` | `false` | Whether the selector is disabled |
-| `showIcon` | `boolean` | `true` | Whether to show the mode icon in the button |
-| `ariaLabel` | `string` | Auto-generated | Custom ARIA label for the selector button |
-| `showErrorAlerts` | `boolean` | `true` | Whether to show error alerts inline below the selector |
+- `TurnIndicator` - Show conversation turn state
+- `LoadingIndicator` - Consistent loading states
+- `ErrorBoundary` - Graceful error handling
+- `ThemeToggle` - Light/dark mode switcher
 
-**Features:**
+## Features
 
-✅ **Hierarchical Menu Structure**
-- Text Only option at root level for quick access
-- Voice submenu with flat list of all available voices
-- Avatar submenu for avatar selection (UI ready, integration pending)
+✅ **Full TypeScript Support** - Complete type definitions and IntelliSense  
+✅ **Accessibility First** - WCAG 2.1 AA compliant with full keyboard navigation  
+✅ **Responsive Design** - Mobile-optimized with touch-friendly controls  
+✅ **Dark Mode Support** - Automatic theme detection and manual toggle  
+✅ **Error Handling** - Built-in error boundaries and recovery  
+✅ **Performance Optimized** - Memoization and lazy loading where appropriate  
+✅ **Customizable** - Override styles with className prop on all components  
 
-✅ **Smart State Management**
-- Automatically syncs with SDK voice model
-- Shows current selection with check marks
-- Loading states during voice changes
-- Disabled state when disconnected
-
-✅ **Full Accessibility Support**
-- WCAG 2.1 AA compliant
-- Complete keyboard navigation
-- Screen reader announcements for all state changes
-- Proper ARIA labels and live regions
-- Focus management and visual indicators
-
-✅ **Error Handling**
-- User-friendly error messages
-- Automatic error dismissal after 5 seconds
-- Error recovery on successful operations
-- Console logging for debugging
-
-✅ **Responsive Design**
-- Mobile-optimized menu widths
-- Touch-friendly tap targets
-- Scroll support for long voice lists
-- Smooth animations and transitions
-
-**Output Modes:**
-
-1. **Text Only Mode**
-   - Sets voice_id to "none" in SDK
-   - Agent responds with text messages only
-   - No audio output generated
-   - Icon: Type (text icon)
-
-2. **Voice Mode**
-   - Select from available TTS voices
-   - Display format: "vendor - voice_id"
-   - Shows description as secondary text
-   - Icon: Mic (microphone icon)
-   - Supports OpenAI, ElevenLabs, and other vendors
-
-3. **Avatar Mode** (Coming Soon)
-   - HeyGen streaming avatar integration
-   - Display format: "avatar_id - pose_name"
-   - Filters to show only active, public avatars
-   - Icon: User (avatar icon)
-   - Currently logs selection to console
-
-**Events and Integration:**
-
-The component automatically integrates with the SDK through React hooks:
-
-```tsx
-// The component listens for these SDK events:
-- 'agent_voice_changed': Updates selection when voice changes
-- 'agent_data_updated': Refreshes available voices/avatars
-- 'connection_error': Disables selector on connection loss
-- 'connected': Re-enables selector on reconnection
-
-// The component calls these SDK methods:
-- client.setAgentVoice(voice_id): Changes the agent's voice
-- client.getVoiceModel(): Gets current voice selection
-- client.getAgentData(): Gets available voices and avatars
-```
-
-**Usage Examples:**
-
-```tsx
-// Basic implementation in a chat interface
-function ChatInterface() {
-  return (
-    <div className="flex items-center gap-4">
-      <OutputSelector />
-      <ConnectionButton />
-      <MicrophoneButton />
-    </div>
-  );
-}
-
-// With error handling and custom styling
-function CustomOutputControl() {
-  return (
-    <OutputSelector
-      className="min-w-[200px] max-w-[300px]"
-      showErrorAlerts={true}
-      showIcon={true}
-      ariaLabel="Choose how the AI assistant responds"
-    />
-  );
-}
-
-// Programmatic control with ref
-function ProgrammaticControl() {
-  const selectorRef = useRef<HTMLButtonElement>(null);
-  
-  const focusSelector = () => {
-    selectorRef.current?.focus();
-  };
-  
-  return (
-    <>
-      <OutputSelector ref={selectorRef} />
-      <button onClick={focusSelector}>Focus Output Selector</button>
-    </>
-  );
-}
-```
-
-**Testing:**
-
-The component includes comprehensive test coverage:
+## Testing
 
 ```bash
-# Run unit tests
-pnpm test packages/ui/test/controls/OutputSelector.test.tsx
+# Run all UI component tests
+pnpm test
 
-# Run integration tests
-pnpm test packages/demo/src/components/__tests__/OutputSelector.integration.test.tsx
+# Run tests with coverage
+pnpm test:coverage
+
+# Run tests in watch mode
+pnpm test:watch
+
+# Open test UI
+pnpm test:ui
 ```
 
-Test coverage includes:
-- Display of all menu options
-- Event firing for each selection type
-- State highlighting and synchronization
-- Disabled states and loading states
-- Error handling scenarios
-- Accessibility compliance
-- SDK integration and event propagation
+## Design System
 
-**Known Limitations:**
-- Avatar selection is currently deferred (UI complete, awaiting SDK integration)
-- HeyGen avatar integration will be implemented in a future release
-- Voice changes during active conversation apply after current turn ends
-- Maximum of 50 voices can be displayed (scrollable list)
-
-#### ConnectionButton
-
-Connect/disconnect button with connection status indicator.
-
-```tsx
-<ConnectionButton showStatus={true} />
-```
-
-#### MicrophoneButton
-
-Audio input toggle with visual feedback.
-
-```tsx
-<MicrophoneButton disabled={false} />
-```
-
-#### ChatMessage
-
-Message display component with markdown support.
-
-```tsx
-<ChatMessage
-  message={{
-    role: 'assistant',
-    content: 'Hello! How can I help you today?',
-    timestamp: new Date().toISOString()
-  }}
-/>
-```
-
-### Additional Components
-
-More components are being added incrementally:
-- `AgentSelector` - Switch between available agents
-- `SessionList` - Display and manage chat sessions
-- `AudioVisualizer` - Real-time audio level display
-- `TurnIndicator` - Show current conversation turn state
+This package follows:
+- **CenSuite Design Principles** - Clarity, Consistency, Efficiency, Scalability, Accessibility
+- **shadcn/ui Patterns** - Component composition and styling approach
+- **Tailwind CSS** - Utility-first CSS framework
 
 ## Development
 
-This package follows CenSuite and shadcn/ui patterns for consistency with Centric's design system.
+### Building
+
+```bash
+# Build the package
+pnpm build
+
+# Build in watch mode
+pnpm build:watch
+```
+
+### Type Checking
+
+```bash
+# Run type checks
+pnpm type-check
+```
+
+### Linting
+
+```bash
+# Run linter
+pnpm lint
+
+# Fix linting issues
+pnpm lint:fix
+```
+
+## License
+
+MIT
+
+## Support
+
+For detailed documentation, examples, and API references, please see the [full documentation](./docs/api-reference/ui-components/).
+
+For issues or questions, please contact the Agent C Realtime team.

@@ -102,12 +102,15 @@ class AgentAssistTools(AgentAssistToolBase):
 
         content = f"**Prime agent** requesting assistance:\n\n{request}"
 
+
+
         await self._raise_render_media(
             sent_by_class=self.__class__.__name__,
             sent_by_function='oneshot',
-            content_type="text/html",
-            content=self.fix_markdown_formatting(f"**Prime** agent requesting assistance from '*{agent_config.name}*':\n\n{request})\n\n"),
-            tool_context=tool_context
+            content_type="text/markdown",
+            content=f"**Prime** agent requesting assistance from '*{agent_config.name}*':\n\n{request})\n\n",
+            tool_context=tool_context,
+            streaming_callback=tool_context['streaming_callback']
         )
 
         messages = await self.agent_oneshot(content, agent_config, user_session_id, tool_context,
@@ -120,9 +123,10 @@ class AgentAssistTools(AgentAssistToolBase):
         await self._raise_render_media(
             sent_by_class=self.__class__.__name__,
             sent_by_function='chat',
-            content_type="text/html",
-            content=self.fix_markdown_formatting(f"Interaction complete for Agent Assist oneshot with {agent_config.name}. Control returned to requesting agent."),
-            tool_context=tool_context
+            content_type="text/markdown",
+            content=f"Interaction complete for Agent Assist oneshot with {agent_config.name}. Control returned to requesting agent.",
+            tool_context=tool_context,
+            streaming_callback=tool_context['streaming_callback']
         )
 
         last_message = messages[-1] if messages else None
@@ -203,8 +207,9 @@ class AgentAssistTools(AgentAssistToolBase):
             sent_by_function='chat',
             content_type="text/html",
             content=self.fix_markdown_formatting(f"Interaction complete for Agent Assist Session ID: {agent_session_id} with {agent_config.name}. Control returned to requesting agent."),
-            tool_context=tool_context
-        )
+            tool_context=tool_context,
+            streaming_callback=tool_context['streaming_callback'])
+
         if messages is not None and len(messages) > 0:
             last_message = messages[-1]
             agent_response = yaml.dump(last_message, allow_unicode=True)

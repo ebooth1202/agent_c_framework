@@ -11,8 +11,9 @@ Your application backend handles authentication:
 1. **Your backend** manages user authentication (login, sessions, etc.)
 2. **Your backend** calls Agent C library functions to create ChatUsers and generate tokens
 3. **Your frontend** receives a payload from YOUR backend containing:
-   - JWT token (`agent_c_token`)
+   - JWT token (`access_token`)
    - WebSocket URL (`ws_url`)
+   - Refresh token (`refresh_token`)
    - HeyGen token if needed (`heygen_access_token`)
    - Other configuration
 4. **Your frontend** initializes the SDK with this payload
@@ -32,6 +33,9 @@ Direct login is ONLY for development/testing:
 - [Multi-Session Manager](#multi-session-manager)
 - [Custom UI Components](#custom-ui-components)
 - [Advanced Features](#advanced-features)
+- [Using Additional Hooks](#using-additional-hooks)
+- [Error Handling & Edge Cases](#error-handling--edge-cases)
+- [StrictMode Compatibility](#strictmode-compatibility)
 - [Development-Only Examples](#development-only-examples)
 
 ---
@@ -86,7 +90,8 @@ app.post('/api/login', async (req, res) => {
 ```tsx
 // ProductionApp.tsx
 import React, { useState, useEffect } from 'react';
-import { AgentCProvider, AuthManager } from '@agentc/realtime-react';
+import { AgentCProvider } from '@agentc/realtime-react';
+import { AuthManager } from '@agentc/realtime-core';
 
 function App() {
   const [authPayload, setAuthPayload] = useState<any>(null);
@@ -156,7 +161,8 @@ If your backend provides the Agent C configuration on page load (e.g., via serve
 ```tsx
 // Initialize with payload already available
 import React from 'react';
-import { AgentCProvider, AuthManager } from '@agentc/realtime-react';
+import { AgentCProvider } from '@agentc/realtime-react';
+import { AuthManager } from '@agentc/realtime-core';
 
 function App({ agentCConfig }: { agentCConfig: any }) {
   // agentCConfig comes from your backend via:
@@ -236,9 +242,9 @@ import React, { useState, useEffect } from 'react';
 import {
   AgentCProvider,
   useConnection,
-  useChat,
-  AuthManager
+  useChat
 } from '@agentc/realtime-react';
+import { AuthManager } from '@agentc/realtime-core';
 
 function BasicChatApp() {
   const [agentCConfig, setAgentCConfig] = useState<any>(null);
@@ -384,9 +390,9 @@ import {
   useChat,
   useAudio,
   useTurnState,
-  useVoiceModel,
-  AuthManager
+  useVoiceModel
 } from '@agentc/realtime-react';
+import { AuthManager } from '@agentc/realtime-core';
 
 function VoiceAssistantApp() {
   const [agentCConfig, setAgentCConfig] = useState<any>(null);
@@ -619,9 +625,9 @@ import {
   useChat,
   useAvatar,
   useVoiceModel,
-  useAuth,
-  AuthManager
+  useRealtimeClient
 } from '@agentc/realtime-react';
+import { AuthManager } from '@agentc/realtime-core';
 import NewStreamingAvatar, { StreamingEvents } from '@heygen/streaming-avatar';
 
 function AvatarChatApp() {
@@ -680,6 +686,7 @@ function AvatarInterface() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const heygenRef = useRef<NewStreamingAvatar | null>(null);
   
+  const client = useRealtimeClient();
   const { connect, isConnected } = useConnection();
   const { messages, sendMessage } = useChat();
   const {
@@ -705,9 +712,8 @@ function AvatarInterface() {
     setIsInitializing(true);
     
     try {
-      // Get HeyGen token from provider config
-      const client = useRealtimeClient();
-      const heygenToken = client?.config?.heygenToken;
+      // Get HeyGen token from the client config
+      const heygenToken = client?.getConfig()?.heygenToken;
       
       if (!heygenToken) {
         throw new Error('HeyGen token not available in configuration.');
@@ -862,9 +868,9 @@ import React, { useState, useEffect } from 'react';
 import {
   AgentCProvider,
   useConnection,
-  useChat,
-  AuthManager
+  useChat
 } from '@agentc/realtime-react';
+import { AuthManager } from '@agentc/realtime-core';
 
 function MultiSessionApp() {
   const [agentCConfig, setAgentCConfig] = useState<any>(null);
@@ -1278,9 +1284,9 @@ import {
   useAudio,
   useTurnState,
   useVoiceModel,
-  useAvatar,
-  AuthManager
+  useAvatar
 } from '@agentc/realtime-react';
+import { AuthManager } from '@agentc/realtime-core';
 
 // Import custom components
 import {
@@ -1765,12 +1771,12 @@ export default AdvancedApp;
 ```tsx
 // ComponentTests.tsx
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { AgentCProvider, AuthManager } from '@agentc/realtime-react';
+import { AgentCProvider } from '@agentc/realtime-react';
 import { ChatInterface } from './ChatInterface';
 
 // Mock AuthManager for testing
-jest.mock('@agentc/realtime-react', () => ({
-  ...jest.requireActual('@agentc/realtime-react'),
+jest.mock('@agentc/realtime-core', () => ({
+  ...jest.requireActual('@agentc/realtime-core'),
   AuthManager: jest.fn().mockImplementation(() => ({
     login: jest.fn().mockResolvedValue({
       ws_url: 'wss://test.api.com/rt/ws',
@@ -1845,7 +1851,7 @@ AGENT_C_SECRET=your_secret    # Server-side only!
 
 ```tsx
 // productionConfig.ts
-import { AuthManager } from '@agentc/realtime-react';
+import { AuthManager } from '@agentc/realtime-core';
 
 export async function getProductionConfig() {
   try {
@@ -2127,6 +2133,9 @@ function LoginPage() {
 ### Protected Route Pattern
 
 ```tsx
+import { AuthManager } from '@agentc/realtime-core';
+import { Navigate } from 'react-router-dom';
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const [agentCConfig, setAgentCConfig] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -2242,6 +2251,883 @@ function LogoutButton() {
 
 ---
 
+## Using Additional Hooks
+
+Examples of other useful hooks provided by the SDK.
+
+### Using useAgentCData
+
+Access all initialization data from the WebSocket connection.
+
+```tsx
+import React from 'react';
+import { useAgentCData, useConnection } from '@agentc/realtime-react';
+
+function SystemInfo() {
+  const { isConnected } = useConnection();
+  const { 
+    agents, 
+    voices, 
+    avatars, 
+    tools,
+    isLoading,
+    error 
+  } = useAgentCData();
+  
+  if (!isConnected) {
+    return <div>Not connected</div>;
+  }
+  
+  if (isLoading) {
+    return <div>Loading system data...</div>;
+  }
+  
+  if (error) {
+    return <div>Error loading data: {error}</div>;
+  }
+  
+  return (
+    <div className="system-info">
+      <section>
+        <h3>Available Agents ({agents.length})</h3>
+        <ul>
+          {agents.map(agent => (
+            <li key={agent.agent_id}>
+              <strong>{agent.name}</strong>
+              <p>{agent.description}</p>
+              <code>Key: {agent.key}</code>
+            </li>
+          ))}
+        </ul>
+      </section>
+      
+      <section>
+        <h3>Available Voices ({voices.length})</h3>
+        <ul>
+          {voices.map(voice => (
+            <li key={voice.voice_id}>
+              {voice.name} ({voice.vendor})
+              {voice.is_default && ' ✓ Default'}
+            </li>
+          ))}
+        </ul>
+      </section>
+      
+      <section>
+        <h3>Available Avatars ({avatars.length})</h3>
+        <ul>
+          {avatars.map(avatar => (
+            <li key={avatar.avatar_id}>
+              {avatar.name}
+              {avatar.preview_url && (
+                <img src={avatar.preview_url} alt={avatar.name} width="50" />
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
+      
+      <section>
+        <h3>Available Tools ({tools.length})</h3>
+        <ul>
+          {tools.map(tool => (
+            <li key={tool.name}>
+              <strong>{tool.name}</strong>
+              <p>{tool.description}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </div>
+  );
+}
+```
+
+### Using useUserData
+
+Access current user information from the WebSocket connection.
+
+```tsx
+import React from 'react';
+import { useUserData } from '@agentc/realtime-react';
+
+function UserProfile() {
+  const { user, isLoading, error } = useUserData();
+  
+  if (isLoading) {
+    return <div>Loading user data...</div>;
+  }
+  
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
+  
+  if (!user) {
+    return <div>No user data available</div>;
+  }
+  
+  return (
+    <div className="user-profile">
+      <h2>User Profile</h2>
+      <dl>
+        <dt>Username:</dt>
+        <dd>{user.username}</dd>
+        
+        <dt>User ID:</dt>
+        <dd>{user.user_id}</dd>
+        
+        <dt>Account Type:</dt>
+        <dd>{user.is_authenticated ? 'Authenticated' : 'Anonymous'}</dd>
+        
+        {user.metadata && (
+          <>
+            <dt>Metadata:</dt>
+            <dd>
+              <pre>{JSON.stringify(user.metadata, null, 2)}</pre>
+            </dd>
+          </>
+        )}
+      </dl>
+    </div>
+  );
+}
+```
+
+### Using useInitializationStatus
+
+Track the detailed initialization status of the connection.
+
+```tsx
+import React from 'react';
+import { useInitializationStatus, ConnectionState } from '@agentc/realtime-react';
+
+function ConnectionStatus() {
+  const { 
+    connectionState, 
+    isInitialized, 
+    initializationError 
+  } = useInitializationStatus();
+  
+  const getStatusIcon = () => {
+    switch (connectionState) {
+      case ConnectionState.DISCONNECTED:
+        return '🔴';
+      case ConnectionState.CONNECTING:
+        return '🟡';
+      case ConnectionState.AUTHENTICATING:
+        return '🟠';
+      case ConnectionState.INITIALIZING:
+        return '🔵';
+      case ConnectionState.READY:
+        return '🟢';
+      case ConnectionState.ERROR:
+        return '❌';
+      default:
+        return '⚪';
+    }
+  };
+  
+  return (
+    <div className="connection-status">
+      <div className="status-indicator">
+        <span className="icon">{getStatusIcon()}</span>
+        <span className="state">{connectionState}</span>
+      </div>
+      
+      {!isInitialized && connectionState === ConnectionState.INITIALIZING && (
+        <div className="initialization-progress">
+          <div className="spinner" />
+          <span>Initializing WebSocket connection...</span>
+        </div>
+      )}
+      
+      {initializationError && (
+        <div className="error-message">
+          <strong>Initialization Error:</strong>
+          <p>{initializationError}</p>
+        </div>
+      )}
+      
+      {isInitialized && (
+        <div className="ready-message">
+          ✅ Ready to communicate
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+### Using useChatSessionList
+
+Manage and display grouped chat sessions.
+
+```tsx
+import React, { useState } from 'react';
+import { useChatSessionList, useChat } from '@agentc/realtime-react';
+
+function SessionExplorer() {
+  const {
+    groupedSessions,
+    totalSessions,
+    refreshSessions,
+    isLoading
+  } = useChatSessionList({
+    groupBy: 'date',
+    sortOrder: 'desc',
+    includeEmpty: false
+  });
+  
+  const { resumeSession, currentSessionId } = useChat();
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  
+  const toggleGroup = (groupKey: string) => {
+    const newExpanded = new Set(expandedGroups);
+    if (newExpanded.has(groupKey)) {
+      newExpanded.delete(groupKey);
+    } else {
+      newExpanded.add(groupKey);
+    }
+    setExpandedGroups(newExpanded);
+  };
+  
+  if (isLoading) {
+    return <div>Loading sessions...</div>;
+  }
+  
+  return (
+    <div className="session-explorer">
+      <header>
+        <h2>Chat Sessions ({totalSessions})</h2>
+        <button onClick={refreshSessions}>🔄 Refresh</button>
+      </header>
+      
+      {Object.entries(groupedSessions).map(([groupKey, group]) => (
+        <div key={groupKey} className="session-group">
+          <button 
+            className="group-header"
+            onClick={() => toggleGroup(groupKey)}
+          >
+            <span className="arrow">
+              {expandedGroups.has(groupKey) ? '▼' : '▶'}
+            </span>
+            <span className="group-title">{group.title}</span>
+            <span className="group-count">({group.sessions.length})</span>
+          </button>
+          
+          {expandedGroups.has(groupKey) && (
+            <div className="group-sessions">
+              {group.sessions.map(session => (
+                <div 
+                  key={session.session_id}
+                  className={`session-item ${
+                    session.session_id === currentSessionId ? 'active' : ''
+                  }`}
+                  onClick={() => resumeSession(session.session_id)}
+                >
+                  <div className="session-name">
+                    {session.session_name || `Session ${session.session_id.slice(0, 8)}`}
+                  </div>
+                  <div className="session-details">
+                    <span>{session.messages.length} messages</span>
+                    <span>•</span>
+                    <span>{new Date(session.updated_at).toLocaleTimeString()}</span>
+                  </div>
+                  {session.messages.length > 0 && (
+                    <div className="last-message">
+                      {session.messages[session.messages.length - 1].content.slice(0, 50)}...
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+### Using useOutputMode
+
+Coordinate output modes between text, audio, and avatar.
+
+```tsx
+import React from 'react';
+import { useOutputMode, OutputMode } from '@agentc/realtime-react';
+
+function OutputModeSelector() {
+  const {
+    currentMode,
+    availableModes,
+    setOutputMode,
+    isAudioEnabled,
+    isAvatarActive,
+    canUseAudio,
+    canUseAvatar
+  } = useOutputMode();
+  
+  const handleModeChange = (mode: OutputMode) => {
+    if (mode === OutputMode.AUDIO && !canUseAudio) {
+      alert('Audio is not available. Please check your microphone settings.');
+      return;
+    }
+    
+    if (mode === OutputMode.AVATAR && !canUseAvatar) {
+      alert('Avatar mode requires an active avatar session.');
+      return;
+    }
+    
+    setOutputMode(mode);
+  };
+  
+  return (
+    <div className="output-mode-selector">
+      <h3>Output Mode</h3>
+      
+      <div className="mode-buttons">
+        {availableModes.map(mode => (
+          <button
+            key={mode}
+            className={`mode-button ${currentMode === mode ? 'active' : ''}`}
+            onClick={() => handleModeChange(mode)}
+            disabled={
+              (mode === OutputMode.AUDIO && !canUseAudio) ||
+              (mode === OutputMode.AVATAR && !canUseAvatar)
+            }
+          >
+            {mode === OutputMode.TEXT && '📝 Text Only'}
+            {mode === OutputMode.AUDIO && '🔊 Audio'}
+            {mode === OutputMode.AVATAR && '🎭 Avatar'}
+          </button>
+        ))}
+      </div>
+      
+      <div className="mode-status">
+        <p>Current: <strong>{currentMode}</strong></p>
+        {isAudioEnabled && <p>✅ Audio enabled</p>}
+        {isAvatarActive && <p>✅ Avatar active</p>}
+      </div>
+    </div>
+  );
+}
+```
+
+### Using useToolNotifications
+
+Display notifications for tool calls made by the agent.
+
+```tsx
+import React, { useEffect } from 'react';
+import { useToolNotifications } from '@agentc/realtime-react';
+
+function ToolNotificationPanel() {
+  const {
+    notifications,
+    clearNotification,
+    clearAll
+  } = useToolNotifications({
+    maxNotifications: 10,
+    autoDismiss: 5000 // Auto-dismiss after 5 seconds
+  });
+  
+  return (
+    <div className="tool-notifications">
+      <header>
+        <h3>Tool Activity</h3>
+        {notifications.length > 0 && (
+          <button onClick={clearAll}>Clear All</button>
+        )}
+      </header>
+      
+      <div className="notifications-list">
+        {notifications.length === 0 && (
+          <p className="no-notifications">No recent tool activity</p>
+        )}
+        
+        {notifications.map(notification => (
+          <div 
+            key={notification.id}
+            className={`notification ${notification.status}`}
+          >
+            <button 
+              className="close-btn"
+              onClick={() => clearNotification(notification.id)}
+            >
+              ×
+            </button>
+            
+            <div className="notification-header">
+              <span className="tool-name">{notification.tool_name}</span>
+              <span className="timestamp">
+                {new Date(notification.timestamp).toLocaleTimeString()}
+              </span>
+            </div>
+            
+            {notification.status === 'pending' && (
+              <div className="pending">
+                <div className="spinner" />
+                Executing...
+              </div>
+            )}
+            
+            {notification.status === 'success' && notification.result && (
+              <div className="result success">
+                ✅ {typeof notification.result === 'string' 
+                  ? notification.result 
+                  : JSON.stringify(notification.result, null, 2)}
+              </div>
+            )}
+            
+            {notification.status === 'error' && notification.error && (
+              <div className="result error">
+                ❌ {notification.error}
+              </div>
+            )}
+            
+            {notification.arguments && (
+              <details className="arguments">
+                <summary>Arguments</summary>
+                <pre>{JSON.stringify(notification.arguments, null, 2)}</pre>
+              </details>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+## Error Handling & Edge Cases
+
+Robust error handling patterns for production applications.
+
+### Connection Error Recovery
+
+```tsx
+import React, { useState, useEffect } from 'react';
+import { 
+  AgentCProvider, 
+  useConnection,
+  useInitializationStatus,
+  ConnectionState 
+} from '@agentc/realtime-react';
+import { AuthManager } from '@agentc/realtime-core';
+
+function ResilientApp() {
+  const [config, setConfig] = useState<any>(null);
+  const [authError, setAuthError] = useState<string>('');
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 3;
+  
+  const loadConfiguration = async () => {
+    try {
+      setAuthError('');
+      
+      // Get config from your backend
+      const response = await fetch('/api/agent-c/config', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('your_app_token')}`
+        }
+      });
+      
+      if (response.status === 401) {
+        // Token expired, try to refresh
+        const refreshed = await refreshYourAppToken();
+        if (!refreshed) {
+          throw new Error('Session expired. Please log in again.');
+        }
+        // Retry with new token
+        return loadConfiguration();
+      }
+      
+      if (!response.ok) {
+        throw new Error(`Configuration failed: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      // Initialize AuthManager
+      const authManager = new AuthManager();
+      authManager.initializeFromPayload(data.agentC);
+      
+      setConfig({
+        wsUrl: data.agentC.wsUrl,
+        authToken: data.agentC.authToken,
+        refreshToken: data.agentC.refreshToken,
+        reconnection: {
+          maxAttempts: 10,
+          initialDelay: 1000,
+          maxDelay: 30000,
+          onReconnectFailed: () => {
+            console.error('Failed to reconnect after max attempts');
+            // Try to get fresh tokens
+            if (retryCount < maxRetries) {
+              setRetryCount(retryCount + 1);
+              setTimeout(() => loadConfiguration(), 5000);
+            }
+          }
+        }
+      });
+      
+      setRetryCount(0); // Reset on success
+      
+    } catch (error: any) {
+      console.error('Configuration error:', error);
+      setAuthError(error.message || 'Failed to load configuration');
+      
+      // Retry logic
+      if (retryCount < maxRetries) {
+        setTimeout(() => {
+          setRetryCount(retryCount + 1);
+          loadConfiguration();
+        }, 5000 * Math.pow(2, retryCount)); // Exponential backoff
+      }
+    }
+  };
+  
+  useEffect(() => {
+    loadConfiguration();
+  }, []);
+  
+  if (authError) {
+    return (
+      <div className="error-container">
+        <h2>Connection Error</h2>
+        <p>{authError}</p>
+        {retryCount < maxRetries ? (
+          <p>Retrying... (Attempt {retryCount + 1} of {maxRetries})</p>
+        ) : (
+          <>
+            <p>Maximum retry attempts reached.</p>
+            <button onClick={() => {
+              setRetryCount(0);
+              loadConfiguration();
+            }}>Try Again</button>
+            <a href="/login">Return to Login</a>
+          </>
+        )}
+      </div>
+    );
+  }
+  
+  if (!config) {
+    return <div>Initializing...</div>;
+  }
+  
+  return (
+    <AgentCProvider config={config}>
+      <ConnectionMonitor />
+      <YourApp />
+    </AgentCProvider>
+  );
+}
+
+function ConnectionMonitor() {
+  const { 
+    isConnected, 
+    connectionState, 
+    error,
+    reconnectAttempt,
+    connect 
+  } = useConnection();
+  
+  const { connectionState: detailedState } = useInitializationStatus();
+  
+  // Show connection issues to user
+  if (error) {
+    return (
+      <div className="connection-banner error">
+        <span>Connection error: {error.message}</span>
+        <button onClick={() => connect()}>Reconnect</button>
+      </div>
+    );
+  }
+  
+  if (reconnectAttempt > 0) {
+    return (
+      <div className="connection-banner warning">
+        <span>Reconnecting... (Attempt {reconnectAttempt})</span>
+      </div>
+    );
+  }
+  
+  if (detailedState === ConnectionState.AUTHENTICATING) {
+    return (
+      <div className="connection-banner info">
+        <span>Authenticating...</span>
+      </div>
+    );
+  }
+  
+  return null;
+}
+
+// Helper function to refresh your app's token
+async function refreshYourAppToken(): Promise<boolean> {
+  try {
+    const refreshToken = localStorage.getItem('your_refresh_token');
+    if (!refreshToken) return false;
+    
+    const response = await fetch('/api/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken })
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      localStorage.setItem('your_app_token', data.access_token);
+      localStorage.setItem('your_refresh_token', data.refresh_token);
+      return true;
+    }
+  } catch (error) {
+    console.error('Token refresh failed:', error);
+  }
+  return false;
+}
+```
+
+### Audio Permission Handling
+
+```tsx
+import React, { useState, useEffect } from 'react';
+import { useAudio } from '@agentc/realtime-react';
+
+function AudioPermissionHandler() {
+  const { 
+    hasPermission,
+    error,
+    startRecording,
+    stopRecording,
+    isRecording 
+  } = useAudio();
+  
+  const [permissionStatus, setPermissionStatus] = useState<string>('unknown');
+  const [isRequesting, setIsRequesting] = useState(false);
+  
+  useEffect(() => {
+    // Check browser permission API if available
+    if ('permissions' in navigator) {
+      navigator.permissions.query({ name: 'microphone' as PermissionName })
+        .then(result => {
+          setPermissionStatus(result.state);
+          
+          result.addEventListener('change', () => {
+            setPermissionStatus(result.state);
+          });
+        })
+        .catch(() => {
+          // Permission API not supported or error
+          setPermissionStatus('unknown');
+        });
+    }
+  }, []);
+  
+  const requestPermission = async () => {
+    setIsRequesting(true);
+    
+    try {
+      // This will trigger the browser's permission prompt
+      await startRecording();
+      
+      // If we get here, permission was granted
+      setPermissionStatus('granted');
+      
+      // Stop recording immediately - we just wanted permission
+      stopRecording();
+      
+    } catch (err: any) {
+      console.error('Microphone permission error:', err);
+      
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setPermissionStatus('denied');
+        
+        // Show helpful message based on browser
+        const isChrome = /Chrome/.test(navigator.userAgent);
+        const isFirefox = /Firefox/.test(navigator.userAgent);
+        const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+        
+        let helpMessage = 'Microphone access was denied. ';
+        
+        if (isChrome) {
+          helpMessage += 'Click the camera icon in the address bar to change permissions.';
+        } else if (isFirefox) {
+          helpMessage += 'Click the microphone icon in the address bar to change permissions.';
+        } else if (isSafari) {
+          helpMessage += 'Go to Safari > Preferences > Websites > Microphone to change permissions.';
+        } else {
+          helpMessage += 'Please check your browser settings to allow microphone access.';
+        }
+        
+        alert(helpMessage);
+        
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        setPermissionStatus('no-device');
+        alert('No microphone found. Please connect a microphone and try again.');
+        
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        setPermissionStatus('in-use');
+        alert('Microphone is already in use by another application.');
+        
+      } else {
+        setPermissionStatus('error');
+        alert(`Microphone error: ${err.message}`);
+      }
+    } finally {
+      setIsRequesting(false);
+    }
+  };
+  
+  // Already have permission
+  if (hasPermission) {
+    return (
+      <div className="permission-status granted">
+        ✅ Microphone access granted
+      </div>
+    );
+  }
+  
+  // Permission explicitly denied
+  if (permissionStatus === 'denied') {
+    return (
+      <div className="permission-status denied">
+        <p>❌ Microphone access denied</p>
+        <p>Please enable microphone access in your browser settings to use voice features.</p>
+        <button onClick={requestPermission}>Try Again</button>
+      </div>
+    );
+  }
+  
+  // No microphone detected
+  if (permissionStatus === 'no-device') {
+    return (
+      <div className="permission-status no-device">
+        <p>🎤 No microphone detected</p>
+        <p>Please connect a microphone to use voice features.</p>
+        <button onClick={requestPermission}>Check Again</button>
+      </div>
+    );
+  }
+  
+  // Microphone in use by another app
+  if (permissionStatus === 'in-use') {
+    return (
+      <div className="permission-status in-use">
+        <p>🔒 Microphone is in use</p>
+        <p>Please close other applications using the microphone.</p>
+        <button onClick={requestPermission}>Try Again</button>
+      </div>
+    );
+  }
+  
+  // Permission not yet requested or unknown
+  return (
+    <div className="permission-status prompt">
+      <p>🎤 Voice features require microphone access</p>
+      <button 
+        onClick={requestPermission}
+        disabled={isRequesting}
+        className="request-permission-btn"
+      >
+        {isRequesting ? 'Requesting...' : 'Enable Microphone'}
+      </button>
+      {error && (
+        <p className="error-message">{error.message}</p>
+      )}
+    </div>
+  );
+}
+```
+
+---
+
+## StrictMode Compatibility
+
+The SDK is fully compatible with React StrictMode, handling double-mounting correctly.
+
+```tsx
+import React, { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import { AgentCProvider } from '@agentc/realtime-react';
+import { AuthManager } from '@agentc/realtime-core';
+
+function App() {
+  // The provider handles StrictMode double-mounting automatically
+  // It will NOT create duplicate connections or cause issues
+  
+  return (
+    <StrictMode>
+      <AgentCProvider 
+        config={{
+          wsUrl: 'wss://api.agentc.com/rt/ws',
+          authToken: 'your-token',
+          refreshToken: 'your-refresh-token',
+          debug: true // Will show StrictMode handling in console
+        }}
+      >
+        <YourApplication />
+      </AgentCProvider>
+    </StrictMode>
+  );
+}
+
+const container = document.getElementById('root')!;
+const root = createRoot(container);
+root.render(<App />);
+```
+
+### Testing with StrictMode
+
+```tsx
+import { render, waitFor } from '@testing-library/react';
+import { StrictMode } from 'react';
+import { AgentCProvider, useConnection } from '@agentc/realtime-react';
+
+function TestComponent() {
+  const { isConnected, connectionState } = useConnection();
+  return (
+    <div>
+      <span data-testid="connected">{String(isConnected)}</span>
+      <span data-testid="state">{connectionState}</span>
+    </div>
+  );
+}
+
+test('handles StrictMode double-mounting correctly', async () => {
+  const mockConfig = {
+    wsUrl: 'wss://test.api.com/ws',
+    authToken: 'test-token',
+    refreshToken: 'test-refresh'
+  };
+  
+  // Render with StrictMode
+  const { getByTestId, unmount } = render(
+    <StrictMode>
+      <AgentCProvider config={mockConfig}>
+        <TestComponent />
+      </AgentCProvider>
+    </StrictMode>
+  );
+  
+  // Should only create one connection despite double-mounting
+  await waitFor(() => {
+    expect(getByTestId('state')).toHaveTextContent('CONNECTING');
+  });
+  
+  // Unmounting should cleanup properly
+  unmount();
+  
+  // No lingering connections or memory leaks
+});
+```
+
+---
+
 ## Development-Only Examples
 
 ⚠️ **WARNING**: The following patterns are for DEVELOPMENT AND TESTING ONLY. Never use these patterns in production!
@@ -2254,7 +3140,8 @@ function LogoutButton() {
 // DEV-ONLY-LoginExample.tsx
 // ⚠️ DEVELOPMENT ONLY - DO NOT USE IN PRODUCTION ⚠️
 import React, { useState } from 'react';
-import { AgentCProvider, AuthManager } from '@agentc/realtime-react';
+import { AgentCProvider } from '@agentc/realtime-react';
+import { AuthManager } from '@agentc/realtime-core';
 
 function DevOnlyApp() {
   const [config, setConfig] = useState<any>(null);
@@ -2336,6 +3223,10 @@ REACT_APP_DEV_PASSWORD=test_pass  # Test account only!
 ```tsx
 // DevOnlyAutoLogin.tsx
 // ⚠️ DEVELOPMENT ONLY - DO NOT USE IN PRODUCTION ⚠️
+import React, { useState, useEffect } from 'react';
+import { AgentCProvider } from '@agentc/realtime-react';
+import { AuthManager } from '@agentc/realtime-core';
+
 function DevOnlyAutoLogin() {
   const [config, setConfig] = useState<any>(null);
 
@@ -2435,3 +3326,368 @@ Example migration checklist:
 - [ ] Update all components to use backend-provided tokens
 - [ ] Test token refresh through YOUR backend
 - [ ] Verify no credentials in frontend bundle
+
+---
+
+## Complete Application Example
+
+Here's a complete, production-ready application that combines all the patterns:
+
+```tsx
+// App.tsx - Complete Production Application
+import React, { Suspense, lazy, useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { 
+  AgentCProvider,
+  useConnection,
+  useChat,
+  useAudio,
+  useTurnState,
+  useVoiceModel,
+  useInitializationStatus,
+  ConnectionState
+} from '@agentc/realtime-react';
+import { AuthManager } from '@agentc/realtime-core';
+
+// Lazy load components for better performance
+const ChatInterface = lazy(() => import('./components/ChatInterface'));
+const VoiceAssistant = lazy(() => import('./components/VoiceAssistant'));
+const AvatarChat = lazy(() => import('./components/AvatarChat'));
+const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
+
+// Main App Component
+function App() {
+  const [authState, setAuthState] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
+  const [agentCConfig, setAgentCConfig] = useState<any>(null);
+  const [error, setError] = useState<string>('');
+
+  useEffect(() => {
+    checkAuthentication();
+  }, []);
+
+  const checkAuthentication = async () => {
+    try {
+      const token = localStorage.getItem('your_app_token');
+      
+      if (!token) {
+        setAuthState('unauthenticated');
+        return;
+      }
+
+      // Verify token with YOUR backend
+      const response = await fetch('/api/verify', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        await loadAgentCConfig(token);
+        setAuthState('authenticated');
+      } else {
+        setAuthState('unauthenticated');
+      }
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      setAuthState('unauthenticated');
+    }
+  };
+
+  const loadAgentCConfig = async (token: string) => {
+    try {
+      const response = await fetch('/api/agent-c/config', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load Agent C configuration');
+      }
+
+      const data = await response.json();
+      
+      // Initialize AuthManager with backend payload
+      const authManager = new AuthManager();
+      authManager.initializeFromPayload(data.agentC);
+      
+      setAgentCConfig({
+        wsUrl: data.agentC.wsUrl,
+        authToken: data.agentC.authToken,
+        refreshToken: data.agentC.refreshToken,
+        heygenToken: data.agentC.heygenToken,
+        enableAudio: true,
+        audioConfig: {
+          enableInput: true,
+          enableOutput: true,
+          respectTurnState: true,
+          initialVolume: 0.8
+        },
+        reconnection: {
+          maxAttempts: 10,
+          initialDelay: 1000,
+          maxDelay: 30000
+        },
+        debug: process.env.NODE_ENV === 'development'
+      });
+    } catch (error: any) {
+      console.error('Failed to load Agent C config:', error);
+      setError(error.message);
+    }
+  };
+
+  if (authState === 'loading') {
+    return <LoadingScreen />;
+  }
+
+  if (authState === 'unauthenticated') {
+    return <LoginPage onSuccess={() => checkAuthentication()} />;
+  }
+
+  if (error) {
+    return (
+      <ErrorBoundary error={error} onRetry={() => {
+        setError('');
+        checkAuthentication();
+      }} />
+    );
+  }
+
+  if (!agentCConfig) {
+    return <div>Initializing chat system...</div>;
+  }
+
+  return (
+    <AgentCProvider config={agentCConfig}>
+      <Router>
+        <AppLayout>
+          <Suspense fallback={<LoadingScreen />}>
+            <Routes>
+              <Route path="/" element={<Navigate to="/chat" replace />} />
+              <Route path="/chat" element={<ChatInterface />} />
+              <Route path="/voice" element={<VoiceAssistant />} />
+              <Route path="/avatar" element={<AvatarChat />} />
+              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
+        </AppLayout>
+      </Router>
+    </AgentCProvider>
+  );
+}
+
+// App Layout with Navigation and Status
+function AppLayout({ children }: { children: React.ReactNode }) {
+  const { isConnected, connectionState } = useConnection();
+  const { connectionState: detailedState } = useInitializationStatus();
+  const { currentTurn } = useTurnState();
+  const { audioLevel, isRecording } = useAudio();
+
+  return (
+    <div className="app-layout">
+      <header className="app-header">
+        <nav className="main-nav">
+          <a href="/chat">Chat</a>
+          <a href="/voice">Voice</a>
+          <a href="/avatar">Avatar</a>
+          <a href="/admin">Admin</a>
+        </nav>
+        
+        <div className="status-bar">
+          <ConnectionStatus 
+            isConnected={isConnected}
+            connectionState={connectionState}
+            detailedState={detailedState}
+          />
+          <TurnIndicator currentTurn={currentTurn} />
+          <AudioIndicator 
+            audioLevel={audioLevel}
+            isRecording={isRecording}
+          />
+        </div>
+      </header>
+      
+      <main className="app-content">
+        {children}
+      </main>
+      
+      <footer className="app-footer">
+        <QuickActions />
+      </footer>
+    </div>
+  );
+}
+
+// Connection Status Component
+function ConnectionStatus({ 
+  isConnected, 
+  connectionState, 
+  detailedState 
+}: {
+  isConnected: boolean;
+  connectionState: string;
+  detailedState: ConnectionState;
+}) {
+  const getStatusColor = () => {
+    if (!isConnected) return 'red';
+    if (detailedState === ConnectionState.READY) return 'green';
+    if (detailedState === ConnectionState.AUTHENTICATING) return 'yellow';
+    return 'orange';
+  };
+
+  return (
+    <div className={`connection-status ${getStatusColor()}`}>
+      <span className="status-dot" />
+      <span className="status-text">{connectionState}</span>
+    </div>
+  );
+}
+
+// Quick Actions Bar
+function QuickActions() {
+  const { newSession, clearMessages } = useChat();
+  const { disconnect, connect, isConnected } = useConnection();
+  const { startRecording, stopRecording, isRecording } = useAudio();
+
+  return (
+    <div className="quick-actions">
+      <button onClick={() => newSession()}>
+        🆕 New Session
+      </button>
+      <button onClick={clearMessages}>
+        🗑️ Clear Chat
+      </button>
+      <button onClick={() => isConnected ? disconnect() : connect()}>
+        {isConnected ? '🔌 Disconnect' : '🔋 Connect'}
+      </button>
+      <button onClick={() => isRecording ? stopRecording() : startRecording()}>
+        {isRecording ? '🔴 Stop' : '🎤 Record'}
+      </button>
+    </div>
+  );
+}
+
+// Helper Components
+function LoadingScreen() {
+  return (
+    <div className="loading-screen">
+      <div className="spinner" />
+      <p>Loading...</p>
+    </div>
+  );
+}
+
+function LoginPage({ onSuccess }: { onSuccess: () => void }) {
+  const [credentials, setCredentials] = useState({ email: '', password: '' });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credentials)
+      });
+
+      if (!response.ok) {
+        throw new Error('Invalid credentials');
+      }
+
+      const data = await response.json();
+      localStorage.setItem('your_app_token', data.token);
+      localStorage.setItem('your_refresh_token', data.refreshToken);
+      
+      onSuccess();
+    } catch (error: any) {
+      setError(error.message || 'Login failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="login-page">
+      <form onSubmit={handleLogin}>
+        <h1>Login</h1>
+        {error && <div className="error">{error}</div>}
+        <input
+          type="email"
+          placeholder="Email"
+          value={credentials.email}
+          onChange={(e) => setCredentials({...credentials, email: e.target.value})}
+          required
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={credentials.password}
+          onChange={(e) => setCredentials({...credentials, password: e.target.value})}
+          required
+        />
+        <button type="submit" disabled={isLoading}>
+          {isLoading ? 'Logging in...' : 'Login'}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function ErrorBoundary({ error, onRetry }: { error: string; onRetry: () => void }) {
+  return (
+    <div className="error-boundary">
+      <h1>Something went wrong</h1>
+      <p>{error}</p>
+      <button onClick={onRetry}>Try Again</button>
+    </div>
+  );
+}
+
+function TurnIndicator({ currentTurn }: { currentTurn: string }) {
+  return (
+    <div className={`turn-indicator ${currentTurn}`}>
+      {currentTurn === 'user_turn' && '🎤 Your Turn'}
+      {currentTurn === 'agent_turn' && '🤖 Agent Speaking'}
+      {!currentTurn && '⏸️ Ready'}
+    </div>
+  );
+}
+
+function AudioIndicator({ audioLevel, isRecording }: { audioLevel: number; isRecording: boolean }) {
+  if (!isRecording) return null;
+  
+  return (
+    <div className="audio-indicator">
+      <div 
+        className="audio-bar" 
+        style={{ width: `${audioLevel * 100}%` }}
+      />
+    </div>
+  );
+}
+
+function NotFound() {
+  return (
+    <div className="not-found">
+      <h1>404 - Page Not Found</h1>
+      <a href="/">Go Home</a>
+    </div>
+  );
+}
+
+export default App;
+```
+
+## Summary
+
+This documentation provides comprehensive examples for building production-ready applications with the Agent C Realtime React SDK. Key takeaways:
+
+1. **Always use backend authentication** - Never expose Agent C credentials in frontend code
+2. **Use the correct imports** - `AuthManager` is from `@agentc/realtime-core`
+3. **Handle errors gracefully** - Provide user feedback and recovery options
+4. **Follow React best practices** - Use hooks correctly, handle StrictMode, clean up effects
+5. **Test thoroughly** - Mock appropriately and test edge cases
+6. **Consider performance** - Use lazy loading, memoization, and proper state management
+
+For more details on individual hooks, see the [hooks documentation](./hooks/). For the core SDK documentation, see [@agentc/realtime-core](../core/).

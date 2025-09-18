@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import { InputArea } from '../InputArea'
 import '@testing-library/jest-dom'
 import { updateMockState } from '../../../test/mocks/realtime-react'
@@ -283,7 +283,9 @@ describe('InputArea', () => {
       const recordButton = screen.getByTestId('record-button')
       expect(recordButton).toHaveTextContent('Stop')
       
-      fireEvent.click(recordButton)
+      await act(async () => {
+        fireEvent.click(recordButton)
+      })
       expect(mockStopStreaming).toHaveBeenCalled()
     })
 

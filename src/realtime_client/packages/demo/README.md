@@ -1,134 +1,155 @@
-# Simple Next.js/ CenSuite Starter
+# Agent C Realtime Client SDK Demo App
 
-A minimal Next.js 14 starter template using the App Router, ShadCN/UI, type-safe environment variables, built-in icon support, and preconfigured settings. Designed for simplicity, it offers a plug-and-play setup ideal for first-time Next.js and ShadCN users.
+A reference implementation demonstrating the Agent C Realtime Client SDK capabilities. This Next.js 14 application showcases real-time chat, audio communication, and agent interactions using our TypeScript SDK.
 
-## Background
+## Documentation
 
-CenSuite is a design system focused on delivering better user experiences through faster, more consistent frontends. It blends expert-crafted UI patterns from the XD team with optimized React tooling to reduce development overhead and improve design accuracy. Every component is built to be accessible, responsive, and performant—helping teams ship applications that feel cohesive, intuitive, and fast. With over 50 reusable, fully customizable components styled using centralized design tokens, CenSuite dramatically reduces developer effort while ensuring brand and UX consistency out of the box.
+For comprehensive documentation, please refer to:
 
-Contact John Tourles (john.tourles@centricconsulting.com) to learn how CenSuite can streamline your next deliverable.
+- **[Complete Demo Documentation](/docs/api-reference/demo/)** - Full setup guide, architecture, features, and deployment
+- **[Quick Start Guide](/docs/api-reference/demo/index.md)** - Get up and running quickly
+- **[Implementation Patterns](/docs/api-reference/demo/implementation-patterns.md)** - Authentication, providers, chat, and audio patterns
+- **[Configuration Guide](/docs/api-reference/demo/configuration-guide.md)** - Environment variables, API endpoints, theming, and build configuration
 
-```mermaid
-graph TD
-  %% Design Layer
-  A1[XD Team] --> A2[Figma: CenSuite Tokens & Components]
+## Quick Overview
 
-  %% System Layer
-  A2 --> B1[Design Tokens]
-  B1 --> B2[CenSuite Component Library ShadCN-based]
-
-  B2 <--> C2
-
-  %% Application Layer
-  C1_App[Next.js App]
-  C1_App --> C2[Page & Layout Composition]
-
-  %% Deployment Layer
-  C2 --> D1[Static/SSR Output]
-  D1 --> D2[Deployment Vercel, AWS, Azure etc.]
-
-```
+This demo application provides:
+- **Real-time Chat Interface** - Full-featured chat with message history and typing indicators
+- **Voice Communication** - WebRTC-based audio with push-to-talk and voice activity detection
+- **Agent Integration** - Seamless interaction with AI agents via the Realtime API
+- **Avatar Support** - HeyGen avatar integration for visual agent representation
+- **Responsive Design** - Built with CenSuite design system for optimal user experience
 
 ## System Requirements
 
 - Node.js 20.18.0 LTS or higher
+- pnpm package manager
+- HTTPS enabled (required for microphone access)
 
-## Usage
+## Quick Start
 
-```markdown
-1. Clone this repository
-```
-
-2. Install the required dependencies and set up audio worklet
-
+1. **Clone and Install**
    ```bash
-   pnpm install # Or package manager of choice
-   
-   # The audio worklet file is automatically deployed during install
-   # It will be copied to public/worklets/audio-processor.worklet.js
+   pnpm install
    ```
 
-3. Verify audio worklet deployment
-
-   ```bash
-   # Check that the worklet file exists
-   ls public/worklets/audio-processor.worklet.js
-   
-   # If missing, copy manually:
-   cp ../../packages/core/dist/worklets/audio-processor.worklet.js public/worklets/
-   ```
-
-4. Copy `.env.example` to `.env.local`
-
+2. **Configure Environment**
    ```bash
    cp .env.example .env.local
+   # Edit .env.local with your API credentials
    ```
 
-4. Start the development server
-
+3. **Start Development Server**
    ```bash
    pnpm dev
    ```
 
-6. Build the project
-
+4. **Build for Production**
    ```bash
    pnpm build
    ```
 
-## Audio System Notes
+## Key Features
 
-### AudioWorklet Deployment
+### Real-time Communication
+- WebSocket-based bidirectional communication
+- Binary audio streaming with automatic resampling
+- Turn-based conversation management
+- Automatic reconnection with exponential backoff
 
-This application uses an AudioWorklet for high-performance audio processing. The worklet file must be accessible at `/worklets/audio-processor.worklet.js`. 
+### Audio System
+- AudioWorklet for high-performance processing
+- Automatic sample rate conversion to 16kHz
+- Voice activity detection
+- Push-to-talk support
 
-**Key features of the audio system:**
-- Automatic resampling from browser native rate to 16kHz
-- Off-thread processing for better performance
-- Binary WebSocket transmission for 33% bandwidth savings
+### UI Components
+- Built with shadcn/ui and CenSuite design system
+- Fully accessible (WCAG 2.1 AA compliant)
+- Responsive layouts for all screen sizes
+- Dark/light theme support
 
-### Troubleshooting Audio Issues
+## Project Structure
 
-If you encounter audio problems:
+```
+packages/demo/
+├── src/
+│   ├── app/           # Next.js app router pages
+│   ├── components/    # React components
+│   │   ├── chat/     # Chat interface components
+│   │   └── ui/       # Base UI components
+│   └── lib/          # Utilities and helpers
+├── public/
+│   └── worklets/     # Audio worklet files
+└── docs/             # Comprehensive documentation
+```
 
-1. **404 Error for worklet:** Ensure `public/worklets/audio-processor.worklet.js` exists
-2. **No audio input:** Check HTTPS is enabled (required for microphone access)
-3. **Distorted audio:** The system automatically handles sample rate conversion
+## Environment Variables
 
-For detailed troubleshooting, see the [Audio Troubleshooting Guide](../../docs/guides/audio-troubleshooting.md).
+Essential configuration (see [Configuration Guide](/docs/api-reference/demo/configuration-guide.md) for full details):
 
-## Features
+```env
+NEXT_PUBLIC_AGENT_ID=your-agent-id
+NEXT_PUBLIC_API_URL=https://api.example.com
+```
 
-- Next.js 14+ `/app` router
-- TypeScript
-- Tailwind CSS v3
-- shadcn/ui (Radix UI + Tailwind)
-- Prettier (w/ auto sort imports and tailwind classes)
-- SEO optimized
-- Typesafe env, icons, and config
-- Ready to use - jump right into development
+## Development
 
-## Developer Resources
+### Available Scripts
 
-### Tools
+- `pnpm dev` - Start development server
+- `pnpm build` - Build for production
+- `pnpm start` - Start production server
+- `pnpm lint` - Run ESLint
+- `pnpm type-check` - Run TypeScript type checking
 
-- [v0](https://v0.dev/) - v0 is a state-of-the-art AI code generation tool trained on Next.js and ShadCN. It's capable of handling screenshots and turning them into copy-and-pasteable components, pages, functions, and more.
-- [OpenNext](https://opennext.js.org/) - A collective initiative by AWS, Cloudflare, and Netlify to bring first-class support for Next.js to any platform.
-- [Lucide React](https://lucide.dev/guide/packages/lucide-react) - Library of SVG-based icons to simplify development."
+### Testing the SDK
 
-### Videos
+The demo app serves as a comprehensive test environment for:
+- Connection management and error handling
+- Audio input/output processing
+- Message streaming and chat history
+- Voice model selection
+- Avatar integration
 
-- [Next.js Summarized in 100 seconds](https://www.youtube.com/watch?v=Sklc_fQBmcs)
-- [ShadCN Explained](https://www.youtube.com/watch?v=yYKEvxFPy5Q)
-- [Tailwind CSS in 100 seconds](https://www.youtube.com/watch?v=mr15Xzb1Ook)
-- [ZOD Schema Validation](https://www.youtube.com/watch?v=9UVPk0Ulm6U)
+## Troubleshooting
 
-### Documentation
+For common issues and solutions, see:
+- [Audio Troubleshooting Guide](../../docs/guides/audio-troubleshooting.md)
+- [Demo App Documentation](/docs/api-reference/demo/README.md#troubleshooting)
 
-- [CenSuite Docs](https://censuite-ui.vercel.app/) - Internal documentation maintained by the XD team and designed to provide better examples and clarifications than the official ShadCN docs.
-- [Theming crash course](https://censuite-ui.vercel.app/docs/design/foundation/customization-and-theming) - Simple list of all native design variables for quick and easy reference.
-- [Built-in Optimizations](https://nextjs.org/docs/14/app/building-your-application/optimizing) - Next.js comes with a variety of built-in optimizations designed to improve your application's speed and Core Web Vitals.
-- [Next.js Docs](https://nextjs.org/docs/14/getting-started) - Official Next.js documentation.
-- [Learn Next.js](https://nextjs.org/learn) - Guides and tutorials from the Next.js team.
-- [Tailwind Docs](https://v3.tailwindcss.com/) - Documentation for the CSS library powering the design system.
-- [TypeScript Docs](https://www.typescriptlang.org/) - Documentation for the TypeScript language.
+## Architecture
+
+This demo app is part of the Agent C Realtime Client SDK monorepo:
+
+```
+@agentc/realtime-core    # Core SDK functionality
+@agentc/realtime-react   # React hooks and providers
+@agentc/realtime-ui      # UI components library
+@agentc/demo-app         # This demo application
+```
+
+## Resources
+
+### SDK Documentation
+- [Core SDK API Reference](/docs/api-reference/core/)
+- [React Integration Guide](/docs/api-reference/react/)
+- [UI Components Library](/docs/api-reference/ui/)
+
+### Design System
+- [CenSuite Documentation](https://censuite-ui.vercel.app/)
+- [Theming Guide](https://censuite-ui.vercel.app/docs/design/foundation/customization-and-theming)
+
+### Technologies
+- [Next.js 14 Documentation](https://nextjs.org/docs)
+- [TypeScript](https://www.typescriptlang.org/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [shadcn/ui](https://ui.shadcn.com/)
+
+## Support
+
+For questions about the Agent C Realtime Client SDK, please refer to the [comprehensive documentation](/docs/api-reference/demo/) or contact the development team.
+
+## License
+
+Proprietary - See LICENSE file for details

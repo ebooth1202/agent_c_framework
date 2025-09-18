@@ -153,7 +153,8 @@ class AgentCloneTools(AgentAssistToolBase):
 
         await self._render_media_markdown(markdown.markdown(f"**Prime** agent requesting assistance from clone:\n\n{orig_message}\n\n## Clone context:\n{process_context}"),
                                                             "chat",
-                                                            tool_context=tool_context)
+                                                            tool_context=tool_context,
+                                                            streaming_callback=tool_context['streaming_callback'])
         content = f"**Prime agent** requesting assistance:\n\n{message}"
         user_session_id = tool_context.get('user_session_id', tool_context['session_id'])
         parent_session_id = tool_context.get('session_id')
@@ -169,7 +170,9 @@ class AgentCloneTools(AgentAssistToolBase):
 
         await self._render_media_markdown(markdown.markdown(f"Interaction complete for Agent Clone Session ID: {agent_session_id}. Control returned to prime agent."),
                                                             "chat",
-                                                            tool_context=tool_context)
+                                                            tool_context=tool_context,
+                                                            streaming_callback=tool_context['streaming_callback'])
+
         last_message = messages[-1] if messages else None
         if last_message is not None:
             content = last_message.get('content', None)

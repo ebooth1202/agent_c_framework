@@ -244,11 +244,12 @@ class Toolset:
             kwargs: The arguments to be passed to the render media event.
         """
         kwargs['role'] = kwargs.get('role', self.tool_role)
+        streaming_callback = kwargs.pop('streaming_callback', self.streaming_callback)
 
         # Format markdown content if content_type is text/markdown
         content_type = kwargs.get('content_type')
-        if content_type == 'text/markdown' and 'content' in kwargs:
-            kwargs['content'] = self._format_markdown(kwargs['content'])
+        #if content_type == 'text/markdown' and 'content' in kwargs:
+        #    kwargs['content'] = self._format_markdown(kwargs['content'])
 
         tool_context = kwargs.pop('tool_context')
         kwargs['session_id'] = kwargs.get('session_id', tool_context.get('user_session_id', tool_context['session_id']))
@@ -257,8 +258,8 @@ class Toolset:
         render_media_event = RenderMediaEvent(**kwargs)
 
         # Send it to the streaming callback
-        if self.streaming_callback:
-            await self.streaming_callback(render_media_event)
+        if streaming_callback:
+            await streaming_callback(render_media_event)
 
     async def _raise_message_event(self, **kwargs: Any) -> None:
         """

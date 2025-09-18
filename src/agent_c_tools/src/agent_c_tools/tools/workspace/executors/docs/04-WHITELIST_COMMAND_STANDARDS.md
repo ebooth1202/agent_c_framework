@@ -246,7 +246,7 @@ node:
   env_overrides:
     NODE_DISABLE_COLORS: "1"
     NO_COLOR: "1"
-    FORCE_COLOR: "0"
+
 
 npx:
   validator: npx

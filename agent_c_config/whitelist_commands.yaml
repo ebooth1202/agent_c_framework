@@ -241,7 +241,6 @@ pnpm:
     PNPM_CONFIG_PROGRESS: "false"   # no progress bars
     PNPM_CONFIG_LOGLEVEL: "warn"    # or "error" to be even quieter
     NO_COLOR: "1"                   # many tools respect this
-    NODE_DISABLE_COLORS: "1"        # belt-and-suspenders for some libs
     CI: "1"                         # many CLIs reduce interactivity/spinners
     PNPM_CONFIG_FUND: "false"
     PNPM_CONFIG_UPDATE_NOTIFIER: "false"
@@ -335,10 +334,8 @@ lerna:
   default_timeout: 180
   env_overrides:
     LERNA_DISABLE_PROGRESS: "1"
-    NPM_CONFIG_COLOR: "false"
     NPM_CONFIG_PROGRESS: "false"
     NO_COLOR: "1"
-    NODE_DISABLE_COLORS: "1"
     CI: "1"
 
 dotnet:

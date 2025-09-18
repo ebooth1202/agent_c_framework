@@ -41,7 +41,9 @@ interface RealtimeClientConfig {
   debug?: boolean;                   // Enable debug logging (default: false)
   connectionTimeout?: number;        // Connection timeout in ms (default: 10000)
   pingInterval?: number;             // WebSocket ping interval in ms (default: 30000)
-  pongTimeout?: number;              // Pong timeout in ms (default: 5000)
+  pongTimeout?: number;              // Pong timeout in ms (default: 10000)
+  maxMessageSize?: number;           // Max message size in bytes (default: 10MB)
+  binaryType?: 'blob' | 'arraybuffer'; // Binary type (default: 'arraybuffer')
   protocols?: string[];              // WebSocket subprotocols
   headers?: Record<string, string>;  // Additional headers
 }
@@ -49,17 +51,23 @@ interface RealtimeClientConfig {
 interface AudioConfig {
   enableInput?: boolean;             // Enable microphone input (default: true)
   enableOutput?: boolean;            // Enable audio output (default: true)
-  sampleRate?: number;               // Audio sample rate (default: 16000)
-  chunkDuration?: number;            // Chunk duration in ms (default: 100)
   respectTurnState?: boolean;        // Respect turn management (default: true)
+  logAudioChunks?: boolean;          // Log audio chunks for debugging (default: false)
+  sampleRate?: number;               // Audio sample rate (default: 24000)
+  chunkSize?: number;                // Chunk size in samples (default: 4800)
   initialVolume?: number;            // Initial volume 0-1 (default: 1.0)
+  autoGainControl?: boolean;         // Enable AGC (default: true)
+  echoCancellation?: boolean;        // Enable echo cancellation (default: true)
+  noiseSuppression?: boolean;        // Enable noise suppression (default: true)
 }
 
 interface ReconnectionConfig {
-  maxAttempts?: number;              // Max reconnection attempts (default: 5)
+  enabled?: boolean;                  // Enable auto-reconnection (default: true)
   initialDelay?: number;             // Initial delay in ms (default: 1000)
   maxDelay?: number;                 // Max delay in ms (default: 30000)
   backoffMultiplier?: number;        // Backoff multiplier (default: 1.5)
+  maxAttempts?: number;              // Max attempts, 0=unlimited (default: 0)
+  jitterFactor?: number;             // Jitter factor 0-1 (default: 0.3)
 }
 ```
 
@@ -82,7 +90,8 @@ const client = new RealtimeClient({
   audioConfig: {
     enableInput: true,
     enableOutput: true,
-    respectTurnState: true
+    respectTurnState: true,
+    sampleRate: 24000
   },
   debug: true
 });
@@ -110,11 +119,22 @@ async connect(): Promise<void>
 
 **Throws:** Error if connection fails or times out
 
+**Note:** Upon successful connection, the server sends 6 initialization events:
+1. `chat_user_data` - User information
+2. `avatar_list` - Available avatars
+3. `voice_list` - Available voices
+4. `agent_list` - Available agents
+5. `tool_catalog` - Available tools
+6. `chat_session_changed` - Initial session
+
 **Example:**
 ```typescript
 try {
   await client.connect();
   console.log('Connected!');
+  
+  // Wait for initialization to complete if needed
+  await client.waitForInitialization();
 } catch (error) {
   console.error('Connection failed:', error);
 }
@@ -162,10 +182,10 @@ getConnectionState(): ConnectionState
 
 ```typescript
 enum ConnectionState {
-  DISCONNECTED = 0,
-  CONNECTING = 1,
-  CONNECTED = 2,
-  RECONNECTING = 3
+  DISCONNECTED = 'DISCONNECTED',
+  CONNECTING = 'CONNECTING',
+  CONNECTED = 'CONNECTED',
+  RECONNECTING = 'RECONNECTING'
 }
 ```
 
@@ -214,9 +234,11 @@ sendBinaryFrame(data: ArrayBuffer | ArrayBufferView): void
 
 **Throws:** Error if not connected or binary not supported
 
+**Note:** This sends raw PCM16 audio directly over WebSocket, not wrapped in JSON
+
 **Example:**
 ```typescript
-const audioData = new Int16Array(1600); // 100ms of 16kHz audio
+const audioData = new Int16Array(2400); // 100ms of 24kHz audio
 client.sendBinaryFrame(audioData.buffer);
 ```
 
@@ -233,11 +255,11 @@ sendEvent<K extends keyof ClientEventMap>(event: ClientEventMap[K]): void
 
 **Throws:** Error if not connected to the server
 
-**Note:** This is a public API method as of version 0.1.0. Most use cases should use the higher-level methods like `sendText()`, `setAgent()`, etc. Use this method when you need direct control over the event structure or for advanced integrations.
+**Note:** This is a public API method. Most use cases should use the higher-level methods like `sendText()`, `setAgent()`, etc. Use this method when you need direct control over the event structure or for advanced integrations.
 
 **Example:**
 ```typescript
-// Send a custom event
+// Send a ping event
 client.sendEvent({ type: 'ping' });
 
 // Send a text input event (equivalent to sendText)
@@ -258,25 +280,69 @@ client.sendEvent<'set_agent'>({
   type: 'set_agent', 
   agent_key: 'support-agent' 
 });
+
+// Cancel the current agent response
+client.sendEvent({ type: 'client_wants_cancel' });
+```
+
+### cancelResponse()
+
+Cancels the current agent response. Convenience method for sending `client_wants_cancel` event.
+
+```typescript
+cancelResponse(): void
+```
+
+**Throws:** Error if not connected
+
+**Note:** Server will respond with a `cancelled` event to confirm cancellation
+
+**Example:**
+```typescript
+// Cancel ongoing agent response
+client.cancelResponse();
+
+// Listen for confirmation
+client.on('cancelled', () => {
+  console.log('Response cancelled');
+});
 ```
 
 ## Agent Management
 
 ### getAgents()
 
-Requests the list of available agents.
+Requests the list of available agents. Note: This is typically not needed as agents are provided during initialization.
 
 ```typescript
 getAgents(): void
 ```
 
-**Emits:** `agents_list` event with available agents
+**Emits:** `agent_list` event with available agents
 
 **Example:**
 ```typescript
 client.getAgents();
-client.on('agents_list', (event) => {
+client.on('agent_list', (event) => {
   console.log('Available agents:', event.agents);
+});
+```
+
+### getAgentsList()
+
+Gets the list of agents received during initialization.
+
+```typescript
+getAgentsList(): Agent[]
+```
+
+**Returns:** Array of available agents
+
+**Example:**
+```typescript
+const agents = client.getAgentsList();
+agents.forEach(agent => {
+  console.log(agent.name, agent.key);
 });
 ```
 
@@ -296,6 +362,24 @@ setAgent(agentKey: string): void
 client.setAgent('customer-service-agent');
 ```
 
+### getCurrentAgentConfig()
+
+Gets the current agent configuration from the active session.
+
+```typescript
+getCurrentAgentConfig(): AgentConfiguration | null
+```
+
+**Returns:** Current agent configuration or null if no session is active
+
+**Example:**
+```typescript
+const config = client.getCurrentAgentConfig();
+if (config) {
+  console.log('Current agent:', config.key, config.name);
+}
+```
+
 ## Voice Management
 
 ### setAgentVoice()
@@ -309,6 +393,10 @@ setAgentVoice(voiceId: string): void
 **Parameters:**
 - `voiceId` (string) - Voice identifier (e.g., 'nova', 'echo', 'none', 'avatar')
 
+**Special voice IDs:**
+- `'none'` - Disable audio output
+- `'avatar'` - Use avatar voice (HeyGen integration)
+
 **Example:**
 ```typescript
 client.setAgentVoice('nova');
@@ -318,6 +406,42 @@ client.setAgentVoice('none');
 
 // Use avatar voice (HeyGen)
 client.setAgentVoice('avatar');
+```
+
+### getVoices()
+
+Requests the list of available voices from the server.
+
+```typescript
+getVoices(): void
+```
+
+**Emits:** `voice_list` event with available voices
+
+**Example:**
+```typescript
+client.getVoices();
+client.on('voice_list', (event) => {
+  console.log('Available voices:', event.voices);
+});
+```
+
+### getVoicesList()
+
+Gets the list of voices received during initialization.
+
+```typescript
+getVoicesList(): Voice[]
+```
+
+**Returns:** Array of available voices
+
+**Example:**
+```typescript
+const voices = client.getVoicesList();
+voices.forEach(voice => {
+  console.log(voice.voice_id, voice.description);
+});
 ```
 
 ### getVoiceManager()
@@ -408,6 +532,48 @@ client.setSessionMetadata({
   userId: 'user123',
   topic: 'technical-support',
   priority: 'high'
+});
+```
+
+### setSessionMessages()
+
+Sets the message history for the current session.
+
+```typescript
+setSessionMessages(messages: Message[]): void
+```
+
+**Parameters:**
+- `messages` (Message[]) - Array of message objects
+
+**Example:**
+```typescript
+client.setSessionMessages([
+  { role: 'user', content: 'Hello' },
+  { role: 'assistant', content: 'Hi there!' }
+]);
+```
+
+### fetchUserSessions()
+
+Fetches paginated list of user sessions.
+
+```typescript
+fetchUserSessions(offset?: number, limit?: number): void
+```
+
+**Parameters:**
+- `offset` (number, optional) - Starting offset for pagination (default: 0)
+- `limit` (number, optional) - Number of sessions to fetch (default: 50)
+
+**Emits:** `get_user_sessions_response` event with session list
+
+**Example:**
+```typescript
+client.fetchUserSessions(0, 20);
+client.on('get_user_sessions_response', (event) => {
+  console.log('Sessions:', event.sessions.chat_sessions);
+  console.log('Total:', event.sessions.total_sessions);
 });
 ```
 
@@ -530,6 +696,7 @@ interface AudioStatus {
   isStreaming: boolean;
   hasPermission: boolean;
   currentLevel: number;      // Current audio level (0-1)
+  averageLevel: number;      // Average audio level (0-1)
   
   // Output status
   isPlaying: boolean;
@@ -552,22 +719,40 @@ console.log('Audio level:', status.currentLevel);
 
 ## Avatar Management
 
-### setAvatarSession()
+### setAvatar()
 
-Notifies the server that a HeyGen avatar session is active.
+Sets the avatar for the current session. This creates a new HeyGen avatar session.
 
 ```typescript
-setAvatarSession(sessionId: string, avatarId: string): void
+setAvatar(avatarId: string, quality?: string, videoEncoding?: string): void
 ```
 
 **Parameters:**
-- `sessionId` (string) - HeyGen session ID
-- `avatarId` (string) - Avatar ID used
+- `avatarId` (string) - The ID of the avatar to set
+- `quality` (string, optional) - Quality setting (default: "auto")
+- `videoEncoding` (string, optional) - Video encoding (default: "H265")
+
+**Example:**
+```typescript
+client.setAvatar('avatar-123', 'auto', 'H265');
+```
+
+### setAvatarSession()
+
+Notifies the server that a HeyGen avatar session is active. Called after HeyGen STREAM_READY event.
+
+```typescript
+setAvatarSession(accessToken: string, avatarSessionId: string): void
+```
+
+**Parameters:**
+- `accessToken` (string) - HeyGen access token for the session
+- `avatarSessionId` (string) - HeyGen avatar session ID
 
 **Example:**
 ```typescript
 // After HeyGen STREAM_READY event
-client.setAvatarSession('heygen-session-123', 'avatar-456');
+client.setAvatarSession('heygen-token', 'heygen-session-123');
 ```
 
 ### clearAvatarSession()
@@ -627,6 +812,115 @@ const token = client.getHeyGenAccessToken();
 if (token) {
   // Use token to create HeyGen session
 }
+```
+
+## Initialization & Configuration
+
+### isFullyInitialized()
+
+Checks if the client has completed initialization (all 6 initialization events received).
+
+```typescript
+isFullyInitialized(): boolean
+```
+
+**Returns:** `true` if initialization is complete, `false` otherwise
+
+**Example:**
+```typescript
+if (client.isFullyInitialized()) {
+  // Safe to access initialization data
+  const agents = client.getAgentsList();
+}
+```
+
+### waitForInitialization()
+
+Waits for initialization to complete.
+
+```typescript
+waitForInitialization(): Promise<void>
+```
+
+**Returns:** Promise that resolves when all initialization events are received
+
+**Example:**
+```typescript
+await client.connect();
+await client.waitForInitialization();
+console.log('Initialization complete');
+```
+
+### getUserData()
+
+Gets the current user data from initialization events.
+
+```typescript
+getUserData(): User | null
+```
+
+**Returns:** User object or null if not initialized
+
+**Example:**
+```typescript
+const user = client.getUserData();
+if (user) {
+  console.log('Username:', user.user_name);
+}
+```
+
+### getToolCatalog()
+
+Requests the tool catalog from the server.
+
+```typescript
+getToolCatalog(): void
+```
+
+**Emits:** `tool_catalog` event with available tools
+
+**Example:**
+```typescript
+client.getToolCatalog();
+client.on('tool_catalog', (event) => {
+  console.log('Available tools:', event.tools);
+});
+```
+
+### getTools()
+
+Gets the list of tools received during initialization.
+
+```typescript
+getTools(): Tool[]
+```
+
+**Returns:** Array of available tools
+
+**Example:**
+```typescript
+const tools = client.getTools();
+tools.forEach(tool => {
+  console.log(tool.name, tool.description);
+});
+```
+
+### ping()
+
+Sends a ping to the server for connection health check.
+
+```typescript
+ping(): void
+```
+
+**Note:** Server responds with `pong` event
+
+**Example:**
+```typescript
+client.ping();
+client.on('pong', () => {
+  console.log('Server is responsive');
+});
 ```
 
 ## Event Handling
@@ -706,34 +1000,75 @@ client.once('connected', () => {
 - `reconnecting` - Attempting to reconnect
 - `reconnected` - Successfully reconnected
 
+### Initialization Events (sent on connection)
+- `chat_user_data` - User information
+- `avatar_list` - Available avatars
+- `voice_list` - Available voices
+- `agent_list` - Available agents
+- `tool_catalog` - Available tools
+- `initialized` - All initialization events received (custom event)
+
 ### Message Events
 - `text_delta` - Streaming text chunk
+- `thought_delta` - Agent thinking process chunk
 - `completion` - Response completion status
+- `interaction` - Full interaction event
 - `error` - Error occurred
+- `cancelled` - Response cancelled
+
+### History Events
+- `history` - Complete history update
+- `history_delta` - Incremental history change
+- `user_message` - User message added
+- `anthropic_user_message` - Anthropic format user message
+- `openai_user_message` - OpenAI format user message
 
 ### Audio Events
 - `audio:output` - Binary audio data received
-- `audio:input:start` - Recording started
-- `audio:input:stop` - Recording stopped
-- `audio:level` - Audio level update
+- `binary_audio` - Binary audio (legacy, same as audio:output)
+- `voice_input_supported` - Voice input capability
+- `server_listening` - Server listening for audio
 
 ### Turn Events
 - `user_turn_start` - User's turn to speak
-- `user_turn_end` - Agent's turn to respond
-- `turn_state_changed` - Turn state changed
+- `user_turn_end` - User turn ended
+- `agent_turn_start` - Agent's turn to respond (deprecated)
+- `agent_turn_end` - Agent turn ended (deprecated)
 
 ### Session Events
 - `chat_session_changed` - Active session changed
 - `chat_session_name_changed` - Session renamed
 - `session_metadata_changed` - Metadata updated
+- `chat_session_added` - New session created
+- `chat_session_deleted` - Session deleted
+- `get_user_sessions_response` - Session list received
+- `subsession_started` - Sub-session started
+- `subsession_ended` - Sub-session ended
 
 ### Voice Events
 - `agent_voice_changed` - Agent voice changed
-- `voices_list` - Available voices received
+- `voice_list` - Available voices received
 
 ### Avatar Events
-- `avatar_session_set` - Avatar session established
-- `avatars_list` - Available avatars received
+- `avatar_connection_changed` - Avatar connection status changed
+- `avatar_list` - Available avatars received
+
+### Agent Events
+- `agent_list` - Available agents received
+- `agent_configuration_changed` - Agent config updated
+
+### Tool Events
+- `tool_catalog` - Tool catalog received
+- `tool_select_delta` - Tool selection update
+- `tool_call` - Tool invocation
+
+### System Events
+- `system_message` - System message
+- `system_prompt` - System prompt
+- `render_media` - Media rendering request
+- `user_request` - User request event
+- `ping` - Ping from server
+- `pong` - Pong response
 
 ## Utility Methods
 
@@ -831,24 +1166,25 @@ import { RealtimeClient, AuthManager, ConnectionState } from '@agentc/realtime-c
 async function main() {
   // Initialize authentication
   const authManager = new AuthManager({
-    apiUrl: 'https://localhost:8000' // or process.env.API_URL
+    apiUrl: 'https://localhost:8000'
   });
   
-  // Login with username and password
+  // Login with credentials
   const loginResponse = await authManager.login({
     username: 'your-username',
     password: 'your-password'
   });
   
-  // Create client with WebSocket URL from login response
+  // Create client with WebSocket URL from login
   const client = new RealtimeClient({
-    apiUrl: loginResponse.wsUrl, // WebSocket URL from login
+    apiUrl: loginResponse.wsUrl,
     authManager,
     enableAudio: true,
     audioConfig: {
       enableInput: true,
       enableOutput: true,
       respectTurnState: true,
+      sampleRate: 24000,
       initialVolume: 0.8
     },
     reconnection: {
@@ -859,8 +1195,16 @@ async function main() {
   });
   
   // Set up event handlers
-  client.on('connected', () => {
+  client.on('connected', async () => {
     console.log('✅ Connected to Agent C');
+    
+    // Wait for initialization
+    await client.waitForInitialization();
+    console.log('✅ Initialization complete');
+    
+    // Show available agents
+    const agents = client.getAgentsList();
+    console.log('Available agents:', agents.map(a => a.name));
   });
   
   client.on('text_delta', (event) => {
@@ -881,6 +1225,10 @@ async function main() {
     console.log('🎤 Your turn to speak');
   });
   
+  client.on('cancelled', () => {
+    console.log('❌ Response cancelled');
+  });
+  
   client.on('error', (error) => {
     console.error('❌ Error:', error.message);
   });
@@ -888,32 +1236,30 @@ async function main() {
   // Connect to the service
   await client.connect();
   
-  // Check connection state
-  if (client.getConnectionState() === ConnectionState.CONNECTED) {
-    // Send a text message
-    client.sendText('Hello! Please introduce yourself.');
-    
-    // Start audio if available
-    const audioStatus = client.getAudioStatus();
-    if (audioStatus.isAudioEnabled) {
-      try {
-        await client.startAudioRecording();
-        client.startAudioStreaming();
-        console.log('🎤 Audio streaming started');
-      } catch (error) {
-        console.error('Audio setup failed:', error);
-      }
+  // Send a text message
+  client.sendText('Hello! Please introduce yourself.');
+  
+  // Start audio if available
+  const audioStatus = client.getAudioStatus();
+  if (audioStatus.isAudioEnabled) {
+    try {
+      await client.startAudioRecording();
+      client.startAudioStreaming();
+      console.log('🎤 Audio streaming started');
+    } catch (error) {
+      console.error('Audio setup failed:', error);
     }
-    
-    // Set voice preference
-    client.setAgentVoice('nova');
-    
-    // Create a new session after 5 seconds
-    setTimeout(() => {
-      client.newChatSession();
-      client.setChatSessionName('Demo Session');
-    }, 5000);
   }
+  
+  // Set voice preference
+  client.setAgentVoice('nova');
+  
+  // Handle cancellation
+  setTimeout(() => {
+    if (client.getConnectionState() === ConnectionState.CONNECTED) {
+      client.cancelResponse();
+    }
+  }, 10000);
   
   // Clean up on exit
   process.on('SIGINT', () => {
@@ -932,21 +1278,36 @@ The RealtimeClient throws errors in these situations:
 
 1. **Connection Errors**
    - Invalid API URL
-   - Authentication failure
+   - Authentication failure (401)
    - Connection timeout
    - Network errors
 
 2. **Configuration Errors**
    - Missing required configuration
    - Invalid configuration values
+   - Missing authentication (no token or AuthManager)
 
 3. **State Errors**
    - Attempting to send when not connected
    - Audio operations when audio not enabled
+   - Invalid volume range (must be 0-1)
 
 4. **Permission Errors**
    - Microphone permission denied
    - Browser doesn't support required APIs
+
+### Error Event Codes
+
+The `error` event may include these error codes from the server:
+
+- `auth_failed` - Authentication failure
+- `invalid_request` - Invalid request format
+- `rate_limited` - Rate limit exceeded
+- `internal_error` - Server internal error
+- `session_not_found` - Session ID not found
+- `agent_not_found` - Agent key not found
+- `voice_not_found` - Voice ID not found
+- `avatar_not_found` - Avatar ID not found
 
 Always wrap async operations in try-catch blocks and listen for error events:
 
@@ -956,16 +1317,20 @@ try {
   await client.connect();
 } catch (error) {
   if (error.message.includes('Authentication')) {
-    // Handle auth error
+    // Handle auth error - token may be expired
   } else if (error.message.includes('timeout')) {
-    // Handle timeout
+    // Handle timeout - server may be down
   }
 }
 
 // Handle runtime errors
 client.on('error', (error) => {
   console.error('Runtime error:', error);
-  // Implement error recovery logic
+  
+  // Check error code for specific handling
+  if (error.code === 'auth_failed') {
+    // Refresh authentication
+  }
 });
 ```
 
@@ -981,8 +1346,11 @@ import {
   AudioConfig,
   AudioStatus,
   RealtimeEventMap,
+  ClientEventMap,
+  ServerEventMap,
   TextDeltaEvent,
   CompletionEvent,
+  ErrorEvent,
   // ... other event types
 } from '@agentc/realtime-core';
 ```

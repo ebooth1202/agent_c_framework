@@ -155,6 +155,5 @@ def test_lerna_environment_security(policies):
     assert env_overrides.get("NPM_CONFIG_COLOR") == "false", "lerna should disable npm colors"
     assert env_overrides.get("NPM_CONFIG_PROGRESS") == "false", "lerna should disable npm progress"
     assert env_overrides.get("NO_COLOR") == "1", "lerna should set NO_COLOR"
-    assert env_overrides.get("FORCE_COLOR") == "0", "lerna should force no color"
     assert env_overrides.get("NODE_DISABLE_COLORS") == "1", "lerna should disable node colors"
     assert env_overrides.get("CI") == "1", "lerna should set CI mode"

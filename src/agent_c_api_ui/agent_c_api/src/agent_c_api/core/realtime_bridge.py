@@ -463,13 +463,12 @@ class RealtimeBridge(AgentBridge):
                             event = self.parse_event(json.loads(message["text"]))
                             self.logger.info(f"Received event {event.type} from session {self.chat_session.session_id}")
 
-                            if self._active_interact_task and not self._active_interact_task.done():
+                            if self._active_interact_task and not self._active_interact_task.done() and event.type not in ["ping", "pong", "client_wants_cancel"]:
                                 self.logger.warning(f"Session {self.chat_session.session_id} has an active interaction, shutting down interaction due to  new event {event.type}")
-                                if event.type not in ["ping", "pong", "client_wants_cancel"]:
-                                    self.client_wants_cancel.set()
-                                    self._active_interact_task.cancel()
-                                    with suppress(asyncio.CancelledError):
-                                        await self._active_interact_task
+                                self.client_wants_cancel.set()
+                                self._active_interact_task.cancel()
+                                with suppress(asyncio.CancelledError):
+                                    await self._active_interact_task
 
                             await self.handle_client_event(event)
                         elif "bytes" in message:
