@@ -3,10 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --experimental-https --experimental-https-key ../../../../agent_c_config/localhost_self_signed-key.pem --experimental-https-cert ../../../../agent_c_config/localhost_self_signed.pem",
+    "dev": "next dev --experimental-https --experimental-https-key localhost_self_signed-key.pem --experimental-https-cert localhost_self_signed.pem",
     "dev:http": "next dev",
+    "dev:docker": "next dev -p 5173 --experimental-https --experimental-https-key localhost_self_signed-key.pem --experimental-https-cert localhost_self_signed.pem",
     "build": "next build",
-    "start": "next start --experimental-https --experimental-https-key localhost_self_signed-key.pem --experimental-https-cert localhost_self_signed.pem",
+    "start": "next dev -p 5173 --experimental-https-key localhost_self_signed-key.pem --experimental-https-cert localhost_self_signed.pem",
     "lint": "next lint",
     "format": "pnpm prettier ./src --write",
     "format:check": "pnpm prettier ./src --check",

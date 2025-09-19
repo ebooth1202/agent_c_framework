@@ -29,10 +29,6 @@ RUN pnpm install
 FROM base AS builder
 WORKDIR /app
 
-# copy self signed cert
-COPY localhost_self_signed-key.pem ./
-COPY localhost_self_signed.pem ./
-
 # Copy node_modules from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/packages/core/node_modules ./packages/core/node_modules
@@ -61,10 +57,9 @@ RUN cd packages/react && pnpm build
 # 3. Build ui package (depends on core and react)
 RUN cd packages/ui && pnpm build
 
-# 4. Build demo app (depends on all workspace packages)
-RUN cd packages/demo && pnpm build
+# Note: We don't build the demo app in dev container - it will build on startup
 
-# Stage 4: Production runner
+# Stage 4: Development runner
 FROM node:20-alpine AS runner
 WORKDIR /app
 
@@ -75,50 +70,51 @@ RUN apk add --no-cache git
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Set NODE_ENV to production
-ENV NODE_ENV=production
-ENV PORT=3000
+# Set NODE_ENV to development for dev mode
+ENV NODE_ENV=development
+ENV PORT=5173
 ENV HOSTNAME="0.0.0.0"
 
 # Install pnpm in runner for package resolution
 RUN npm install -g pnpm@9
 
-# Copy necessary files from builder
-# Copy package files
+# Copy workspace configuration files
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/pnpm-lock.yaml ./
 COPY --from=builder /app/pnpm-workspace.yaml ./
 COPY --from=builder /app/lerna.json ./
+COPY --from=builder /app/tsconfig.json ./
+COPY --from=builder /app/eslint.config.mts ./
 
-# Copy built packages
-COPY --from=builder --chown=nextjs:nodejs /app/packages/core/package.json ./packages/core/
-COPY --from=builder --chown=nextjs:nodejs /app/packages/core/dist ./packages/core/dist
+# Copy ALL source files for core package
+COPY --from=builder --chown=nextjs:nodejs /app/packages/core ./packages/core
 
-COPY --from=builder --chown=nextjs:nodejs /app/packages/react/package.json ./packages/react/
-COPY --from=builder --chown=nextjs:nodejs /app/packages/react/dist ./packages/react/dist
+# Copy ALL source files for react package
+COPY --from=builder --chown=nextjs:nodejs /app/packages/react ./packages/react
 
-COPY --from=builder --chown=nextjs:nodejs /app/packages/ui/package.json ./packages/ui/
-COPY --from=builder --chown=nextjs:nodejs /app/packages/ui/dist ./packages/ui/dist
-# UI package also needs source for transpilation
-COPY --from=builder --chown=nextjs:nodejs /app/packages/ui/src ./packages/ui/src
+# Copy ALL source files for ui package
+COPY --from=builder --chown=nextjs:nodejs /app/packages/ui ./packages/ui
 
-# Copy demo app
-COPY --from=builder --chown=nextjs:nodejs /app/packages/demo/package.json ./packages/demo/
-COPY --from=builder --chown=nextjs:nodejs /app/packages/demo/.next ./packages/demo/.next
-COPY --from=builder --chown=nextjs:nodejs /app/packages/demo/next.config.js ./packages/demo/
-COPY --from=builder --chown=nextjs:nodejs /app/packages/demo/public ./packages/demo/public
+# Copy ALL demo app files from builder (excluding .next if it exists)
+# This includes all source, config files, certificates, etc.
+COPY --from=builder --chown=nextjs:nodejs /app/packages/demo ./packages/demo
 
-# Install production dependencies only
-RUN pnpm install --frozen-lockfile --prod --ignore-scripts
+# Remove .next directory if it was accidentally included from builder
+RUN rm -rf ./packages/demo/.next
+
+# Install ALL dependencies including devDependencies for development mode
+# Remove --ignore-scripts to allow postinstall scripts to run (needed for some packages)
+# This will install all dependencies and set up workspace links
+RUN pnpm install --frozen-lockfile
 
 # Switch to non-root user
 USER nextjs
 
 # Expose the port Next.js runs on
-EXPOSE 3000
+EXPOSE 5173
 
-# Change to demo directory and start the application
+# Change to demo directory and start the application in development mode
 WORKDIR /app/packages/demo
 
-# Use Next.js production server
-CMD ["pnpm", "start", "--experimental-https-key localhost_self_signed-key.pem", "--experimental-https-cert localhost_self_signed.pem"]
+# Run in development mode using the docker-specific script
+CMD ["pnpm", "dev:docker"]
