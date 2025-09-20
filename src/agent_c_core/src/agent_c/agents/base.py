@@ -125,9 +125,7 @@ class BaseAgent:
 
     async def _render_contexts(self, **kwargs) -> Tuple[dict[str, Any], dict[str, Any]]:
         tool_call_context = kwargs.get("tool_context", {})
-        tool_call_context['streaming_callback'] = kwargs.get("streaming_callback", self.streaming_callback)
         tool_call_context['calling_model_name'] = kwargs.get("model_name", self.model_name)
-        tool_call_context['client_wants_cancel'] = kwargs.get("client_wants_cancel")
         tool_call_context['user_session_id'] = kwargs.get("user_session_id", kwargs.get('session_id', 'unknown'))
         tool_call_context['parent_session_id'] = kwargs.get("parent_session_id", None)
         prompt_context = kwargs.get("prompt_metadata", {})
