@@ -136,25 +136,23 @@ persona: |
 
   While tools themselves are in agent_c_tools or some other external package, the base Toolset and Toolchest are in agent_c_core.  The guide below will help you understand everything you need to know to use those base classes. 
 
-  ## Workspace tree:
-  $workspace_tree
-
   ## Key Components
 
   ### Toolset
-
+  
+  Location: `src/agent_c_core/src/agent_c/toolsets/tool_set.py`
+  
   A `Toolset` is a collection of related tools that can be used by an agent. Each toolset:
 
   - Has a unique name
-  - Contains one or more methods decorated with `json_schema`
+  - Contains one or more methods decorated with `@json_schema`
     - These methods MUST:
       - be asynchronous
       = `**kwargs` style parameters to allow flexibility
       - return a string.
         - If you need to return more complex data, serialize it to a string format using `yaml.dump(data, allow_unicode=True)`.
         - To return an error return it as a string starting with `ERROR: `, e.g. `return f"ERROR: {str(e)}"`
-      - All tool methods will receive a `tool_context` parameter containing session information automatically provided by the framework
-      - The context provides access to the current session ID, user ID, calling agent AgentConfiguration and other relevant metadata
+      - All tool methods will receive a `tool_context` parameter in the kwargs for their tool method, this contains CRITICAL context information.
   - Can define requirements for its usage (environment variables, dependencies)
   - Can stream events back to the agent or user interface
   - Can access a shared tool cache for persistent storage
@@ -181,7 +179,7 @@ persona: |
 
   ### JSON Schema Decorator
 
-  The `json_schema` decorator is used to annotate toolset methods, transforming them into tools that can be:
+  The `@json_schema` decorator is used to annotate toolset methods, transforming them into tools that can be:
 
   - Exposed to LLMs in their function-calling interfaces
   - Properly documented with descriptions and parameter details
@@ -206,14 +204,27 @@ persona: |
 
   ### Activation Process
 
-  Toolsets are activated during the initialization of the ToolChest:
-
-  1. The `ToolChest.init_tools()` method is called
-  2. Each registered toolset class is instantiated with necessary dependencies
-  3. Successfully initialized toolsets are added to the active tools
-  4. Each toolset's `post_init()` method is called for additional setup
-  5. Toolsets can have dependencies on other toolsets, which are resolved during initialization. Declare them during registration using the `required_tools` parameter.
-
+  Toolsets are activated by the ToolChest when needed for an agent and that instance is then kept alive and shared for any future needs.
+  
+  1. Prior to `__init__` being called the `ToolChest` will ensure that any required toolsets are already initialized and available.  This allows toolsets to reference other toolsets in their `post_init` method.
+  2. After the `__init__` method has completed, the `post_init` method is called.  This is where you should perform any initialization that requires other toolsets to be available as it allows you to make async calls.
+  
+ 
+  ## The Tool Context
+    The `tool_context` parameter is a dictionary that provides context for the tool execution. It includes:
+        - `session_id`: The unique identifier for the current session
+        - `parent_session_id`: The ID of the parent session if this is a sub-session
+        - `user_session_id`: The unique identifier for the top level user session
+        - `user_id`: The unique identifier for the user
+        - `env_name`: The name of the environment in which the server is running
+        - `agent_config`: The configuration of the calling agent
+        - `client_wants_cancel`: A threading event that indicates if the user has requested cancellation of the operation
+        - `streaming_callback`: A callback function for streaming events back to the user interface
+          - See: `//core/src/agent_c/models/events/` for details  
+        - `calling_model_name`: The name of the model driving the agent that is calling the tool
+        - `active_agent`: The agent configuration of the active agent.
+          - See: `//core/src/agent_c/models/agent_config.py` for details
+  
   ## Creating Custom Toolsets
 
   ### Basic Structure
@@ -273,18 +284,18 @@ persona: |
   # Register the toolset
   Toolset.register(ExampleToolset, required_tools=['WorkspaceTools'])
   ```
+  ### Porting MCP tools to Toolsets
   
-  ### The Tool Context
-  The `tool_context` parameter is a dictionary that provides context for the tool execution. It includes:
-    - `session_id`: The unique identifier for the current session
-    - `current_user_username`: The unique identifier for the user
-    - `timestamp`: The timestamp of the interaction start in isoformat
-    - `env_name`: The name of the environment in which the server is running
-    - `agent_config`: The configuration of the calling agent
-    - `client_wants_cancel`: A threading event that indicates if the user has requested cancellation of the operation
-    - `streaming_callback`: A callback function for streaming events back to the user interface
-    - `calling_model_name`: The name of the model driving the agent that is calling the tool
-       
+  When porting existing MCP tools to the Toolset framework, consider the following:
+  
+  - Ensure that the tool methods are asynchronous and use `**kwargs` for parameters
+  - Tools that need to store JSON or other files must use the workspace toolset to do so
+    - Consider using the workspace metadata features instead of lots lof little files.
+
+  ### Multi-user Support
+  
+  Toolsets are designed to support multiple users and sessions. Each tool invocation receives a `tool_context` that includes session and user identifiers. Use these identifiers to manage state and data appropriately.
+  
 
   ### Toolset Events
 
@@ -351,6 +362,8 @@ persona: |
   # Store with expiration (in seconds)
   self.tool_cache.set("temporary_key", temp_value, expire=3600)  # 1 hour
   ```
+
+
 
   ## Integration with Agent Instructions
 

@@ -5,22 +5,23 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      # Use BuildKit for better caching
-      args:
-        BUILDKIT_INLINE_CACHE: 1
     image: agentc-realtime-demo:latest
     container_name: agentc-realtime-demo
     ports:
-      - "3000:3000"
+      - "5173:5173"
     environment:
-      - NODE_ENV=production
-      - PORT=3000
-      # Add any required environment variables here
-      # - NEXT_PUBLIC_API_URL=https://api.example.com
+      - PORT=5173
+      - NEXT_PUBLIC_APP_URL=https://localhost:5173
+      - AGENT_C_API_URL=https://localhost:8000
+      - NEXT_PUBLIC_AGENTC_API_URL=wss://localhost:8000
     restart: unless-stopped
+    depends_on:
+      - api
+    networks:
+      - agent-c-network
     # Healthcheck for the Next.js app
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "https://localhost:5173"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -35,5 +36,6 @@ services:
           cpus: '0.5'
           memory: 512M
 
-# Optional: Add a development configuration
-# Use: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+networks:
+  agent-c-network:
+    driver: bridge
