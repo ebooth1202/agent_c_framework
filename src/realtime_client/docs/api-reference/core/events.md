@@ -22,57 +22,57 @@ Control events manage system configuration and session lifecycle. They inherit d
 
 #### Initialization Events (Auto-sent on connect)
 
-The server automatically sends exactly 7 initialization events in sequence immediately after WebSocket connection:
+The server automatically sends a series initialization events in sequence immediately after WebSocket connection, the current list is as follows:
 
-| Event | Description | Payload |
-|-------|-------------|---------|
-| `chat_user_data` | User profile information | `{ user: User }` |
-| `avatar_list` | Available HeyGen avatars | `{ avatars: Avatar[] }` |
-| `voice_list` | Available TTS voices | `{ voices: Voice[] }` |
-| `agent_list` | Available AI agents | `{ agents: Agent[] }` |
-| `tool_catalog` | Available agent tools | `{ tools: Tool[] }` |
-| `chat_session_changed` | Current chat session | `{ chat_session: ChatSession }` |
-| `user_turn_start` | **READY SIGNAL** - Server ready for input | `{}` |
+| Event                  | Description                               | Payload                         |
+|------------------------|-------------------------------------------|---------------------------------|
+| `chat_user_data`       | User profile information                  | `{ user: User }`                |
+| `avatar_list`          | Available HeyGen avatars                  | `{ avatars: Avatar[] }`         |
+| `voice_list`           | Available TTS voices                      | `{ voices: Voice[] }`           |
+| `agent_list`           | Available AI agents                       | `{ agents: Agent[] }`           |
+| `tool_catalog`         | Available agent tools                     | `{ tools: Tool[] }`             |
+| `chat_session_changed` | Current chat session                      | `{ chat_session: ChatSession }` |
+| `user_turn_start`      | **READY SIGNAL** - Server ready for input | `{}`                            |
 
 **⚠️ IMPORTANT:** Clients MUST wait for `user_turn_start` before sending any input (text or audio).
 
 #### Agent Events
 
-| Event | Description | Payload |
-|-------|-------------|---------|
+| Event                         | Description          | Payload                                |
+|-------------------------------|----------------------|----------------------------------------|
 | `agent_configuration_changed` | Agent config updated | `{ agent_config: AgentConfiguration }` |
 
 #### Avatar Events
 
-| Event | Description | Payload |
-|-------|-------------|---------|
+| Event                       | Description                   | Payload                                                                           |
+|-----------------------------|-------------------------------|-----------------------------------------------------------------------------------|
 | `avatar_connection_changed` | Avatar session status changed | `{ avatar_session_request: AvatarSessionRequest, avatar_session: AvatarSession }` |
 
 #### Session Management Events
 
-| Event | Description | Payload |
-|-------|-------------|---------|
-| `chat_session_name_changed` | Session renamed | `{ session_name: string, session_id?: string }` |
-| `session_metadata_changed` | Metadata updated | `{ meta: Record<string, any> }` |
-| `chat_session_added` | New session created | `{ chat_session: ChatSessionIndexEntry }` |
-| `chat_session_deleted` | Session deleted | `{ session_id?: string }` |
-| `get_user_sessions_response` | Response to session list request | `{ sessions: ChatSessionQueryResponse }` |
+| Event                        | Description                      | Payload                                         |
+|------------------------------|----------------------------------|-------------------------------------------------|
+| `chat_session_name_changed`  | Session renamed                  | `{ session_name: string, session_id?: string }` |
+| `session_metadata_changed`   | Metadata updated                 | `{ meta: Record<string, any> }`                 |
+| `chat_session_added`         | New session created              | `{ chat_session: ChatSessionIndexEntry }`       |
+| `chat_session_deleted`       | Session deleted                  | `{ session_id?: string }`                       | 
+| `get_user_sessions_response` | Response to session list request | `{ sessions: ChatSessionQueryResponse }`        |
 
 #### Voice Events
 
-| Event | Description | Payload |
-|-------|-------------|---------|
-| `agent_voice_changed` | Agent's TTS voice changed | `{ voice: Voice }` |
-| `voice_input_supported` | Supported input modes | `{ modes: ('ptt' \| 'vad')[] }` |
-| `server_listening` | Server listening for audio | `{}` |
+| Event                   | Description                | Payload                           |
+|-------------------------|----------------------------|-----------------------------------|
+| `agent_voice_changed`   | Agent's TTS voice changed  | `{ voice: Voice }`                |
+| `voice_input_supported` | Supported input modes      | `{ modes: ('ptt' \| 'vad')[] }`   |
+| `server_listening`      | Server listening for audio | `{}`                              |
 
 #### Connection Events
 
-| Event | Description | Payload |
-|-------|-------------|---------|
-| `pong` | Response to ping | `{}` |
-| `error` | Error notification | `{ message: string, source?: string }` |
-| `cancelled` | Response cancelled confirmation | `{}` |
+| Event       | Description                     | Payload                                |
+|-------------|---------------------------------|----------------------------------------|
+| `pong`      | Response to ping                | `{}`                                   |
+| `error`     | Error notification              | `{ message: string, source?: string }` |
+| `cancelled` | Response cancelled confirmation | `{}`                                   |
 
 ### Session Events (SessionEvent)
 
@@ -84,54 +84,65 @@ Session events are generated during chat interactions and include session contex
 
 #### Message Streaming Events
 
-| Event | Description | Payload |
-|-------|-------------|---------|
-| `text_delta` | Streaming assistant text | `{ content: string, format: MessageFormat }` + session fields |
+| Event           | Description                  | Payload                                                       |
+|-----------------|------------------------------|---------------------------------------------------------------|
+| `text_delta`    | Streaming assistant text     | `{ content: string, format: MessageFormat }` + session fields |
 | `thought_delta` | Streaming assistant thoughts | `{ content: string, format: MessageFormat }` + session fields |
-| `history_delta` | Incremental history update | `{ messages: Message[] }` + session fields |
+| `history_delta` | Incremental history update   | `{ messages: Message[] }` + session fields                    |
 
 #### Completion Events
 
-| Event | Description | Payload |
-|-------|-------------|---------|
-| `completion` | Generation status | `{ running: boolean, completion_options: CompletionOptions, stop_reason?: StopReason, input_tokens?: number, output_tokens?: number }` + session fields |
-| `interaction` | Interaction lifecycle | `{ started: boolean, id: string }` + session fields |
+| Event          | Description           | Payload                                                                                                                                                 |
+|----------------|-----------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `completion`   | Generation status     | `{ running: boolean, completion_options: CompletionOptions, stop_reason?: StopReason, input_tokens?: number, output_tokens?: number }` + session fields |
+| `interaction`  | Interaction lifecycle | `{ started: boolean, id: string }` + session fields                                                                                                     |
 
 #### History Events
 
-| Event | Description | Payload |
-|-------|-------------|---------|
-| `history` | Full message history | `{ vendor: string, messages: Message[] }` + session fields |
-| `system_prompt` | System instructions | `{ content: string, format: MessageFormat }` + session fields |
-| `user_request` | User input echo | `{ data: { message: string } }` + session fields |
-| `user_message` | Vendor-specific user message | `{ vendor: string, message?: any }` + session fields |
-| `anthropic_user_message` | Anthropic user message | `{ vendor: 'anthropic', message: any }` + session fields |
-| `openai_user_message` | OpenAI user message | `{ vendor: 'openai', message: any }` + session fields |
+| Event                    | Description                  | Payload                                                       |
+|--------------------------|------------------------------|---------------------------------------------------------------|
+| `history`                | Full message history         | `{ vendor: string, messages: Message[] }` + session fields    |
+| `system_prompt`          | System instructions          | `{ content: string, format: MessageFormat }` + session fields |
+| `user_request`           | User input echo              | `{ data: { message: string } }` + session fields              |
+| `user_message`           | Vendor-specific user message | `{ vendor: string, message?: any }` + session fields          |
+| `anthropic_user_message` | Anthropic user message       | `{ vendor: 'anthropic', message: any }` + session fields      |
+| `openai_user_message`    | OpenAI user message          | `{ vendor: 'openai', message: any }` + session fields         |
 
 #### Tool Events
 
-| Event | Description | Payload |
-|-------|-------------|---------|
-| `tool_select_delta` | Tool being selected | `{ tool_calls: ToolCall[] }` + session fields |
-| `tool_call` | Tool execution | `{ active: boolean, vendor: string, tool_calls: ToolCall[], tool_results?: ToolResult[] }` + session fields |
-| `render_media` | Media content | `{ content_type: string, content: string, foreign_content: boolean, url?: string, name?: string }` + session fields |
+| Event               | Description             | Payload                                                                                                              |
+|---------------------|-------------------------|----------------------------------------------------------------------------------------------------------------------|
+| `tool_select_delta` | Tool being selected     | `{ tool_calls: ToolCall[] }` + session fields                                                                        |
+| `tool_call`         | Tool execution          | `{ active: boolean, vendor: string, tool_calls: ToolCall[], tool_results?: ToolResult[] }` + session fields          |
+
+
+**IMPORTANT**: Sequence of events for fool calls is `tool_select_delta` → `tool_call` (active: true) → `tool_call` (active: false). The final event contains the results.
+
+
+### Content Rendering Events
+
+| Event               | Description             | Payload                                                                                                              |
+|---------------------|-------------------------|----------------------------------------------------------------------------------------------------------------------|
+| `render_media`      | Media content           | `{ content_type: string, content: string, foreign_content: boolean, url?: string, name?: string }` + session fields  |
 
 **⚠️ SECURITY:** The `foreign_content` field in `render_media` indicates untrusted third-party content requiring sandboxing.
 
+
+
 #### System Events
 
-| Event | Description | Payload |
-|-------|-------------|---------|
-| `system_message` | System notification | `{ content: string, format: MessageFormat, severity?: Severity }` + session fields |
+| Event                | Description            | Payload                                                                                                                 |
+|----------------------|------------------------|-------------------------------------------------------------------------------------------------------------------------|
+| `system_message`     | System notification    | `{ content: string, format: MessageFormat, severity?: Severity }` + session fields                                      |
 | `subsession_started` | Nested session started | `{ sub_session_type: string, sub_agent_type: string, prime_agent_key: string, sub_agent_key: string }` + session fields |
-| `subsession_ended` | Nested session ended | `{}` + session fields |
+| `subsession_ended`   | Nested session ended   | `{}` + session fields                                                                                                   |
 
 ### Turn Management Events
 
-| Event | Description | Payload |
-|-------|-------------|---------|
-| `user_turn_start` | Server ready for user input | `{}` |
-| `user_turn_end` | User input received, processing | `{}` |
+| Event             | Description                     | Payload |
+|-------------------|---------------------------------|---------|
+| `user_turn_start` | Server ready for user input     | `{}`    |
+| `user_turn_end`   | User input received, processing | `{}`    |
 
 ## Binary Audio Frames
 
@@ -153,60 +164,60 @@ Commands sent from the client to control the server.
 
 ### Agent Management
 
-| Event | Description | Payload |
-|-------|-------------|---------|
-| `get_agents` | Request agent list | `{}` |
-| `set_agent` | Set active agent | `{ agent_key: string }` |
+| Event        | Description        | Payload                 |
+|--------------|--------------------|-------------------------|
+| `get_agents` | Request agent list | `{}`                    |
+| `set_agent`  | Set active agent   | `{ agent_key: string }` |
 
 ### Avatar Management
 
-| Event | Description | Payload |
-|-------|-------------|---------|
-| `get_avatars` | Request avatar list | `{}` |
-| `set_avatar` | Create avatar session | `{ avatar_id: string, quality?: string, video_encoding?: string }` |
-| `set_avatar_session` | Connect to avatar | `{ access_token: string, avatar_session_id: string }` |
-| `clear_avatar_session` | End avatar session | `{ session_id: string }` |
+| Event                  | Description           | Payload                                                            |
+|------------------------|-----------------------|--------------------------------------------------------------------|
+| `get_avatars`          | Request avatar list   | `{}`                                                               |
+| `set_avatar`           | Create avatar session | `{ avatar_id: string, quality?: string, video_encoding?: string }` |
+| `set_avatar_session`   | Connect to avatar     | `{ access_token: string, avatar_session_id: string }`              |
+| `clear_avatar_session` | End avatar session    | `{ session_id: string }`                                           |
 
 ### Voice Management
 
-| Event | Description | Payload |
-|-------|-------------|---------|
-| `get_voices` | Request voice list | `{}` |
-| `set_agent_voice` | Set TTS voice | `{ voice_id: string }` |
+| Event             | Description        | Payload                |
+|-------------------|--------------------|------------------------|
+| `get_voices`      | Request voice list | `{}`                   |
+| `set_agent_voice` | Set TTS voice      | `{ voice_id: string }` |
 
 ### Chat Management
 
-| Event | Description | Payload |
-|-------|-------------|---------|
-| `text_input` | Send text message | `{ text: string, file_ids?: string[] }` |
-| `new_chat_session` | Create new session | `{ agent_key?: string }` |
-| `resume_chat_session` | Resume session | `{ session_id: string }` |
-| `set_chat_session_name` | Rename session | `{ session_name: string, session_id?: string }` |
-| `set_session_metadata` | Update metadata | `{ meta: Record<string, any> }` |
-| `set_session_messages` | Replace messages | `{ messages: Message[] }` |
-| `delete_chat_session` | Delete session | `{ session_id?: string }` |
+| Event                   | Description         | Payload                                         |
+|-------------------------|---------------------|-------------------------------------------------|
+| `text_input`            | Send text message   | `{ text: string, file_ids?: string[] }`         |
+| `new_chat_session`      | Create new session  | `{ agent_key?: string }`                        |
+| `resume_chat_session`   | Resume session      | `{ session_id: string }`                        |
+| `set_chat_session_name` | Rename session      | `{ session_name: string, session_id?: string }` |
+| `set_session_metadata`  | Update metadata     | `{ meta: Record<string, any> }`                 |
+| `set_session_messages`  | Replace messages    | `{ messages: Message[] }`                       |
+| `delete_chat_session`   | Delete session      | `{ session_id?: string }`                       |
 
 ### Session Management
 
-| Event | Description | Payload |
-|-------|-------------|---------|
-| `get_user_sessions` | Request session list | `{ offset: number, limit: number }` |
-| `get_tool_catalog` | Request tool catalog | `{}` |
+| Event                 | Description            | Payload                               |
+|-----------------------|------------------------|---------------------------------------|
+| `get_user_sessions`   | Request session list   | `{ offset: number, limit: number }`   |
+| `get_tool_catalog`    | Request tool catalog   | `{}`                                  |
 
 ### Audio Control
 
-| Event | Description | Payload |
-|-------|-------------|---------|
-| `ptt_start` | Start push-to-talk | `{}` |
-| `ptt_end` | End push-to-talk | `{}` |
-| `set_voice_input_mode` | Set input mode | `{ mode: 'ptt' \| 'vad' }` |
+| Event                  | Description        | Payload                    |
+|------------------------|--------------------|----------------------------|
+| `ptt_start`            | Start push-to-talk | `{}`                       |
+| `ptt_end`              | End push-to-talk   | `{}`                       |
+| `set_voice_input_mode` | Set input mode     | `{ mode: 'ptt' \| 'vad' }` |
 
 ### Connection Management
 
-| Event | Description | Payload |
-|-------|-------------|---------|
-| `ping` | Health check | `{}` |
-| `client_wants_cancel` | Cancel current response | `{}` |
+| Event                 | Description             | Payload |
+|-----------------------|-------------------------|---------|
+| `ping`                | Health check            | `{}`    |
+| `client_wants_cancel` | Cancel current response | `{}`    |
 
 ## SDK-Emitted Events
 
@@ -214,75 +225,75 @@ Events generated locally by the SDK for application use.
 
 ### Connection Lifecycle
 
-| Event | Description | Payload |
-|-------|-------------|---------|
-| `connected` | WebSocket connected | `undefined` |
-| `disconnected` | WebSocket disconnected | `{ code: number, reason: string }` |
-| `reconnecting` | Attempting reconnection | `{ attempt: number, delay: number }` |
-| `reconnected` | Successfully reconnected | `undefined` |
-| `initialized` | All initialization events received | `undefined` |
+| Event          | Description                        | Payload                              |
+|----------------|------------------------------------|--------------------------------------|
+| `connected`    | WebSocket connected                | `undefined`                          |
+| `disconnected` | WebSocket disconnected             | `{ code: number, reason: string }`   |
+| `reconnecting` | Attempting reconnection            | `{ attempt: number, delay: number }` |
+| `reconnected`  | Successfully reconnected           | `undefined`                          |
+| `initialized`  | All initialization events received | `undefined`                          |
 
 ### Session Manager Events
 
-| Event | Description | Payload |
-|-------|-------------|---------|
-| `session-changed` | Current session changed | `{ session: ChatSession, previousId?: string }` |
-| `sessions-updated` | Session list updated | `{ sessions: ChatSession[] }` |
-| `sessions-index-updated` | Session index updated | `{ index: ChatSessionQueryResponse }` |
-| `message-added` | Message added to session | `{ message: Message, sessionId: string }` |
-| `message-streaming` | Message being streamed | `{ content: string, messageId: string, role: string }` |
-| `message-complete` | Message completed | `{ message: Message, messageId: string }` |
-| `tool-notification` | Tool being executed | `{ id: string, name: string, status: string, args?: any }` |
-| `tool-notification-removed` | Tool completed | `string` (notification ID) |
-| `tool-call-complete` | Tool call finished | `{ toolCall: ToolCall, result?: ToolResult }` |
-| `media-added` | Media content added | `{ media: RenderMediaEvent }` |
-| `system-notification` | System message | `{ message: string, severity?: string }` |
-| `user-message` | User message added | `{ message: Message }` |
-| `response-cancelled` | Response was cancelled | `{}` |
-| `session-messages-loaded` | Messages loaded in bulk | `{ messages: Message[], sessionId: string }` |
-| `session-cleared` | Session cleared | `{ sessionId: string }` |
-| `all-sessions-cleared` | All sessions cleared | `undefined` |
-| `request-user-sessions` | Need more sessions | `{ offset: number, limit: number }` |
-| `subsession-started` | Nested session started | `{ type: string, agentType: string, primeKey: string, subKey: string }` |
-| `subsession-ended` | Nested session ended | `{}` |
+| Event                       | Description              | Payload                                                                 |
+|-----------------------------|--------------------------|-------------------------------------------------------------------------|
+| `session-changed`           | Current session changed  | `{ session: ChatSession, previousId?: string }`                         |
+| `sessions-updated`          | Session list updated     | `{ sessions: ChatSession[] }`                                           |
+| `sessions-index-updated`    | Session index updated    | `{ index: ChatSessionQueryResponse }`                                   |
+| `message-added`             | Message added to session | `{ message: Message, sessionId: string }`                               |
+| `message-streaming`         | Message being streamed   | `{ content: string, messageId: string, role: string }`                  |
+| `message-complete`          | Message completed        | `{ message: Message, messageId: string }`                               |
+| `tool-notification`         | Tool being executed      | `{ id: string, name: string, status: string, args?: any }`              |
+| `tool-notification-removed` | Tool completed           | `string` (notification ID)                                              |
+| `tool-call-complete`        | Tool call finished       | `{ toolCall: ToolCall, result?: ToolResult }`                           |
+| `media-added`               | Media content added      | `{ media: RenderMediaEvent }`                                           |
+| `system-notification`       | System message           | `{ message: string, severity?: string }`                                |
+| `user-message`              | User message added       | `{ message: Message }`                                                  |
+| `response-cancelled`        | Response was cancelled   | `{}`                                                                    |
+| `session-messages-loaded`   | Messages loaded in bulk  | `{ messages: Message[], sessionId: string }`                            |
+| `session-cleared`           | Session cleared          | `{ sessionId: string }`                                                 |
+| `all-sessions-cleared`      | All sessions cleared     | `undefined`                                                             |
+| `request-user-sessions`     | Need more sessions       | `{ offset: number, limit: number }`                                     |
+| `subsession-started`        | Nested session started   | `{ type: string, agentType: string, primeKey: string, subKey: string }` |
+| `subsession-ended`          | Nested session ended     | `{}`                                                                    |
 
 ### Authentication Events
 
-| Event | Description | Payload |
-|-------|-------------|---------|
-| `auth:login` | Login successful | `{ user: User, tokens: TokenPair }` |
-| `auth:logout` | Logout completed | `undefined` |
-| `auth:tokens-refreshed` | Tokens refreshed | `{ agentCToken: string, heygenToken: string }` |
-| `auth:error` | Auth error occurred | `{ error: Error }` |
-| `auth:state-changed` | Auth state changed | `{ isAuthenticated: boolean, user?: User }` |
+| Event                   | Description         | Payload                                        |
+|-------------------------|---------------------|------------------------------------------------|
+| `auth:login`            | Login successful    | `{ user: User, tokens: TokenPair }`            |
+| `auth:logout`           | Logout completed    | `undefined`                                    |
+| `auth:tokens-refreshed` | Tokens refreshed    | `{ agentCToken: string, heygenToken: string }` |
+| `auth:error`            | Auth error occurred | `{ error: Error }`                             |
+| `auth:state-changed`    | Auth state changed  | `{ isAuthenticated: boolean, user?: User }`    |
 
 ### Voice Manager Events
 
-| Event | Description | Payload |
-|-------|-------------|---------|
-| `voices-updated` | Voice list updated | `{ voices: Voice[] }` |
-| `voice-changed` | Current voice changed | `{ currentVoice: Voice \| null, previousVoice: Voice \| null, source: 'client' \| 'server' }` |
+| Event            | Description           | Payload                                                                                       |
+|------------------|-----------------------|-----------------------------------------------------------------------------------------------|
+| `voices-updated` | Voice list updated    | `{ voices: Voice[] }`                                                                         |
+| `voice-changed`  | Current voice changed | `{ currentVoice: Voice \| null, previousVoice: Voice \| null, source: 'client' \| 'server' }` |
 
 ### Avatar Manager Events
 
-| Event | Description | Payload |
-|-------|-------------|---------|
+| Event                    | Description            | Payload                                   |
+|--------------------------|------------------------|-------------------------------------------|
 | `avatar-session-started` | Avatar session started | `{ sessionId: string, avatarId: string }` |
-| `avatar-session-ended` | Avatar session ended | `{ sessionId: string }` |
-| `avatar-state-changed` | Avatar state changed | `{ active: boolean }` |
+| `avatar-session-ended`   | Avatar session ended   | `{ sessionId: string }`                   |
+| `avatar-state-changed`   | Avatar state changed   | `{ active: boolean }`                     |
 
 ### Turn Manager Events
 
-| Event | Description | Payload |
-|-------|-------------|---------|
+| Event                | Description        | Payload                     |
+|----------------------|--------------------|-----------------------------|
 | `turn-state-changed` | Turn state changed | `{ canSendInput: boolean }` |
 
 ### Audio Events
 
-| Event | Description | Payload |
-|-------|-------------|---------|
+| Event          | Description             | Payload       |
+|----------------|-------------------------|---------------|
 | `audio:output` | Audio frame from server | `ArrayBuffer` |
-| `binary_audio` | Legacy audio event | `ArrayBuffer` |
+| `binary_audio` | Legacy audio event      | `ArrayBuffer` |
 
 ## Event Sequences
 

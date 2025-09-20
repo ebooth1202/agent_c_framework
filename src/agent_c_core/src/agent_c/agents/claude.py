@@ -310,6 +310,7 @@ class ClaudeChatAgent(BaseAgent):
             "think_tool_state": ThinkToolState.INACTIVE,
             "think_partial": "",
             "think_escape_buffer": "",  # Added to track escape buffer
+            "tool_json_buffers": [],  # JSON buffers for each tool call
             "stop_reason": None,
             "complete": False,
             "interaction_id": None
@@ -354,7 +355,13 @@ class ClaudeChatAgent(BaseAgent):
         elif delta.type == "thinking_delta":
             await self._handle_thinking_delta(delta, state, callback_opts)
         elif delta.type == "input_json_delta":
-            await self._handle_think_tool_json(delta, state, callback_opts)
+            # Check if this is a think tool (preserve existing functionality)
+            if (state['collected_tool_calls'] and 
+                state['collected_tool_calls'][-1].get('name') == 'think'):
+                await self._handle_think_tool_json(delta, state, callback_opts)
+            else:
+                # Handle regular tool JSON delta accumulation
+                await self._handle_input_json_delta(delta, state, callback_opts)
 
 
     async def _handle_thinking_delta(self, delta, state, callback_opts):
@@ -420,6 +427,18 @@ class ClaudeChatAgent(BaseAgent):
         await self._raise_thought_delta(processed, **callback_opts)
         if complete:
             await self._raise_complete_thought(processed, **callback_opts)
+
+
+    async def _handle_input_json_delta(self, delta, state, callback_opts):
+        """Handle input_json_delta for regular tool calls (not think tool)."""
+        if state['collected_tool_calls']:
+            tool_call_index = len(state['collected_tool_calls']) - 1
+            # Ensure we have a buffer for this tool call
+            while len(state['tool_json_buffers']) <= tool_call_index:
+                state['tool_json_buffers'].append("")
+            
+            # Accumulate the JSON delta to the buffer
+            state['tool_json_buffers'][tool_call_index] += delta.partial_json
 
 
     async def _handle_message_stop(self, event, state, tool_chest, session_manager, messages, callback_opts):
@@ -491,6 +510,8 @@ class ClaudeChatAgent(BaseAgent):
             state['think_tool_state'] = ThinkToolState.WAITING
 
         state['collected_tool_calls'].append(tool_call)
+        # Initialize JSON buffer for this tool call (empty string for delta accumulation)
+        state['tool_json_buffers'].append("")
         await self._raise_tool_call_delta(state['collected_tool_calls'] + state['server_tool_calls'], **callback_opts)
 
 
@@ -517,7 +538,24 @@ class ClaudeChatAgent(BaseAgent):
     def _handle_input_json(self, event, state):
         """Handle input_json event."""
         if state['collected_tool_calls']:
-            state['collected_tool_calls'][-1]['input'] = event.snapshot
+            # Use the accumulated JSON buffer instead of snapshot replacement
+            tool_call_index = len(state['collected_tool_calls']) - 1
+            if tool_call_index < len(state['tool_json_buffers']):
+                # Parse the accumulated JSON buffer
+                json_str = state['tool_json_buffers'][tool_call_index]
+                if json_str.strip():  # Only parse if we have content
+                    try:
+                        import json
+                        state['collected_tool_calls'][-1]['input'] = json.loads(json_str)
+                    except json.JSONDecodeError:
+                        # Fallback to snapshot if JSON parsing fails
+                        state['collected_tool_calls'][-1]['input'] = event.snapshot
+                else:
+                    # Fallback to snapshot if buffer is empty
+                    state['collected_tool_calls'][-1]['input'] = event.snapshot
+            else:
+                # Fallback to snapshot if buffer doesn't exist
+                state['collected_tool_calls'][-1]['input'] = event.snapshot
 
 
     async def _handle_text_event(self, event, state, callback_opts):
@@ -648,287 +686,11 @@ class ClaudeChatAgent(BaseAgent):
         return [{"role": "user", "content": contents}]
 
     async def __tool_calls_to_messages(self, state, tool_chest, tool_context):
-        # Use the new centralized tool call handling in ToolChest
         tools_calls = await tool_chest.call_tools(state['collected_tool_calls'], tool_context, format_type="claude")
-
         return tools_calls
 
-    def _format_model_outputs_to_text(self, model_outputs: List[Dict[str, Any]]) -> str:
-        """
-        Convert Claude's model outputs into a single text string for session storage.
-        CREATED BY JOE: May not be the best way
-        Args:
-            model_outputs: List of output blocks from Claude
-
-        Returns:
-            str: Combined text content from all text blocks
-        """
-        text_parts = []
-        for output in model_outputs:
-            if 'text' in output:
-                text_parts.append(output['text'])
-            elif 'thinking' in output:
-                # use one or the other below lines for adding to message history, for now we're going to exclude
-                # text_parts.append(f"[Thinking] {output['thinking']}") # Add thinking blocks to the output
-                pass  # Skip thinking blocks by default
-
-        return "".join(text_parts)
-
-    async def process_tool_response_messages(self, session_manager, tool_response_messages):
-        """
-        Process the tool response messages from the assistant.
-        CREATED BY JOE: May not be the best way
-        Args:
-            session_manager: to save messages to for chat history
-            tool_response_messages: incoming tool response messages
-
-        Returns:
-
-        """
-        # Process the assistant's tool call (first message) - has role of Assistant
-        assistant_message = tool_response_messages[0]
-        if isinstance(assistant_message.get('content', ''), list):
-            content = json.dumps(assistant_message['content'])
-        else:
-            content = assistant_message.get('content', '')
-        prefixed_content = "[Tool Call] " + content
 
 
-        # Process the tool result message (second message, if it exists)
-        if len(tool_response_messages) > 1:
-            tool_result = tool_response_messages[1]
-            if isinstance(tool_result.get('content', ''), list):
-                content = json.dumps(tool_result['content'])
-            else:
-                content = tool_result.get('content', '')
-
-            # Save the tool result as 'assistant' with a prefix to indicate it was a tool response. This is because Claude
-            # does not like you passing in prior messages with a role of tool
-            tool_response_content = "[Tool Response] " + content
-            await self._save_message_to_session(session_manager, tool_response_content, 'assistant')
-
-    async def one_shot_sync(self, **kwargs) -> str:
-        """For text in, text out processing. without chat"""
-        messages = await self.chat_sync(**kwargs)
-        if len(messages) > 0:
-            return yaml.dump(messages[-1])
-
-        return "Unknown issue no messages returned please try again later"
-
-    async def chat_sync(self, **kwargs) -> List[dict[str, Any]]:
-        """
-        Non-streaming chat method that returns the complete response directly.
-        
-        This method provides the same functionality as chat() but without emitting
-        intermediate streaming events. It's ideal for tool usage, batch processing,
-        or when you don't need real-time response streaming.
-        
-        Args:
-            **kwargs: Same parameters as chat() method:
-                - user_message (str): The user's message
-                - messages (List[dict], optional): Existing conversation history
-                - tool_chest (ToolChest, optional): Tools available to the agent
-                - session_manager (ChatSessionManager, optional): Session management
-                - model_name (str, optional): Override default model
-                - temperature (float, optional): Override default temperature
-                - max_tokens (int, optional): Override default max tokens
-                - budget_tokens (int, optional): Thinking budget tokens
-                - toolsets (List[str], optional): Specific toolsets to use
-                - client_wants_cancel (threading.Event, optional): Cancellation signal
-                - emit_tool_events (bool, optional): Whether to emit tool call events
-                - All other parameters from base chat() method
-        
-        Returns:
-            List[dict[str, Any]]: Complete conversation messages including:
-                - Original messages
-                - Assistant responses
-                - Tool calls and responses
-                
-        Raises:
-            Same exceptions as chat() method:
-                - ValueError: For invalid parameters
-                - APITimeoutError: For API timeouts (after retries)
-                - RateLimitError: For rate limits (after retries)
-                - Exception: For other API errors
-                
-        Note:
-            - Does not emit intermediate streaming events
-            - Emits minimal events: interaction_start, interaction_end, errors
-            - Tool calls are processed synchronously in sequence
-            - Compatible with all existing session managers and tool chests
-        """
-        opts = await self.__interaction_setup(**kwargs)
-        client_wants_cancel: threading.Event = kwargs.get("client_wants_cancel")
-        emit_tool_events: bool = kwargs.get("emit_tool_events", False)
-        callback_opts = opts["callback_opts"]
-        tool_chest = opts['tool_chest']
-        session_manager: Union[ChatSessionManager, None] = kwargs.get("session_manager", None)
-        messages = opts["completion_opts"]["messages"].copy()  # Work with a copy
-        tool_context = opts["tool_context"]
-        
-        delay = 1  # Initial delay between retries
-        async with (self.semaphore):
-            interaction_id = await self._raise_interaction_start(**callback_opts)
-            
-            while delay <= self.max_delay:
-                try:
-                    # Check for cancellation
-                    if client_wants_cancel.is_set():
-                        self.logger.info("Chat cancelled by client")
-                        await self._raise_interaction_end(id=interaction_id, stop_reason="client_cancel", **callback_opts)
-                        return messages
-                    
-                    # Process conversation with tool calls until completion
-                    final_messages = await self._handle_claude_sync(
-                        opts["completion_opts"],
-                        tool_chest,
-                        session_manager,
-                        messages,
-                        callback_opts,
-                        interaction_id,
-                        client_wants_cancel,
-                        tool_context,
-                        emit_tool_events
-                    )
-                    
-                    await self._raise_interaction_end(id=interaction_id, **callback_opts)
-                    return final_messages
-                    
-                except (APITimeoutError, RateLimitError) as e:
-                    # Exponential backoff handled in a helper method
-                    delay = await self._handle_retryable_error(delay)
-                    self.logger.warning(f"Timeout / Ratelimit. Retrying...Delay is {delay} seconds")
-                except Exception as e:
-                    if "overloaded" in str(e).lower():
-                        self.logger.warning(f"Claude API is overloaded. Retrying... Delay is {delay} seconds")
-                        delay = await self._handle_retryable_error(delay)
-                    else:
-                        self.logger.exception(f"Unrecoverable error during Claude chat_sync: {e}", exc_info=True)
-                        await self._raise_system_event(f"Exception calling `client.messages.create`.\n\n{e}\n", **callback_opts)
-                        await self._raise_interaction_end(id=interaction_id, stop_reason="exception", **callback_opts)
-                        raise
-            
-            self.logger.warning("Claude API is overloaded. GIVING UP")
-            await self._raise_system_event(f"Claude API is overloaded. GIVING UP.\n", **callback_opts)
-            await self._raise_interaction_end(id=interaction_id, stop_reason="overload", **callback_opts)
-            return messages
-    
-    async def _handle_claude_sync(self, completion_opts, tool_chest, session_manager,
-                                  messages, callback_opts, interaction_id,
-                                  client_wants_cancel: threading.Event,
-                                  tool_context: Dict[str, Any],
-                                  emit_tool_events: bool = False) -> List[dict[str, Any]]:
-        """
-        Handle the Claude API non-streaming response with tool call processing.
-        """
-        # Work with a copy of completion_opts to avoid modifying the original
-        current_completion_opts = completion_opts.copy()
-        current_messages = messages.copy()
-        
-        # Process conversation until no more tool calls
-        max_iterations = 10  # Prevent infinite loops
-        iteration = 0
-        
-        while iteration < max_iterations:
-            iteration += 1
-            
-            # Check for cancellation
-            if client_wants_cancel.is_set():
-                self.logger.info("Chat cancelled by client during processing")
-                return current_messages
-            
-            # Update messages in completion options
-            current_completion_opts["messages"] = current_messages
-            
-            # Make the API call
-            self.logger.debug(f"Making non-streaming API call (iteration {iteration})")
-            response = await self.client.beta.messages.create(**current_completion_opts)
-            
-            # Add assistant response to messages
-            assistant_message = {"role": "assistant", "content": response.content}
-            current_messages.append(assistant_message)
-            
-            # Update session manager if present
-            if session_manager is not None:
-                session_manager.active_memory.messages = current_messages
-            
-            # Check if we're done (no tool calls)
-            if response.stop_reason != "tool_use":
-                self.logger.info(f"Conversation completed with stop_reason: {response.stop_reason}")
-                break
-            
-            # Extract tool calls from response content
-            tool_calls = [block for block in response.content if hasattr(block, 'type') and block.type == "tool_use"]
-            
-            if not tool_calls:
-                self.logger.info("No tool calls found despite tool_use stop reason")
-                break
-            
-            self.logger.info(f"Processing {len(tool_calls)} tool call(s)")
-            
-            # Emit tool call start event if requested
-            if emit_tool_events:
-                await self._raise_tool_call_start(tool_calls, vendor="anthropic", **callback_opts)
-            
-            # Convert tool calls to the format expected by tool_chest
-            formatted_tool_calls = []
-            for tool_call in tool_calls:
-                formatted_tool_calls.append({
-                    "id": tool_call.id,
-                    "name": tool_call.name,
-                    "input": tool_call.input
-                })
-            
-            # Execute tool calls
-            try:
-                tool_response_messages = await tool_chest.call_tools(
-                    formatted_tool_calls, 
-                    tool_context, 
-                    format_type="claude"
-                )
-                
-                # Add tool responses to conversation
-                current_messages.extend(tool_response_messages)
-                
-                # Emit tool call end event if requested
-                if emit_tool_events:
-                    await self._raise_tool_call_end(
-                        formatted_tool_calls,
-                        tool_response_messages,
-                        vendor="anthropic",
-                        **callback_opts
-                    )
-                
-                # Update session manager with tool responses
-                if session_manager is not None:
-                    session_manager.active_memory.messages = current_messages
-                    
-            except Exception as e:
-                self.logger.exception(f"Error executing tool calls: {e}", exc_info=True)
-                # Add error message and continue
-                error_message = {
-                    "role": "user",
-                    "content": [{
-                        "type": "tool_result",
-                        "tool_use_id": tool_calls[0].id if tool_calls else "unknown",
-                        "content": f"Error executing tool: {str(e)}",
-                        "is_error": True
-                    }]
-                }
-                current_messages.append(error_message)
-                
-                if emit_tool_events:
-                    await self._raise_tool_call_end(
-                        formatted_tool_calls,
-                        [error_message],
-                        vendor="anthropic",
-                        **callback_opts
-                    )
-        
-        if iteration >= max_iterations:
-            self.logger.warning(f"Reached maximum iterations ({max_iterations}) in tool call loop")
-        
-        return current_messages
 
 class ClaudeBedrockChatAgent(ClaudeChatAgent):
     def __init__(self, **kwargs) -> None:
