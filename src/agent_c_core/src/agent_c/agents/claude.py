@@ -1,6 +1,7 @@
 import asyncio
 import copy
 import json
+import time
 
 import httpcore
 import yaml
@@ -32,6 +33,16 @@ class ThinkToolState(Enum):
 
 
 class ClaudeChatAgent(BaseAgent):
+    """
+    Claude Chat Agent with optimized lazy JSON processing.
+    
+    Key optimization: Tool arguments are kept as accumulated strings during streaming
+    and only parsed to JSON at tool execution time. This reduces memory overhead
+    during streaming while maintaining backward compatibility.
+    
+    CRITICAL: The "think" tool has special handling that streams arguments directly
+    to the client as thought deltas. This functionality is preserved exactly.
+    """
     CLAUDE_MAX_TOKENS: int = 64000
     class ClaudeTokenCounter(TokenCounter):
 
@@ -310,10 +321,17 @@ class ClaudeChatAgent(BaseAgent):
             "think_tool_state": ThinkToolState.INACTIVE,
             "think_partial": "",
             "think_escape_buffer": "",  # Added to track escape buffer
-            "tool_json_buffers": [],  # JSON buffers for each tool call
+            "tool_json_buffers": [],  # JSON buffers for each tool call (lazy processing)
             "stop_reason": None,
             "complete": False,
-            "interaction_id": None
+            "interaction_id": None,
+            # Performance optimization: cache concatenated tool calls
+            "cached_all_tool_calls": [],
+            "tool_calls_cache_dirty": False,
+            # Text delta batching for performance (NOT for think tool - preserve streaming)
+            "text_delta_buffer": "",
+            "text_delta_batch_size": 50,  # Batch size for text deltas
+            "last_text_delta_time": 0
         }
 
 
@@ -334,7 +352,7 @@ class ClaudeChatAgent(BaseAgent):
         elif event_type == "content_block_stop":
             await self._handle_content_block_end(event, state, callback_opts)
         elif event_type == "input_json":
-            self._handle_input_json(event, state)
+            await self._handle_input_json(event, state, callback_opts)
         elif event_type == "text":
             await self._handle_text_event(event, state, callback_opts)
         elif event_type == "message_delta":
@@ -446,6 +464,18 @@ class ClaudeChatAgent(BaseAgent):
         state['output_tokens'] = event.message.usage.output_tokens
         state['complete'] = True
 
+        # Flush any remaining text deltas before completing
+        await self._flush_text_delta_buffer(state, callback_opts)
+
+        # Fire ToolCallEvent with active=true for completed non-think tools
+        # This happens BEFORE completion event to ensure proper UI state transitions
+        if state['collected_tool_calls']:
+            non_think_tool_calls = [tool_call for tool_call in state['collected_tool_calls'] 
+                                  if tool_call.get('name', '') != 'think' 
+                                  and tool_call.get('input') is not None]
+            if non_think_tool_calls:
+                await self._raise_tool_call_start(non_think_tool_calls, vendor="anthropic", **callback_opts)
+
         # Completion end event
         await self._raise_completion_end(
             callback_opts.get('completion_opts', {}),
@@ -471,6 +501,9 @@ class ClaudeChatAgent(BaseAgent):
     async def _handle_content_block_end(self, event, state, callback_opts):
         if state['current_block_type'] == "thinking":
             await self._raise_complete_thought(state['current_thought']['thinking'], **callback_opts)
+        elif state['current_block_type'] == "text":
+            # Flush any remaining text deltas at block end
+            await self._flush_text_delta_buffer(state, callback_opts)
 
     async def _handle_content_block_start(self, event, state, callback_opts):
         """Handle the content_block_start event."""
@@ -500,7 +533,8 @@ class ClaudeChatAgent(BaseAgent):
         state['current_agent_msg'] = copy.deepcopy(event.content_block.model_dump())
         state['model_outputs'].append(state['current_agent_msg'])
         if len(content) > 0:
-            await self._raise_text_delta(content, **callback_opts)
+            # Use batching for regular text deltas for performance
+            await self._batch_text_delta(content, state, callback_opts)
 
 
     async def _handle_tool_use_block(self, event, state, callback_opts):
@@ -512,7 +546,9 @@ class ClaudeChatAgent(BaseAgent):
         state['collected_tool_calls'].append(tool_call)
         # Initialize JSON buffer for this tool call (empty string for delta accumulation)
         state['tool_json_buffers'].append("")
-        await self._raise_tool_call_delta(state['collected_tool_calls'] + state['server_tool_calls'], **callback_opts)
+        # Mark cache as dirty and update
+        state['tool_calls_cache_dirty'] = True
+        await self._raise_tool_call_delta(self._get_all_tool_calls(state), **callback_opts)
 
 
 
@@ -520,7 +556,9 @@ class ClaudeChatAgent(BaseAgent):
         """Handle tool use block event."""
         tool_call = event.content_block.model_dump()
         state['server_tool_calls'].append(tool_call)
-        await self._raise_tool_call_delta(state['collected_tool_calls'] + state['server_tool_calls'], **callback_opts)
+        # Mark cache as dirty and update
+        state['tool_calls_cache_dirty'] = True
+        await self._raise_tool_call_delta(self._get_all_tool_calls(state), **callback_opts)
 
     async def _handle_thinking_block(self, event, state, callback_opts):
         """Handle thinking block event."""
@@ -535,39 +573,59 @@ class ClaudeChatAgent(BaseAgent):
         await self._raise_thought_delta(content, **callback_opts)
 
 
-    def _handle_input_json(self, event, state):
-        """Handle input_json event."""
+    async def _handle_input_json(self, event, state, callback_opts):
+        """Handle input_json event with lazy JSON processing.
+        
+        For think tools, maintain existing behavior (immediate parsing for streaming).
+        For other tools, store raw JSON string for lazy parsing at execution time.
+        """
         if state['collected_tool_calls']:
-            # Use the accumulated JSON buffer instead of snapshot replacement
-            tool_call_index = len(state['collected_tool_calls']) - 1
-            if tool_call_index < len(state['tool_json_buffers']):
-                # Parse the accumulated JSON buffer
-                json_str = state['tool_json_buffers'][tool_call_index]
-                if json_str.strip():  # Only parse if we have content
-                    try:
-                        import json
-                        state['collected_tool_calls'][-1]['input'] = json.loads(json_str)
-                    except json.JSONDecodeError:
-                        # Fallback to snapshot if JSON parsing fails
-                        state['collected_tool_calls'][-1]['input'] = event.snapshot
+            tool_call = state['collected_tool_calls'][-1]
+            tool_name = tool_call.get('name', '')
+            
+            # CRITICAL: Preserve think tool streaming behavior exactly
+            if tool_name == 'think':
+                # Think tool needs immediate parsing to support streaming
+                tool_call_index = len(state['collected_tool_calls']) - 1
+                if tool_call_index < len(state['tool_json_buffers']):
+                    json_str = state['tool_json_buffers'][tool_call_index]
+                    if json_str.strip():
+                        try:
+                            tool_call['input'] = json.loads(json_str)
+                        except json.JSONDecodeError:
+                            tool_call['input'] = event.snapshot
+                    else:
+                        tool_call['input'] = event.snapshot
                 else:
-                    # Fallback to snapshot if buffer is empty
-                    state['collected_tool_calls'][-1]['input'] = event.snapshot
+                    tool_call['input'] = event.snapshot
             else:
-                # Fallback to snapshot if buffer doesn't exist
-                state['collected_tool_calls'][-1]['input'] = event.snapshot
+                # For regular tools: store raw JSON string for lazy parsing
+                tool_call_index = len(state['collected_tool_calls']) - 1
+                if tool_call_index < len(state['tool_json_buffers']):
+                    json_str = state['tool_json_buffers'][tool_call_index]
+                    if json_str.strip():
+                        # Store raw JSON string instead of parsing
+                        tool_call['input'] = json_str
+                    else:
+                        # Fallback to snapshot as string if buffer is empty
+                        tool_call['input'] = json.dumps(event.snapshot) if event.snapshot else '{}'
+                else:
+                    # Fallback to snapshot as string if buffer doesn't exist
+                    tool_call['input'] = json.dumps(event.snapshot) if event.snapshot else '{}'
 
 
     async def _handle_text_event(self, event, state, callback_opts):
         """Handle text event."""
         if state['current_block_type'] == "text":
             state['current_agent_msg']['text'] = state['current_agent_msg']['text'] + event.text
-            await self._raise_text_delta(event.text, **callback_opts)
+            # Use batching for regular text deltas for performance
+            await self._batch_text_delta(event.text, state, callback_opts)
         elif state['current_block_type'] in ["thinking", "redacted_thinking"]:
             if state['current_block_type'] == "redacted_thinking":
                 state['current_thought']['data'] = state['current_thought']['data'] + event.data
             else:
                 state['current_thought']['thinking'] = state['current_thought']['thinking'] + event.text
+                # CRITICAL: Think tool deltas must stream immediately - do NOT batch
                 await self._raise_thought_delta(event.text, **callback_opts)
 
 
@@ -575,10 +633,51 @@ class ClaudeChatAgent(BaseAgent):
         """Handle message_delta event."""
         state['stop_reason'] = event.delta.stop_reason
 
+    def _get_all_tool_calls(self, state) -> List[dict[str, Any]]:
+        """Get concatenated tool calls list, using cache for performance.
+        
+        This optimization avoids repeatedly concatenating the same lists on every
+        tool call delta event. The cache is invalidated whenever tool calls are modified.
+        """
+        if state['tool_calls_cache_dirty'] or not state['cached_all_tool_calls']:
+            # Recalculate cached list only when needed
+            state['cached_all_tool_calls'] = state['collected_tool_calls'] + state['server_tool_calls']
+            state['tool_calls_cache_dirty'] = False
+        return state['cached_all_tool_calls']
+
+    async def _batch_text_delta(self, text: str, state, callback_opts, force_flush: bool = False):
+        """Batch text deltas for performance, but preserve immediate streaming for think tool.
+        
+        CRITICAL: This is only used for regular text content. Think tool deltas are 
+        streamed immediately via _raise_thought_delta() to preserve exact streaming behavior.
+        """
+        current_time = time.time()
+        state['text_delta_buffer'] += text
+        
+        # Force immediate flush if requested, or if buffer is large enough, or enough time has passed
+        should_flush = (
+            force_flush or 
+            len(state['text_delta_buffer']) >= state['text_delta_batch_size'] or
+            (current_time - state['last_text_delta_time']) > 0.05  # 50ms timeout
+        )
+        
+        if should_flush and state['text_delta_buffer']:
+            await self._raise_text_delta(state['text_delta_buffer'], **callback_opts)
+            state['text_delta_buffer'] = ""
+            state['last_text_delta_time'] = current_time
+
+    async def _flush_text_delta_buffer(self, state, callback_opts):
+        """Flush any remaining text in the buffer."""
+        if state['text_delta_buffer']:
+            await self._raise_text_delta(state['text_delta_buffer'], **callback_opts)
+            state['text_delta_buffer'] = ""
+            state['last_text_delta_time'] = time.time()
+
 
     async def _finalize_tool_calls(self, state, tool_chest, session_manager, messages, callback_opts, tool_context):
         """Finalize tool calls after receiving a complete message."""
-        await self._raise_tool_call_start(state['collected_tool_calls'], vendor="anthropic", **callback_opts)
+        # ToolCallEvent with active=true is now handled in _handle_message_stop
+        # before the completion event, so no additional activation is needed here
 
         # Process tool calls and get response messages
         tool_response_messages = await self.__tool_calls_to_messages(
@@ -587,11 +686,8 @@ class ClaudeChatAgent(BaseAgent):
             tool_context
         )
 
-
         # Add tool response messages to the conversation history
         messages.extend(tool_response_messages)
-
-
 
         await self._raise_tool_call_end(
             state['collected_tool_calls'],
@@ -685,8 +781,69 @@ class ClaudeChatAgent(BaseAgent):
 
         return [{"role": "user", "content": contents}]
 
+    def _validate_and_parse_json(self, json_str: str, tool_name: str = "unknown") -> dict:
+        """Validate JSON completeness and parse safely.
+        
+        Args:
+            json_str: Raw JSON string to parse
+            tool_name: Name of tool for logging purposes
+            
+        Returns:
+            Parsed JSON dict, or empty dict if parsing fails
+        """
+        if not json_str or not json_str.strip():
+            self.logger.warning(f"Empty JSON string for tool {tool_name}")
+            return {}
+            
+        json_str = json_str.strip()
+        
+        # Basic JSON completeness validation
+        if not (json_str.startswith('{') and json_str.endswith('}')):
+            self.logger.warning(f"JSON appears incomplete for tool {tool_name}: {json_str[:50]}...")
+            return {}
+            
+        try:
+            return json.loads(json_str)
+        except json.JSONDecodeError as e:
+            self.logger.warning(f"Failed to parse JSON for tool {tool_name}: {e}. JSON: {json_str[:100]}...")
+            return {}
+
     async def __tool_calls_to_messages(self, state, tool_chest, tool_context):
-        tools_calls = await tool_chest.call_tools(state['collected_tool_calls'], tool_context, format_type="claude")
+        """Process tool calls with lazy JSON parsing.
+        
+        This method now handles JSON parsing for non-think tools at execution time
+        rather than during streaming, improving memory efficiency.
+        """
+        # Create a copy of tool calls to avoid modifying the original state
+        processed_tool_calls = []
+        
+        for tool_call in state['collected_tool_calls']:
+            processed_call = tool_call.copy()
+            tool_name = tool_call.get('name', 'unknown')
+            tool_input = tool_call.get('input')
+            
+            # CRITICAL: Think tools are already parsed and ready to use
+            if tool_name == 'think':
+                # Think tool input is already parsed - use as-is
+                processed_tool_calls.append(processed_call)
+            else:
+                # For regular tools: parse JSON string now (lazy parsing)
+                if isinstance(tool_input, str):
+                    # Parse the JSON string that was stored during streaming
+                    parsed_input = self._validate_and_parse_json(tool_input, tool_name)
+                    processed_call['input'] = parsed_input
+                elif isinstance(tool_input, dict):
+                    # Already parsed (fallback case) - use as-is
+                    processed_call['input'] = tool_input
+                else:
+                    # Unexpected type - provide empty dict
+                    self.logger.warning(f"Unexpected input type for tool {tool_name}: {type(tool_input)}")
+                    processed_call['input'] = {}
+                    
+                processed_tool_calls.append(processed_call)
+        
+        # Call tools with processed (lazily parsed) tool calls
+        tools_calls = await tool_chest.call_tools(processed_tool_calls, tool_context, format_type="claude")
         return tools_calls
 
 
