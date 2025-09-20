@@ -33,6 +33,16 @@ class ThinkToolState(Enum):
 
 
 class ClaudeChatAgent(BaseAgent):
+    """
+    Claude Chat Agent with optimized lazy JSON processing.
+    
+    Key optimization: Tool arguments are kept as accumulated strings during streaming
+    and only parsed to JSON at tool execution time. This reduces memory overhead
+    during streaming while maintaining backward compatibility.
+    
+    CRITICAL: The "think" tool has special handling that streams arguments directly
+    to the client as thought deltas. This functionality is preserved exactly.
+    """
     CLAUDE_MAX_TOKENS: int = 64000
     class ClaudeTokenCounter(TokenCounter):
 
@@ -311,7 +321,7 @@ class ClaudeChatAgent(BaseAgent):
             "think_tool_state": ThinkToolState.INACTIVE,
             "think_partial": "",
             "think_escape_buffer": "",  # Added to track escape buffer
-            "tool_json_buffers": [],  # JSON buffers for each tool call
+            "tool_json_buffers": [],  # JSON buffers for each tool call (lazy processing)
             "stop_reason": None,
             "complete": False,
             "interaction_id": None,
@@ -564,26 +574,44 @@ class ClaudeChatAgent(BaseAgent):
 
 
     async def _handle_input_json(self, event, state, callback_opts):
-        """Handle input_json event."""
+        """Handle input_json event with lazy JSON processing.
+        
+        For think tools, maintain existing behavior (immediate parsing for streaming).
+        For other tools, store raw JSON string for lazy parsing at execution time.
+        """
         if state['collected_tool_calls']:
-            # Use the accumulated JSON buffer instead of snapshot replacement
-            tool_call_index = len(state['collected_tool_calls']) - 1
-            if tool_call_index < len(state['tool_json_buffers']):
-                # Parse the accumulated JSON buffer
-                json_str = state['tool_json_buffers'][tool_call_index]
-                if json_str.strip():  # Only parse if we have content
-                    try:
-                        import json
-                        state['collected_tool_calls'][-1]['input'] = json.loads(json_str)
-                    except json.JSONDecodeError:
-                        # Fallback to snapshot if JSON parsing fails
-                        state['collected_tool_calls'][-1]['input'] = event.snapshot
+            tool_call = state['collected_tool_calls'][-1]
+            tool_name = tool_call.get('name', '')
+            
+            # CRITICAL: Preserve think tool streaming behavior exactly
+            if tool_name == 'think':
+                # Think tool needs immediate parsing to support streaming
+                tool_call_index = len(state['collected_tool_calls']) - 1
+                if tool_call_index < len(state['tool_json_buffers']):
+                    json_str = state['tool_json_buffers'][tool_call_index]
+                    if json_str.strip():
+                        try:
+                            tool_call['input'] = json.loads(json_str)
+                        except json.JSONDecodeError:
+                            tool_call['input'] = event.snapshot
+                    else:
+                        tool_call['input'] = event.snapshot
                 else:
-                    # Fallback to snapshot if buffer is empty
-                    state['collected_tool_calls'][-1]['input'] = event.snapshot
+                    tool_call['input'] = event.snapshot
             else:
-                # Fallback to snapshot if buffer doesn't exist
-                state['collected_tool_calls'][-1]['input'] = event.snapshot
+                # For regular tools: store raw JSON string for lazy parsing
+                tool_call_index = len(state['collected_tool_calls']) - 1
+                if tool_call_index < len(state['tool_json_buffers']):
+                    json_str = state['tool_json_buffers'][tool_call_index]
+                    if json_str.strip():
+                        # Store raw JSON string instead of parsing
+                        tool_call['input'] = json_str
+                    else:
+                        # Fallback to snapshot as string if buffer is empty
+                        tool_call['input'] = json.dumps(event.snapshot) if event.snapshot else '{}'
+                else:
+                    # Fallback to snapshot as string if buffer doesn't exist
+                    tool_call['input'] = json.dumps(event.snapshot) if event.snapshot else '{}'
 
 
     async def _handle_text_event(self, event, state, callback_opts):
@@ -753,8 +781,69 @@ class ClaudeChatAgent(BaseAgent):
 
         return [{"role": "user", "content": contents}]
 
+    def _validate_and_parse_json(self, json_str: str, tool_name: str = "unknown") -> dict:
+        """Validate JSON completeness and parse safely.
+        
+        Args:
+            json_str: Raw JSON string to parse
+            tool_name: Name of tool for logging purposes
+            
+        Returns:
+            Parsed JSON dict, or empty dict if parsing fails
+        """
+        if not json_str or not json_str.strip():
+            self.logger.warning(f"Empty JSON string for tool {tool_name}")
+            return {}
+            
+        json_str = json_str.strip()
+        
+        # Basic JSON completeness validation
+        if not (json_str.startswith('{') and json_str.endswith('}')):
+            self.logger.warning(f"JSON appears incomplete for tool {tool_name}: {json_str[:50]}...")
+            return {}
+            
+        try:
+            return json.loads(json_str)
+        except json.JSONDecodeError as e:
+            self.logger.warning(f"Failed to parse JSON for tool {tool_name}: {e}. JSON: {json_str[:100]}...")
+            return {}
+
     async def __tool_calls_to_messages(self, state, tool_chest, tool_context):
-        tools_calls = await tool_chest.call_tools(state['collected_tool_calls'], tool_context, format_type="claude")
+        """Process tool calls with lazy JSON parsing.
+        
+        This method now handles JSON parsing for non-think tools at execution time
+        rather than during streaming, improving memory efficiency.
+        """
+        # Create a copy of tool calls to avoid modifying the original state
+        processed_tool_calls = []
+        
+        for tool_call in state['collected_tool_calls']:
+            processed_call = tool_call.copy()
+            tool_name = tool_call.get('name', 'unknown')
+            tool_input = tool_call.get('input')
+            
+            # CRITICAL: Think tools are already parsed and ready to use
+            if tool_name == 'think':
+                # Think tool input is already parsed - use as-is
+                processed_tool_calls.append(processed_call)
+            else:
+                # For regular tools: parse JSON string now (lazy parsing)
+                if isinstance(tool_input, str):
+                    # Parse the JSON string that was stored during streaming
+                    parsed_input = self._validate_and_parse_json(tool_input, tool_name)
+                    processed_call['input'] = parsed_input
+                elif isinstance(tool_input, dict):
+                    # Already parsed (fallback case) - use as-is
+                    processed_call['input'] = tool_input
+                else:
+                    # Unexpected type - provide empty dict
+                    self.logger.warning(f"Unexpected input type for tool {tool_name}: {type(tool_input)}")
+                    processed_call['input'] = {}
+                    
+                processed_tool_calls.append(processed_call)
+        
+        # Call tools with processed (lazily parsed) tool calls
+        tools_calls = await tool_chest.call_tools(processed_tool_calls, tool_context, format_type="claude")
         return tools_calls
 
 
