@@ -898,4 +898,4 @@ eventEmitter.on('render_media', (event) => {
 - [MessageBuilder Documentation](./MessageBuilder.md) - Text accumulation and message construction
 - [EventStreamProcessor Documentation](./EventStreamProcessor.md) - Central event coordination
 - [SessionManager Documentation](./SessionManager.md) - Session and message management
-- [Event Types Reference](./EventTypes.md) - Complete event type definitions
+- [Event Types Reference](./Types.md) - Complete event type definitions
