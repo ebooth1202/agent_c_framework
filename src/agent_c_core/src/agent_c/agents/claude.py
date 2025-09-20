@@ -310,6 +310,7 @@ class ClaudeChatAgent(BaseAgent):
             "think_tool_state": ThinkToolState.INACTIVE,
             "think_partial": "",
             "think_escape_buffer": "",  # Added to track escape buffer
+            "tool_json_buffers": [],  # JSON buffers for each tool call
             "stop_reason": None,
             "complete": False,
             "interaction_id": None
@@ -354,7 +355,13 @@ class ClaudeChatAgent(BaseAgent):
         elif delta.type == "thinking_delta":
             await self._handle_thinking_delta(delta, state, callback_opts)
         elif delta.type == "input_json_delta":
-            await self._handle_think_tool_json(delta, state, callback_opts)
+            # Check if this is a think tool (preserve existing functionality)
+            if (state['collected_tool_calls'] and 
+                state['collected_tool_calls'][-1].get('name') == 'think'):
+                await self._handle_think_tool_json(delta, state, callback_opts)
+            else:
+                # Handle regular tool JSON delta accumulation
+                await self._handle_input_json_delta(delta, state, callback_opts)
 
 
     async def _handle_thinking_delta(self, delta, state, callback_opts):
@@ -420,6 +427,18 @@ class ClaudeChatAgent(BaseAgent):
         await self._raise_thought_delta(processed, **callback_opts)
         if complete:
             await self._raise_complete_thought(processed, **callback_opts)
+
+
+    async def _handle_input_json_delta(self, delta, state, callback_opts):
+        """Handle input_json_delta for regular tool calls (not think tool)."""
+        if state['collected_tool_calls']:
+            tool_call_index = len(state['collected_tool_calls']) - 1
+            # Ensure we have a buffer for this tool call
+            while len(state['tool_json_buffers']) <= tool_call_index:
+                state['tool_json_buffers'].append("")
+            
+            # Accumulate the JSON delta to the buffer
+            state['tool_json_buffers'][tool_call_index] += delta.partial_json
 
 
     async def _handle_message_stop(self, event, state, tool_chest, session_manager, messages, callback_opts):
@@ -491,6 +510,8 @@ class ClaudeChatAgent(BaseAgent):
             state['think_tool_state'] = ThinkToolState.WAITING
 
         state['collected_tool_calls'].append(tool_call)
+        # Initialize JSON buffer for this tool call (empty string for delta accumulation)
+        state['tool_json_buffers'].append("")
         await self._raise_tool_call_delta(state['collected_tool_calls'] + state['server_tool_calls'], **callback_opts)
 
 
@@ -517,7 +538,24 @@ class ClaudeChatAgent(BaseAgent):
     def _handle_input_json(self, event, state):
         """Handle input_json event."""
         if state['collected_tool_calls']:
-            state['collected_tool_calls'][-1]['input'] = event.snapshot
+            # Use the accumulated JSON buffer instead of snapshot replacement
+            tool_call_index = len(state['collected_tool_calls']) - 1
+            if tool_call_index < len(state['tool_json_buffers']):
+                # Parse the accumulated JSON buffer
+                json_str = state['tool_json_buffers'][tool_call_index]
+                if json_str.strip():  # Only parse if we have content
+                    try:
+                        import json
+                        state['collected_tool_calls'][-1]['input'] = json.loads(json_str)
+                    except json.JSONDecodeError:
+                        # Fallback to snapshot if JSON parsing fails
+                        state['collected_tool_calls'][-1]['input'] = event.snapshot
+                else:
+                    # Fallback to snapshot if buffer is empty
+                    state['collected_tool_calls'][-1]['input'] = event.snapshot
+            else:
+                # Fallback to snapshot if buffer doesn't exist
+                state['collected_tool_calls'][-1]['input'] = event.snapshot
 
 
     async def _handle_text_event(self, event, state, callback_opts):
