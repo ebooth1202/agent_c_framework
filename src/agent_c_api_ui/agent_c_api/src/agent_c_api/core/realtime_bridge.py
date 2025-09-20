@@ -607,7 +607,12 @@ class RealtimeBridge(AgentBridge):
                 "streaming_callback": on_event  if on_event else self.runtime_callback,
                 'tool_context': {'active_agent': self.chat_session.agent_config,
                                  'bridge': self,
+                                 'parent_session_id': None,
+                                 'user_session_id': self.chat_session.session_id,
+                                 'user_id': self.chat_session.user_id,
+                                 'session_id': self.chat_session.session_id,
                                  "client_wants_cancel": self.client_wants_cancel,
+                                 "env_name": os.getenv('ENV_NAME', 'development'),
                                  "streaming_callback": on_event  if on_event else self.runtime_callback},
                 'prompt_builder': PromptBuilder(sections=agent_sections),
             }
