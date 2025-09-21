@@ -1913,6 +1913,187 @@ _plans:
         updated_at: '2025-06-09T10:32:48.640443'
     title: BOKF Design Team Coordination Framework
     updated_at: '2025-06-09T10:32:48.640443'
+  demo_team_upgrade:
+    created_at: '2025-09-20T13:21:50.425035'
+    description: Systematic upgrade of demo package realtime agent team through API
+      documentation processing, testing guide creation, and specialized testing context
+      development
+    id: aztec-nato
+    lessons_learned: []
+    tasks:
+      adios-henry:
+        child_tasks: []
+        completed: true
+        completion_report: Successfully obtained comprehensive demo package testing
+          guide from Quinn. Guide covers Next.js App Router testing, WebSocket mocking,
+          audio API testing, authentication flows, and complete integration testing
+          patterns.
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T13:22:02.324886'
+        description: Obtain demo package-specific testing guide from Quinn
+        id: adios-henry
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 3
+        title: 'Phase 3: Testing Guide Creation'
+        updated_at: '2025-09-20T13:32:37.891224'
+      balance-fruit:
+        child_tasks: []
+        completed: true
+        completion_report: 'CORRECTED ANALYSIS: Based on clarification that demo app
+          uses components from UI package, revised to 3-specialist architecture focused
+          on integration: Next.js Integration (App Router/auth/API routes), UI Integration
+          & Styling (component integration/CSS/responsive), and SDK Integration (hooks/state/WebSocket).
+          Analysis updated to reflect integration-focused testing approach.'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T13:22:06.008453'
+        description: Analyze processed documentation and recommend specialist architecture
+        id: balance-fruit
+        parent_id: null
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 4
+        title: 'Phase 4: Analysis and Team Design'
+        updated_at: '2025-09-20T13:45:20.117167'
+      bali-prism:
+        child_tasks: []
+        completed: true
+        completion_report: Phase 1 completed successfully. Set up working directories,
+          created comprehensive plan structure, and verified demo package documentation
+          (4 files identified).
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T13:21:54.889088'
+        description: Verify source structure, set up working directories, and create
+          task organization
+        id: bali-prism
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 1
+        title: 'Phase 1: Setup and Preparation'
+        updated_at: '2025-09-20T13:51:31.337818'
+      calypso-zebra:
+        child_tasks: []
+        completed: true
+        completion_report: Created comprehensive testing context for SDK Integration
+          Demo Specialist. Covers SDK hook integration, state architecture, WebSocket
+          communication, real-time features, and integration-specific testing challenges.
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T13:45:34.755980'
+        description: Create comprehensive testing context for the SDK Integration
+          Demo Specialist (hooks, state management, WebSocket integration)
+        id: calypso-zebra
+        parent_id: genetic-little
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: Create SDK Integration Demo Specialist Context
+        updated_at: '2025-09-20T13:50:36.155232'
+      dallas-dolphin:
+        child_tasks:
+        - salute-morgan
+        completed: true
+        completion_report: Phase 2 completed successfully. All demo package API documentation
+          has been processed into essential details format suitable for agent consumption.
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T13:21:58.529049'
+        description: Process all demo package API documentation into agent-ready essential
+          details format
+        id: dallas-dolphin
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 2
+        title: 'Phase 2: API Documentation Processing'
+        updated_at: '2025-09-20T13:25:10.848428'
+      elite-tokyo:
+        child_tasks: []
+        completed: true
+        completion_report: Created comprehensive testing context for Next.js Integration
+          Demo Specialist. Covers App Router patterns, authentication proxy, provider
+          hierarchy, route protection, middleware integration, and Next.js-specific
+          testing challenges.
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T13:33:42.100854'
+        description: Create comprehensive testing context for the Next.js Integration
+          Demo Specialist (App Router, authentication proxy, API routes)
+        id: elite-tokyo
+        parent_id: genetic-little
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: Create Next.js Integration Demo Specialist Context
+        updated_at: '2025-09-20T13:47:00.178401'
+      genetic-little:
+        child_tasks:
+        - elite-tokyo
+        - sample-habitat
+        - calypso-zebra
+        completed: true
+        completion_report: 'Phase 5 completed successfully! Created comprehensive
+          testing context files for all 3 recommended specialists: Next.js Integration
+          (App Router/auth/API routes), UI Integration & Styling (component integration/CSS/responsive),
+          and SDK Integration (hooks/state/WebSocket). All contexts include domain
+          expertise, testing patterns, mock strategies, and integration challenges.'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T13:22:09.602373'
+        description: Create comprehensive testing context files for each recommended
+          specialist
+        id: genetic-little
+        parent_id: null
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 5
+        title: 'Phase 5: Testing Context Creation'
+        updated_at: '2025-09-20T13:50:42.931889'
+      salute-morgan:
+        child_tasks: []
+        completed: true
+        completion_report: 'Successfully processed all 4 demo package API documentation
+          files into agent-ready essential details format. Files created: index.md,
+          README.md, configuration-guide.md, implementation-patterns.md'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T13:22:33.078698'
+        description: 'Process all 4 demo package API files: index.md, README.md, configuration-guide.md,
+          implementation-patterns.md'
+        id: salute-morgan
+        parent_id: dallas-dolphin
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: Process Demo API Documentation Group
+        updated_at: '2025-09-20T13:25:06.842197'
+      sample-habitat:
+        child_tasks: []
+        completed: true
+        completion_report: Created comprehensive testing context for UI Integration
+          & Styling Demo Specialist. Covers @agentc/realtime-ui component integration,
+          Tailwind CSS patterns, theme management, responsive design, and visual testing
+          strategies.
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T13:45:30.391661'
+        description: Create comprehensive testing context for the UI Integration &
+          Styling Demo Specialist (component integration, Tailwind CSS, responsive
+          design)
+        id: sample-habitat
+        parent_id: genetic-little
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: Create UI Integration & Styling Demo Specialist Context
+        updated_at: '2025-09-20T13:48:35.761290'
+    title: Demo Package Team Agent Upgrades
+    updated_at: '2025-09-20T13:51:31.337832'
   domo_instruction_update:
     created_at: '2025-08-29T21:19:11.367810'
     description: Replace outdated "Target SDK Architecture Components" with accurate
@@ -2075,6 +2256,452 @@ _plans:
         updated_at: '2025-08-29T21:22:59.098145'
     title: Update Domo Instructions to Reflect Actual Architecture
     updated_at: '2025-08-29T21:23:12.359701'
+  react_team_upgrade:
+    created_at: '2025-09-20T08:42:52.717472'
+    description: Systematic upgrade of realtime agent teams for the react package
+      through API documentation processing, testing guide creation, and specialized
+      testing context development
+    id: panic-coconut
+    lessons_learned: []
+    tasks:
+      april-orlando:
+        child_tasks: []
+        completed: true
+        completion_report: Created comprehensive testing context for chat_react_specialist.
+          Context covers useChat, useChatSessionList, useChatSessionListOptimized,
+          useTurnState with detailed streaming patterns, optimistic updates, session
+          management, turn coordination, performance testing, and complex async flow
+          validation.
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T09:03:03.800052'
+        description: Create comprehensive testing context for chat_react_specialist
+          covering useChat, useChatSessionList, useChatSessionListOptimized, useTurnState
+        id: april-orlando
+        parent_id: denmark-polygon
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: 5.2 Create Chat React Specialist Testing Context
+        updated_at: '2025-09-20T09:06:22.824995'
+      biology-tribal:
+        child_tasks: []
+        completed: true
+        completion_report: Successfully processed Group 2 files (useChat, useChatSessionList,
+          useChatSessionListOptimized, useTurnState). All 4 chat and communication
+          hooks converted to essential details format with focus on message management,
+          session handling, and turn state patterns.
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T08:44:26.326892'
+        description: Process useChat.md, useChatSessionList.md, useChatSessionListOptimized.md,
+          useTurnState.md
+        id: biology-tribal
+        parent_id: traffic-caravan
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: '2.2 Process Group 2: Chat & Communication'
+        updated_at: '2025-09-20T08:49:31.002189'
+      bogart-mars:
+        child_tasks: []
+        completed: true
+        completion_report: Created comprehensive inventory of 19 react package API
+          files. Structure includes AgentCProvider, 14 React hooks, and 4 documentation
+          files. Complexity assessment and React-specific testing considerations documented.
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T08:43:31.787283'
+        description: Examine react package API documentation structure and identify
+          all component/feature areas
+        id: bogart-mars
+        parent_id: sharp-lake
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: 1.1 Verify Source Structure and Create Inventory
+        updated_at: '2025-09-20T08:43:53.357252'
+      bravo-analog:
+        child_tasks: []
+        completed: true
+        completion_report: Created comprehensive testing context for audio_react_specialist.
+          Context covers useAudio, useVoiceModel, useOutputMode with detailed browser
+          audio API testing, permission handling, device management, cross-browser
+          compatibility, turn coordination, and resource cleanup patterns.
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T09:03:08.546069'
+        description: Create comprehensive testing context for audio_react_specialist
+          covering useAudio, useVoiceModel, useOutputMode
+        id: bravo-analog
+        parent_id: denmark-polygon
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: 5.3 Create Audio React Specialist Testing Context
+        updated_at: '2025-09-20T09:08:16.232506'
+      change-anatomy:
+        child_tasks: []
+        completed: true
+        completion_report: Created comprehensive testing context for provider_react_specialist.
+          Context covers AgentCProvider, useRealtimeClient, useConnection, useInitializationStatus
+          with detailed React patterns, StrictMode compatibility, authentication testing,
+          mock strategies, and performance benchmarks. Foundation specialist context
+          complete.
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T09:02:59.325551'
+        description: Create comprehensive testing context for provider_react_specialist
+          covering AgentCProvider, useRealtimeClient, useConnection, useInitializationStatus
+        id: change-anatomy
+        parent_id: denmark-polygon
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: 5.1 Create Provider React Specialist Testing Context
+        updated_at: '2025-09-20T09:04:33.875330'
+      change-carrot:
+        child_tasks: []
+        completed: true
+        completion_report: Completed comprehensive analysis of React package documentation.
+          Identified complexity levels across 5 functional groups, integration density
+          patterns, error-prone areas, and performance-critical components. Analysis
+          reveals optimal architecture of 4 specialists with clear domain separation.
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T09:01:29.324328'
+        description: Analyze functional groups and complexity to determine optimal
+          specialist architecture for React package
+        id: change-carrot
+        parent_id: trident-lazarus
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: 4.1 Analyze Processed Documentation
+        updated_at: '2025-09-20T09:02:19.914818'
+      denmark-polygon:
+        child_tasks:
+        - change-anatomy
+        - april-orlando
+        - bravo-analog
+        - evident-pelican
+        completed: true
+        completion_report: 'Phase 5 complete: All 4 testing context files created
+          for React specialists. Each specialist now has comprehensive domain expertise
+          covering their specific components, testing patterns, mock strategies, integration
+          requirements, and success metrics. Testing contexts ready for specialist
+          team implementation.'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T08:43:10.518382'
+        description: Create comprehensive domain context files for each recommended
+          specialist
+        id: denmark-polygon
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 5
+        title: 'Phase 5: Testing Context Creation'
+        updated_at: '2025-09-20T09:10:33.279545'
+      dynasty-easy:
+        child_tasks: []
+        completed: true
+        completion_report: Successfully processed Group 4 files (useAgentCData, useUserData,
+          useAvatar, useToolNotifications). All 4 data management and notification
+          hooks converted to essential details format with focus on state synchronization,
+          error handling, and integration patterns.
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T08:44:33.753173'
+        description: Process useAgentCData.md, useUserData.md, useAvatar.md, useToolNotifications.md
+        id: dynasty-easy
+        parent_id: traffic-caravan
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: '2.4 Process Group 4: Data Management & Notifications'
+        updated_at: '2025-09-20T08:52:51.712489'
+      evident-pelican:
+        child_tasks: []
+        completed: true
+        completion_report: Created comprehensive testing context for data_react_specialist.
+          Context covers useAgentCData, useUserData, useAvatar, useToolNotifications
+          plus documentation components with detailed data synchronization patterns,
+          notification lifecycles, cross-hook consistency testing, and documentation
+          validation.
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T09:03:13.011489'
+        description: Create comprehensive testing context for data_react_specialist
+          covering useAgentCData, useUserData, useAvatar, useToolNotifications, documentation
+        id: evident-pelican
+        parent_id: denmark-polygon
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: 5.4 Create Data React Specialist Testing Context
+        updated_at: '2025-09-20T09:10:26.629116'
+      forget-type:
+        child_tasks: []
+        completed: true
+        completion_report: Successfully processed Group 5 files (examples, hooks-overview,
+          hooks). All 3 documentation files converted to essential details format
+          with focus on usage patterns, integration examples, and best practices.
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T08:44:37.199915'
+        description: Process examples.md, hooks-overview.md, hooks.md
+        id: forget-type
+        parent_id: traffic-caravan
+        priority: low
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: '2.5 Process Group 5: Documentation & Examples'
+        updated_at: '2025-09-20T08:55:38.990256'
+      italian-joseph:
+        child_tasks: []
+        completed: true
+        completion_report: 'Quality control complete: All 19 react package files successfully
+          processed and verified. Files maintain consistent agent-optimized format
+          with practical information, technical accuracy, and React-specific considerations.
+          Directory structure matches original API documentation layout.'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T08:44:41.199782'
+        description: Review all processed files for technical accuracy and make corrections
+          as needed
+        id: italian-joseph
+        parent_id: traffic-caravan
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: 2.6 Quality Control and Correction
+        updated_at: '2025-09-20T08:55:53.398060'
+      mambo-bingo:
+        child_tasks: []
+        completed: true
+        completion_report: 'Testing guide validation complete: Excellent alignment
+          with established testing philosophy, comprehensive React-specific patterns
+          (hook testing, provider testing, event cleanup), StrictMode compatibility,
+          memory leak prevention, and integration testing approaches. All requirements
+          met.'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T09:01:12.104676'
+        description: Review testing guide for alignment with established testing philosophy
+          and React-specific requirements
+        id: mambo-bingo
+        parent_id: protect-camilla
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: 3.2 Validate Testing Philosophy Integration
+        updated_at: '2025-09-20T09:01:18.457289'
+      protect-camilla:
+        child_tasks:
+        - simple-canoe
+        - mambo-bingo
+        completed: true
+        completion_report: 'Phase 3 complete: React-specific testing guide obtained
+          from Quinn and validated. Guide covers hook lifecycle, provider testing,
+          event subscription cleanup, memory leak prevention, and performance testing
+          with practical recipes and debugging guidance. Ready for Phase 4.'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T08:43:03.866884'
+        description: Obtain package-specific testing guide from Quinn agent and validate
+          integration
+        id: protect-camilla
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 3
+        title: 'Phase 3: Testing Guide Creation'
+        updated_at: '2025-09-20T09:01:23.146824'
+      ricardo-toyota:
+        child_tasks: []
+        completed: true
+        completion_report: 'Specialist architecture designed: 4-specialist team structure
+          with provider_react_specialist (foundation), chat_react_specialist (streaming/sessions),
+          audio_react_specialist (voice/devices), and data_react_specialist (synchronization/docs).
+          Clear domain separation, integration patterns, and implementation priorities
+          established.'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T09:01:33.721621'
+        description: Create recommended specialist team structure with justification
+          and integration patterns
+        id: ricardo-toyota
+        parent_id: trident-lazarus
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: 4.2 Design Specialist Architecture
+        updated_at: '2025-09-20T09:02:48.241583'
+      rodeo-secure:
+        child_tasks: []
+        completed: true
+        completion_report: 'Working directories created: //project/.scratch/realtime_agent_updates/react/
+          for essential details and //project/.scratch/realtime_agent_updates/context/react/
+          for specialist contexts.'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T08:43:35.124861'
+        description: Create required directory structure for react package processing
+        id: rodeo-secure
+        parent_id: sharp-lake
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: 1.2 Set Up Working Directories
+        updated_at: '2025-09-20T08:43:58.338267'
+      russian-rapid:
+        child_tasks: []
+        completed: true
+        completion_report: Successfully processed Group 3 files (useAudio, useVoiceModel,
+          useOutputMode). All 3 audio and voice hooks converted to essential details
+          format with focus on permissions, device management, voice configuration,
+          and browser compatibility.
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T08:44:29.807268'
+        description: Process useAudio.md, useVoiceModel.md, useOutputMode.md
+        id: russian-rapid
+        parent_id: traffic-caravan
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: '2.3 Process Group 3: Audio & Voice'
+        updated_at: '2025-09-20T08:50:57.128083'
+      scuba-armada:
+        child_tasks: []
+        completed: true
+        completion_report: 'Organized 19 react package files into 5 logical functional
+          groups with 3-5 files each. Groups prioritized by technical complexity and
+          importance: Core Provider & Client, Chat & Communication, Audio & Voice,
+          Data Management & Notifications, Documentation & Examples.'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T08:43:39.155131'
+        description: Organize react package files into logical groups for processing
+          (5-7 files max per group)
+        id: scuba-armada
+        parent_id: sharp-lake
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: 1.3 Group API Files by Functional Areas
+        updated_at: '2025-09-20T08:44:13.066734'
+      sharp-lake:
+        child_tasks:
+        - bogart-mars
+        - rodeo-secure
+        - scuba-armada
+        completed: true
+        completion_report: 'Phase 1 complete: React package structure verified (19
+          files total), working directories established, and files organized into
+          5 functional groups for systematic processing. Ready for Phase 2: API Documentation
+          Processing.'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T08:42:57.117193'
+        description: Verify source structure, set up working directories, and establish
+          project foundation
+        id: sharp-lake
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 1
+        title: 'Phase 1: Setup and Preparation'
+        updated_at: '2025-09-20T08:44:17.355891'
+      simple-canoe:
+        child_tasks: []
+        completed: true
+        completion_report: Successfully obtained comprehensive React testing guide
+          from Quinn. Guide covers React-specific testing strategies, hook testing
+          patterns, memory leak prevention, performance considerations, and integration
+          approaches. Saved to testing/react.md with practical recipes and debugging
+          guidance.
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T08:56:05.062487'
+        description: Use aa_oneshot with agent_c_realtime_test to get comprehensive
+          react package testing guide
+        id: simple-canoe
+        parent_id: protect-camilla
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: 3.1 Obtain React Testing Guide from Quinn
+        updated_at: '2025-09-20T09:01:07.335996'
+      traffic-caravan:
+        child_tasks:
+        - trilogy-frozen
+        - biology-tribal
+        - russian-rapid
+        - dynasty-easy
+        - forget-type
+        - italian-joseph
+        completed: true
+        completion_report: 'Phase 2 complete: All 19 react package API files processed
+          into essential details format. Files organized by functional groups and
+          converted to agent-optimized documentation with React-specific patterns,
+          hooks, and integration considerations. Quality verified and ready for Phase
+          3.'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T08:43:00.488883'
+        description: Inventory, group, and process all react package API files into
+          essential details format
+        id: traffic-caravan
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 2
+        title: 'Phase 2: API Documentation Processing'
+        updated_at: '2025-09-20T08:55:58.406445'
+      trident-lazarus:
+        child_tasks:
+        - change-carrot
+        - ricardo-toyota
+        completed: true
+        completion_report: 'Phase 4 complete: Comprehensive analysis of React package
+          complexity and specialist architecture design completed. Recommended 4-specialist
+          team with clear domain ownership, integration patterns, and implementation
+          strategy. Ready for Phase 5: Testing Context Creation.'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T08:43:07.284484'
+        description: Analyze processed documentation and design recommended specialist
+          architecture
+        id: trident-lazarus
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 4
+        title: 'Phase 4: Analysis and Team Design'
+        updated_at: '2025-09-20T09:02:53.458540'
+      trilogy-frozen:
+        child_tasks: []
+        completed: true
+        completion_report: Successfully processed Group 1 files (AgentCProvider, useRealtimeClient,
+          useConnection, useInitializationStatus, README). All 5 files converted to
+          agent-optimized essential details format with React-specific considerations
+          included.
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T08:44:22.646341'
+        description: Process AgentCProvider.md, useRealtimeClient.md, useConnection.md,
+          useInitializationStatus.md, README.md
+        id: trilogy-frozen
+        parent_id: traffic-caravan
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: '2.1 Process Group 1: Core Provider & Client Integration'
+        updated_at: '2025-09-20T08:47:33.075283'
+    title: React Package Team Agent Upgrades
+    updated_at: '2025-09-20T09:10:33.279554'
   realtime_agent_team_fixes:
     created_at: '2025-08-30T16:47:34.556326'
     description: Comprehensive plan to fix the identity, role clarity, team structure,
@@ -2101,6 +2728,193 @@ _plans:
         updated_at: '2025-08-30T16:47:38.897184'
     title: Agent C Realtime Team Restructuring & Enhancement
     updated_at: '2025-08-30T16:47:38.897212'
+  realtime_team_upgrade:
+    created_at: '2025-09-19T18:40:50.363048'
+    description: Systematic upgrade of the realtime agent team through API documentation
+      analysis, testing guide creation, and specialist agent identification. This
+      will help determine optimal team composition and reduce investigation overhead
+      for future tasks.
+    id: america-rhino
+    lessons_learned: []
+    tasks:
+      chicken-shelter:
+        child_tasks: []
+        completed: true
+        completion_report: Successfully set up all workspace structure, verified source
+          paths, corrected events.md documentation, and created comprehensive context
+          files for all 4 recommended specialist agents. Directory structure established
+          at //project/.scratch/realtime_agent_updates/
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-19T18:40:54.759407'
+        description: Establish workspace structure and verify all source materials
+        id: chicken-shelter
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 1
+        title: 'Phase 1: Setup and Preparation'
+        updated_at: '2025-09-19T21:05:03.132586'
+      convert-pelican:
+        child_tasks: []
+        completed: true
+        completion_report: 'Created 4 comprehensive context files providing complete
+          domain knowledge packages for each specialist: Event Stream Processing,
+          Audio Pipeline, Communication Flow, and System Integration. Each context
+          includes package structure, core components, technical challenges, integration
+          patterns, and testing strategies to minimize research phases.'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-19T18:41:06.066821'
+        description: Analyze processed documentation to determine optimal specialist
+          agent composition
+        id: convert-pelican
+        parent_id: null
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 4
+        title: 'Phase 4: Analysis and Team Design'
+        updated_at: '2025-09-19T21:05:08.646766'
+      frank-torch:
+        child_tasks: []
+        completed: true
+        completion_report: 'Successfully processed 4 messaging/communication files:
+          MessageBuilder, MessageUtilities, AdvancedMessageHandlers, and TurnManager.
+          All essential details focus on event-driven patterns, turn-taking protocols,
+          and streaming message construction.'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-19T18:47:03.248182'
+        description: 'Create essential details for: MessageBuilder.md, MessageUtilities.md,
+          AdvancedMessageHandlers.md, TurnManager.md'
+        id: frank-torch
+        parent_id: peru-toyota
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: Process Messaging & Communication Group
+        updated_at: '2025-09-19T18:57:36.329194'
+      moses-brandy:
+        child_tasks: []
+        completed: true
+        completion_report: 'Successfully processed 5 core component files: RealtimeClient,
+          WebSocketManager, EventSystem, EventStreamProcessor, and SessionManager.
+          All essential details files created in the target directory with agent-friendly
+          formatting.'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-19T18:46:55.630857'
+        description: 'Create essential details for: RealtimeClient.md, WebSocketManager.md,
+          EventSystem.md, EventStreamProcessor.md, SessionManager.md'
+        id: moses-brandy
+        parent_id: peru-toyota
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: Process Core Components Group 1
+        updated_at: '2025-09-19T18:51:07.959339'
+      patriot-fragile:
+        child_tasks: []
+        completed: true
+        completion_report: Successfully obtained comprehensive testing guide from
+          Quinn (agent_c_realtime_test). Guide saved to //project/.scratch/realtime_agent_updates/testing/core.md
+          and covers all requested areas including event stream processing, mock strategies,
+          performance testing, and integration testing approaches.
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-19T18:41:02.044802'
+        description: Get detailed core package testing guide from Quinn (agent_c_realtime_test)
+        id: patriot-fragile
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 3
+        title: 'Phase 3: Testing Guide Creation'
+        updated_at: '2025-09-19T19:02:38.382807'
+      peru-toyota:
+        child_tasks:
+        - moses-brandy
+        - salute-polka
+        - frank-torch
+        - royal-taboo
+        - trapeze-premium
+        completed: true
+        completion_report: 'Successfully processed all 23 API documentation files
+          from the core package, creating agent-friendly essential details versions.
+          Organized into logical groups: Core Components (5), Audio/Voice (5), Messaging/Communication
+          (4), Support Systems (5), and Foundation/Utilities (4). All files saved
+          to //project/.scratch/realtime_agent_updates/core/'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-19T18:40:58.476115'
+        description: Create concise essential details versions of all core API reference
+          files for agent crafting
+        id: peru-toyota
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 2
+        title: 'Phase 2: API Documentation Processing'
+        updated_at: '2025-09-19T19:02:33.072727'
+      royal-taboo:
+        child_tasks: []
+        completed: true
+        completion_report: 'Successfully processed 5 support system files: AuthManager,
+          ReconnectionManager, Logger, AvatarManager, and ClientConfig. All essential
+          details focus on reliability patterns, configuration management, and foundational
+          infrastructure systems.'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-19T18:47:07.189331'
+        description: 'Create essential details for: AuthManager.md, ReconnectionManager.md,
+          Logger.md, AvatarManager.md, ClientConfig.md'
+        id: royal-taboo
+        parent_id: peru-toyota
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: Process Support Systems Group
+        updated_at: '2025-09-19T19:00:10.383273'
+      salute-polka:
+        child_tasks: []
+        completed: true
+        completion_report: 'Successfully processed 5 audio/voice component files:
+          AudioInput, AudioOutput, AudioOutputService, AudioProcessor, and VoiceManager.
+          All essential details focus on WebAudio API integration, PCM16 processing,
+          and realtime performance considerations.'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-19T18:46:59.556620'
+        description: 'Create essential details for: AudioInput.md, AudioOutput.md,
+          AudioOutputService.md, AudioProcessor.md, VoiceManager.md'
+        id: salute-polka
+        parent_id: peru-toyota
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: Process Audio & Voice Group
+        updated_at: '2025-09-19T18:55:25.768491'
+      trapeze-premium:
+        child_tasks: []
+        completed: true
+        completion_report: 'Successfully processed 4 foundation files: Types, Utilities,
+          events, and index. All essential details focus on type definitions, utility
+          patterns, event schemas, and API surface understanding for foundational
+          building blocks.'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-19T18:47:10.857165'
+        description: 'Create essential details for: Types.md, Utilities.md, events.md,
+          index.md'
+        id: trapeze-premium
+        parent_id: peru-toyota
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: Process Foundation & Utilities Group
+        updated_at: '2025-09-19T19:02:27.768010'
+    title: Realtime Team Agent Upgrades
+    updated_at: '2025-09-19T21:05:08.646774'
   realtime_ui_fixes:
     created_at: '2025-09-03T14:47:50.241320'
     description: 'Address the three critical issues identified after achieving the
@@ -2178,6 +2992,407 @@ _plans:
         updated_at: '2025-09-03T14:59:13.581018'
     title: Realtime Client UI and Connection Fixes
     updated_at: '2025-09-03T17:06:32.316607'
+  ui_components_team_upgrade:
+    created_at: '2025-09-20T11:48:32.938225'
+    description: Systematic upgrade of realtime agent teams for the UI Components
+      package through API documentation processing, testing guide creation, and specialized
+      testing context development
+    id: tourist-export
+    lessons_learned: []
+    tasks:
+      albert-consul:
+        child_tasks: []
+        completed: true
+        completion_report: '✅ Controls & Layout Specialist Testing Context Created
+
+
+          Comprehensive testing context created covering:
+
+          - **Domain Focus**: Configuration management, responsive layouts, form validation,
+          connection status, system coordination
+
+          - **Core Expertise**: Cross-component state sync, responsive design testing,
+          settings persistence, WebSocket integration
+
+          - **Mock Strategies**: Configuration state management, responsive testing
+          utilities, form validation frameworks
+
+          - **Specialized Testing**: Layout stability during changes, performance
+          under configuration updates, cross-component coordination
+
+          - **Critical Challenges**: Settings conflicts, offline scenarios, layout
+          stability, multi-component synchronization
+
+          - **Success Metrics**: < 200ms config updates, 100% settings persistence,
+          perfect responsive design, WCAG 2.1 AA compliance
+
+
+          Context includes sophisticated configuration testing utilities, responsive
+          layout testing frameworks, and comprehensive coordination validation approaches.'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T12:01:53.176625'
+        description: Create comprehensive testing context for Controls & Layout Specialist
+          covering configuration management and general UI
+        id: albert-consul
+        parent_id: monday-blast
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: Create Controls & Layout Specialist Testing Context
+        updated_at: '2025-09-20T12:09:34.425967'
+      bandit-neuron:
+        child_tasks: []
+        completed: true
+        completion_report: '✅ Successfully processed all 7 UI Components files into
+          essential details format:
+
+
+          **Files Created**:
+
+          - audio-components.md (audio controls, recording, mute, visualization)
+
+          - avatar-components.md (HeyGen streaming avatar integration)
+
+          - chat-components.md (message display, typing indicators, content rendering)
+
+          - connection-components.md (WebSocket status, connection controls)
+
+          - control-components.md (agent selection, output modes, theme controls)
+
+          - other-components.md (layout, editor, input, session management)
+
+          - index.md (navigation index and component overview)
+
+
+          **Quality Verified**: Files follow proper format with Purpose, Key Components,
+          Key Properties, Integration Points, Critical Notes, and Agent Considerations
+          sections. Technical accuracy maintained with practical agent-focused guidance.'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T11:49:29.025195'
+        description: Process all 7 UI Components files into essential details format
+          using act_oneshot delegation
+        id: bandit-neuron
+        parent_id: omega-regular
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: Process UI Components Group (All Files)
+        updated_at: '2025-09-20T11:54:33.857268'
+      convert-vatican:
+        child_tasks: []
+        completed: true
+        completion_report: '✅ Chat Interface Specialist Testing Context Created
+
+
+          Comprehensive testing context created covering:
+
+          - **Domain Focus**: Real-time message streaming, content rendering, conversational
+          UI patterns
+
+          - **Core Expertise**: WebSocket simulation, scroll behavior testing, markdown/code
+          rendering validation
+
+          - **Mock Strategies**: Message streaming simulation, WebSocket communication
+          mocking, input handling utilities
+
+          - **Specialized Testing**: Large message list performance, accessibility
+          in chat UI, message ordering consistency
+
+          - **Critical Challenges**: Real-time delta updates, scroll behavior intuition,
+          content sanitization, memory efficiency
+
+          - **Success Metrics**: < 16ms message rendering, 60fps scroll performance,
+          WCAG 2.1 AA compliance, 1000+ message handling
+
+
+          Context includes sophisticated streaming simulators, performance testing
+          utilities, and comprehensive accessibility validation approaches.'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T12:01:48.713546'
+        description: Create comprehensive testing context for Chat Interface Specialist
+          covering real-time communication and message rendering
+        id: convert-vatican
+        parent_id: monday-blast
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: Create Chat Interface Specialist Testing Context
+        updated_at: '2025-09-20T12:07:11.534992'
+      laser-spain:
+        child_tasks: []
+        completed: true
+        completion_report: '✅ Avatar & Visual Specialist Testing Context Created
+
+
+          Comprehensive testing context created covering:
+
+          - **Domain Focus**: HeyGen SDK integration, video element lifecycle, visual
+          state management
+
+          - **Core Expertise**: External SDK mocking, video compatibility, animation
+          testing, resource management
+
+          - **Mock Strategies**: HeyGen session simulation, video element mocking,
+          network condition testing
+
+          - **Specialized Testing**: Visual regression testing, cross-platform compatibility,
+          animation frame control
+
+          - **Critical Challenges**: Resource cleanup, mobile video constraints, session
+          state synchronization
+
+          - **Success Metrics**: < 3s avatar init, 60fps animations, zero memory leaks,
+          95% SDK reliability
+
+
+          Context includes sophisticated mocking utilities, visual testing patterns,
+          and comprehensive error handling approaches.'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T12:01:44.307630'
+        description: Create comprehensive testing context for Avatar & Visual Specialist
+          covering HeyGen SDK and video lifecycle
+        id: laser-spain
+        parent_id: monday-blast
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: Create Avatar & Visual Specialist Testing Context
+        updated_at: '2025-09-20T12:04:58.508126'
+      mental-tibet:
+        child_tasks: []
+        completed: true
+        completion_report: '✅ Audio UI Specialist Testing Context Created
+
+
+          Comprehensive testing context created covering:
+
+          - **Domain Focus**: Browser audio APIs (MediaRecorder, AudioContext, getUserMedia)
+
+          - **Core Expertise**: Permission handling, real-time audio processing, cross-browser
+          compatibility
+
+          - **Mock Strategies**: AudioContext mocking, MediaRecorder simulation, permission
+          state testing
+
+          - **Specialized Testing**: Animation frame control, audio level simulation,
+          device management
+
+          - **Critical Challenges**: AudioContext state lifecycle, memory leak prevention,
+          mobile considerations
+
+          - **Success Metrics**: < 50ms latency, 60fps visualization, WCAG 2.1 AA
+          compliance
+
+
+          Context includes practical code examples, testing utilities, and comprehensive
+          coverage requirements for all audio UI components.'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T12:01:38.966416'
+        description: Create comprehensive testing context for Audio UI Specialist
+          covering browser APIs, audio controls, and real-time processing
+        id: mental-tibet
+        parent_id: monday-blast
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: Create Audio UI Specialist Testing Context
+        updated_at: '2025-09-20T12:03:13.848840'
+      metal-clinic:
+        child_tasks: []
+        completed: true
+        completion_report: "✅ Phase 1 Complete:\n\n**Package Structure Verified**:\
+          \ UI Components package at //realtime_client/docs/api-reference/ui-components/\
+          \ with 7 component files + README\n\n**File Inventory**:\n- audio-components.md\
+          \ - Audio UI elements\n- avatar-components.md - Avatar display/management\
+          \ UI  \n- chat-components.md - Chat interface elements\n- connection-components.md\
+          \ - Connection status/controls\n- control-components.md - General control\
+          \ elements\n- other-components.md - Miscellaneous UI elements\n- index.md\
+          \ - Package overview and exports\n\n**Logical Grouping Strategy**: Single\
+          \ group processing (7 files) - files are already domain-organized rather\
+          \ than individual components\n\n**Working Directories Created**:\n- //project/.scratch/realtime_agent_updates/ui-components/\
+          \ (essential details)\n- //project/.scratch/realtime_agent_updates/context/ui-components/\
+          \ (testing contexts)\n\n**Plan Structure**: 5-phase plan created with proper\
+          \ sequencing and priorities"
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T11:48:37.232473'
+        description: Initial assessment, planning, and working directory setup for
+          UI Components package processing
+        id: metal-clinic
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 1
+        title: 'Phase 1: Setup and Preparation'
+        updated_at: '2025-09-20T11:49:24.001984'
+      monday-blast:
+        child_tasks:
+        - mental-tibet
+        - laser-spain
+        - convert-vatican
+        - albert-consul
+        completed: true
+        completion_report: "✅ Phase 5 Complete: Testing Context Creation\n\nSuccessfully\
+          \ created comprehensive testing context files for all 4 recommended specialists:\n\
+          \n**1. Audio UI Specialist** (`audio_ui_specialist_testing_context.md`)\n\
+          - Browser APIs (MediaRecorder, AudioContext, getUserMedia)\n- Permission\
+          \ handling, real-time processing, cross-browser compatibility\n- Animation\
+          \ frame control, audio level simulation, device management\n\n**2. Avatar\
+          \ & Visual Specialist** (`avatar_visual_specialist_testing_context.md`)\
+          \ \n- HeyGen SDK integration, video element lifecycle, visual state management\n\
+          - External SDK mocking, video compatibility, animation testing\n- Resource\
+          \ cleanup, mobile video constraints, session synchronization\n\n**3. Chat\
+          \ Interface Specialist** (`chat_interface_specialist_testing_context.md`)\n\
+          - Real-time message streaming, content rendering, conversational UI patterns\n\
+          - WebSocket simulation, scroll behavior, markdown/code validation\n- Large\
+          \ message performance, accessibility in chat UI, delta updates\n\n**4. Controls\
+          \ & Layout Specialist** (`controls_layout_specialist_testing_context.md`)\n\
+          - Configuration management, responsive layouts, form validation, connection\
+          \ status\n- Cross-component coordination, settings persistence, system integration\n\
+          - Layout stability, performance under config changes, multi-device support\n\
+          \nEach context includes specialized mock strategies, testing utilities,\
+          \ performance metrics, and comprehensive coverage requirements."
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T11:48:51.863831'
+        description: Create comprehensive testing context files for each recommended
+          specialist
+        id: monday-blast
+        parent_id: null
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 5
+        title: 'Phase 5: Testing Context Creation'
+        updated_at: '2025-09-20T12:09:46.224928'
+      ocean-donald:
+        child_tasks: []
+        completed: true
+        completion_report: "✅ Phase 4 Complete: Analysis and Team Design\n\n**Analysis\
+          \ Summary Created**: Comprehensive analysis of UI Components package with\
+          \ complexity assessment and specialist architecture recommendation.\n\n\
+          **Recommended 4-Specialist Architecture**:\n\n1. **Audio UI Specialist**\
+          \ - Browser APIs, audio controls, recording, visualization\n   - Focus:\
+          \ MediaRecorder, AudioContext, permissions, real-time processing\n   \n\
+          2. **Avatar & Visual Specialist** - HeyGen SDK integration, video lifecycle\
+          \  \n   - Focus: External SDK, streaming video, session management, visual\
+          \ feedback\n   \n3. **Chat Interface Specialist** - Real-time communication\
+          \ UI, message rendering\n   - Focus: Message streaming, markdown rendering,\
+          \ interaction patterns\n   \n4. **Controls & Layout Specialist** - Configuration,\
+          \ connection status, general UI\n   - Focus: Settings management, WebSocket\
+          \ UI, layout containers, form utilities\n\n**Key Advantages**: Clear domain\
+          \ separation, optimal team size (proven 4-specialist pattern), technical\
+          \ expertise alignment, distinct testing paradigms, natural integration boundaries.\n\
+          \n**Analysis saved**: //project/.scratch/realtime_agent_updates/analysis/ui-components-team-analysis.md"
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T11:48:48.335486'
+        description: Analyze processed documentation and design specialist agent architecture
+        id: ocean-donald
+        parent_id: null
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 4
+        title: 'Phase 4: Analysis and Team Design'
+        updated_at: '2025-09-20T12:01:33.374000'
+      omega-regular:
+        child_tasks:
+        - bandit-neuron
+        completed: true
+        completion_report: '✅ Phase 2 Complete: API Documentation Processing
+
+
+          Successfully processed all UI Components API documentation files from //realtime_client/docs/api-reference/ui-components/
+          into agent-ready essential details format. All 7 component files converted
+          with proper structure:
+
+
+          - Purpose and functionality descriptions
+
+          - Key components with brief descriptions
+
+          - Important properties and integration points
+
+          - Critical notes about behaviors and limitations
+
+          - Agent-specific implementation guidance
+
+
+          Files saved to //project/.scratch/realtime_agent_updates/ui-components/
+          and verified for quality and completeness.'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T11:48:40.876469'
+        description: Process UI Components API documentation into agent-ready essential
+          details format
+        id: omega-regular
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 2
+        title: 'Phase 2: API Documentation Processing'
+        updated_at: '2025-09-20T11:54:40.780993'
+      virgo-pelican:
+        child_tasks: []
+        completed: true
+        completion_report: '✅ Phase 3 Complete: Testing Guide Creation
+
+
+          Successfully obtained comprehensive UI Components testing guide from Quinn
+          (agent_c_realtime_test). The guide provides:
+
+
+          **Comprehensive Coverage**:
+
+          - UI Component specific testing strategies and patterns
+
+          - Special attention areas (audio, avatar, chat, connection components)
+
+          - Common challenges and solutions (StrictMode, async updates, WebSocket
+          events)
+
+          - Mock strategies for UI APIs and user interactions
+
+          - Business logic testing patterns
+
+          - Test data fixtures and setup patterns
+
+          - Performance testing considerations
+
+          - Integration testing approaches
+
+          - Component-specific guidelines for all UI categories
+
+
+          **Key Features**:
+
+          - 3-layer testing approach (Unit, Integration, User Flow)
+
+          - User-centric testing philosophy aligned with accessibility standards
+
+          - Practical code examples for all testing scenarios
+
+          - Complete test checklist and quick reference guide
+
+
+          Guide saved to: //project/.scratch/realtime_agent_updates/testing/ui-components.md'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-20T11:48:44.419177'
+        description: Obtain UI Components specific testing guide from Quinn (agent_c_realtime_test)
+        id: virgo-pelican
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 3
+        title: 'Phase 3: Testing Guide Creation'
+        updated_at: '2025-09-20T12:00:36.886867'
+    title: UI Components Team Agent Upgrades
+    updated_at: '2025-09-20T12:09:46.224943'
 agents:
   hank_agent:
     agent_key: hank_agent
