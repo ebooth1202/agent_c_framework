@@ -542,6 +542,10 @@ class LocalStorageWorkspace(BaseWorkspace):
                 cmd.append("-R")
             else:
                 cmd.append("-r")
+        excluded_dirs = ['.git', 'node_modules', '__pycache__', 'idea', '.vscode', '.venv', 'venv',
+                         'npm-cache', '.cache']
+        for ex_dir in excluded_dirs:
+            cmd.extend(["--exclude-dir", ex_dir])
 
         # Add pattern and files
         cmd.append(pattern)
