@@ -183,6 +183,13 @@ class ClaudeChatAgent(BaseAgent):
         delay = 1  # Initial delay between retries
         async with (self.semaphore):
             while delay <= self.max_delay:
+                # Check for cancellation before starting new completion
+                if client_wants_cancel and client_wants_cancel.is_set():
+                    self.logger.info(f"Client requested cancellation before completion start for interaction {interaction_id}")
+                    await self._raise_completion_end(opts["completion_opts"], stop_reason="client_cancel", **callback_opts)
+                    await self._raise_interaction_end(id=interaction_id, **callback_opts)
+                    return messages
+                    
                 try:
                     # Stream handling encapsulated in a helper method
                     result, state = await self._handle_claude_stream(
@@ -198,6 +205,14 @@ class ClaudeChatAgent(BaseAgent):
 
                     if state['complete'] and state['stop_reason'] != 'tool_use':
                         self.logger.info(f"Interaction {interaction_id} stopped with reason: {state['stop_reason']}")
+                        return result
+                        
+                    # Check for cancellation after tool processing
+                    if state['complete'] and state['stop_reason'] == 'client_cancel':
+                        self.logger.info(f"Interaction {interaction_id} cancelled during tool processing")
+                        # Fire necessary events for proper cleanup
+                        await self._raise_history_event(result, **callback_opts)
+                        await self._raise_interaction_end(id=interaction_id, **callback_opts)
                         return result
 
                     new_system_prompt  = await prompt_builder.render(opts['tool_context'], tool_sections=kwargs.get("tool_sections", None))
@@ -278,6 +293,7 @@ class ClaudeChatAgent(BaseAgent):
                                                  messages, callback_opts)
 
                 if client_wants_cancel.is_set():
+                    self.logger.info("Client requested cancellation.")
                     state['complete'] = True
                     state['stop_reason'] = "client_cancel"
 
@@ -292,7 +308,14 @@ class ClaudeChatAgent(BaseAgent):
                 # If we've reached the end of a tool call response, continue after processing tool calls
                 elif state['complete'] and state['stop_reason'] == 'tool_use':
                     await self._finalize_tool_calls(state, tool_chest, session_manager,
-                                                  messages, callback_opts, tool_context)
+                                                  messages, callback_opts, tool_context, client_wants_cancel)
+                    
+                    # Check if finalize_tool_calls set cancellation state
+                    if state['stop_reason'] == 'client_cancel':
+                        # Tool call processing was cancelled, fire events and return
+                        await self._raise_history_event(messages, **callback_opts)
+                        await self._raise_interaction_end(id=state['interaction_id'], **callback_opts)
+                        return messages, state
 
                     messages.extend(state['server_tool_calls'])
                     messages.extend(state['server_tool_responses'])
@@ -674,8 +697,20 @@ class ClaudeChatAgent(BaseAgent):
             state['last_text_delta_time'] = time.time()
 
 
-    async def _finalize_tool_calls(self, state, tool_chest, session_manager, messages, callback_opts, tool_context):
+    async def _finalize_tool_calls(self, state, tool_chest, session_manager, messages, callback_opts, tool_context, client_wants_cancel: threading.Event = None):
         """Finalize tool calls after receiving a complete message."""
+        # Check for cancellation before processing tool calls
+        if client_wants_cancel and client_wants_cancel.is_set():
+            self.logger.info("Client requested cancellation during tool call processing.")
+            
+            # Clean up any unfulfilled tool calls from the assistant message
+            await self._cleanup_unfulfilled_tool_calls(state, messages, callback_opts)
+            
+            # Set cancellation state
+            state['complete'] = True
+            state['stop_reason'] = "client_cancel"
+            return
+            
         # ToolCallEvent with active=true is now handled in _handle_message_stop
         # before the completion event, so no additional activation is needed here
 
@@ -695,6 +730,26 @@ class ClaudeChatAgent(BaseAgent):
             vendor="anthropic",
             **callback_opts
         )
+
+    async def _cleanup_unfulfilled_tool_calls(self, state, messages, callback_opts):
+        """Clean up unfulfilled tool calls from message history when cancelled."""
+        # If we have model outputs with tool calls, we need to remove the tool call blocks
+        # but keep any text content that was generated before the tool calls
+        if state['model_outputs']:
+            # Filter out tool_use blocks from model_outputs, keeping only text blocks
+            cleaned_outputs = []
+            for output in state['model_outputs']:
+                if output.get('type') != 'tool_use':
+                    cleaned_outputs.append(output)
+            
+            # Update the state with cleaned outputs
+            state['model_outputs'] = cleaned_outputs
+            
+            # If there's any content left, add it to messages
+            if cleaned_outputs:
+                msg = {'role': 'assistant', 'content': cleaned_outputs}
+                messages.append(msg)
+                await self._raise_history_delta([msg], **callback_opts)
 
 
     async def _generate_multi_modal_user_message(self, user_input: str, images: List[ImageInput], audio: List[AudioInput],
