@@ -95,7 +95,7 @@ node:
   default_timeout: 5
   env_overrides:
     NODE_DISABLE_COLORS: "1"
-    NO_COLOR: "1"
+    FORCE_COLOR: "0"
 nodejs:
   validator: node
   flags: [ "-v","--version","--help" ]
@@ -103,7 +103,7 @@ nodejs:
   default_timeout: 5
   env_overrides:
     NODE_DISABLE_COLORS: "1"
-    NO_COLOR: "1"
+    FORCE_COLOR: "0"
 
 npm:
   validator: npm
@@ -155,7 +155,7 @@ npm:
     NPM_CONFIG_COLOR: "false"       # npm itself: no color
     NPM_CONFIG_PROGRESS: "false"    # no progress bars
     NPM_CONFIG_LOGLEVEL: "warn"     # or "error" to be even quieter
-    NO_COLOR: "1"                   # many tools respect this
+    FORCE_COLOR: "0"                # chalk/colorette/etc. honor this
     NODE_DISABLE_COLORS: "1"        # belt-and-suspenders for some libs
     CI: "1"                         # many CLIs reduce interactivity/spinners
     NPM_CONFIG_FUND: "false"
@@ -240,7 +240,6 @@ pnpm:
     PNPM_CONFIG_COLOR: "false"      # pnpm itself: no color
     PNPM_CONFIG_PROGRESS: "false"   # no progress bars
     PNPM_CONFIG_LOGLEVEL: "warn"    # or "error" to be even quieter
-    NO_COLOR: "1"                   # many tools respect this
     CI: "1"                         # many CLIs reduce interactivity/spinners
     PNPM_CONFIG_FUND: "false"
     PNPM_CONFIG_UPDATE_NOTIFIER: "false"
@@ -287,7 +286,7 @@ npx:
   env_overrides:
     NPM_CONFIG_COLOR: "false"
     NPM_CONFIG_PROGRESS: "false"
-    NO_COLOR: "1"
+    FORCE_COLOR: "0"
     NODE_DISABLE_COLORS: "1"
     CI: "1"
     NPM_CONFIG_FUND: "false"
@@ -334,8 +333,10 @@ lerna:
   default_timeout: 180
   env_overrides:
     LERNA_DISABLE_PROGRESS: "1"
+    NPM_CONFIG_COLOR: "false"
     NPM_CONFIG_PROGRESS: "false"
-    NO_COLOR: "1"
+    FORCE_COLOR: "0"
+    NODE_DISABLE_COLORS: "1"
     CI: "1"
 
 dotnet:
@@ -381,7 +382,6 @@ dotnet:
     NUGET_PACKAGES: ".nuget/packages"
     # Generic no-color hints:
     CLICOLOR: "0"
-    NO_COLOR: "1"
     TERM: "dumb"
     # Stable, English output (helps tokenization & parsing):
     DOTNET_CLI_UI_LANGUAGE: "en-US"
@@ -451,7 +451,6 @@ powershell: &powershell_common
     POWERSHELL_TELEMETRY_OPTOUT: "1"
     POWERSHELL_UPDATECHECK: "Off"
     PSDisableWinRTForCurrentUser: "1"
-    NO_COLOR: "1"
     TERM: "dumb"
     CLICOLOR: "0"
   default_timeout: 30
