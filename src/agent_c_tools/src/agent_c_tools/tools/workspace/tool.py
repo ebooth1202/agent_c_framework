@@ -577,6 +577,7 @@ class WorkspaceTools(Toolset):
 
             # Split the content into lines
             lines = file_content.splitlines()
+            await asyncio.sleep(0)
 
             # Check if end_line is beyond the file length
             if end_line >= len(lines):
@@ -606,45 +607,7 @@ class WorkspaceTools(Toolset):
                 exc_info=True)
             return f'Error reading file lines, for {unc_path}: {str(e)}'
 
-    @json_schema(
-        'Inspects a code file and returns details about its contents and usage.',
-        {
-            'path': {
-                'type': 'string',
-                'description': 'UNC-style path (//WORKSPACE/path) to the file to read',
-                'required': True
-            }
-        }
-    )
-    async def inspect_code(self, **kwargs: Any) -> str:
-        """Uses CodeExplorer to prepare code overviews.
-
-        Args:
-            path (str): UNC-style path (//WORKSPACE/path) to the file to read
-
-        Returns:
-            str: A markdown overview of the code
-        """
-        unc_path = kwargs.get('path', '')
-
-        error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
-        if error:
-            return f'Error: {str(error)}'
-
-        try:
-            file_content = await workspace.read_internal(relative_path)
-        except Exception as e:
-            self.logger.exception(f'Error fetching file {unc_path}: {str(e)}', exc_info=True)
-            return f'Error fetching {unc_path}: {str(e)}'
-
-        try:
-            context = api.get_code_context(file_content, format='markdown', filename=unc_path)
-        except Exception as e:
-            self.logger.warning(f'Error inspecting code {unc_path}: {str(e)}')
-            return f'Error inspecting code {unc_path}: {str(e)}'
-
-        return context
-
+   
     @json_schema(
         description="Find files matching a glob pattern in a workspace. Equivalent to `glob.glob` in Python",
         params={
