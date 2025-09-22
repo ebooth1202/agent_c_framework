@@ -123,8 +123,8 @@ class AgentAssistToolBase(Toolset):
 
         if parent_tool_context is not None:
             parent_session_id = opts.get('parent_session_id', parent_tool_context.get('session_id', None))
-            client_wants_cancel = opts['parent_tool_context'].get('client_wants_cancel', None)
-            parent_streaming_callback = opts['parent_tool_context'].get('streaming_callback', self.streaming_callback)
+            client_wants_cancel = parent_tool_context.get('client_wants_cancel', None)
+            parent_streaming_callback = parent_tool_context.get('streaming_callback', self.streaming_callback)
             tool_context = parent_tool_context.copy()
         else:
             parent_session_id = opts.get('parent_session_id')
