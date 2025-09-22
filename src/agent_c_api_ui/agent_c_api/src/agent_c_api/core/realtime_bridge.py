@@ -332,10 +332,9 @@ class RealtimeBridge(AgentBridge):
                 return
 
             self.chat_session.agent_config = agent_config
+            await self.send_event(AgentConfigurationChangedEvent(agent_config=self.chat_session.agent_config))
             await self.tool_chest.activate_toolset(self.chat_session.agent_config.tools)
             self.logger.info(f"RealtimeBridge {self.chat_session.session_id}: Agent set to {agent_key}")
-
-        await self.send_event(AgentConfigurationChangedEvent(agent_config=self.chat_session.agent_config))
 
     def parse_event(self, data: dict) -> BaseEvent:
         """Parse incoming data into appropriate event type"""
