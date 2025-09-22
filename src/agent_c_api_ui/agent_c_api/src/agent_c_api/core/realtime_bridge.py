@@ -9,6 +9,9 @@ from typing import List, Optional, Any, Dict, AsyncIterator
 from fastapi import WebSocket, WebSocketDisconnect
 from functools import singledispatchmethod
 
+from starlette.websockets import WebSocketState
+from websockets import State
+
 from agent_c.chat import ChatSessionManager
 from agent_c.config.agent_config_loader import AgentConfigLoader
 from agent_c.models import ChatSession, ChatUser
@@ -359,7 +362,7 @@ class RealtimeBridge(AgentBridge):
         await self.send_event(UserTurnEndEvent())
 
     async def send_event(self, event: BaseEvent):
-        if self.websocket is None:
+        if self.websocket is None or self.websocket.client_state != WebSocketState.CONNECTED:
             return
 
         model_dump = event.model_dump()
@@ -369,10 +372,12 @@ class RealtimeBridge(AgentBridge):
 
         try:
             async with self._send_lock:
-                await self.websocket.send_text(json.dumps(model_dump))
+                event_str = json.dumps(model_dump)
+                await self.websocket.send_text(event_str)
 
             if event.type not in ["ping", "pong"]:
                 self.logger.info(f"Sent event {event.type} to {self.chat_session.session_id}")
+                # self.logger.info(event_str)
         except Exception as e:
             self.logger.exception(f"Failed to send event to {self.chat_session.session_id}: {e}")
             self.is_running = False
