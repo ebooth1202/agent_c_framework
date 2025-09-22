@@ -1,1 +1,665 @@
-_plans: {}
+_plans:
+  chat_fixes_phase1:
+    created_at: '2025-09-22T13:29:08.614715'
+    description: Fix missed requirements and incorrect implementations for chat rendering
+      (Items 1-5 from high-level task list). This phase addresses event naming issues,
+      missing UI components, and incorrect logic in subsession handling.
+    id: welcome-antenna
+    lessons_learned: []
+    tasks:
+      boris-diamond:
+        child_tasks: []
+        completed: false
+        completion_report: ''
+        completion_signoff_by: null
+        context: 'CRITICAL: ErrorEvent does not inherit from SessionEvent. Current
+          code incorrectly treats it as one.
+
+
+          File: packages/core/src/events/EventStreamProcessor.ts
+
+          Lines: 631-639
+
+          Current behavior: Emits as ''system-notification'' for chat display
+
+          Required behavior: Emit as ''error'' or ''error-notification'' for toast
+          display outside chat
+
+
+          ErrorEvent should appear as toast messages, NOT in the chat stream.
+
+
+          **COMPLETION CRITERIA:**
+
+          1. Build MUST pass - no TypeScript errors
+
+          2. ALL tests MUST pass without any warnings
+
+          3. Changes must be verified to work end-to-end
+
+          4. NO broken builds are acceptable
+
+
+          Reference: .scratch/chat_fixes/chat_streaming_notes.md - see ErrorEvents
+          section'
+        created_at: '2025-09-22T13:29:36.488657'
+        description: ErrorEvent is NOT a SessionEvent and should not be emitted as
+          'system-notification'. It should be emitted as a separate event type for
+          toast notifications, not chat display.
+        id: boris-diamond
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 2
+        title: 'Core Package: Fix ErrorEvent handling'
+        updated_at: '2025-09-22T16:31:01.082533'
+      control-episode:
+        child_tasks: []
+        completed: false
+        completion_report: ''
+        completion_signoff_by: null
+        context: 'Location: packages/ui/src/components/chat/content-renderers/
+
+
+          RenderMediaContentRenderer:
+
+          - Handle markdown, HTML, and image content types
+
+          - Apply appropriate styling for each type
+
+          - Ensure security for HTML rendering
+
+
+          SystemMessageContentRenderer:
+
+          - Render markdown content
+
+          - Apply severity-based styling
+
+          - Ensure proper alert box appearance
+
+
+          These renderers will be used by the bubble components.
+
+
+          **COMPLETION CRITERIA:**
+
+          1. Build MUST pass - no TypeScript errors
+
+          2. ALL tests MUST pass without any warnings
+
+          3. Renderers must be tested and verified working
+
+          4. NO broken builds are acceptable'
+        created_at: '2025-09-22T13:32:02.014527'
+        description: Create RenderMediaContentRenderer and SystemMessageContentRenderer
+          in the content-renderers folder to handle the new message types.
+        id: control-episode
+        parent_id: null
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 24
+        title: 'UI Components: Create content renderers'
+        updated_at: '2025-09-22T16:33:22.468504'
+      crimson-nato:
+        child_tasks: []
+        completed: false
+        completion_report: ''
+        completion_signoff_by: null
+        context: "BLOCKED BY: React package system_message handler\n\nRequirements:\n\
+          - Alert-style bubble (think of alert boxes in documentation)\n- Visual severity\
+          \ indicators:\n  - info: blue/informational styling\n  - warning: yellow/warning\
+          \ styling\n  - error: red/error styling\n- Display in chat message list\
+          \ (not as toast)\n- Markdown content support\n- No avatar needed\n\nLocation:\
+          \ packages/ui/src/components/chat/\nConsider creating SystemMessageBubble.tsx\n\
+          \nThis is different from error toasts - SystemMessages are part of the chat\
+          \ history.\n\n**COMPLETION CRITERIA:**\n1. Build MUST pass - no TypeScript\
+          \ errors\n2. ALL tests MUST pass without any warnings\n3. Component must\
+          \ be tested and verified working\n4. NO broken builds are acceptable\n\n\
+          Reference: .scratch/chat_fixes/chat_streaming_notes.md - System message\
+          \ events section"
+        created_at: '2025-09-22T13:31:37.677055'
+        description: Create an alert-style bubble component for SystemMessage events
+          with severity indicators (info/warning/error).
+        id: crimson-nato
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 22
+        title: 'UI Components: Create SystemMessageBubble component'
+        updated_at: '2025-09-22T16:32:54.800282'
+      electra-zoom:
+        child_tasks: []
+        completed: false
+        completion_report: ''
+        completion_signoff_by: null
+        context: 'CRITICAL: This blocks React and UI work. The event name MUST match
+          exactly what the API sends. Current code emits ''system-notification'' but
+          API uses ''system_message''. This inconsistency prevents proper handling
+          downstream.
+
+
+          File: packages/core/src/events/EventStreamProcessor.ts
+
+          Lines: 618-625
+
+          Current emission: this.emit(''system-notification'', ...)
+
+          Required emission: this.emit(''system_message'', ...)
+
+
+          **COMPLETION CRITERIA:**
+
+          1. Build MUST pass - no TypeScript errors
+
+          2. ALL tests MUST pass without any warnings
+
+          3. Changes must be verified to work end-to-end
+
+          4. NO broken builds are acceptable
+
+
+          Reference: .scratch/chat_fixes/chat_streaming_notes.md'
+        created_at: '2025-09-22T13:29:22.504184'
+        description: In EventStreamProcessor.ts, change the emission from 'system-notification'
+          to 'system_message' to maintain API naming consistency. This is currently
+          on lines 618-625.
+        id: electra-zoom
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 1
+        title: 'Core Package: Fix SystemMessageEvent emission name'
+        updated_at: '2025-09-22T16:30:48.190175'
+      happy-riviera:
+        child_tasks: []
+        completed: false
+        completion_report: ''
+        completion_signoff_by: null
+        context: 'BLOCKED BY: Core Package error event fix
+
+
+          ErrorEvent handling:
+
+          - Listen for ''error'' or ''error-notification'' event from Core
+
+          - DO NOT add to chat message list
+
+          - Trigger toast notification system
+
+          - Pass error details to UI layer for toast display
+
+
+          This is fundamentally different from SystemMessage - errors are not chat
+          content.
+
+
+          **COMPLETION CRITERIA:**
+
+          1. Build MUST pass - no TypeScript errors
+
+          2. ALL tests MUST pass without any warnings
+
+          3. Changes must be verified to work with Core fixes
+
+          4. NO broken builds are acceptable
+
+
+          Reference: .scratch/chat_fixes/chat_streaming_notes.md - ErrorEvents section'
+        created_at: '2025-09-22T13:30:13.990145'
+        description: Add handler for error events that triggers toast notifications
+          instead of adding to chat. ErrorEvent is NOT a SessionEvent.
+        id: happy-riviera
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 11
+        title: 'React Package: Add error event handler for toasts'
+        updated_at: '2025-09-22T16:31:26.873399'
+      isabel-pacific:
+        child_tasks: []
+        completed: false
+        completion_report: ''
+        completion_signoff_by: null
+        context: "Core already emits 'media-added' correctly (lines 533-551 in EventStreamProcessor).\n\
+          \nAdd to useChat:\n- Listen for 'media-added' event\n- Add RenderMedia to\
+          \ message list with:\n  - content_type (markdown/html/image)\n  - content\
+          \ (the actual media)\n  - sent_by_class (optional)\n  - sent_by_function\
+          \ (optional)\n\nThis needs special rendering in UI (no avatar, distinct\
+          \ bubble).\n\n**COMPLETION CRITERIA:**\n1. Build MUST pass - no TypeScript\
+          \ errors\n2. ALL tests MUST pass without any warnings\n3. Changes must be\
+          \ verified to work end-to-end\n4. NO broken builds are acceptable\n\nReference:\
+          \ .scratch/chat_fixes/chat_streaming_notes.md - RenderMedia section"
+        created_at: '2025-09-22T13:30:29.611725'
+        description: Add handler in useChat for 'media-added' events from Core. RenderMedia
+          should be added to message list but displayed differently than regular messages.
+        id: isabel-pacific
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 12
+        title: 'React Package: Add render_media event handler'
+        updated_at: '2025-09-22T16:31:39.667600'
+      mile-mayor:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: 'BLOCKED BY: All other Phase 1 tasks
+
+
+          Test checklist:
+
+          1. SubsessionDivider shows only on events (no client logic)
+
+          2. RenderMedia displays in distinct bubble with footer
+
+          3. SystemMessage shows as alert with correct severity
+
+          4. Error events appear as toasts, not in chat
+
+          5. All event names match API specification
+
+          6. No regressions in existing functionality
+
+
+          Use all test data files to validate each scenario.
+
+          Document any issues found for immediate fixing.
+
+
+          Success criteria: All items 1-5 from high-level task list working per specifications.'
+        created_at: '2025-09-22T13:32:53.088972'
+        description: Comprehensive testing to ensure all Phase 1 fixes work correctly
+          together. Validate against requirements documents.
+        id: mile-mayor
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 40
+        title: 'Integration Testing: Validate all Phase 1 fixes'
+        updated_at: '2025-09-22T13:32:53.088973'
+      nadia-brave:
+        child_tasks: []
+        completed: false
+        completion_report: ''
+        completion_signoff_by: null
+        context: 'BLOCKED BY: React package error handler
+
+
+          Requirements:
+
+          - Toast-style notification (not in chat)
+
+          - Appears in corner of screen or top
+
+          - Auto-dismiss after timeout (with option to persist)
+
+          - Show error details clearly
+
+          - Should not be part of chat history
+
+          - Consider using existing toast libraries or patterns
+
+
+          Location: packages/ui/src/components/notifications/
+
+          Consider creating ToastNotification.tsx
+
+
+          ErrorEvents indicate server-side errors and should not clutter the chat
+          stream.
+
+
+          **COMPLETION CRITERIA:**
+
+          1. Build MUST pass - no TypeScript errors
+
+          2. ALL tests MUST pass without any warnings
+
+          3. Component must be tested and verified working
+
+          4. NO broken builds are acceptable
+
+
+          Reference: .scratch/chat_fixes/chat_streaming_notes.md - ErrorEvents section'
+        created_at: '2025-09-22T13:31:50.109520'
+        description: Create a toast notification component for ErrorEvent display.
+          Must appear outside the chat stream as a temporary notification.
+        id: nadia-brave
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 23
+        title: 'UI Components: Create ToastNotification component'
+        updated_at: '2025-09-22T16:33:08.363997'
+      observe-plaza:
+        child_tasks: []
+        completed: false
+        completion_report: ''
+        completion_signoff_by: null
+        context: "BLOCKED BY: Core Package event naming fix\n\nAdd to packages/react/src/hooks/useChat.ts:\n\
+          - Listen for 'system_message' event from Core\n- Add SystemMessage to message\
+          \ list with:\n  - content (markdown)\n  - severity (info/warning/error)\n\
+          \  - format (always 'markdown' currently)\n  - All SessionEvent fields\n\
+          \nMessage type needs to support SystemMessage rendering in UI.\n\n**COMPLETION\
+          \ CRITERIA:**\n1. Build MUST pass - no TypeScript errors\n2. ALL tests MUST\
+          \ pass without any warnings\n3. Changes must be verified to work with Core\
+          \ fixes\n4. NO broken builds are acceptable\n\nReference: .scratch/chat_fixes/chat_streaming_notes.md\
+          \ - SystemMessage section"
+        created_at: '2025-09-22T13:30:01.942353'
+        description: Add handler in useChat hook for 'system_message' events (not
+          'system-notification'). SystemMessage should be added to chat message list
+          with severity indicator.
+        id: observe-plaza
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 10
+        title: 'React Package: Add system_message event handler'
+        updated_at: '2025-09-22T16:31:14.138288'
+      origami-tibet:
+        child_tasks: []
+        completed: false
+        completion_report: ''
+        completion_signoff_by: null
+        context: 'Message type needs to support:
+
+          - SystemMessage with severity
+
+          - RenderMedia with content_type and metadata
+
+          - Subsession markers with type (start/end) and agent info
+
+
+          This may require updating the ExtendedMessage interface or creating new
+          message subtypes.
+
+
+          Ensure state management correctly handles these new message types.
+
+
+          **COMPLETION CRITERIA:**
+
+          1. Build MUST pass - no TypeScript errors
+
+          2. ALL tests MUST pass without any warnings
+
+          3. Changes must be verified to work with all handlers
+
+          4. NO broken builds are acceptable'
+        created_at: '2025-09-22T13:30:54.974577'
+        description: Expand ExtendedMessage type to support SystemMessage, RenderMedia,
+          and proper subsession markers. Update state management accordingly.
+        id: origami-tibet
+        parent_id: null
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 14
+        title: 'React Package: Update message types and state'
+        updated_at: '2025-09-22T16:32:05.055355'
+      panda-hostel:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: 'Create a debug/test page that:
+
+          - Loads test JSON files
+
+          - Simulates chat session with the test data
+
+          - Allows switching between different test scenarios
+
+          - Shows both streamed and resumed versions for comparison
+
+
+          This will be critical for validating that all Phase 1 fixes work correctly.'
+        created_at: '2025-09-22T13:32:38.060591'
+        description: Create a test page in the demo app that can load and display
+          the test JSON files to validate each fix.
+        id: panda-hostel
+        parent_id: null
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 31
+        title: 'Demo: Implement test harness for loading test data'
+        updated_at: '2025-09-22T13:32:38.060592'
+      period-ritual:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: 'Dependencies: Must complete after the two Core fixes.
+
+
+          Test scenarios:
+
+          1. SystemMessageEvent emits ''system_message'' not ''system-notification''
+
+          2. ErrorEvent emits separate event (not system-notification)
+
+          3. ErrorEvent does not get added to chat message list
+
+          4. Verify no regressions in other event handling
+
+
+          Estimated time: 2-3 hours'
+        created_at: '2025-09-22T13:29:49.162885'
+        description: Test that SystemMessageEvent and ErrorEvent are emitted with
+          correct event names and that ErrorEvent is not treated as a SessionEvent.
+        id: period-ritual
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 3
+        title: 'Core Package: Testing and Validation'
+        updated_at: '2025-09-22T13:29:49.162886'
+      plato-costume:
+        child_tasks: []
+        completed: false
+        completion_report: ''
+        completion_signoff_by: null
+        context: 'CURRENT PROBLEM in MessageList.tsx (lines 257-289):
+
+          - Logic checks isSubSessionStart and isSubSessionEnd by comparing adjacent
+          messages
+
+          - Automatically adds end divider when last message is subsession (lines
+          294-300)
+
+
+          REQUIRED FIX:
+
+          - Remove ALL client-side logic for determining when to show dividers
+
+          - Only show SubsessionDivider when message type indicates subsession marker
+
+          - Start markers when subsession-started event received
+
+          - End markers when subsession-ended event received
+
+
+          The SubsessionDivider component itself is fine - it''s the usage that''s
+          wrong.
+
+
+          **COMPLETION CRITERIA:**
+
+          1. Build MUST pass - no TypeScript errors
+
+          2. ALL tests MUST pass without any warnings
+
+          3. Changes must be verified to work with React handlers
+
+          4. NO broken builds are acceptable
+
+
+          Reference: .scratch/chat_fixes/chat_streaming_notes.md - Sub-session Events
+          section'
+        created_at: '2025-09-22T13:31:08.053157'
+        description: Remove client-side logic that automatically adds end markers.
+          SubsessionDivider should ONLY show based on actual subsession events from
+          the server.
+        id: plato-costume
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 20
+        title: 'UI Components: Fix SubsessionDivider usage in MessageList'
+        updated_at: '2025-09-22T16:32:23.380448'
+      postage-medusa:
+        child_tasks: []
+        completed: false
+        completion_report: ''
+        completion_signoff_by: null
+        context: 'BLOCKED BY: React package render_media handler
+
+
+          Requirements:
+
+          - Distinct bubble without AI/user avatars
+
+          - Display content based on content_type (markdown/html/image)
+
+          - Footer showing sent_by_class and sent_by_function if populated
+
+          - Should stand out as non-message content
+
+
+          Location: packages/ui/src/components/chat/
+
+          Consider creating RenderMediaBubble.tsx
+
+
+          The bubble should be visually distinct to indicate it''s media content from
+          a tool, not a message from the assistant.
+
+
+          **COMPLETION CRITERIA:**
+
+          1. Build MUST pass - no TypeScript errors
+
+          2. ALL tests MUST pass without any warnings
+
+          3. Component must be tested and verified working
+
+          4. NO broken builds are acceptable
+
+
+          Reference: .scratch/chat_fixes/chat_streaming_notes.md - RenderMedia events
+          section'
+        created_at: '2025-09-22T13:31:21.311800'
+        description: Create a new bubble component for RenderMedia events. Must be
+          distinct from regular messages - no avatar, includes footer with metadata.
+        id: postage-medusa
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 21
+        title: 'UI Components: Create RenderMediaBubble component'
+        updated_at: '2025-09-22T16:32:42.142787'
+      section-cabinet:
+        child_tasks: []
+        completed: false
+        completion_report: ''
+        completion_signoff_by: null
+        context: 'BLOCKED BY: All new UI components must be created first
+
+
+          Update MessageList.tsx to:
+
+          - Detect message type and render appropriate component
+
+          - Use RenderMediaBubble for render_media messages
+
+          - Use SystemMessageBubble for system_message messages
+
+          - Keep SubsessionDivider for markers (but fix usage per other task)
+
+          - Ensure proper styling and layout for all message types
+
+
+          This is the integration point where all the new components come together.
+
+
+          **COMPLETION CRITERIA:**
+
+          1. Build MUST pass - no TypeScript errors
+
+          2. ALL tests MUST pass without any warnings
+
+          3. Integration must be tested end-to-end
+
+          4. NO broken builds are acceptable'
+        created_at: '2025-09-22T13:32:12.368481'
+        description: Integrate the new bubble components into MessageList. Ensure
+          proper rendering based on message type.
+        id: section-cabinet
+        parent_id: null
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 25
+        title: 'UI Components: Update MessageList to use new components'
+        updated_at: '2025-09-22T16:33:37.300714'
+      sweden-exact:
+        child_tasks: []
+        completed: false
+        completion_report: ''
+        completion_signoff_by: null
+        context: "Core already emits these correctly (lines 858-875 in EventStreamProcessor).\n\
+          \nAdd to useChat:\n- Listen for 'subsession-started' event\n  - Add marker\
+          \ with type='start' and agent info\n- Listen for 'subsession-ended' event\
+          \  \n  - Add marker with type='end'\n\nNO CLIENT-SIDE LOGIC for when to\
+          \ show these - only show based on actual events.\n\nThe UI currently tries\
+          \ to add end markers on its own - that must be removed.\n\n**COMPLETION\
+          \ CRITERIA:**\n1. Build MUST pass - no TypeScript errors\n2. ALL tests MUST\
+          \ pass without any warnings\n3. Changes must be verified to work end-to-end\n\
+          4. NO broken builds are acceptable\n\nReference: .scratch/chat_fixes/chat_streaming_notes.md\
+          \ - Sub-sessions section"
+        created_at: '2025-09-22T13:30:42.658444'
+        description: Add handlers for 'subsession-started' and 'subsession-ended'
+          events. These should add subsession markers to the message list.
+        id: sweden-exact
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 13
+        title: 'React Package: Add subsession event handlers'
+        updated_at: '2025-09-22T16:31:51.207799'
+      wisdom-bazooka:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: 'Create in .scratch/chat_fixes/:
+
+
+          1. session_with_subsessions.json - Test subsession markers
+
+          2. session_with_render_media.json - Test RenderMedia events
+
+          3. session_with_system_messages.json - Test SystemMessage with different
+          severities
+
+          4. session_with_errors.json - Test Error event handling
+
+
+          Each file should contain realistic chat session data that exercises the
+          specific feature.
+
+
+          Can work in parallel with other tasks for test preparation.'
+        created_at: '2025-09-22T13:32:25.115367'
+        description: 'Create test JSON files for each Phase 1 fix: subsessions, render
+          media, system messages, and errors.'
+        id: wisdom-bazooka
+        parent_id: null
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 30
+        title: 'Demo: Create test data files for Phase 1 scenarios'
+        updated_at: '2025-09-22T13:32:25.115369'
+    title: 'Chat Rendering Fixes - Phase 1: Gap Fixing'
+    updated_at: '2025-09-22T16:33:37.300724'
+current_plan: chat_fixes_phase1
