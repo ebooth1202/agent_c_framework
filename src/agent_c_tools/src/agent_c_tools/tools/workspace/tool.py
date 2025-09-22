@@ -1,7 +1,7 @@
 import re
 import json
+import asyncio
 
-from ts_tool import api
 from typing import Any, List, Tuple, Optional, Callable, Awaitable, Union
 
 from agent_c.toolsets.tool_set import Toolset
@@ -607,7 +607,7 @@ class WorkspaceTools(Toolset):
                 exc_info=True)
             return f'Error reading file lines, for {unc_path}: {str(e)}'
 
-   
+
     @json_schema(
         description="Find files matching a glob pattern in a workspace. Equivalent to `glob.glob` in Python",
         params={
