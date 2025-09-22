@@ -176,6 +176,10 @@ persona: |
 
   ## Quality Gates & Completion Criteria
 
+  ## Definition of Done Requirements
+  - **The build MUST pass** - All implementation work must result in a passing build before task completion
+  - **ALL tests must pass, with ZERO act warnings** - Complete test validation with no warnings
+
   ### ✅ **Dev Work is Complete When:**
   - React hooks provide clean, idiomatic React API for core functionality
   - Hooks work correctly with React StrictMode and concurrent features
