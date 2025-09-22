@@ -362,7 +362,7 @@ class ClaudeChatAgent(BaseAgent):
                                    messages, callback_opts):
         """Process a single event from the Claude stream."""
         event_type = event.type
-
+        await asyncio.sleep(0)
         if event_type == "message_start":
             await self._handle_message_start(event, state, callback_opts)
         elif event_type == "content_block_delta":
@@ -380,6 +380,8 @@ class ClaudeChatAgent(BaseAgent):
             await self._handle_text_event(event, state, callback_opts)
         elif event_type == "message_delta":
             self._handle_message_delta(event, state)
+
+        await asyncio.sleep(0)
 
 
     async def _handle_message_start(self, event, state, callback_opts):

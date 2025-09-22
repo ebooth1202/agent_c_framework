@@ -114,28 +114,32 @@ class AgentAssistToolBase(Toolset):
         return runtime_cls(model_name=model_config["id"], client=client,prompt_builder=PromptBuilder(sections=agent_sections))
 
     async def __chat_params(self, agent: AgentConfiguration, agent_runtime: BaseAgent,
-                            user_session_id: Optional[str] = None, **opts) -> Dict[str, Any]:
+                            user_session_id: Optional[str] = None, parent_tool_context: Optional[Dict[str, any]] = None, **opts) -> Dict[str, Any]:
         tool_params = {}
         client_wants_cancel = opts.get('client_wants_cancel')
         parent_streaming_callback = self.streaming_callback
+        agent_session_id = opts.get('agent_session_id', MnemonicSlugs.generate_id_slug(2))
 
 
-        parent_tool_context = opts.get('parent_tool_context', None)
         if parent_tool_context is not None:
+            parent_session_id = opts.get('parent_session_id', parent_tool_context.get('session_id', None))
             client_wants_cancel = opts['parent_tool_context'].get('client_wants_cancel', None)
             parent_streaming_callback = opts['parent_tool_context'].get('streaming_callback', self.streaming_callback)
+            tool_context = parent_tool_context.copy()
+        else:
+            parent_session_id = opts.get('parent_session_id')
+            tool_context = opts.get("tool_context", {})
 
-        tool_context = opts.get("tool_context", {})
         tool_context['active_agent'] = agent
         tool_context['client_wants_cancel'] = client_wants_cancel
         tool_context['streaming_callback'] = parent_streaming_callback
+        tool_context["session_id"] = agent_session_id
+        tool_context["parent_session_id"] =  parent_session_id
+        tool_context["user_session_id"] =  user_session_id
 
-        opts['tool_call_context'] = tool_context
+        opts['tool_context'] = tool_context
         if client_wants_cancel is None:
             client_wants_cancel = tool_context.get('client_wants_cancel', None)
-
-        agent_session_id = opts.get('agent_session_id', MnemonicSlugs.generate_id_slug(2))
-        parent_session_id = opts.get('parent_session_id', None)
 
         prompt_metadata = await self.__build_prompt_metadata(agent, user_session_id, **opts)
         prompt_metadata['tool_context'] = tool_context
@@ -186,6 +190,8 @@ class AgentAssistToolBase(Toolset):
             chat_params = await self.__chat_params(agent, agent_runtime, user_session_id,
                                                    parent_tool_context=parent_tool_context,
                                                    agent_session_id=agent_session_id,
+                                                   sub_session_type="chat",
+                                                   sub_agent_type=sub_agent_type,
                                                    prime_agent_key=prime_agent_key,
                                                    parent_session_id=parent_session_id,
                                                    **additional_metadata)
@@ -256,7 +262,7 @@ class AgentAssistToolBase(Toolset):
                                                    parent_tool_context=tool_context,
                                                    agent_session_id=agent_session_id,
                                                    parent_session_id=parent_session_id,
-                                                   sub_session_type="oneshot",
+                                                   sub_session_type="chat",
                                                    sub_agent_type=sub_agent_type,
                                                    prime_agent_key=prime_agent_key,
                                                    sub_agent_key=agent.key,
@@ -267,7 +273,7 @@ class AgentAssistToolBase(Toolset):
             await self._raise_subsession_start(SubsessionStartedEvent(session_id=agent_session_id,
                                                                       user_session_id=user_session_id,
                                                                       parent_session_id=user_session_id,
-                                                                      sub_session_type="oneshot",
+                                                                      sub_session_type="chat",
                                                                       sub_agent_type=sub_agent_type,
                                                                       prime_agent_key=prime_agent_key,
                                                                       sub_agent_key=agent.key,

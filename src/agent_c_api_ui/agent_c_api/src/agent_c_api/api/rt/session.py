@@ -60,7 +60,8 @@ async def refresh_token(request: Request):
 @router.websocket("/ws")
 async def initialize_realtime_session(websocket: WebSocket,
                                       token: str,
-                                      session_id: Optional[str] = None):
+                                      ui_session_id: Optional[str] = None,
+                                      chat_session_id: Optional[str] = None):
     """
     Creates an agent session with the provided parameters.
     """
@@ -69,9 +70,9 @@ async def initialize_realtime_session(websocket: WebSocket,
         auth_service: 'AuthService' = websocket.app.state.auth_service
         user = await auth_service.auth_repo.get_user_by_id(user_info['user_id'])
         manager = websocket.app.state.realtime_manager
-        ui_session = await manager.create_realtime_session(user, session_id)
+        ui_session = await manager.create_realtime_session(user, ui_session_id)
 
-        await ui_session.bridge.run(websocket)
+        await ui_session.bridge.run(websocket, chat_session_id)
 
     except Exception as e:
         logger.exception(f"Error during session initialization: {str(e)}", exc_info=True)
