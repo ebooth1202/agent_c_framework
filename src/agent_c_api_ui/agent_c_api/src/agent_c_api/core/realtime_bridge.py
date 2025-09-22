@@ -12,7 +12,7 @@ from functools import singledispatchmethod
 from agent_c.chat import ChatSessionManager
 from agent_c.config.agent_config_loader import AgentConfigLoader
 from agent_c.models import ChatSession, ChatUser
-from agent_c.models.events import BaseEvent, TextDeltaEvent,  HistoryEvent
+from agent_c.models.events import BaseEvent, TextDeltaEvent, HistoryEvent, RenderMediaEvent
 from agent_c.models.events.chat import AudioInputDeltaEvent
 from agent_c.models.heygen import HeygenAvatarSessionData, NewSessionRequest
 from agent_c.toolsets import Toolset
@@ -45,7 +45,7 @@ class RealtimeBridge(AgentBridge):
         file_handler = RTFileHandler(chat_user.user_id, ui_session_id)
 
         super().__init__(None, session_manager, file_handler)
-
+        self._is_new_bridge = True
         self.chat_session_manager: ChatSessionManager = session_manager
         self.chat_user: ChatUser = chat_user
         self.ui_session_id: str = ui_session_id
@@ -371,7 +371,9 @@ class RealtimeBridge(AgentBridge):
         try:
             async with self._send_lock:
                 await self.websocket.send_text(json.dumps(model_dump))
-            self.logger.info(f"Sent event {event.type} to {self.chat_session.session_id}")
+
+            if event.type not in ["ping", "pong"]:
+                self.logger.info(f"Sent event {event.type} to {self.chat_session.session_id}")
         except Exception as e:
             self.logger.exception(f"Failed to send event to {self.chat_session.session_id}: {e}")
             self.is_running = False
@@ -431,24 +433,38 @@ class RealtimeBridge(AgentBridge):
 
     async def runtime_callback(self, event: BaseEvent):
         """Handle runtime events from the agent"""
-        self.logger.debug(f"RealtimeBridge {self.chat_session.session_id}: Received runtime event: {event.type}")
+        if event.type not in ["ping", "pong"]:
+            self.logger.debug(f"RealtimeBridge {self.chat_session.session_id}: Received runtime event: {event.type}")
         # These are already in model format and don't need parsed.
         await self.handle_runtime_event(event)
         await asyncio.sleep(0)
 
     async def send_client_initial_data(self):
-        await self.send_user_info()
-        await self.send_avatar_list()
-        await self.send_voices()
-        await self.send_agent_list()
-        await self.send_tool_catalog()
-        await self.send_chat_session()
+        if self._is_new_bridge:
+            await self.send_user_info()
+            await self.send_avatar_list()
+            await self.send_voices()
+            await self.send_agent_list()
+            await self.send_tool_catalog()
+            self._is_new_bridge = False
 
-    async def run(self, websocket: WebSocket):
+        await self.send_chat_session()
+        message = "# Welcome to Agent C\n\nFirst time here? Send '*Hello Domo*' to get started!"
+
+        if len(self.chat_session.messages) > 0:
+            message = "# Welcome back Agent C\n\nYour previous session has been restored."
+
+        await self.raise_render_media_markdown(message)
+
+    async def run(self, websocket: WebSocket, chat_session_id: Optional[str] = None):
         """Main run loop for the bridge"""
         await websocket.accept()
         self.websocket=websocket
         self.is_running = True
+
+        if chat_session_id is not None and (self.chat_session is None or self.chat_session.session_id != chat_session_id):
+            self.chat_session = await self._get_or_create_chat_session(session_id=chat_session_id, user_id=self.chat_user.user_id)
+
         self.logger.info (f"RealtimeBridge started for session {self.chat_session.session_id}")
         await self.send_client_initial_data()
         await self.send_user_turn_start()
@@ -460,7 +476,13 @@ class RealtimeBridge(AgentBridge):
                     if message["type"] == "websocket.receive":
                         if "text" in message:
                             event = self.parse_event(json.loads(message["text"]))
-                            self.logger.info(f"Received event {event.type} from session {self.chat_session.session_id}")
+                            if event.type not in ["ping", "pong"]:
+                                self.logger.info(f"Received event {event.type} from session {self.chat_session.session_id}")
+
+                            if event.type == "resume_chat_session" and event.session_id == self.chat_session.session_id:
+                                self.logger("Client requested to resume the current session, ignoring.")
+                                await self.send_chat_session()
+                                break
 
                             if self._active_interact_task and not self._active_interact_task.done() and event.type not in ["ping", "pong", "client_wants_cancel"]:
                                 self.logger.warning(f"Session {self.chat_session.session_id} has an active interaction, shutting down interaction due to  new event {event.type}")
@@ -488,6 +510,15 @@ class RealtimeBridge(AgentBridge):
                     await self.send_error(f"Error processing event: {str(e)}")
         finally:
             self.logger.info(f"RealtimeBridge stopped for session {self.ui_session_id}")
+
+    async def raise_render_media_markdown(self, text: str):
+        event = RenderMediaEvent(content=text, session_id=self.chat_session.session_id,
+                                 content_type="text/markdown", sent_by_class= "RealtimeBridge", foreign_content=False,
+                                 user_session_id=self.chat_session.session_id,
+                                 role="assistant")
+
+        await self.send_event(event)
+
 
     async def iter_interact(self, text: str, file_ids: Optional[List[str]] = None, max_buffer: int = 512) -> AsyncIterator[str]:
         """
@@ -582,7 +613,6 @@ class RealtimeBridge(AgentBridge):
                     self.logger.info(f"Processing {len(file_inputs)} files: {input_types}")
 
             prompt_metadata = await self._build_prompt_metadata()
-            # Prepare chat parameters
             tool_params = {}
             if len(self.chat_session.agent_config.tools):
                 await self.tool_chest.initialize_toolsets(self.chat_session.agent_config.tools)
@@ -613,7 +643,8 @@ class RealtimeBridge(AgentBridge):
                                  'session_id': self.chat_session.session_id,
                                  "client_wants_cancel": self.client_wants_cancel,
                                  "env_name": os.getenv('ENV_NAME', 'development'),
-                                 "streaming_callback": on_event  if on_event else self.runtime_callback},
+                                 "streaming_callback": on_event  if on_event is not None else self.runtime_callback,
+                                 "prompt_metadata": prompt_metadata},
                 'prompt_builder': PromptBuilder(sections=agent_sections),
             }
 

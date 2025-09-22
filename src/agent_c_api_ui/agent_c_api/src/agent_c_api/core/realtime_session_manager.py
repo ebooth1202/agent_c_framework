@@ -77,6 +77,12 @@ class RealtimeSessionManager:
         """
         ui_session_id = session_id if session_id else RealtimeSession.generate_session_id(user.user_id)
 
+        if ui_session_id in self.ui_sessions:
+            if self.ui_sessions[ui_session_id].user_id == user.user_id:
+                return self.ui_sessions[ui_session_id]
+            else:
+                raise ValueError(f"Session ID {ui_session_id} already exists for a different user.")
+
         self._locks[ui_session_id] = asyncio.Lock()
 
         async with self._locks[ui_session_id]:
