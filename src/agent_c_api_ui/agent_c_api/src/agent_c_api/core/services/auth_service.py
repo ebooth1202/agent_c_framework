@@ -136,7 +136,16 @@ class AuthService:
         Returns:
             bool: True if password matches
         """
-        return self.pwd_context.verify(plain_password, hashed_password)
+        try:
+            return self.pwd_context.verify(plain_password, hashed_password)
+        except Exception as e:
+            self.logger.error(
+                "password_verification_failed",
+                error_type=type(e).__name__,
+                hash_prefix=hashed_password[:10] if hashed_password else "None",
+                hash_length=len(hashed_password) if hashed_password else 0
+            )
+            return False
     
     async def create_user(self, user_request: UserCreateRequest) -> ChatUserResponse:
         """
