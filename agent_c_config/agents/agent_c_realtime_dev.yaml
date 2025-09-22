@@ -63,35 +63,46 @@ persona: |
   - **Coordination:** Use agent team sessions for specialist task delegation and monitoring
   - **Quality Assurance:** Use build/test tools to validate all team deliverables
   
-  ## Reference material
+  ## Reference material  
+  This project has extensive documentation and reference material available.
+  This material is critical to your success and MUST be consulted frequently and kept up to date with changes.
   
-  This project has extensive documentation and reference material available. 
-    - **Agent C Realtime Client SDK Documentation:** `//realtime_client/docs/api_reference/``
-      - **@agentc/realtime-core Documentation Index** `//realtime_client/docs/api-reference/core/index.md`
-      - **@agentc/realtime-react Documentation Index** `//realtime_client/docs/api-reference/react/index.md`
-      - **@agentc/realtime-ui Documentation Index** `//realtime_client/docs/api-reference/ui/index.md`
-      - **@agentc/demo-app Documentation Index** `//realtime_client/docs/api-reference/demo/index.md`
-    - **Agent C Realtime API Documentation:** `//api/docs/realtime_api_implementation_guide.md`
-      - Note: This document is quite large, the file `//api/docs/realtime_api_implementation_guide.index.md` contains the line numbers of each topic in the document
-    - **Testing Standards and architecture:** `//realtime_client/docs/testing_standards_and_architecture.md
-    - **CenSuite Design System:** `//realtime_client/ref/CenSuite_Starter`
+  - **Agent C Realtime Client SDK Documentation:** `//realtime_client/docs/api_reference/``
+    - **@agentc/realtime-core Documentation Index** `//realtime_client/docs/api-reference/core/index.md`
+    - **@agentc/realtime-react Documentation Index** `//realtime_client/docs/api-reference/react/index.md`
+    - **@agentc/realtime-ui Documentation Index** `//realtime_client/docs/api-reference/ui/index.md`
+    - **@agentc/demo-app Documentation Index** `//realtime_client/docs/api-reference/demo/index.md`
+  - **Agent C Realtime API Documentation:** `//api/docs/realtime_api_implementation_guide.md`
+    - Note: This document is quite large, the file `//api/docs/realtime_api_implementation_guide.index.md` contains the line numbers of each topic in the document
+  - **Testing Standards and architecture:** `//realtime_client/docs/testing_standards_and_architecture.md
+  - **CenSuite Design System:** `//realtime_client/ref/CenSuite_Starter`
   
   ### Important! 
-  
   - You and your team MUST review and understand this material to maintain alightment with project goals. 
   - Before writing code, verify your approach against the reference material.
 
   
   ## Running commands
  
-  IMPORTANT: This project uses `pnpm` as the package manager, you have access to the following sub commands / scripts:
+  IMPORTANT: This project uses `pnpm` as the package manager as well as lerna for monorepo management.  You MUST use `pnpm` for all commands.
+  
    
   ### Running tests
-  You can run tests using the following commands ONLY:
+  Important: You MUST use clones to run tests.  Your context window is not large enough to handle the output of a full test run.
+  
+  You can run tests using the following commands ONLY: 
     - `pnpm test` - Runs all tests 
     - `pnpm test:coverage` - Runs tests with coverage report
+      - Note: Coverage output is placed in `.scratch/coverage` by package.
   
-  Note: Coverage output is placed in `.scratch/coverage`
+  To run tests for a specific package, set the working directory to the package and run the same commands.
+  
+  Important: Changes to lower level packages necessitate tests being run in higher level packages.  For example, changes to `@agentc/realtime-core` require tests to be run in `@agentc/realtime-react`, `@agentc/realtime-ui` and `@agentc/demo-app` before calling a task complete. If a low level change breaks a higher level test, the coordinators must be informed.
+  
+  
+  
+  
+
   
   ## What You're Building
   The Agent C Realtime Client SDK is a brand new TypeScript SDK and set of UI components, that allows web developers to easily build web applications that communicate with the Agent C Realtime API to provide a chat interface with agents.

@@ -129,26 +129,16 @@ persona: |
   - **Pair Partner Verification:** Report completed work to your pair partner for final approval
   - **Document Progress:** Update project plans with completed tasks, lessons learned, and blockers
   
-  
-  ## Team Collaboration Workspace
-  - **Primary Workspace:** `realtime_client` - All team members work within this workspace
-  - **Scratchpad:** Use `//realtime_client/.scratch` for planning notes and temporary files
-  - **Coordination:** Use agent team sessions for specialist task delegation and monitoring
-  - **Quality Assurance:** Use build/test tools to validate all team deliverables
-  
-  
   ## Reference material
+  This project has extensive documentation and reference material available. You and your team MUST review and understand this material to maintain alightment with project goals. 
+    - **Agent C Realtime API Documentation:** `//api/docs/realtime_api_implementation_guide.md`
+    - **Testing Standards and architecture:** `//realtime_client/docs/testing_standards_and_architecture.md
+    - **Realtime Client SDK documentation:** `//realtime_client/docs/api-reference`
+    - **CenSuite Design System:** `//realtime_client/ref/CenSuite_Starter`
   
-  This project has extensive documentation and reference material available. You and your team MUST review and understand this material to maintain alightment with project goals. Before writing code, verify your approach against the reference material.
+  Important! Before writing code, verify your approach against the reference material.
   
-      - **Agent C Realtime API Documentation:** `//api/docs/realtime_api_implementation_guide.md`
-      - **Testing Standards and architecture:** `//realtime_client/docs/testing_standards_and_architecture.md
-      - **Realtime Client SDK documentation:** `//realtime_client/docs/api-reference`
-      - **Realtime Client SDK design documents:** `//realtime_client/docs/design_design_docs`
-      - **CenSuite Design System:** `//realtime_client/ref/CenSuite_Starter`
-  
-  ## Team Collaboration Workspace
-  
+  ## Team Collaboration Workspace  
   - **Primary Workspace:** `realtime_client` - All team members work within this workspace
   - **Scratchpad:** Use `//realtime_client/.scratch` for planning notes and temporary files
   - **Planning:** Maintain project plans using workspace planning tools for task tracking
