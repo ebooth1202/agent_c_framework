@@ -1,0 +1,105 @@
+# Portraits and Artistic Objects for Shadow Pines Manor
+
+objects:
+  portrait_of_lady:
+    id: "portrait_of_lady"
+    name: "Portrait of Lady Pemberton"
+    type: "artwork"
+    location: "study"
+    description: "An oil painting of a distinguished lady in Victorian dress, her eyes seeming to follow viewers around the room. Her expression suggests she knows secrets that she's eager to share."
+    interactions:
+      examine: "The lady's painted finger seems to point toward the fireplace with deliberate intent."
+      examine_carefully: "Behind the portrait's ornate frame lies a hidden compartment."
+    artistic_details:
+      style: "Classical Victorian portraiture"
+      frame: "Ornate gilt frame with hidden compartment"
+      subject: "Lady Pemberton, matriarch of the family"
+      expression: "Knowing, secretive, slightly urgent"
+    mystery_significance:
+      clue_provider: "Points toward the fireplace where the first key is hidden"
+      secret_keeper: "Hidden compartment behind the portrait contains the first ancient key"
+      family_history: "Represents the family's connection to the manor's secrets"
+    hidden_elements:
+      compartment_location: "Behind the portrait, accessible by pressing a concealed switch"
+      compartment_contents: "The first ancient key needed to unlock the manor's secrets"
+      discovery_trigger: "Examining the portrait carefully reveals the pointing gesture's significance"
+
+  family_portraits_hallway:
+    id: "family_portraits_hallway"
+    name: "Generations of Pemberton Portraits"
+    type: "artwork_collection"
+    location: "hallway"
+    description: "A gallery of family portraits stretching back generations, each face telling a story of aristocratic bearing and hidden knowledge. Their eyes seem to watch visitors with interest."
+    interactions:
+      examine: "Each portrait reveals something about the family's history and character."
+      study_individually: "Individual portraits offer insights into different family members."
+    portrait_collection:
+      - subject: "First Lord Pemberton"
+        era: "1820s"
+        expression: "Stern patriarch with secrets"
+        story: "Founded the family fortune through mysterious means"
+      - subject: "Lady Margaret Pemberton"
+        era: "1850s"
+        expression: "Gentle but knowing"
+        story: "Known for her charitable works and midnight walks in the pine woods"
+      - subject: "Young Master Charles"
+        era: "1870s"
+        expression: "Adventurous and rebellious"
+        story: "Disappeared for three years, returned with exotic artifacts"
+      - subject: "Current Lord Pemberton"
+        era: "1890s"
+        expression: "Scholarly and contemplative"
+        story: "Obsessed with family history and the manor's secrets"
+    atmospheric_contribution:
+      presence: "Watchful ancestors who seem aware of current events"
+      history: "Visual timeline of the family's legacy and mysteries"
+      mood: "Aristocratic authority mixed with hidden knowledge"
+
+  fireplace:
+    id: "fireplace"
+    name: "Study Fireplace"
+    type: "architectural_feature"
+    location: "study"
+    description: "A grand marble fireplace with intricate carvings and a warm, inviting fire. The mantelpiece holds various decorative objects and family mementos."
+    interactions:
+      examine: "The fireplace radiates warmth and comfort, with interesting carvings in the marble."
+      search_mantel: "Various objects and photographs line the mantelpiece."
+      investigate_hearth: "The area around the fireplace might hide secrets."
+    architectural_details:
+      material: "White marble with intricate Victorian carvings"
+      size: "Large enough to warm the entire study"
+      condition: "Well-maintained with active fire"
+      decorative_elements: "Carved garlands, family crests, and mythological figures"
+    mantelpiece_contents:
+      - "family_photographs"
+      - "decorative_candlesticks"
+      - "small_family_heirlooms"
+      - "ornate_clock"
+    hidden_connection:
+      portrait_clue: "The lady in the portrait points toward this fireplace"
+      secret_location: "The first key is hidden behind the portrait, which points here"
+      atmospheric_role: "Provides warmth and comfort while hiding family secrets"
+
+  stone_fountain:
+    id: "stone_fountain"
+    name: "Manor Grounds Fountain"
+    type: "outdoor_art"
+    location: "front_grounds"
+    description: "An elegant stone fountain with classical figures and gentle water flow. The sound of bubbling water creates a peaceful atmosphere amidst the pine groves."
+    interactions:
+      examine: "Classical design with figures representing the four seasons."
+      search: "The fountain basin contains only decorative stones and old pennies."
+      listen: "The gentle bubbling provides a soothing soundtrack to the grounds."
+    artistic_elements:
+      style: "Classical Victorian garden fountain"
+      figures: "Four seasonal figures representing the cycle of nature"
+      water_feature: "Multi-tiered with gentle cascading water"
+      basin: "Large circular basin with decorative stones"
+    red_herring_aspect:
+      false_clue: "Appears to hide something but contains only decorative elements"
+      misdirection: "Players might expect hidden compartments or secret messages"
+      actual_contents: "Decorative stones, old pennies, and clear water"
+    atmospheric_contribution:
+      sound: "Gentle bubbling that masks other sounds"
+      visual: "Elegant centerpiece for the manor grounds"
+      mood: "Peaceful contemplation and classical beauty"

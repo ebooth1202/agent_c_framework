@@ -1,0 +1,66 @@
+id: "garage"
+name: "Estate Garage"
+description: "A stone building that houses the manor's vehicles. Tools hang neatly on racks, and a workbench shows signs of recent mechanical work. The scent of motor oil and pine needles creates an oddly comforting atmosphere."
+connections: ["front_grounds"]
+access_requirements: []
+objects: ["red_atv", "black_dirtbike", "tool_rack", "workbench"]
+secrets: ["maintenance_log_with_locations", "gas_can_behind_tools"]
+
+# Room-specific clues and interactions
+room_clues:
+  - id: "maintenance_log"
+    description: "A leather-bound vehicle maintenance log showing recent trips to 'the old clearing' with notes about 'final preparations'"
+    reveals: "Location of hidden forest clearing and hints about its importance"
+    discovery_requirements: ["examine_garage_thoroughly"]
+  - id: "empty_fuel_tanks"
+    description: "Both the ATV and dirtbike have completely empty fuel tanks, though they show signs of recent heavy use"
+    reveals: "Vehicles were recently used extensively and need refueling before another journey"
+    discovery_requirements: ["check_vehicle_gas_levels"]
+  - id: "hidden_gas_can"
+    description: "A red gas can carefully hidden behind the tool rack, nearly full and marked with 'Emergency Use Only'"
+    reveals: "Fuel source for reaching the hidden clearing"
+    discovery_requirements: ["search_garage_for_gas"]
+
+# Vehicle states and management
+vehicle_states:
+  red_atv:
+    fuel_level: "empty"
+    condition: "excellent"
+    can_start: false
+    description: "A sturdy red ATV perfect for navigating woodland trails"
+    start_requirements: ["filled_atv_tank"]
+  black_dirtbike:
+    fuel_level: "empty"
+    condition: "excellent" 
+    can_start: false
+    description: "A sleek black dirtbike built for speed and agility through forest paths"
+    start_requirements: ["filled_dirtbike_tank"]
+
+# Atmospheric details specific to this room
+atmosphere:
+  lighting: "Natural light from large doors, supplemented by work lamps"
+  sounds: ["tools_clinking", "metal_settling", "distant_wind", "occasional_dripping"]
+  scents: ["motor_oil", "gasoline", "metal", "pine_needles", "leather"]
+  temperature: "Cool but warmer than outside, with heat from recent engine work"
+  mood: "Practical workspace with hints of recent urgent activity"
+
+# Progression gates specific to this room
+progression_gates:
+  - gate_id: "start_atv"
+    requirements: ["checked_atv_gas", "filled_atv_tank"]
+    hint_triggers:
+      - condition: "tried_start_atv_without_gas"
+        hint: "The ATV's engine turns over eagerly but won't catch. The fuel gauge needle points firmly to empty."
+  - gate_id: "start_dirtbike"
+    requirements: ["checked_dirtbike_gas", "filled_dirtbike_tank"]
+    hint_triggers:
+      - condition: "tried_start_dirtbike_without_gas"
+        hint: "The dirtbike's engine cranks with mechanical precision but refuses to start. You notice the fuel tank cap is loose, as if recently opened."
+
+# Items and tools
+garage_items:
+  gas_can:
+    location: "garage_hidden"
+    description: "Red metal gas can marked 'Emergency Use Only', nearly full of fuel"
+    discovered: false
+    capacity: "enough_for_both_vehicles"

@@ -1,4 +1,6 @@
-from agents.voice import TTSVoice
+# OpenAI TTS Voice options
+from typing import Literal
+TTSVoice = Literal["alloy", "ash", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer"]
 from pydantic import Field
 
 from agent_c.models.base import BaseModel

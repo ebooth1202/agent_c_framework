@@ -1,11 +1,13 @@
 from datetime import datetime
 import json
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, TYPE_CHECKING
 import structlog
 
 from agent_c_api.core.agent_manager import UItoAgentBridgeManager
 from agent_c_api.core.repositories.session_repository import SessionRepository
-from agent_c_api.api.v2.models.session_models import SessionCreate, SessionUpdate
+
+if TYPE_CHECKING:
+    from agent_c_api.api.v2.models.session_models import SessionCreate, SessionUpdate
 
 class SessionMigration:
     """Helper class for migrating sessions to Redis storage"""

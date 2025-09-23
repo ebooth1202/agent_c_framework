@@ -101,7 +101,7 @@ export interface JWTPayload {
 const AUTH_CONFIG = {
   tokenCookieName: 'agentc-auth-token',
   tokenCookieOptions: {
-    secure: true, // Always use secure cookies for JWT tokens
+    secure: true, // Use secure cookies for real JWT tokens
     sameSite: 'strict' as const,
     httpOnly: false, // Need to access from JavaScript for API calls
     path: '/',

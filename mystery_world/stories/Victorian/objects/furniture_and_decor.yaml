@@ -1,0 +1,51 @@
+# Furniture and Decorative Objects for Ravenscroft Manor
+
+objects:
+  mahogany_desk:
+    id: "mahogany_desk"
+    name: "Lord Ravenscroft's Mahogany Desk"
+    type: "furniture"
+    location: "study"
+    description: "A massive mahogany desk with brass fittings, showing signs of recent urgent use. Papers are scattered and ink stains suggest hasty writing."
+    interactions:
+      examine: "Recent ink stains and scattered papers suggest desperate late-night work"
+      search: "Requires butler's trust to access locked drawers"
+    secrets: ["altered_will", "financial_correspondence"]
+
+  velvet_sofa:
+    id: "velvet_sofa"
+    name: "Burgundy Velvet Sofa"
+    type: "furniture"
+    location: "drawing_room"
+    description: "An elegant burgundy velvet sofa positioned for formal conversation. The fabric shows wear from recent anxious pacing."
+    interactions:
+      examine: "Fabric shows unusual wear patterns from recent distressed use"
+
+  crystal_chandelier:
+    id: "crystal_chandelier"
+    name: "Grand Crystal Chandelier"
+    type: "decorative"
+    location: "drawing_room"
+    description: "A magnificent crystal chandelier that refracts gas light into rainbow patterns across the room."
+
+  family_portraits:
+    id: "family_portraits"
+    name: "Ravenscroft Family Portraits"
+    type: "artwork"
+    location: "drawing_room"
+    description: "Oil paintings of stern Ravenscroft ancestors, their eyes seeming to judge the current family's circumstances."
+    secrets: ["family_history", "hidden_scandals"]
+
+  servants_table:
+    id: "servants_table"
+    name: "Servants' Dining Table"
+    type: "furniture"
+    location: "servants_hall"
+    description: "A long wooden table where household staff take their meals and share gossip about the family's affairs."
+
+  reading_chair:
+    id: "reading_chair"
+    name: "Leather Reading Chair"
+    type: "furniture"
+    location: "library"
+    description: "A well-worn leather chair by the fireplace, showing signs of recent use. A book lies open nearby."

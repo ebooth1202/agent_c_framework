@@ -1,0 +1,64 @@
+id: "woods_edge"
+name: "Edge of the Pine Woods"
+description: "Dense woodland where towering pine trees create a natural cathedral. Ancient trail markers carved into bark hint at paths used for generations, while an old signpost points deeper into the mysterious depths of Shadow Pines."
+connections: ["front_grounds", "hidden_clearing"]
+access_requirements: []
+objects: ["trail_markers", "old_signpost"]
+secrets: ["fresh_footprints"]
+
+# Room-specific clues and interactions
+room_clues:
+  - id: "fresh_footprints"
+    description: "Recent footprints in the soft earth, leading deeper into the woods"
+    reveals: "Someone has been here recently, heading toward the hidden areas"
+    discovery_requirements: ["examine_ground_carefully"]
+  - id: "trail_markers"
+    description: "Ancient carvings in pine bark showing directional symbols and dates"
+    reveals: "This path has been used by the Pemberton family for generations"
+    discovery_requirements: ["examine_tree_markings"]
+
+# Atmospheric details specific to this room
+atmosphere:
+  lighting: "Filtered green light through dense pine canopy"
+  sounds: ["pine_needles_falling", "wind_through_branches", "distant_bird_calls", "creaking_wood"]
+  scents: ["pine_resin", "damp_earth", "moss", "wild_flowers"]
+  temperature: "Cooler and more humid than the open grounds"
+  mood: "Ancient mystery and natural cathedral reverence"
+
+# Navigation and pathfinding
+trail_system:
+  main_path: 
+    description: "Well-worn path leading deeper into the woods"
+    destination: "hidden_clearing"
+    difficulty: "moderate_hiking"
+  secondary_paths:
+    description: "Smaller trails branching off the main route"
+    destinations: ["old_hunting_blind", "stream_crossing", "abandoned_cabin"]
+    difficulty: "challenging_navigation"
+
+# Access to hidden clearing
+clearing_access:
+  requirements: ["found_tire_tracks", "chose_vehicle"]
+  vehicle_paths:
+    atv_route: "Wider trail suitable for ATV navigation"
+    dirtbike_route: "Narrow path perfect for motorcycle agility"
+  on_foot_option: "Possible but significantly more challenging and time-consuming"
+
+# Wildlife and natural elements
+natural_features:
+  - feature: "ancient_pines"
+    description: "Towering trees that have stood for centuries"
+    interaction: "Their bark bears the scars and markings of generations"
+  - feature: "forest_floor"
+    description: "Thick carpet of pine needles and fallen branches"
+    interaction: "Soft underfoot but shows clear signs of recent passage"
+  - feature: "natural_clearings"
+    description: "Small openings where sunlight penetrates the canopy"
+    interaction: "Perfect spots for rest and contemplation"
+
+# Seasonal variations
+seasonal_atmosphere:
+  autumn: "Golden light filters through changing leaves mixed with evergreen"
+  winter: "Snow creates stark contrast against dark pine trunks"
+  spring: "New growth and fresh scents emerge from winter dormancy"
+  summer: "Dense canopy creates cool, shaded sanctuary"

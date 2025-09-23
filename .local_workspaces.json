@@ -1,0 +1,64 @@
+{
+    "local_workspaces": [
+        {
+            "name": "tools",
+            "workspace_path": "src/agent_c_tools",
+            "description": "Agent C - Tools project"
+        },
+        {
+            "name": "core",
+            "workspace_path": "src/agent_c_core",
+            "description": "The Agent C - Core project"
+        },
+        {
+            "name": "desktop",
+            "workspace_path": "/Users/Ebooth/Desktop",
+            "description": "Mapped the the users desktop"
+        },
+        {
+            "name": "api",
+            "workspace_path": "agent_c_api_ui/agent_c_api",
+            "description": "Mapped to the source for the Agent C React UI backend APIt"
+        },
+        {
+            "name": "ui",
+            "workspace_path": "agent_c_api_ui/agent_c_react_client",
+            "description": "Mapped to the source for the Agent C React UI"
+        },
+        {
+            "name": "writing",
+            "workspace_path": "/workspaces/writing",
+            "description": "Workspace for writing projects"
+        },
+        {
+            "name": "virt_joe",
+            "workspace_path": "/workspaces/virt_joe",
+            "description": "Workspace for the virtual Joe demo of the realtime api"
+        },
+        {
+            "name": "realtime_client",
+            "workspace_path": "src/realtime_client",
+            "description": "Workspace for the realtime client built from the virtual Joe demo"
+        },
+        {
+            "name": "vis",
+            "workspace_path": "/Users/Ebooth/path/to/your/three-js-project",
+            "description": "Workspace with three.js visualizer"
+        },
+        {
+            "name": "mystery",
+            "workspace_path": "mystery_world",
+            "description": "Mystery world workpath"
+        },
+        {
+            "name": "logistics_project",
+            "workspace_path": "Logistics_proj",
+            "description": "Logistics demo project work path"
+        },
+        {
+            "name": "prompt_reference",
+            "workspace_path": "reference_material/Prompt_Render_Guide_NEW",
+            "description": "Work path for the newly updated prompt render guide"
+        }
+    ]
+}

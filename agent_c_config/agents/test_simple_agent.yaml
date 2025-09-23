@@ -1,0 +1,20 @@
+version: 2
+name: "Test Simple Agent"
+key: "test_simple"
+agent_description: |
+  A simple test agent to verify UI loading
+model_id: "claude-sonnet-4-20250514"
+tools:
+  - ThinkTools
+  - WorkspaceTools
+  - WorkspacePlanningTools
+  - AgentAssistTools
+  - AgentCloneTools
+agent_params:
+  budget_tokens: 20000
+  max_tokens: 64000
+category:
+  - "domo"
+
+persona: |
+  You are a simple test agent for troubleshooting purposes.

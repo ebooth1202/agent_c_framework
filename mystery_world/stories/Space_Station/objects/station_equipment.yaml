@@ -1,0 +1,175 @@
+# Station Equipment and Systems for Research Station Kepler-442b
+
+objects:
+  atmospheric_processor:
+    id: "atmospheric_processor"
+    name: "Atmospheric Processing Unit"
+    type: "life_support_system"
+    location: "docking_bay"
+    description: "A sophisticated atmospheric processing unit that maintains breathable air for multiple species. The gentle hum indicates optimal operation, while status displays show green across all parameters."
+    interactions:
+      examine: "The processor shows perfect operational status with efficiency ratings at 98.7%"
+      monitor: "Real-time atmospheric composition displayed on integrated screens"
+      maintenance: "Recent maintenance logs show regular service and calibration"
+    
+    technical_specifications:
+      function: "Multi-species atmospheric composition control and purification"
+      efficiency: "98.7% operational efficiency"
+      capacity: "Supports up to 200 crew members across three species"
+      safety_features: "Redundant backup systems and emergency protocols"
+    
+    operational_status:
+      current_state: "Fully operational with optimal performance"
+      recent_activity: "Routine maintenance completed within specification"
+      monitoring: "Continuous real-time atmospheric quality assessment"
+      alerts: "No current warnings or anomalies detected"
+    
+    atmospheric_contribution:
+      sound: "Gentle, reassuring hum indicating proper operation"
+      safety: "Critical system for crew survival in space environment"
+      reliability: "Proven track record of consistent performance"
+
+  safety_displays:
+    id: "safety_displays"
+    name: "Holographic Safety Status Displays"
+    type: "monitoring_system"
+    location: "docking_bay"
+    description: "Advanced holographic displays showing real-time safety parameters for all docking bay operations. Multi-species text and universal symbols ensure comprehension across cultures."
+    interactions:
+      examine: "All safety parameters showing green - optimal conditions maintained"
+      read_displays: "Atmospheric pressure, temperature, structural integrity all within safe ranges"
+      check_alerts: "No current warnings or emergency notifications active"
+    
+    display_information:
+      atmospheric_status: "Pressure, composition, and quality readings"
+      structural_integrity: "Hull stress, airlock seals, and emergency systems"
+      operational_safety: "Docking procedures, traffic control, and crew protocols"
+      emergency_readiness: "Evacuation routes, emergency equipment, and communication systems"
+    
+    multi_species_accessibility:
+      human_text: "Standard English with technical terminology"
+      zephyrian_glyphs: "Flowing organic symbols for Zephyrian crew"
+      altairian_patterns: "Geometric designs for Altairian logical processing"
+      universal_symbols: "Species-neutral pictographs for critical information"
+    
+    technology_features:
+      holographic_projection: "Three-dimensional data visualization"
+      real_time_updates: "Continuous monitoring and display refresh"
+      alert_systems: "Automatic warnings for any parameter deviations"
+      accessibility_features: "Multi-species language and symbol support"
+
+  viewing_ports:
+    id: "viewing_ports"
+    name: "Transparent Aluminum Viewing Ports"
+    type: "observation_system"
+    location: "docking_bay"
+    description: "Large transparent aluminum viewing ports offering spectacular views of Kepler-442b's blue-green surface rotating below and the infinite star field beyond."
+    interactions:
+      examine: "Crystal-clear views of the planet's surface and surrounding space"
+      observe_planet: "Kepler-442b's continents and weather patterns visible in detail"
+      stargazing: "Distant stars and nebulae provide breathtaking cosmic backdrop"
+    
+    construction_details:
+      material: "Transparent aluminum - stronger than steel, clearer than glass"
+      size: "Large panoramic windows providing wide-angle views"
+      protection: "Radiation shielding and micrometeorite resistance"
+      maintenance: "Self-cleaning systems and damage monitoring"
+    
+    viewing_opportunities:
+      planetary_observation: "Detailed views of Kepler-442b's surface features"
+      stellar_phenomena: "Distant stars, nebulae, and cosmic events"
+      space_traffic: "Occasional ships and stations in the distance"
+      psychological_benefit: "Connection to the cosmos and sense of wonder"
+    
+    atmospheric_impact:
+      inspiration: "Breathtaking reminder of humanity's place in the universe"
+      isolation: "Vast emptiness emphasizes station's isolation"
+      perspective: "Cosmic scale provides philosophical contemplation"
+      comfort: "Familiar sight of planetary surface below"
+
+  guest_orientation_terminal:
+    id: "guest_orientation_terminal"
+    name: "Multi-Species Guest Orientation Terminal"
+    type: "information_system"
+    location: "docking_bay"
+    description: "An interactive terminal providing station information, safety protocols, and cultural orientation for visiting crew members and passengers from different species."
+    interactions:
+      examine: "Touch-responsive holographic interface with multi-species options"
+      access_information: "Station maps, safety procedures, and cultural guidelines"
+      language_selection: "Available in Standard, Zephyrian, and Altairian languages"
+    
+    information_categories:
+      station_layout: "Interactive maps and navigation assistance"
+      safety_protocols: "Emergency procedures and safety equipment locations"
+      cultural_guidelines: "Inter-species etiquette and communication tips"
+      operational_procedures: "Docking protocols and visitor requirements"
+    
+    accessibility_features:
+      multi_species_interface: "Adaptable to different alien physiologies"
+      universal_translation: "Real-time language translation capabilities"
+      visual_aids: "Pictographic instructions and directional assistance"
+      audio_support: "Spoken instructions in multiple languages"
+    
+    recent_usage:
+      visitor_logs: "Record of recent guest access and information requests"
+      popular_queries: "Most frequently requested information categories"
+      system_updates: "Recent additions to cultural guidelines and safety protocols"
+
+  directional_strips:
+    id: "directional_strips"
+    name: "Color-Coded Navigation Strips"
+    type: "navigation_system"
+    location: "main_corridor"
+    description: "Illuminated floor strips in different colors that guide crew members to various station sections. The system accommodates different species' color perception abilities."
+    interactions:
+      examine: "Clear color coding with backup symbols for species with different vision"
+      follow_blue: "Blue strips lead to command center and administrative areas"
+      follow_green: "Green strips guide to crew quarters and residential sections"
+      follow_yellow: "Yellow strips direct to research labs and scientific facilities"
+    
+    navigation_system:
+      blue_strips: "Command center, administrative offices, and operational areas"
+      green_strips: "Crew quarters, recreational areas, and residential facilities"
+      yellow_strips: "Research labs, scientific equipment, and analysis areas"
+      red_strips: "Emergency evacuation routes and escape pod access"
+    
+    accessibility_design:
+      color_coding: "Primary navigation method for most species"
+      symbol_backup: "Geometric symbols for color-blind species"
+      tactile_elements: "Raised textures for species with limited vision"
+      lighting_integration: "Illuminated strips visible in emergency lighting"
+    
+    maintenance_features:
+      durability: "Resistant to heavy foot traffic and cleaning procedures"
+      power_efficiency: "Low-energy LED systems with long operational life"
+      emergency_override: "Can be reprogrammed for evacuation procedures"
+      system_integration: "Connected to station's main navigation computer"
+
+  emergency_stations:
+    id: "emergency_stations"
+    name: "Multi-Species Emergency Stations"
+    type: "safety_equipment"
+    location: "main_corridor"
+    description: "Emergency equipment stations positioned every 50 meters along the corridor, containing safety equipment adapted for human, Zephyrian, and Altairian physiologies."
+    interactions:
+      examine: "Fully stocked emergency equipment for multiple species"
+      access_communicator: "Emergency communication devices for crisis contact"
+      check_supplies: "First aid materials and emergency breathing apparatus"
+    
+    equipment_inventory:
+      communication_devices: "Emergency communicators with station-wide access"
+      first_aid_supplies: "Medical equipment suitable for multiple species"
+      breathing_apparatus: "Emergency oxygen and atmospheric support systems"
+      emergency_tools: "Basic tools for emergency repairs and access"
+    
+    species_adaptations:
+      human_equipment: "Standard human emergency and medical supplies"
+      zephyrian_adaptations: "Atmospheric supplements and specialized medical tools"
+      altairian_accommodations: "Equipment sized and configured for Altairian physiology"
+      universal_items: "Tools and supplies usable by all species"
+    
+    maintenance_status:
+      inspection_schedule: "Regular checks ensure all equipment is functional"
+      supply_levels: "All stations fully stocked and ready for use"
+      system_testing: "Communication devices tested monthly for reliability"
+      emergency_protocols: "Clear instructions for proper equipment usage"

@@ -1,0 +1,23 @@
+id: "study"
+name: "Lord Ravenscroft's Study"
+description: "A mahogany-paneled study with gas lamps casting amber light across leather-bound ledgers. The Persian rug has been recently cleaned—perhaps too recently. Family portraits watch from the walls."
+connections: ["drawing_room", "library"]
+access_requirements: []
+objects: ["mahogany_desk", "family_ledgers", "gas_lamps", "persian_rug"]
+secrets: ["altered_will_in_desk", "financial_distress_evidence"]
+
+atmosphere:
+  lighting: "Amber gas flames behind etched glass globes"
+  sounds: ["clock_ticking", "papers_rustling", "distant_wind"]
+  scents: ["leather_bindings", "beeswax_polish", "pipe_tobacco"]
+  mood: "Scholarly authority with undertones of financial desperation"
+
+room_clues:
+  - id: "financial_distress"
+    description: "Ledgers show mounting debts and desperate financial measures"
+    reveals: "Lord Ravenscroft was facing financial ruin"
+    discovery_requirements: ["examine_ledgers_carefully"]
+  - id: "altered_will"
+    description: "A will with suspicious alterations and fresh ink"
+    reveals: "Someone changed the inheritance after Lord Ravenscroft's death"
+    discovery_requirements: ["gained_butler_trust", "search_desk_thoroughly"]

@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Executive Summary Report - January 2024</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 40px;
+            color: #333;
+            background-color: #fff;
+        }
+        
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #2c5aa0;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #2c5aa0;
+            margin: 0;
+            font-size: 28px;
+        }
+        
+        .header h2 {
+            color: #666;
+            margin: 5px 0;
+            font-weight: normal;
+            font-size: 18px;
+        }
+        
+        .meta-info {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-left: 4px solid #2c5aa0;
+            margin: 20px 0;
+        }
+        
+        .dashboard {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .dashboard h2 {
+            margin-top: 0;
+            color: white;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        
+        th {
+            background-color: #2c5aa0;
+            color: white;
+            font-weight: bold;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        
+        .section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        
+        .section h2 {
+            color: #2c5aa0;
+            border-bottom: 2px solid #2c5aa0;
+            padding-bottom: 10px;
+        }
+        
+        .financial {
+            background-color: #f8fff8;
+            border-left: 4px solid #28a745;
+        }
+        
+        .operations {
+            background-color: #fff8f0;
+            border-left: 4px solid #fd7e14;
+        }
+        
+        .compliance {
+            background-color: #fff5f5;
+            border-left: 4px solid #dc3545;
+        }
+        
+        .recommendations {
+            background-color: #f0f8ff;
+            border-left: 4px solid #007bff;
+        }
+        
+        .metric-card {
+            display: inline-block;
+            width: 18%;
+            margin: 1%;
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .metric-good { background-color: #d4edda; }
+        .metric-warning { background-color: #fff3cd; }
+        .metric-danger { background-color: #f8d7da; }
+        
+        .status-icon {
+            font-size: 20px;
+            margin-right: 5px;
+        }
+        
+        .conclusion {
+            background-color: #2c5aa0;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 30px 0;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+            color: #666;
+            font-size: 12px;
+        }
+        
+        ul, ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        
+        li {
+            margin: 5px 0;
+        }
+        
+        .highlight {
+            background-color: #fff3cd;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        
+        @media print {
+            body { margin: 20px; }
+            .section { break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>EXECUTIVE SUMMARY REPORT</h1>
+        <h2>Fleet Operations Performance - January 2024</h2>
+    </div>
+    
+    <div class="meta-info">
+        <strong>PREPARED FOR:</strong> Board of Directors<br>
+        <strong>REPORT DATE:</strong> January 17, 2024<br>
+        <strong>REPORTING PERIOD:</strong> January 2024 (Month-to-Date)<br>
+        <strong>FLEET SIZE:</strong> 5 Tractors | 5 Drivers | Multi-State Operations
+    </div>
+    
+    <div class="dashboard">
+        <h2>📊 EXECUTIVE DASHBOARD</h2>
+        <h3>Key Performance Indicators</h3>
+        <table>
+            <tr>
+                <th>Metric</th>
+                <th>Current</th>
+                <th>Target</th>
+                <th>Status</th>
+            </tr>
+            <tr>
+                <td>Fleet Revenue</td>
+                <td>$4,360</td>
+                <td>$4,500</td>
+                <td><span class="status-icon">⚠️</span> 97%</td>
+            </tr>
+            <tr>
+                <td>Average Rate/Mile</td>
+                <td>$2.90</td>
+                <td>$3.00</td>
+                <td><span class="status-icon">⚠️</span> 97%</td>
+            </tr>
+            <tr>
+                <td>Fleet Utilization</td>
+                <td>80%</td>
+                <td>85%</td>
+                <td><span class="status-icon">⚠️</span> 94%</td>
+            </tr>
+            <tr>
+                <td>Safety Compliance</td>
+                <td>85/100</td>
+                <td>95/100</td>
+                <td><span class="status-icon">🔴</span> 89%</td>
+            </tr>
+            <tr>
+                <td>Maintenance On-Time</td>
+                <td>60%</td>
+                <td>80%</td>
+                <td><span class="status-icon">🔴</span> 75%</td>
+            </tr>
+        </table>
+    </div>
+    
+    <div class="section financial">
+        <h2>💰 FINANCIAL PERFORMANCE</h2>
+        
+        <h3>Revenue Analysis</h3>
+        <ul>
+            <li><strong>Total Monthly Revenue:</strong> $4,360</li>
+            <li><strong>Revenue Per Mile:</strong> $2.90 average</li>
+            <li><strong>Profit Margin:</strong> 68% (after estimated fuel costs)</li>
+            <li><strong>Top Revenue Generator:</strong> Industrial Steel Works ($1,125 - Single Load)</li>
+        </ul>
+        
+        <h3>Route Profitability Ranking</h3>
+        <ol>
+            <li><strong>Dallas → Little Rock:</strong> $3.54/mile (Steel Manufacturing)</li>
+            <li><strong>Austin → San Antonio:</strong> $3.33/mile (Construction)</li>
+            <li><strong>Fort Worth → Oklahoma City:</strong> $3.22/mile (General Freight)</li>
+            <li><strong>Houston → Baton Rouge:</strong> $2.52/mile (Chemicals)</li>
+            <li><strong>Amarillo → Tulsa:</strong> $2.29/mile (Agriculture)</li>
+        </ol>
+        
+        <h3>Customer Performance</h3>
+        <ul>
+            <li><strong>Strategic Accounts:</strong> 3 customers generating $2,700 (62% of revenue)</li>
+            <li><strong>Payment Terms:</strong> Average 28 days (Range: 15-45 days)</li>
+            <li><strong>Customer Retention:</strong> 100% month-over-month</li>
+        </ul>
+    </div>
+    
+    <div class="section operations">
+        <h2>🚛 FLEET OPERATIONS</h2>
+        
+        <h3>Vehicle Status</h3>
+        <ul>
+            <li><strong>Active Units:</strong> 4 of 5 (80% availability)</li>
+            <li><strong>In Maintenance:</strong> 1 unit (TRK003 - Kenworth T680)</li>
+            <li><strong>Average Fleet Age:</strong> 2.2 years</li>
+            <li><strong>Total Fleet Mileage:</strong> 622,000 combined</li>
+        </ul>
+        
+        <h3>Driver Performance</h3>
+        <ul>
+            <li><strong>Total Drivers:</strong> 5 (2 Owner-Operators, 3 Company)</li>
+            <li><strong>Performance Distribution:</strong>
+                <ul>
+                    <li>Top Performers: 2 drivers (40%)</li>
+                    <li>Above Average: 1 driver (20%)</li>
+                    <li>Average: 1 driver (20%)</li>
+                    <li>Below Average: 1 driver (20%)</li>
+                </ul>
+            </li>
+        </ul>
+        
+        <h3>Load Management</h3>
+        <ul>
+            <li><strong>Completed Loads:</strong> 4 loads</li>
+            <li><strong>In Transit:</strong> 1 load</li>
+            <li><strong>On-Time Performance:</strong> 80%</li>
+            <li><strong>Average Load Value:</strong> $872</li>
+        </ul>
+    </div>
+    
+    <div class="section compliance">
+        <h2>⚠️ COMPLIANCE & SAFETY</h2>
+        
+        <h3>DOT Compliance Status</h3>
+        <ul>
+            <li><strong>HOS Violations:</strong> 0 current violations ✅</li>
+            <li><strong>Drivers in Compliance:</strong> 4 of 5 (80%)</li>
+            <li><strong class="highlight">Critical Issue:</strong> 1 driver approaching HOS limits (requires immediate attention)</li>
+        </ul>
+        
+        <h3>Vehicle Maintenance</h3>
+        <ul>
+            <li><strong>Overdue Services:</strong> 0 units</li>
+            <li><strong>Approaching Service:</strong> 2 units (next 30 days)</li>
+            <li><strong>Recent Maintenance Spend:</strong> $6,366 (5 service events)</li>
+            <li><strong>Preventive vs Reactive:</strong> 60%/40% (Target: 80%/20%)</li>
+        </ul>
+        
+        <h3>Safety Metrics</h3>
+        <ul>
+            <li><strong>Fleet Safety Score:</strong> 85/100</li>
+            <li><strong>Risk Level:</strong> MEDIUM (1 driver approaching limits)</li>
+            <li><strong>Insurance Claims:</strong> 0 YTD</li>
+        </ul>
+    </div>
+    
+    <div class="section recommendations">
+        <h2>🎯 STRATEGIC RECOMMENDATIONS</h2>
+        
+        <h3>IMMEDIATE ACTIONS (Next 30 Days)</h3>
+        <ol>
+            <li><strong>Driver Compliance:</strong> Implement automated HOS monitoring system</li>
+            <li><strong>Maintenance Scheduling:</strong> Schedule TRK004 (Martinez) for preventive service</li>
+            <li><strong>Revenue Optimization:</strong> Renegotiate AgriGrain Distribution rates</li>
+            <li><strong>Fleet Availability:</strong> Return TRK003 from maintenance to active service</li>
+        </ol>
+        
+        <h3>GROWTH OPPORTUNITIES</h3>
+        <ol>
+            <li><strong>Market Focus:</strong> Expand manufacturing/construction customer base</li>
+            <li><strong>Route Optimization:</strong> Prioritize TX Triangle corridor (Austin-San Antonio-Houston)</li>
+            <li><strong>Rate Improvement:</strong> Target minimum $3.20/mile for new contracts</li>
+            <li><strong>Fleet Expansion:</strong> Consider adding 1-2 units for Q2 2024</li>
+        </ol>
+        
+        <h3>RISK MITIGATION</h3>
+        <ol>
+            <li><strong>Diversification:</strong> Reduce dependency on seasonal agricultural customers</li>
+            <li><strong>Cash Flow:</strong> Improve payment terms (target Net 20-25 days average)</li>
+            <li><strong>Preventive Maintenance:</strong> Increase PM schedule compliance to 80%+</li>
+            <li><strong>Driver Retention:</strong> Implement performance incentive programs</li>
+        </ol>
+    </div>
+    
+    <div class="section">
+        <h2>📈 OUTLOOK & PROJECTIONS</h2>
+        
+        <h3>Q1 2024 Forecast</h3>
+        <ul>
+            <li><strong>Projected Revenue:</strong> $13,500-15,000</li>
+            <li><strong>Target Profit Margin:</strong> 70%+</li>
+            <li><strong>Fleet Utilization Goal:</strong> 85%+</li>
+            <li><strong>New Customer Acquisition:</strong> 2-3 accounts</li>
+        </ul>
+        
+        <h3>Investment Priorities</h3>
+        <ol>
+            <li><strong>Technology:</strong> ELD/HOS monitoring system ($15K)</li>
+            <li><strong>Fleet:</strong> 1 additional tractor unit ($180K)</li>
+            <li><strong>Maintenance:</strong> Preventive service equipment ($25K)</li>
+            <li><strong>Safety:</strong> Driver training programs ($8K)</li>
+        </ol>
+    </div>
+    
+    <div class="conclusion">
+        <h2>CONCLUSION</h2>
+        
+        <p><strong>Current State:</strong> Fleet operations are performing at 89% of target across key metrics with strong revenue generation but requiring attention to compliance and maintenance optimization.</p>
+        
+        <p><strong>Key Strengths:</strong> High-value customer relationships, profitable route mix, experienced driver base.</p>
+        
+        <p><strong>Priority Focus:</strong> Immediate compliance intervention required, followed by systematic maintenance optimization and strategic growth planning.</p>
+        
+        <p><strong>Board Action Required:</strong> Approval for technology investment and Q2 fleet expansion planning.</p>
+    </div>
+    
+    <div class="footer">
+        <p><em>Report prepared by: Main Logistics Supervisor</em><br>
+        <em>Next Review: February 15, 2024</em><br>
+        <em>For questions contact: Operations Command Center</em></p>
+    </div>
+</body>
+</html>

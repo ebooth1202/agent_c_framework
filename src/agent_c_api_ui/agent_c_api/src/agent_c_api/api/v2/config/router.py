@@ -1,12 +1,14 @@
 from fastapi import APIRouter, HTTPException, Depends, Path, Query, Request
 from typing import Optional
 # Removed fastapi_versioning import - using directory structure for versioning
+from fastapi_cache import FastAPICache
 
 from .services import ConfigService
 from agent_c_api.api.v2.models.config_models import (
     ModelInfo, PersonaInfo, ToolInfo,
     ModelsResponse, AgentConfigsResponse, ToolsResponse, SystemConfigResponse
 )
+from agent_c_api.api.v2.models.response_models import APIResponse, APIStatus
 
 # Create router with prefix and tags
 router = APIRouter(
@@ -359,6 +361,50 @@ async def get_system_config(
             detail={
                 "error": "Failed to retrieve system configuration",
                 "error_code": "CONFIG_RETRIEVAL_ERROR",
+                "message": str(e)
+            }
+        )
+
+# Cache management endpoint
+@router.post("/cache/clear", 
+           response_model=APIResponse[dict],
+           summary="Clear Configuration Cache",
+           description="Clears the configuration cache to force reload of agents, models, and tools.")
+async def clear_config_cache():
+    """
+    Clear the configuration cache to force reload of agents, models, and tools.
+    
+    This endpoint clears the FastAPI cache used by the configuration service,
+    forcing all subsequent requests to reload data from the source files.
+    Useful when agent configurations have been updated and need to be reflected
+    in the API immediately without waiting for cache expiration.
+    
+    Returns:
+        APIResponse: Success message confirming cache was cleared
+        
+    Example:
+        ```python
+        import requests
+        
+        response = requests.post("https://your-agent-c-instance.com/api/v2/config/cache/clear")
+        result = response.json()
+        ```
+    """
+    try:
+        await FastAPICache.clear()
+        return APIResponse(
+            status=APIStatus(
+                success=True,
+                message="Configuration cache cleared successfully"
+            ),
+            data={"cache_cleared": True}
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "Failed to clear configuration cache",
+                "error_code": "CACHE_CLEAR_ERROR",
                 "message": str(e)
             }
         )

@@ -1,0 +1,60 @@
+# Personal Effects and Character Items for Ravenscroft Manor
+
+objects:
+  family_crests:
+    id: "family_crests"
+    name: "Ravenscroft Family Crests"
+    type: "heraldic"
+    location: "entrance_hall"
+    description: "Elaborate family crests displaying the Ravenscroft coat of arms and motto. The Latin inscription speaks of honor and duty—ideals the current generation struggles to maintain."
+    secrets: ["family_motto_irony", "heraldic_symbolism"]
+
+  hunting_trophies:
+    id: "hunting_trophies"
+    name: "Hunting Trophy Collection"
+    type: "personal_collection"
+    location: "entrance_hall"
+    description: "Mounted heads and hunting memorabilia from generations of Ravenscroft sporting expeditions. Recent additions suggest Lord Ravenscroft's final attempts at maintaining appearances."
+    secrets: ["recent_expensive_purchases", "maintaining_facade"]
+
+  marble_staircase:
+    id: "marble_staircase"
+    name: "Grand Marble Staircase"
+    type: "architectural"
+    location: "entrance_hall"
+    description: "An imposing marble staircase leading to the private family quarters upstairs. The bannister shows wear from anxious gripping."
+    interactions:
+      examine: "Bannister shows unusual wear patterns from recent anxious use"
+    access_requirements: ["family_permission", "butler_escort"]
+
+  garden_tools:
+    id: "garden_tools"
+    name: "Conservatory Garden Tools"
+    type: "implements"
+    location: "conservatory"
+    description: "Well-maintained tools for tending the exotic plants. Some show signs of recent unusual use."
+    interactions:
+      examine: "Some tools show soil stains and recent cleaning"
+    secrets: ["burial_evidence", "ground_disturbance"]
+
+  fireplace:
+    id: "fireplace"
+    name: "Library Fireplace"
+    type: "architectural"
+    location: "library"
+    description: "A grand marble fireplace with a crackling fire. The ashes show evidence of recent paper burning."
+    interactions:
+      examine: "Ashes contain fragments of burned documents"
+      search_ashes: "Reveals partially burned evidence of financial documents"
+    secrets: ["document_destruction", "evidence_burning"]
+
+  gossip_corner:
+    id: "gossip_corner"
+    name: "Servants' Gossip Corner"
+    type: "social_space"
+    location: "servants_hall"
+    description: "A corner where servants gather to share information about the family's affairs. Whispered conversations cease when outsiders approach."
+    interactions:
+      listen: "Requires gaining servants' trust to overhear conversations"
+      join_conversation: "Servants clam up around strangers initially"
+    secrets: ["servant_knowledge", "household_secrets", "staff_observations"]

@@ -1,0 +1,244 @@
+# Mystery Genre Template Library Architecture
+
+## System Overview
+Multi-genre template library system with specialized agent templates for different mystery settings, coordinated through improved handoff flow from initial user request to final world-specific agent team.
+
+## Genre Template Libraries
+
+### Victorian Gothic Library
+```yaml
+library_id: "victorian_gothic"
+template_agents:
+  - mystery_game_master_template_victorian
+  - mystery_world_builder_template_victorian
+  - mystery_environment_specialist_template_victorian
+  - mystery_character_specialist_template_victorian
+  - mystery_rules_guru_template_victorian
+  - mystery_tutorial_guide_template_victorian
+  - mystery_fail_safe_coordinator_template_victorian
+
+specializations:
+  architecture: ["manor_houses", "estate_grounds", "servant_quarters", "formal_gardens"]
+  social_structure: ["aristocracy", "servant_hierarchy", "family_dynamics", "social_propriety"]
+  technology: ["gas_lighting", "mechanical_locks", "horse_carriages", "telegram_systems"]
+  character_types: ["butler", "maid", "groundskeeper", "lord", "lady", "governess"]
+  mystery_elements: ["family_secrets", "inheritance_disputes", "hidden_passages", "ancestral_curses"]
+```
+
+### Space Station Library
+```yaml
+library_id: "space_station"
+template_agents:
+  - mystery_game_master_template_space
+  - mystery_world_builder_template_space
+  - mystery_environment_specialist_template_space
+  - mystery_character_specialist_template_space
+  - mystery_rules_guru_template_space
+  - mystery_tutorial_guide_template_space
+  - mystery_fail_safe_coordinator_template_space
+
+specializations:
+  environments: ["command_bridge", "engineering_deck", "hydroponics_bay", "airlocks", "observation_dome"]
+  systems: ["life_support", "artificial_gravity", "reactor_core", "navigation", "communications"]
+  technology: ["holographic_interfaces", "ai_systems", "force_fields", "teleportation", "energy_weapons"]
+  character_types: ["commander", "engineer", "scientist", "pilot", "ai_construct", "alien_diplomat"]
+  mystery_elements: ["sabotage", "alien_artifacts", "system_failures", "corporate_espionage", "time_anomalies"]
+```
+
+### Underwater Research Library
+```yaml
+library_id: "underwater_research"
+template_agents:
+  - mystery_game_master_template_underwater
+  - mystery_world_builder_template_underwater
+  - mystery_environment_specialist_template_underwater
+  - mystery_character_specialist_template_underwater
+  - mystery_rules_guru_template_underwater
+  - mystery_tutorial_guide_template_underwater
+  - mystery_fail_safe_coordinator_template_underwater
+
+specializations:
+  environments: ["research_labs", "diving_chambers", "observation_decks", "submarine_docks", "deep_sea_trenches"]
+  systems: ["pressure_regulation", "oxygen_recycling", "sonar_navigation", "emergency_surfacing", "hull_integrity"]
+  marine_life: ["bioluminescent_creatures", "deep_sea_predators", "symbiotic_organisms", "coral_ecosystems"]
+  character_types: ["marine_biologist", "deep_sea_diver", "submarine_captain", "research_director", "equipment_specialist"]
+  mystery_elements: ["specimen_theft", "pressure_accidents", "unknown_species", "corporate_sabotage", "ancient_ruins"]
+```
+
+### Modern Urban Library
+```yaml
+library_id: "modern_urban"
+template_agents:
+  - mystery_game_master_template_urban
+  - mystery_world_builder_template_urban
+  - mystery_environment_specialist_template_urban
+  - mystery_character_specialist_template_urban
+  - mystery_rules_guru_template_urban
+  - mystery_tutorial_guide_template_urban
+  - mystery_fail_safe_coordinator_template_urban
+
+specializations:
+  environments: ["corporate_offices", "apartment_buildings", "shopping_centers", "parking_garages", "rooftop_gardens"]
+  technology: ["security_systems", "digital_locks", "surveillance_cameras", "computer_networks", "smart_devices"]
+  urban_systems: ["elevator_mechanics", "hvac_systems", "fire_safety", "building_codes", "utility_access"]
+  character_types: ["security_guard", "office_worker", "building_manager", "detective", "corporate_executive"]
+  mystery_elements: ["corporate_fraud", "identity_theft", "surveillance_networks", "digital_evidence", "urban_legends"]
+```
+
+### Wilderness Survival Library
+```yaml
+library_id: "wilderness_survival"
+template_agents:
+  - mystery_game_master_template_wilderness
+  - mystery_world_builder_template_wilderness
+  - mystery_environment_specialist_template_wilderness
+  - mystery_character_specialist_template_wilderness
+  - mystery_rules_guru_template_wilderness
+  - mystery_tutorial_guide_template_wilderness
+  - mystery_fail_safe_coordinator_template_wilderness
+
+specializations:
+  environments: ["forest_clearings", "mountain_cabins", "river_crossings", "cave_systems", "wildlife_trails"]
+  survival_systems: ["weather_patterns", "food_sources", "shelter_construction", "navigation", "first_aid"]
+  natural_elements: ["seasonal_changes", "animal_behavior", "plant_identification", "geological_features"]
+  character_types: ["park_ranger", "local_guide", "hermit", "hiker", "wildlife_researcher"]
+  mystery_elements: ["missing_persons", "poaching_operations", "ancient_artifacts", "environmental_crimes", "folklore_mysteries"]
+```
+
+### Cyberpunk Noir Library
+```yaml
+library_id: "cyberpunk_noir"
+template_agents:
+  - mystery_game_master_template_cyberpunk
+  - mystery_world_builder_template_cyberpunk
+  - mystery_environment_specialist_template_cyberpunk
+  - mystery_character_specialist_template_cyberpunk
+  - mystery_rules_guru_template_cyberpunk
+  - mystery_tutorial_guide_template_cyberpunk
+  - mystery_fail_safe_coordinator_template_cyberpunk
+
+specializations:
+  environments: ["neon_districts", "corporate_towers", "underground_clubs", "hacker_dens", "virtual_reality_spaces"]
+  technology: ["neural_interfaces", "holographic_displays", "cyber_implants", "ai_networks", "quantum_encryption"]
+  social_systems: ["corporate_hierarchy", "underground_economy", "hacker_collectives", "street_gangs", "ai_rights"]
+  character_types: ["corporate_hacker", "street_runner", "ai_construct", "cyber_detective", "tech_mogul"]
+  mystery_elements: ["data_theft", "ai_consciousness", "corporate_conspiracies", "virtual_murders", "memory_manipulation"]
+```
+
+## Improved Handoff Flow Architecture
+
+### Decision Chain Flow
+```yaml
+handoff_sequence:
+  1_entry_point:
+    agent: "mystery_genre_router"
+    function: "User greeting, genre detection, preference capture"
+    output: "Genre selection + user preferences"
+    
+  2_specialized_world_building:
+    agent: "mystery_world_builder_[genre]"
+    function: "Genre-specific world creation with domain expertise"
+    input: "Genre context + user preferences"
+    output: "Complete world file with genre specialization"
+    
+  3_template_coordination:
+    agent: "mystery_template_coordinator_[genre]"
+    function: "Genre-aware agent team composition analysis"
+    input: "World file + genre specialization requirements"
+    output: "Optimal agent team specification for genre"
+    
+  4_specialized_cloning:
+    agent: "mystery_cloning_coordinator"
+    function: "Genre template instantiation with world context"
+    input: "Genre template library + world customization"
+    output: "World-specific agent team with genre expertise"
+    
+  5_tutorial_handoff:
+    agent: "mystery_tutorial_guide_[world]_[genre]"
+    function: "Genre-appropriate player onboarding"
+    input: "World-specific team + genre knowledge"
+    output: "Prepared player ready for genre-specific gameplay"
+    
+  6_gameplay_orchestration:
+    agent: "mystery_game_master_[world]_[genre]"
+    function: "Genre-expert gameplay coordination"
+    input: "Tutorial completion + specialized agent team"
+    output: "Rich, authentic genre-specific mystery experience"
+```
+
+### Handoff Data Standards
+```yaml
+standardized_handoff_format:
+  metadata:
+    from_agent: "source_agent_key"
+    to_agent: "target_agent_key"
+    handoff_timestamp: "ISO_timestamp"
+    handoff_type: "genre_routing|world_building|template_coordination|cloning|tutorial|gameplay"
+    
+  context_data:
+    genre_specialization: "detected_or_selected_genre"
+    user_preferences: "captured_requirements_and_preferences"
+    world_context: "world_file_path_and_key_details"
+    agent_specifications: "required_agents_and_customizations"
+    
+  quality_assurance:
+    validation_status: "passed|failed"
+    completeness_check: "all_required_data_present"
+    downstream_readiness: "next_agent_available_and_prepared"
+    
+  efficiency_metrics:
+    token_usage: "handoff_overhead_tokens"
+    processing_time: "handoff_completion_seconds"
+    context_compression: "optimization_applied"
+```
+
+## Template Creation Priority
+
+### Phase 1: Core Genres (Immediate)
+1. **Victorian Gothic** - Already partially developed, needs specialization
+2. **Space Station** - High user interest, clear specialization requirements
+3. **Modern Urban** - Broad appeal, familiar setting
+
+### Phase 2: Specialized Genres (1-2 weeks)
+4. **Underwater Research** - Unique environment, interesting technical challenges
+5. **Wilderness Survival** - Natural settings, survival mechanics
+
+### Phase 3: Advanced Genres (2-4 weeks)
+6. **Cyberpunk Noir** - Complex technology, sophisticated social systems
+7. **Additional genres based on user demand**
+
+## Implementation Strategy
+
+### Template Development Process
+```yaml
+template_creation_workflow:
+  1_genre_analysis:
+    - Research genre conventions and expectations
+    - Identify unique environmental, character, and system elements
+    - Define specialization boundaries and expertise areas
+    
+  2_template_customization:
+    - Adapt base template structure for genre-specific knowledge
+    - Inject domain expertise and specialized examples
+    - Optimize for genre-appropriate language and concepts
+    
+  3_integration_testing:
+    - Validate handoff flow with genre-specific templates
+    - Test cloning process with specialized customization
+    - Verify agent coordination within genre context
+    
+  4_quality_assurance:
+    - Ensure authentic genre representation
+    - Validate token efficiency and response quality
+    - Test edge cases and error handling
+```
+
+### Success Metrics
+```yaml
+system_performance_targets:
+  genre_detection_accuracy: ">95% user satisfaction"
+  handoff_efficiency: "<500 tokens overhead per handoff"
+  template_specialization: ">90% genre-appropriate responses"
+  user_experience: ">95% smooth progression through pipeline"
+  system_scalability: "Support for unlimited genre expansion"
+```

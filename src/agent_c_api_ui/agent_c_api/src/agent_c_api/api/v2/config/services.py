@@ -87,11 +87,10 @@ class ConfigService:
     @cache(expire=300)  # Cache for 5 minutes
     async def get_agent_configs(self) -> AgentConfigsResponse:
         """
-        Get available personas using the existing file-based mechanism
+        Get available agent configurations
         """
         return AgentConfigsResponse(agents=list(self.agent_config_loader.catalog.values()))
 
-    
     @cache(expire=300)  # Cache for 5 minutes
     async def get_agent_config(self, agent_key: str) -> Optional['CurrentAgentConfiguration']:
         """
@@ -101,6 +100,42 @@ class ConfigService:
             return None
 
         return self.agent_config_loader.catalog[agent_key]
+    
+    @cache(expire=300)  # Cache for 5 minutes
+    async def get_personas(self) -> AgentConfigsResponse:
+        """
+        Get available personas (agents with 'domo' category) using the existing file-based mechanism
+        """
+        # Filter agents that have 'domo' in their category (similar to v1 personas endpoint)
+        domo_agents = []
+        for agent_config in self.agent_config_loader.catalog.values():
+            if "domo" in agent_config.category:
+                domo_agents.append(agent_config)
+        
+        return AgentConfigsResponse(agents=domo_agents)
+    
+    @cache(expire=300)  # Cache for 5 minutes
+    async def get_persona(self, persona_id: str) -> Optional[PersonaInfo]:
+        """
+        Get a specific persona by ID, converted to PersonaInfo format
+        """
+        if persona_id not in self.agent_config_loader.catalog:
+            return None
+        
+        agent_config = self.agent_config_loader.catalog[persona_id]
+        
+        # Only return if this agent has 'domo' in category (is a persona)
+        if "domo" not in agent_config.category:
+            return None
+        
+        # Convert AgentConfiguration to PersonaInfo
+        return PersonaInfo(
+            id=agent_config.key,
+            name=agent_config.name,
+            description=agent_config.agent_description,
+            file_path=f"{agent_config.key}.yaml",
+            content=agent_config.persona[:1000] if agent_config.persona else None  # Truncate for display
+        )
     
     @cache(expire=300)  # Cache for 5 minutes
     async def get_tools(self) -> ToolsResponse:
@@ -173,9 +208,21 @@ class ConfigService:
         personas_response = await self.get_personas()
         tools_response = await self.get_tools()
         
+        # Convert AgentConfiguration objects to PersonaInfo objects
+        persona_infos = []
+        for agent_config in personas_response.agents:
+            persona_info = PersonaInfo(
+                id=agent_config.key,
+                name=agent_config.name,
+                description=agent_config.agent_description,
+                file_path=f"{agent_config.key}.yaml",
+                content=agent_config.persona[:1000] if agent_config.persona else None  # Truncate for display
+            )
+            persona_infos.append(persona_info)
+        
         return SystemConfigResponse(
             models=models_response.models,
-            personas=personas_response.personas,
+            personas=persona_infos,
             tools=tools_response.tools,
             tool_categories=tools_response.categories,
             essential_tools=tools_response.essential_tools

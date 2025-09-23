@@ -142,5 +142,5 @@ class LoginResponse(BaseModel):
 class RealtimeLoginResponse(BaseModel):
     """Response model for avatar login with config payload."""
     agent_c_token: str = Field(..., description="JWT authentication token")
-    heygen_token: str = Field(..., description="HeyGen access token")
+    heygen_token: Optional[str] = Field(None, description="HeyGen access token (optional for development)")
     ui_session_id: str = Field(..., description="UI session identifier")

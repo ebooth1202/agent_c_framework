@@ -26,6 +26,7 @@ services:
     volumes:
       - ${AGENT_C_IMAGES_PATH}:/app/images  # Mounted volume for saved images
       - ${AGENT_C_PERSONAS_PATH}:/app/agent_c_config/agents/local  # Local agents
+      - ${PROJECT_WORKSPACE_PATH}/agent_c_config:/app/agent_c_config  # Mount entire config directory
       - ${DOCUMENTS_WORKSPACE}:/app/workspaces/documents  # Mount documents workspace directory
       - ${DOWNLOADS_WORKSPACE}:/app/workspaces/downloads  # Mount downloads workspace directory
       - ${DESKTOP_WORKSPACE}:/app/workspaces/desktop  # Mount desktop workspace directory

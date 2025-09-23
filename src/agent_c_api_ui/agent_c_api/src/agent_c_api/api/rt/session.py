@@ -23,7 +23,7 @@ logger = LoggingManager(__name__).get_logger()
 @router.post("/login", response_model=RealtimeLoginResponse)
 async def login(login_request: UserLoginRequest,
                 auth_service: "AuthService" = Depends(get_auth_service),
-                heygen_client: "HeyGenStreamingClient" = Depends(get_heygen_client)) -> RealtimeLoginResponse:
+                heygen_client: Optional["HeyGenStreamingClient"] = Depends(get_heygen_client)) -> RealtimeLoginResponse:
     """
     Authenticate user and return config with token.
     """
@@ -32,11 +32,22 @@ async def login(login_request: UserLoginRequest,
     if not login_response:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
+<<<<<<< HEAD
     # Get config data
     if heygen_client is not None:
         heygen_token = await heygen_client.create_streaming_access_token()
     else:
         heygen_token = "None"
+=======
+    # Get config data - make HeyGen token optional for development
+    heygen_token = None
+    try:
+        if heygen_client:
+            heygen_token = await heygen_client.create_streaming_access_token()
+    except Exception as e:
+        logger.warning(f"HeyGen token generation failed (continuing without): {e}")
+        heygen_token = None
+>>>>>>> 6b21e21a84ec28e76be5ccee55f32886d58d8245
 
     return RealtimeLoginResponse(agent_c_token=login_response.token,
                                  heygen_token=heygen_token,

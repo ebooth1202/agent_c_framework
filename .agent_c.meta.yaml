@@ -951,6 +951,198 @@ _plans:
         updated_at: '2025-06-13T10:11:01.816739'
     title: Agent Variant Testing & Refinement Framework
     updated_at: '2025-06-13T10:51:16.358977'
+  bobs_insurance_team_plan:
+    created_at: '2025-09-10T18:55:41.586241'
+    description: Design and implement a multi-agent team for Bob's Insurance that
+      handles COBOL file processing, data extraction, and Excel file management through
+      a coordinated workflow.
+    id: 9af81ade-2a5a-40cd-a8ea-f84298112430
+    lessons_learned: []
+    tasks:
+      132cebfb-fdd2-47e2-b509-1e4973a4dbfb:
+        child_tasks: []
+        completed: true
+        completion_report: 'Created Data Extraction Specialist agent with:
+
+          - Insurance-specific data extraction expertise
+
+          - State-specific and regulatory compliance processing
+
+          - Rate and pricing data handling capabilities
+
+          - Excel-optimized output preparation
+
+          - Quality assurance and validation framework
+
+          - Progressive disclosure for complex processing features'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-10T18:56:03.310769'
+        description: Create the agent that processes COBOL file information and extracts
+          specific insurance data, rates, and other requested information
+        id: 132cebfb-fdd2-47e2-b509-1e4973a4dbfb
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 5
+        title: Design Data Extraction Agent
+        updated_at: '2025-09-10T18:58:46.622111'
+      40a7bade-d388-4278-b920-8d61eba1ba07:
+        child_tasks: []
+        completed: true
+        completion_report: 'Requirements analyzed:
+
+          - 4-agent team: Gatekeeper (orchestrator) + 3 specialized agents
+
+          - Workflow: Client input → COBOL interpretation → Data extraction → Excel
+          management → Validation & response
+
+          - Need to follow Agent C prompt rendering guidelines
+
+          - Must create directory structure and individual agent files
+
+          - Team should follow multi-agent coordination principles with sequential
+          processing'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-10T18:55:45.900239'
+        description: Analyze the user requirements and design the overall team architecture
+          following multi-agent design principles
+        id: 40a7bade-d388-4278-b920-8d61eba1ba07
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 1
+        title: Analyze Requirements and Design Team Architecture
+        updated_at: '2025-09-10T18:56:18.221119'
+      43108cef-fc8d-4a23-8caf-bd198f15ba28:
+        child_tasks: []
+        completed: true
+        completion_report: 'Created comprehensive workflow documentation including:
+
+          - Complete team architecture and agent composition
+
+          - Detailed workflow process with critical markers
+
+          - Quality gates and error recovery procedures
+
+          - Performance standards and communication protocols
+
+          - Planning tool integration and metadata management
+
+          - Success metrics and continuous improvement framework'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-10T18:56:11.665850'
+        description: Create comprehensive documentation explaining the team workflow,
+          agent interactions, and critical markers
+        id: 43108cef-fc8d-4a23-8caf-bd198f15ba28
+        parent_id: null
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 7
+        title: Create Workflow Documentation
+        updated_at: '2025-09-10T19:00:47.695484'
+      6b599049-c6cd-4e42-a9bf-169a657090a7:
+        child_tasks: []
+        completed: true
+        completion_report: 'Created COBOL File Interpreter agent with:
+
+          - Comprehensive COBOL language expertise and file processing capabilities
+
+          - File identification and data extraction procedures
+
+          - Structured handoff preparation for downstream agents
+
+          - Insurance industry context and compliance considerations
+
+          - Progressive disclosure for technical details and error handling'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-10T18:55:59.326674'
+        description: Create the agent that understands COBOL, interprets client input
+          codes/numbers, and identifies/extracts file information
+        id: 6b599049-c6cd-4e42-a9bf-169a657090a7
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 4
+        title: Design COBOL File Interpreter Agent
+        updated_at: '2025-09-10T18:57:55.411135'
+      819ed349-c4c4-42c0-97e2-65a601719593:
+        child_tasks: []
+        completed: true
+        completion_report: 'Created gatekeeper orchestrator agent with:
+
+          - Client interface and workflow coordination capabilities
+
+          - Team member delegation framework with agent keys
+
+          - Quality assurance and validation protocols
+
+          - Bob''s Insurance service standards
+
+          - Planning tool integration for workflow management
+
+          - Progressive disclosure for advanced features'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-10T18:55:54.533495'
+        description: Create the main orchestrator agent that coordinates the entire
+          workflow and interfaces with clients
+        id: 819ed349-c4c4-42c0-97e2-65a601719593
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 3
+        title: Design Gatekeeper Agent (Orchestrator)
+        updated_at: '2025-09-10T18:57:06.443916'
+      bcf1bed0-1f3a-4090-bfc9-8968d9a96cce:
+        child_tasks: []
+        completed: true
+        completion_report: 'Created Excel File Manager agent with:
+
+          - Comprehensive Excel file operation capabilities
+
+          - Professional formatting and Bob''s Insurance branding standards
+
+          - Advanced Excel features including pivot tables, charts, and automation
+
+          - File security and protection measures
+
+          - Quality assurance framework and deliverable standards
+
+          - Progressive disclosure for advanced features and technical details'
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-10T18:56:07.815017'
+        description: Create the agent that handles Excel file operations - creating,
+          updating, amending files and managing file paths
+        id: bcf1bed0-1f3a-4090-bfc9-8968d9a96cce
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 6
+        title: Design Excel File Manager Agent
+        updated_at: '2025-09-10T18:59:41.603805'
+      e8b4f398-f28f-4824-a0cf-285b19f36bc1:
+        child_tasks: []
+        completed: true
+        completion_report: Created directory structure at //project/.scratch/Bobs_insurance/
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-10T18:55:50.305995'
+        description: Create the //project/.scratch/Bobs_insurance directory and set
+          up the file structure
+        id: e8b4f398-f28f-4824-a0cf-285b19f36bc1
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 2
+        title: Create Directory Structure
+        updated_at: '2025-09-10T18:56:25.998432'
+    title: Bob's Insurance Multi-Agent Team Design
+    updated_at: '2025-09-10T19:00:47.695502'
   bok_bakeoff_agents:
     created_at: '2025-06-07T17:12:23.012364'
     description: Development of variant BOKF agents and iteration on delegation systems

@@ -9,86 +9,73 @@ from fastapi import Depends
 from typing import Optional
 from redis import asyncio as aioredis
 
-from agent_c_api.api.dependencies import get_redis_client, get_redis_client_optional
+# Import Redis dependencies directly to avoid circular imports
+from agent_c_api.config.redis_config import RedisConfig
 from .session_repository import SessionRepository
 from .user_repository import UserRepository
 from .chat_repository import ChatRepository
 
 
-async def get_session_repository(
-    redis_client: aioredis.Redis = Depends(get_redis_client)
-) -> SessionRepository:
+async def get_session_repository() -> SessionRepository:
     """
     FastAPI dependency that provides a SessionRepository.
     
     This dependency creates a SessionRepository with a Redis client,
     failing fast if Redis is not available.
-    
-    Args:
-        redis_client: Redis client dependency
         
     Returns:
         SessionRepository instance
     """
+    redis_client = await RedisConfig.get_client()
     return SessionRepository(redis_client)
 
 
-async def get_session_repository_optional(
-    redis_client: Optional[aioredis.Redis] = Depends(get_redis_client_optional)
-) -> Optional[SessionRepository]:
+async def get_session_repository_optional() -> Optional[SessionRepository]:
     """
     FastAPI dependency that provides an optional SessionRepository.
     
     This dependency provides graceful degradation when Redis is not available,
     returning None instead of raising an exception.
-    
-    Args:
-        redis_client: Optional Redis client dependency
         
     Returns:
         SessionRepository instance if Redis is available, None otherwise
     """
-    if redis_client is None:
+    try:
+        redis_client = await RedisConfig.get_client()
+        return SessionRepository(redis_client)
+    except Exception:
         return None
-    return SessionRepository(redis_client)
 
 
-async def get_user_repository(
-    redis_client: aioredis.Redis = Depends(get_redis_client)
-) -> UserRepository:
+async def get_user_repository() -> UserRepository:
     """
     FastAPI dependency that provides a UserRepository.
     
     This dependency creates a UserRepository with a Redis client,
     failing fast if Redis is not available.
-    
-    Args:
-        redis_client: Redis client dependency
         
     Returns:
         UserRepository instance
     """
+    redis_client = await RedisConfig.get_client()
     return UserRepository(redis_client)
 
 
-async def get_user_repository_optional(
-    redis_client: Optional[aioredis.Redis] = Depends(get_redis_client_optional)
-) -> Optional[UserRepository]:
+async def get_user_repository_optional() -> Optional[UserRepository]:
     """
     FastAPI dependency that provides an optional UserRepository.
     
     This dependency provides graceful degradation when Redis is not available,
     returning None instead of raising an exception.
-    
-    Args:
-        redis_client: Optional Redis client dependency
         
     Returns:
         UserRepository instance if Redis is available, None otherwise
     """
-    if redis_client is None:
+    try:
+        redis_client = await RedisConfig.get_client()
+        return UserRepository(redis_client)
+    except Exception:
         return None
-    return UserRepository(redis_client)
 
 
 # Note: ChatRepository dependencies are not included here because ChatRepository

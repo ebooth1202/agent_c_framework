@@ -1,0 +1,15 @@
+# Shadow Pines Manor - Test Game State
+world_reference: "shadow_pines_manor"
+world_file: "//project/mystery_worlds/shadow_pines_manor.yaml"
+
+player_state:
+  current_location: "front_grounds"
+  inventory: []
+  discovered_clues: ["portrait_hint", "tire_tracks_clue", "empty_fuel_tanks"]
+  character_relationships:
+    butler_james: "neutral"
+  progress_flags: ["examined_portrait_carefully", "found_tire_tracks", "tried_start_dirtbike_without_gas", "checked_dirtbike_gas"]
+  session_data:
+    play_time: 0
+    last_action: "checked_dirtbike_gas_level"
+    world_loaded: "shadow_pines_manor"
