@@ -308,7 +308,7 @@ persona: |
       const error = this.video.error;
       if (error) {
         throw new AvatarError(
-          `Video error: ${error.message}`,
+          `Video error: $${error.message}`,
           AvatarErrorCode.VIDEO_LOAD_FAILED,
           new Error(error.message)
         );
@@ -378,7 +378,7 @@ persona: |
       const validTransitions = this.stateTransitions.get(this.currentState);
       
       if (!validTransitions?.has(newState)) {
-        throw new Error(`Invalid transition from ${this.currentState} to ${newState}`);
+        throw new Error(`Invalid transition from $${this.currentState} to $${newState}`);
       }
       
       const previousState = this.currentState;

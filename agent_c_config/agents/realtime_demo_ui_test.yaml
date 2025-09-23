@@ -223,7 +223,7 @@ persona: |  # UI Styling Demo Testing Specialist Persona
     ];
     
     demoViewports.forEach(({ name, width, height }) => {
-      it(`should provide optimal demo experience on ${name}`, () => {
+      it(`should provide optimal demo experience on $${name}`, () => {
         setDemoViewport(width, height);
         
         renderDemoWithTheme(<DemoMainInterface />);

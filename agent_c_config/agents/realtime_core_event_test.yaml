@@ -160,7 +160,7 @@ persona: |
       it('should handle concurrent text and audio streams', async () => {
         const textEvents = Array.from({ length: 10 }, (_, i) => ({
           ...serverEventFixtures.textDelta,
-          content: `Text ${i}`,
+          content: `Text $${i}`,
           interaction_id: 'text-stream'
         }));
 
@@ -257,7 +257,7 @@ persona: |
       malformedEvents.forEach((malformedEvent, index) => {
         expect(() => {
           processor.processEvent(malformedEvent as any);
-        }).not.toThrow(`Should not throw for malformed event ${index}`);
+        }).not.toThrow(`Should not throw for malformed event $${index}`);
       });
 
       // Should emit errors but continue processing
@@ -407,7 +407,7 @@ persona: |
       for (let i = 0; i < 1000; i++) {
         processor.processEvent({
           ...serverEventFixtures.textDelta,
-          content: `Message ${i}`
+          content: `Message $${i}`
         });
       }
 
@@ -426,8 +426,8 @@ persona: |
       for (let i = 0; i < 10000; i++) {
         processor.processEvent({
           ...serverEventFixtures.textDelta,
-          content: `Event ${i}`,
-          interaction_id: `interaction-${Math.floor(i / 100)}`
+          content: `Event $${i}`,
+          interaction_id: `interaction-$${Math.floor(i / 100)}`
         });
 
         // Clean up completed interactions periodically
@@ -553,7 +553,7 @@ persona: |
       const processingOrder: string[] = [];
       
       processor.registerHandler('text_delta', (event) => {
-        processingOrder.push(`start-${event.content}`);
+        processingOrder.push(`start-$${event.content}`);
         
         // Try to process another event during handler execution
         processor.processEvent({
@@ -561,7 +561,7 @@ persona: |
           content: 'nested'
         });
         
-        processingOrder.push(`end-${event.content}`);
+        processingOrder.push(`end-$${event.content}`);
       });
       
       processor.processEvent({
@@ -599,12 +599,12 @@ persona: |
       
       // Test all server events
       Object.entries(serverEventFixtures).forEach(([eventType, fixture]) => {
-        expected(validator.validate(fixture), `${eventType} should be valid`).toBe(true);
+        expected(validator.validate(fixture), `$${eventType} should be valid`).toBe(true);
       });
       
       // Test all client events  
       Object.entries(clientEventFixtures).forEach(([eventType, fixture]) => {
-        expect(validator.validate(fixture), `${eventType} should be valid`).toBe(true);
+        expect(validator.validate(fixture), `$${eventType} should be valid`).toBe(true);
       });
     });
   });

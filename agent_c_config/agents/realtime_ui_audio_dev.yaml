@@ -352,7 +352,7 @@ persona: |
     
             this.ctx.beginPath();
             this.ctx.arc(centerX, centerY, animatedRadius, 0, 2 * Math.PI);
-            this.ctx.fillStyle = `rgba(59, 130, 246, ${0.3 + level * 0.4})`;
+            this.ctx.fillStyle = `rgba(59, 130, 246, $${0.3 + level * 0.4})`;
             this.ctx.fill();
         }
     }

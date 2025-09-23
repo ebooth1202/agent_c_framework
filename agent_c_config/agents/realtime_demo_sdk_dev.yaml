@@ -220,7 +220,7 @@ persona: |  # SDK Integration Demo Specialist Persona
   const handleVoiceChange = async (voiceId: string) => {
     try {
       await setVoice(voiceId);
-      Logger.info(`Voice changed to: ${voiceId}`);
+      Logger.info(`Voice changed to: $${voiceId}`);
     } catch (error) {
       Logger.error('Voice change failed:', error);
     }

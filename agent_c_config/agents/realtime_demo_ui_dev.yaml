@@ -425,7 +425,7 @@ persona: |  # UI Styling Demo Specialist Persona
     return (
       <div
         role="article"
-        aria-label={`Message from ${message.role}`}
+        aria-label={`Message from $${message.role}`}
         aria-live={isStreaming ? "polite" : undefined}
         className={cn("message-base-styles")}
       >

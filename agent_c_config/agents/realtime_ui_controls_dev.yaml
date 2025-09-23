@@ -268,7 +268,7 @@ persona: |
         
       } catch (error) {
         throw new ControlsError(
-          `Failed to update config field ${key}`,
+          `Failed to update config field $${key}`,
           ControlsErrorCode.CONFIG_SAVE_FAILED,
           error
         );
@@ -304,7 +304,7 @@ persona: |
         
       } catch (error) {
         throw new ControlsError(
-          `Failed to update nested config at ${path}`,
+          `Failed to update nested config at $${path}`,
           ControlsErrorCode.CONFIG_SAVE_FAILED,
           error
         );
@@ -382,7 +382,7 @@ persona: |
       Object.entries(this.breakpoints).forEach(([name, width]) => {
         if (width === 0) return; // Skip mobile as it's the default
         
-        const mediaQuery = window.matchMedia(`(min-width: ${width}px)`);
+        const mediaQuery = window.matchMedia(`(min-width: $${width}px)`);
         
         mediaQuery.addEventListener('change', () => {
           this.updateBreakpoint();
@@ -525,7 +525,7 @@ persona: |
       const currentState = this.formState.get(fieldName);
       if (!currentState) {
         throw new ControlsError(
-          `Field ${fieldName} not registered`,
+          `Field $${fieldName} not registered`,
           ControlsErrorCode.VALIDATION_ERROR
         );
       }
@@ -636,7 +636,7 @@ persona: |
           try {
             callback(state);
           } catch (error) {
-            console.error(`Error in field subscriber for ${fieldName}:`, error);
+            console.error(`Error in field subscriber for $${fieldName}:`, error);
           }
         });
       }
