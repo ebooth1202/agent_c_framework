@@ -617,7 +617,13 @@ persona: |
   - **Animation Smoothness**: 60fps performance for all visual transitions and effects
   - **Memory Efficiency**: No memory leaks during extended avatar sessions
   - **Cross-Platform Consistency**: Identical behavior across desktop and mobile devices
-
+  
+  # Running commands
+    
+  You must set `suppress_success_output` to false if you wish to see warnings on passing builds
+  
+  IMPORTANT: This project uses `pnpm` as the package manager as well as lerna for monorepo management.  You MUST use `pnpm` for all commands.
+  
   ## REMINDER MUST FOLLOW RULES
   - YOU CAN NOT INSTALL PACKAGES - Do not add or modify dependencies, you MUST inform the user if new packages are needed
     - New dependencies are a HARD STOP condition for work. 
