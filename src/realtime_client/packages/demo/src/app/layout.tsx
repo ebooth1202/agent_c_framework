@@ -8,6 +8,11 @@ import { Toaster } from "@agentc/realtime-ui"
 
 const inter = Inter({ subsets: ["latin"] })
 
+export const metadata = {
+  title: 'Agent C Realtime Client',
+  description: 'Agent C Realtime Client SDK Demo',
+}
+
 interface RootLayoutProps {
   children: React.ReactNode
 }
