@@ -1,3 +1,4 @@
+import asyncio
 import json
 from typing import Any, Dict, List, Union
 import logging
@@ -50,11 +51,12 @@ class ReplaceStringsHelper:
             
             # Parse the file content response
             file_content = self._parse_file_content(file_content_response, encoding)
+            await asyncio.sleep(0)
             if isinstance(file_content, dict) and 'error' in file_content:
                 return file_content
             
             # Process replacements with explicit encoding
-            updated_content, replacement_stats = self._process_replacements(file_content, updates, encoding)
+            updated_content, replacement_stats = await self._process_replacements(file_content, updates, encoding)
             
             # Ensure content is encoded properly for writing
             content_to_write = updated_content
@@ -63,6 +65,7 @@ class ReplaceStringsHelper:
                 
             # Write updated content back to file
             write_response = await write_function(path, 'write', content_to_write)
+            await asyncio.sleep(0)
             
             # Check write response
             if isinstance(write_response, dict) and 'error' in write_response:
@@ -167,7 +170,7 @@ class ReplaceStringsHelper:
         return response
         
     @staticmethod
-    def _process_replacements(content: str, updates: List[Dict[str, str]], encoding: str = 'utf-8') -> tuple[str, List[Dict[str, Any]]]:
+    async def _process_replacements(content: str, updates: List[Dict[str, str]], encoding: str = 'utf-8') -> tuple[str, List[Dict[str, Any]]]:
         """
         Process multiple string replacements in the content with explicit encoding handling.
         
@@ -195,7 +198,9 @@ class ReplaceStringsHelper:
                 old_string = old_string.decode(encoding)
             if isinstance(new_string, bytes):
                 new_string = new_string.decode(encoding)
-            
+
+            await asyncio.sleep(0)
+
             # Skip invalid operations (should be caught by validation, but just in case)
             if not old_string:
                 replacement_stats.append({

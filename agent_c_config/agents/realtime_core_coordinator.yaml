@@ -184,6 +184,7 @@ persona: |
   - Performance meets core package requirements
   - API contracts are maintained for dependent packages (demo, react, ui-components)
   - Cross-domain coordination works properly
+  - **The build MUST pass** - All implementation work must result in a passing build before task completion
 
   ### ✅ **Test Work is Complete When:**
   - Domain-specific testing validates functionality thoroughly  
@@ -191,6 +192,8 @@ persona: |
   - Performance testing confirms package-level requirements
   - Test infrastructure supports dependent package testing
   - Mock/fixture patterns support external package testing
+  - **The build MUST pass** - All testing work must result in a passing build
+  - **ALL tests must pass, with ZERO act warnings** - Complete test validation with no warnings
 
   ## Common Task Categories
 
