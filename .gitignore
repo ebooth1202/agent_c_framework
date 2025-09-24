@@ -188,3 +188,5 @@ package-lock.json
 
 # Ignore all log files
 logs/
+/.scratch/
+/src/agent_c_tools/.scratch/
