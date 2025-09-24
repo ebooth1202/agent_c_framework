@@ -519,36 +519,24 @@ export class EventStreamProcessor {
   
   /**
    * Handle system messages
-   * SystemMessageEvent is a SessionEvent that should be displayed in the chat as an alert-style bubble
-   * Must maintain API naming consistency - emit as 'system_message' not 'system-notification'
    */
   private handleSystemMessage(event: SystemMessageEvent): void {
-    // Emit the system message event with all original fields preserved
-    // This maintains API naming consistency with the server event type
-    this.sessionManager.emit('system_message', {
-      type: event.type,
-      session_id: event.session_id,
-      role: event.role,
-      content: event.content,
-      format: event.format,
+    this.sessionManager.emit('system-notification', {
+      type: 'system',
       severity: event.severity || 'info',
-      // Include session event fields if present
-      parent_session_id: event.parent_session_id,
-      user_session_id: event.user_session_id
+      content: event.content,
+      timestamp: new Date().toISOString()
     });
   }
   
   /**
    * Handle error events
-   * ErrorEvent is NOT a SessionEvent - it indicates unhandled server errors
-   * Should be displayed as a toast notification, not in the chat stream
    */
   private handleError(event: ErrorEvent): void {
-    // Emit as 'error' event for toast notifications
-    // This is distinct from system messages and should not appear in chat
-    this.sessionManager.emit('error', {
-      type: event.type,
-      message: event.message,
+    this.sessionManager.emit('system-notification', {
+      type: 'error',
+      severity: 'error',
+      content: event.message,
       source: event.source,
       timestamp: new Date().toISOString()
     });

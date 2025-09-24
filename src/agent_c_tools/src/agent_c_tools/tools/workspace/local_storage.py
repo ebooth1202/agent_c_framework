@@ -164,7 +164,6 @@ class LocalStorageWorkspace(BaseWorkspace):
             return self._error_response(error_msg)
 
         ignore_patterns = self._find_nearest_ignore_file(full_path)
-        await asyncio.sleep(0)
 
         builder = LocalFileSystemTreeBuilder(ignore_patterns=ignore_patterns)
         if relative_path is not None and relative_path != '' and relative_path != '/':
@@ -174,7 +173,6 @@ class LocalStorageWorkspace(BaseWorkspace):
 
         tree = builder.build_tree(start_path=str(full_path),
                                   root_name=root_name)
-        await asyncio.sleep(0)
         renderer = MinimalTreeRenderer()
         tree_txt = "\n".join(renderer.render(
             tree=tree,
@@ -200,17 +198,14 @@ class LocalStorageWorkspace(BaseWorkspace):
     async def read(self, file_path: str, encoding: Optional[str] = "utf-8") -> str:
         try:
             contents = await self.read_internal(file_path)
-            await asyncio.sleep(0)
             if len(contents):
                 file_tokens = TokenCounter.count(contents)
-                await asyncio.sleep(0)
                 if file_tokens > self.max_token_size:
                     return self._error_response(
                         f'The file {file_path} exceeds the token limit of '
                         f'{self.max_token_size}. Actual size is {file_tokens}.'
                     )
-
-            return contents
+            return await self.read_internal(file_path)
         except Exception as e:
             return self._error_response(str(e))
 
@@ -311,7 +306,7 @@ class LocalStorageWorkspace(BaseWorkspace):
 
             with open(full_path, write_mode, encoding=None if is_binary else 'utf-8') as file:
                 file.write(data)
-            await asyncio.sleep(0)
+
             action = 'written to' if write_mode.startswith('w') else 'appended in'
             return self._success_response(f'Data successfully {action} {file_path}.')
         except Exception as e:
@@ -476,7 +471,7 @@ class LocalStorageWorkspace(BaseWorkspace):
                 recursive=recursive,
                 include_hidden=include_hidden
             )
-            await asyncio.sleep(0)
+
             self.logger.debug(f"Raw glob results: {len(matching_paths)} matches")
 
             # Convert absolute paths back to workspace-relative paths
@@ -530,7 +525,6 @@ class LocalStorageWorkspace(BaseWorkspace):
         invalid_paths = []
         for file_path in file_paths:
             valid, error_msg, full_path = self._validate_path(file_path)
-            await asyncio.sleep(0)
             if valid:
                 actual_paths.append(str(full_path))
             else:
@@ -567,10 +561,9 @@ class LocalStorageWorkspace(BaseWorkspace):
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )
-            await asyncio.sleep(0)
+
             # Wait for the subprocess to complete and get stdout/stderr
             stdout_bytes, stderr_bytes = await process.communicate()
-            await asyncio.sleep(0)
             stdout = stdout_bytes.decode('utf-8').replace("\\", "/")
             stderr = stderr_bytes.decode('utf-8')
             if process.returncode > 1:
@@ -590,7 +583,7 @@ class LocalStorageWorkspace(BaseWorkspace):
                         file_map[path] = []
 
                     file_map[path].append(f"  - {line}: {rest}")
-            await asyncio.sleep(0)
+
             result: str = ""
             if len(invalid_paths):
                 result += f"Invalid paths: {', '.join(invalid_paths)}\n\n"
@@ -630,5 +623,4 @@ class LocalStorageWorkspace(BaseWorkspace):
         }
         
         return await self.executor.execute_command(command=command, working_directory=working_directory, override_env=override_env, timeout=timeout, suppress_success_output=suppress_success_output)
-
 from agent_c_tools.tools.workspace.local_project import LocalProjectWorkspace  # noqa

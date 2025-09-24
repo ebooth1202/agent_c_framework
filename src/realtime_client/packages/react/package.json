@@ -19,8 +19,7 @@
     "react-dom": "^18.0.0"
   },
   "dependencies": {
-    "@agentc/realtime-core": "workspace:*",
-    "@testing-library/user-event": "^14.6.1"
+    "@agentc/realtime-core": "workspace:*"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.8.0",

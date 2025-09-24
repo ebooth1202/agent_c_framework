@@ -15,7 +15,7 @@ from websockets import State
 from agent_c.chat import ChatSessionManager
 from agent_c.config.agent_config_loader import AgentConfigLoader
 from agent_c.models import ChatSession, ChatUser
-from agent_c.models.events import BaseEvent, TextDeltaEvent, HistoryEvent, RenderMediaEvent, SystemMessageEvent
+from agent_c.models.events import BaseEvent, TextDeltaEvent, HistoryEvent, RenderMediaEvent
 from agent_c.models.events.chat import AudioInputDeltaEvent
 from agent_c.models.heygen import HeygenAvatarSessionData, NewSessionRequest
 from agent_c.toolsets import Toolset
@@ -103,8 +103,6 @@ class RealtimeBridge(AgentBridge):
     async def cancel_interaction(self) -> None:
         self.client_wants_cancel.set()
         await self.send_event(CancelledEvent())
-        await self.send_event(SystemMessageEvent(content="Interaction cancelled by user, waiting for runtime to exit..", session_id=self.chat_session.session_id,
-                                                 severity="info", role="system"))
 
     @handle_client_event.register
     async def _(self, event: DeleteChatSessionEvent):
@@ -125,9 +123,6 @@ class RealtimeBridge(AgentBridge):
         if session_id == self.chat_session.session_id:
             self.chat_session = None
             await self.new_chat_session()
-
-        await self.send_event(SystemMessageEvent(content=f"Chat Session {session_id} deleted", session_id=self.chat_session.session_id,
-                                                 severity="info", role="system"))
 
 
     @handle_client_event.register
@@ -242,9 +237,6 @@ class RealtimeBridge(AgentBridge):
         await self.tool_chest.activate_toolset(self.chat_session.agent_config.tools)
         self.logger.info(f"RealtimeBridge resumed chat session {self.chat_session.session_id}")
         await self.send_chat_session()
-        await self.send_event(SystemMessageEvent(content=F"Welcome back! **Session ID:** {self.chat_session.session_id}", session_id=self.chat_session.session_id,
-                                                 severity="info", role="system"))
-
 
     @handle_client_event.register
     async def _(self, event: SetChatSessionNameEvent) -> None:
@@ -345,7 +337,7 @@ class RealtimeBridge(AgentBridge):
             self.chat_session.agent_config = agent_config
             await self.send_event(AgentConfigurationChangedEvent(agent_config=self.chat_session.agent_config))
             await self.tool_chest.activate_toolset(self.chat_session.agent_config.tools)
-            self.logger.debug(f"RealtimeBridge {self.chat_session.session_id}: Agent set to {agent_key}")
+            self.logger.info(f"RealtimeBridge {self.chat_session.session_id}: Agent set to {agent_key}")
 
     def parse_event(self, data: dict) -> BaseEvent:
         """Parse incoming data into appropriate event type"""
@@ -383,8 +375,8 @@ class RealtimeBridge(AgentBridge):
                 event_str = json.dumps(model_dump)
                 await self.websocket.send_text(event_str)
 
-            #if event.type not in ["ping", "pong"]:
-            #    self.logger.info(f"Sent event {event.type} to {self.chat_session.session_id}")
+            if event.type not in ["ping", "pong"]:
+                self.logger.info(f"Sent event {event.type} to {self.chat_session.session_id}")
                 # self.logger.info(event_str)
         except Exception as e:
             self.logger.exception(f"Failed to send event to {self.chat_session.session_id}: {e}")
@@ -445,8 +437,8 @@ class RealtimeBridge(AgentBridge):
 
     async def runtime_callback(self, event: BaseEvent):
         """Handle runtime events from the agent"""
-        #if event.type not in ["ping", "pong"]:
-            #self.logger.debug(f"RealtimeBridge {self.chat_session.session_id}: Received runtime event: {event.type}")
+        if event.type not in ["ping", "pong"]:
+            self.logger.debug(f"RealtimeBridge {self.chat_session.session_id}: Received runtime event: {event.type}")
         # These are already in model format and don't need parsed.
         await self.handle_runtime_event(event)
         await asyncio.sleep(0)

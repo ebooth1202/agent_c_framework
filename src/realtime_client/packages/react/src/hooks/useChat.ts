@@ -4,21 +4,20 @@
  */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import type { ChatSession } from '@agentc/realtime-core';
+import type { ChatSession, Message } from '@agentc/realtime-core';
 import { ensureMessagesFormat } from '@agentc/realtime-core';
 import { Logger } from '../utils/logger';
 import { useRealtimeClientSafe } from '../providers/AgentCContext';
-import { 
-  ChatItem, 
-  MessageChatItem, 
-  DividerChatItem, 
-  MediaChatItem,
-  SystemAlertChatItem,
-  isMessageItem 
-} from '../types/chat';
 
-// For backward compatibility, keep ExtendedMessage as an alias
-type ExtendedMessage = MessageChatItem;
+// Extended message type to include sub-session metadata
+interface ExtendedMessage extends Message {
+  isSubSession?: boolean;
+  metadata?: {
+    sessionId: string;
+    parentSessionId?: string;
+    userSessionId?: string;
+  };
+}
 
 /**
  * Options for the useChat hook
@@ -35,8 +34,8 @@ export interface UseChatOptions {
  * Return type for the useChat hook
  */
 export interface UseChatReturn {
-  /** Current chat items (messages, dividers, media, alerts) */
-  messages: ChatItem[];
+  /** Current chat messages */
+  messages: ExtendedMessage[];
   
   /** Current session information */
   currentSession: ChatSession | null;
@@ -57,19 +56,19 @@ export interface UseChatReturn {
   isAgentTyping: boolean;
   
   /** Current streaming message from agent */
-  streamingMessage: MessageChatItem | null;
+  streamingMessage: ExtendedMessage | null;
   
   /** Error state */
   error: string | null;
   
   /** Get the last message */
-  lastMessage: MessageChatItem | null;
+  lastMessage: ExtendedMessage | null;
   
   /** Get messages from a specific role */
-  getMessagesByRole: (role: 'user' | 'assistant' | 'system') => MessageChatItem[];
+  getMessagesByRole: (role: 'user' | 'assistant' | 'system') => ExtendedMessage[];
   
   /** Check if a message is from a sub-session */
-  isSubSessionMessage: (message: ChatItem) => boolean;
+  isSubSessionMessage: (message: ExtendedMessage) => boolean;
 }
 
 /**
@@ -81,12 +80,12 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
   const client = useRealtimeClientSafe();
   
   // State
-  const [messages, setMessages] = useState<ChatItem[]>([]);
+  const [messages, setMessages] = useState<ExtendedMessage[]>([]);
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [isAgentTyping, setIsAgentTyping] = useState(false);
-  const [streamingMessage, setStreamingMessage] = useState<MessageChatItem | null>(null);
+  const [streamingMessage, setStreamingMessage] = useState<ExtendedMessage | null>(null);
   const [error, setError] = useState<string | null>(null);
   
   // Track the current streaming message ID to avoid duplicates
@@ -166,15 +165,13 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
   }, []);
   
   // Get messages by role
-  const getMessagesByRole = useCallback((role: 'user' | 'assistant' | 'system'): MessageChatItem[] => {
-    return messages
-      .filter(isMessageItem)
-      .filter(msg => msg.role === role);
+  const getMessagesByRole = useCallback((role: 'user' | 'assistant' | 'system'): ExtendedMessage[] => {
+    return messages.filter(msg => msg.role === role);
   }, [messages]);
   
   // Check if a message is from a sub-session
-  const isSubSessionMessage = useCallback((message: ChatItem): boolean => {
-    return isMessageItem(message) && message.isSubSession === true;
+  const isSubSessionMessage = useCallback((message: ExtendedMessage): boolean => {
+    return message.isSubSession === true;
   }, []);
   
   // Subscribe to chat events
@@ -192,12 +189,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
       Logger.debug('[useChat] Message added event:', messageEvent);
       
       setMessages(prev => {
-        // Ensure the message has a type and id for compatibility
-        const messageToAdd: MessageChatItem = messageEvent.message.type 
-          ? messageEvent.message 
-          : { ...messageEvent.message, type: 'message', id: messageEvent.sessionId };
-        
-        const newMessages = [...prev, messageToAdd];
+        const newMessages = [...prev, messageEvent.message];
         // Limit messages if needed
         if (maxMessages && maxMessages > 0 && newMessages.length > maxMessages) {
           return newMessages.slice(-maxMessages);
@@ -246,12 +238,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
       
       // Add the completed message to the messages array
       setMessages(prev => {
-        // Ensure the message has a type and id for compatibility
-        const messageToAdd: MessageChatItem = completeEvent.message.type 
-          ? completeEvent.message 
-          : { ...completeEvent.message, type: 'message', id: completeEvent.sessionId };
-        
-        const newMessages = [...prev, messageToAdd];
+        const newMessages = [...prev, completeEvent.message];
         // Limit messages if needed
         if (maxMessages && maxMessages > 0 && newMessages.length > maxMessages) {
           return newMessages.slice(-maxMessages);
@@ -293,15 +280,10 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         // Load messages from the session if present (for backward compatibility)
         if (sessionEvent.chat_session.messages && sessionEvent.chat_session.messages.length > 0) {
           const formattedMessages = ensureMessagesFormat(sessionEvent.chat_session.messages);
-          // Ensure all messages have type field for compatibility
-          const messagesWithType = formattedMessages.map((msg, idx) => {
-            if ('type' in msg) return msg;
-            return { ...msg, type: 'message' as const, id: `session-${idx}` };
-          });
           const messagesToSet = maxMessages && maxMessages > 0 
-            ? messagesWithType.slice(-maxMessages)
-            : messagesWithType;
-          setMessages(messagesToSet as ChatItem[]);
+            ? formattedMessages.slice(-maxMessages)
+            : formattedMessages;
+          setMessages(messagesToSet as ExtendedMessage[]);
         } else {
           // Clear messages if session has no messages
           setMessages([]);
@@ -331,149 +313,20 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
           Logger.debug('[useChat] Empty messages array - clearing chat display');
         }
         
-        // Ensure all messages have type field for compatibility
-        const messagesWithType = messagesEvent.messages.map((msg, idx) => 
-          msg.type ? msg : { ...msg, type: 'message' as const, id: `loaded-${idx}` }
-        );
-        
         // Messages come from EventStreamProcessor already formatted with sub-session metadata
         const messagesToSet = maxMessages && maxMessages > 0
-          ? messagesWithType.slice(-maxMessages)
-          : messagesWithType;
+          ? messagesEvent.messages.slice(-maxMessages)
+          : messagesEvent.messages;
         Logger.debug('[useChat] After slice for loaded messages:', messagesToSet.length, 'messages');
         
         // Set messages - this will clear the display if messagesToSet is empty
-        setMessages(messagesToSet as ChatItem[]);
+        setMessages(messagesToSet as ExtendedMessage[]);
         
         // Clear any streaming state
         setStreamingMessage(null);
         streamingMessageIdRef.current = null;
         setIsAgentTyping(false);
       }
-    };
-    
-    // Handle subsession started events
-    const handleSubsessionStarted = (event: unknown) => {
-      const subsessionEvent = event as {
-        subSessionType?: 'chat' | 'oneshot';
-        subAgentType?: 'clone' | 'team' | 'assist' | 'tool';
-        primeAgentKey?: string;
-        subAgentKey?: string;
-      };
-      Logger.debug('[useChat] Subsession started event:', subsessionEvent);
-      
-      const divider: DividerChatItem = {
-        id: `divider-start-${Date.now()}`,
-        type: 'divider',
-        dividerType: 'start',
-        timestamp: new Date().toISOString(),
-        metadata: {
-          subSessionType: subsessionEvent.subSessionType,
-          subAgentType: subsessionEvent.subAgentType,
-          primeAgentKey: subsessionEvent.primeAgentKey,
-          subAgentKey: subsessionEvent.subAgentKey
-        }
-      };
-      
-      setMessages(prev => {
-        const newMessages = [...prev, divider];
-        if (maxMessages && maxMessages > 0 && newMessages.length > maxMessages) {
-          return newMessages.slice(-maxMessages);
-        }
-        return newMessages;
-      });
-    };
-    
-    // Handle subsession ended events
-    const handleSubsessionEnded = (_event: unknown) => {
-      Logger.debug('[useChat] Subsession ended event');
-      
-      const divider: DividerChatItem = {
-        id: `divider-end-${Date.now()}`,
-        type: 'divider',
-        dividerType: 'end',
-        timestamp: new Date().toISOString()
-      };
-      
-      setMessages(prev => {
-        const newMessages = [...prev, divider];
-        if (maxMessages && maxMessages > 0 && newMessages.length > maxMessages) {
-          return newMessages.slice(-maxMessages);
-        }
-        return newMessages;
-      });
-    };
-    
-    // Handle media added events (RenderMedia)
-    const handleMediaAdded = (event: unknown) => {
-      const mediaEvent = event as {
-        sessionId: string;
-        media: {
-          id?: string;
-          content: string;
-          contentType: string;
-          timestamp?: string;
-          metadata?: {
-            sent_by_class?: string;
-            sent_by_function?: string;
-            foreign_content?: boolean;
-            url?: string;
-            name?: string;
-          };
-        };
-      };
-      Logger.debug('[useChat] Media added event:', mediaEvent);
-      
-      const mediaItem: MediaChatItem = {
-        id: mediaEvent.media.id || `media-${Date.now()}`,
-        type: 'media',
-        timestamp: mediaEvent.media.timestamp || new Date().toISOString(),
-        content: mediaEvent.media.content,
-        contentType: mediaEvent.media.contentType,
-        metadata: {
-          sentByClass: mediaEvent.media.metadata?.sent_by_class,
-          sentByFunction: mediaEvent.media.metadata?.sent_by_function,
-          foreignContent: mediaEvent.media.metadata?.foreign_content,
-          url: mediaEvent.media.metadata?.url,
-          name: mediaEvent.media.metadata?.name
-        }
-      };
-      
-      setMessages(prev => {
-        const newMessages = [...prev, mediaItem];
-        if (maxMessages && maxMessages > 0 && newMessages.length > maxMessages) {
-          return newMessages.slice(-maxMessages);
-        }
-        return newMessages;
-      });
-    };
-    
-    // Handle system message events (system alerts in chat)
-    const handleSystemMessage = (event: unknown) => {
-      const systemEvent = event as {
-        content: string;
-        severity?: 'info' | 'warning' | 'error';
-        format?: 'markdown' | 'text';
-        timestamp?: string;
-      };
-      Logger.debug('[useChat] System message event:', systemEvent);
-      
-      const systemAlert: SystemAlertChatItem = {
-        id: `system-${Date.now()}`,
-        type: 'system_alert',
-        timestamp: systemEvent.timestamp || new Date().toISOString(),
-        content: systemEvent.content,
-        severity: systemEvent.severity || 'info',
-        format: systemEvent.format || 'markdown'
-      };
-      
-      setMessages(prev => {
-        const newMessages = [...prev, systemAlert];
-        if (maxMessages && maxMessages > 0 && newMessages.length > maxMessages) {
-          return newMessages.slice(-maxMessages);
-        }
-        return newMessages;
-      });
     };
     
     // Subscribe to turn events on client for typing indicators
@@ -488,13 +341,6 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
       sessionManager.on('message-streaming', handleMessageStreaming);
       sessionManager.on('message-complete', handleMessageComplete);
       sessionManager.on('session-messages-loaded', handleSessionMessagesLoaded);
-      
-      // New event subscriptions for Phase 1
-      sessionManager.on('subsession-started', handleSubsessionStarted);
-      sessionManager.on('subsession-ended', handleSubsessionEnded);
-      sessionManager.on('media-added', handleMediaAdded);
-      sessionManager.on('system_message', handleSystemMessage);
-      // Note: 'error' events are handled in useErrors hook for toast notifications
     }
     
     return () => {
@@ -512,27 +358,12 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         cleanupSessionManager.off('message-streaming', handleMessageStreaming);
         cleanupSessionManager.off('message-complete', handleMessageComplete);
         cleanupSessionManager.off('session-messages-loaded', handleSessionMessagesLoaded);
-        
-        // Cleanup new event subscriptions
-        cleanupSessionManager.off('subsession-started', handleSubsessionStarted);
-        cleanupSessionManager.off('subsession-ended', handleSubsessionEnded);
-        cleanupSessionManager.off('media-added', handleMediaAdded);
-        cleanupSessionManager.off('system_message', handleSystemMessage);
       }
     };
   }, [client, maxMessages, updateChatInfo]);
   
   // Computed properties
-  const lastMessage: MessageChatItem | null = (() => {
-    // Find the last actual message (not divider, media, or alert)
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const item = messages[i];
-      if (item && isMessageItem(item)) {
-        return item;
-      }
-    }
-    return null;
-  })();
+  const lastMessage: ExtendedMessage | null = messages.length > 0 ? messages[messages.length - 1]! : null;
   
   return {
     messages,
