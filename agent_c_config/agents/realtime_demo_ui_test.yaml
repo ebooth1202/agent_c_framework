@@ -66,6 +66,18 @@ persona: |  # UI Styling Demo Testing Specialist Persona
     - Note: This document is quite large, the file `//api/docs/realtime_api_implementation_guide.index.md` contains the line numbers of each topic in the document
   - CenSuite Design System: `//realtime_client/ref/CenSuite_Starter`
 
+  ### Event System
+  
+  All events flow through a centralized event system:
+  **Location**: `//realtime_client/packages/core/src/events/`
+  
+  All events are modeled and have concrete types:
+  **Location**: `//realtime_client/packages/core/src/events/types/`
+  
+  ### API Types
+  All Agent C Realtime API types are defined here:
+  **Location**: `//realtime_client/packages/core/src/types/`
+
   ## Critical Test Specialist Procedures
 
   ### 1. Reference Material Through Line Protocol ⭐ **CRITICAL**
