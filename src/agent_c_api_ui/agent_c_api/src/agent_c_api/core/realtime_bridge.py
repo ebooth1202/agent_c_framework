@@ -36,7 +36,7 @@ from agent_c.models.input.image_input import ImageInput
 from agent_c_api.core.voice.models import open_ai_voice_models, AvailableVoiceModel, heygen_avatar_voice_model, no_voice_model
 from agent_c_api.core.voice.voice_io_manager import VoiceIOManager
 from agent_c_tools.tools.think.prompt import ThinkSection
-from agent_c.prompting import PromptBuilder, EnvironmentInfoSection
+from agent_c.prompting import PromptBuilder
 from agent_c.prompting.basic_sections.persona import DynamicPersonaSection
 
 
@@ -239,10 +239,6 @@ class RealtimeBridge(AgentBridge):
             return
 
         self.chat_session = session_info
-
-        if 'BridgeTools' not in self.chat_session.agent_config.tools:
-            self.chat_session.agent_config.tools.append('BridgeTools')
-
         await self.tool_chest.activate_toolset(self.chat_session.agent_config.tools)
         self.logger.info(f"RealtimeBridge resumed chat session {self.chat_session.session_id}")
         await self.send_chat_session()
@@ -347,10 +343,6 @@ class RealtimeBridge(AgentBridge):
                 return
 
             self.chat_session.agent_config = agent_config
-
-            if 'BridgeTools' not in self.chat_session.agent_config.tools:
-                self.chat_session.agent_config.tools.append('BridgeTools')
-
             await self.send_event(AgentConfigurationChangedEvent(agent_config=self.chat_session.agent_config))
             await self.tool_chest.activate_toolset(self.chat_session.agent_config.tools)
             self.logger.debug(f"RealtimeBridge {self.chat_session.session_id}: Agent set to {agent_key}")
@@ -643,9 +635,9 @@ class RealtimeBridge(AgentBridge):
             if self.sections is not None:
                 agent_sections = self.sections
             elif "ThinkTools" in self.chat_session.agent_config.tools:
-                agent_sections = [ThinkSection(), EnvironmentInfoSection(),  DynamicPersonaSection()]
+                agent_sections = [ThinkSection(), DynamicPersonaSection()]
             else:
-                agent_sections = [EnvironmentInfoSection(), DynamicPersonaSection()]
+                agent_sections = [DynamicPersonaSection()]
 
             chat_params: Dict[str, Any] = {
                 "user_id": self.chat_session.user_id,
