@@ -7,44 +7,11 @@ import React from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, fireEvent, waitFor } from '@testing-library/react';
 import { MessageList } from '../MessageList';
-import { 
-  useChat, 
-  useErrors, 
-  useToolNotifications,
-  isMessageItem,
-  isDividerItem,
-  isMediaItem,
-  isSystemAlertItem
-} from '@agentc/realtime-react';
+import { useChat } from '@agentc/realtime-react';
 import type { ChatMessage } from '@agentc/realtime-core';
 import { updateMockState } from '../../../test/mocks/realtime-react';
 
 // Note: @agentc/realtime-react is already mocked globally in test setup
-
-// Setup type guard mocks
-(isMessageItem as any).mockImplementation((item: any) => item?.type === 'message');
-(isDividerItem as any).mockImplementation((item: any) => item?.type === 'divider');
-(isMediaItem as any).mockImplementation((item: any) => item?.type === 'media');
-(isSystemAlertItem as any).mockImplementation((item: any) => item?.type === 'system_alert');
-
-// Create default mock for useErrors
-const mockUseErrors = {
-  errors: [],
-  dismissError: vi.fn(),
-  addError: vi.fn(),
-  clearErrors: vi.fn()
-};
-
-// Create default mock for useToolNotifications
-const mockUseToolNotifications = {
-  notifications: [],
-  completedToolCalls: [],
-  getNotification: vi.fn(),
-  clearNotifications: vi.fn(),
-  hasActiveTools: false,
-  isToolActive: vi.fn(() => false),
-  activeToolCount: 0
-};
 
 // Mock child components
 vi.mock('../Message', () => ({
@@ -63,33 +30,6 @@ vi.mock('../TypingIndicator', () => ({
   TypingIndicator: () => <div data-testid="typing-indicator">Typing...</div>
 }));
 
-vi.mock('../SubsessionDivider', () => ({
-  SubsessionDivider: ({ type, timestamp, label }: any) => 
-    <div data-testid={`divider-${type}`}>{label || `Subsession ${type}`}</div>
-}));
-
-vi.mock('../MediaRenderer', () => ({
-  MediaRenderer: ({ content, contentType }: any) => 
-    <div data-testid="media-renderer">{content}</div>
-}));
-
-vi.mock('../SystemMessage', () => ({
-  SystemMessage: ({ content, severity }: any) => 
-    <div data-testid={`system-message-${severity}`}>{content}</div>
-}));
-
-vi.mock('../ToolNotification', () => ({
-  ToolNotificationList: ({ notifications }: any) => 
-    <div data-testid="tool-notifications">{notifications.length} notifications</div>
-}));
-
-// Mock sonner for toast notifications
-vi.mock('sonner', () => ({
-  toast: {
-    error: vi.fn()
-  }
-}));
-
 // Mock Lucide icons
 vi.mock('lucide-react', () => ({
   Loader2: ({ className, ...props }: any) => 
@@ -102,26 +42,22 @@ vi.mock('lucide-react', () => ({
 vi.mock('../../../utils/logger', () => ({
   Logger: {
     debug: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn(),
-    info: vi.fn(),
-    trace: vi.fn()
+    error: vi.fn()
   }
 }));
 
 // Create type-safe mock for useChat
 const createMockUseChat = () => ({
-  messages: [] as any[],  // ChatItem array
+  messages: [] as ChatMessage[],
   isAgentTyping: false,
-  streamingMessage: null as any | null,  // MessageChatItem
+  streamingMessage: null as ChatMessage | null,
   sendMessage: vi.fn(),
   clearMessages: vi.fn(),
   isLoading: false,
   error: null,
   updateMessage: vi.fn(),
   deleteMessage: vi.fn(),
-  isSubSessionMessage: vi.fn(() => false),
-  currentSessionId: 'test-session'
+  isSubSessionMessage: vi.fn(() => false)
 });
 
 describe('MessageList', () => {
@@ -133,8 +69,6 @@ describe('MessageList', () => {
     // Reset mock to default state
     mockUseChat = createMockUseChat();
     updateMockState('chat', mockUseChat);
-    updateMockState('errors', mockUseErrors);
-    updateMockState('toolNotifications', mockUseToolNotifications);
   });
 
   afterEach(() => {
@@ -272,10 +206,10 @@ describe('MessageList', () => {
   describe('Message Rendering', () => {
     it('should render all messages', () => {
       mockUseChat.messages = [
-        { id: 'msg-1', type: 'message', role: 'user', content: 'Hello', timestamp: '2024-01-01T12:00:00Z' },
-        { id: 'msg-2', type: 'message', role: 'assistant', content: 'Hi there!', timestamp: '2024-01-01T12:00:01Z' },
-        { id: 'msg-3', type: 'message', role: 'user', content: 'How are you?', timestamp: '2024-01-01T12:00:02Z' }
-      ];
+        { role: 'user', content: 'Hello', timestamp: '2024-01-01T12:00:00Z' },
+        { role: 'assistant', content: 'Hi there!', timestamp: '2024-01-01T12:00:01Z' },
+        { role: 'user', content: 'How are you?', timestamp: '2024-01-01T12:00:02Z' }
+      ] as ChatMessage[];
       (useChat as any).mockReturnValue(mockUseChat);
       
       const { getAllByTestId } = render(<MessageList />);
@@ -292,8 +226,8 @@ describe('MessageList', () => {
 
     it('should pass showTimestamps prop to messages', () => {
       mockUseChat.messages = [
-        { id: 'msg-1', type: 'message', role: 'user', content: 'Test', timestamp: '2024-01-01T12:00:00Z' }
-      ];
+        { role: 'user', content: 'Test', timestamp: '2024-01-01T12:00:00Z' }
+      ] as ChatMessage[];
       (useChat as any).mockReturnValue(mockUseChat);
       
       const { getByTestId, rerender } = render(<MessageList showTimestamps={true} />);
@@ -307,8 +241,8 @@ describe('MessageList', () => {
 
     it('should add animation classes to messages', () => {
       mockUseChat.messages = [
-        { id: 'msg-1', type: 'message', role: 'user', content: 'Animated message' }
-      ];
+        { role: 'user', content: 'Animated message' }
+      ] as ChatMessage[];
       (useChat as any).mockReturnValue(mockUseChat);
       
       const { getByTestId } = render(<MessageList />);
@@ -319,8 +253,8 @@ describe('MessageList', () => {
 
     it('should handle messages without timestamps', () => {
       mockUseChat.messages = [
-        { id: 'msg-1', type: 'message', role: 'user', content: 'No timestamp' } // No timestamp property
-      ];
+        { role: 'user', content: 'No timestamp' } // No timestamp property
+      ] as ChatMessage[];
       (useChat as any).mockReturnValue(mockUseChat);
       
       const { getByTestId } = render(<MessageList />);
@@ -332,11 +266,11 @@ describe('MessageList', () => {
 
     it('should handle mixed message types', () => {
       mockUseChat.messages = [
-        { id: 'msg-1', type: 'message', role: 'user', content: 'Text message' },
-        { id: 'msg-2', type: 'message', role: 'assistant', content: 'Response' },
-        { id: 'msg-3', type: 'message', role: 'system', content: 'System message' },
-        { id: 'msg-4', type: 'message', role: 'function', content: 'Function result' }
-      ];
+        { role: 'user', content: 'Text message' },
+        { role: 'assistant', content: 'Response' },
+        { role: 'system', content: 'System message' },
+        { role: 'function', content: 'Function result' }
+      ] as ChatMessage[];
       (useChat as any).mockReturnValue(mockUseChat);
       
       const { container } = render(<MessageList />);
@@ -349,9 +283,9 @@ describe('MessageList', () => {
 
     it('should handle empty content in messages', () => {
       mockUseChat.messages = [
-        { id: 'msg-1', type: 'message', role: 'user', content: '' },
-        { id: 'msg-2', type: 'message', role: 'assistant', content: '' }
-      ];
+        { role: 'user', content: '' },
+        { role: 'assistant', content: '' }
+      ] as ChatMessage[];
       (useChat as any).mockReturnValue(mockUseChat);
       
       const { getAllByTestId } = render(<MessageList />);
@@ -362,10 +296,10 @@ describe('MessageList', () => {
 
   describe('Streaming and Typing', () => {
     it('should show partial message when streaming', () => {
-      mockUseChat.streamingMessage = { id: 'stream-1', type: 'message', role: 'assistant', content: 'This is being typed...' };
+      mockUseChat.streamingMessage = { role: 'assistant', content: 'This is being typed...' } as ChatMessage;
       mockUseChat.messages = [
-        { id: 'msg-1', type: 'message', role: 'user', content: 'Previous message' }
-      ];
+        { role: 'user', content: 'Previous message' }
+      ] as ChatMessage[];
       (useChat as any).mockReturnValue(mockUseChat);
       
       const { getByTestId, getAllByTestId } = render(<MessageList />);
@@ -382,7 +316,7 @@ describe('MessageList', () => {
     it('should show typing indicator when agent typing without partial message', () => {
       mockUseChat.isAgentTyping = true;
       mockUseChat.streamingMessage = null;
-      mockUseChat.messages = [{ id: 'msg-1', type: 'message', role: 'user', content: 'Hello' }]; // Need at least one message to show typing
+      mockUseChat.messages = [{ role: 'user', content: 'Hello' }]; // Need at least one message to show typing
       (useChat as any).mockReturnValue(mockUseChat);
       
       const { getByTestId, getByText } = render(<MessageList />);
@@ -393,7 +327,7 @@ describe('MessageList', () => {
 
     it('should not show typing indicator when partial message exists', () => {
       mockUseChat.isAgentTyping = true;
-      mockUseChat.streamingMessage = { id: 'stream-1', type: 'message', role: 'assistant', content: 'Some partial text' };
+      mockUseChat.streamingMessage = { role: 'assistant', content: 'Some partial text' } as ChatMessage;
       (useChat as any).mockReturnValue(mockUseChat);
       
       const { queryByTestId } = render(<MessageList />);
@@ -404,7 +338,7 @@ describe('MessageList', () => {
     it('should show typing indicator with correct animation classes', () => {
       mockUseChat.isAgentTyping = true;
       mockUseChat.streamingMessage = null;
-      mockUseChat.messages = [{ id: 'msg-1', type: 'message', role: 'user', content: 'Hello' }]; // Need messages to show typing
+      mockUseChat.messages = [{ role: 'user', content: 'Hello' }]; // Need messages to show typing
       (useChat as any).mockReturnValue(mockUseChat);
       
       const { container } = render(<MessageList />);
@@ -417,7 +351,7 @@ describe('MessageList', () => {
     it('should show AI avatar with typing indicator', () => {
       mockUseChat.isAgentTyping = true;
       mockUseChat.streamingMessage = null;
-      mockUseChat.messages = [{ id: 'msg-1', type: 'message', role: 'user', content: 'Hello' }]; // Need messages to show typing
+      mockUseChat.messages = [{ role: 'user', content: 'Hello' }]; // Need messages to show typing
       (useChat as any).mockReturnValue(mockUseChat);
       
       const { container } = render(<MessageList />);
@@ -436,7 +370,7 @@ describe('MessageList', () => {
       rerender(<MessageList />);
       
       // Add partial message
-      mockUseChat.streamingMessage = { id: 'stream-1', type: 'message', role: 'assistant', content: 'Typing...' };
+      mockUseChat.streamingMessage = { role: 'assistant', content: 'Typing...' } as ChatMessage;
       (useChat as any).mockReturnValue(mockUseChat);
       rerender(<MessageList />);
       
@@ -444,8 +378,8 @@ describe('MessageList', () => {
       mockUseChat.isAgentTyping = false;
       mockUseChat.streamingMessage = null;
       mockUseChat.messages = [
-        { id: 'msg-1', type: 'message', role: 'assistant', content: 'Completed message' }
-      ];
+        { role: 'assistant', content: 'Completed message' }
+      ] as ChatMessage[];
       (useChat as any).mockReturnValue(mockUseChat);
       rerender(<MessageList />);
       
@@ -457,12 +391,10 @@ describe('MessageList', () => {
   describe('Virtual Scrolling', () => {
     it('should handle enableVirtualScroll prop', () => {
       mockUseChat.messages = Array.from({ length: 100 }, (_, i) => ({
-        id: `msg-${i}`,
-        type: 'message',
         role: i % 2 === 0 ? 'user' : 'assistant',
         content: `Message ${i}`,
         timestamp: new Date().toISOString()
-      }));
+      })) as ChatMessage[];
       (useChat as any).mockReturnValue(mockUseChat);
       
       const { container } = render(<MessageList enableVirtualScroll={true} />);
@@ -475,11 +407,9 @@ describe('MessageList', () => {
 
     it('should use regular scrolling when virtual scroll disabled', () => {
       mockUseChat.messages = Array.from({ length: 10 }, (_, i) => ({
-        id: `msg-${i}`,
-        type: 'message',
         role: 'user',
         content: `Message ${i}`
-      }));
+      })) as ChatMessage[];
       (useChat as any).mockReturnValue(mockUseChat);
       
       const { container } = render(<MessageList enableVirtualScroll={false} />);
@@ -501,9 +431,9 @@ describe('MessageList', () => {
 
     it('should handle keyboard navigation', () => {
       mockUseChat.messages = [
-        { id: 'msg-1', type: 'message', role: 'user', content: 'Message 1' },
-        { id: 'msg-2', type: 'message', role: 'assistant', content: 'Message 2' }
-      ];
+        { role: 'user', content: 'Message 1' },
+        { role: 'assistant', content: 'Message 2' }
+      ] as ChatMessage[];
       (useChat as any).mockReturnValue(mockUseChat);
       
       const { container } = render(<MessageList />);
@@ -527,8 +457,8 @@ describe('MessageList', () => {
       
       // Add a new message
       mockUseChat.messages = [
-        { id: 'msg-1', type: 'message', role: 'user', content: 'New message' }
-      ];
+        { role: 'user', content: 'New message' }
+      ] as ChatMessage[];
       (useChat as any).mockReturnValue(mockUseChat);
       rerender(<MessageList />);
       
@@ -541,8 +471,8 @@ describe('MessageList', () => {
     it('should handle very long messages', () => {
       const longContent = 'A'.repeat(5000);
       mockUseChat.messages = [
-        { id: 'msg-1', type: 'message', role: 'user', content: longContent }
-      ];
+        { role: 'user', content: longContent }
+      ] as ChatMessage[];
       (useChat as any).mockReturnValue(mockUseChat);
       
       const { getByTestId } = render(<MessageList />);
@@ -557,11 +487,9 @@ describe('MessageList', () => {
       // Rapidly update messages
       for (let i = 0; i < 10; i++) {
         mockUseChat.messages = Array.from({ length: i }, (_, j) => ({
-          id: `msg-${j}`,
-          type: 'message',
           role: 'user',
           content: `Message ${j}`
-        }));
+        })) as ChatMessage[];
         (useChat as any).mockReturnValue(mockUseChat);
         
         expect(() => rerender(<MessageList />)).not.toThrow();
@@ -570,9 +498,9 @@ describe('MessageList', () => {
 
     it('should handle null/undefined in message content gracefully', () => {
       mockUseChat.messages = [
-        { id: 'msg-1', type: 'message', role: 'user', content: null as any },
-        { id: 'msg-2', type: 'message', role: 'assistant', content: undefined as any }
-      ];
+        { role: 'user', content: null as any },
+        { role: 'assistant', content: undefined as any }
+      ] as ChatMessage[];
       (useChat as any).mockReturnValue(mockUseChat);
       
       const { container } = render(<MessageList />);
@@ -610,24 +538,18 @@ describe('MessageList', () => {
       // For now, we pass them through as-is
       mockUseChat.messages = [
         { 
-          id: 'msg-1',
-          type: 'message',
           role: 'user', 
           content: 'Simple string'
         },
         { 
-          id: 'msg-2',
-          type: 'message',
           role: 'assistant', 
           content: 'Another string' // Keep it simple for the mock
         },
         { 
-          id: 'msg-3',
-          type: 'message',
           role: 'user', 
           content: 'Third string' // Keep it simple for the mock
         }
-      ];
+      ] as ChatMessage[];
       (useChat as any).mockReturnValue(mockUseChat);
       
       const { container } = render(<MessageList />);
@@ -648,11 +570,9 @@ describe('MessageList', () => {
 
     it('should apply overflow styles when maxHeight is set', () => {
       mockUseChat.messages = Array.from({ length: 20 }, (_, i) => ({
-        id: `msg-${i}`,
-        type: 'message',
         role: 'user',
         content: `Message ${i}`
-      }));
+      })) as ChatMessage[];
       (useChat as any).mockReturnValue(mockUseChat);
       
       const { container } = render(<MessageList maxHeight="200px" />);
@@ -664,11 +584,9 @@ describe('MessageList', () => {
     it('should handle scroll events', () => {
       const onScroll = vi.fn();
       mockUseChat.messages = Array.from({ length: 20 }, (_, i) => ({
-        id: `msg-${i}`,
-        type: 'message',
         role: 'user',
         content: `Message ${i}`
-      }));
+      })) as ChatMessage[];
       (useChat as any).mockReturnValue(mockUseChat);
       
       const { container } = render(
@@ -727,8 +645,8 @@ describe('MessageList', () => {
       
       // Add messages and check if layout changes
       mockUseChat.messages = [
-        { id: 'msg-1', type: 'message', role: 'user', content: 'Test' }
-      ];
+        { role: 'user', content: 'Test' }
+      ] as ChatMessage[];
       (useChat as any).mockReturnValue(mockUseChat);
       rerender(<MessageList />);
       
@@ -740,12 +658,10 @@ describe('MessageList', () => {
   describe('Performance', () => {
     it('should handle large message lists', () => {
       const largeMessageList = Array.from({ length: 1000 }, (_, i) => ({
-        id: `msg-${i}`,
-        type: 'message',
         role: i % 2 === 0 ? 'user' : 'assistant',
         content: `Message ${i}`,
         timestamp: new Date(Date.now() + i * 1000).toISOString()
-      }));
+      })) as ChatMessage[];
       
       mockUseChat.messages = largeMessageList;
       (useChat as any).mockReturnValue(mockUseChat);
@@ -762,13 +678,11 @@ describe('MessageList', () => {
       // Simulate rapid updates
       for (let i = 0; i < 50; i++) {
         mockUseChat.messages = Array.from({ length: i % 10 }, (_, j) => ({
-          id: `msg-${j}`,
-          type: 'message',
           role: 'user',
           content: `Msg ${j}`
-        }));
+        })) as ChatMessage[];
         mockUseChat.isAgentTyping = i % 2 === 0;
-        mockUseChat.streamingMessage = i % 3 === 0 ? { id: 'stream-1', type: 'message', role: 'assistant', content: `Partial ${i}` } : null;
+        mockUseChat.streamingMessage = i % 3 === 0 ? { role: 'assistant', content: `Partial ${i}` } as ChatMessage : null;
         (useChat as any).mockReturnValue(mockUseChat);
         
         expect(() => rerender(<MessageList />)).not.toThrow();
@@ -777,9 +691,9 @@ describe('MessageList', () => {
 
     it('should memoize visible messages correctly', () => {
       mockUseChat.messages = [
-        { id: 'msg-1', type: 'message', role: 'user', content: 'Message 1' },
-        { id: 'msg-2', type: 'message', role: 'assistant', content: 'Message 2' }
-      ];
+        { role: 'user', content: 'Message 1' },
+        { role: 'assistant', content: 'Message 2' }
+      ] as ChatMessage[];
       (useChat as any).mockReturnValue(mockUseChat);
       
       const { container, rerender } = render(<MessageList enableVirtualScroll={false} />);
@@ -820,8 +734,8 @@ describe('MessageList', () => {
       
       // User sends first message
       mockUseChat.messages = [
-        { id: 'msg-1', type: 'message', role: 'user', content: 'Hello AI!', timestamp: '2024-01-01T10:00:00Z' }
-      ];
+        { role: 'user', content: 'Hello AI!', timestamp: '2024-01-01T10:00:00Z' }
+      ] as ChatMessage[];
       (useChat as any).mockReturnValue(mockUseChat);
       rerender(<MessageList ref={ref} />);
       
@@ -836,7 +750,7 @@ describe('MessageList', () => {
       expect(getByTestId('typing-indicator')).toBeInTheDocument();
       
       // AI partial response appears
-      mockUseChat.streamingMessage = { id: 'stream-1', type: 'message', role: 'assistant', content: 'Hello! I am' };
+      mockUseChat.streamingMessage = { role: 'assistant', content: 'Hello! I am' } as ChatMessage;
       (useChat as any).mockReturnValue(mockUseChat);
       rerender(<MessageList ref={ref} />);
       
@@ -846,9 +760,9 @@ describe('MessageList', () => {
       
       // AI completes response
       mockUseChat.messages = [
-        { id: 'msg-1', type: 'message', role: 'user', content: 'Hello AI!', timestamp: '2024-01-01T10:00:00Z' },
-        { id: 'msg-2', type: 'message', role: 'assistant', content: 'Hello! I am your AI assistant. How can I help you today?', timestamp: '2024-01-01T10:00:05Z' }
-      ];
+        { role: 'user', content: 'Hello AI!', timestamp: '2024-01-01T10:00:00Z' },
+        { role: 'assistant', content: 'Hello! I am your AI assistant. How can I help you today?', timestamp: '2024-01-01T10:00:05Z' }
+      ] as ChatMessage[];
       mockUseChat.isAgentTyping = false;
       mockUseChat.streamingMessage = null;
       (useChat as any).mockReturnValue(mockUseChat);
@@ -860,11 +774,11 @@ describe('MessageList', () => {
       
       // Multiple exchanges
       mockUseChat.messages = [
-        { id: 'msg-1', type: 'message', role: 'user', content: 'Hello AI!', timestamp: '2024-01-01T10:00:00Z' },
-        { id: 'msg-2', type: 'message', role: 'assistant', content: 'Hello! I am your AI assistant. How can I help you today?', timestamp: '2024-01-01T10:00:05Z' },
-        { id: 'msg-3', type: 'message', role: 'user', content: 'What is the weather?', timestamp: '2024-01-01T10:00:10Z' },
-        { id: 'msg-4', type: 'message', role: 'assistant', content: 'I cannot check real-time weather, but I can help you understand weather patterns!', timestamp: '2024-01-01T10:00:15Z' }
-      ];
+        { role: 'user', content: 'Hello AI!', timestamp: '2024-01-01T10:00:00Z' },
+        { role: 'assistant', content: 'Hello! I am your AI assistant. How can I help you today?', timestamp: '2024-01-01T10:00:05Z' },
+        { role: 'user', content: 'What is the weather?', timestamp: '2024-01-01T10:00:10Z' },
+        { role: 'assistant', content: 'I cannot check real-time weather, but I can help you understand weather patterns!', timestamp: '2024-01-01T10:00:15Z' }
+      ] as ChatMessage[];
       (useChat as any).mockReturnValue(mockUseChat);
       rerender(<MessageList ref={ref} />);
       

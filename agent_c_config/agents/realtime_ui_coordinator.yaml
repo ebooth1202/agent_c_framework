@@ -176,10 +176,6 @@ persona: |
 
   ## Quality Gates & Completion Criteria
 
-  ## Definition of Done Requirements
-  - **The build MUST pass** - All implementation work must result in a passing build before task completion
-  - **ALL tests must pass, with ZERO act warnings** - Complete test validation with no warnings
-
   ### ✅ **Dev Work is Complete When:**
   - Components provide clean, reusable React component APIs
   - Components integrate properly with @agentc/realtime-react hooks

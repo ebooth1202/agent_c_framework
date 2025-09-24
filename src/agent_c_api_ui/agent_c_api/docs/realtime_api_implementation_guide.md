@@ -20,7 +20,6 @@ The Agent C realtime API uses a structured event system built on a clear inherit
 #### BaseEvent Structure
 
 All events inherit from `BaseEvent` which provides:
-
 - `type` (str): Event type identifier in snake_case format without "event" suffix
 - Automatic type assignment: defaults to snake_case version of class name minus "Event"
 - Automatic event registration with EventRegistry
@@ -28,13 +27,11 @@ All events inherit from `BaseEvent` which provides:
 #### Event Categories
 
 **Control Events**: Inherit directly from `BaseEvent`
-
 - Handle session management, configuration, and system operations
 - Only contain the base `type` field plus event-specific data
 - Examples: `get_agents`, `set_agent`, `avatar_list`, `tool_catalog`
 
 **Session Events**: Inherit from `SessionEvent` (which extends `BaseEvent`)
-
 - Handle chat interactions and content within active sessions
 - Include session context fields:
   - `session_id` (required str): Current chat session identifier
@@ -46,7 +43,6 @@ All events inherit from `BaseEvent` which provides:
 #### Event Type Naming Convention
 
 Event types follow snake_case naming WITHOUT "event" suffix:
-
 - Class: `TextDeltaEvent` → Type: `"text_delta"`
 - Class: `SystemPromptEvent` → Type: `"system_prompt"`
 - Class: `ToolCallEvent` → Type: `"tool_call"`
@@ -62,12 +58,10 @@ The Agent C Realtime API uses a human-friendly identifier system called **Mnemon
 ### Why MnemonicSlugs?
 
 Consider these identifiers:
-
 - Traditional: `8f9240688685a1e9`
 - MnemonicSlug: `magic-slang-crimson`
 
 MnemonicSlugs are:
-
 - **Human-readable** - Easy to read aloud, type, and remember
 - **Error-resistant** - Easier to spot typos and communication errors
 - **Support-friendly** - Better for error messages and user communication
@@ -77,15 +71,12 @@ MnemonicSlugs are:
 ### Format and Structure
 
 #### Basic Format
-
 - **Single words**: `tiger` (1,633 possible values)
 - **Two words**: `tiger-castle` (2.67 million combinations)
 - **Three words**: `magic-slang-crimson` (4.35 billion combinations)
 
 #### Hierarchical IDs
-
 Used for nested relationships with `:` separating levels:
-
 ```
 user-id:session-id:message-id
 tiger-castle:apollo:banana
@@ -94,15 +85,12 @@ tiger-castle:apollo:banana
 ### Usage in Realtime API
 
 #### Session Identifiers
-
 - **UI Session IDs**: 3-word slugs (e.g., `"tiger-castle-moon"`)
 - **Chat Session IDs**: 2-word slugs (e.g., `"purple-river"`)
 - **User Session IDs**: 2-word slugs for user identification
 
 #### Subsession Correlation
-
 Parent-child session relationships use hierarchical format:
-
 ```json
 {
   "session_id": "bright-cloud",
@@ -112,7 +100,6 @@ Parent-child session relationships use hierarchical format:
 ```
 
 #### Examples in API Responses
-
 ```json
 // Login response
 {
@@ -137,14 +124,12 @@ Parent-child session relationships use hierarchical format:
 ### Implementation Considerations
 
 #### Client Handling
-
 - **Case Insensitive**: All operations are case-insensitive
 - **Validation**: Expect format `word-word` or `word-word-word`
 - **Display**: Show as-is to users (human-friendly)
 - **Storage**: Store exactly as received from API
 
 #### Benefits for Development
-
 - **Debugging**: Easier to trace issues in logs
 - **Testing**: Deterministic ID generation for test scenarios
 - **User Support**: Users can communicate IDs verbally
@@ -184,6 +169,7 @@ Authenticate user and get initial configuration.
 **Note:** User data, agents, avatars, tools, and voices are provided via the WebSocket initialization events after connection, not in the login response.
 
 ```
+
 #### `GET /rt/refresh_token`
 
 Refresh JWT and HeyGen tokens.
@@ -256,44 +242,36 @@ When a client successfully connects to the WebSocket, the server automatically s
 **Exact 7-Event Sequence:**
 
 1. **`chat_user_data`** - Current user information and profile data
-   
    - **Content:** `ChatUserData` object with user ID, username, email, roles, etc.
    - **Purpose:** Provides client with authenticated user context
 
 2. **`avatar_list`** - Available HeyGen avatars for the user
-   
    - **Content:** Array of `Avatar` objects with avatar IDs, previews, and configuration
    - **Purpose:** Populates avatar selection UI
 
 3. **`voice_list`** - Available TTS voice models and configurations
-   
    - **Content:** Array of `AvailableVoiceModel` objects including system voices (none, avatar) and OpenAI voices
    - **Purpose:** Enables voice selection and TTS configuration
 
 4. **`agent_list`** - Available AI agents the user can interact with
-   
    - **Content:** Array of `AgentCatalogEntry` objects with agent names, keys, descriptions, and categories
    - **Purpose:** Populates agent selection interface
 
 5. **`tool_catalog`** - Available tools and their schemas for the current session
-   
    - **Content:** Array of `ClientToolInfo` objects with tool schemas and descriptions
    - **Purpose:** Informs client of available agent capabilities
 
 6. **`chat_session_changed`** - Current or newly created chat session state
-   
    - **Content:** Complete `ChatSession` object with session ID, messages, agent config, metadata
    - **Purpose:** Establishes current conversation context
 
 7. **`user_turn_start`** - ⚠️ **CRITICAL CLIENT READY SIGNAL**
-   
    - **Content:** No additional data (marker event only)
    - **Purpose:** **Signals that the server is ready to accept user input** (text or audio)
 
 **⚠️ IMPORTANT:** Clients MUST NOT send input until receiving `user_turn_start`. This event indicates the server has completed initialization and is ready for user interaction.
 
 This exact sequence provides all necessary information for clients to:
-
 - Render the user interface
 - Configure available options
 - Display current session state  
@@ -326,13 +304,11 @@ class ChatSession(BaseModel):
 #### Computed Fields
 
 **`vendor`** - Determines message format based on agent configuration:
-
 - `"anthropic"` - When model_id starts with "claude" or "bedrock"
 - `"openai"` - For all other model_ids
 - `"none"` - When no agent_config is present
 
 **`display_name`** - User-friendly session name:
-
 - Returns `session_name` if set
 - Otherwise returns `"New chat with {agent_name}"`
 
@@ -340,7 +316,6 @@ class ChatSession(BaseModel):
 
 **Anthropic (`vendor: "anthropic"`):**
 Follows Anthropic MessageParam specification:
-
 ```json
 {
   "role": "user|assistant",
@@ -349,7 +324,6 @@ Follows Anthropic MessageParam specification:
 ```
 
 Content blocks can include:
-
 - Text blocks: `{"type": "text", "text": "content"}`
 - Image blocks: `{"type": "image", "source": {...}}`
 - Tool use blocks: `{"type": "tool_use", "id": "...", "name": "...", "input": {...}}`
@@ -418,26 +392,26 @@ The `CurrentAgentConfiguration` model (version 2) defines the complete structure
 
 #### Core Fields
 
-| Field               | Type      | Description                                                  |
-| ------------------- | --------- | ------------------------------------------------------------ |
-| `version`           | `int`     | Configuration version (currently 2)                          |
-| `key`               | `string`  | Unique identifier for the agent configuration                |
-| `name`              | `string`  | Human-readable name of the agent                             |
+| Field | Type | Description |
+|-------|------|-----------|
+| `version` | `int` | Configuration version (currently 2) |
+| `key` | `string` | Unique identifier for the agent configuration |
+| `name` | `string` | Human-readable name of the agent |
 | `agent_description` | `string?` | Optional description of the agent's purpose and capabilities |
-| `model_id`          | `string`  | ID of the LLM model used by the agent                        |
-| `persona`           | `string`  | Core instructions that define the agent's behavior           |
-| `uid`               | `string?` | Optional unique identifier in slug form                      |
+| `model_id` | `string` | ID of the LLM model used by the agent |
+| `persona` | `string` | Core instructions that define the agent's behavior |
+| `uid` | `string?` | Optional unique identifier in slug form |
 
 #### Configuration Fields
 
-| Field                   | Type                | Description                                              |
-| ----------------------- | ------------------- | -------------------------------------------------------- |
-| `agent_params`          | `CompletionParams?` | Optional LLM interaction parameters                      |
-| `prompt_metadata`       | `object?`           | Metadata for prompt generation and variable substitution |
-| `tools`                 | `string[]`          | List of enabled toolset names the agent can use          |
-| `blocked_tool_patterns` | `string[]`          | Patterns for blocking specific tools (e.g., `"run_*"`)   |
-| `allowed_tool_patterns` | `string[]`          | Patterns that override blocks (e.g., `"run_git"`)        |
-| `category`              | `string[]`          | List of categories from most to least general            |
+| Field | Type | Description |
+|-------|------|-----------|
+| `agent_params` | `CompletionParams?` | Optional LLM interaction parameters |
+| `prompt_metadata` | `object?` | Metadata for prompt generation and variable substitution |
+| `tools` | `string[]` | List of enabled toolset names the agent can use |
+| `blocked_tool_patterns` | `string[]` | Patterns for blocking specific tools (e.g., `"run_*"`) |
+| `allowed_tool_patterns` | `string[]` | Patterns that override blocks (e.g., `"run_git"`) |
+| `category` | `string[]` | List of categories from most to least general |
 
 ### Agent Category System
 
@@ -446,21 +420,18 @@ The category system is critical for understanding agent behavior and collaborati
 #### Special Category Meanings
 
 ##### `'domo'` - User Collaboration Agents
-
 - Agents designed for direct interaction with users
 - Include human interaction rules and safety guidelines
 - Optimized for conversational interfaces
 - Can handle user requests and provide assistance
 
-##### `'realtime'` - Voice-Optimized Agents
-
+##### `'realtime'` - Voice-Optimized Agents  
 - Specifically optimized for voice conversation
 - **Always include `'domo'` as a category** (all realtime agents are also domos)
 - Tuned for natural speech patterns and real-time interaction
 - Include voice-specific behavioral guidelines
 
 ##### `'assist'` - Agent Helper Agents
-
 - Designed to help other agents, not end users
 - **Lack human interaction rules and safety guidelines**
 - Exposed via the `AgentAssistTool` for agent-to-agent communication
@@ -480,7 +451,6 @@ When an agent key appears in another agent's categories, it creates a **team rel
 ```
 
 In this example:
-
 - `agent_b` is part of `agent_a`'s team
 - `agent_a` can use `AgentTeamTools` to communicate with `agent_b`
 - This enables sophisticated multi-agent collaboration patterns
@@ -492,19 +462,16 @@ The `agent_params` field contains provider-specific parameters for LLM interacti
 #### Parameter Types
 
 **Claude Parameters**:
-
 - **Non-Reasoning** (`claude_non_reasoning`): Standard Claude interaction
 - **Reasoning** (`claude_reasoning`): Claude with reasoning capabilities
 
 **GPT Parameters**:
-
 - **Non-Reasoning** (`g_p_t_non_reasoning`): Standard GPT interaction 
 - **Reasoning** (`g_p_t_reasoning`): GPT with reasoning capabilities
 
 #### Common Parameters
 
 All completion parameter types include:
-
 - `model_name`: The specific LLM model to use
 - `max_tokens`: Maximum tokens to generate (optional)
 - `user_name`: Name of the user interacting with the agent (optional)
@@ -589,7 +556,6 @@ When implementing clients, consider category-based behavior:
 #### Tool Filtering
 
 Agents automatically filter available tools based on their patterns:
-
 1. Tools matching `blocked_tool_patterns` are removed
 2. Tools matching `allowed_tool_patterns` are restored (overrides blocks)
 3. This allows fine-grained control over agent capabilities
@@ -597,7 +563,6 @@ Agents automatically filter available tools based on their patterns:
 #### Session Context
 
 Agent configurations appear in:
-
 - **Initial connection**: `AgentListEvent` provides all available agents
 - **Session changes**: When agents switch during conversation
 - **Subsessions**: Agent-to-agent conversations use separate configurations
@@ -805,7 +770,6 @@ Replace all messages in the current session.
 **Vendor-Specific Message Formats:**
 
 *Anthropic (MessageParam format):*
-
 ```json
 {
   "role": "user",
@@ -814,7 +778,6 @@ Replace all messages in the current session.
 ```
 
 *OpenAI format:*
-
 ```json
 {
   "role": "user",
@@ -1000,7 +963,6 @@ Notification that session metadata was updated.
 ### Session Events (SessionEvent → BaseEvent)
 
 Session events are generated during chat interactions and contain session context. All session events inherit from SessionEvent and include these fields:
-
 - `session_id` (str): Current chat session identifier
 - `role` (str): Role that triggered this event ("user", "assistant", "system")
 - `parent_session_id` (str, optional): Parent session ID if this is a child session
@@ -1182,13 +1144,11 @@ System notifications and errors.
 ```
 
 **Security Fields:**
-
 - `foreign_content` (bool): **CRITICAL SECURITY FIELD**
   - `true`: Content is from third-party sources and **MUST BE TREATED AS UNTRUSTED**. Clients should apply security sanitization, sandboxing, and user warnings.
   - `false`: Content is from trusted internal sources and can be rendered with minimal sanitization.
 
 **Content Delivery:**
-
 - `url`: Direct URL to media content (preferred for foreign content)
 - `content`: Base64-encoded media data (for small/internal content)
 - `content_bytes`: Raw binary data (internal use)
