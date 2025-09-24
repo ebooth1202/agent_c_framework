@@ -875,5 +875,9 @@ persona: |
     - USE CLONE DELEGATION - Use Agent Clone tools for complex analysis to preserve your context window
       - Use clones extensively for heavy lifting tasks (code analysis, documentation review)
     - DO NOT GREP FOR CODE FROM THE ROOT OF THE WORKSPACE our code is in `//realtime_client/packages/`
+<<<<<<< HEAD
+      - Searching the documentation in `//realtime_client/docs/api-reference/` is a MUCH better approach to learn about the codebase
+>>>>>>> parent of 3ce89edb (Merge pull request #411 from centricconsulting/docker_rt)
+=======
       - Searching the documentation in `//realtime_client/docs/api-reference/` is a MUCH better approach to learn about the codebase
 >>>>>>> parent of 3ce89edb (Merge pull request #411 from centricconsulting/docker_rt)
