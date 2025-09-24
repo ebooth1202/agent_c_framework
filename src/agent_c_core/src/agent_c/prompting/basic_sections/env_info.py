@@ -7,8 +7,7 @@ from typing import Any,  Optional, TYPE_CHECKING
 from agent_c.prompting.prompt_section import PromptSection, property_bag_item
 
 if TYPE_CHECKING:
-    from agent_c.models import ChatSession
-
+    from agent_c.models import ChatSession, ChatUser
 
 
 class EnvironmentInfoSection(PromptSection):
@@ -34,7 +33,7 @@ class EnvironmentInfoSection(PromptSection):
 
 
     @property_bag_item
-    async def session_info(self, **opts) -> str:
+    async def session_info(self, context) -> str:
         """
         Generates a string representation of the current chat session's information and metadata,
         excluding AI-internal metadata.
@@ -42,14 +41,16 @@ class EnvironmentInfoSection(PromptSection):
         Returns:
             str: Formatted session information.
         """
-        chat_session: Optional['ChatSession'] = opts.get('chat_session', None)
+        chat_session: Optional['ChatSession'] = context.get('chat_session', None)
         if chat_session is None:
             return ""
 
         session_name = chat_session.session_name or "ALERT! This session has no name!  Use `bridge_set_session_name` to set a name once you know the topic of the session."
 
         session_data = f"Session ID: {chat_session.session_id}\nSession Name: {session_name}\n"
-        user_data = f"User Name: {chat_session.user_name}\n"
+        chat_user: 'ChatUser' = context['chat_user']
+        groups: str = ", ".join(chat_user.groups) if chat_user.groups else "None"
+        user_data = f"User Name: {chat_user.user_name}\nGroups: {groups}\n"
 
         return  f"### Session Info\n{session_data}\n{user_data}"
 
@@ -75,16 +76,3 @@ class EnvironmentInfoSection(PromptSection):
         except Exception:
             self._logger.error("An error occurred when formatting the timestamp.", exc_info=True)
             return 'Warn the user that there was an error formatting the timestamp.'
-
-    @property_bag_item
-    async def env_name(self) -> str:
-        """
-        Retrieves the current environment name and its associated behavior rules.
-
-        Returns:
-            str: Formatted environment name and its rules.
-        """
-        env = os.environ.get("ENVIRONMENT", "PRODUCTION").upper()
-        inst = self.env_rules.get(env, '') if self.env_rules is not None else ""
-
-        return f"{env}. {inst}"
