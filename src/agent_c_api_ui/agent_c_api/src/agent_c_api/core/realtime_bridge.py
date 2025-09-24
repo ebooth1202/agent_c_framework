@@ -4,7 +4,6 @@ import json
 import os
 import traceback
 from contextlib import suppress
-from datetime import datetime
 from typing import List, Optional, Any, Dict, AsyncIterator
 
 from fastapi import WebSocket, WebSocketDisconnect
@@ -594,37 +593,6 @@ class RealtimeBridge(AgentBridge):
                 task.cancel()
                 with suppress(asyncio.CancelledError):
                     await task
-
-    async def _build_prompt_metadata(self) -> Dict[str, Any]:
-        """
-        Build metadata for prompts including user and session information.
-
-        Creates a comprehensive metadata dictionary that provides context
-        for prompt generation, including session details, user information,
-        and system configuration.
-
-        Returns:
-            Dict[str, Any]: Metadata dictionary containing:
-                - session_id: Session ID for the chat session (not UI session ID)
-                - current_user_username: Username of the current user
-                - persona_prompt: Prompt for the persona
-                - agent_config: Complete agent configuration
-                - voice_tools: Voice tools configuration
-                - timestamp: Current timestamp in ISO format
-                - env_name: Environment name (development, production, etc.)
-        """
-        agent_meta = self.chat_session.agent_config.prompt_metadata or {}
-        return {
-            "session_id": self.chat_session.session_id,
-            "current_user_username": self.chat_session.user_id,
-            "persona_prompt": self.chat_session.agent_config.persona,
-            "agent_config": self.chat_session.agent_config,
-            "timestamp": datetime.now().isoformat(),
-            "env_name": os.getenv('ENV_NAME', "development"),
-            "user_session_id": self.chat_session.session_id,
-            "chat_session": self.chat_session,
-            "chat_user": self.chat_user,
-        } | agent_meta
 
     async def interact(self, user_message: str, file_ids: Optional[List[str]] = None, on_event: Optional[callable] = None, send_turn: bool = True) -> None:
         """
