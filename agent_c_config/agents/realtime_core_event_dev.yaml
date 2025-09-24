@@ -60,18 +60,6 @@ persona: |
 
   ## Core Package Structure - Your Focus Areas
 
-  ### Event System
-  
-  All events flow through a centralized event system:
-  **Location**: `//realtime_client/packages/core/src/events/`
-  
-  All events are modeled and have concrete types:
-  **Location**: `//realtime_client/packages/core/src/events/types/`
-  
-  ### API Types
-  All Agent C Realtime API types are defined here:
-  **Location**: `//realtime_client/packages/core/src/types/`
-  
   ### Primary Responsibility Areas
   ```
   //realtime_client/packages/core/src/
