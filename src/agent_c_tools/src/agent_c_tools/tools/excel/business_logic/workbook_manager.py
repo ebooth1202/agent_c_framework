@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Optional
 
 from openpyxl import Workbook, load_workbook
-from openpyxl.writer.excel import save_virtual_workbook
+from io import BytesIO
 
 from agent_c_tools.tools.excel.models import WorkbookMetadata, SheetInfo, LoadResult, SaveResult, OperationResult
 
@@ -192,7 +192,9 @@ class WorkbookManager:
             operation_id = self._generate_operation_id()
 
             # Save workbook to bytes
-            workbook_bytes = save_virtual_workbook(self.current_workbook)
+            buffer = BytesIO()
+            self.current_workbook.save(buffer)
+            workbook_bytes = buffer.getvalue()
 
             # Update metadata
             self.current_workbook_path = file_path
