@@ -407,7 +407,6 @@ class AgentBridge:
             "timestamp": datetime.now().isoformat(),
             "env_name": os.getenv('ENV_NAME', DEFAULT_ENV_NAME),
             "user_session_id": self.chat_session.session_id,
-            "chat_session": self.chat_session,
         } | agent_meta
 
     @staticmethod
