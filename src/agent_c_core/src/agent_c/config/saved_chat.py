@@ -541,8 +541,12 @@ class SavedChatLoader(ConfigLoader):
             self.logger.warning(f"Session file not found: {session_file}")
             raise FileNotFoundError(f"Session file not found: {session_file}")
 
-        with open(session_file, 'r', encoding='utf-8') as f:
-            session_data = json.load(f)
+        try:
+            with open(session_file, 'r', encoding='utf-8') as f:
+                session_data = json.load(f)
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Failed to decode JSON from {session_file}: {e}")
+            raise
 
         return ChatSession.model_validate(session_data)
 
