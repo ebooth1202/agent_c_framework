@@ -19,12 +19,14 @@
     "react-dom": "^18.0.0"
   },
   "dependencies": {
-    "@agentc/realtime-core": "workspace:*"
+    "@agentc/realtime-core": "workspace:*",
+    "@testing-library/user-event": "^14.6.1"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.8.0",
     "@types/node": "^20.0.0",
-    "@types/react": "^18.3.24"
+    "@types/react": "^18.3.24",
+    "msw": "^2.11.3"
   },
   "scripts": {
     "build": "tsc",
