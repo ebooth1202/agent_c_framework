@@ -14,10 +14,10 @@ start cmd /k "scripts\start_api.bat"
 echo Waiting a few to a allow server start...
 timeout /t 12
 echo Launching front end server in a new command window...
-start cmd /k "scripts\start_fe.bat"
+start cmd /k "scripts\start_realtime_client.bat"
 echo Waiting a few to a allow server start...
 timeout /t 3
-start http://localhost:5173/chat
+start https://localhost:5173/chat
 popd
 
 ENDLOCAL
