@@ -9,9 +9,15 @@ if "%CD:~-7%"=="scripts" (
     cd ..
 )
 CALL .venv\scripts\activate.bat
+echo Launching API server in a new command window...
 start cmd /k "scripts\start_api.bat"
+echo Waiting a few to a allow server start...
+timeout /t 12
+echo Launching front end server in a new command window...
 start cmd /k "scripts\start_fe.bat"
-:: Return to original directory
+echo Waiting a few to a allow server start...
+timeout /t 3
+start http://localhost:5173/chat
 popd
 
 ENDLOCAL

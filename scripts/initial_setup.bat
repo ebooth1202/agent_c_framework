@@ -21,6 +21,33 @@ if exist .venv (
     )
 )
 
+if exist .env (
+    echo Config file already exists. Skipping creation.
+) else (
+    echo Copying example.env to .env ...
+    copy example.env .env
+    cls
+    echo ******************************************************************************
+    echo *
+    echo *  Please edit the .env file to configure your API keys.
+    echo *  When notepad closes initial setup will continue.
+    notepad .env
+)
+
+if exist .local_workspaces.json (
+    echo Local workspaces config file already exists. Skipping creation.
+) else (
+    echo Creating local workspaces config file from example ...
+    copy local_workspaces.example.json .local_workspaces.json
+)
+
+if exist src\realtime_client\packages\demo\.env.local (
+    echo Demo local config file already exists. Skipping creation.
+) else (
+    echo Copying demo example.env to src\realtime_client\packages\demo\.env.local ...
+    copy src\realtime_client\packages\demo\.env.example src\realtime_client\packages\demo\.env.local
+)
+
 :: Activate the virtual environment
 echo Activating virtual environment.
 CALL .venv\scripts\activate.bat
@@ -45,5 +72,5 @@ if errorlevel 1 (
 
 
 echo Initial setup completed successfully.
-echo Remember to activate the virtual environment with ',venv\scripts\activate.bat' before you start working.
+echo Remember to activate the virtual environment with '.venv\scripts\activate.bat' before you start working.
 ENDLOCAL
