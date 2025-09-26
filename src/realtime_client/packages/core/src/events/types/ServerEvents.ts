@@ -304,14 +304,14 @@ export interface ToolSelectDeltaEvent extends SessionEvent {
 export interface RenderMediaEvent extends SessionEvent {
   type: 'render_media';
   role: 'assistant';
-  content_type: string;  // e.g., "text/html", "image/svg+xml"
-  content: string;       // The media content
-  sent_by_class: string; // Tool class that sent the event
-  sent_by_function: string; // Specific function that generated the event
-  foreign_content: boolean; // SECURITY: Indicates if content is from external sources
-  url?: string;          // Optional: URL source of the content
-  name?: string;         // Optional: Name/title of the media content
-  content_bytes?: number; // Optional: Size of the content in bytes
+  content_type: string;           // MIME type (REQUIRED)
+  content?: string;                // Optional: Text or base64 encoded content
+  url?: string;                    // Optional: URL to the media
+  name?: string;                   // Optional: Name/title of the media content
+  sent_by_class?: string;          // Optional: Tool class that sent the event
+  sent_by_function?: string;       // Optional: Function that generated the event
+  foreign_content: boolean;        // Security flag for external content
+  // Remove content_bytes field - not sent over WebSocket JSON
 }
 
 /**

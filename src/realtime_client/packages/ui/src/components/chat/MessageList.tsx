@@ -333,7 +333,7 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
         return (
           <MediaRenderer
             key={item.id}
-            content={item.content}
+            content={item.content || ''}
             contentType={item.contentType}
             metadata={item.metadata}
             timestamp={item.timestamp}

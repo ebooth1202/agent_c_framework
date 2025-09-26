@@ -31,4 +31,3 @@ export {
 export { EventStreamProcessor } from './EventStreamProcessor';
 export { MessageBuilder, EnhancedMessage, MessageMetadata, MessageType } from './MessageBuilder';
 export { ToolCallManager, ToolNotification, ToolCallWithResult } from './ToolCallManager';
-export { RichMediaHandler, RichMediaContent } from './RichMediaHandler';

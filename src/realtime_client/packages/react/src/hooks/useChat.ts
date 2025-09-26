@@ -522,7 +522,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         sessionId: string;
         media: {
           id?: string;
-          content: string;
+          content?: string;
           contentType: string;
           timestamp?: string;
           metadata?: {

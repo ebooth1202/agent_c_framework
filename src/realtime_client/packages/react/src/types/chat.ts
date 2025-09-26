@@ -64,9 +64,9 @@ export interface DividerChatItem extends BaseChatItem {
  */
 export interface MediaChatItem extends BaseChatItem {
   type: 'media';
-  /** The media content to render */
-  content: string;
-  /** Media content type (e.g., "text/html", "image/svg+xml") */
+  /** The media content to render (may be absent if only URL provided) */
+  content?: string;
+  /** Media content type (e.g., "text/markdown", "text/html", "image/svg+xml") */
   contentType: string;
   /** Optional metadata about the source */
   metadata?: {
