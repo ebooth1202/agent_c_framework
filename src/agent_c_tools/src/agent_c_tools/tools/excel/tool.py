@@ -4,7 +4,9 @@ Clean, thin interface layer that delegates to business logic components.
 Each method is under 25 lines and focuses solely on interface responsibilities.
 """
 
+
 import json
+import yaml
 from typing import Any, Dict, List, Optional, cast
 
 from agent_c.toolsets import Toolset, json_schema
@@ -39,10 +41,10 @@ class ExcelTools(Toolset):
     def _validate_workbook_loaded(self) -> Optional[str]:
         """Check if workbook is loaded and return error JSON if not."""
         if not self.workbook_manager.has_workbook():
-            return json.dumps({
+            return yaml.dump({
                 'success': False,
                 'error': 'No workbook is currently loaded. Create or load a workbook first.'
-            })
+            }, default_flow_style=False, sort_keys=False, allow_unicode=True)
         return None
 
     async def _handle_workspace_save(self, unc_path: str, workbook_bytes: bytes, tool_context: Dict) -> Dict[str, Any]:
@@ -65,10 +67,10 @@ class ExcelTools(Toolset):
             result = self.workbook_manager.create_workbook()
             self.concurrency_manager.sheet_row_counts.clear()
             self.concurrency_manager.row_reservations.clear()
-            return json.dumps(result.to_dict())
+            return yaml.dump(result.to_dict(), default_flow_style=False, sort_keys=False, allow_unicode=True)
         except Exception as e:
             self.logger.error(f"Error in create_workbook: {str(e)}")
-            return json.dumps({'success': False, 'error': f"Unexpected error: {str(e)}"})
+            return yaml.dump({'success': False, 'error': f"Unexpected error: {str(e)}"}, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
     @json_schema(
         description='Load an Excel workbook from workspace using UNC path',
@@ -81,7 +83,7 @@ class ExcelTools(Toolset):
         """Load an Excel workbook from workspace."""
         success, message = validate_required_fields(kwargs, ['path'])
         if not success:
-            return json.dumps({'success': False, 'error': message})
+            return yaml.dump({'success': False, 'error': message}, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
         try:
             from agent_c_tools.helpers.path_helper import os_file_system_path
@@ -91,11 +93,11 @@ class ExcelTools(Toolset):
             # Validate and get OS path
             error, _, _ = self.workspace_tool.validate_and_get_workspace_path(unc_path)
             if error:
-                return json.dumps({'success': False, 'error': error})
+                return yaml.dump({'success': False, 'error': error}, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
             os_path = os_file_system_path(self.workspace_tool, unc_path)
             if not os_path:
-                return json.dumps({'success': False, 'error': 'Could not resolve file path'})
+                return yaml.dump({'success': False, 'error': 'Could not resolve file path'}, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
             # Load using business logic
             result = self.workbook_manager.load_workbook(os_path, read_only)
@@ -104,10 +106,10 @@ class ExcelTools(Toolset):
 
             response = result.to_dict()
             response['message'] = 'Excel workbook loaded successfully' if result.success else result.error
-            return json.dumps(response)
+            return yaml.dump(response, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
         except Exception as e:
-            return json.dumps({'success': False, 'error': f"Error loading workbook: {str(e)}"})
+            return yaml.dump({'success': False, 'error': f"Error loading workbook: {str(e)}"}, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
     def _reset_concurrency_tracking(self, sheets):
         """Reset concurrency tracking and update with sheet info."""
@@ -131,7 +133,7 @@ class ExcelTools(Toolset):
 
         success, message = validate_required_fields(kwargs, ['path'])
         if not success:
-            return json.dumps({'success': False, 'error': message})
+            return yaml.dump({'success': False, 'error': message}, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
         try:
             from agent_c_tools.helpers.path_helper import ensure_file_extension
@@ -140,19 +142,19 @@ class ExcelTools(Toolset):
 
             save_result, workbook_bytes = self.workbook_manager.save_workbook(unc_path)
             if not save_result.success or not workbook_bytes:
-                return json.dumps(save_result.to_dict())
+                return yaml.dump(save_result.to_dict(), default_flow_style=False, sort_keys=False, allow_unicode=True)
 
             # Save to workspace
             workspace_result = await self._handle_workspace_save(unc_path, workbook_bytes, tool_context)
             if not workspace_result['success']:
-                return json.dumps(workspace_result)
+                return yaml.dump(workspace_result, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
             response = save_result.to_dict()
             response['message'] = 'Excel workbook saved successfully'
-            return json.dumps(response)
+            return yaml.dump(response, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
         except Exception as e:
-            return json.dumps({'success': False, 'error': f"Error saving workbook: {str(e)}"})
+            return yaml.dump({'success': False, 'error': f"Error saving workbook: {str(e)}"}, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
     @json_schema(
         description='List all sheets in the current workbook',
@@ -167,7 +169,7 @@ class ExcelTools(Toolset):
         try:
             result = self.workbook_manager.get_workbook_info()
             if not result.success:
-                return json.dumps(result.to_dict())
+                return yaml.dump(result.to_dict(), default_flow_style=False, sort_keys=False, allow_unicode=True)
 
             # Add tracked row counts
             sheets_data = result.data.get('sheets', [])
@@ -176,14 +178,14 @@ class ExcelTools(Toolset):
                 if sheet_name in self.concurrency_manager.sheet_row_counts:
                     sheet_data['tracked_row_count'] = self.concurrency_manager.sheet_row_counts[sheet_name]
 
-            return json.dumps({
+            return yaml.dump({
                 'success': True,
                 'sheets': sheets_data,
                 'total_sheets': result.data.get('total_sheets', 0),
                 'active_sheet': result.data.get('active_sheet', '')
-            })
+            }, default_flow_style=False, sort_keys=False, allow_unicode=True)
         except Exception as e:
-            return json.dumps({'success': False, 'error': f"Error listing sheets: {str(e)}"})
+            return yaml.dump({'success': False, 'error': f"Error listing sheets: {str(e)}"}, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
     @json_schema(
         description='Create a new sheet in the current workbook',
@@ -200,7 +202,7 @@ class ExcelTools(Toolset):
 
         success, message = validate_required_fields(kwargs, ['sheet_name'])
         if not success:
-            return json.dumps({'success': False, 'error': message})
+            return yaml.dump({'success': False, 'error': message}, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
         try:
             sheet_name = kwargs.get('sheet_name')
@@ -212,9 +214,9 @@ class ExcelTools(Toolset):
 
             response = result.to_dict()
             response['message'] = f'Sheet "{sheet_name}" created successfully' if result.success else result.error
-            return json.dumps(response)
+            return yaml.dump(response, default_flow_style=False, sort_keys=False, allow_unicode=True)
         except Exception as e:
-            return json.dumps({'success': False, 'error': f"Error creating sheet: {str(e)}"})
+            return yaml.dump({'success': False, 'error': f"Error creating sheet: {str(e)}"}, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
     @json_schema(
         description='Reserve rows for concurrent writing by multiple agents',
@@ -232,7 +234,7 @@ class ExcelTools(Toolset):
 
         success, message = validate_required_fields(kwargs, ['row_count'])
         if not success:
-            return json.dumps({'success': False, 'error': message})
+            return yaml.dump({'success': False, 'error': message}, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
         try:
             row_count = kwargs.get('row_count')
@@ -240,7 +242,7 @@ class ExcelTools(Toolset):
             agent_id = kwargs.get('agent_id')
 
             if row_count <= 0:
-                return json.dumps({'success': False, 'error': 'row_count must be greater than 0'})
+                return yaml.dump({'success': False, 'error': 'row_count must be greater than 0'}, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
             workbook = self.workbook_manager.get_workbook()
             self._ensure_sheet_exists(workbook, sheet_name)
@@ -250,9 +252,9 @@ class ExcelTools(Toolset):
                 row_count, sheet_name, current_max_row, agent_id
             )
 
-            return json.dumps(result.to_dict())
+            return yaml.dump(result.to_dict(), default_flow_style=False, sort_keys=False, allow_unicode=True)
         except Exception as e:
-            return json.dumps({'success': False, 'error': f'Error reserving rows: {str(e)}'})
+            return yaml.dump({'success': False, 'error': f'Error reserving rows: {str(e)}'}, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
     def _ensure_sheet_exists(self, workbook, sheet_name):
         """Ensure a sheet exists in the workbook."""
@@ -280,12 +282,12 @@ class ExcelTools(Toolset):
 
         success, message = validate_required_fields(kwargs, ['records'])
         if not success:
-            return json.dumps({'success': False, 'error': message})
+            return yaml.dump({'success': False, 'error': message}, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
         try:
             records = kwargs.get('records')
             if not records:
-                return json.dumps({'success': False, 'error': 'No records provided'})
+                return yaml.dump({'success': False, 'error': 'No records provided'}, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
             async with self.concurrency_manager.get_write_lock():
                 result = await self._perform_append_operation(kwargs)
@@ -297,9 +299,9 @@ class ExcelTools(Toolset):
                 response = result.to_dict()
                 response['message'] = (f'Successfully appended {result.records_written} records'
                                      if result.success else result.error)
-                return json.dumps(response)
+                return yaml.dump(response, default_flow_style=False, sort_keys=False, allow_unicode=True)
         except Exception as e:
-            return json.dumps({'success': False, 'error': f'Error appending records: {str(e)}'})
+            return yaml.dump({'success': False, 'error': f'Error appending records: {str(e)}'}, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
     async def _perform_append_operation(self, kwargs):
         """Perform the actual append operation with business logic."""
@@ -341,7 +343,7 @@ class ExcelTools(Toolset):
 
         success, message = validate_required_fields(kwargs, ['reservation_id', 'records'])
         if not success:
-            return json.dumps({'success': False, 'error': message})
+            return yaml.dump({'success': False, 'error': message}, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
         try:
             reservation_id = kwargs.get('reservation_id')
@@ -349,13 +351,13 @@ class ExcelTools(Toolset):
 
             reservation = self.concurrency_manager.get_reservation(reservation_id)
             if not reservation:
-                return json.dumps({'success': False, 'error': f'Reservation {reservation_id} not found'})
+                return yaml.dump({'success': False, 'error': f'Reservation {reservation_id} not found'}, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
             if reservation.status.value != 'active':
-                return json.dumps({'success': False, 'error': f'Reservation not active: {reservation.status.value}'})
+                return yaml.dump({'success': False, 'error': f'Reservation not active: {reservation.status.value}'}, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
             if len(records) > reservation.row_count:
-                return json.dumps({'success': False, 'error': f'Too many records for reservation'})
+                return yaml.dump({'success': False, 'error': f'Too many records for reservation'}, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
             workbook = self.workbook_manager.get_workbook()
             result = await self.excel_operations.write_to_reserved_rows(
@@ -372,9 +374,9 @@ class ExcelTools(Toolset):
                 'message': f'Successfully wrote {len(records)} records to reserved rows' if result.success else result.error
             })
 
-            return json.dumps(response)
+            return yaml.dump(response, default_flow_style=False, sort_keys=False, allow_unicode=True)
         except Exception as e:
-            return json.dumps({'success': False, 'error': f'Error writing to reservation: {str(e)}'})
+            return yaml.dump({'success': False, 'error': f'Error writing to reservation: {str(e)}'}, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
     @json_schema(
         description='Read data from a sheet with optional range specification',
@@ -408,11 +410,11 @@ class ExcelTools(Toolset):
             )
 
             if not result.success:
-                return json.dumps(result.to_dict())
+                return yaml.dump(result.to_dict(), default_flow_style=False, sort_keys=False, allow_unicode=True)
 
             return self._handle_read_response(result, kwargs.get('sheet_name', 'Sheet'))
         except Exception as e:
-            return json.dumps({'success': False, 'error': f'Error reading sheet data: {str(e)}'})
+            return yaml.dump({'success': False, 'error': f'Error reading sheet data: {str(e)}'}, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
     def _handle_read_response(self, result, sheet_name):
         """Handle read response, potentially caching large results."""
@@ -420,7 +422,7 @@ class ExcelTools(Toolset):
         import uuid
 
         response_data = {'data': result.data, 'headers': result.headers}
-        response_json = json.dumps(response_data)
+        response_json = yaml.dump(response_data, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
         response_dict = result.to_dict()
         response_dict['sheet_name'] = sheet_name
@@ -440,7 +442,7 @@ class ExcelTools(Toolset):
             response_dict.pop('data', None)
             response_dict.pop('headers', None)
 
-        return json.dumps(response_dict)
+        return yaml.dump(response_dict, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
     @json_schema(
         description='Load cached sheet data using a cache key',
@@ -452,23 +454,23 @@ class ExcelTools(Toolset):
         """Load cached sheet data using a cache key."""
         success, message = validate_required_fields(kwargs, ['cache_key'])
         if not success:
-            return json.dumps({'success': False, 'error': message})
+            return yaml.dump({'success': False, 'error': message}, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
         try:
             cache_key = kwargs.get('cache_key')
             cached_data = self.tool_cache.get(cache_key)
 
             if cached_data is None:
-                return json.dumps({'success': False, 'error': f'No cached data found for key {cache_key}'})
+                return yaml.dump({'success': False, 'error': f'No cached data found for key {cache_key}'}, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
-            return json.dumps({
+            return yaml.dump({
                 'success': True,
                 'message': 'Cached data retrieved successfully',
                 'cache_key': cache_key,
                 **cached_data
-            })
+            }, default_flow_style=False, sort_keys=False, allow_unicode=True)
         except Exception as e:
-            return json.dumps({'success': False, 'error': f'Error loading cached data: {str(e)}'})
+            return yaml.dump({'success': False, 'error': f'Error loading cached data: {str(e)}'}, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
     @json_schema(
         description='Get the next available row number in a sheet',
@@ -491,9 +493,9 @@ class ExcelTools(Toolset):
             )
 
             result = self.excel_operations.get_next_available_row_info(workbook, sheet_name, reserved_rows)
-            return json.dumps(result.to_dict())
+            return yaml.dump(result.to_dict(), default_flow_style=False, sort_keys=False, allow_unicode=True)
         except Exception as e:
-            return json.dumps({'success': False, 'error': f'Error getting next available row: {str(e)}'})
+            return yaml.dump({'success': False, 'error': f'Error getting next available row: {str(e)}'}, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
     @json_schema(
         description='Get operation status and statistics',
@@ -514,13 +516,13 @@ class ExcelTools(Toolset):
 
             concurrency_status = self.concurrency_manager.get_operation_status()
 
-            return json.dumps({
+            return yaml.dump({
                 'success': True,
                 'current_workbook': workbook_info,
                 **concurrency_status
-            })
+            }, default_flow_style=False, sort_keys=False, allow_unicode=True)
         except Exception as e:
-            return json.dumps({'success': False, 'error': f'Error getting operation status: {str(e)}'})
+            return yaml.dump({'success': False, 'error': f'Error getting operation status: {str(e)}'}, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
 
 # Register the toolset
