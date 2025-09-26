@@ -454,9 +454,6 @@ class RealtimeBridge(AgentBridge):
 
     async def runtime_callback(self, event: BaseEvent):
         """Handle runtime events from the agent"""
-        #if event.type not in ["ping", "pong"]:
-            #self.logger.debug(f"RealtimeBridge {self.chat_session.session_id}: Received runtime event: {event.type}")
-        # These are already in model format and don't need parsed.
         await self.handle_runtime_event(event)
         await asyncio.sleep(0)
 
@@ -477,30 +474,25 @@ class RealtimeBridge(AgentBridge):
 
         await self.raise_render_media_markdown(message)
 
-    async def run(self, websocket: WebSocket, chat_session_id: Optional[str] = None, agent_key: Optional[str] = None):
+    async def run(self, websocket: WebSocket):
         """Main run loop for the bridge"""
         await websocket.accept()
         self.websocket=websocket
         self.is_running = True
 
-        if chat_session_id is not None and (self.chat_session is None or self.chat_session.session_id != chat_session_id):
-            self.chat_session = await self._get_or_create_chat_session(session_id=chat_session_id,
-                                                                       user_id=self.chat_user.user_id,
-                                                                       agent_key=agent_key)
-
-        self.logger.info (f"RealtimeBridge started for session {self.chat_session.session_id}")
+        self.logger.info (f"RealtimeBridge started for UI session {self.ui_session_id}")
         await self.send_client_initial_data()
         await self.send_user_turn_start()
 
         try:
             while self.is_running:
                 try:
-                    message = await self.websocket.receive() # .receive_json()
+                    message = await self.websocket.receive()
                     if message["type"] == "websocket.receive":
                         if "text" in message:
                             event = self.parse_event(json.loads(message["text"]))
                             if event.type not in ["ping", "pong"]:
-                                self.logger.info(f"Received event {event.type} from session {self.chat_session.session_id}")
+                                self.logger.debug(f"Received event {event.type} from session {self.chat_session.session_id}")
 
                             if event.type == "resume_chat_session" and event.session_id == self.chat_session.session_id:
                                 self.logger("Client requested to resume the current session, ignoring.")
@@ -763,7 +755,7 @@ class RealtimeBridge(AgentBridge):
 
         return chat_session
 
-    async def initialize(self) -> None:
-        self.chat_session = await self._get_or_create_chat_session()
+    async def initialize(self, chat_session_id: Optional[str] = None, agent_key: Optional[str] = None) -> None:
+        self.chat_session = await self._get_or_create_chat_session(session_id=chat_session_id, agent_key=agent_key)
         await self._init_tool_chest()
         await self.initialize_agent_parameters()
