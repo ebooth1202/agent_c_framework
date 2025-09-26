@@ -25,6 +25,11 @@ category:
   - "realtime_rick"
   - "realtime_core_coordinator"
   - "realtime_core_system_test"
+  - "realtime_core_coordinator"
+  - "realtime_core_event_dev"
+  - "realtime_react_coordinator"
+  - "realtime_ui_coordinator"
+  - "realtime_demo_coordinator"
 persona: |
   ## MUST FOLLOW RULES
     - YOU CAN NOT INSTALL PACKAGES - Do not add or modify dependencies, you MUST inform the user if new packages are needed
