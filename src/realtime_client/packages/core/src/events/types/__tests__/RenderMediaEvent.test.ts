@@ -107,23 +107,23 @@ describe('RenderMediaEvent Security Tests', () => {
         session_id: 'test',
         role: 'assistant',
         content_type: 'text/plain',
-        content: 'Safe text',
-        sent_by_class: 'TextTool',
-        sent_by_function: 'generate_text',
         foreign_content: false
-        // url, name, content_bytes are optional
+        // content, url, name, sent_by_class, sent_by_function are optional
       };
 
       // Act & Assert
       // Required fields
       expect(minimalEvent.foreign_content).toBeDefined();
-      expect(minimalEvent.sent_by_class).toBeDefined();
-      expect(minimalEvent.sent_by_function).toBeDefined();
+      expect(minimalEvent.content_type).toBeDefined();
+      expect(minimalEvent.session_id).toBeDefined();
+      expect(minimalEvent.role).toBeDefined();
       
       // Optional fields
+      expect(minimalEvent.content).toBeUndefined();
       expect(minimalEvent.url).toBeUndefined();
       expect(minimalEvent.name).toBeUndefined();
-      expect(minimalEvent.content_bytes).toBeUndefined();
+      expect(minimalEvent.sent_by_class).toBeUndefined();
+      expect(minimalEvent.sent_by_function).toBeUndefined();
     });
   });
 
@@ -602,7 +602,7 @@ describe('RenderMediaEvent Security Tests', () => {
         content: 'test',
         sent_by_class: 'Tool',
         sent_by_function: 'func'
-        // Missing foreign_content
+        // Missing foreign_content - REQUIRED field
       };
 
       const missingSentByClass = {
@@ -613,12 +613,22 @@ describe('RenderMediaEvent Security Tests', () => {
         content: 'test',
         sent_by_function: 'func',
         foreign_content: true
-        // Missing sent_by_class
+        // Missing sent_by_class - now OPTIONAL, should still be valid
+      };
+
+      const missingContentType = {
+        type: 'render_media',
+        session_id: 'test',
+        role: 'assistant',
+        content: 'test',
+        foreign_content: true
+        // Missing content_type - REQUIRED field
       };
 
       // Act & Assert
-      expect(isRenderMediaEvent(missingForeignContent)).toBe(false);
-      expect(isRenderMediaEvent(missingSentByClass)).toBe(false);
+      expect(isRenderMediaEvent(missingForeignContent)).toBe(false); // foreign_content is required
+      expect(isRenderMediaEvent(missingSentByClass)).toBe(true); // sent_by_class is optional
+      expect(isRenderMediaEvent(missingContentType)).toBe(false); // content_type is required
     });
   });
 
@@ -760,8 +770,7 @@ function validateRenderMediaEvent(event: any): boolean {
   
   // Check required fields
   const requiredFields = [
-    'session_id', 'role', 'content_type', 'content',
-    'sent_by_class', 'sent_by_function', 'foreign_content'
+    'session_id', 'role', 'content_type', 'foreign_content'
   ];
   
   for (const field of requiredFields) {
@@ -796,18 +805,9 @@ function validateRenderMediaEventStrict(event: any): asserts event is RenderMedi
     throw new Error('Invalid type for foreign_content: must be boolean');
   }
   
-  if (!('sent_by_class' in event)) {
-    throw new Error('Missing required field: sent_by_class');
-  }
-  
-  if (!('sent_by_function' in event)) {
-    throw new Error('Missing required field: sent_by_function');
-  }
-  
-  // Validate other required fields
+  // Validate required string fields
   const requiredStringFields = [
-    'session_id', 'role', 'content_type', 'content',
-    'sent_by_class', 'sent_by_function'
+    'session_id', 'role', 'content_type'
   ];
   
   for (const field of requiredStringFields) {
@@ -848,15 +848,8 @@ function isRenderMediaEvent(event: any): event is RenderMediaEvent {
   }
   
   // Must have all required fields
+  // Required fields
   if (!('foreign_content' in event) || typeof event.foreign_content !== 'boolean') {
-    return false;
-  }
-  
-  if (!('sent_by_class' in event) || typeof event.sent_by_class !== 'string') {
-    return false;
-  }
-  
-  if (!('sent_by_function' in event) || typeof event.sent_by_function !== 'string') {
     return false;
   }
   
@@ -872,7 +865,16 @@ function isRenderMediaEvent(event: any): event is RenderMediaEvent {
     return false;
   }
   
-  if (!('content' in event) || typeof event.content !== 'string') {
+  // Optional fields type checking
+  if ('content' in event && event.content !== undefined && typeof event.content !== 'string') {
+    return false;
+  }
+  
+  if ('sent_by_class' in event && event.sent_by_class !== undefined && typeof event.sent_by_class !== 'string') {
+    return false;
+  }
+  
+  if ('sent_by_function' in event && event.sent_by_function !== undefined && typeof event.sent_by_function !== 'string') {
     return false;
   }
   

@@ -6,7 +6,6 @@
 import { SessionManager } from '../session/SessionManager';
 import { MessageBuilder } from './MessageBuilder';
 import { ToolCallManager } from './ToolCallManager';
-import { RichMediaHandler } from './RichMediaHandler';
 import { 
   ServerEvent,
   TextDeltaEvent, 
@@ -46,7 +45,6 @@ import { Logger } from '../utils/logger';
 export class EventStreamProcessor {
   private messageBuilder: MessageBuilder;
   private toolCallManager: ToolCallManager;
-  private richMediaHandler: RichMediaHandler;
   private sessionManager: SessionManager;
   private userSessionId: string | null = null;
   
@@ -54,7 +52,6 @@ export class EventStreamProcessor {
     this.sessionManager = sessionManager;
     this.messageBuilder = new MessageBuilder();
     this.toolCallManager = new ToolCallManager();
-    this.richMediaHandler = new RichMediaHandler();
   }
   
   /**
@@ -499,22 +496,27 @@ export class EventStreamProcessor {
    * Handle rich media rendering events
    */
   private handleRenderMedia(event: RenderMediaEvent): void {
-    const media = this.richMediaHandler.processRenderMediaEvent(event);
+    // Generate ID for React key prop
+    const id = `media_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    // Emit media event for UI
+    // Emit media event preserving server structure
     this.sessionManager.emit('media-added', {
       sessionId: event.session_id,
       media: {
-        id: media.id,
-        role: 'assistant',
+        id,
+        role: event.role || 'assistant',
         type: 'media',
-        content: media.content,
-        contentType: media.type,
-        timestamp: media.metadata.timestamp.toISOString(),
+        content: event.content,
+        contentType: event.content_type, // PRESERVE server field, don't transform
+        timestamp: new Date().toISOString(),
         status: 'complete',
+        // Preserve ALL server fields in metadata
         metadata: {
-          ...media.metadata,
-          timestamp: media.metadata.timestamp.toISOString()
+          sent_by_class: event.sent_by_class,
+          sent_by_function: event.sent_by_function,
+          foreign_content: event.foreign_content,
+          url: event.url,
+          name: event.name
         }
       }
     });
