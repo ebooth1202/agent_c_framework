@@ -11,13 +11,13 @@ import { Logger } from '../utils/logger';
  */
 export interface EnhancedMessage extends Message {
   id: string;
-  type: 'message' | 'thought' | 'media' | 'notification';
+  type: 'message' | 'media' | 'notification';  // 'thought' removed - use role instead
   status: 'streaming' | 'complete' | 'error';
   contentType?: 'text' | 'html' | 'svg' | 'image' | 'unknown';
   metadata?: MessageMetadata;
   toolCalls?: ToolCall[];
   toolResults?: ToolResult[];
-  isCollapsed?: boolean; // For thoughts
+  isCollapsed?: boolean; // For thoughts (identified by role === 'assistant (thought)')
 }
 
 /**
@@ -60,10 +60,10 @@ export class MessageBuilder {
     
     this.currentMessage = {
       id: this.generateMessageId(),
-      role: type === 'thought' ? 'assistant' : type,
+      role: type === 'thought' ? 'assistant (thought)' : type === 'user' ? 'user' : 'assistant',
       content: '',
       timestamp: new Date().toISOString(),
-      type: type === 'thought' ? 'thought' : 'message',
+      type: 'message', // Always 'message' - UI only recognizes this type
       status: 'streaming',
       format: 'text'
     };
@@ -113,7 +113,8 @@ export class MessageBuilder {
     };
     
     // Set collapsed state for thoughts by default
-    if (finalMessage.type === 'thought') {
+    // Check role instead of type since type is always 'message' now
+    if (finalMessage.role === 'assistant (thought)') {
       finalMessage.isCollapsed = true;
     }
     
