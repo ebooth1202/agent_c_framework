@@ -269,7 +269,7 @@ class RealtimeBridge(AgentBridge):
                 await self.send_error(f"Session '{session_id}' not found", source="set_chat_session_name")
                 return
         else:
-            self.chat_session.name = session_name
+            self.chat_session.session_name = session_name
 
         self.logger.info(f"RealtimeBridge {session_id}: Session name set to '{session_name}'")
 
