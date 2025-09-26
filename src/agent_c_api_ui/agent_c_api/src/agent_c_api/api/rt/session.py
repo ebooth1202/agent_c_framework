@@ -71,9 +71,12 @@ async def initialize_realtime_session(websocket: WebSocket,
         auth_service: 'AuthService' = websocket.app.state.auth_service
         user = await auth_service.auth_repo.get_user_by_id(user_info['user_id'])
         manager = websocket.app.state.realtime_manager
-        ui_session = await manager.create_realtime_session(user, ui_session_id)
+        if agent_key is None:
+            agent_key = "default"
 
-        await ui_session.bridge.run(websocket, chat_session_id, agent_key)
+        ui_session = await manager.create_realtime_session(user, ui_session_id, chat_session_id, agent_key)
+
+        await ui_session.bridge.run(websocket)
 
     except Exception as e:
         logger.exception(f"Error during session initialization: {str(e)}", exc_info=True)
