@@ -250,6 +250,9 @@ importers:
       '@tanstack/react-table':
         specifier: ^8.21.3
         version: 8.21.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@testing-library/user-event':
+        specifier: ^14.6.1
+        version: 14.6.1(@testing-library/dom@10.4.1)
       axios:
         specifier: ^1.7.9
         version: 1.12.2
@@ -309,7 +312,7 @@ importers:
         version: 2.0.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       table:
         specifier: git+https://github.com/tanstack/react-table.git
-        version: git+https://github.com/tanstack/react-table.git#569a6e85b5690a488b05e9d3113f37dbab6bd40e
+        version: git+https://git@github.com:tanstack/react-table.git#02c203afed5865cfec0aa614de9f2861645d6ff9
       tailwind-merge:
         specifier: ^2.6.0
         version: 2.6.0
@@ -350,6 +353,9 @@ importers:
       jest-axe:
         specifier: ^10.0.0
         version: 10.0.0
+      msw:
+        specifier: ^2.11.2
+        version: 2.11.2(@types/node@20.19.17)(typescript@5.9.2)
       postcss:
         specifier: ^8.5.3
         version: 8.5.6
@@ -371,6 +377,9 @@ importers:
       '@agentc/realtime-core':
         specifier: workspace:*
         version: link:../core
+      '@testing-library/user-event':
+        specifier: ^14.6.1
+        version: 14.6.1(@testing-library/dom@10.4.1)
       react:
         specifier: ^18.0.0
         version: 18.3.1
@@ -387,6 +396,9 @@ importers:
       '@types/react':
         specifier: ^18.3.24
         version: 18.3.24
+      msw:
+        specifier: ^2.11.3
+        version: 2.11.3(@types/node@20.19.17)(typescript@5.9.2)
 
   packages/ui:
     dependencies:
@@ -483,6 +495,9 @@ importers:
       '@tanstack/react-virtual':
         specifier: ^3.13.12
         version: 3.13.12(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@testing-library/user-event':
+        specifier: ^14.6.1
+        version: 14.6.1(@testing-library/dom@10.4.1)
       '@tiptap/core':
         specifier: ^2.26.1
         version: 2.26.1(@tiptap/pm@2.26.1)
@@ -5168,6 +5183,16 @@ packages:
       typescript:
         optional: true
 
+  msw@2.11.3:
+    resolution: {integrity: sha512-878imp8jxIpfzuzxYfX0qqTq1IFQz/1/RBHs/PyirSjzi+xKM/RRfIpIqHSCWjH0GxidrjhgiiXC+DWXNDvT9w==}
+    engines: {node: '>=18'}
+    hasBin: true
+    peerDependencies:
+      typescript: '>= 4.8.x'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
   multimatch@5.0.0:
     resolution: {integrity: sha512-ypMKuglUrZUD99Tk2bUQ+xNQj43lPEfAeX2o9cTteAmShXy2VHDJpuwu1o0xqoKCt9jLVAvwyFKdLTPXKAfJyA==}
     engines: {node: '>=10'}
@@ -6446,8 +6471,8 @@ packages:
   symbol-tree@3.2.4:
     resolution: {integrity: sha512-9QNk5KwDF+Bvz+PyObkmSYjI5ksVUYtjW7AU22r2NKcfLJcXp96hkDWU3+XndOsUb+AQ9QhfzfCT2O+CNWT5Tw==}
 
-  table@git+https://github.com/tanstack/react-table.git#569a6e85b5690a488b05e9d3113f37dbab6bd40e:
-    resolution: {commit: 569a6e85b5690a488b05e9d3113f37dbab6bd40e, repo: https://github.com/tanstack/react-table.git, type: git}
+  table@git+https://git@github.com:tanstack/react-table.git#02c203afed5865cfec0aa614de9f2861645d6ff9:
+    resolution: {commit: 02c203afed5865cfec0aa614de9f2861645d6ff9, repo: git@github.com:tanstack/react-table.git, type: git}
     version: 0.0.0
 
   tailwind-merge@2.6.0:
@@ -6763,6 +6788,9 @@ packages:
 
   unrs-resolver@1.11.1:
     resolution: {integrity: sha512-bSjt9pjaEBnNiGgc9rUiHGKv5l4/TGzDmYw3RhnkJGtLhbnnA/5qJj7x3dNDCRx/PJxu774LlH8lCOlB4hEfKg==}
+
+  until-async@3.0.2:
+    resolution: {integrity: sha512-IiSk4HlzAMqTUseHHe3VhIGyuFmN90zMTpD3Z3y8jeQbzLIq500MVM7Jq2vUAnTKAFPJrqwkzr6PoTcPhGcOiw==}
 
   upath@2.0.1:
     resolution: {integrity: sha512-1uEe95xksV1O0CYKXo8vQvN1JEbtJp7lb7C5U9HMsIp6IVwntkH/oNUzyVNQSd4S1sYk2FpSSW44FqMc8qee5w==}
@@ -12344,6 +12372,32 @@ snapshots:
     transitivePeerDependencies:
       - '@types/node'
 
+  msw@2.11.3(@types/node@20.19.17)(typescript@5.9.2):
+    dependencies:
+      '@bundled-es-modules/cookie': 2.0.1
+      '@bundled-es-modules/statuses': 1.0.1
+      '@inquirer/confirm': 5.1.18(@types/node@20.19.17)
+      '@mswjs/interceptors': 0.39.6
+      '@open-draft/deferred-promise': 2.2.0
+      '@types/cookie': 0.6.0
+      '@types/statuses': 2.0.6
+      graphql: 16.11.0
+      headers-polyfill: 4.0.3
+      is-node-process: 1.2.0
+      outvariant: 1.4.3
+      path-to-regexp: 6.3.0
+      picocolors: 1.1.1
+      rettime: 0.7.0
+      strict-event-emitter: 0.5.1
+      tough-cookie: 6.0.0
+      type-fest: 4.41.0
+      until-async: 3.0.2
+      yargs: 17.7.2
+    optionalDependencies:
+      typescript: 5.9.2
+    transitivePeerDependencies:
+      - '@types/node'
+
   multimatch@5.0.0:
     dependencies:
       '@types/minimatch': 3.0.5
@@ -13792,7 +13846,7 @@ snapshots:
 
   symbol-tree@3.2.4: {}
 
-  table@git+https://github.com/tanstack/react-table.git#569a6e85b5690a488b05e9d3113f37dbab6bd40e: {}
+  table@git+https://git@github.com:tanstack/react-table.git#02c203afed5865cfec0aa614de9f2861645d6ff9: {}
 
   tailwind-merge@2.6.0: {}
 
@@ -14162,6 +14216,8 @@ snapshots:
       '@unrs/resolver-binding-win32-arm64-msvc': 1.11.1
       '@unrs/resolver-binding-win32-ia32-msvc': 1.11.1
       '@unrs/resolver-binding-win32-x64-msvc': 1.11.1
+
+  until-async@3.0.2: {}
 
   upath@2.0.1: {}
 
