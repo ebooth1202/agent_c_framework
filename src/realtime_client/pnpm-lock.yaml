@@ -144,6 +144,9 @@ importers:
       dompurify:
         specifier: ^3.2.6
         version: 3.2.7
+      msw:
+        specifier: ^2.11.3
+        version: 2.11.3(@types/node@20.19.17)(typescript@5.9.2)
     devDependencies:
       '@types/dompurify':
         specifier: ^3.2.0
@@ -564,6 +567,9 @@ importers:
       lucide-react:
         specifier: ^0.330.0
         version: 0.330.0(react@18.3.1)
+      msw:
+        specifier: ^2.11.3
+        version: 2.11.3(@types/node@20.19.17)(typescript@5.9.2)
       next-themes:
         specifier: ^0.2.1
         version: 0.2.1(next@14.2.8(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
