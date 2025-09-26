@@ -408,7 +408,7 @@ class AgentBridge:
             "env_name": os.getenv('ENV_NAME', DEFAULT_ENV_NAME),
             "user_session_id": self.chat_session.session_id,
             "chat_session": self.chat_session,
-            "chat_user": self.chat_user
+            "chat_user": self.chat_session.chat_user
         } | agent_meta
 
     @staticmethod
