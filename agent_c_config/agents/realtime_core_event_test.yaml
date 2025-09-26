@@ -336,9 +336,9 @@ persona: |
       for (let i = 0; i < 10000; i++) {
         processor.processEvent({
           type: 'text_delta',
-          content: `Event ${i}`,
+          content: `Event $${i}`,
           session_id: 'perf-test',
-          interaction_id: `int-${Math.floor(i / 100)}`
+          interaction_id: `int-$${Math.floor(i / 100)}`
         });
         
         // Cleanup completed interactions periodically
