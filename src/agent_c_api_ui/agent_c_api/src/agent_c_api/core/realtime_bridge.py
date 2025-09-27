@@ -5,57 +5,86 @@ import os
 import traceback
 from contextlib import suppress
 from datetime import datetime
-from typing import List, Optional, Any, Dict, AsyncIterator
+from functools import singledispatchmethod
+from typing import List, Optional, Any, Dict, AsyncIterator, Union, TYPE_CHECKING
 
 from fastapi import WebSocket, WebSocketDisconnect
-from functools import singledispatchmethod
-
 from starlette.websockets import WebSocketState
-from websockets import State
 
+from agent_c.agents import ClaudeChatAgent, BaseAgent
+from agent_c.agents.claude import ClaudeBedrockChatAgent
+from agent_c.agents.gpt import AzureGPTChatAgent, GPTChatAgent
 from agent_c.chat import ChatSessionManager
+from agent_c.config import ModelConfigurationLoader
 from agent_c.config.agent_config_loader import AgentConfigLoader
 from agent_c.models import ChatSession, ChatUser
-from agent_c.models.events import BaseEvent, TextDeltaEvent, HistoryEvent, RenderMediaEvent, SystemMessageEvent
-from agent_c.models.events.chat import AudioInputDeltaEvent
+from agent_c.models.events import BaseEvent, TextDeltaEvent, HistoryEvent, RenderMediaEvent
 from agent_c.models.heygen import HeygenAvatarSessionData, NewSessionRequest
-from agent_c.toolsets import Toolset
-from agent_c.util import MnemonicSlugs
-from agent_c.util.heygen_streaming_avatar_client import HeyGenStreamingClient
-from agent_c.util.registries.event import EventRegistry
-from agent_c_api.api.rt.models.control_events import GetAgentsEvent, ErrorEvent, AgentListEvent, GetAvatarsEvent, AvatarListEvent, TextInputEvent, SetAvatarEvent, AvatarConnectionChangedEvent, \
-    SetAgentEvent, AgentConfigurationChangedEvent, SetAvatarSessionEvent, ChatSessionChangedEvent, ResumeChatSessionEvent, \
-    NewChatSessionEvent, SetAgentVoiceEvent, AgentVoiceChangedEvent, UserTurnStartEvent, UserTurnEndEvent, GetUserSessionsEvent, GetUserSessionsResponseEvent, PingEvent, PongEvent, \
-    GetToolCatalogEvent, ToolCatalogEvent, ChatUserDataEvent, GetVoicesEvent, VoiceListEvent, ChatSessionAddedEvent, DeleteChatSessionEvent, ClientWantsCancelEvent, CancelledEvent
-from agent_c_api.api.rt.models.control_events import SetChatSessionNameEvent, SetSessionMessagesEvent, ChatSessionNameChangedEvent, SetSessionMetadataEvent, SessionMetadataChangedEvent
-from agent_c_api.core.agent_bridge import AgentBridge
 from agent_c.models.input import AudioInput
-
 from agent_c.models.input.file_input import FileInput
-from agent_c_api.core.file_handler import RTFileHandler
 from agent_c.models.input.image_input import ImageInput
-from agent_c_api.core.voice.models import open_ai_voice_models, AvailableVoiceModel, heygen_avatar_voice_model, no_voice_model
-from agent_c_api.core.voice.voice_io_manager import VoiceIOManager
-from agent_c_tools.tools.think.prompt import ThinkSection
 from agent_c.prompting import PromptBuilder, EnvironmentInfoSection
 from agent_c.prompting.basic_sections.persona import DynamicPersonaSection
+from agent_c.toolsets import Toolset, ToolChest, ToolCache
+from agent_c.util import MnemonicSlugs
+from agent_c.util.heygen_streaming_avatar_client import HeyGenStreamingClient
+from agent_c.util.logging_utils import LoggingManager
+from agent_c.util.registries.event import EventRegistry
+from agent_c_api.api.rt.models.control_events import ChatSessionNameChangedEvent, SessionMetadataChangedEvent
+from agent_c_api.api.rt.models.control_events import ErrorEvent, AgentListEvent, AvatarListEvent, AvatarConnectionChangedEvent, \
+    AgentConfigurationChangedEvent, ChatSessionChangedEvent, AgentVoiceChangedEvent, UserTurnStartEvent, UserTurnEndEvent, GetUserSessionsResponseEvent, ToolCatalogEvent, ChatUserDataEvent, \
+    VoiceListEvent, ChatSessionAddedEvent, DeleteChatSessionEvent, CancelledEvent
+
+from agent_c_api.core.event_handlers.client_event_handlers import ClientEventHandler
+from agent_c_api.core.file_handler import RTFileHandler
+from agent_c_api.core.voice.models import open_ai_voice_models, AvailableVoiceModel, heygen_avatar_voice_model, no_voice_model
+from agent_c_api.core.voice.voice_io_manager import VoiceIOManager
+from agent_c_tools.tools.workspace.local_storage  import LocalStorageWorkspace
+from agent_c_tools.tools.think.prompt import ThinkSection
+from agent_c_tools.tools.workspace.base import BaseWorkspace
+from agent_c_tools.tools.workspace.local_project import LocalProjectWorkspace
+
+if TYPE_CHECKING:
+    from agent_c.models.events import  SystemMessageEvent
+    from agent_c.models.agent_config import CurrentAgentConfiguration
+    from agent_c.chat import ChatSessionManager
+    from agent_c_api.core.realtime_session_manager import RealtimeSessionManager
 
 
-class RealtimeBridge(AgentBridge):
+# Constants
+DEFAULT_BACKEND = 'claude'
+DEFAULT_MODEL_NAME = 'claude-sonnet-4-20250514'
+DEFAULT_OUTPUT_FORMAT = 'raw'
+DEFAULT_TOOL_CACHE_DIR = '.tool_cache'
+DEFAULT_LOG_DIR = './logs/sessions'
+LOCAL_WORKSPACES_FILE = '.local_workspaces.json'
+DEFAULT_ENV_NAME = 'development'
+OPENAI_REASONING_MODELS = ['o1', 'o1-mini', 'o3', 'o3-mini']
+
+
+class RealtimeBridge(ClientEventHandler):
+    __vendor_agent_map = {
+        "azure_openai": AzureGPTChatAgent,
+        "openai": GPTChatAgent,
+        "claude": ClaudeChatAgent,
+        "bedrock": ClaudeBedrockChatAgent
+    }
+
     def __init__(self,
+                 ui_session_manager: 'RealtimeSessionManager',
                  chat_user: ChatUser,
                  ui_session_id: str,
                  session_manager: ChatSessionManager):
-        file_handler = RTFileHandler(chat_user.user_id, ui_session_id)
-
-        super().__init__(None, session_manager, file_handler)
+        self.ui_session_manager = ui_session_manager
+        self.chat_session: Optional[ChatSession] = None
+        self.websocket: Optional[WebSocket] = None
+        self.is_running = False
         self._is_new_bridge = True
         self.chat_session_manager: ChatSessionManager = session_manager
         self.chat_user: ChatUser = chat_user
         self.ui_session_id: str = ui_session_id
 
-        self.websocket: Optional[WebSocket] = None
-        self.is_running = False
+        self.logger = LoggingManager(__name__).get_logger()
         self.agent_config_loader: AgentConfigLoader = AgentConfigLoader()
         if os.environ.get("HEYGEN_API_KEY") is not None:
             self.heygen_client = HeyGenStreamingClient()
@@ -75,41 +104,87 @@ class RealtimeBridge(AgentBridge):
         self._voices = open_ai_voice_models
         self._voice: AvailableVoiceModel = no_voice_model
 
+        self.model_config_loader = ModelConfigurationLoader()
+        self.model_configs: Dict[str, Any] = self.model_config_loader.flattened_config()
+        self.runtime_cache: Dict[str, BaseAgent] = {}
+
+        self.tool_chest: Optional[ToolChest] = None
+        self.tool_cache_dir = DEFAULT_TOOL_CACHE_DIR
+        self.tool_cache = ToolCache(cache_dir=self.tool_cache_dir)
+
+        self.file_handler: RTFileHandler = RTFileHandler(self, chat_user.user_id)
+        self.image_inputs: List[ImageInput] = []
+        self.audio_inputs: List[AudioInput] = []
+
+        self.workspaces: Optional[List[BaseWorkspace]] = None
+        self.__init_workspaces()
+
+
+    def runtime_for_agent(self, agent_config: 'CurrentAgentConfiguration'):
+        if agent_config.key in self.runtime_cache:
+            return self.runtime_cache[agent_config.key]
+        else:
+            self.runtime_cache[agent_config.key] = self._runtime_for_agent(agent_config)
+            return self.runtime_cache[agent_config.key]
+
+
+    def _runtime_for_agent(self, agent_config: 'CurrentAgentConfiguration') -> BaseAgent:
+        model_config = self.model_configs[agent_config.model_id]
+        runtime_cls = self.__vendor_agent_map[model_config["vendor"]]
+
+        auth_info = agent_config.agent_params.auth.model_dump() if agent_config.agent_params.auth is not None else {}
+        client = runtime_cls.client(**auth_info)
+        return runtime_cls(model_name=model_config["id"], client=client)
+
+
+    def __init_workspaces(self) -> None:
+        """
+        Initialize the agent's workspaces by loading local workspace configurations.
+
+        Sets up the default local project workspace and loads additional workspaces
+        from the local configuration file if it exists. This provides the agent
+        with access to file system locations for tool operations.
+
+        Raises:
+            Exception: If there are errors loading workspace configurations
+                (FileNotFoundError is handled gracefully).
+        """
+        local_project = LocalProjectWorkspace()
+        user_uploads = LocalStorageWorkspace(workspace_path=str(self.file_handler.base_dir), name="Uploads", description="Files the user had uploaded")
+        self.workspaces: List[BaseWorkspace] = [local_project, user_uploads]
+
+        # TODO: ALLOWED / DISALLOWED WORKSPACES from agent config
+        try:
+            with open(LOCAL_WORKSPACES_FILE, 'r', encoding='utf-8') as json_file:
+                local_workspaces = json.load(json_file)
+
+            for ws in local_workspaces['local_workspaces']:
+                self.workspaces.append(LocalStorageWorkspace(**ws))
+        except FileNotFoundError:
+            # Local workspaces file is optional
+            pass
+
     async def flush_session(self, touch: bool = True, chat_session: Optional[ChatSession] = None) -> None:
         """Flush the current chat session to persistent storage"""
         chat_session = chat_session or self.chat_session
         if chat_session:
-            await self.session_manager.flush_session(chat_session, touch)
+            await self.chat_session_manager.flush_session(chat_session, touch)
 
+    async def send_tool_error(self, tool_name: str, error: str) -> None:
+        """Report a tool error to the client"""
+        await self.send_event(SystemMessageEvent(content=f"# Error using tool '{tool_name}':\n\n```{error}```", session_id=self.chat_session.session_id,
+                                                 severity="error", role="system"))
 
-    # Handlers for events coming from the client websocket
-    @singledispatchmethod
-    async def handle_client_event(self, event: BaseEvent) -> None:
-        """Default handler for unknown events"""
-        self.logger.warning(f"RealtimeBridge {self.ui_session_id}: Unhandled event type: {event.type}")
-        # await self.send_error(f"Unknown event type: {event.type}")
-
-    @handle_client_event.register
-    async def _(self, _: PingEvent) -> None:
-        await self.send_event(PongEvent())
-
-    @handle_client_event.register
-    async def _(self, _: GetAgentsEvent) -> None:
-        await self.send_agent_list()
-
-    @handle_client_event.register
-    async def _(self, _: ClientWantsCancelEvent) -> None:
-        await self.cancel_interaction()
+    async def send_system_message(self, content: str, severity: str = "info") -> None:
+        """Send a system message to the client"""
+        await self.send_event(SystemMessageEvent(content=content, session_id=self.chat_session.session_id,
+                                                 severity=severity, role="system"))
 
     async def cancel_interaction(self) -> None:
         self.client_wants_cancel.set()
         await self.send_event(CancelledEvent())
         await self.send_event(SystemMessageEvent(content="Interaction cancelled by user, waiting for runtime to exit..", session_id=self.chat_session.session_id,
                                                  severity="info", role="system"))
-
-    @handle_client_event.register
-    async def _(self, event: DeleteChatSessionEvent):
-        await self.delete_chat_session(event.session_id)
 
     async def delete_chat_session(self, session_id: str) -> None:
         if session_id is None:
@@ -130,46 +205,29 @@ class RealtimeBridge(AgentBridge):
         await self.send_event(SystemMessageEvent(content=f"Chat Session {session_id} deleted", session_id=self.chat_session.session_id,
                                                  severity="info", role="system"))
 
+    async def set_agent_voice(self, voice_id: str) -> None:
+        if voice_id == "none":
+           voice = no_voice_model
+        else:
+            voice = next((v for v in self._voices if v.voice_id == voice_id), None)
 
-    @handle_client_event.register
-    async def _(self, event: SetAgentVoiceEvent):
-        if event.voice_id == "none":
-            await self.set_agent_voice(no_voice_model)
-            return
-
-        voice = next((v for v in self._voices if v.voice_id == event.voice_id), None)
         if not voice:
-            await self.send_error(f"Voice '{event.voice_id}' not found", source="set_agent_voice")
+            await self.send_system_message(f"Voice '{voice_id}' not found", severity="error")
             return
 
         await self.set_agent_voice(voice)
 
-    async def set_agent_voice(self, voice: AvailableVoiceModel) -> None:
+
         self.voice_io_manager.change_voice(voice)
         await self.send_event(AgentVoiceChangedEvent(voice=voice))
 
-    @handle_client_event.register
-    async def _(self, event: TextInputEvent) -> None:
-        if self._active_interact_task and not self._active_interact_task.done():
-            self.client_wants_cancel.set()
-            self._active_interact_task.cancel()
-            with suppress(asyncio.CancelledError):
-                await self._active_interact_task
-
-        self.client_wants_cancel.clear()
-        # Fire-and-manage: don't await here, let run() keep reading the socket
-        self._active_interact_task = asyncio.create_task(
-            self.interact(user_message=event.text, file_ids=event.file_ids),
-            name=f"interact-{self.chat_session.session_id}"
-        )
+    async def reload_agents(self) -> None:
+        self.agent_config_loader.load_agents()
+        await self.send_agent_list()
 
     async def send_agent_list(self) -> None:
         catalog = self.agent_config_loader.client_catalog
         await self.send_event(AgentListEvent(agents=catalog))
-
-    @handle_client_event.register
-    async def _(self, _: GetAvatarsEvent) -> None:
-        await self.send_avatar_list()
 
     async def send_avatar_list(self) -> None:
         if self.heygen_client:
@@ -191,10 +249,6 @@ class RealtimeBridge(AgentBridge):
                 self.avatar_session = None
                 self.heygen_client = None
 
-    @handle_client_event.register
-    async def _(self, event: SetAvatarEvent) -> None:
-        await self.set_avatar(event.avatar_id, event.quality, event.video_encoding)
-
     async def set_avatar(self, avatar_id: str, quality: str = "medium", video_encoding: str = "H264") -> None:
         """Set the avatar for the current session by creating a HeyGen session"""
         if self.avatar_session is not None:
@@ -207,15 +261,6 @@ class RealtimeBridge(AgentBridge):
                                                            avatar_session_request= session_request))
         self.voice_io_manager.start(heygen_avatar_voice_model)
 
-    @handle_client_event.register
-    async def _(self, event: AudioInputDeltaEvent) -> None:
-        self.logger.info("RealtimeBridge received audio input delta event")
-
-    @handle_client_event.register
-    async def _(self, event: SetAvatarSessionEvent) -> None:
-        """Set the avatar session using the provided access token and session ID"""
-        await self.set_avatar_session(event.access_token, event.avatar_session_id)
-
     async def set_avatar_session(self, access_token: str, avatar_session_id: str) -> None:
         """Set the avatar session for the current session"""
         if self.avatar_session is not None:
@@ -227,10 +272,6 @@ class RealtimeBridge(AgentBridge):
         await self.send_event(AgentVoiceChangedEvent(voice=heygen_avatar_voice_model))
         self.voice_io_manager.start(heygen_avatar_voice_model)
         await self.avatar_say("Avtar bridge connected to avatar session", role="system")
-
-    @handle_client_event.register
-    async def _(self, event: ResumeChatSessionEvent) -> None:
-        await self.resume_chat_session(event.session_id)
 
     async def resume_chat_session(self, session_id: str) -> None:
         await self.release_current_session()
@@ -249,11 +290,6 @@ class RealtimeBridge(AgentBridge):
         await self.send_chat_session()
         await self.send_event(SystemMessageEvent(content=F"Welcome back! **Session ID:** {self.chat_session.session_id}", session_id=self.chat_session.session_id,
                                                  severity="info", role="system"))
-
-
-    @handle_client_event.register
-    async def _(self, event: SetChatSessionNameEvent) -> None:
-        await self.set_chat_session_name(event.session_name, event.session_id)
 
     async def rename_current_session(self, new_name: str):
         await self.set_chat_session_name(new_name)
@@ -275,17 +311,9 @@ class RealtimeBridge(AgentBridge):
 
         await self.send_event(ChatSessionNameChangedEvent(session_name=session_name, session_id=session_id))
 
-    @handle_client_event.register
-    async def _(self, event: GetUserSessionsEvent) -> None:
-        await self.send_user_sessions(event.offset, event.limit)
-
     async def send_user_sessions(self, offset: int, limit: int = 50) -> None:
         sessions = await self.chat_session_manager.get_user_sessions(self.chat_user.user_id, offset, limit)
         await self.send_event(GetUserSessionsResponseEvent(sessions=sessions))
-
-    @handle_client_event.register
-    async def _(self, event: SetSessionMetadataEvent) -> None:
-        await self.set_session_metadata(event.meta)
 
     async def set_session_metadata(self, meta: Dict[str, Any]) -> None:
         """Set the metadata for the current chat session"""
@@ -293,10 +321,6 @@ class RealtimeBridge(AgentBridge):
         self.logger.info(f"RealtimeBridge {self.chat_session.session_id}: Session metadata updated")
 
         await self.send_chat_session_meta()
-
-    @handle_client_event.register
-    async def _(self, event: NewChatSessionEvent) -> None:
-        await self.new_chat_session(event.agent_key)
 
     async def release_current_session(self) -> None:
         if self.chat_session is not None:
@@ -313,17 +337,9 @@ class RealtimeBridge(AgentBridge):
         self.chat_session =  await self._get_or_create_chat_session(session_id=session_id, agent_key=agent_key)
         await self.send_chat_session()
 
-    @handle_client_event.register
-    async def _(self, event: GetVoicesEvent):
-        await self.send_voices()
-
     async def send_voices(self) -> None:
         voices = [no_voice_model, heygen_avatar_voice_model] + open_ai_voice_models
         await self.send_event(VoiceListEvent(voices=voices))
-
-    @handle_client_event.register
-    async def _(self, event: GetToolCatalogEvent):
-        await self.send_tool_catalog()
 
     async def send_tool_catalog(self) -> None:
         await self.send_event(ToolCatalogEvent(tools=Toolset.get_client_registry()))
@@ -331,20 +347,12 @@ class RealtimeBridge(AgentBridge):
     async def send_user_info(self) -> None:
         await self.send_event(ChatUserDataEvent(user=self.chat_user))
 
-    @handle_client_event.register
-    async def _(self, event: SetSessionMessagesEvent) -> None:
-        await self.set_session_messages(event.messages)
-
     async def set_session_messages(self, messages: List[Dict[str, Any]]) -> None:
         """Set the messages for the current chat session"""
         self.chat_session.messages = messages
         self.logger.info(f"RealtimeBridge {self.chat_session.session_id}: Session messages updated")
         await self.flush_session()
         await self.send_event(HistoryEvent(messages=self.chat_session.messages, session_id=self.chat_session.session_id))
-
-    @handle_client_event.register
-    async def _(self, event: SetAgentEvent) -> None:
-        await self.set_agent(event.agent_key)
 
     async def set_agent(self, agent_key: str) -> None:
         """Set the agent for the current session"""
@@ -437,7 +445,6 @@ class RealtimeBridge(AgentBridge):
         if event.session_id == self.chat_session.session_id:
             self.chat_session.messages = copy.deepcopy(event.messages)
 
-
     @property
     def avatar_think_message(self) -> str:
         # Placeholder for avatar thinking message
@@ -502,7 +509,7 @@ class RealtimeBridge(AgentBridge):
                                 self.logger.debug(f"Received event {event.type} from session {self.chat_session.session_id}")
 
                             if event.type == "resume_chat_session" and event.session_id == self.chat_session.session_id:
-                                self.logger("Client requested to resume the current session, ignoring.")
+                                self.logger.info("Client requested to resume the current session, ignoring.")
                                 await self.send_chat_session()
                                 break
 
@@ -541,6 +548,20 @@ class RealtimeBridge(AgentBridge):
 
         await self.send_event(event)
 
+    async def process_text_input(self, text: str, file_ids: Optional[List[str]] = None):
+        if self._active_interact_task and not self._active_interact_task.done():
+            self.client_wants_cancel.set()
+            self._active_interact_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await self._active_interact_task
+
+        self.client_wants_cancel.clear()
+
+        # let run() keep reading the socket
+        self._active_interact_task = asyncio.create_task(
+            self.interact(user_message=text, file_ids=file_ids),
+            name=f"interact-{self.chat_session.session_id}"
+        )
 
     async def iter_interact(self, text: str, file_ids: Optional[List[str]] = None, max_buffer: int = 512) -> AsyncIterator[str]:
         """
@@ -627,7 +648,7 @@ class RealtimeBridge(AgentBridge):
             "chat_user": self.chat_user,
         } | agent_meta
 
-    async def interact(self, user_message: str, file_ids: Optional[List[str]] = None, on_event: Optional[callable] = None, send_turn: bool = True) -> None:
+    async def interact(self, user_message: str, file_ids: Optional[List[str]] = None, on_event: Optional[callable] = None) -> None:
         """
         Streams chat responses for a given user message.
 
@@ -649,7 +670,7 @@ class RealtimeBridge(AgentBridge):
         self.client_wants_cancel.clear()
         await self.send_user_turn_end()
         try:
-            await self.session_manager.update()
+            await self.chat_session_manager.update()
             if len(self.chat_session.messages) == 0:
                 await self.send_event(ChatSessionAddedEvent(chat_session=self.chat_session.as_index_entry()))
 
@@ -673,9 +694,7 @@ class RealtimeBridge(AgentBridge):
                 tool_params['schemas'] = self.chat_session.agent_config.filter_allowed_tools(tool_params['schemas'])
                 tool_params["toolsets"] = self.chat_session.agent_config.tools
 
-            if self.sections is not None:
-                agent_sections = self.sections
-            elif "ThinkTools" in self.chat_session.agent_config.tools:
+            if "ThinkTools" in self.chat_session.agent_config.tools:
                 agent_sections = [ThinkSection(), EnvironmentInfoSection(),  DynamicPersonaSection()]
             else:
                 agent_sections = [EnvironmentInfoSection(), DynamicPersonaSection()]
@@ -766,3 +785,147 @@ class RealtimeBridge(AgentBridge):
         self.chat_session = await self._get_or_create_chat_session(session_id=chat_session_id, agent_key=agent_key)
         await self._init_tool_chest()
         await self.initialize_agent_parameters()
+
+    async def process_files_for_message(
+            self,
+            file_ids: List[str],
+            session_id: str
+    ) -> List[Union[FileInput, ImageInput, AudioInput]]:
+        """
+        Process files and convert them to appropriate Input objects for the agent.
+
+        This method processes uploaded files and converts them to the appropriate input
+        objects (FileInput, ImageInput, AudioInput) for handling by the agent's multimodal
+        capabilities.
+
+        Args:
+            file_ids: List of file IDs to process.
+            session_id: Session ID for file processing context.
+
+        Returns:
+            List of input objects for the agent, typed as FileInput, ImageInput, or AudioInput.
+
+        Raises:
+            Exception: If file processing fails (logged but not re-raised).
+        """
+        if not self.file_handler or not file_ids:
+            return []
+
+        input_objects = []
+
+        for file_id in file_ids:
+            # Get file metadata
+            metadata = self.file_handler.get_file_metadata(file_id, session_id)
+            if not metadata:
+                metadata = await self.file_handler.process_file(file_id, session_id)
+
+            if not metadata:
+                self.logger.warning(f"Could not get metadata for file {file_id}")
+                continue
+
+            # Create the appropriate input object based on file type
+            input_obj = self.file_handler.get_file_as_input(file_id, session_id)
+            if input_obj:
+                self.logger.info(f"Created {type(input_obj).__name__} for file {metadata.original_filename}")
+                input_objects.append(input_obj)
+            else:
+                self.logger.warning(f"Failed to create input object for file {metadata.original_filename}")
+
+        return input_objects
+
+    async def _init_tool_chest(self) -> None:
+        """
+        Initialize the agent's tool chest with selected tools and configurations.
+
+        This method sets up the ToolChest with tools from the global Toolset registry
+        based on the tools specified in the agent configuration. It configures additional
+        tool options, initializes the selected tools, and logs the result. The method handles
+        errors and logs any tools that failed to initialize.
+
+        Process:
+            1. Set up tool options including cache, session manager, and workspaces
+            2. Initialize the ToolChest with configuration options
+            3. Initialize and activate the specified toolset
+            4. Log successful initialization and any failures
+
+        Raises:
+            Exception: If there are errors during tool initialization, logged with full traceback.
+
+        Note:
+            Logs warnings if selected tools do not get initialized, typically due to
+            misspelled tool class names in the agent configuration.
+        """
+        self.logger.info(
+            f"Requesting initialization of these tools: "
+            f"{self.chat_session.agent_config.tools} for agent "
+            f"{self.chat_session.agent_config.key}"
+        )
+
+        try:
+            tool_opts = {
+                'tool_cache': self.tool_cache,
+                'session_manager': self.chat_session_manager,
+                'workspaces': self.workspaces,
+                'streaming_callback': self.runtime_callback,
+                'model_configs': self.model_config_loader.get_cached_config()
+            }
+
+            # Initialize the tool chest with essential tools first
+            self.tool_chest = ToolChest(**tool_opts)
+
+            # Initialize the tool chest essential tools
+            await self.tool_chest.init_tools(tool_opts)
+            await self.tool_chest.activate_toolset(self.chat_session.agent_config.tools)
+
+            self.logger.info(
+                f"Agent {self.chat_session.agent_config.key} successfully initialized "
+                f"essential tools: {list(self.tool_chest.active_tools.keys())}"
+            )
+
+            # Check for tools that were selected but not initialized
+            # Usually indicates misspelling of the tool class name
+            initialized_tools = set(self.tool_chest.active_tools.keys())
+            uninitialized_tools = [
+                tool_name for tool_name in self.chat_session.agent_config.tools
+                if tool_name not in initialized_tools
+            ]
+
+            if uninitialized_tools:
+                self.logger.warning(
+                    f"The following selected tools were not initialized: "
+                    f"{uninitialized_tools} for Agent {self.chat_session.agent_config.name}"
+                )
+
+        except Exception as e:
+            self.logger.exception("Error initializing tools: %s", e, exc_info=True)
+            raise
+
+    async def initialize_agent_parameters(self) -> None:
+        """
+        Initialize the internal agent with prompt builders, tools, and configurations.
+
+        This method creates and configures the conversational agent for the application.
+        It sets up the agent's prompt builder and initializes the appropriate agent
+        class based on the specified backend (Claude, Bedrock, or OpenAI).
+
+        Process:
+            1. Build the system prompt using configured sections
+            2. Prepare common agent parameters
+            3. Add backend-specific parameters (temperature, reasoning settings, etc.)
+            4. Initialize the appropriate agent class based on backend
+
+        Raises:
+            Exception: If an error occurs during agent initialization.
+
+        Note:
+            Sets self.agent_runtime to the initialized agent instance, which will be
+            one of ClaudeChatAgent, ClaudeBedrockChatAgent, or GPTChatAgent.
+        """
+        agent_params = self.chat_session.agent_config.agent_params.model_dump(exclude_none=True)
+
+        agent_params |= {
+            "tool_chest": self.tool_chest,
+            "streaming_callback": self.runtime_callback
+        }
+
+        self.logger.info(f"Agent initialized using the following parameters: {agent_params}")

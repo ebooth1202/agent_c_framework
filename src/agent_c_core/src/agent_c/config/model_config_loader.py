@@ -6,7 +6,6 @@ of model configurations from JSON files. Enhanced with singleton pattern
 and shared caching for optimal performance.
 """
 import json
-import os
 import threading
 from pathlib import Path
 from typing import Union, Dict, Any, Optional
@@ -153,6 +152,8 @@ class ModelConfigurationLoader(ConfigLoader, metaclass=SingletonCacheMeta):
         Returns:
             Cached ModelConfigurationFile or None if not loaded
         """
+        if self._cached_config is None:
+            self.load_from_json()
         return self._cached_config
     
     def reload(self) -> ModelConfigurationFile:
@@ -217,7 +218,8 @@ class ModelConfigurationLoader(ConfigLoader, metaclass=SingletonCacheMeta):
         model = model_cache.get_or_compute(cache_key, load_and_parse_json)
         return model
     
-    def _load_raw_json(self, path: Path) -> Dict[str, Any]:
+    @staticmethod
+    def _load_raw_json(path: Path) -> Dict[str, Any]:
         """
         Load raw JSON data from file.
         
@@ -230,7 +232,8 @@ class ModelConfigurationLoader(ConfigLoader, metaclass=SingletonCacheMeta):
         with open(path, 'r', encoding='utf-8') as f:
             return json.load(f)
     
-    def _invalidate_file_cache(self, path: Path) -> None:
+    @staticmethod
+    def _invalidate_file_cache(path: Path) -> None:
         """
         Invalidate cached data for a specific file.
         
