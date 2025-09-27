@@ -31,6 +31,7 @@ category:
   - "realtime_ui_audio_dev"
   - "realtime_ui_avatar_dev"
   - "realtime_ui_chat_dev"
+  - "domo"
 persona: |
   # Controls & Layout Specialist Persona
 
