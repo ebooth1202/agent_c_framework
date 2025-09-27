@@ -15,19 +15,35 @@ import { EventStreamProcessor } from '../EventStreamProcessor';
 import { SessionManager } from '../../session/SessionManager';
 import { ChatSession } from '../types/CommonTypes';
 import { MessageParam } from '../../types/message-params';
+import { WebSocketTracker, MockWebSocket } from '../../test/mocks/websocket.mock';
+import { server, startMockServer, resetMockServer, stopMockServer } from '../../test/mocks/server';
+import { 
+  chatSessionChangedSequence,
+  toolCallSequence,
+  multiToolCallSequence,
+  subsessionSequence
+} from '../../test/fixtures/event-sequences';
 import testSession from './fixtures/session_with_delegation.json';
 
 describe('EventStreamProcessor - Resumed Messages Mapping', () => {
   let processor: EventStreamProcessor;
   let sessionManager: SessionManager;
   let sessionManagerEmitSpy: ReturnType<typeof vi.spyOn>;
+  let wsTracker: WebSocketTracker;
   let mockSession: ChatSession;
   const testSessionId = 'test-resumed-session';
 
   beforeEach(() => {
     vi.clearAllMocks();
     
-    // Create a mock session
+    // Start MSW server
+    startMockServer();
+    
+    // Setup WebSocket tracker
+    wsTracker = new WebSocketTracker();
+    wsTracker.install();
+    
+    // Create a properly structured mock session
     mockSession = {
       session_id: testSessionId,
       session_name: 'Test Resumed Session',
@@ -35,7 +51,13 @@ describe('EventStreamProcessor - Resumed Messages Mapping', () => {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       token_count: 0,
-      metadata: {}
+      context_window_size: 128000,
+      user_id: 'test-user',
+      vendor: 'anthropic',
+      metadata: {
+        test: true,
+        mode: 'resumed'
+      }
     };
 
     // Create real instances
@@ -53,6 +75,8 @@ describe('EventStreamProcessor - Resumed Messages Mapping', () => {
     vi.restoreAllMocks();
     processor.destroy();
     sessionManager.destroy();
+    wsTracker.uninstall();
+    resetMockServer();
   });
 
   describe('Think Tool Rendering', () => {
@@ -101,50 +125,46 @@ describe('EventStreamProcessor - Resumed Messages Mapping', () => {
         }
       ];
 
-      // Process the chat_session_changed event
+      // Process the chat_session_changed event with version field
       processor.processEvent({
         type: 'chat_session_changed',
         chat_session: {
+          version: 2,
           session_id: testSessionId,
           messages
         }
       } as any);
 
-      // Verify the events emitted
-      const messageAddedCalls = sessionManagerEmitSpy.mock.calls.filter(
-        call => call[0] === 'message-added'
+      // Get events emitted
+      const sessionLoadedCalls = sessionManagerEmitSpy.mock.calls.filter(
+        call => call[0] === 'session-messages-loaded'
       );
 
-      // Should have 3 message-added events
-      expect(messageAddedCalls).toHaveLength(3);
+      // Should have loaded the messages
+      expect(sessionLoadedCalls).toHaveLength(1);
+      const loadedMessages = sessionLoadedCalls[0][1].messages;
+
+      // Should have 3 messages
+      expect(loadedMessages).toHaveLength(3);
 
       // First: regular assistant text
-      expect(messageAddedCalls[0][1]).toEqual({
-        sessionId: testSessionId,
-        message: expect.objectContaining({
-          role: 'assistant',
-          content: 'Let me think about this...'
-        })
-      });
+      expect(loadedMessages[0]).toEqual(expect.objectContaining({
+        role: 'assistant',
+        content: 'Let me think about this...'
+      }));
 
       // Second: thought rendered as assistant (thought)
-      expect(messageAddedCalls[1][1]).toEqual({
-        sessionId: testSessionId,
-        message: expect.objectContaining({
-          role: 'assistant (thought)',
-          content: 'I need to analyze the request carefully. The user is asking about...',
-          format: 'markdown'
-        })
-      });
+      expect(loadedMessages[1]).toEqual(expect.objectContaining({
+        role: 'assistant (thought)',
+        content: 'I need to analyze the request carefully. The user is asking about...',
+        format: 'markdown'
+      }));
 
       // Third: final assistant response
-      expect(messageAddedCalls[2][1]).toEqual({
-        sessionId: testSessionId,
-        message: expect.objectContaining({
-          role: 'assistant',
-          content: 'Based on my analysis, here is the answer...'
-        })
-      });
+      expect(loadedMessages[2]).toEqual(expect.objectContaining({
+        role: 'assistant',
+        content: 'Based on my analysis, here is the answer...'
+      }));
 
       // Verify NO tool-call-complete events for think tool
       const toolCallCompleteCalls = sessionManagerEmitSpy.mock.calls.filter(
@@ -202,10 +222,11 @@ text: |
         }
       ];
 
-      // Process the chat_session_changed event
+      // Process the chat_session_changed event with version field
       processor.processEvent({
         type: 'chat_session_changed',
         chat_session: {
+          version: 2,
           session_id: testSessionId,
           messages
         }
@@ -231,24 +252,27 @@ text: |
         subAgentKey: 'analyzer'
       });
 
-      // Verify messages in subsession
-      const messageAddedCalls = sessionManagerEmitSpy.mock.calls.filter(
-        call => call[0] === 'message-added'
+      // Get loaded messages
+      const sessionLoadedCalls = sessionManagerEmitSpy.mock.calls.filter(
+        call => call[0] === 'session-messages-loaded'
       );
+      
+      expect(sessionLoadedCalls).toHaveLength(1);
+      const loadedMessages = sessionLoadedCalls[0][1].messages;
 
       // Find the subsession messages
-      const subsessionUserMsg = messageAddedCalls.find(call => 
-        call[1].message.content.includes('Please analyze the code structure')
+      const subsessionUserMsg = loadedMessages.find((msg: any) => 
+        msg.content.includes('Please analyze the code structure')
       );
-      const subsessionAssistantMsg = messageAddedCalls.find(call =>
-        call[1].message.content.includes('Code Structure Analysis')
+      const subsessionAssistantMsg = loadedMessages.find((msg: any) =>
+        msg.content.includes('Code Structure Analysis')
       );
 
       expect(subsessionUserMsg).toBeDefined();
       expect(subsessionAssistantMsg).toBeDefined();
       
       // Verify user message includes process context
-      expect(subsessionUserMsg![1].message.content).toContain('Focus on the main components');
+      expect(subsessionUserMsg.content).toContain('Focus on the main components');
     });
 
     it('should handle ateam_chat delegation with proper agent type', () => {
@@ -283,6 +307,7 @@ text: |
       processor.processEvent({
         type: 'chat_session_changed',
         chat_session: {
+          version: 2,
           session_id: testSessionId,
           messages
         }
@@ -330,17 +355,21 @@ text: |
       processor.processEvent({
         type: 'chat_session_changed',
         chat_session: {
+          version: 2,
           session_id: testSessionId,
           messages
         }
       } as any);
 
-      const messageAddedCalls = sessionManagerEmitSpy.mock.calls.filter(
-        call => call[0] === 'message-added'
+      const sessionLoadedCalls = sessionManagerEmitSpy.mock.calls.filter(
+        call => call[0] === 'session-messages-loaded'
       );
+      
+      expect(sessionLoadedCalls).toHaveLength(1);
+      const loadedMessages = sessionLoadedCalls[0][1].messages;
 
-      const assistantResponse = messageAddedCalls.find(call =>
-        call[1].message.content === 'Simple response text'
+      const assistantResponse = loadedMessages.find((msg: any) =>
+        msg.content === 'Simple response text'
       );
 
       expect(assistantResponse).toBeDefined();
@@ -377,24 +406,28 @@ text: |
       processor.processEvent({
         type: 'chat_session_changed',
         chat_session: {
+          version: 2,
           session_id: testSessionId,
           messages
         }
       } as any);
 
-      const messageAddedCalls = sessionManagerEmitSpy.mock.calls.filter(
-        call => call[0] === 'message-added'
+      const sessionLoadedCalls = sessionManagerEmitSpy.mock.calls.filter(
+        call => call[0] === 'session-messages-loaded'
       );
+      
+      expect(sessionLoadedCalls).toHaveLength(1);
+      const loadedMessages = sessionLoadedCalls[0][1].messages;
 
-      const assistantResponse = messageAddedCalls.find(call =>
-        call[1].message.role === 'assistant' &&
-        call[1].message.content.includes('Line 1 of the response')
+      const assistantResponse = loadedMessages.find((msg: any) =>
+        msg.role === 'assistant' &&
+        msg.content.includes('Line 1 of the response')
       );
 
       expect(assistantResponse).toBeDefined();
-      expect(assistantResponse![1].message.content).toContain('Line 1 of the response');
-      expect(assistantResponse![1].message.content).toContain('Line 2 of the response');
-      expect(assistantResponse![1].message.content).toContain('Line 3 of the response');
+      expect(assistantResponse.content).toContain('Line 1 of the response');
+      expect(assistantResponse.content).toContain('Line 2 of the response');
+      expect(assistantResponse.content).toContain('Line 3 of the response');
     });
 
     it('should handle YAML with preamble correctly', () => {
@@ -427,28 +460,32 @@ text: 'Response without preamble'`
       processor.processEvent({
         type: 'chat_session_changed',
         chat_session: {
+          version: 2,
           session_id: testSessionId,
           messages
         }
       } as any);
 
-      const messageAddedCalls = sessionManagerEmitSpy.mock.calls.filter(
-        call => call[0] === 'message-added'
+      const sessionLoadedCalls = sessionManagerEmitSpy.mock.calls.filter(
+        call => call[0] === 'session-messages-loaded'
       );
+      
+      expect(sessionLoadedCalls).toHaveLength(1);
+      const loadedMessages = sessionLoadedCalls[0][1].messages;
 
-      const assistantResponse = messageAddedCalls.find(call =>
-        call[1].message.role === 'assistant' &&
-        call[1].message.content === 'Response without preamble'
+      const assistantResponse = loadedMessages.find((msg: any) =>
+        msg.role === 'assistant' &&
+        msg.content === 'Response without preamble'
       );
 
       expect(assistantResponse).toBeDefined();
       // Verify preamble was removed
-      expect(assistantResponse![1].message.content).not.toContain('**IMPORTANT**');
+      expect(assistantResponse.content).not.toContain('**IMPORTANT**');
     });
   });
 
   describe('Regular Tool Calls', () => {
-    it('should handle regular tool calls with tool-call-complete events', () => {
+    it('should handle regular tool calls without tool-call-complete events for resumed messages', () => {
       const messages: MessageParam[] = [
         {
           role: 'assistant',
@@ -476,6 +513,7 @@ text: 'Response without preamble'`
       processor.processEvent({
         type: 'chat_session_changed',
         chat_session: {
+          version: 2,
           session_id: testSessionId,
           messages
         }
@@ -486,19 +524,8 @@ text: 'Response without preamble'`
         call => call[0] === 'tool-call-complete'
       );
 
-      expect(toolCallCompleteCalls).toHaveLength(1);
-      expect(toolCallCompleteCalls[0][1]).toEqual({
-        toolCalls: [{
-          id: 'toolu_6',
-          name: 'calculator',
-          input: { operation: 'add', a: 5, b: 3 }
-        }],
-        toolResults: [{
-          tool_use_id: 'toolu_6',
-          content: '{"result": 8}',
-          is_error: false
-        }]
-      });
+      // Resumed messages should NOT emit tool-call-complete events
+      expect(toolCallCompleteCalls).toHaveLength(0);
 
       // Verify NO subsession events for regular tools
       const subsessionStartCalls = sessionManagerEmitSpy.mock.calls.filter(
@@ -525,6 +552,7 @@ text: 'Response without preamble'`
       processor.processEvent({
         type: 'chat_session_changed',
         chat_session: {
+          version: 2,
           session_id: testSessionId,
           messages
         }
@@ -534,15 +562,8 @@ text: 'Response without preamble'`
         call => call[0] === 'tool-call-complete'
       );
 
-      expect(toolCallCompleteCalls).toHaveLength(1);
-      expect(toolCallCompleteCalls[0][1]).toEqual({
-        toolCalls: [{
-          id: 'toolu_7',
-          name: 'send_notification',
-          input: { message: 'Task complete' }
-        }],
-        toolResults: undefined
-      });
+      // Resumed messages should NOT emit tool-call-complete events
+      expect(toolCallCompleteCalls).toHaveLength(0);
     });
   });
 
@@ -598,8 +619,8 @@ text: 'Response without preamble'`
       } as any);
 
       // Count different event types
-      const messageAddedCalls = sessionManagerEmitSpy.mock.calls.filter(
-        call => call[0] === 'message-added'
+      const sessionLoadedCalls = sessionManagerEmitSpy.mock.calls.filter(
+        call => call[0] === 'session-messages-loaded'
       );
       const subsessionStartCalls = sessionManagerEmitSpy.mock.calls.filter(
         call => call[0] === 'subsession-started'
@@ -613,8 +634,10 @@ text: 'Response without preamble'`
       // - One act_oneshot delegation
       // - One think tool
       
-      // Verify we have messages
-      expect(messageAddedCalls.length).toBeGreaterThan(0);
+      // Get loaded messages
+      expect(sessionLoadedCalls).toHaveLength(1);
+      const loadedMessages = sessionLoadedCalls[0][1].messages;
+      expect(loadedMessages.length).toBeGreaterThan(0);
 
       // Find the delegation subsession - ateam_chat to realtime_core_coordinator
       const delegationStart = subsessionStartCalls.find(call =>
@@ -623,9 +646,9 @@ text: 'Response without preamble'`
       expect(delegationStart).toBeDefined();
 
       // Find the think tool thought
-      const thoughtMessage = messageAddedCalls.find(call =>
-        call[1].message.role === 'assistant (thought)' &&
-        call[1].message.content.includes('thought from agent')
+      const thoughtMessage = loadedMessages.find((msg: any) =>
+        msg.role === 'assistant (thought)' &&
+        msg.content.includes('thought from agent')
       );
       expect(thoughtMessage).toBeDefined();
 
@@ -633,16 +656,44 @@ text: 'Response without preamble'`
       expect(subsessionStartCalls).toHaveLength(subsessionEndCalls.length);
 
       // Verify user messages are present
-      const userMessages = messageAddedCalls.filter(call =>
-        call[1].message.role === 'user'
+      const userMessages = loadedMessages.filter((msg: any) =>
+        msg.role === 'user'
       );
       expect(userMessages.length).toBeGreaterThan(0);
 
       // Check that delegation user message is present
-      const helloDomo = userMessages.find(call =>
-        call[1].message.content.includes('Hello other agent')
+      const helloDomo = userMessages.find((msg: any) =>
+        msg.content.includes('Hello other agent')
       );
       expect(helloDomo).toBeDefined();
+    });
+
+    it('should handle fixture sequences with resumed messages', () => {
+      // Test with the chatSessionChangedSequence from fixtures
+      const event = chatSessionChangedSequence[0];
+      processor.processEvent(event);
+
+      // Verify session was loaded
+      const sessionLoadedCalls = sessionManagerEmitSpy.mock.calls.filter(
+        call => call[0] === 'session-messages-loaded'
+      );
+      expect(sessionLoadedCalls).toHaveLength(1);
+
+      // Get loaded messages
+      const loadedMessages = sessionLoadedCalls[0][1].messages;
+
+      // Check for TypeScript-related messages from the fixture
+      const typescriptMessages = loadedMessages.filter(
+        (msg: any) => msg.content.includes('TypeScript')
+      );
+      expect(typescriptMessages.length).toBeGreaterThan(0);
+
+      // Verify thought role preservation from resumed session
+      const thoughtMessages = loadedMessages.filter(
+        (msg: any) => msg.role === 'assistant (thought)'
+      );
+      expect(thoughtMessages.length).toBeGreaterThan(0);
+      expect(thoughtMessages[0].content).toContain('The user is asking about TypeScript');
     });
   });
 
@@ -679,26 +730,31 @@ text: 'Response without preamble'`
       processor.processEvent({
         type: 'chat_session_changed',
         chat_session: {
+          version: 2,
           session_id: testSessionId,
           messages
         }
       } as any);
 
-      // Should have both text message and tool call
-      const messageAddedCalls = sessionManagerEmitSpy.mock.calls.filter(
-        call => call[0] === 'message-added'
+      // Get loaded messages
+      const sessionLoadedCalls = sessionManagerEmitSpy.mock.calls.filter(
+        call => call[0] === 'session-messages-loaded'
       );
       const toolCallCompleteCalls = sessionManagerEmitSpy.mock.calls.filter(
         call => call[0] === 'tool-call-complete'
       );
 
+      expect(sessionLoadedCalls).toHaveLength(1);
+      const loadedMessages = sessionLoadedCalls[0][1].messages;
+
       // Find the text message
-      const textMessage = messageAddedCalls.find(call =>
-        call[1].message.content === 'Let me calculate that for you.'
+      const textMessage = loadedMessages.find((msg: any) =>
+        msg.content === 'Let me calculate that for you.'
       );
       
       expect(textMessage).toBeDefined();
-      expect(toolCallCompleteCalls).toHaveLength(1);
+      // Resumed messages should NOT emit tool-call-complete events
+      expect(toolCallCompleteCalls).toHaveLength(0);
     });
 
     it('should skip tool result messages in user role', () => {
@@ -722,22 +778,26 @@ text: 'Response without preamble'`
       processor.processEvent({
         type: 'chat_session_changed',
         chat_session: {
+          version: 2,
           session_id: testSessionId,
           messages
         }
       } as any);
 
-      const messageAddedCalls = sessionManagerEmitSpy.mock.calls.filter(
-        call => call[0] === 'message-added'
+      const sessionLoadedCalls = sessionManagerEmitSpy.mock.calls.filter(
+        call => call[0] === 'session-messages-loaded'
       );
 
+      expect(sessionLoadedCalls).toHaveLength(1);
+      const loadedMessages = sessionLoadedCalls[0][1].messages;
+
       // Should only have the normal user message
-      expect(messageAddedCalls).toHaveLength(1);
-      expect(messageAddedCalls[0][1].message.content).toBe('Normal user message');
+      expect(loadedMessages).toHaveLength(1);
+      expect(loadedMessages[0].content).toBe('Normal user message');
       
       // Should NOT have the tool result as a message
-      const toolResultMessage = messageAddedCalls.find(call =>
-        call[1].message.content.includes('This should be skipped')
+      const toolResultMessage = loadedMessages.find((msg: any) =>
+        msg.content.includes('This should be skipped')
       );
       expect(toolResultMessage).toBeUndefined();
     });
@@ -774,6 +834,7 @@ text: 'Response without preamble'`
         processor.processEvent({
           type: 'chat_session_changed',
           chat_session: {
+            version: 2,
             session_id: testSessionId,
             messages
           }
@@ -781,13 +842,16 @@ text: 'Response without preamble'`
       }).not.toThrow();
 
       // Should still create subsession with raw content
-      const messageAddedCalls = sessionManagerEmitSpy.mock.calls.filter(
-        call => call[0] === 'message-added'
+      const sessionLoadedCalls = sessionManagerEmitSpy.mock.calls.filter(
+        call => call[0] === 'session-messages-loaded'
       );
 
-      const assistantMessage = messageAddedCalls.find(call =>
-        call[1].message.role === 'assistant' &&
-        call[1].message.content.includes('Not valid YAML')
+      expect(sessionLoadedCalls).toHaveLength(1);
+      const loadedMessages = sessionLoadedCalls[0][1].messages;
+
+      const assistantMessage = loadedMessages.find((msg: any) =>
+        msg.role === 'assistant' &&
+        msg.content.includes('Not valid YAML')
       );
       
       expect(assistantMessage).toBeDefined();
@@ -805,6 +869,7 @@ text: 'Response without preamble'`
         processor.processEvent({
           type: 'chat_session_changed',
           chat_session: {
+            version: 2,
             session_id: testSessionId,
             messages
           }
@@ -823,23 +888,24 @@ text: 'Response without preamble'`
       processor.processEvent({
         type: 'chat_session_changed',
         chat_session: {
+          version: 2,
           session_id: testSessionId,
           messages
         }
       } as any);
 
-      const messageAddedCalls = sessionManagerEmitSpy.mock.calls.filter(
-        call => call[0] === 'message-added'
+      const sessionLoadedCalls = sessionManagerEmitSpy.mock.calls.filter(
+        call => call[0] === 'session-messages-loaded'
       );
 
-      expect(messageAddedCalls).toHaveLength(1);
-      expect(messageAddedCalls[0][1]).toEqual({
-        sessionId: testSessionId,
-        message: expect.objectContaining({
-          role: 'system',
-          content: 'System initialization message'
-        })
-      });
+      expect(sessionLoadedCalls).toHaveLength(1);
+      const loadedMessages = sessionLoadedCalls[0][1].messages;
+
+      expect(loadedMessages).toHaveLength(1);
+      expect(loadedMessages[0]).toEqual(expect.objectContaining({
+        role: 'system',
+        content: 'System initialization message'
+      }));
     });
   });
 });
