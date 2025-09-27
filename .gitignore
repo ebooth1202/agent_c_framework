@@ -189,3 +189,5 @@ package-lock.json
 
 # Ignore all log files
 logs/
+
+jim_writing*
