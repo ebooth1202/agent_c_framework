@@ -91,7 +91,7 @@ class RealtimeSessionManager:
         self._locks[ui_session_id] = asyncio.Lock()
 
         async with self._locks[ui_session_id]:
-            agent_bridge = RealtimeBridge(user, ui_session_id, self.chat_session_manager)
+            agent_bridge = RealtimeBridge(self, user, ui_session_id, self.chat_session_manager)
             await agent_bridge.initialize(chat_session_id, agent_key)
             self.ui_sessions[ui_session_id] = RealtimeSession(session_id=ui_session_id, user_id=user.user_id, bridge=agent_bridge)
 
