@@ -43,9 +43,9 @@ from agent_c_tools.tools.workspace.local_storage  import LocalStorageWorkspace
 from agent_c_tools.tools.think.prompt import ThinkSection
 from agent_c_tools.tools.workspace.base import BaseWorkspace
 from agent_c_tools.tools.workspace.local_project import LocalProjectWorkspace
+from agent_c.models.events import  SystemMessageEvent
 
 if TYPE_CHECKING:
-    from agent_c.models.events import  SystemMessageEvent
     from agent_c.models.agent_config import CurrentAgentConfiguration
     from agent_c.chat import ChatSessionManager
     from agent_c_api.core.realtime_session_manager import RealtimeSessionManager
