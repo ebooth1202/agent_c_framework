@@ -31,6 +31,7 @@ category:
   - "realtime_core_event_test"
   - "realtime_core_audio_dev"
   - "realtime_core_system_dev"
+  - "realtime_react_dev"
   - "assist"
   - "domo"
 persona: |
