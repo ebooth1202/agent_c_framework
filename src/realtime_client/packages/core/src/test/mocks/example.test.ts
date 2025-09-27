@@ -4,8 +4,8 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
-  mockWebSocket,
-  MockWebSocketConstructor,
+  WebSocketTracker,
+  MockWebSocket,
   mockAudioContext,
   MockAudioContextConstructor,
   mockNavigator,
@@ -14,15 +14,24 @@ import {
 } from './index';
 
 describe('Mock Usage Examples', () => {
+  let wsTracker: WebSocketTracker;
+  let mockWs: MockWebSocket;
+
   beforeEach(() => {
-    // Setup global mocks
-    global.WebSocket = MockWebSocketConstructor as unknown as typeof WebSocket;
+    // Setup WebSocket tracker
+    wsTracker = new WebSocketTracker();
+    wsTracker.install();
+    
+    // Setup other global mocks
     global.AudioContext = MockAudioContextConstructor as unknown as typeof AudioContext;
     global.navigator = mockNavigator as unknown as Navigator;
     global.AbortController = MockAbortControllerConstructor as unknown as typeof AbortController;
   });
 
   afterEach(() => {
+    // Cleanup WebSocket tracker
+    wsTracker.uninstall();
+    
     // Reset all mocks after each test
     resetAllMocks();
     vi.restoreAllMocks();
@@ -31,43 +40,63 @@ describe('Mock Usage Examples', () => {
   describe('WebSocket Mock', () => {
     it('should track WebSocket instantiation', () => {
       const ws = new WebSocket('ws://test.example.com');
-      expect(MockWebSocketConstructor).toHaveBeenCalledWith('ws://test.example.com');
-      expect(ws).toBe(mockWebSocket);
+      
+      const instances = wsTracker.getAll();
+      expect(instances).toHaveLength(1);
+      expect(instances[0].url).toBe('ws://test.example.com');
+      expect(ws).toBe(instances[0]);
     });
 
     it('should track send calls', () => {
       const ws = new WebSocket('ws://test.example.com');
+      mockWs = wsTracker.getLatest()!;
       const message = JSON.stringify({ type: 'test', data: 'hello' });
       
+      // Wait for WebSocket to be open
+      mockWs.readyState = MockWebSocket.OPEN;
       ws.send(message);
       
-      expect(mockWebSocket.send).toHaveBeenCalledWith(message);
-      expect(mockWebSocket.send).toHaveBeenCalledTimes(1);
+      expect(mockWs.send).toHaveBeenCalledWith(message);
+      expect(mockWs.send).toHaveBeenCalledTimes(1);
     });
 
     it('should allow simulating events', () => {
       const ws = new WebSocket('ws://test.example.com');
+      mockWs = wsTracker.getLatest()!;
       const onMessage = vi.fn();
       
       // Set up event handler
       ws.onmessage = onMessage;
       
-      // Simulate receiving a message
-      const messageEvent = { data: JSON.stringify({ type: 'response' }) };
-      mockWebSocket.onmessage(messageEvent);
+      // Open the WebSocket first
+      mockWs.simulateOpen();
       
-      expect(onMessage).toHaveBeenCalledWith(messageEvent);
+      // Simulate receiving a message
+      mockWs.simulateTextMessage({ type: 'response' });
+      
+      expect(onMessage).toHaveBeenCalled();
     });
 
     it('should track connection state', () => {
       const ws = new WebSocket('ws://test.example.com');
+      mockWs = wsTracker.getLatest()!;
       
-      // Check initial state
+      // Check initial state (CONNECTING)
+      expect(ws.readyState).toBe(WebSocket.CONNECTING);
+      
+      // Simulate opening
+      mockWs.simulateOpen();
       expect(ws.readyState).toBe(WebSocket.OPEN);
       
       // Simulate closing
-      mockWebSocket.readyState = WebSocket.CLOSED;
-      expect(ws.readyState).toBe(WebSocket.CLOSED);
+      mockWs.close();
+      // Need to wait for async close
+      return new Promise<void>((resolve) => {
+        setTimeout(() => {
+          expect(ws.readyState).toBe(WebSocket.CLOSED);
+          resolve();
+        }, 10);
+      });
     });
   });
 
@@ -169,7 +198,11 @@ describe('Mock Usage Examples', () => {
       expect(MockAudioContextConstructor).toHaveBeenCalled();
       expect(mockNavigator.mediaDevices.getUserMedia).toHaveBeenCalled();
       expect(mockAudioContext.createMediaStreamSource).toHaveBeenCalledWith(stream);
-      expect(MockWebSocketConstructor).toHaveBeenCalled();
+      
+      // Verify WebSocket was created
+      const instances = wsTracker.getAll();
+      expect(instances).toHaveLength(1);
+      expect(instances[0].url).toBe('ws://audio.test');
       
       // All objects are mocked
       expect(source.connect).toBeDefined();

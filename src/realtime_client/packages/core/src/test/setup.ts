@@ -4,6 +4,23 @@
  */
 
 import { vi } from 'vitest';
+import { startMockServer, stopMockServer, resetMockServer } from './mocks/server';
+
+// Start MSW server before all tests
+beforeAll(() => {
+  startMockServer();
+});
+
+// Reset handlers after each test
+afterEach(() => {
+  resetMockServer();
+  vi.clearAllMocks();
+});
+
+// Stop server after all tests
+afterAll(() => {
+  stopMockServer();
+});
 
 // Polyfill for CloseEvent (not available in Node)
 if (typeof CloseEvent === 'undefined') {

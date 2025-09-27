@@ -5,21 +5,38 @@
  * and not modified or cast to standard vendor roles.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { EventStreamProcessor } from '../EventStreamProcessor';
 import { SessionManager } from '../../session/SessionManager';
 import { ChatSession } from '../types/CommonTypes';
 import { MessageParam } from '../../types/message-params';
+import { WebSocketTracker } from '../../test/mocks/websocket.mock';
+import { 
+  thoughtStreamingSequence,
+  chatSessionChangedSequence,
+  subsessionSequence,
+  createCustomSequence
+} from '../../test/fixtures/event-sequences';
+import { server, startMockServer, resetMockServer, stopMockServer } from '../../test/mocks/server';
 
 describe('EventStreamProcessor - Role Preservation', () => {
   let processor: EventStreamProcessor;
   let sessionManager: SessionManager;
   let sessionManagerEmitSpy: ReturnType<typeof vi.spyOn>;
+  let wsTracker: WebSocketTracker;
   const testSessionId = 'test-role-preservation';
 
   beforeEach(() => {
     vi.clearAllMocks();
     
+    // Start MSW server for any HTTP mocking needed
+    startMockServer();
+    
+    // Setup WebSocket tracker
+    wsTracker = new WebSocketTracker();
+    wsTracker.install();
+    
+    // Initialize session with proper structure
     const mockSession: ChatSession = {
       session_id: testSessionId,
       session_name: 'Test Role Preservation',
@@ -27,13 +44,30 @@ describe('EventStreamProcessor - Role Preservation', () => {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       token_count: 0,
-      metadata: {}
+      context_window_size: 128000,
+      user_id: 'test-user',
+      vendor: 'anthropic',
+      metadata: {
+        test: true
+      }
     };
 
+    // Create instances and setup spies
     sessionManager = new SessionManager();
     processor = new EventStreamProcessor(sessionManager);
     sessionManagerEmitSpy = vi.spyOn(sessionManager, 'emit');
+    
+    // Initialize session manager with the session
     sessionManager.setCurrentSession(mockSession);
+  });
+
+  afterEach(() => {
+    // Cleanup
+    vi.restoreAllMocks();
+    processor.destroy();
+    sessionManager.destroy();
+    wsTracker.uninstall();
+    resetMockServer();
   });
 
   describe('Thought Role Preservation', () => {
@@ -56,7 +90,7 @@ describe('EventStreamProcessor - Role Preservation', () => {
             {
               type: 'tool_result',
               tool_use_id: 'tool_1',
-              content: 'null'
+              content: ''
             }
           ]
         }
@@ -65,19 +99,45 @@ describe('EventStreamProcessor - Role Preservation', () => {
       processor.processEvent({
         type: 'chat_session_changed',
         chat_session: {
+          version: 2,
           session_id: testSessionId,
           messages
         }
       } as any);
 
-      const thoughtMessages = sessionManagerEmitSpy.mock.calls.filter(
-        call => call[0] === 'message-added' && 
-        call[1].message.role === 'assistant (thought)'
+      // Check for session-messages-loaded event which contains all processed messages
+      const sessionLoadedCalls = sessionManagerEmitSpy.mock.calls.filter(
+        call => call[0] === 'session-messages-loaded'
+      );
+      
+      expect(sessionLoadedCalls).toHaveLength(1);
+      const loadedMessages = sessionLoadedCalls[0][1].messages;
+      
+      // Find thought messages in the loaded messages
+      const thoughtMessages = loadedMessages.filter(
+        (msg: any) => msg.role === 'assistant (thought)'
       );
 
       expect(thoughtMessages).toHaveLength(1);
-      expect(thoughtMessages[0][1].message.role).toBe('assistant (thought)');
-      expect(thoughtMessages[0][1].message.content).toBe('Analyzing the problem...');
+      expect(thoughtMessages[0].role).toBe('assistant (thought)');
+      expect(thoughtMessages[0].content).toBe('Analyzing the problem...');
+      expect(thoughtMessages[0].format).toBe('markdown');
+    });
+
+    it('should handle streaming thought events correctly', () => {
+      // Process the thought streaming sequence from fixtures
+      thoughtStreamingSequence.forEach(event => {
+        processor.processEvent(event);
+      });
+
+      // For streaming events, check for message-complete events
+      const completedMessages = sessionManagerEmitSpy.mock.calls.filter(
+        call => call[0] === 'message-complete' &&
+        call[1].message.role === 'assistant (thought)'
+      );
+
+      expect(completedMessages).toHaveLength(1);
+      expect(completedMessages[0][1].message.content).toContain('I need to analyze this carefully.');
     });
 
     it('should not cast thought role to regular assistant', () => {
@@ -92,25 +152,42 @@ describe('EventStreamProcessor - Role Preservation', () => {
               input: { thought: 'Deep thinking content' }
             }
           ]
+        },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: 'tool_2',
+              content: ''
+            }
+          ]
         }
       ];
 
       processor.processEvent({
         type: 'chat_session_changed',
         chat_session: {
+          version: 2,
           session_id: testSessionId,
           messages
         }
       } as any);
 
-      const assistantMessages = sessionManagerEmitSpy.mock.calls.filter(
-        call => call[0] === 'message-added' && 
-        call[1].message.role === 'assistant'
+      // Get loaded messages from session-messages-loaded event
+      const sessionLoadedCalls = sessionManagerEmitSpy.mock.calls.filter(
+        call => call[0] === 'session-messages-loaded'
+      );
+      
+      expect(sessionLoadedCalls).toHaveLength(1);
+      const loadedMessages = sessionLoadedCalls[0][1].messages;
+      
+      const assistantMessages = loadedMessages.filter(
+        (msg: any) => msg.role === 'assistant' && !msg.role.includes('thought')
       );
 
-      const thoughtMessages = sessionManagerEmitSpy.mock.calls.filter(
-        call => call[0] === 'message-added' && 
-        call[1].message.role === 'assistant (thought)'
+      const thoughtMessages = loadedMessages.filter(
+        (msg: any) => msg.role === 'assistant (thought)'
       );
 
       expect(assistantMessages).toHaveLength(0);
@@ -122,7 +199,7 @@ describe('EventStreamProcessor - Role Preservation', () => {
     it('should preserve system role for system messages', () => {
       const messages: MessageParam[] = [
         {
-          role: 'system' as any, // System messages might come from special contexts
+          role: 'system' as any,
           content: 'System notification: Connection established'
         }
       ];
@@ -130,18 +207,46 @@ describe('EventStreamProcessor - Role Preservation', () => {
       processor.processEvent({
         type: 'chat_session_changed',
         chat_session: {
+          version: 2,
           session_id: testSessionId,
           messages
         }
       } as any);
 
-      const systemMessages = sessionManagerEmitSpy.mock.calls.filter(
-        call => call[0] === 'message-added' && 
-        call[1].message.role === 'system'
+      // Get loaded messages from session-messages-loaded event
+      const sessionLoadedCalls = sessionManagerEmitSpy.mock.calls.filter(
+        call => call[0] === 'session-messages-loaded'
+      );
+      
+      expect(sessionLoadedCalls).toHaveLength(1);
+      const loadedMessages = sessionLoadedCalls[0][1].messages;
+      
+      const systemMessages = loadedMessages.filter(
+        (msg: any) => msg.role === 'system'
       );
 
       expect(systemMessages).toHaveLength(1);
-      expect(systemMessages[0][1].message.content).toBe('System notification: Connection established');
+      expect(systemMessages[0].content).toBe('System notification: Connection established');
+    });
+
+    it('should handle system_message events from server', () => {
+      processor.processEvent({
+        type: 'system_message',
+        session_id: testSessionId,
+        role: 'system',
+        content: 'Server maintenance in 5 minutes',
+        format: 'text',
+        severity: 'warning'
+      });
+
+      // System messages emit 'system_message', not 'message-added'
+      const systemMessages = sessionManagerEmitSpy.mock.calls.filter(
+        call => call[0] === 'system_message'
+      );
+
+      expect(systemMessages).toHaveLength(1);
+      expect(systemMessages[0][1].content).toBe('Server maintenance in 5 minutes');
+      expect(systemMessages[0][1].severity).toBe('warning');
     });
   });
 
@@ -187,30 +292,59 @@ describe('EventStreamProcessor - Role Preservation', () => {
       processor.processEvent({
         type: 'chat_session_changed',
         chat_session: {
+          version: 2,
           session_id: testSessionId,
           messages
         }
       } as any);
 
+      // Get events
+      const subsessionStartCalls = sessionManagerEmitSpy.mock.calls.filter(
+        call => call[0] === 'subsession-started'
+      );
+      
+      const sessionLoadedCalls = sessionManagerEmitSpy.mock.calls.filter(
+        call => call[0] === 'session-messages-loaded'
+      );
+      
+      expect(sessionLoadedCalls).toHaveLength(1);
+      const loadedMessages = sessionLoadedCalls[0][1].messages;
+
+      const userMessages = loadedMessages.filter(
+        (msg: any) => msg.role === 'user'
+      );
+
+      const assistantMessages = loadedMessages.filter(
+        (msg: any) => msg.role === 'assistant' && !msg.role.includes('thought')
+      );
+
+      expect(subsessionStartCalls).toHaveLength(1);
+      expect(subsessionStartCalls[0][1].subAgentKey).toBe('test_agent');
+      expect(subsessionStartCalls[0][1].subSessionType).toBe('chat');
+      expect(userMessages).toHaveLength(1);
+      expect(userMessages[0].content).toBe('Test delegation request');
+      expect(assistantMessages).toHaveLength(1);
+      expect(assistantMessages[0].content).toBe('Delegation response content');
+    });
+
+    it('should handle subsession events from server correctly', () => {
+      // Process subsession sequence from fixtures
+      subsessionSequence.forEach(event => {
+        processor.processEvent(event);
+      });
+
       const subsessionStartCalls = sessionManagerEmitSpy.mock.calls.filter(
         call => call[0] === 'subsession-started'
       );
 
-      const userMessages = sessionManagerEmitSpy.mock.calls.filter(
-        call => call[0] === 'message-added' && 
-        call[1].message.role === 'user'
-      );
-
-      const assistantMessages = sessionManagerEmitSpy.mock.calls.filter(
-        call => call[0] === 'message-added' && 
-        call[1].message.role === 'assistant'
+      const subsessionEndCalls = sessionManagerEmitSpy.mock.calls.filter(
+        call => call[0] === 'subsession-ended'
       );
 
       expect(subsessionStartCalls).toHaveLength(1);
-      expect(userMessages).toHaveLength(1);
-      expect(userMessages[0][1].message.content).toBe('Test delegation request');
-      expect(assistantMessages).toHaveLength(1);
-      expect(assistantMessages[0][1].message.content).toBe('Delegation response content');
+      expect(subsessionEndCalls).toHaveLength(1);
+      expect(subsessionStartCalls[0][1].subAgentKey).toBe('specialist');
+      expect(subsessionStartCalls[0][1].subSessionType).toBe('oneshot');
     });
 
     it('should handle YAML format delegation results for backward compatibility', () => {
@@ -248,18 +382,26 @@ describe('EventStreamProcessor - Role Preservation', () => {
       processor.processEvent({
         type: 'chat_session_changed',
         chat_session: {
+          version: 2,
           session_id: testSessionId,
           messages
         }
       } as any);
 
-      const assistantMessages = sessionManagerEmitSpy.mock.calls.filter(
-        call => call[0] === 'message-added' && 
-        call[1].message.role === 'assistant'
+      // Get loaded messages from session-messages-loaded event
+      const sessionLoadedCalls = sessionManagerEmitSpy.mock.calls.filter(
+        call => call[0] === 'session-messages-loaded'
+      );
+      
+      expect(sessionLoadedCalls).toHaveLength(1);
+      const loadedMessages = sessionLoadedCalls[0][1].messages;
+
+      const assistantMessages = loadedMessages.filter(
+        (msg: any) => msg.role === 'assistant' && !msg.role.includes('thought')
       );
 
       expect(assistantMessages).toHaveLength(1);
-      expect(assistantMessages[0][1].message.content).toContain('This is a YAML response');
+      expect(assistantMessages[0].content).toContain('This is a YAML response');
     });
   });
 
@@ -276,20 +418,38 @@ describe('EventStreamProcessor - Role Preservation', () => {
               input: { thought: 'Thinking...' }
             }
           ]
+        },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: 'tool_5',
+              content: ''
+            }
+          ]
         }
       ];
 
       processor.processEvent({
         type: 'chat_session_changed',
         chat_session: {
+          version: 2,
           session_id: testSessionId,
           messages
         }
       } as any);
 
-      const thoughtMessages = sessionManagerEmitSpy.mock.calls.filter(
-        call => call[0] === 'message-added' && 
-        call[1].message.role === 'assistant (thought)'
+      // Get loaded messages from session-messages-loaded event
+      const sessionLoadedCalls = sessionManagerEmitSpy.mock.calls.filter(
+        call => call[0] === 'session-messages-loaded'
+      );
+      
+      expect(sessionLoadedCalls).toHaveLength(1);
+      const loadedMessages = sessionLoadedCalls[0][1].messages;
+
+      const thoughtMessages = loadedMessages.filter(
+        (msg: any) => msg.role === 'assistant (thought)'
       );
 
       expect(thoughtMessages).toHaveLength(1);
@@ -389,6 +549,7 @@ describe('EventStreamProcessor - Role Preservation', () => {
       processor.processEvent({
         type: 'chat_session_changed',
         chat_session: {
+          version: 2,
           session_id: testSessionId,
           messages
         }
@@ -402,7 +563,8 @@ describe('EventStreamProcessor - Role Preservation', () => {
         call => call[0] === 'subsession-started'
       );
 
-      expect(toolCallCalls).toHaveLength(1);
+      // Resumed messages should NOT emit tool-call-complete events
+      expect(toolCallCalls).toHaveLength(0);
       expect(subsessionCalls).toHaveLength(0);
     });
   });
@@ -435,7 +597,7 @@ describe('EventStreamProcessor - Role Preservation', () => {
             {
               type: 'tool_result',
               tool_use_id: 'tool_9',
-              content: 'null'
+              content: ''
             }
           ]
         },
@@ -448,6 +610,7 @@ describe('EventStreamProcessor - Role Preservation', () => {
       processor.processEvent({
         type: 'chat_session_changed',
         chat_session: {
+          version: 2,
           session_id: testSessionId,
           messages
         }
@@ -456,17 +619,58 @@ describe('EventStreamProcessor - Role Preservation', () => {
       const allCalls = sessionManagerEmitSpy.mock.calls;
       const eventSequence = allCalls.map(call => call[0]);
 
-      // Verify correct sequence
+      // Verify correct sequence - bulk loads use session-messages-loaded, not message-added
       expect(eventSequence).toContain('session-messages-loaded');
-      expect(eventSequence).toContain('message-added');
+      expect(eventSequence).not.toContain('message-added');
 
-      // Verify order of message-added events
-      const messageAddedCalls = allCalls.filter(call => call[0] === 'message-added');
-      expect(messageAddedCalls[0][1].message.role).toBe('user');
-      expect(messageAddedCalls[1][1].message.role).toBe('assistant (thought)');
-      expect(messageAddedCalls[1][1].message.content).toBe('Processing...');
-      expect(messageAddedCalls[2][1].message.content).toBe('I need to think about this.');
-      expect(messageAddedCalls[3][1].message.role).toBe('assistant');
+      // Get loaded messages from session-messages-loaded event
+      const sessionLoadedCalls = allCalls.filter(call => call[0] === 'session-messages-loaded');
+      expect(sessionLoadedCalls).toHaveLength(1);
+      const loadedMessages = sessionLoadedCalls[0][1].messages;
+      
+      // Verify order and content of loaded messages
+      expect(loadedMessages[0].role).toBe('user');
+      expect(loadedMessages[0].content).toBe('Initial message');
+      expect(loadedMessages[1].role).toBe('assistant (thought)');
+      expect(loadedMessages[1].content).toBe('Processing...');
+      expect(loadedMessages[2].role).toBe('assistant');
+      expect(loadedMessages[2].content).toBe('I need to think about this.');
+      expect(loadedMessages[3].role).toBe('assistant');
+      expect(loadedMessages[3].content).toBe('Here is my response.');
+    });
+
+    it('should handle chat session changed events from fixtures', () => {
+      // Use the chatSessionChanged sequence from fixtures
+      const sessionChangedEvent = chatSessionChangedSequence[0];
+      processor.processEvent(sessionChangedEvent);
+
+      // Verify session was loaded
+      const sessionLoadedCalls = sessionManagerEmitSpy.mock.calls.filter(
+        call => call[0] === 'session-messages-loaded'
+      );
+
+      expect(sessionLoadedCalls).toHaveLength(1);
+      
+      // Get loaded messages from session-messages-loaded event
+      const loadedMessages = sessionLoadedCalls[0][1].messages;
+
+      // Should have user messages and assistant messages
+      const userMessages = loadedMessages.filter(
+        (msg: any) => msg.role === 'user'
+      );
+      const assistantMessages = loadedMessages.filter(
+        (msg: any) => msg.role === 'assistant' && !msg.role.includes('thought')
+      );
+      const thoughtMessages = loadedMessages.filter(
+        (msg: any) => msg.role === 'assistant (thought)'
+      );
+
+      expect(userMessages.length).toBeGreaterThan(0);
+      expect(assistantMessages.length).toBeGreaterThan(0);
+      expect(thoughtMessages.length).toBeGreaterThan(0);
+      
+      // Verify the thought content
+      expect(thoughtMessages[0].content).toContain('The user is asking about TypeScript');
     });
 
     it('should not emit duplicate events for the same content', () => {
@@ -481,20 +685,38 @@ describe('EventStreamProcessor - Role Preservation', () => {
               input: { thought: 'Unique thought' }
             }
           ]
+        },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: 'tool_10',
+              content: ''
+            }
+          ]
         }
       ];
 
       processor.processEvent({
         type: 'chat_session_changed',
         chat_session: {
+          version: 2,
           session_id: testSessionId,
           messages
         }
       } as any);
 
-      const thoughtMessages = sessionManagerEmitSpy.mock.calls.filter(
-        call => call[0] === 'message-added' && 
-        call[1].message.content === 'Unique thought'
+      // Get loaded messages from session-messages-loaded event
+      const sessionLoadedCalls = sessionManagerEmitSpy.mock.calls.filter(
+        call => call[0] === 'session-messages-loaded'
+      );
+      
+      expect(sessionLoadedCalls).toHaveLength(1);
+      const loadedMessages = sessionLoadedCalls[0][1].messages;
+
+      const thoughtMessages = loadedMessages.filter(
+        (msg: any) => msg.content === 'Unique thought'
       );
 
       expect(thoughtMessages).toHaveLength(1);

@@ -603,6 +603,9 @@ describe('EventStreamProcessor - Streaming Delta Assembly', () => {
         session_id: 'test-session-123'
       } as TextDeltaEvent);
 
+      // Clear setup events before checking thought_delta processing
+      sessionManagerEmitSpy.mockClear();
+
       // Process thought delta
       processor.processEvent({
         type: 'thought_delta',
@@ -618,12 +621,12 @@ describe('EventStreamProcessor - Streaming Delta Assembly', () => {
         })
       });
 
-      // Thought messages have role: 'assistant' with type: 'thought' to differentiate
+      // Thought messages have role: 'assistant (thought)' with type: 'message' to differentiate
       expect(sessionManagerEmitSpy).toHaveBeenCalledWith('message-streaming', {
         sessionId: 'test-session-123',
         message: expect.objectContaining({
-          role: 'assistant',
-          type: 'thought',
+          role: 'assistant (thought)',
+          type: 'message',
           content: 'Internal thinking'
         })
       });
@@ -863,8 +866,8 @@ describe('EventStreamProcessor - Streaming Delta Assembly', () => {
         expect(sessionManagerEmitSpy).toHaveBeenCalledWith('message-streaming', {
           sessionId: 'test-session-123',
           message: expect.objectContaining({
-            role: 'assistant',
-            type: 'thought',
+            role: 'assistant (thought)',
+            type: 'message',
             content: 'I need to analyze this...'
           })
         });
@@ -914,7 +917,8 @@ describe('EventStreamProcessor - Streaming Delta Assembly', () => {
           expect(sessionManagerEmitSpy).toHaveBeenCalledWith('message-streaming', {
             sessionId: 'test-session-123',
             message: expect.objectContaining({
-              type: 'thought',
+              type: 'message',
+              role: 'assistant (thought)',
               content: thoughtDeltas.slice(0, index + 1).join('')
             })
           });
