@@ -1,6 +1,7 @@
 node_modules/
 # TypeScript build cache
-
+test-results.json
+test_results.json
 *.tsbuildinfo
 tsconfig.tsbuildinfo
 
