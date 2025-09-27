@@ -537,7 +537,7 @@ describe('useChat - Part 1: Message Management', () => {
 
       const { result } = renderHook(() => useChat());
 
-      // Emit session change
+      // Emit session change - NEW: This clears messages and sets loading state
       emitClientEvent('chat_session_changed', { 
         chat_session: newSession 
       });
@@ -546,15 +546,21 @@ describe('useChat - Part 1: Message Management', () => {
       expect(result.current.currentSession).toEqual(newSession);
       expect(result.current.currentSessionId).toBe('new-session');
 
-      // Verify messages were loaded
-      expect(mockEnsureMessagesFormat).toHaveBeenCalledWith(existingMessages);
+      // NEW: Messages should be cleared during loading
+      expect(result.current.messages).toHaveLength(0);
+      expect(result.current.streamingMessage).toBeNull();
+
+      // NEW: Emit session-messages-loaded to deliver the messages
+      emitSessionEvent('session-messages-loaded', {
+        sessionId: 'new-session',
+        messages: existingMessages
+      });
+
+      // NOW messages should be loaded
       // Messages now have additional id and type fields added
       expect(result.current.messages).toHaveLength(existingMessages.length);
       expect(result.current.messages[0]?.content).toBe('Hello');
       expect(result.current.messages[1]?.content).toBe('Hi there');
-
-      // Verify streaming state was cleared
-      expect(result.current.streamingMessage).toBeNull();
     });
 
     it('clears messages on session change without messages', () => {
@@ -574,9 +580,18 @@ describe('useChat - Part 1: Message Management', () => {
         chat_session: emptySession 
       });
 
-      // Verify messages were cleared
+      // Verify messages were cleared immediately
       expect(result.current.messages).toEqual([]);
       expect(result.current.streamingMessage).toBeNull();
+
+      // NEW: Emit session-messages-loaded with empty array
+      emitSessionEvent('session-messages-loaded', {
+        sessionId: 'empty-session',
+        messages: []
+      });
+
+      // Should remain empty
+      expect(result.current.messages).toEqual([]);
     });
 
     it('handles session-messages-loaded event', () => {
@@ -632,6 +647,16 @@ describe('useChat - Part 1: Message Management', () => {
       });
       expect(result.current.streamingMessage?.content).toBe('Partial');
 
+      // NEW: First emit chat_session_changed to clear and set loading state
+      const newSession = createTestSession('test-session');
+      emitClientEvent('chat_session_changed', { 
+        chat_session: newSession 
+      });
+
+      // Verify streaming was cleared by session change
+      expect(result.current.streamingMessage).toBeNull();
+      expect(result.current.messages).toHaveLength(0);
+
       // Load session messages
       const messages = [createMessage('user', 'Loaded message')];
       emitSessionEvent('session-messages-loaded', {
@@ -639,8 +664,7 @@ describe('useChat - Part 1: Message Management', () => {
         messages
       });
 
-      // Verify streaming was cleared
-      expect(result.current.streamingMessage).toBeNull();
+      // Verify messages were loaded
       // Messages now have additional id and type fields added
       expect(result.current.messages).toHaveLength(messages.length);
       expect(result.current.messages[0]?.content).toBe('Loaded message');
@@ -966,6 +990,12 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
       // Streaming message should be cleared and typing state reset
       expect(result.current.streamingMessage).toBeNull();
       expect(result.current.isAgentTyping).toBe(false);
+
+      // NEW: Complete loading state by emitting session-messages-loaded
+      emitSessionEvent('session-messages-loaded', {
+        sessionId: 'new-session',
+        messages: []
+      });
     });
 
     it('handles rapid typing state changes', () => {
@@ -1104,11 +1134,11 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
       });
       expect(result.current.messages).toHaveLength(1);
 
-      // Invalid session change (no chat_session) - implementation doesn't update state
+      // Invalid session change (no chat_session) - implementation clears messages
       emitClientEvent('chat_session_changed', {});
       
-      // Should maintain existing state when no chat_session provided
-      expect(result.current.messages).toHaveLength(1);
+      // Should clear messages when any session change occurs (even invalid)
+      expect(result.current.messages).toEqual([]);
       expect(result.current.currentSession).toBeNull();
 
       // Session with no messages should clear
@@ -1118,6 +1148,15 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
       // Should clear messages for empty session
       expect(result.current.messages).toEqual([]);
       expect(result.current.currentSession).toEqual(emptySession);
+      
+      // NEW: Complete loading state
+      emitSessionEvent('session-messages-loaded', {
+        sessionId: 'empty-session',
+        messages: []
+      });
+      
+      // Should remain empty
+      expect(result.current.messages).toEqual([]);
     });
 
     it('handles rapid event firing', () => {
@@ -1517,6 +1556,9 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
         await result.current.sendMessage('Success');
       });
       expect(result.current.error).toBeNull();
+      
+      // NEW: Verify message was sent even though we don't add it locally
+      expect(mockClient.sendText).toHaveBeenCalledWith('Success');
     });
 
     it('maintains state consistency after errors', async () => {
