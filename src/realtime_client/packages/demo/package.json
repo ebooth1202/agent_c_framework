@@ -11,7 +11,7 @@
     "lint": "next lint",
     "format": "pnpm prettier ./src --write",
     "format:check": "pnpm prettier ./src --check",
-    "clean": "rimraf .next",
+    "clean": "rimraf .next node_modules",
     "test": "vitest run",
     "test:watch": "vitest watch",
     "test:coverage": "vitest run --coverage",
