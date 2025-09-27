@@ -477,34 +477,45 @@ describe('useChat - Race Condition Fix for Session Switching', () => {
       expect(result.current.messages[0]?.content).toBe('From Session B');
     });
 
-    it('handles session with inline messages (backward compatibility)', () => {
+    it('handles session change with new event pattern', () => {
       const { result } = renderHook(() => useChat());
 
-      // Session with inline messages (old format)
-      const inlineMessages = [
-        createMessage('user', 'Inline message 1'),
-        createMessage('assistant', 'Inline message 2')
+      // Messages for the session
+      const sessionMessages = [
+        createMessage('user', 'Session message 1'),
+        createMessage('assistant', 'Session message 2')
       ];
       
-      const sessionWithInline = createTestSession('inline-session', inlineMessages);
+      const session = createTestSession('test-session');
+      
+      // NEW: chat_session_changed clears messages and sets loading state
       emitClientEvent('chat_session_changed', { 
-        chat_session: sessionWithInline 
+        chat_session: session 
       });
 
-      // Messages should be loaded immediately from inline data
-      expect(result.current.messages).toHaveLength(2);
-      expect(result.current.messages[0]?.content).toBe('Inline message 1');
-      expect(result.current.messages[1]?.content).toBe('Inline message 2');
+      // Messages should be cleared during loading
+      expect(result.current.messages).toHaveLength(0);
+      expect(result.current.currentSessionId).toBe('test-session');
 
-      // session-messages-loaded should not be expected in this case
-      // Try to send a duplicate load event
+      // NEW: session-messages-loaded delivers the messages
       emitSessionEvent('session-messages-loaded', {
-        messages: [createMessage('user', 'Should be ignored')]
+        messages: sessionMessages
       });
 
-      // Messages should not change (loading state was already cleared)
+      // Now messages should be loaded
       expect(result.current.messages).toHaveLength(2);
-      expect(result.current.messages[0]?.content).toBe('Inline message 1');
+      expect(result.current.messages[0]?.content).toBe('Session message 1');
+      expect(result.current.messages[1]?.content).toBe('Session message 2');
+
+      // Try to send another load event (should be accepted as loading is complete)
+      emitSessionEvent('message-added', {
+        sessionId: 'msg-1',
+        message: createMessage('user', 'New message')
+      });
+
+      // New message should be added
+      expect(result.current.messages).toHaveLength(3);
+      expect(result.current.messages[2]?.content).toBe('New message');
     });
   });
 
