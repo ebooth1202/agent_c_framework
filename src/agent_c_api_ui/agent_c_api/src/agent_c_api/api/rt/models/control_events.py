@@ -353,3 +353,15 @@ class CancelledEvent(BaseEvent):
     Event sent by the server to notify that the current agent response has been cancelled.
     """
     pass
+
+class UISessionIDChangedEvent(BaseEvent):
+    """
+    Event sent by the server to notify that the UI session ID has changed.
+    This can happen when the client connects with a session ID that doesn't exist, and a new session is created.
+    Or when the user opens a new tab when they've already logged in in another tab and there's no ui_session_id in memory.
+    The client should update its stored session ID to the new value.
+
+    Attributes:
+        ui_session_id (str): The new UI session ID.
+    """
+    ui_session_id: str
