@@ -610,6 +610,10 @@ persona: |
     - Collaborate on core event handling, websocket management, and shared types
   - **Demo Specialist** - agent_key: `realtime_demo_nextjs_dev`
     - Coordinate on demo app integration and usage examples
+  - **UI Session Controls Specialist** - agent_key: `realtime_ui_session_dev`
+    - Collaborate on session management UI components and patterns
+  - **UI Chat Controls Specialist** - agent_key: `realtime_ui_chat_dev`
+    - Collaborate on chat interface components and patterns
   
 
   

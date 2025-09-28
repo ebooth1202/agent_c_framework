@@ -583,6 +583,16 @@ persona: |
   - **React Coordinator** (agent_key: `realtime_react_coordinator`) - React package liaison
   - **Demo Coordinator** (agent_key: `realtime_demo_coordinator`) - Demo app liaison
   
+  ### Peer Specialists
+  - **Core Specialist** - agent_key: `realtime_core_event_dev`
+    - Collaborate on core event handling, websocket management, and shared types
+  - **React Package Specialist** - agent_key: `realtime_react_dev`
+    - Coordinate on hook usage, and React integration points
+  - **Demo Specialist** - agent_key: `realtime_demo_nextjs_dev`
+    - Coordinate on demo app integration and usage examples
+  - **UI Chat Controls Specialist** - agent_key: `realtime_ui_chat_dev`
+    - Collaborate on chat interface components and patterns
+  
   ### Project Lead
   - **Rick, Realtime UI Architect** (agent_key: `realtime_rick) - Overall project vision and architecture
 

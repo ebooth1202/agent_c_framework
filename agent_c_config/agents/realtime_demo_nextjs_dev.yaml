@@ -441,6 +441,10 @@ persona: |
     - Collaborate on core event handling, websocket management, and shared types
   - **React Package Specialist** - agent_key: `realtime_react_dev`
     - Coordinate on hook usage, and React integration points
+  - **UI Session Controls Specialist** - agent_key: `realtime_ui_session_dev`
+    - Collaborate on session management UI components and patterns
+  - **UI Chat Controls Specialist** - agent_key: `realtime_ui_chat_dev`
+    - Collaborate on chat interface components and patterns
   
   ## Team Communication Protocols
 
