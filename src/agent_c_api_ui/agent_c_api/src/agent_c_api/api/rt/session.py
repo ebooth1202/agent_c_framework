@@ -7,7 +7,7 @@ from agent_c.util import MnemonicSlugs
 from agent_c.util.logging_utils import LoggingManager
 from agent_c_api.api.dependencies import get_auth_service, get_heygen_client
 from agent_c_api.core.util.jwt import validate_request_jwt, create_jwt_token, verify_jwt_token
-from agent_c_api.models.auth_models import UserLoginRequest, RealtimeLoginResponse
+from agent_c_api.models.auth_models import UserLoginRequest, RealtimeLoginResponse, LoginResponse
 
 if TYPE_CHECKING:
     from agent_c.util.heygen_streaming_avatar_client import HeyGenStreamingClient
@@ -27,7 +27,7 @@ async def login(login_request: UserLoginRequest,
     """
     Authenticate user and return config with token.
     """
-    login_response = await auth_service.login(login_request.username, login_request.password)
+    login_response: Optional[LoginResponse] = await auth_service.login(login_request.username, login_request.password)
     
     if not login_response:
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -40,7 +40,7 @@ async def login(login_request: UserLoginRequest,
 
     return RealtimeLoginResponse(agent_c_token=login_response.token,
                                  heygen_token=heygen_token,
-                                 ui_session_id=MnemonicSlugs.generate_slug(3))
+                                 ui_session_id=f"{login_response.user.user_id}-{MnemonicSlugs.generate_slug(2)}")
 
 @router.get("/refresh_token")
 async def refresh_token(request: Request):

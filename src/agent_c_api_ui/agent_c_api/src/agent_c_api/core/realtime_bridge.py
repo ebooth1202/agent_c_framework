@@ -30,7 +30,7 @@ from agent_c.util import MnemonicSlugs
 from agent_c.util.heygen_streaming_avatar_client import HeyGenStreamingClient
 from agent_c.util.logging_utils import LoggingManager
 from agent_c.util.registries.event import EventRegistry
-from agent_c_api.api.rt.models.control_events import ChatSessionNameChangedEvent, SessionMetadataChangedEvent
+from agent_c_api.api.rt.models.control_events import ChatSessionNameChangedEvent, SessionMetadataChangedEvent, UISessionIDChangedEvent
 from agent_c_api.api.rt.models.control_events import ErrorEvent, AgentListEvent, AvatarListEvent, AvatarConnectionChangedEvent, \
     AgentConfigurationChangedEvent, ChatSessionChangedEvent, AgentVoiceChangedEvent, UserTurnStartEvent, UserTurnEndEvent, GetUserSessionsResponseEvent, ToolCatalogEvent, ChatUserDataEvent, \
     VoiceListEvent, ChatSessionAddedEvent, DeleteChatSessionEvent, CancelledEvent
@@ -475,8 +475,13 @@ class RealtimeBridge(ClientEventHandler):
         await self.handle_runtime_event(event)
         await asyncio.sleep(0)
 
+    async def send_ui_session_id(self):
+        """Send the UI session ID to the client"""
+        await self.send_event(UISessionIDChangedEvent(ui_session_id=self.ui_session_id))
+
     async def send_client_initial_data(self):
         if self._is_new_bridge:
+            await self.send_ui_session_id()
             await self.send_user_info()
             await self.send_avatar_list()
             await self.send_voices()
