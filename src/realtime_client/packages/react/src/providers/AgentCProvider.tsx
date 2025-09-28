@@ -17,6 +17,7 @@ import {
   ErrorEvent
 } from '@agentc/realtime-core';
 import { AgentCContext, AgentCContextValue, InitializationState } from './AgentCContext';
+import { AgentStorage } from '../utils/agentStorage';
 
 /**
  * Configuration props for the AgentCProvider
@@ -283,6 +284,21 @@ export function AgentCProvider({
         newClient.on('connected', handlersRef.current.connected);
         newClient.on('disconnected', handlersRef.current.disconnected);
         newClient.on('error', handlersRef.current.error);
+      }
+      
+      // CRITICAL FIX: Load saved agent preference from localStorage
+      // This connects the UI layer's persistence to the Core layer's connection logic
+      try {
+        const savedAgentKey = AgentStorage.getAgentKey();
+        if (savedAgentKey) {
+          newClient.setPreferredAgentKey(savedAgentKey);
+          if (debug) {
+            console.warn('AgentCProvider: Set preferred agent from localStorage:', savedAgentKey);
+          }
+        }
+      } catch (err) {
+        // Don't fail initialization if localStorage access fails
+        console.warn('AgentCProvider: Failed to load agent preference from localStorage:', err);
       }
       
       setClient(newClient);

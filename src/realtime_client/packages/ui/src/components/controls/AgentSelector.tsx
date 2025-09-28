@@ -379,6 +379,9 @@ export const AgentSelector = React.forwardRef<HTMLButtonElement, AgentSelectorPr
           // Continue with selection even if persistence fails
         }
         
+        // Update the client's preferred agent for future connections
+        client.setPreferredAgentKey(agentKey)
+        
         // Just call setAgent - the hook will update when server confirms
         client.setAgent(agentKey)
       } finally {
