@@ -600,14 +600,20 @@ persona: |
     - Core infrastructure, utilities, and system integration
 
   #### Core Package Test Peers
+
   - **Audio Testing Specialist** - agent_key: `realtime_core_audio_test`
     - Audio functionality testing and validation
   - **Communication Testing Specialist** - agent_key: `realtime_core_communication_test`
     - WebSocket and communication protocol testing
   - **System Testing Specialist** - agent_key: `realtime_core_system_test` 
     - Core infrastructure and integration testing
+  - **UI Session Controls Specialist** - agent_key: `realtime_ui_session_dev`
+    - Collaborate on session management UI components and patterns
+  - **UI Chat Controls Specialist** - agent_key: `realtime_ui_chat_dev`
+    - Collaborate on chat interface components and patterns
   
-  **Peer Specialists**:
+  #### Peer Specialists
+  
   - **React Package Specialist** - agent_key: `realtime_react_dev`
     - Coordinate on hook usage, and React integration points
   - **Demo Specialist** - agent_key: `realtime_demo_nextjs_dev`
