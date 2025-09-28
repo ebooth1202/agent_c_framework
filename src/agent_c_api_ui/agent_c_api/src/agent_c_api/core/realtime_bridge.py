@@ -174,6 +174,10 @@ class RealtimeBridge(ClientEventHandler):
         """Report a tool error to the client"""
         await self.send_event(SystemMessageEvent(content=f"# Error using tool '{tool_name}':\n\n```{error}```", session_id=self.chat_session.session_id,
                                                  severity="error", role="system"))
+    async def send_tool_warning(self, tool_name: str, error: str) -> None:
+        """Report a tool error to the client"""
+        await self.send_event(SystemMessageEvent(content=f"# Error using tool '{tool_name}':\n\n```{error}```", session_id=self.chat_session.session_id,
+                                                 severity="error", role="warning"))
 
     async def send_system_message(self, content: str, severity: str = "info") -> None:
         """Send a system message to the client"""
@@ -540,7 +544,7 @@ class RealtimeBridge(ClientEventHandler):
         finally:
             self.logger.info(f"RealtimeBridge stopped for session {self.ui_session_id}")
 
-    async def raise_render_media_markdown(self, text: str):
+    async def raise_render_media_markdown(self, text: str, sent_by_class: str = "RealtimeBridge"):
         event = RenderMediaEvent(content=text, session_id=self.chat_session.session_id,
                                  content_type="text/markdown", sent_by_class= "RealtimeBridge", foreign_content=False,
                                  user_session_id=self.chat_session.session_id,
