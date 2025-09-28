@@ -187,7 +187,7 @@ class AgentAssistTools(AgentAssistToolBase):
                                                            sub_agent_type="assist",
                                                            prime_agent_key=calling_agent_config.key
                                                            )
-        await tool_context['broker'].send_system_message(f"Char interaction complete between {calling_agent_key} and {agent_config.key} for oneshot request.", "info")
+        await tool_context['bridge'].send_system_message(f"Char interaction complete between {calling_agent_key} and {agent_config.key} for oneshot request.", "info")
 
         if messages is not None and len(messages) > 0:
             last_message = messages[-1]
