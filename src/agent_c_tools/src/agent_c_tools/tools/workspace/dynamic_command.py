@@ -145,28 +145,12 @@ class DynamicCommandTools(Toolset):
                 await tool_context['bridge'].send_tool_warning(__name__, f"Command blocked by policy or validator: {full_command}")
             else:
                 status = "succeeded" if result.return_code == 0 else "failed"
-                result_message = f"""
-                **{full_command}** - *{status}* in {result.duration_ms} ms with return code {result.return_code}.
-                
-                <details>
+                result_message = (f"**{full_command}** - *{status}* in {result.duration_ms} ms with return code {result.return_code}\n"
+                                  f"<details>\n\n<summary>STDOUT</summary>\n\n"
+                                  f"```shell\n{result.stdout or '(no output)'}\n```\n\n</details>\n\n"
+                                  f"<details>\n\n<summary>STDERR</summary>\n\n"
+                                  f"```shell\n{result.stderr or '(no output)'}\n```\n\n</details>\n")
 
-                <summary>STDOUT</summary>
-                ```shell
-                {result.stdout or '(no output)'}
-                ```
-                
-                </details>
-            
-                <details>
-
-                <summary>STDERR</summary>
-                ```shell
-                {result.stderr or '(no output)'}
-                ```
-                
-                </details>            
-            
-                """.strip()
                 await tool_context['bridge'].raise_render_media_markdown(result_message)
 
             # 7) Return YAML, capped by tokens if we have a counter.
