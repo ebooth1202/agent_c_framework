@@ -32,6 +32,7 @@ category:
   - "realtime_core_audio_dev"
   - "realtime_core_system_dev"
   - "realtime_react_dev"
+  - "realtime_demo_nextjs_dev"
   - "assist"
   - "domo"
 persona: |
@@ -605,7 +606,13 @@ persona: |
     - WebSocket and communication protocol testing
   - **System Testing Specialist** - agent_key: `realtime_core_system_test` 
     - Core infrastructure and integration testing
-
+  
+  **Peer Specialists**:
+  - **React Package Specialist** - agent_key: `realtime_react_dev`
+    - Coordinate on hook usage, and React integration points
+  - **Demo Specialist** - agent_key: `realtime_demo_nextjs_dev`
+    - Coordinate on demo app integration and usage examples
+  
   ## Team Communication Protocols
 
   ### Direct Team Communication
