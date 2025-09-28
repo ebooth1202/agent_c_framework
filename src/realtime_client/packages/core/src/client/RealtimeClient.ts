@@ -52,8 +52,7 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
     // Runtime state management for agent persistence and session recovery
     private preferredAgentKey?: string;          // Agent key to use on first connection
     private isReconnecting: boolean = false;     // Track if we're in a reconnection scenario
-    private lastKnownSessionId?: string;         // Chat session ID for reconnection recovery
-    private sessionIdToRecover?: string;         // Session ID saved specifically for recovery
+    private currentChatSessionId?: string;       // Current chat session ID for reconnection recovery
     
     // Audio system components
     private audioService: AudioService | null = null;
@@ -193,10 +192,7 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
                 this.sessionManager!.setCurrentSession(event.chat_session);
                 
                 // Store the session ID for reconnection recovery
-                // Don't overwrite during reconnection initialization - we need to preserve the old session ID
-                if (!this.isReconnecting) {
-                    this.lastKnownSessionId = event.chat_session.session_id;
-                }
+                this.currentChatSessionId = event.chat_session.session_id;
                 
                 if (this.config.debug) {
                     console.debug('Session changed:', event.chat_session.session_id, 'with', event.chat_session.messages?.length || 0, 'messages');
@@ -410,32 +406,20 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
      * This ensures we don't conflict with server initialization events
      */
     private handlePostInitializationRecovery(): void {
-        // CRITICAL: We must defer execution to the next tick to ensure:
-        // 1. The WebSocket is ready to send new messages
-        // 2. The current event processing stack completes
-        // 3. The WebSocket send buffer is available
-        // Without this deferral, sendEvent() may fail silently
+        // Defer execution to ensure WebSocket is ready for new messages
         setTimeout(() => {
             if (this.isReconnecting) {
-                // We're reconnecting - try to resume previous session or use preferred agent
-                const sessionToRecover = this.sessionIdToRecover;
-                
-                if (sessionToRecover) {
-                    // Resume the previous session
+                // We're reconnecting - session recovery is handled by URL parameters
+                // The server will automatically resume the session if chat_session_id was provided
+                // If not, check if we should create a new session with preferred agent
+                if (!this.currentChatSessionId && this.preferredAgentKey) {
                     if (this.config.debug) {
-                        console.debug('Reconnection: resuming session', sessionToRecover);
-                    }
-                    this.resumeChatSession(sessionToRecover);
-                } else if (this.preferredAgentKey) {
-                    // No session to resume, but have a preferred agent
-                    if (this.config.debug) {
-                        console.debug('Reconnection: creating new session with preferred agent', this.preferredAgentKey);
+                        console.debug('Reconnection: no session to resume, creating new session with preferred agent', this.preferredAgentKey);
                     }
                     this.newChatSession(this.preferredAgentKey);
                 }
                 this.isReconnecting = false;  // Clear reconnection flag
-                this.sessionIdToRecover = undefined;  // Clear recovery session ID
-            } else if (this.preferredAgentKey && !this.lastKnownSessionId) {
+            } else if (this.preferredAgentKey && !this.currentChatSessionId) {
                 // Initial connection with preferred agent (not reconnection)
                 if (this.config.debug) {
                     console.debug('Initial connection: creating session with preferred agent', this.preferredAgentKey);
@@ -610,7 +594,6 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
     disconnect(): void {
         this.reconnectionManager.stopReconnection();
         this.isReconnecting = false;  // Clear reconnection flag if disconnect is called
-        this.sessionIdToRecover = undefined;  // Clear recovery session ID
         
         // Stop audio streaming if active
         if (this.audioBridge?.getStatus().isStreaming) {
@@ -823,9 +806,8 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
      * Create a new chat session
      */
     newChatSession(agentKey?: string): void {
-        // Clear the stored session IDs since we're explicitly starting a new session
-        this.lastKnownSessionId = undefined;
-        this.sessionIdToRecover = undefined;
+        // Clear the stored session ID since we're explicitly starting a new session
+        this.currentChatSessionId = undefined;
         
         // Reset accumulator when creating new session
         if (this.sessionManager) {
@@ -1264,11 +1246,23 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
             throw new Error('Authentication token is required to build WebSocket URL. Ensure auth is initialized before connecting.');
         }
 
-        // Build the WebSocket URL with the correct endpoint path
+        // Parse the base URL to handle protocol conversion
         const baseUrl = this.config.apiUrl;
-        const wsUrl = baseUrl.endsWith('/') ? baseUrl + 'api/rt/ws' : baseUrl + '/api/rt/ws';
+        const parsedUrl = new URL(baseUrl);
         
-        const url = new URL(wsUrl);
+        // Convert HTTP(S) to WS(S) protocol
+        let protocol = parsedUrl.protocol;
+        if (protocol === 'http:') {
+            protocol = 'ws:';
+        } else if (protocol === 'https:') {
+            protocol = 'wss:';
+        } else if (protocol !== 'ws:' && protocol !== 'wss:') {
+            throw new Error(`Invalid protocol in apiUrl: ${protocol}. Must be http, https, ws, or wss`);
+        }
+        
+        // Build the WebSocket URL with the correct endpoint path
+        // Always use /api/rt/ws as the path, ignoring any path in the base URL
+        const url = new URL(`${protocol}//${parsedUrl.host}/api/rt/ws`);
         url.searchParams.set('token', this.authToken);
         
         if (this.sessionId) {
@@ -1277,16 +1271,12 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
 
         // Add connection context parameters
         // Priority: reconnection parameters take precedence over first connection parameters
-        if (this.isReconnecting && (this.sessionIdToRecover || this.lastKnownSessionId)) {
+        if (this.isReconnecting && this.currentChatSessionId) {
             // Add chat_session_id parameter for reconnection recovery
-            const chatSessionId = this.sessionIdToRecover || this.lastKnownSessionId;
-            // TypeScript needs explicit confirmation that chatSessionId is defined
-            if (chatSessionId) {
-                url.searchParams.append('chat_session_id', chatSessionId);
-                
-                if (this.config.debug) {
-                    console.debug(`[WebSocket] Adding chat_session_id for reconnection: ${chatSessionId}`);
-                }
+            url.searchParams.append('chat_session_id', this.currentChatSessionId);
+            
+            if (this.config.debug) {
+                console.debug(`[WebSocket] Adding chat_session_id for reconnection: ${this.currentChatSessionId}`);
             }
         } else if (this.preferredAgentKey) {
             // Add agent_key parameter for first connection with agent preference
@@ -1432,14 +1422,12 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
         }
         
         this.isReconnecting = true;  // Mark that we're reconnecting
-        // Save the current session ID for recovery before reconnection
-        this.sessionIdToRecover = this.lastKnownSessionId;
+        // The current chat session ID is already stored and will be used in buildWebSocketUrl
         
         this.reconnectionManager.startReconnection(async () => {
             await this.connect();
         }).catch((error) => {
             this.isReconnecting = false;  // Clear reconnection flag on failure
-            this.sessionIdToRecover = undefined;  // Clear recovery session ID on failure
             if (this.config.debug) {
                 console.error('Reconnection failed:', error);
             }

@@ -26,12 +26,14 @@ export const AgentStorage = {
 
   /**
    * Retrieve the saved agent key from localStorage
-   * @returns The saved agent key or null if not found
+   * @returns The saved agent key or null if not found or empty
    */
   getAgentKey(): string | null {
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
-        return localStorage.getItem(AGENT_KEY_STORAGE_KEY);
+        const value = localStorage.getItem(AGENT_KEY_STORAGE_KEY);
+        // Return null for empty strings to avoid setting empty agent keys
+        return value && value.trim() !== '' ? value : null;
       }
     } catch (error) {
       console.warn('Failed to retrieve agent key from localStorage:', error);
