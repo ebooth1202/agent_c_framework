@@ -544,6 +544,152 @@ describe('AgentCProvider', () => {
       // Assert
       expect(RealtimeClient).toHaveBeenCalledTimes(1);
     });
+
+    it('removes all event listeners with correct handler references to prevent memory leaks', () => {
+      // This test verifies the memory leak fix where event listeners weren't being
+      // properly removed because the handler references weren't being stored
+      
+      // Arrange
+      const { unmount } = render(<AgentCProvider {...defaultProps} debug={true} />);
+      
+      // Store the handler references that were registered
+      const registeredHandlers = new Map<string, Function>();
+      
+      // Capture all the on() calls to record handler references
+      mockClient.on.mock.calls.forEach(([event, handler]) => {
+        registeredHandlers.set(event, handler);
+      });
+      
+      // Should have registered 6 init events + 3 debug events = 9 total
+      expect(registeredHandlers.size).toBe(9);
+      expect(registeredHandlers.has('chat_user_data')).toBe(true);
+      expect(registeredHandlers.has('agent_list')).toBe(true);
+      expect(registeredHandlers.has('avatar_list')).toBe(true);
+      expect(registeredHandlers.has('voice_list')).toBe(true);
+      expect(registeredHandlers.has('tool_catalog')).toBe(true);
+      expect(registeredHandlers.has('chat_session_changed')).toBe(true);
+      expect(registeredHandlers.has('connected')).toBe(true);
+      expect(registeredHandlers.has('disconnected')).toBe(true);
+      expect(registeredHandlers.has('error')).toBe(true);
+      
+      // Clear the mock to count only the off() calls during unmount
+      mockClient.off.mockClear();
+      
+      // Act - Unmount which should trigger cleanup
+      unmount();
+      
+      // Assert - All event listeners should be removed with the EXACT same handler references
+      expect(mockClient.off).toHaveBeenCalledTimes(9);
+      
+      // Verify each listener was removed with the exact same handler reference that was registered
+      expect(mockClient.off).toHaveBeenCalledWith('chat_user_data', registeredHandlers.get('chat_user_data'));
+      expect(mockClient.off).toHaveBeenCalledWith('agent_list', registeredHandlers.get('agent_list'));
+      expect(mockClient.off).toHaveBeenCalledWith('avatar_list', registeredHandlers.get('avatar_list'));
+      expect(mockClient.off).toHaveBeenCalledWith('voice_list', registeredHandlers.get('voice_list'));
+      expect(mockClient.off).toHaveBeenCalledWith('tool_catalog', registeredHandlers.get('tool_catalog'));
+      expect(mockClient.off).toHaveBeenCalledWith('chat_session_changed', registeredHandlers.get('chat_session_changed'));
+      expect(mockClient.off).toHaveBeenCalledWith('connected', registeredHandlers.get('connected'));
+      expect(mockClient.off).toHaveBeenCalledWith('disconnected', registeredHandlers.get('disconnected'));
+      expect(mockClient.off).toHaveBeenCalledWith('error', registeredHandlers.get('error'));
+      
+      // Verify cleanup happens BEFORE destroy
+      const offCallOrder = mockClient.off.mock.invocationCallOrder[0];
+      const destroyCallOrder = mockClient.destroy.mock.invocationCallOrder[0];
+      expect(offCallOrder).toBeLessThan(destroyCallOrder);
+    });
+
+    it('removes only registered event listeners when debug is false', () => {
+      // Verify that when debug=false, only the 6 init events are registered and removed
+      
+      // Arrange
+      const { unmount } = render(<AgentCProvider {...defaultProps} debug={false} />);
+      
+      // Store the handler references that were registered
+      const registeredHandlers = new Map<string, Function>();
+      
+      // Capture all the on() calls to record handler references
+      mockClient.on.mock.calls.forEach(([event, handler]) => {
+        registeredHandlers.set(event, handler);
+      });
+      
+      // Should have registered only 6 init events (no debug events)
+      expect(registeredHandlers.size).toBe(6);
+      expect(registeredHandlers.has('connected')).toBe(false);
+      expect(registeredHandlers.has('disconnected')).toBe(false);
+      expect(registeredHandlers.has('error')).toBe(false);
+      
+      // Clear the mock to count only the off() calls during unmount
+      mockClient.off.mockClear();
+      
+      // Act - Unmount which should trigger cleanup
+      unmount();
+      
+      // Assert - Only 6 event listeners should be removed
+      expect(mockClient.off).toHaveBeenCalledTimes(6);
+      
+      // Verify each listener was removed with the exact same handler reference
+      expect(mockClient.off).toHaveBeenCalledWith('chat_user_data', registeredHandlers.get('chat_user_data'));
+      expect(mockClient.off).toHaveBeenCalledWith('agent_list', registeredHandlers.get('agent_list'));
+      expect(mockClient.off).toHaveBeenCalledWith('avatar_list', registeredHandlers.get('avatar_list'));
+      expect(mockClient.off).toHaveBeenCalledWith('voice_list', registeredHandlers.get('voice_list'));
+      expect(mockClient.off).toHaveBeenCalledWith('tool_catalog', registeredHandlers.get('tool_catalog'));
+      expect(mockClient.off).toHaveBeenCalledWith('chat_session_changed', registeredHandlers.get('chat_session_changed'));
+      
+      // Should NOT attempt to remove debug event listeners that were never registered
+      expect(mockClient.off).not.toHaveBeenCalledWith('connected', expect.any(Function));
+      expect(mockClient.off).not.toHaveBeenCalledWith('disconnected', expect.any(Function));
+      expect(mockClient.off).not.toHaveBeenCalledWith('error', expect.any(Function));
+    });
+
+    it('prevents event listener accumulation across multiple mount/unmount cycles', () => {
+      // This test simulates the scenario that would have caused the memory leak warning:
+      // "Warning: Possible EventEmitter memory leak detected. 11 'connected' listeners added"
+      // The fix ensures listeners are properly removed and don't accumulate
+      
+      // Track how many unique listener handlers are created
+      const uniqueHandlers = new Set<Function>();
+      
+      // Perform multiple mount/unmount cycles
+      const cycles = 5;
+      
+      for (let i = 0; i < cycles; i++) {
+        // Clear previous mock calls but preserve the mock function
+        mockClient.on.mockClear();
+        mockClient.off.mockClear();
+        
+        // Mount
+        const { unmount } = render(<AgentCProvider {...defaultProps} debug={true} />);
+        
+        // Collect the handlers that were registered in this cycle
+        const handlersThisCycle = new Map<string, Function>();
+        mockClient.on.mock.calls.forEach(([event, handler]) => {
+          handlersThisCycle.set(event, handler);
+          uniqueHandlers.add(handler);
+        });
+        
+        // Should register exactly 9 listeners (6 init + 3 debug)
+        expect(mockClient.on).toHaveBeenCalledTimes(9);
+        expect(handlersThisCycle.size).toBe(9);
+        
+        // Unmount
+        unmount();
+        
+        // Should remove exactly the same 9 listeners with the same handler references
+        expect(mockClient.off).toHaveBeenCalledTimes(9);
+        
+        // Verify each handler was removed with the exact same reference
+        handlersThisCycle.forEach((handler, event) => {
+          expect(mockClient.off).toHaveBeenCalledWith(event, handler);
+        });
+      }
+      
+      // After all cycles, we should have created exactly cycles * 9 unique handlers
+      // This proves new handlers are created for each mount (no reuse of stale references)
+      expect(uniqueHandlers.size).toBe(cycles * 9);
+      
+      // If the memory leak bug existed, handlers wouldn't be properly removed
+      // and we'd accumulate listeners on the client
+    });
   });
 
   describe('Debug Mode Tests', () => {

@@ -241,7 +241,7 @@ const ThoughtMessage: React.FC<ThoughtMessageProps> = ({
 // Import MessageFooter from separate file
 import { MessageFooter } from './MessageFooter'
 
-const Message = React.forwardRef<HTMLDivElement, MessageProps>(
+const MessageComponent = React.forwardRef<HTMLDivElement, MessageProps>(
   ({ 
     className, 
     message,
@@ -459,6 +459,20 @@ const Message = React.forwardRef<HTMLDivElement, MessageProps>(
   }
 )
 
-Message.displayName = 'Message'
+MessageComponent.displayName = 'Message'
+
+// Memoize the Message component to prevent unnecessary re-renders
+const Message = React.memo(MessageComponent, (prevProps, nextProps) => {
+  // Custom comparison to prevent re-renders when not needed
+  if (prevProps.message.id !== nextProps.message.id) return false;
+  if (prevProps.message.content !== nextProps.message.content) return false;
+  if (prevProps.isStreaming !== nextProps.isStreaming) return false;
+  if (prevProps.isSubSession !== nextProps.isSubSession) return false;
+  if (prevProps.showTimestamp !== nextProps.showTimestamp) return false;
+  if (prevProps.showFooter !== nextProps.showFooter) return false;
+  
+  // Props are equal, skip re-render
+  return true;
+});
 
 export { Message }

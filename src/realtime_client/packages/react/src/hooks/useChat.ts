@@ -644,7 +644,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         cleanupSessionManager.off('system_message', handleSystemMessage);
       }
     };
-  }, [client, maxMessages, updateChatInfo]);
+  }, [client, maxMessages]); // Removed updateChatInfo to prevent re-registration
   
   // Computed properties
   const lastMessage: MessageChatItem | null = (() => {

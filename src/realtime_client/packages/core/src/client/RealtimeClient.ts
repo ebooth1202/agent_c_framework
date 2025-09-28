@@ -49,6 +49,12 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
     private avatarManager: AvatarManager | null = null;
     private eventStreamProcessor: EventStreamProcessor | null = null;
     
+    // Runtime state management for agent persistence and session recovery
+    private preferredAgentKey?: string;          // Agent key to use on first connection
+    private isReconnecting: boolean = false;     // Track if we're in a reconnection scenario
+    private lastKnownSessionId?: string;         // Chat session ID for reconnection recovery
+    private sessionIdToRecover?: string;         // Session ID saved specifically for recovery
+    
     // Audio system components
     private audioService: AudioService | null = null;
     private audioBridge: AudioAgentCBridge | null = null;
@@ -185,6 +191,12 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
             if (event.chat_session) {
                 // Set the current session in SessionManager
                 this.sessionManager!.setCurrentSession(event.chat_session);
+                
+                // Store the session ID for reconnection recovery
+                // Don't overwrite during reconnection initialization - we need to preserve the old session ID
+                if (!this.isReconnecting) {
+                    this.lastKnownSessionId = event.chat_session.session_id;
+                }
                 
                 if (this.config.debug) {
                     console.debug('Session changed:', event.chat_session.session_id, 'with', event.chat_session.messages?.length || 0, 'messages');
@@ -385,9 +397,52 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
                 console.debug('Initialization complete - all 6 events received');
             }
             
+            // Handle session recovery or agent preference after initialization
+            this.handlePostInitializationRecovery();
+            
             // Emit a custom event to signal initialization is complete
             this.emit('initialized' as any, undefined);
         }
+    }
+    
+    /**
+     * Handle session recovery or agent preference after initialization completes
+     * This ensures we don't conflict with server initialization events
+     */
+    private handlePostInitializationRecovery(): void {
+        // CRITICAL: We must defer execution to the next tick to ensure:
+        // 1. The WebSocket is ready to send new messages
+        // 2. The current event processing stack completes
+        // 3. The WebSocket send buffer is available
+        // Without this deferral, sendEvent() may fail silently
+        setTimeout(() => {
+            if (this.isReconnecting) {
+                // We're reconnecting - try to resume previous session or use preferred agent
+                const sessionToRecover = this.sessionIdToRecover;
+                
+                if (sessionToRecover) {
+                    // Resume the previous session
+                    if (this.config.debug) {
+                        console.debug('Reconnection: resuming session', sessionToRecover);
+                    }
+                    this.resumeChatSession(sessionToRecover);
+                } else if (this.preferredAgentKey) {
+                    // No session to resume, but have a preferred agent
+                    if (this.config.debug) {
+                        console.debug('Reconnection: creating new session with preferred agent', this.preferredAgentKey);
+                    }
+                    this.newChatSession(this.preferredAgentKey);
+                }
+                this.isReconnecting = false;  // Clear reconnection flag
+                this.sessionIdToRecover = undefined;  // Clear recovery session ID
+            } else if (this.preferredAgentKey && !this.lastKnownSessionId) {
+                // Initial connection with preferred agent (not reconnection)
+                if (this.config.debug) {
+                    console.debug('Initial connection: creating session with preferred agent', this.preferredAgentKey);
+                }
+                this.newChatSession(this.preferredAgentKey);
+            }
+        }, 0);
     }
     
     /**
@@ -469,6 +524,15 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
             }
         }
 
+        // Check for auth token before connecting
+        if (!this.authToken) {
+            const error = new Error('Authentication token is required for connection');
+            if (this.config.debug) {
+                console.error('[RealtimeClient] Cannot connect: No authentication token available');
+            }
+            throw error;
+        }
+
         this.setConnectionState(ConnectionState.CONNECTING);
 
         return new Promise((resolve, reject) => {
@@ -497,6 +561,9 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
                             if (this.audioBridge && this.audioConfig?.enableInput) {
                                 this.audioBridge.setClient(this);
                             }
+                            
+                            // Session recovery will happen after initialization completes
+                            // This ensures we don't conflict with server initialization events
                             
                             resolve();
                         },
@@ -542,6 +609,8 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
      */
     disconnect(): void {
         this.reconnectionManager.stopReconnection();
+        this.isReconnecting = false;  // Clear reconnection flag if disconnect is called
+        this.sessionIdToRecover = undefined;  // Clear recovery session ID
         
         // Stop audio streaming if active
         if (this.audioBridge?.getStatus().isStreaming) {
@@ -754,6 +823,10 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
      * Create a new chat session
      */
     newChatSession(agentKey?: string): void {
+        // Clear the stored session IDs since we're explicitly starting a new session
+        this.lastKnownSessionId = undefined;
+        this.sessionIdToRecover = undefined;
+        
         // Reset accumulator when creating new session
         if (this.sessionManager) {
             this.sessionManager.resetAccumulator();
@@ -1167,6 +1240,18 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
         }
     }
 
+    /**
+     * Set the preferred agent key to use when creating new chat sessions.
+     * This agent key will be used automatically when:
+     * - Creating a new chat session on initial connection
+     * - Creating a new chat session after reconnection (if no session to resume)
+     * 
+     * @param agentKey - The agent key to use for new sessions, or undefined to clear
+     */
+    public setPreferredAgentKey(agentKey: string | undefined): void {
+        this.preferredAgentKey = agentKey;
+    }
+
     // Private methods
 
     /**
@@ -1174,7 +1259,9 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
      */
     private buildWebSocketUrl(): string {
         if (!this.authToken) {
-            throw new Error('Authentication token is required');
+            // CRITICAL FIX: More descriptive error for missing auth
+            // This helps identify auth issues vs connection issues
+            throw new Error('Authentication token is required to build WebSocket URL. Ensure auth is initialized before connecting.');
         }
 
         // Build the WebSocket URL with the correct endpoint path
@@ -1187,6 +1274,29 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
         if (this.sessionId) {
             url.searchParams.set('session_id', this.sessionId);
         }
+
+        // Add connection context parameters
+        // Priority: reconnection parameters take precedence over first connection parameters
+        if (this.isReconnecting && (this.sessionIdToRecover || this.lastKnownSessionId)) {
+            // Add chat_session_id parameter for reconnection recovery
+            const chatSessionId = this.sessionIdToRecover || this.lastKnownSessionId;
+            // TypeScript needs explicit confirmation that chatSessionId is defined
+            if (chatSessionId) {
+                url.searchParams.append('chat_session_id', chatSessionId);
+                
+                if (this.config.debug) {
+                    console.debug(`[WebSocket] Adding chat_session_id for reconnection: ${chatSessionId}`);
+                }
+            }
+        } else if (this.preferredAgentKey) {
+            // Add agent_key parameter for first connection with agent preference
+            url.searchParams.append('agent_key', this.preferredAgentKey);
+            
+            if (this.config.debug) {
+                console.debug(`[WebSocket] Adding agent_key for first connection: ${this.preferredAgentKey}`);
+            }
+        }
+        // NEVER send both parameters simultaneously - enforced by else-if structure
 
         return url.toString();
     }
@@ -1312,11 +1422,31 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
      * Attempt to reconnect to the server
      */
     private attemptReconnection(): void {
+        // Check if we have auth before attempting reconnection
+        if (!this.authToken && (!this.authManager || !this.authManager.getTokens()?.agentCToken)) {
+            if (this.config.debug) {
+                console.error('[RealtimeClient] Cannot reconnect: No authentication token available');
+            }
+            // Don't attempt reconnection without auth
+            return;
+        }
+        
+        this.isReconnecting = true;  // Mark that we're reconnecting
+        // Save the current session ID for recovery before reconnection
+        this.sessionIdToRecover = this.lastKnownSessionId;
+        
         this.reconnectionManager.startReconnection(async () => {
             await this.connect();
         }).catch((error) => {
+            this.isReconnecting = false;  // Clear reconnection flag on failure
+            this.sessionIdToRecover = undefined;  // Clear recovery session ID on failure
             if (this.config.debug) {
                 console.error('Reconnection failed:', error);
+            }
+            
+            // If it's an auth error, don't keep retrying
+            if (error.message && error.message.includes('Authentication')) {
+                this.reconnectionManager.stopReconnection();
             }
         });
     }

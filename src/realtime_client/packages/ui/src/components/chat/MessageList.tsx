@@ -62,7 +62,8 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
   }, ref) => {
     const { messages, isAgentTyping, streamingMessage, currentSessionId } = useChat()
     const { notifications: toolNotifications } = useToolNotifications({
-      autoRemoveCompleted: false, // We'll handle removal when tool completes
+      autoRemoveCompleted: true, // Auto-remove completed notifications to prevent memory leaks
+      autoRemoveDelay: 3000, // Remove after 3 seconds
       maxNotifications: 5
     })
     const { errors, dismissError } = useErrors()
