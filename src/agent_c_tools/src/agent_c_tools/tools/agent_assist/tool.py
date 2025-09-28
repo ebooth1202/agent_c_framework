@@ -97,23 +97,15 @@ class AgentAssistTools(AgentAssistToolBase):
         user_session_id = tool_context.get('user_session_id', tool_context['session_id'])
         parent_session_id = tool_context.get('session_id')
 
+        calling_agent_key: str = calling_agent_config.key
+
         try:
             agent_config = self.agent_loader.catalog[kwargs.get('agent_key')]
         except FileNotFoundError:
             return f"Error: Agent {kwargs.get('agent_key')} not found in catalog."
 
-        content = f"**Prime agent** requesting assistance:\n\n{request}"
+        content = f"**{calling_agent_key} agent** requesting assistance:\n\n{request}"
 
-
-
-        await self._raise_render_media(
-            sent_by_class=self.__class__.__name__,
-            sent_by_function='oneshot',
-            content_type="text/markdown",
-            content=f"**Prime** agent requesting assistance from '*{agent_config.name}*':\n\n{request})\n\n",
-            tool_context=tool_context,
-            streaming_callback=tool_context['streaming_callback']
-        )
 
         agent_session_id = MnemonicSlugs.generate_slug(2)
 
@@ -124,14 +116,9 @@ class AgentAssistTools(AgentAssistToolBase):
                                              agent_session_id=agent_session_id,
                                              sub_agent_type="assist", prime_agent_key=calling_agent_config.key)
 
-        await self._raise_render_media(
-            sent_by_class=self.__class__.__name__,
-            sent_by_function='chat',
-            content_type="text/markdown",
-            content=f"Interaction complete for Agent Assist oneshot with {agent_config.name}. Control returned to requesting agent.",
-            tool_context=tool_context,
-            streaming_callback=tool_context['streaming_callback']
-        )
+        await tool_context['bridge'].send_system_message(f"Oneshot interaction complete between {calling_agent_key} and {agent_config.key} for oneshot request.", "info")
+
+
 
         if messages is not None and len(messages) > 0:
             last_message = messages[-1]
@@ -187,16 +174,8 @@ class AgentAssistTools(AgentAssistToolBase):
         calling_agent_config: CurrentAgentConfiguration = tool_context.get('agent_config', tool_context.get('active_agent'))
         user_session_id = tool_context.get('user_session_id', tool_context['session_id'])
         parent_session_id = tool_context.get('session_id')
-
-        content = f"**Prime agent** requesting assistance:\n\n{message}"
-
-        await self._raise_render_media(
-            sent_by_class=self.__class__.__name__,
-            sent_by_function='chat',
-            content_type="text/markdown",
-            content=content,
-            tool_context=tool_context
-        )
+        calling_agent_key: str = calling_agent_config.key
+        content = f"**{calling_agent_key}** requesting assistance:\n\n{message}"
 
         agent_session_id, messages = await self.agent_chat(content, agent_config,
                                                            user_session_id,
@@ -208,13 +187,7 @@ class AgentAssistTools(AgentAssistToolBase):
                                                            sub_agent_type="assist",
                                                            prime_agent_key=calling_agent_config.key
                                                            )
-        await self._raise_render_media(
-            sent_by_class=self.__class__.__name__,
-            sent_by_function='chat',
-            content_type="text/html",
-            content=self.fix_markdown_formatting(f"Interaction complete for Agent Assist Session ID: {agent_session_id} with {agent_config.name}. Control returned to requesting agent."),
-            tool_context=tool_context,
-            streaming_callback=tool_context['streaming_callback'])
+        await tool_context['broker'].send_system_message(f"Char interaction complete between {calling_agent_key} and {agent_config.key} for oneshot request.", "info")
 
         if messages is not None and len(messages) > 0:
             last_message = messages[-1]
