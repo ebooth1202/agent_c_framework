@@ -47,6 +47,7 @@ import {
   ErrorEvent,
   GetUserSessionsResponseEvent,
   ChatUserDataEvent,
+  UISessionIDChangedEvent,
   VoiceListEvent,
   ToolCatalogEvent,
   PongEvent,
@@ -117,6 +118,7 @@ export interface ServerEventMap {
   'error': ErrorEvent;
   'get_user_sessions_response': GetUserSessionsResponseEvent;
   'chat_user_data': ChatUserDataEvent;
+  'ui_session_id_changed': UISessionIDChangedEvent;
   'voice_list': VoiceListEvent;
   'tool_catalog': ToolCatalogEvent;
   'pong': PongEvent;
@@ -220,6 +222,7 @@ export class EventRegistry {
     'error',
     'get_user_sessions_response',
     'chat_user_data',
+    'ui_session_id_changed',
     'voice_list',
     'tool_catalog',
     'pong',

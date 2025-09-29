@@ -480,8 +480,8 @@ class RealtimeBridge(ClientEventHandler):
         await self.send_event(UISessionIDChangedEvent(ui_session_id=self.ui_session_id))
 
     async def send_client_initial_data(self):
+        await self.send_ui_session_id()
         if self._is_new_bridge:
-            await self.send_ui_session_id()
             await self.send_user_info()
             await self.send_avatar_list()
             await self.send_voices()

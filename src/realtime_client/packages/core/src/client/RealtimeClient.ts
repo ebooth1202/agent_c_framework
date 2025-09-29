@@ -12,7 +12,8 @@ import {
     TextInputEvent,
     NewChatSessionEvent,
     GetUserSessionsEvent,
-    GetUserSessionsResponseEvent
+    GetUserSessionsResponseEvent,
+    UISessionIDChangedEvent
 } from '../events';
 import { EventStreamProcessor } from '../events/EventStreamProcessor';
 import {
@@ -36,12 +37,12 @@ import { AvatarManager } from '../avatar';
  * Main client class for connecting to Agent C Realtime API
  */
 export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
-    private config: Required<Omit<RealtimeClientConfig, 'sessionId' | 'headers' | 'protocols' | 'authToken' | 'authManager'>> & Pick<RealtimeClientConfig, 'sessionId' | 'headers' | 'protocols' | 'authToken' | 'authManager'>;
+    private config: Required<Omit<RealtimeClientConfig, 'uiSessionId' | 'headers' | 'protocols' | 'authToken' | 'authManager'>> & Pick<RealtimeClientConfig, 'uiSessionId' | 'headers' | 'protocols' | 'authToken' | 'authManager'>;
     private wsManager: WebSocketManager | null = null;
     private reconnectionManager: ReconnectionManager;
     private connectionState: ConnectionState = ConnectionState.DISCONNECTED;
     private authToken: string | null = null;
-    private sessionId: string | null = null;
+    private uiSessionId: string | null = null;  // UI session ID for WebSocket reconnection
     private authManager: AuthManager | null = null;
     private turnManager: TurnManager | null = null;
     private voiceManager: VoiceManager | null = null;
@@ -73,7 +74,7 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
         super();
         this.config = mergeConfig(config);
         this.authToken = config.authToken || null;
-        this.sessionId = config.sessionId || null;
+        this.uiSessionId = config.uiSessionId || null;
 
         // Initialize auth manager if provided
         if (config.authManager) {
@@ -279,6 +280,41 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
                 this.checkInitializationComplete();
             }
         });
+        
+        // Handle UI session ID changed event
+        this.on('ui_session_id_changed', (event: UISessionIDChangedEvent) => {
+            console.debug('[RealtimeClient] ui_session_id_changed handler called with:', event);
+            if (event.ui_session_id) {
+                // Update stored UI session ID for reconnection
+                this.uiSessionId = event.ui_session_id;
+                
+                // Update auth manager's UI session ID if available
+                if (this.authManager) {
+                    (this.authManager as any).updateState({
+                        uiSessionId: event.ui_session_id
+                    });
+                }
+                
+                if (this.config.debug) {
+                    console.debug('UI Session ID updated:', event.ui_session_id);
+                }
+            }
+        });
+        
+        // Listen to SessionManager for session changes to update currentChatSessionId
+        if (this.sessionManager) {
+            this.sessionManager.on('session-changed', ({ currentSession }) => {
+            console.debug('[RealtimeClient] session-changed handler called with:', currentSession);
+            if (currentSession && currentSession.session_id) {
+                // Update stored chat session ID for reconnection
+                this.currentChatSessionId = currentSession.session_id;
+                
+                if (this.config.debug) {
+                    console.debug('Chat Session ID updated for reconnection:', this.currentChatSessionId);
+                }
+            }
+            });
+        }
         
         // Handle avatar list event
         this.on('avatar_list', (event: any) => {
@@ -501,10 +537,10 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
         }
 
         // Get UI session ID from auth manager if available
-        if (this.authManager && !this.sessionId) {
+        if (this.authManager && !this.uiSessionId) {
             const uiSessionId = this.authManager.getUiSessionId();
             if (uiSessionId) {
-                this.sessionId = uiSessionId;
+                this.uiSessionId = uiSessionId;
             }
         }
 
@@ -1213,9 +1249,9 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
     /**
      * Update session ID
      */
-    setSessionId(sessionId: string | null): void {
-        this.sessionId = sessionId;
-        // If connected, we need to reconnect with new session ID
+    setUiSessionId(uiSessionId: string | null): void {
+        this.uiSessionId = uiSessionId;
+        // If connected, we need to reconnect with new UI session ID
         if (this.isConnected()) {
             this.disconnect();
             this.connect();
@@ -1264,9 +1300,14 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
         // Always use /api/rt/ws as the path, ignoring any path in the base URL
         const url = new URL(`${protocol}//${parsedUrl.host}/api/rt/ws`);
         url.searchParams.set('token', this.authToken);
-        
-        if (this.sessionId) {
-            url.searchParams.set('session_id', this.sessionId);
+        // CRITICAL: Always send ui_session_id if available (not session_id)
+        // This identifies the client instance for reconnection
+        console.debug('[RealtimeClient] Building WebSocket URL - uiSessionId:', this.uiSessionId);
+        if (this.uiSessionId) {
+            url.searchParams.set('ui_session_id', this.uiSessionId);
+            console.debug('[RealtimeClient] Added ui_session_id to URL:', this.uiSessionId);
+        } else {
+            console.warn('[RealtimeClient] NO ui_session_id available for WebSocket connection!');
         }
 
         // Add connection context parameters
@@ -1300,7 +1341,15 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
             // JSON message - parse as event
             try {
                 const event = JSON.parse(data);
+                // Log EVERY event received
+                console.debug('[RealtimeClient] Raw event received:', event.type, event);
+                
                 if (event && typeof event.type === 'string') {
+                    // Debug logging for ui_session_id_changed
+                    if (event.type === 'ui_session_id_changed') {
+                        console.debug('[RealtimeClient] Received ui_session_id_changed event:', event);
+                    }
+                    
                     // Debug logging for turn and cancel events
                     if (this.config.debug && 
                         (event.type === 'user_turn_start' || 
@@ -1360,6 +1409,10 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
                     // Only emit events that weren't processed by EventStreamProcessor
                     // EventStreamProcessor handles its own event emission for streaming events
                     if (!processedByEventStream) {
+                        // Debug ui_session_id_changed specifically
+                        if (event.type === 'ui_session_id_changed') {
+                            console.debug('[RealtimeClient] About to emit ui_session_id_changed:', event);
+                        }
                         this.emit(event.type as keyof RealtimeEventMap, event as RealtimeEventMap[keyof RealtimeEventMap]);
                     }
                     

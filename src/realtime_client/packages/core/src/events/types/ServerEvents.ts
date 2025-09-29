@@ -230,6 +230,15 @@ export interface ChatUserDataEvent extends BaseServerEvent {
 }
 
 /**
+ * UI Session ID notification sent during connection initialization
+ * Updates the client with the current UI session ID to use for reconnection
+ */
+export interface UISessionIDChangedEvent extends BaseServerEvent {
+  type: 'ui_session_id_changed';
+  ui_session_id: string;
+}
+
+/**
  * Voice list sent during initialization or in response to get_voices
  * Contains complete voice model information
  */
@@ -428,6 +437,7 @@ export type ServerEvent =
   | ErrorEvent
   | GetUserSessionsResponseEvent
   | ChatUserDataEvent
+  | UISessionIDChangedEvent
   | VoiceListEvent
   | ToolCatalogEvent
   | PongEvent

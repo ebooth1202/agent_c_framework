@@ -77,11 +77,11 @@ describe('RealtimeClient - buildWebSocketUrl', () => {
       expect(params.has('chat_session_id')).toBe(false);
     });
 
-    it('should include session_id when available', async () => {
+    it('should include ui_session_id when available', async () => {
       client = new RealtimeClient(config);
       
-      // Set session ID before connecting
-      client['sessionId'] = 'existing-session-456';
+      // Set UI session ID before connecting
+      client['uiSessionId'] = 'existing-session-456';
       
       await client.connect();
       
@@ -89,7 +89,7 @@ describe('RealtimeClient - buildWebSocketUrl', () => {
       const params = parseUrlParams(url!);
       
       expect(params.get('token')).toBe('test-token-123');
-      expect(params.get('session_id')).toBe('existing-session-456');
+      expect(params.get('ui_session_id')).toBe('existing-session-456');
       expect(params.has('agent_key')).toBe(false);
       expect(params.has('chat_session_id')).toBe(false);
     });
@@ -609,7 +609,7 @@ describe('RealtimeClient - buildWebSocketUrl', () => {
       
       // Verify parameter order (implementation dependent, but should be consistent)
       expect(paramString).toContain('token=test-token-123');
-      expect(paramString).toContain('session_id=test-session');
+      expect(paramString).toContain('ui_session_id=test-session');
       expect(paramString).toContain('agent_key=test-agent');
       
       // Token should come first, then session_id, then agent_key

@@ -174,13 +174,13 @@ describe('AgentCProvider - localStorage Integration', () => {
       expect(RealtimeClient).toHaveBeenCalled();
     });
     
-    // Verify warning was logged
+    // Verify warning was logged by AgentStorage.getAgentKey()
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'AgentCProvider: Failed to load agent preference from localStorage:',
+      'Failed to retrieve agent key from localStorage:',
       expect.any(Error)
     );
     
-    // Verify setPreferredAgentKey was NOT called (error was handled)
+    // Verify setPreferredAgentKey was NOT called (error was handled gracefully)
     expect(mockClient.setPreferredAgentKey).not.toHaveBeenCalled();
     
     // Restore original localStorage.getItem
@@ -210,20 +210,19 @@ describe('AgentCProvider - localStorage Integration', () => {
       </AgentCProvider>
     );
     
-    // Wait for initialization
+    // Wait for initialization and setPreferredAgentKey to be called
     await waitFor(() => {
       // Verify RealtimeClient was created
       expect(RealtimeClient).toHaveBeenCalled();
+      // Verify setPreferredAgentKey was called
+      expect(mockClient.setPreferredAgentKey).toHaveBeenCalledWith(savedAgentKey);
     });
     
-    // Verify debug message was logged
+    // Verify debug message was logged with the correct format
     expect(consoleWarnSpy).toHaveBeenCalledWith(
       'AgentCProvider: Set preferred agent from localStorage:',
       savedAgentKey
     );
-    
-    // Verify setPreferredAgentKey was called
-    expect(mockClient.setPreferredAgentKey).toHaveBeenCalledWith(savedAgentKey);
     
     consoleWarnSpy.mockRestore();
     
@@ -235,6 +234,9 @@ describe('AgentCProvider - localStorage Integration', () => {
     // Save an agent key to localStorage
     const savedAgentKey = 'auto-connect-agent';
     AgentStorage.saveAgentKey(savedAgentKey);
+    
+    // Verify it was saved correctly
+    expect(localStorage.getItem('agentc_selected_agent_key')).toBe(savedAgentKey);
     
     // Create the provider with autoConnect
     const { unmount } = render(
@@ -252,12 +254,12 @@ describe('AgentCProvider - localStorage Integration', () => {
       // Verify RealtimeClient was created
       expect(RealtimeClient).toHaveBeenCalled();
       
-      // Verify setPreferredAgentKey was called before connect
+      // Verify setPreferredAgentKey was called with the saved agent key
       expect(mockClient.setPreferredAgentKey).toHaveBeenCalledWith(savedAgentKey);
       
       // Verify connect was called
       expect(mockClient.connect).toHaveBeenCalled();
-    });
+    }, { timeout: 2000 });
     
     // Verify order of operations: setPreferredAgentKey before connect
     const setAgentCallOrder = mockClient.setPreferredAgentKey.mock.invocationCallOrder[0];

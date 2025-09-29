@@ -75,8 +75,8 @@ export interface RealtimeClientConfig {
   /** Optional AuthManager instance for automatic token management */
   authManager?: AuthManager;
   
-  /** Optional session ID to resume */
-  sessionId?: string;
+  /** UI Session ID for WebSocket reconnection (identifies client instance) */
+  uiSessionId?: string;
   
   /** Enable automatic reconnection on disconnect */
   autoReconnect?: boolean;
@@ -168,8 +168,8 @@ export const defaultConfig: Partial<RealtimeClientConfig> = {
  */
 export function mergeConfig(
   userConfig: RealtimeClientConfig
-): Required<Omit<RealtimeClientConfig, 'sessionId' | 'headers' | 'protocols' | 'authToken' | 'authManager'>> & 
-  Pick<RealtimeClientConfig, 'sessionId' | 'headers' | 'protocols' | 'authToken' | 'authManager'> {
+): Required<Omit<RealtimeClientConfig, 'uiSessionId' | 'headers' | 'protocols' | 'authToken' | 'authManager'>> & 
+  Pick<RealtimeClientConfig, 'uiSessionId' | 'headers' | 'protocols' | 'authToken' | 'authManager'> {
   
   const config = {
     ...defaultConfig,
@@ -200,6 +200,6 @@ export function mergeConfig(
     throw new Error('Either authToken or authManager is required in RealtimeClientConfig');
   }
 
-  return config as Required<Omit<RealtimeClientConfig, 'sessionId' | 'headers' | 'protocols' | 'authToken' | 'authManager'>> & 
-    Pick<RealtimeClientConfig, 'sessionId' | 'headers' | 'protocols' | 'authToken' | 'authManager'>;
+  return config as Required<Omit<RealtimeClientConfig, 'uiSessionId' | 'headers' | 'protocols' | 'authToken' | 'authManager'>> & 
+    Pick<RealtimeClientConfig, 'uiSessionId' | 'headers' | 'protocols' | 'authToken' | 'authManager'>;
 }

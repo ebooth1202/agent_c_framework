@@ -364,4 +364,9 @@ class UISessionIDChangedEvent(BaseEvent):
     Attributes:
         ui_session_id (str): The new UI session ID.
     """
+    type: str = Field( 'ui_session_id_changed`', description="The type of the event. Defaults to the snake case class name without event")
     ui_session_id: str
+
+    def __init__(self, **data: Any) -> None:
+        data['type'] = 'ui_session_id_changed'
+        super().__init__(**data)
