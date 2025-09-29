@@ -230,7 +230,11 @@ class RealtimeBridge(ClientEventHandler):
 
     async def reload_agents(self) -> None:
         self.agent_config_loader.load_agents()
+        self.chat_session.agent_config = self.agent_config_loader.duplicate(self.chat_session.agent_config.key)
         await self.send_agent_list()
+        await self.tool_chest.activate_toolset(self.chat_session.agent_config.tools)
+        await self.send_event(AgentConfigurationChangedEvent(agent_config=self.chat_session.agent_config))
+
 
     async def send_agent_list(self) -> None:
         catalog = self.agent_config_loader.client_catalog
@@ -288,6 +292,7 @@ class RealtimeBridge(ClientEventHandler):
             return
 
         self.chat_session = session_info
+        self.chat_session.agent_config = self.agent_config_loader.duplicate(self.chat_session.agent_config.key)
 
         if 'BridgeTools' not in self.chat_session.agent_config.tools:
             self.chat_session.agent_config.tools.append('BridgeTools')
@@ -689,8 +694,8 @@ class RealtimeBridge(ClientEventHandler):
         await self.send_user_turn_end()
         try:
             await self.chat_session_manager.update()
-            if len(self.chat_session.messages) == 0:
-                await self.send_to_all_user_sessions(ChatSessionAddedEvent(chat_session=self.chat_session.as_index_entry()))
+            self.chat_session.touch()
+            await self.send_to_all_user_sessions(ChatSessionAddedEvent(chat_session=self.chat_session.as_index_entry()))
 
             agent_runtime = self.runtime_for_agent(self.chat_session.agent_config)
             file_inputs = []
@@ -796,6 +801,8 @@ class RealtimeBridge(ClientEventHandler):
             agent_config = self.agent_config_loader.duplicate(agent_key)
             user_id = user_id or self.chat_user.user_id
             chat_session = ChatSession(session_id=session_id, agent_config=agent_config, user_id=user_id)
+        else:
+            chat_session.agent_config = self.agent_config_loader.duplicate(agent_key)
 
         return chat_session
 
