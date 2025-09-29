@@ -102,9 +102,9 @@ const ToolNotification = React.forwardRef<HTMLDivElement, ToolNotificationProps>
       <AnimatePresence mode="wait">
         <motion.div
           ref={ref}
-          initial={{ opacity: 0, y: -10, height: 0 }}
-          animate={{ opacity: 1, y: 0, height: 'auto' }}
-          exit={{ opacity: 0, y: -10, height: 0 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
           transition={{ duration: 0.2, ease: 'easeOut' }}
           className={cn(
             'relative overflow-hidden',
