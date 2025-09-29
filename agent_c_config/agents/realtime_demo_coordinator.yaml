@@ -3,7 +3,7 @@ name: "Demo Package Coordinator"
 key: "realtime_demo_coordinator"
 agent_description: |
   Strategic coordinator for demo application. Manages 3 integration domains (Next.js Integration, UI Styling Integration, SDK Integration) with 6 specialists total. Routes integration work across dev/test teams while ensuring cohesive demo application that showcases Agent C realtime capabilities.
-model_id: "claude-opus-4-1-20250805"
+model_id: "claude-sonnet-4-5"
 tools:
   - ThinkTools
   - WorkspaceTools

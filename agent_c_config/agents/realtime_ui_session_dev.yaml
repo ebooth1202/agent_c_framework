@@ -3,7 +3,7 @@ name: "Sid, Session UI Development Specialist"
 key: "realtime_ui_session_dev"
 agent_description: |
   UI package specialist focused on chat session components
-model_id: "claude-opus-4-1-20250805"
+model_id: "claude-sonnet-4-5"
 tools:
   - ThinkTools
   - WorkspaceTools

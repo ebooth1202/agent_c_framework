@@ -3,7 +3,7 @@ name: "NextJS Integration Development Specialist"
 key: "realtime_demo_nextjs_dev"
 agent_description: |
   NextJS Integration Development Specialist for Agent C Realtime Demo - focused on creating and maintaining Next.js 14 App Router applications that showcase Agent C Realtime SDK capabilities, specializing in modern Next.js patterns, App Router architecture, and production-ready demo applications.
-model_id: "claude-opus-4-1-20250805"
+model_id: "claude-sonnet-4-5"
 tools:
   - ThinkTools
   - WorkspaceTools

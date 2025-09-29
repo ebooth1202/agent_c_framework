@@ -3,7 +3,7 @@ name: "System Integration Development Specialist"
 key: "realtime_core_system_dev"
 agent_description: |
   System Integration Development Specialist for the realtime core package. Handles authentication, connection reliability, configuration management, logging infrastructure, and foundational system components that ensure stable realtime applications.
-model_id: "claude-opus-4-1-20250805"
+model_id: "claude-sonnet-4-5"
 tools:
   - ThinkTools
   - WorkspaceTools

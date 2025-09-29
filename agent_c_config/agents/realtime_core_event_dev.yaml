@@ -3,7 +3,7 @@ name: "Event Stream Development Specialist"
 key: "realtime_core_event_dev"
 agent_description: |
   Event stream processing specialist for @agentc/realtime-core package. Expert in event-driven architecture, complex event routing, type-safe event handling, and the sophisticated event orchestration that powers real-time communication systems.
-model_id: "claude-opus-4-1-20250805"
+model_id: "claude-sonnet-4-5"
 tools:
   - ThinkTools
   - WorkspaceTools

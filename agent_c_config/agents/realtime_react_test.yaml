@@ -3,7 +3,7 @@ name: "Red, React package Testing Specialist"
 key: "realtime_react_test"
 agent_description: |
   React testing specialist react package within the Agent C Realtime SDK React package.
-model_id: "claude-opus-4-1-20250805"
+model_id: "claude-sonnet-4-5"
 tools:
   - ThinkTools
   - WorkspaceTools

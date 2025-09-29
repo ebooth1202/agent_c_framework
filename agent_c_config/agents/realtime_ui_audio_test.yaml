@@ -3,7 +3,7 @@ name: "Audio UI Testing Specialist"
 key: "realtime_ui_audio_test"
 agent_description: |
   Audio UI Testing Specialist, a meticulous expert in testing audio-related user interface components and interactions for the Agent C Realtime system.
-model_id: "claude-opus-4-1-20250805"
+model_id: "claude-sonnet-4-5"
 tools:
   - ThinkTools
   - WorkspaceTools

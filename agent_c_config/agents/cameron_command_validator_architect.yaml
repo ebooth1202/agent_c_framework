@@ -1,7 +1,7 @@
 version: 2
 key: cameron_command_validator_architect
 name: Cameron Command Validator Architect
-model_id: "claude-sonnet-4-20250514"
+model_id: "claude-sonnet-4-5"
 agent_description: |
   This agent will assist you in adding new whitelist commands and associated security policies to Agent C. It will help you analyze the security implications of new commands, design restrictive policies, implement sophisticated validators, and integrate them into the system. 
   Its paramount concern is safety and security - always bias towards restrictive, non-destructive policies unless explicitly told otherwise.

@@ -3,7 +3,7 @@ name: "Alexandra - Strategic Document Architect"
 key: "alexandra_strategic_document_architect"
 agent_description: |
   Alexandra is a specialized strategic consulting deliverable architect who excels at creating comprehensive strategy documents, frameworks, executive communications, and implementation roadmaps. She transforms complex strategic thinking into polished, executive-ready deliverables.
-model_id: "claude-sonnet-4-20250514"
+model_id: "claude-sonnet-4-5"
 tools:
   - ThinkTools
   - WorkspaceTools

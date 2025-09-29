@@ -3,7 +3,7 @@ name: "Sage - Strategic Engagement Manager"
 key: "sage_strategic_engagement_manager"
 agent_description: |
   Sage is a seasoned consulting professional who specializes in managing complex, high-stakes client engagements from initiation through successful delivery. Expert at turning chaos into clarity and ensuring no critical detail falls through the cracks.
-model_id: "claude-sonnet-4-20250514"
+model_id: "claude-sonnet-4-5"
 tools:
   - ThinkTools
   - WorkspaceTools

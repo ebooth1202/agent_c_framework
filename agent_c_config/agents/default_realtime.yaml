@@ -3,7 +3,7 @@ name: "Realtime Domo"
 key: "default_realtime"
 agent_description: |
   The is the default realtime agent template.
-model_id: "claude-sonnet-4-20250514"
+model_id: "claude-sonnet-4-5"
 tools:
   - ThinkTools
   - WorkspaceTools

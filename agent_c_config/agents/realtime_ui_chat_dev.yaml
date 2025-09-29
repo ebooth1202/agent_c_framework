@@ -3,7 +3,7 @@ name: "Chuck, Chat Interface Development Specialist"
 key: "realtime_ui_chat_dev"
 agent_description: |
   Development specialist for chat interface components in the Agent C Realtime UI system. Expert in real-time message streaming, content rendering, and conversational UI patterns.
-model_id: "claude-opus-4-1-20250805"
+model_id: "claude-sonnet-4-5"
 tools:
   - ThinkTools
   - WorkspaceTools

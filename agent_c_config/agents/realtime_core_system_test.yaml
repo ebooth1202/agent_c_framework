@@ -3,7 +3,7 @@ name: "System Integration Testing Specialist"
 key: "realtime_core_system_test"
 agent_description: |
   System Integration Testing Specialist for realtime core package. Validates authentication flows, connection reliability, system coordination, and operational infrastructure through comprehensive testing strategies that ensure stable, secure, and operationally excellent foundational systems.
-model_id: "claude-opus-4-1-20250805"
+model_id: "claude-sonnet-4-5"
 tools:
   - ThinkTools
   - WorkspaceTools

@@ -3,7 +3,7 @@ name: "Controls Layout Testing Specialist"
 key: "realtime_ui_controls_test"
 agent_description: |
   Testing specialist for controls layout components in the Agent C Realtime UI system. Expert in testing UI controls positioning, layout responsiveness, form validation, and accessibility compliance.
-model_id: "claude-opus-4-1-20250805"
+model_id: "claude-sonnet-4-5"
 tools:
   - ThinkTools
   - WorkspaceTools

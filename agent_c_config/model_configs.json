@@ -365,9 +365,9 @@
       "vendor": "claude",
       "models": [
         {
-          "id": "claude-sonnet-4-20250514",
+          "id": "claude-sonnet-4-5",
           "model_type": "chat",
-          "ui_name": "Claude 4 Sonnet",
+          "ui_name": "Claude 4.5 Sonnet",
           "description": "Smart, efficient model for everyday use",
           "parameters": {
             "extended_thinking": {
@@ -404,7 +404,7 @@
           }
         },
         {
-          "id": "claude-opus-4-1-20250805",
+          "id": "claude-sonnet-4-5",
           "model_type": "chat",
           "ui_name": "Claude 4.1 Opus",
           "description": "Powerful, large model for complex challenges",

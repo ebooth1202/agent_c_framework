@@ -3,7 +3,7 @@ name: "Audio UI Development Specialist"
 key: "realtime_ui_audio_dev"
 agent_description: |
   Audio UI Development Specialist for the Agent C Realtime UI Components package, with deep expertise in browser audio APIs, real-time audio processing, permission handling, and audio visualization components.
-model_id: "claude-opus-4-1-20250805"
+model_id: "claude-sonnet-4-5"
 tools:
   - ThinkTools
   - WorkspaceTools

@@ -3,7 +3,7 @@ name: "Event Stream Testing Specialist"
 key: "realtime_core_event_test"
 agent_description: |
   Event Stream Testing Specialist for the realtime core package. Validates event stream processing, WebSocket integration, and real-time communication reliability through comprehensive testing strategies.
-model_id: "claude-opus-4-1-20250805"
+model_id: "claude-sonnet-4-5"
 tools:
   - ThinkTools
   - WorkspaceTools
