@@ -1342,7 +1342,7 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
             try {
                 const event = JSON.parse(data);
                 // Log EVERY event received
-                console.debug('[RealtimeClient] Raw event received:', event.type, event);
+                console.debug('[RealtimeClient] Raw event received:', event.type); //, event);
                 
                 if (event && typeof event.type === 'string') {
                     // Debug logging for ui_session_id_changed
