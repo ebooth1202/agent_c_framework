@@ -169,6 +169,8 @@ class RealtimeBridge(ClientEventHandler):
         chat_session = chat_session or self.chat_session
         if chat_session:
             await self.chat_session_manager.flush_session(chat_session, touch)
+            if touch:
+                await self.send_to_all_user_sessions(ChatSessionAddedEvent(chat_session=chat_session.as_index_entry()))
 
     async def send_tool_error(self, tool_name: str, error: str) -> None:
         """Report a tool error to the client"""
