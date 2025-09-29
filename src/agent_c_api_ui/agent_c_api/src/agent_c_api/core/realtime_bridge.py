@@ -195,12 +195,13 @@ class RealtimeBridge(ClientEventHandler):
             session_id = self.chat_session.session_id
 
         success = await self.chat_session_manager.delete_session(session_id, self.chat_user.user_id)
-        if success:
-            self.logger.info(f"RealtimeBridge {self.ui_session_id}: Deleted chat session {session_id}")
-        else:
+        if not success:
             self.logger.warning(f"RealtimeBridge {self.ui_session_id}: Failed to delete chat session {session_id}")
+            await self.send_error(f"Session '{session_id}' not found", source="delete_chat_session")
+            return
 
-        await self.send_event(DeleteChatSessionEvent(session_id=session_id))
+        self.logger.info(f"RealtimeBridge {self.ui_session_id}: Deleted chat session {session_id}")
+        await self.send_to_all_user_sessions(DeleteChatSessionEvent(session_id=session_id))
 
         if session_id == self.chat_session.session_id:
             self.chat_session = None
@@ -313,7 +314,7 @@ class RealtimeBridge(ClientEventHandler):
 
         self.logger.info(f"RealtimeBridge {session_id}: Session name set to '{session_name}'")
 
-        await self.send_event(ChatSessionNameChangedEvent(session_name=session_name, session_id=session_id))
+        await self.send_to_all_user_sessions(ChatSessionNameChangedEvent(session_name=session_name, session_id=session_id))
 
     async def send_user_sessions(self, offset: int, limit: int = 50) -> None:
         sessions = await self.chat_session_manager.get_user_sessions(self.chat_user.user_id, offset, limit)
@@ -657,6 +658,10 @@ class RealtimeBridge(ClientEventHandler):
             "chat_user": self.chat_user,
         } | agent_meta
 
+    async def send_to_all_user_sessions(self, event: BaseEvent):
+        """Send an event to all sessions for the current user"""
+        await self.ui_session_manager.send_to_all_user_sessions(self.chat_user.user_id, event)
+
     async def interact(self, user_message: str, file_ids: Optional[List[str]] = None, on_event: Optional[callable] = None) -> None:
         """
         Streams chat responses for a given user message.
@@ -681,7 +686,7 @@ class RealtimeBridge(ClientEventHandler):
         try:
             await self.chat_session_manager.update()
             if len(self.chat_session.messages) == 0:
-                await self.send_event(ChatSessionAddedEvent(chat_session=self.chat_session.as_index_entry()))
+                await self.send_to_all_user_sessions(ChatSessionAddedEvent(chat_session=self.chat_session.as_index_entry()))
 
             agent_runtime = self.runtime_for_agent(self.chat_session.agent_config)
             file_inputs = []

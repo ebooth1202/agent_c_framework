@@ -137,3 +137,15 @@ class RealtimeSessionManager:
         self.logger.info(f"Cancelling interaction for session: {ui_session_id}")
         self.ui_sessions[ui_session_id].bridge.client_wants_cancel.set()
         return True
+
+    async def send_to_all_user_sessions(self, user_id: str, event):
+        """
+        Send and event to all sessions associated with a specific user.
+
+        Args:
+            user_id (str): The user ID to send the message to
+            event: The event to send
+        """
+        sessions: List[RealtimeSession] = [session for session in self.ui_sessions.values() if session.user_id == user_id]
+        for session in sessions:
+            await session.bridge.send_event(event)
