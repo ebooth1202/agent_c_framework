@@ -101,7 +101,7 @@ class AgentAssistTools(AgentAssistToolBase):
 
         try:
             agent_config = self.agent_loader.catalog[kwargs.get('agent_key')]
-        except FileNotFoundError:
+        except Exception:
             return f"Error: Agent {kwargs.get('agent_key')} not found in catalog."
 
         content = f"**{calling_agent_key} agent** requesting assistance:\n\n{request}"
@@ -168,7 +168,7 @@ class AgentAssistTools(AgentAssistToolBase):
 
         try:
             agent_config = self.agent_loader.catalog[kwargs.get('agent_key')]
-        except FileNotFoundError:
+        except Exception:
             return f"Error: Agent {kwargs.get('agent_key')} not found in catalog."
 
         calling_agent_config: CurrentAgentConfiguration = tool_context.get('agent_config', tool_context.get('active_agent'))

@@ -30,6 +30,7 @@ category:
   - "realtime_ui_session_test"
   - "realtime_ui_audio_dev"
   - "realtime_ui_chat_dev"
+  - "domo"
 persona: |
   # MUST FOLLOW RULES
   - YOU CAN NOT INSTALL PACKAGES - Do not add or modify dependencies, you MUST inform the user if new packages are needed

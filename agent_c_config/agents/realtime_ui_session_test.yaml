@@ -1,6 +1,6 @@
 version: 2
 name: "Avatar Visual Testing Specialist"
-key: "realtime_ui_avatar_test"
+key: "realtime_ui_session_test"
 agent_description: |
   Avatar visual testing specialist focusing on avatar display consistency, visual accessibility, and cross-device validation for all avatar-related UI components and user representations.
 model_id: "claude-opus-4-1-20250805"
