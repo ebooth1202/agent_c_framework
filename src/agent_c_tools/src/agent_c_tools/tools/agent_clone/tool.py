@@ -83,7 +83,7 @@ class AgentCloneTools(AgentAssistToolBase):
                                              sub_agent_type="clone",  prime_agent_key=calling_agent_config.key,
                                              agent_session_id=agent_session_id
                                              )
-        await tool_context['broker'].send_system_message(f"Clone oneshot interaction complete for {calling_agent_config.key}.", "info")
+        await tool_context['bridge'].send_system_message(f"Clone oneshot interaction complete for {calling_agent_config.key}.", "info")
 
 
         if messages is not None and len(messages) > 0:
@@ -163,7 +163,7 @@ class AgentCloneTools(AgentAssistToolBase):
                                                            sub_agent_type="clone", prime_agent_key=calling_agent_config.key
                                                            )
 
-        await tool_context['broker'].send_system_message(f"Clone chat interaction complete for {calling_agent_config.key}.", "info")
+        await tool_context['bridge'].send_system_message(f"Clone chat interaction complete for {calling_agent_config.key}.", "info")
 
         if messages is not None and len(messages) > 0:
             last_message = messages[-1]

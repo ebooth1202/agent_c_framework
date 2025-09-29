@@ -7,6 +7,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import type { ChatSession } from '@agentc/realtime-core';
 import { Logger } from '../utils/logger';
 import { useRealtimeClientSafe } from '../providers/AgentCContext';
+import { AgentStorage } from '../utils/agentStorage';
 import { 
   ChatItem, 
   MessageChatItem, 
@@ -328,6 +329,18 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         setCurrentSession(sessionEvent.chat_session);
         setCurrentSessionId(newSessionId);
         currentSessionIdRef.current = newSessionId;
+        
+        // CRITICAL FIX: Save agent key when session changes
+        // This ensures we persist the agent key when resuming a chat session
+        // as required by the connection/reconnection improvements
+        if (sessionEvent.chat_session.agent_config?.key) {
+          try {
+            AgentStorage.saveAgentKey(sessionEvent.chat_session.agent_config.key);
+            console.log('[useChat] Saved agent key from session change:', sessionEvent.chat_session.agent_config.key);
+          } catch (err) {
+            console.warn('[useChat] Failed to save agent key:', err);
+          }
+        }
         
         // Set loading state to block incoming events during transition
         isLoadingSessionRef.current = true;
