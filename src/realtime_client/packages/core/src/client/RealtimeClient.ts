@@ -74,7 +74,8 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
         super();
         this.config = mergeConfig(config);
         this.authToken = config.authToken || null;
-        this.uiSessionId = config.uiSessionId || null;
+        // Backward compatibility: support legacy sessionId config parameter
+        this.uiSessionId = config.uiSessionId || (config as any).sessionId || null;
 
         // Initialize auth manager if provided
         if (config.authManager) {
@@ -546,11 +547,29 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
 
         // Check for auth token before connecting
         if (!this.authToken) {
-            const error = new Error('Authentication token is required for connection');
-            if (this.config.debug) {
-                console.error('[RealtimeClient] Cannot connect: No authentication token available');
+            // Try to get token from authManager if available
+            if (this.authManager) {
+                const tokens = this.authManager.getTokens();
+                if (tokens) {
+                    this.authToken = tokens.agentCToken;
+                }
             }
-            throw error;
+            
+            // If still no token, fail with error event and exception
+            if (!this.authToken) {
+                const errorEvent = {
+                    type: 'error' as const,
+                    message: 'Authentication required',
+                    source: 'auth' as const
+                };
+                this.emit('error', errorEvent);
+                
+                const error = new Error('Authentication token is required for connection');
+                if (this.config.debug) {
+                    console.error('[RealtimeClient] Cannot connect: No authentication token available');
+                }
+                throw error;
+            }
         }
 
         this.setConnectionState(ConnectionState.CONNECTING);
@@ -1300,14 +1319,21 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
         // Always use /api/rt/ws as the path, ignoring any path in the base URL
         const url = new URL(`${protocol}//${parsedUrl.host}/api/rt/ws`);
         url.searchParams.set('token', this.authToken);
+        
         // CRITICAL: Always send ui_session_id if available (not session_id)
         // This identifies the client instance for reconnection
-        console.debug('[RealtimeClient] Building WebSocket URL - uiSessionId:', this.uiSessionId);
-        if (this.uiSessionId) {
-            url.searchParams.set('ui_session_id', this.uiSessionId);
-            console.debug('[RealtimeClient] Added ui_session_id to URL:', this.uiSessionId);
+        // Try to get ui_session_id from multiple sources: direct property or AuthManager
+        let effectiveUiSessionId = this.uiSessionId;
+        if (!effectiveUiSessionId && this.authManager) {
+            effectiveUiSessionId = this.authManager.getUiSessionId() || null;
+        }
+        
+        console.debug('[RealtimeClient] Building WebSocket URL - uiSessionId:', effectiveUiSessionId);
+        if (effectiveUiSessionId) {
+            url.searchParams.set('ui_session_id', effectiveUiSessionId);
+            console.debug('[RealtimeClient] Added ui_session_id to URL:', effectiveUiSessionId);
         } else {
-            console.warn('[RealtimeClient] NO ui_session_id available for WebSocket connection!');
+            console.debug('[RealtimeClient] No ui_session_id available for WebSocket connection');
         }
 
         // Add connection context parameters
@@ -1470,6 +1496,13 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
             if (this.config.debug) {
                 console.error('[RealtimeClient] Cannot reconnect: No authentication token available');
             }
+            // Emit error event for UI handling
+            const errorEvent = {
+                type: 'error' as const,
+                message: 'Authentication required for reconnection',
+                source: 'auth' as const
+            };
+            this.emit('error', errorEvent);
             // Don't attempt reconnection without auth
             return;
         }

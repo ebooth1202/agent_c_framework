@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import type { RealtimeClientConfig } from '@agentc/realtime-core';
 import { AgentCProvider } from '@agentc/realtime-react';
@@ -34,6 +34,19 @@ export function ClientProvider({
   const [configReady, setConfigReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Stabilize callbacks to prevent unnecessary client recreation
+  const handleInitialized = useCallback(() => {
+    console.log('Client initialized');
+  }, []);
+
+  const handleError = useCallback((error: Error) => {
+    setError(error.message);
+  }, []);
+
+  const handleInitializationComplete = useCallback(() => {
+    console.log('Initialization complete');
+  }, []);
+
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -41,11 +54,12 @@ export function ClientProvider({
     }
   }, [authLoading, isAuthenticated, router]);
 
+  // Get auth token outside useMemo to avoid function reference dependency
+  const authToken = getAuthToken();
+
   // Create client configuration
   const clientConfig = useMemo<RealtimeClientConfig | null>(() => {
-    const token = getAuthToken();
-    
-    if (!token) {
+    if (!authToken) {
       return null;
     }
 
@@ -53,7 +67,7 @@ export function ClientProvider({
     
     return {
       apiUrl: baseUrl,
-      authToken: token,
+      authToken: authToken,
       enableAudio,
       autoReconnect: true,
       
@@ -79,7 +93,7 @@ export function ClientProvider({
       }
     };
   }, [
-    getAuthToken,
+    authToken,
     apiUrl,
     enableAudio
   ]);
@@ -139,6 +153,9 @@ export function ClientProvider({
   return (
     <AgentCProvider 
       config={clientConfig}
+      onInitialized={handleInitialized}
+      onError={handleError}
+      onInitializationComplete={handleInitializationComplete}
       autoConnect={true}
       debug={true}
     >

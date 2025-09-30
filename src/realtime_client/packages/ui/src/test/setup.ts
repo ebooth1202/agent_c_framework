@@ -9,9 +9,13 @@ import { cleanup } from '@testing-library/react';
 import { afterEach, beforeAll, afterAll, beforeEach } from 'vitest';
 import { server } from './mocks/server';
 import * as realtimeReactMocks from './mocks/realtime-react';
+import * as reactVirtualMocks from './mocks/react-virtual';
 
 // Mock @agentc/realtime-react globally
 vi.mock('@agentc/realtime-react', () => realtimeReactMocks);
+
+// Mock @tanstack/react-virtual globally
+vi.mock('@tanstack/react-virtual', () => reactVirtualMocks);
 
 // Start MSW server before all tests
 beforeAll(() => {

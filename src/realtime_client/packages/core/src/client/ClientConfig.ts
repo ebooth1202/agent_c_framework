@@ -195,10 +195,8 @@ export function mergeConfig(
     throw new Error('apiUrl is required in RealtimeClientConfig');
   }
   
-  // Either authToken or authManager must be provided
-  if (!config.authToken && !config.authManager) {
-    throw new Error('Either authToken or authManager is required in RealtimeClientConfig');
-  }
+  // Note: Auth validation moved to connect() method to allow tests to create
+  // clients and test auth validation behavior
 
   return config as Required<Omit<RealtimeClientConfig, 'uiSessionId' | 'headers' | 'protocols' | 'authToken' | 'authManager'>> & 
     Pick<RealtimeClientConfig, 'uiSessionId' | 'headers' | 'protocols' | 'authToken' | 'authManager'>;

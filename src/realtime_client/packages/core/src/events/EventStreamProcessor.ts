@@ -46,7 +46,10 @@ export class EventStreamProcessor {
   private messageBuilder: MessageBuilder;
   private toolCallManager: ToolCallManager;
   private sessionManager: SessionManager;
-  private userSessionId: string | null = null;
+  private currentChatSessionId: string | null = null;
+  private recentEventIds: Set<string> = new Set();
+  private readonly EVENT_ID_TTL = 5000; // 5 seconds - events older than this are forgotten
+  private eventCounter = 0; // Sequential counter for events without IDs
   
   constructor(sessionManager: SessionManager) {
     this.sessionManager = sessionManager;
@@ -55,28 +58,68 @@ export class EventStreamProcessor {
   }
   
   /**
-   * Set the user session ID for sub-session detection
+   * Set the current chat session ID for sub-session detection
    */
-  setUserSessionId(id: string): void {
-    this.userSessionId = id;
-    Logger.debug(`[EventStreamProcessor] User session ID set: ${id}`);
+  setCurrentChatSessionId(id: string): void {
+    this.currentChatSessionId = id;
+    Logger.debug(`[EventStreamProcessor] Current chat session ID set: ${id}`);
   }
   
   /**
    * Check if an event represents a sub-session
+   * 
+   * Sub-sessions occur when an agent uses delegation tools to communicate with
+   * other agents/clones. These events have a different session_id than the
+   * current user's chat session.
+   * 
+   * @param event - Event to check
+   * @returns true if event is from a sub-session, false otherwise
    */
   private isSubSession(event: any): boolean {
-    // Primary check: use event fields if available
-    if (event.user_session_id && event.session_id) {
-      return event.session_id !== event.user_session_id;
+    // Sub-session = event's session_id doesn't match current user chat session
+    if (this.currentChatSessionId && event.session_id) {
+      return event.session_id !== this.currentChatSessionId;
     }
-    
-    // Fallback: use stored user session ID
-    if (this.userSessionId && event.session_id) {
-      return event.session_id !== this.userSessionId;
-    }
-    
     return false;
+  }
+  
+  /**
+   * Generate a unique fingerprint for an event to detect duplicates.
+   * Uses event ID if available, otherwise creates fingerprint from event properties.
+   * 
+   * For streaming events without IDs (text_delta, thought_delta, etc.), uses a
+   * sequential counter to ensure uniqueness even when events arrive in the same
+   * millisecond (which is common for rapid streaming).
+   */
+  private generateEventFingerprint(event: ServerEvent): string {
+    // If event has an ID field, use it
+    if ('id' in event && event.id) {
+      return String(event.id);
+    }
+    
+    // For events without IDs, use sequential counter to ensure uniqueness
+    // This prevents false duplicates when events arrive rapidly (same millisecond)
+    const sessionId = 'session_id' in event ? event.session_id : 'no-session';
+    return `${event.type}_${sessionId || 'no-session'}_${++this.eventCounter}`;
+  }
+
+  /**
+   * Check if an event was recently processed.
+   */
+  private hasProcessedRecently(eventId: string): boolean {
+    return this.recentEventIds.has(eventId);
+  }
+
+  /**
+   * Mark an event as processed and schedule cleanup after TTL.
+   */
+  private markAsProcessed(eventId: string): void {
+    this.recentEventIds.add(eventId);
+    
+    // Clean up after TTL to prevent memory growth
+    setTimeout(() => {
+      this.recentEventIds.delete(eventId);
+    }, this.EVENT_ID_TTL);
   }
   
   /**
@@ -225,6 +268,21 @@ export class EventStreamProcessor {
    * Process incoming server events
    */
   processEvent(event: ServerEvent): void {
+    // Check for duplicate events
+    const eventId = this.generateEventFingerprint(event);
+    
+    if (this.hasProcessedRecently(eventId)) {
+      Logger.debug('[EventStreamProcessor] Skipping duplicate event', {
+        type: event.type,
+        eventId,
+        sessionId: 'session_id' in event ? (event.session_id || 'none') : 'none'
+      });
+      return; // Skip processing
+    }
+    
+    // Mark as processed before handling
+    this.markAsProcessed(eventId);
+    
     // Filter out ignored events early
     const IGNORED_EVENTS = ['history', 'history_delta', 'complete_thought', 'system_prompt'];
     
@@ -596,15 +654,8 @@ export class EventStreamProcessor {
       return;
     }
     
-    // Extract user_session_id if available for sub-session detection
-    // ChatSessionChangedEvent doesn't extend SessionEvent, so check if it exists
-    const eventWithSessionInfo = event as any;
-    if (eventWithSessionInfo.user_session_id) {
-      this.setUserSessionId(eventWithSessionInfo.user_session_id);
-    } else if (event.chat_session.session_id) {
-      // If no explicit user_session_id, assume the current session is the user session
-      this.setUserSessionId(event.chat_session.session_id);
-    }
+    // Track the current user's chat session ID for sub-session detection
+    this.setCurrentChatSessionId(event.chat_session.session_id);
     
     // Convert the server session to runtime ChatSession with normalized messages
     const session = this.convertServerSession(event.chat_session);
@@ -963,6 +1014,7 @@ export class EventStreamProcessor {
   reset(): void {
     this.messageBuilder.reset();
     this.toolCallManager.reset();
+    this.recentEventIds.clear(); // Clear deduplication cache
     Logger.info('[EventStreamProcessor] EventStreamProcessor reset');
   }
   
@@ -970,7 +1022,6 @@ export class EventStreamProcessor {
    * Clean up resources
    */
   destroy(): void {
-    this.reset();
     Logger.info('[EventStreamProcessor] EventStreamProcessor destroyed');
   }
   
