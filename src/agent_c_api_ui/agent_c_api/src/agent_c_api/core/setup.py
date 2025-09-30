@@ -124,13 +124,9 @@ def create_application(router: APIRouter, **kwargs) -> FastAPI:
         lifespan_app.state.chat_session_manager = ChatSessionManager(loader=chat_loader)
         logger.info("✅ Chat session manager initialized successfully")
 
-        # Shared AgentManager instance.
-        logger.info("🤖 Initializing HTTP Chat Manager...")
-        lifespan_app.state.agent_manager = UItoAgentBridgeManager(lifespan_app.state.chat_session_manager)
-        logger.info("✅ HTTP Chat Manager initialized successfully")
-
         logger.info("🤖 Initializing Realtime Manager...")
         lifespan_app.state.realtime_manager = RealtimeSessionManager(lifespan_app.state.chat_session_manager)
+        await lifespan_app.state.realtime_manager.create_user_runtime_cache_entry("admin")  # Pre-create cache for admin user
         logger.info("✅ Realtime Manager initialized successfully")
         
         # Initialize FastAPICache with InMemoryBackend
