@@ -88,13 +88,13 @@ export const SessionNameDropdown = React.forwardRef<HTMLButtonElement, SessionNa
         setCurrentSessionName(name)
       }
       
-      // Handler for session changes from SessionManager - this is the proper event to listen to
-      // The EventStreamProcessor consumes chat_session_changed and the SessionManager emits session-changed
-      const handleSessionChanged = (event: { previousSession?: any; currentSession?: any }) => {
-        if (event.currentSession) {
+      // Handler for session changes from ChatSessionManager - this is the proper event to listen to
+      // The EventStreamProcessor consumes chat_session_changed and the ChatSessionManager emits chat-session-changed
+      const handleSessionChanged = (event: { previousChatSession?: any; currentChatSession?: any }) => {
+        if (event.currentChatSession) {
           // Always update both sessionId and name when this event fires
-          const newSessionId = event.currentSession.session_id
-          const newName = event.currentSession.session_name || event.currentSession.display_name || "New Chat"
+          const newSessionId = event.currentChatSession.session_id
+          const newName = event.currentChatSession.session_name || event.currentChatSession.display_name || "New Chat"
           
           // Update state unconditionally - this event means the session has changed
           setSessionId(newSessionId)
@@ -111,15 +111,15 @@ export const SessionNameDropdown = React.forwardRef<HTMLButtonElement, SessionNa
         }
       }
       
-      // Subscribe to SessionManager events for session changes
-      sessionManager.on('session-changed', handleSessionChanged)
+      // Subscribe to ChatSessionManager events for session changes
+      sessionManager.on('chat-session-changed', handleSessionChanged)
       
       // Subscribe to client events for session name changes (these are still emitted directly)
       client.on('chat_session_name_changed', handleSessionNameChanged)
       
       // Cleanup
       return () => {
-        sessionManager.off('session-changed', handleSessionChanged)
+        sessionManager.off('chat-session-changed', handleSessionChanged)
         client.off('chat_session_name_changed', handleSessionNameChanged)
       }
     }, [client]) // Remove sessionId from dependencies to prevent re-subscription

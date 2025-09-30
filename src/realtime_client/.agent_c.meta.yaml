@@ -1351,3 +1351,31 @@ _plans:
         updated_at: '2025-09-27T18:19:17.739550'
     title: Demo Package Connection/Reconnection Implementation
     updated_at: '2025-09-27T18:19:32.383595'
+  react_core_breaking_changes:
+    created_at: '2025-09-30T16:04:41.804294'
+    description: Fix React package tests and code after extensive core package changes
+      including breaking changes to event handling, session management, and auth validation
+      timing. Core package completed 7 phases of changes resulting in 27 failing tests
+      in React package.
+    id: sulfur-guide
+    lessons_learned: []
+    tasks:
+      comedy-crack:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-30T16:04:47.449728'
+        description: The chat-session-changed event listener was using an inline arrow
+          function that couldn't be properly cleaned up, causing a memory leak. Refactor
+          to use a named handler function that can be properly unsubscribed.
+        id: comedy-crack
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: Fix inline arrow function memory leak in useChat.ts
+        updated_at: '2025-09-30T16:04:47.449730'
+    title: 'React Package: Core Breaking Changes Recovery'
+    updated_at: '2025-09-30T16:04:47.449751'

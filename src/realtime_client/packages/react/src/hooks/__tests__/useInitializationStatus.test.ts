@@ -209,7 +209,7 @@ describe('useInitializationStatus', () => {
         'voice_list',
         'agent_list',
         'tool_catalog',
-        'chat_session_changed'
+        'chat-session-changed'
       ];
       
       // Verify each event is registered
@@ -373,7 +373,7 @@ describe('useInitializationStatus', () => {
         'voice_list',
         'agent_list',
         'tool_catalog',
-        'chat_session_changed'
+        'chat-session-changed'
       ];
       
       initEvents.forEach(event => {

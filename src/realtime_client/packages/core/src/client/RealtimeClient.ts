@@ -26,7 +26,7 @@ import {
 import { WebSocketManager } from './WebSocketManager';
 import { ReconnectionManager } from './ReconnectionManager';
 import { AuthManager, TokenPair } from '../auth';
-import { TurnManager, SessionManager } from '../session';
+import { TurnManager, ChatSessionManager } from '../session';
 import { AudioService, AudioAgentCBridge, AudioOutputService } from '../audio';
 import type { AudioStatus, VoiceModel } from '../audio/types';
 import { VoiceManager } from '../voice';
@@ -46,7 +46,7 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
     private authManager: AuthManager | null = null;
     private turnManager: TurnManager | null = null;
     private voiceManager: VoiceManager | null = null;
-    private sessionManager: SessionManager | null = null;
+    private sessionManager: ChatSessionManager | null = null;
     private avatarManager: AvatarManager | null = null;
     private eventStreamProcessor: EventStreamProcessor | null = null;
     
@@ -130,7 +130,7 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
         }
         
         // Initialize session manager
-        this.sessionManager = new SessionManager({
+        this.sessionManager = new ChatSessionManager({
             maxSessions: 50,
             persistSessions: false
         });
@@ -157,7 +157,7 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
     private setupSessionFetchingHandlers(): void {
         if (!this.sessionManager) return;
         
-        // Listen for session fetch requests from SessionManager
+        // Listen for session fetch requests from ChatSessionManager
         this.sessionManager.on('request-user-sessions', ({ offset, limit }) => {
             this.fetchUserSessions(offset, limit);
         });
@@ -190,7 +190,7 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
         // Handle chat session changes from server
         this.on('chat_session_changed', (event: ChatSessionChangedEvent) => {
             if (event.chat_session) {
-                // Set the current session in SessionManager
+                // Set the current chat session in ChatSessionManager
                 this.sessionManager!.setCurrentSession(event.chat_session);
                 
                 // Store the session ID for reconnection recovery
@@ -302,13 +302,13 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
             }
         });
         
-        // Listen to SessionManager for session changes to update currentChatSessionId
+        // Listen to ChatSessionManager for chat session changes to update currentChatSessionId
         if (this.sessionManager) {
-            this.sessionManager.on('session-changed', ({ currentSession }) => {
-            console.debug('[RealtimeClient] session-changed handler called with:', currentSession);
-            if (currentSession && currentSession.session_id) {
+            this.sessionManager.on('chat-session-changed', ({ currentChatSession }) => {
+            console.debug('[RealtimeClient] chat-session-changed handler called with:', currentChatSession);
+            if (currentChatSession && currentChatSession.session_id) {
                 // Update stored chat session ID for reconnection
-                this.currentChatSessionId = currentSession.session_id;
+                this.currentChatSessionId = currentChatSession.session_id;
                 
                 if (this.config.debug) {
                     console.debug('Chat Session ID updated for reconnection:', this.currentChatSessionId);
@@ -1039,7 +1039,7 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
     /**
      * Get the session manager instance
      */
-    getSessionManager(): SessionManager | null {
+    getSessionManager(): ChatSessionManager | null {
         return this.sessionManager;
     }
     

@@ -181,12 +181,13 @@ describe('useChat - Resumed Session Integration Test', () => {
       expect(result.current.messages).toHaveLength(0);
       expect(result.current.currentSession).toBeNull();
 
-      // Simulate receiving the chat_session_changed event with test data
+      // Simulate receiving the chat-session-changed event with test data
       // This simulates what happens when a session is resumed
       // NEW: This clears messages and sets loading state
       await act(async () => {
-        emitClientEvent('chat_session_changed', {
-          chat_session: testSessionData
+        emitSessionEvent('chat-session-changed', {
+          currentChatSession: testSessionData,
+          previousChatSession: null
         });
       });
 
@@ -427,8 +428,9 @@ describe('useChat - Resumed Session Integration Test', () => {
 
       // Load the test session
       await act(async () => {
-        emitClientEvent('chat_session_changed', {
-          chat_session: testSessionData
+        emitSessionEvent('chat-session-changed', {
+          currentChatSession: testSessionData,
+          previousChatSession: null
         });
       });
 
@@ -519,8 +521,9 @@ describe('useChat - Resumed Session Integration Test', () => {
 
       // Load resumed session
       await act(async () => {
-        emitClientEvent('chat_session_changed', {
-          chat_session: testSessionData
+        emitSessionEvent('chat-session-changed', {
+          currentChatSession: testSessionData,
+          previousChatSession: null
         });
       });
 
@@ -595,11 +598,12 @@ describe('useChat - Resumed Session Integration Test', () => {
 
       // Load empty session
       await act(async () => {
-        emitClientEvent('chat_session_changed', {
-          chat_session: {
+        emitSessionEvent('chat-session-changed', {
+          currentChatSession: {
             session_id: 'empty-session',
             messages: []
-          }
+          },
+          previousChatSession: null
         });
       });
 
@@ -628,8 +632,9 @@ describe('useChat - Resumed Session Integration Test', () => {
       const { result } = renderHook(() => useChat());
 
       await act(async () => {
-        emitClientEvent('chat_session_changed', {
-          chat_session: testSessionData
+        emitSessionEvent('chat-session-changed', {
+          currentChatSession: testSessionData,
+          previousChatSession: null
         });
       });
 
@@ -673,8 +678,9 @@ describe('useChat - Resumed Session Integration Test', () => {
       const { result } = renderHook(() => useChat());
 
       await act(async () => {
-        emitClientEvent('chat_session_changed', {
-          chat_session: testSessionData
+        emitSessionEvent('chat-session-changed', {
+          currentChatSession: testSessionData,
+          previousChatSession: null
         });
       });
 
@@ -721,8 +727,9 @@ describe('useChat - Resumed Session Integration Test', () => {
       const { result } = renderHook(() => useChat());
 
       await act(async () => {
-        emitClientEvent('chat_session_changed', {
-          chat_session: testSessionData
+        emitSessionEvent('chat-session-changed', {
+          currentChatSession: testSessionData,
+          previousChatSession: null
         });
       });
       

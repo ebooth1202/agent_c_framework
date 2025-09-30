@@ -197,7 +197,7 @@ export function useInitializationStatus(): UseInitializationStatusReturn {
       'voice_list',
       'agent_list',
       'tool_catalog',
-      'chat_session_changed'
+      'chat-session-changed'
     ];
     
     const handleInitEvent = () => {

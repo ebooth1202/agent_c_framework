@@ -3,7 +3,7 @@
  * Routes events to appropriate handlers and coordinates message building
  */
 
-import { SessionManager } from '../session/SessionManager';
+import { ChatSessionManager } from '../session/SessionManager';
 import { MessageBuilder } from './MessageBuilder';
 import { ToolCallManager } from './ToolCallManager';
 import { 
@@ -45,13 +45,13 @@ import { Logger } from '../utils/logger';
 export class EventStreamProcessor {
   private messageBuilder: MessageBuilder;
   private toolCallManager: ToolCallManager;
-  private sessionManager: SessionManager;
+  private sessionManager: ChatSessionManager;
   private currentChatSessionId: string | null = null;
   private recentEventIds: Set<string> = new Set();
   private readonly EVENT_ID_TTL = 5000; // 5 seconds - events older than this are forgotten
   private eventCounter = 0; // Sequential counter for events without IDs
   
-  constructor(sessionManager: SessionManager) {
+  constructor(sessionManager: ChatSessionManager) {
     this.sessionManager = sessionManager;
     this.messageBuilder = new MessageBuilder();
     this.toolCallManager = new ToolCallManager();
@@ -662,7 +662,7 @@ export class EventStreamProcessor {
     
     Logger.info(`[EventStreamProcessor] Processing session change: ${session.session_id} with ${session.messages?.length || 0} messages and agent_config: ${session.agent_config?.key || 'none'}`);
     
-    // Update the session in SessionManager with the converted version
+    // Update the session in ChatSessionManager with the converted version
     this.sessionManager.setCurrentSession(session);
     
     // Reset the message builder for new session context

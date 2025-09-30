@@ -17,11 +17,11 @@ from agent_c_api.core.util.logging_utils import LoggingManager
 from agent_c_api.models.realtime_session import RealtimeSession
 from agent_c_tools.tools.workspace.base  import BaseWorkspace
 from agent_c_api.models.user_runtime_cache_entry import UserRuntimeCacheEntry
-from agent_c_tools.tools.workspace.local_project import LocalProjectWorkspace
+
 
 from agent_c_tools import *  # noqa
 from agent_c_tools.tools.in_process import * # noqa
-
+from agent_c_tools.tools.workspace.dynamic_command import DynamicCommandTools
 
 
 # Constants
@@ -34,7 +34,7 @@ LOCAL_WORKSPACES_FILE = '.local_workspaces.json'
 DEFAULT_ENV_NAME = 'development'
 OPENAI_REASONING_MODELS = ['o1', 'o1-mini', 'o3', 'o3-mini']
 
-DEFAULT_TOOLSETS = "ThinkTools,WorkspaceTools,AgentCloneTools,AgentAssistTools,AgentTeamTools,WorkspacePlanningTools,BridgeTools,MarkdownToHtmlReportTools"
+DEFAULT_TOOLSETS = "ThinkTools,WorkspaceTools,AgentCloneTools,AgentAssistTools,AgentTeamTools,WorkspacePlanningTools,BridgeTools,MarkdownToHtmlReportTools,DynamicCommandTools"
 
 
 class RealtimeSessionManager:

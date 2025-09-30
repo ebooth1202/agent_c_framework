@@ -192,7 +192,7 @@ describe('useChat - Part 1: Message Management', () => {
       // Verify client events for turn management
       expect(mockClient.on).toHaveBeenCalledWith('user_turn_start', expect.any(Function));
       expect(mockClient.on).toHaveBeenCalledWith('user_turn_end', expect.any(Function));
-      expect(mockClient.on).toHaveBeenCalledWith('chat_session_changed', expect.any(Function));
+      expect(mockSessionManager.on).toHaveBeenCalledWith('chat-session-changed', expect.any(Function));
 
       // Verify SessionManager events for message handling
       expect(mockSessionManager.on).toHaveBeenCalledWith('message-added', expect.any(Function));
@@ -215,7 +215,7 @@ describe('useChat - Part 1: Message Management', () => {
       // Verify client event cleanup for turn management
       expect(mockClient.off).toHaveBeenCalledWith('user_turn_start', expect.any(Function));
       expect(mockClient.off).toHaveBeenCalledWith('user_turn_end', expect.any(Function));
-      expect(mockClient.off).toHaveBeenCalledWith('chat_session_changed', expect.any(Function));
+      expect(mockSessionManager.off).toHaveBeenCalledWith('chat-session-changed', expect.any(Function));
 
       // Verify SessionManager event cleanup for message handling
       expect(mockSessionManager.off).toHaveBeenCalledWith('message-added', expect.any(Function));
@@ -538,8 +538,9 @@ describe('useChat - Part 1: Message Management', () => {
       const { result } = renderHook(() => useChat());
 
       // Emit session change - NEW: This clears messages and sets loading state
-      emitClientEvent('chat_session_changed', { 
-        chat_session: newSession 
+      emitSessionEvent('chat-session-changed', { 
+        currentChatSession: newSession,
+        previousChatSession: null
       });
 
       // Verify session was updated
@@ -576,8 +577,9 @@ describe('useChat - Part 1: Message Management', () => {
 
       // Emit session change with no messages
       const emptySession = createTestSession('empty-session', []);
-      emitClientEvent('chat_session_changed', { 
-        chat_session: emptySession 
+      emitSessionEvent('chat-session-changed', { 
+        currentChatSession: emptySession,
+        previousChatSession: null
       });
 
       // Verify messages were cleared immediately
@@ -647,10 +649,11 @@ describe('useChat - Part 1: Message Management', () => {
       });
       expect(result.current.streamingMessage?.content).toBe('Partial');
 
-      // NEW: First emit chat_session_changed to clear and set loading state
+      // NEW: First emit chat-session-changed to clear and set loading state
       const newSession = createTestSession('test-session');
-      emitClientEvent('chat_session_changed', { 
-        chat_session: newSession 
+      emitSessionEvent('chat-session-changed', { 
+        currentChatSession: newSession,
+        previousChatSession: null
       });
 
       // Verify streaming was cleared by session change
@@ -985,7 +988,7 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
 
       // Change session
       const newSession = createTestSession('new-session');
-      emitClientEvent('chat_session_changed', { chat_session: newSession });
+      emitSessionEvent('chat-session-changed', { currentChatSession: newSession, previousChatSession: null });
 
       // Streaming message should be cleared and typing state reset
       expect(result.current.streamingMessage).toBeNull();
@@ -1102,15 +1105,15 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
       const { rerender } = renderHook(() => useChat());
 
       // Initial render subscribes events
-      expect(mockClient.on).toHaveBeenCalledTimes(3); // user_turn_start, user_turn_end, chat_session_changed
-      expect(mockSessionManager.on).toHaveBeenCalledTimes(8); // message-added, message-streaming, message-complete, session-messages-loaded, subsession-started, subsession-ended, media-added, system_message
+      expect(mockClient.on).toHaveBeenCalledTimes(2); // user_turn_start, user_turn_end
+      expect(mockSessionManager.on).toHaveBeenCalledTimes(9); // chat-session-changed, message-added, message-streaming, message-complete, session-messages-loaded, subsession-started, subsession-ended, media-added, system_message
 
       // Rerender should not duplicate subscriptions
       rerender();
 
       // Should still have same number of subscriptions
-      expect(mockClient.on).toHaveBeenCalledTimes(3);
-      expect(mockSessionManager.on).toHaveBeenCalledTimes(8);
+      expect(mockClient.on).toHaveBeenCalledTimes(2);
+      expect(mockSessionManager.on).toHaveBeenCalledTimes(9);
     });
 
     it('handles events when sessionManager is null', () => {
@@ -1134,16 +1137,16 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
       });
       expect(result.current.messages).toHaveLength(1);
 
-      // Invalid session change (no chat_session) - implementation clears messages
-      emitClientEvent('chat_session_changed', {});
+      // Invalid session change (no currentChatSession) - implementation ignores it
+      emitSessionEvent('chat-session-changed', {});
       
-      // Should clear messages when any session change occurs (even invalid)
-      expect(result.current.messages).toEqual([]);
+      // Should keep existing state when session change is invalid (no currentChatSession)
+      expect(result.current.messages).toHaveLength(1);
       expect(result.current.currentSession).toBeNull();
 
       // Session with no messages should clear
       const emptySession = createTestSession('empty-session', []);
-      emitClientEvent('chat_session_changed', { chat_session: emptySession });
+      emitSessionEvent('chat-session-changed', { currentChatSession: emptySession, previousChatSession: null });
       
       // Should clear messages for empty session
       expect(result.current.messages).toEqual([]);
@@ -1348,12 +1351,12 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
       unmount();
 
       // Verify all client handlers were removed
-      ['user_turn_start', 'user_turn_end', 'chat_session_changed'].forEach(event => {
+      ['user_turn_start', 'user_turn_end'].forEach(event => {
         expect(mockClient.off).toHaveBeenCalledWith(event, clientHandlers.get(event));
       });
 
       // Verify all session handlers were removed
-      ['message-added', 'message-streaming', 'message-complete', 'session-messages-loaded', 'subsession-started', 'subsession-ended', 'media-added', 'system_message'].forEach(event => {
+      ['chat-session-changed', 'message-added', 'message-streaming', 'message-complete', 'session-messages-loaded', 'subsession-started', 'subsession-ended', 'media-added', 'system_message'].forEach(event => {
         expect(mockSessionManager.off).toHaveBeenCalledWith(event, sessionHandlers.get(event));
       });
     });
@@ -1422,7 +1425,7 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
       expect(() => unmount()).not.toThrow();
 
       // Client events should still be cleaned up
-      expect(mockClient.off).toHaveBeenCalledTimes(3); // user_turn_start, user_turn_end, chat_session_changed
+      expect(mockClient.off).toHaveBeenCalledTimes(2); // user_turn_start, user_turn_end
     });
 
     it('properly cleans up after error state', async () => {
@@ -1464,8 +1467,8 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
       unmount();
 
       // All handlers should be removed
-      expect(mockClient.off.mock.calls.length).toBe(3); // user_turn_start, user_turn_end, chat_session_changed
-      expect(mockSessionManager.off.mock.calls.length).toBe(8); // message-added, message-streaming, message-complete, session-messages-loaded, subsession-started, subsession-ended, media-added, system_message
+      expect(mockClient.off.mock.calls.length).toBe(2); // user_turn_start, user_turn_end
+      expect(mockSessionManager.off.mock.calls.length).toBe(9); // chat-session-changed, message-added, message-streaming, message-complete, session-messages-loaded, subsession-started, subsession-ended, media-added, system_message
     });
   });
 
@@ -1525,8 +1528,9 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
       expect(result.current.lastMessage?.content).toBe('Message');
 
       // Clear via session change
-      emitClientEvent('chat_session_changed', {
-        chat_session: createTestSession('new', [])
+      emitSessionEvent('chat-session-changed', {
+        currentChatSession: createTestSession('new', []),
+        previousChatSession: null
       });
       expect(result.current.lastMessage).toBeNull();
     });

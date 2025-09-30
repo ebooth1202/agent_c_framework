@@ -367,6 +367,14 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
       }
     }, []); // No dependencies - uses refs and setters
     
+    // Named handler for chat-session-changed event from SessionManager
+    // This wraps handleSessionChanged and can be properly cleaned up
+    const handleChatSessionChanged = useCallback((data: { currentChatSession: ChatSession | null; previousChatSession: ChatSession | null }) => {
+      if (data.currentChatSession) {
+        handleSessionChanged({ chat_session: data.currentChatSession });
+      }
+    }, [handleSessionChanged]);
+    
     // Handle session messages loaded event (from EventStreamProcessor)
     const handleSessionMessagesLoaded = useCallback((event: unknown) => {
       const messagesEvent = event as { sessionId?: string; messages?: ExtendedMessage[] };
@@ -629,14 +637,10 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     client.on('user_turn_start', handleUserTurnStart);
     client.on('user_turn_end', handleUserTurnEnd);
     
-    // Subscribe to SessionManager events for message handling (only if sessionManager exists)
+    // Subscribe to ChatSessionManager events for message handling (only if sessionManager exists)
     if (sessionManager) {
-      // Session change events come from SessionManager, not client
-      sessionManager.on('session-changed', (data: { currentSession: ChatSession | null }) => {
-        if (data.currentSession) {
-          handleSessionChanged({ chat_session: data.currentSession });
-        }
-      });
+      // Chat session change events come from ChatSessionManager, not client
+      sessionManager.on('chat-session-changed', handleChatSessionChanged);
       sessionManager.on('message-added', handleMessageAdded);
       sessionManager.on('message-streaming', handleMessageStreaming);
       sessionManager.on('message-complete', handleMessageComplete);
@@ -663,8 +667,8 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
       // Get sessionManager again in cleanup to ensure it's available
       const cleanupSessionManager = client?.getSessionManager();
       if (cleanupSessionManager) {
-        // Note: We can't easily clean up the inline arrow function for session-changed
-        // This is a known limitation - consider refactoring to use a named handler
+        // Clean up chat-session-changed listener using named handler reference
+        cleanupSessionManager.off('chat-session-changed', handleChatSessionChanged);
         cleanupSessionManager.off('message-added', handleMessageAdded);
         cleanupSessionManager.off('message-streaming', handleMessageStreaming);
         cleanupSessionManager.off('message-complete', handleMessageComplete);

@@ -5,12 +5,12 @@
  * 1. Deltas emit `message-streaming` events as they arrive (real-time streaming)
  * 2. Messages accumulate correctly without duplication during streaming
  * 3. Messages are added to the session only once after completion
- * 4. EventStreamProcessor handles the full flow without SessionManager interference
+ * 4. EventStreamProcessor handles the full flow without ChatSessionManager interference
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { EventStreamProcessor } from '../EventStreamProcessor';
-import { SessionManager } from '../../session/SessionManager';
+import { ChatSessionManager } from '../../session/SessionManager';
 import { 
   TextDeltaEvent,
   CompletionEvent,
@@ -24,7 +24,7 @@ import { ChatSession, Message } from '../types/CommonTypes';
 
 describe('EventStreamProcessor - Streaming Delta Assembly', () => {
   let processor: EventStreamProcessor;
-  let sessionManager: SessionManager;
+  let sessionManager: ChatSessionManager;
   let sessionManagerEmitSpy: ReturnType<typeof vi.spyOn>;
   let getCurrentSessionSpy: ReturnType<typeof vi.spyOn>;
   let mockSession: ChatSession;
@@ -44,7 +44,7 @@ describe('EventStreamProcessor - Streaming Delta Assembly', () => {
     };
 
     // Create real instances
-    sessionManager = new SessionManager();
+    sessionManager = new ChatSessionManager();
     processor = new EventStreamProcessor(sessionManager);
     
     // Setup spies
@@ -250,8 +250,8 @@ describe('EventStreamProcessor - Streaming Delta Assembly', () => {
   });
 
   describe('EventStreamProcessor Isolation', () => {
-    it('should handle the full flow without SessionManager text accumulation interference', () => {
-      // Spy on deprecated SessionManager methods that should NOT be called
+    it('should handle the full flow without ChatSessionManager text accumulation interference', () => {
+      // Spy on deprecated ChatSessionManager methods that should NOT be called
       const handleTextDeltaSpy = vi.spyOn(sessionManager, 'handleTextDelta');
       const handleTextDoneSpy = vi.spyOn(sessionManager, 'handleTextDone');
       const resetAccumulatorSpy = vi.spyOn(sessionManager, 'resetAccumulator');
@@ -275,7 +275,7 @@ describe('EventStreamProcessor - Streaming Delta Assembly', () => {
         session_id: 'test-session-123'
       } as CompletionEvent);
 
-      // Verify SessionManager's deprecated methods were NOT called
+      // Verify ChatSessionManager's deprecated methods were NOT called
       expect(handleTextDeltaSpy).not.toHaveBeenCalled();
       expect(handleTextDoneSpy).not.toHaveBeenCalled();
       
@@ -515,8 +515,8 @@ describe('EventStreamProcessor - Streaming Delta Assembly', () => {
       // not by direct event handlers in RealtimeClient
     });
 
-    it('should not allow SessionManager accumulator to interfere with message building', () => {
-      // Get the SessionManager's accumulator state
+    it('should not allow ChatSessionManager accumulator to interfere with message building', () => {
+      // Get the ChatSessionManager's accumulator state
       const initialAccumulator = sessionManager.getAccumulatedText();
       expect(initialAccumulator).toBe('');
 
@@ -527,7 +527,7 @@ describe('EventStreamProcessor - Streaming Delta Assembly', () => {
         session_id: 'test-session-123'
       } as TextDeltaEvent);
 
-      // SessionManager's accumulator should remain empty
+      // ChatSessionManager's accumulator should remain empty
       // (EventStreamProcessor handles its own accumulation)
       expect(sessionManager.getAccumulatedText()).toBe('');
       expect(sessionManager.isAccumulatingText()).toBe(false);
@@ -539,11 +539,11 @@ describe('EventStreamProcessor - Streaming Delta Assembly', () => {
         session_id: 'test-session-123'
       } as CompletionEvent);
 
-      // Message should be in session from EventStreamProcessor, not SessionManager
+      // Message should be in session from EventStreamProcessor, not ChatSessionManager
       expect(mockSession.messages).toHaveLength(1);
       expect(mockSession.messages[0].content).toBe('Message from EventStreamProcessor');
       
-      // SessionManager accumulator should still be empty
+      // ChatSessionManager accumulator should still be empty
       expect(sessionManager.getAccumulatedText()).toBe('');
     });
   });

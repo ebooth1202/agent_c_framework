@@ -169,7 +169,7 @@ describe('useChat - Listener Cleanup Fix', () => {
       // Verify exactly one handler registered for each client event
       expect(getHandlerCount('user_turn_start')).toBe(1);
       expect(getHandlerCount('user_turn_end')).toBe(1);
-      expect(getHandlerCount('chat_session_changed')).toBe(1);
+      expect(getHandlerCount('chat-session-changed', true)).toBe(1);
 
       // Verify exactly one handler registered for each session event
       expect(getHandlerCount('message-added', true)).toBe(1);
@@ -216,7 +216,7 @@ describe('useChat - Listener Cleanup Fix', () => {
       // Verify all handlers were removed
       expect(getHandlerCount('user_turn_start')).toBe(0);
       expect(getHandlerCount('user_turn_end')).toBe(0);
-      expect(getHandlerCount('chat_session_changed')).toBe(0);
+      expect(getHandlerCount('chat-session-changed', true)).toBe(0);
       expect(getHandlerCount('message-added', true)).toBe(0);
       expect(getHandlerCount('message-streaming', true)).toBe(0);
       expect(getHandlerCount('message-complete', true)).toBe(0);
@@ -451,7 +451,7 @@ describe('useChat - Listener Cleanup Fix', () => {
 
       // Change session
       const session1 = createTestSession('session-1', []);
-      emitClientEvent('chat_session_changed', { chat_session: session1 });
+      emitSessionEvent('chat-session-changed', { currentChatSession: session1, previousChatSession: null });
 
       // Should still have exactly one handler
       expect(getHandlerCount('session-messages-loaded', true)).toBe(1);
@@ -466,7 +466,7 @@ describe('useChat - Listener Cleanup Fix', () => {
 
       // Change to session 2
       const session2 = createTestSession('session-2', []);
-      emitClientEvent('chat_session_changed', { chat_session: session2 });
+      emitSessionEvent('chat-session-changed', { currentChatSession: session2, previousChatSession: null });
 
       // Should STILL have exactly one handler (not accumulated)
       expect(getHandlerCount('session-messages-loaded', true)).toBe(1);

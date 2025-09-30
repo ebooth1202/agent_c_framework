@@ -30,7 +30,7 @@ export function ClientProvider({
   respectTurnState = true
 }: ClientProviderProps) {
   const router = useRouter();
-  const { isAuthenticated, isLoading: authLoading, getAuthToken } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, getAuthToken, getUiSessionId } = useAuth();
   const [configReady, setConfigReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,8 +54,9 @@ export function ClientProvider({
     }
   }, [authLoading, isAuthenticated, router]);
 
-  // Get auth token outside useMemo to avoid function reference dependency
+  // Get auth token and UI session ID outside useMemo to avoid function reference dependency
   const authToken = getAuthToken();
+  const uiSessionId = getUiSessionId();
 
   // Create client configuration
   const clientConfig = useMemo<RealtimeClientConfig | null>(() => {
@@ -68,6 +69,7 @@ export function ClientProvider({
     return {
       apiUrl: baseUrl,
       authToken: authToken,
+      uiSessionId: uiSessionId, // Pass UI session ID for reconnection support
       enableAudio,
       autoReconnect: true,
       
@@ -94,6 +96,7 @@ export function ClientProvider({
     };
   }, [
     authToken,
+    uiSessionId,
     apiUrl,
     enableAudio
   ]);

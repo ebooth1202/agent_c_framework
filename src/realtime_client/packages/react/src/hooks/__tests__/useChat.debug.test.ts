@@ -117,7 +117,7 @@ describe('useChat - Debug Race Condition', () => {
     
     // Trigger session change - this sets loading state asynchronously
     await act(async () => {
-      emitClientEvent('chat_session_changed', { chat_session: session });
+      emitSessionEvent('chat-session-changed', { currentChatSession: session, previousChatSession: null });
       // Give React time to process state updates
       await new Promise(resolve => setTimeout(resolve, 0));
     });
@@ -167,7 +167,7 @@ describe('useChat - Debug Race Condition', () => {
     
     // NEW: Trigger session change - clears messages and sets loading
     await act(async () => {
-      emitClientEvent('chat_session_changed', { chat_session: session });
+      emitSessionEvent('chat-session-changed', { currentChatSession: session, previousChatSession: null });
       await new Promise(resolve => setTimeout(resolve, 0));
     });
     

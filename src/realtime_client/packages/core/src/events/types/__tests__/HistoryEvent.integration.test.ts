@@ -74,8 +74,8 @@ class MessageFormatConverter {
   }
 }
 
-// Mock session manager for testing
-class SessionManager {
+// Mock chat session manager for testing
+class ChatSessionManager {
   private sessions: Map<string, { session: ChatSession; vendor: 'anthropic' | 'openai' }> = new Map();
   
   addSession(session: ChatSession, vendor: 'anthropic' | 'openai') {
@@ -113,12 +113,12 @@ class SessionManager {
 
 describe('HistoryEvent Integration', () => {
   let emitter: EventEmitter<Record<string, any>>;
-  let sessionManager: SessionManager;
+  let sessionManager: ChatSessionManager;
 
   beforeEach(() => {
     vi.clearAllMocks();
     emitter = new EventEmitter();
-    sessionManager = new SessionManager();
+    sessionManager = new ChatSessionManager();
   });
 
   afterEach(() => {
