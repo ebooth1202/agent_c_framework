@@ -500,7 +500,9 @@ class RealtimeBridge(ClientEventHandler):
             self._is_new_bridge = False
 
         await self.send_chat_session()
-        message = "# Welcome to Agent C\n\nFirst time here? Send '*Hello Domo*' to get started!"
+        #message = "# Welcome to Agent C\n\nFirst time here? Send '*Hello Domo*' to get started!"
+
+        message = "# Agent C Framework\n\n## What is Agent C?\n\nAgent C is a framework for building interactive, AI agents that make use of advanced planning and delegation patterns to accomplish much larger workloads per chat session than most. (to say the least) "
 
         if len(self.chat_session.messages) > 0:
             message = "# Welcome back Agent C\n\nYour previous session has been restored."
