@@ -73,9 +73,16 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
     const [actualScrollContainer, setActualScrollContainer] = React.useState<HTMLElement | null>(null)
     const scrollSentinelRef = React.useRef<HTMLDivElement>(null)
     const [isLoading, setIsLoading] = React.useState(false)
-    const [isAutoScrollEnabled, setIsAutoScrollEnabled] = React.useState(true)
+    const [isAutoScrollEnabled, setIsAutoScrollEnabledRaw] = React.useState(true)
     
-
+    // Wrapper to log ALL changes to the auto-scroll flag
+    const setIsAutoScrollEnabled = React.useCallback((value: boolean | ((prev: boolean) => boolean)) => {
+      const newValue = typeof value === 'function' ? value(isAutoScrollEnabled) : value
+      const stack = new Error().stack
+      const caller = stack ? stack.split('\n')[2] : 'unknown'
+      console.log(`[AUTO-SCROLL FLAG] Changing from ${isAutoScrollEnabled} to ${newValue}`, caller)
+      setIsAutoScrollEnabledRaw(value)
+    }, [isAutoScrollEnabled])
     const [hasCompletedInitialScroll, setHasCompletedInitialScroll] = React.useState(false)
 
     const previousSessionIdRef = React.useRef(currentSessionId)
@@ -118,7 +125,8 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
       const { scrollTop, scrollHeight, clientHeight } = actualScrollContainer
       const distanceFromBottom = scrollHeight - scrollTop - clientHeight
       
-
+      console.log(`[IS NEAR BOTTOM] scrollHeight: ${scrollHeight}, scrollTop: ${scrollTop}, clientHeight: ${clientHeight}, distance: ${distanceFromBottom}, threshold: ${scrollThreshold}`)
+      
       return distanceFromBottom <= scrollThreshold
     }, [actualScrollContainer, scrollThreshold])
     
@@ -134,14 +142,17 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
       })
     }, [])
     
-    // Scroll to bottom function
+    // Scroll to bottom function with better programmatic detection
     const scrollToBottom = React.useCallback((smooth = true) => {
+      console.log(`[SCROLL TO BOTTOM] Called with smooth=${smooth}, Flag is: ${isAutoScrollEnabled}`)
       if (!scrollSentinelRef.current || !actualScrollContainer) {
+        console.log('[SCROLL TO BOTTOM] Missing refs or scroll container - cannot scroll')
         return
       }
 
       
       // Use the sentinel element as the scroll target
+      console.log('[SCROLL TO BOTTOM] EXECUTING scrollIntoView NOW')
       scrollSentinelRef.current.scrollIntoView({ 
         behavior: smooth ? 'smooth' : 'auto',
         block: 'end'
@@ -150,7 +161,16 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
       // That's it. We scrolled. The user interaction handler will manage the flag.
     }, [actualScrollContainer, isAutoScrollEnabled])
     
-
+    // We don't need a separate scroll handler - user interaction handler does it all
+    // This is just for logging/debugging
+    const handleScroll = React.useCallback(() => {
+      // Just log scroll position for debugging
+      if (actualScrollContainer) {
+        const { scrollTop, scrollHeight, clientHeight } = actualScrollContainer
+        const distanceFromBottom = scrollHeight - scrollTop - clientHeight
+        console.log(`[SCROLL POSITION] Distance from bottom: ${distanceFromBottom}px, Flag: ${isAutoScrollEnabled}`)
+      }
+    }, [actualScrollContainer, isAutoScrollEnabled])
     
     // Find the actual scrolling container (the parent with overflow)
     React.useEffect(() => {
@@ -161,15 +181,22 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
       while (element) {
         const style = window.getComputedStyle(element)
         if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
+          console.log('[SCROLL DETECTION] Found actual scroll container:', element.className)
           setActualScrollContainer(element)
           break
         }
         element = element.parentElement
       }
+      
+      if (!element) {
+        console.log('[SCROLL DETECTION] WARNING: Could not find scrolling container!')
+      }
     }, [actualScrollContainer, isAutoScrollEnabled])
     
     // Detect user interactions - just check if they're at bottom or not
     const handleUserInteraction = React.useCallback((event: Event) => {
+      console.log(`[USER INTERACTION] Detected ${event.type} event`)
+      
       // Small delay to let the scroll position update
       setTimeout(() => {
         const nearBottom = isNearBottom()
@@ -177,11 +204,13 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
         if (nearBottom) {
           // User scrolled TO bottom - enable auto-scroll
           if (!isAutoScrollEnabled) {
+            console.log('[USER INTERACTION] User scrolled TO BOTTOM - ENABLING auto-scroll')
             setIsAutoScrollEnabled(true)
           }
         } else {
           // User scrolled UP/AWAY - disable auto-scroll
           if (isAutoScrollEnabled) {
+            console.log('[USER INTERACTION] User scrolled AWAY from bottom - DISABLING auto-scroll')
             setIsAutoScrollEnabled(false)
           }
         }
@@ -191,8 +220,14 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
     // Set up scroll event listener on the ACTUAL scrolling container
     React.useEffect(() => {
       if (!actualScrollContainer) {
+        console.log('[SCROLL LISTENER] No scroll container found yet')
         return
       }
+      
+      console.log('[SCROLL LISTENER] Attaching listeners to actual container')
+      
+      // Listen for scroll events
+      actualScrollContainer.addEventListener('scroll', handleScroll, { passive: true })
       
       // Listen for user interaction events that indicate manual scrolling
       actualScrollContainer.addEventListener('wheel', handleUserInteraction, { passive: true })
@@ -200,11 +235,12 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
       actualScrollContainer.addEventListener('mousedown', handleUserInteraction, { passive: true })
       
       return () => {
+        actualScrollContainer.removeEventListener('scroll', handleScroll)
         actualScrollContainer.removeEventListener('wheel', handleUserInteraction)
         actualScrollContainer.removeEventListener('touchmove', handleUserInteraction)  
         actualScrollContainer.removeEventListener('mousedown', handleUserInteraction)
       }
-    }, [actualScrollContainer, handleUserInteraction])
+    }, [actualScrollContainer, handleScroll, handleUserInteraction])
     
     // Track session changes and reset state
     React.useEffect(() => {
@@ -236,12 +272,18 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
     
     // DEAD SIMPLE Auto-scroll logic - just check the flag
     React.useEffect(() => {
+      console.log(`[AUTO-SCROLL EFFECT] Flag is: ${isAutoScrollEnabled}`)
+      
       // IF FLAG IS FALSE, DON'T SCROLL. PERIOD.
       if (!isAutoScrollEnabled) {
+        console.log('[AUTO-SCROLL EFFECT] FLAG IS FALSE - NOT SCROLLING')
         previousMessageCountRef.current = messages.length
         previousStreamingMessageRef.current = streamingMessage?.content as string || null
         return
       }
+      
+      // FLAG IS TRUE - Check if we have new content to scroll to
+      console.log('[AUTO-SCROLL EFFECT] FLAG IS TRUE - Checking for changes')
       
       const hasNewContent = messages.length !== previousMessageCountRef.current
       const isInitialLoad = previousMessageCountRef.current === 0 && messages.length > 0
@@ -251,16 +293,24 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
       const streamingContentChanged = streamingMessage && 
         currentStreamingContent !== previousStreamingMessageRef.current
       
+      if (streamingMessage) {
+        console.log(`[STREAMING CHECK] Previous: "${previousStreamingMessageRef.current?.slice(-50) || 'null'}", Current: "${currentStreamingContent?.slice(-50) || 'null'}"`)  
+      }
+      
       // Only scroll if something actually changed
       if (hasNewContent || streamingContentChanged || (isAgentTyping && !streamingMessage)) {
+        console.log(`[AUTO-SCROLL EFFECT] WILL SCROLL - hasNewContent: ${hasNewContent}, streamingChanged: ${streamingContentChanged}, typing: ${isAgentTyping && !streamingMessage}`)
         
         // Wait for DOM to update, then scroll
         waitForDOMUpdate().then(() => {
           // Get fresh value of flag from state
-          setIsAutoScrollEnabled((current: boolean) => {
+          setIsAutoScrollEnabledRaw(current => {
+            console.log(`[AUTO-SCROLL EFFECT] CHECKING FLAG AFTER DOM WAIT - Flag is: ${current}`)
             if (!current) {
+              console.log('[AUTO-SCROLL EFFECT] FLAG IS FALSE AFTER WAIT - NOT SCROLLING')
               return current
             }
+            console.log(`[AUTO-SCROLL EFFECT] FLAG IS TRUE - EXECUTING SCROLL NOW`)
           
           const useSmooth = !isInitialLoad && messages.length - previousMessageCountRef.current <= 2
             scrollToBottom(useSmooth)
@@ -271,6 +321,8 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
             return current
           })
         })
+      } else {
+        console.log(`[AUTO-SCROLL EFFECT] NO CHANGES - Not scrolling (hasNewContent: ${hasNewContent}, streamingChanged: ${streamingContentChanged})`)
       }
       
       // Update tracking refs
@@ -285,7 +337,12 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
     
     // Virtual scrolling logic (simplified for now - can be enhanced with react-window)
     const visibleItems = React.useMemo(() => {
+      Logger.debug('[MessageList] Computing visible items');
+      Logger.debug('[MessageList] enableVirtualScroll:', enableVirtualScroll);
+      Logger.debug('[MessageList] messages length:', messages.length);
+      
       if (!enableVirtualScroll) {
+        Logger.debug('[MessageList] Returning all items (no virtual scroll)');
         return messages
       }
       // For now, return all messages - in production, implement windowing
@@ -415,8 +472,10 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
                 if (!streamingMessage) return null
                 const isDuplicate = visibleItems.some(item => isMessageItem(item) && item.id === streamingMessage.id)
                 if (isDuplicate) {
+                  console.log(`[STREAMING MESSAGE] Skipping duplicate streaming message with id: ${streamingMessage.id}`)
                   return null
                 }
+                console.log(`[STREAMING MESSAGE] Rendering streaming message with id: ${streamingMessage.id}`)
                 return (
                   <Message
                     key={`streaming-${streamingMessage.id}`}

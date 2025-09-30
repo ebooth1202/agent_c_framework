@@ -203,7 +203,7 @@ export {
   SystemNotification,
   SystemNotificationContainer,
   TypingIndicator,
-
+  ScrollAnchor,
   ChatMessagesView,
   typingIndicatorStyles
 } from './components/chat';
@@ -218,7 +218,7 @@ export type {
   SystemNotificationData,
   NotificationSeverity,
   TypingIndicatorProps,
-
+  ScrollAnchorProps,
   ChatMessagesViewProps
 } from './components/chat';
 

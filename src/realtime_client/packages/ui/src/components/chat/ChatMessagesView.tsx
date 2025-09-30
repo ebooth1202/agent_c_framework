@@ -3,7 +3,7 @@
 import * as React from "react"
 import { cn } from "../../lib/utils"
 import { MessageList } from "./MessageList"
-
+import { ScrollAnchor } from "./ScrollAnchor"
 
 export interface ChatMessagesViewProps {
   className?: string
@@ -15,6 +15,8 @@ export interface ChatMessagesViewProps {
  */
 export const ChatMessagesView = React.forwardRef<HTMLDivElement, ChatMessagesViewProps>(
   ({ className }, ref) => {
+    const scrollRef = React.useRef<HTMLDivElement>(null)
+
     return (
       <div
         ref={ref}
@@ -24,12 +26,18 @@ export const ChatMessagesView = React.forwardRef<HTMLDivElement, ChatMessagesVie
         )}
       >
         {/* Scrollable message area - takes full height */}
-        <div className="h-full overflow-y-auto">
+        <div 
+          ref={scrollRef}
+          className="h-full overflow-y-auto"
+        >
           {/* Message list - remove fixed height, let it grow naturally */}
           <MessageList 
             className="max-w-4xl mx-auto px-4 py-4"
             maxHeight="none"
           />
+          
+          {/* Scroll anchor for auto-scrolling */}
+          <ScrollAnchor scrollContainerRef={scrollRef} />
         </div>
       </div>
     )
