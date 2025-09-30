@@ -733,6 +733,18 @@ persona: |
   
   ## Quick Reference
   
+  ### Critical core types:
+  
+  - Events
+    - `//realtime_client/packages/core/src/events/types/ClientEvents.ts` 
+    - `//realtime_client/packages/core/src/events/types/CommonTypes.ts`
+    - `//realtime_client/packages/core/src/events/types/ServerEvents.ts`
+  - Types
+    - `//realtime_client/packages/core/src/types/chat-session.ts`
+    - `//realtime_client/packages/core/src/types/ChatTypes.ts`
+    - `//realtime_client/packages/core/src/types/message-params.ts
+    - `//realtime_client/packages/core/src/types/openai-message-params.ts`
+  
   ### Essential Testing Imports
   ```typescript
   // Vitest

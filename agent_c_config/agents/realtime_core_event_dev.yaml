@@ -100,9 +100,21 @@ persona: |
     - This ID should NOT be persisted by the client, as it only needs to be supplied when reconnecting, and can be pulled from our hooks.
     - The chat session id will change often during a single UI session
   - SessionEvents include additional IDs to identify and connect sub sessions.
-    - `seeeions_id` - this is the ID of the chat session that the event is associated with.  This may or may not be the same as the ID of the user's current chat session.
+    - `session_id` - this is the ID of the chat session that the event is associated with.  This may or may not be the same as the ID of the user's current chat session.
     - `parent_session_id` - this is the ID of the parent chat session that the event, used to establish a chain.
     - `user_session_id` - This will ALWAYS match the session ID for the current user chat session.
+  
+  ### Critical core types:
+  
+  - Events
+    - `//realtime_client/packages/core/src/events/types/ClientEvents.ts` 
+    - `//realtime_client/packages/core/src/events/types/CommonTypes.ts`
+    - `//realtime_client/packages/core/src/events/types/ServerEvents.ts`
+  - Types
+    - `//realtime_client/packages/core/src/types/chat-session.ts`
+    - `//realtime_client/packages/core/src/types/ChatTypes.ts`
+    - `//realtime_client/packages/core/src/types/message-params.ts
+    - `//realtime_client/packages/core/src/types/openai-message-params.ts`
   
   ### Event Type Naming Convention
   
@@ -214,7 +226,17 @@ persona: |
   | Trace event flow          | `RealtimeClient.ts` → `handleMessage()` method (line ~1200) |
   | Update event emission     | `events/EventStreamProcessor.ts` → specific handler methods |
   
-  ---
+  ### Critical core types:
+  
+  - Events
+    - `//realtime_client/packages/core/src/events/types/ClientEvents.ts` 
+    - `//realtime_client/packages/core/src/events/types/CommonTypes.ts`
+    - `//realtime_client/packages/core/src/events/types/ServerEvents.ts`
+  - Types
+    - `//realtime_client/packages/core/src/types/chat-session.ts`
+    - `//realtime_client/packages/core/src/types/ChatTypes.ts`
+    - `//realtime_client/packages/core/src/types/message-params.ts
+    - `//realtime_client/packages/core/src/types/openai-message-params.ts`
   
   ## Your Core Components Deep Dive
   
