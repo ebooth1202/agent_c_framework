@@ -3,7 +3,7 @@
  * Manages error events that should be displayed as toasts, not in chat
  */
 
-import { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Logger } from '../utils/logger';
 import { useRealtimeClientSafe } from '../providers/AgentCContext';
 import type { ErrorInfo } from '../types/chat';
@@ -38,21 +38,21 @@ export interface UseErrorsReturn {
 export function useErrors(): UseErrorsReturn {
   const client = useRealtimeClientSafe();
   const [errors, setErrors] = useState<ErrorInfo[]>([]);
+  const errorTimersRef = React.useRef<Map<string, NodeJS.Timeout>>(new Map());
   
   // Add a new error to the list
   const addErrorInternal = useCallback((error: ErrorInfo) => {
+    const errorId = error.id;
     setErrors(prev => [...prev, error]);
     
-    // Auto-dismiss errors after 10 seconds
-    setTimeout(() => {
-      setErrors(prev => 
-        prev.map(err => 
-          err.id === error.id 
-            ? { ...err, dismissed: true } 
-            : err
-        )
-      );
+    // Auto-remove errors after 10 seconds (not just dismiss)
+    const timer = setTimeout(() => {
+      setErrors(prev => prev.filter(err => err.id !== errorId));
+      errorTimersRef.current.delete(errorId);
     }, 10000);
+    
+    // Store timer for cleanup
+    errorTimersRef.current.set(errorId, timer);
   }, []);
   
   // Handle error events from the server
@@ -95,18 +95,25 @@ export function useErrors(): UseErrorsReturn {
   const dismissError = useCallback((id: string) => {
     Logger.debug('[useErrors] Dismissing error:', id);
     
-    setErrors(prev => 
-      prev.map(err => 
-        err.id === id 
-          ? { ...err, dismissed: true } 
-          : err
-      )
-    );
+    // Clear any pending timer for this error
+    const timer = errorTimersRef.current.get(id);
+    if (timer) {
+      clearTimeout(timer);
+      errorTimersRef.current.delete(id);
+    }
+    
+    // Remove the error immediately
+    setErrors(prev => prev.filter(err => err.id !== id));
   }, []);
   
   // Clear all errors
   const clearErrors = useCallback(() => {
     Logger.debug('[useErrors] Clearing all errors');
+    
+    // Clear all timers
+    errorTimersRef.current.forEach(timer => clearTimeout(timer));
+    errorTimersRef.current.clear();
+    
     setErrors([]);
   }, []);
   
@@ -124,6 +131,10 @@ export function useErrors(): UseErrorsReturn {
     }
     
     return () => {
+      // Clear all timers on unmount
+      errorTimersRef.current.forEach(timer => clearTimeout(timer));
+      errorTimersRef.current.clear();
+      
       // Cleanup subscription
       const cleanupSessionManager = client?.getSessionManager();
       if (cleanupSessionManager) {

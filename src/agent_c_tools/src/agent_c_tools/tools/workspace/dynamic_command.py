@@ -140,23 +140,18 @@ class DynamicCommandTools(Toolset):
                 timeout=timeout,
                 suppress_success_output=suppress_success_output
             )
-            if result.status == "error":
+            if result.status == "blocked":
                 self.logger.warning(f"Agent run command blocked: {full_command}")
+                await tool_context['bridge'].send_tool_warning(__name__, f"Command blocked by policy or validator: {full_command}")
+            else:
+                status = "succeeded" if result.return_code == 0 else "failed"
+                result_message = (f"**{full_command}** - *{status}* in {result.duration_ms} ms with return code {result.return_code}\n"
+                                  f"<details>\n\n<summary>STDOUT</summary>\n\n"
+                                  f"```shell\n{result.stdout or '(no output)'}\n```\n\n</details>\n\n"
+                                  f"<details>\n\n<summary>STDERR</summary>\n\n"
+                                  f"```shell\n{result.stderr or '(no output)'}\n```\n\n</details>\n")
 
-            # 6) Optional UI: reuse the WorkspaceTools media helper so stdout shows in the panel.
-            try:
-                html = await MediaEventHelper.stdout_html(result.to_dict())
-                await self._raise_render_media(
-                    sent_by_class=workspace.__class__.__name__,
-                    sent_by_function=f"run_{base_cmd}",
-                    content_type="text/html",
-                    content=html,
-                    tool_context=tool_context,
-                )
-            except Exception:
-                # If media helper isn’t available here, you can omit UI rendering safely.
-                self.logger.debug("Media helper not available, skipping media rendering.")
-                pass
+                await tool_context['bridge'].raise_render_media_markdown(result_message)
 
             # 7) Return YAML, capped by tokens if we have a counter.
             counter = tool_context.get("agent_runtime").count_tokens if tool_context else None

@@ -6,5 +6,6 @@ onlyBuiltDependencies:
   - msw
   - nx
   - protobufjs
+  - sharp
   - table
   - unrs-resolver

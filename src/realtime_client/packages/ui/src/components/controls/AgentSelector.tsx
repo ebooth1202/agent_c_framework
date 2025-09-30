@@ -10,7 +10,7 @@
 import * as React from "react"
 import * as ReactDOM from "react-dom"
 import { Bot, Check, ChevronDown, Loader2, Search, X } from "lucide-react"
-import { useAgentCData, useConnection, useRealtimeClientSafe } from "@agentc/realtime-react"
+import { useAgentCData, useConnection, useRealtimeClientSafe, AgentStorage } from "@agentc/realtime-react"
 import type { Agent } from "@agentc/realtime-react"
 import { cn } from "../../lib/utils"
 import { Badge } from "../ui/badge"
@@ -371,6 +371,17 @@ export const AgentSelector = React.forwardRef<HTMLButtonElement, AgentSelectorPr
       setOpen(false)
       
       try {
+        // Persist agent selection to localStorage
+        try {
+          AgentStorage.saveAgentKey(agentKey)
+        } catch (error) {
+          console.error('Failed to persist agent selection:', error)
+          // Continue with selection even if persistence fails
+        }
+        
+        // Update the client's preferred agent for future connections
+        client.setPreferredAgentKey(agentKey)
+        
         // Just call setAgent - the hook will update when server confirms
         client.setAgent(agentKey)
       } finally {

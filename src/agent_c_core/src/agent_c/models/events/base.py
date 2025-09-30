@@ -19,10 +19,10 @@ class BaseEvent(BaseModel):
             If 'type' is not provided in the data, it will be automatically set to
             the snake_case version of the class name, without "event".
     """
-    type: str = Field(..., description="The type of the event. Defaults to the snake case class name without event" )
+    type: str = Field(default_factory=lambda: None, description="The type of the event. Defaults to the snake case class name without event" )
 
     def __init__(self, **data: Any) -> None:
-        if 'type' not in data:
+        if 'type' not in data or data['type'] is None:
             data['type'] = to_snake_case(self.__class__.__name__.removesuffix('Event'))
 
         super().__init__(**data)

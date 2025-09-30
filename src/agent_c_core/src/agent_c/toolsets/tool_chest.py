@@ -520,7 +520,9 @@ class ToolChest:
             return await src_obj.call(function_id, function_args)
         except Exception as e:
             self.logger.exception(f"Failed calling {function_id} on {src_obj.name}. {e}", stacklevel=3)
-            return f"# CRITICAL ERROR!  THIS IS A HALT CONDITION\nImportant! Tell the user an error occurred calling {function_id} on {src_obj.name}. {e}\n\n HALT AND INFORM THE USER!!"
+            function_args['tool_context']['bridge'].send_system_message(f"# CRITICAL ERROR\n\nFailed calling {function_id} on {src_obj.name}.\n{e}\n", "error")
+            function_args['tool_context']['bridge'].send_error(f"CRITICAL ERROR: Failed calling {function_id} on {src_obj.name}. {e}")
+            return f"HALT AND INFORM THE USER!!\n# CRITICAL ERROR!  THIS IS A HALT CONDITION\nImportant! Tell the user an error occurred calling {function_id} on {src_obj.name}. {e}\n\nHALT AND INFORM THE USER!!"
 
     def get_inference_data(self, toolset_names: List[str], tool_format: str = "claude") -> Dict[str, Any]:
         """

@@ -7,6 +7,7 @@ import { ClientProvider } from '@/components/providers/client-provider';
 import { ChatLayout } from '@/components/layout/ChatLayout';
 import { Skeleton, Card, CardHeader, CardTitle, CardDescription, Button } from '@agentc/realtime-ui';
 
+
 /**
  * AuthGuard component - Ensures user is authenticated before rendering children
  */
@@ -70,6 +71,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 function ChatContent() {
   const [sessionName, setSessionName] = useState<string>('New Chat');
   const [outputMode, setOutputMode] = useState<'chat' | 'avatar' | 'voice'>('chat');
+
 
   // Handle output mode changes
   const handleOutputModeChange = (mode: string) => {

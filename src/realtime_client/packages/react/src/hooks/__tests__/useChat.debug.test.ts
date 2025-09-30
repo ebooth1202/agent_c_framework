@@ -151,28 +151,43 @@ describe('useChat - Debug Race Condition', () => {
     expect(result.current.messages[0]?.content).toBe('Test message');
   });
   
-  it('Session switch with inline messages (backward compat)', () => {
+  it('Session switch follows new event pattern', async () => {
     const { result } = renderHook(() => useChat());
     
-    const inlineMessages = [
-      createMessage('user', 'Inline message 1'),
-      createMessage('assistant', 'Inline message 2')
+    const sessionMessages = [
+      createMessage('user', 'Session message 1'),
+      createMessage('assistant', 'Session message 2')
     ];
     
-    // Session WITH messages property (old format)
-    const sessionWithInline: ChatSession = {
-      session_id: 'inline-session',
-      messages: inlineMessages,
+    // Session WITHOUT messages property (new format)
+    const session: ChatSession = {
+      session_id: 'new-session',
       context: {}
     } as ChatSession;
     
-    // Trigger session change with inline messages
-    emitClientEvent('chat_session_changed', { chat_session: sessionWithInline });
+    // NEW: Trigger session change - clears messages and sets loading
+    await act(async () => {
+      emitClientEvent('chat_session_changed', { chat_session: session });
+      await new Promise(resolve => setTimeout(resolve, 0));
+    });
     
-    // Messages should be loaded immediately
-    console.log('[TEST] Messages after inline load:', result.current.messages);
+    // Messages should be cleared during loading
+    console.log('[TEST] Messages after session change:', result.current.messages);
+    expect(result.current.messages).toHaveLength(0);
+    expect(result.current.currentSessionId).toBe('new-session');
+    
+    // NEW: Emit session-messages-loaded to deliver messages
+    await act(async () => {
+      emitSessionEvent('session-messages-loaded', {
+        sessionId: 'new-session',
+        messages: sessionMessages
+      });
+    });
+    
+    // Now messages should be loaded
+    console.log('[TEST] Messages after load:', result.current.messages);
     expect(result.current.messages).toHaveLength(2);
-    expect(result.current.messages[0]?.content).toBe('Inline message 1');
-    expect(result.current.messages[1]?.content).toBe('Inline message 2');
+    expect(result.current.messages[0]?.content).toBe('Session message 1');
+    expect(result.current.messages[1]?.content).toBe('Session message 2');
   });
 });

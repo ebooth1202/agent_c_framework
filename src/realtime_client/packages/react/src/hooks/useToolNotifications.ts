@@ -174,35 +174,34 @@ export function useToolNotifications(
         removalTimersRef.current.delete(toolId);
       }
       
-      // Get the notification before removing it
-      const notification = notifications.get(toolId);
-      
-      // Remove the notification
+      // Remove the notification and get it for potential completed list addition
       setNotifications(prev => {
         const next = new Map(prev);
+        const notification = prev.get(toolId);
         next.delete(toolId);
+        
+        // If it was a completed notification with arguments, add to completed list
+        if (notification && notification.status === 'complete' && notification.arguments) {
+          const toolCallResult: ToolCallResult = {
+            id: notification.id,
+            toolName: notification.toolName,
+            arguments: notification.arguments,
+            result: '', // Will be populated from tool_call event
+            timestamp: notification.timestamp
+          };
+          
+          setCompletedToolCalls(prev => {
+            const next = [...prev, toolCallResult];
+            // Limit completed calls if needed
+            if (maxNotifications && next.length > maxNotifications) {
+              return next.slice(-maxNotifications);
+            }
+            return next;
+          });
+        }
+        
         return next;
       });
-      
-      // If it was a completed notification with arguments, add to completed list
-      if (notification && notification.status === 'complete' && notification.arguments) {
-        const toolCallResult: ToolCallResult = {
-          id: notification.id,
-          toolName: notification.toolName,
-          arguments: notification.arguments,
-          result: '', // Will be populated from tool_call event
-          timestamp: notification.timestamp
-        };
-        
-        setCompletedToolCalls(prev => {
-          const next = [...prev, toolCallResult];
-          // Limit completed calls if needed
-          if (maxNotifications && next.length > maxNotifications) {
-            return next.slice(-maxNotifications);
-          }
-          return next;
-        });
-      }
     };
     
     // Handle tool call complete events (with results)
@@ -259,7 +258,7 @@ export function useToolNotifications(
         cleanupSessionManager.off('tool-call-complete', handleToolCallComplete);
       }
     };
-  }, [client, maxNotifications, autoRemoveCompleted, autoRemoveDelay, notifications]);
+  }, [client, maxNotifications, autoRemoveCompleted, autoRemoveDelay]); // Removed notifications to prevent re-registration
   
   // Computed properties
   const notificationsArray = Array.from(notifications.values());

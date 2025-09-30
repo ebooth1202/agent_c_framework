@@ -21,7 +21,8 @@
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
     "test:integration": "vitest run --grep '\\.integration\\.'",
-    "test:unit": "vitest run --grep -v '\\.integration\\.'"
+    "test:unit": "vitest run --grep -v '\\.integration\\.'",
+    "test:markdown-verify": "node test-markdown-verify.js"
   },
   "peerDependencies": {
     "react": "^18.0.0",
@@ -60,7 +61,6 @@
     "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@tanstack/react-virtual": "^3.13.12",
-    "@testing-library/user-event": "^14.6.1",
     "@tiptap/core": "^2.26.1",
     "@tiptap/extension-code-block-lowlight": "^2.26.1",
     "@tiptap/extension-link": "^2.26.1",
@@ -75,7 +75,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
-    "dompurify": "^3.2.6",
+    "dompurify": "^3.2.7",
     "framer-motion": "^12.23.12",
     "highlight.js": "^11.11.1",
     "js-cookie": "^3.0.5",
@@ -93,12 +93,14 @@
     "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
+    "@jackfranklin/test-data-bot": "^2.1.0",
     "@testing-library/jest-dom": "^6.8.0",
-    "@types/dompurify": "^3.2.0",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "^18.3.24",
     "@types/react-dom": "^18.3.7",
     "autoprefixer": "^10.4.21",
     "jest-axe": "^10.0.0",
+    "msw": "^2.11.3",
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.17",
     "tsup": "^8.0.0",

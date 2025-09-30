@@ -82,12 +82,14 @@ export const defaultMockStates = {
   },
   agentCData: {
     agents: [],
+    currentAgent: null,
     voices: [],
     avatars: [],
     tools: [],
     selectedAgent: null,
     selectAgent: vi.fn(),
     isLoading: false,
+    loading: false,
     error: null,
   },
   initializationStatus: {
@@ -144,10 +146,31 @@ export const getConnectionStateString = vi.fn((state: string) => state);
 // Provider mock
 export const AgentCProvider = vi.fn(({ children }) => children);
 
+// AgentStorage mock for localStorage persistence
+export const AgentStorage = {
+  saveAgentKey: vi.fn(),
+  loadAgentKey: vi.fn(),
+  clearAgentKey: vi.fn(),
+};
+
 // Type exports to match the real package
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
 export type OutputMode = 'voice' | 'text' | 'both';
 export type TurnState = 'idle' | 'user_speaking' | 'agent_speaking' | 'processing';
+
+// Agent type export
+export interface Agent {
+  key: string;
+  name: string;
+  description?: string;
+  metadata?: {
+    tags?: string[];
+    category?: string;
+    [key: string]: any;
+  };
+  status?: string;
+  [key: string]: any;
+}
 
 // ChatItem type exports
 export type ChatItemType = 'message' | 'divider' | 'media' | 'system_alert';
@@ -207,14 +230,20 @@ export function updateMockState(hook: string, newState: any) {
     chatSessionList: useChatSessionList,
     toolNotifications: useToolNotifications,
     errors: useErrors,
+    client: useRealtimeClientSafe,
   };
   
   const mockHook = hookMap[hook as keyof typeof hookMap];
   if (mockHook) {
-    mockHook.mockReturnValue({
-      ...defaultMockStates[hook as keyof typeof defaultMockStates],
-      ...newState,
-    });
+    // Special handling for client
+    if (hook === 'client') {
+      mockHook.mockReturnValue(newState);
+    } else {
+      mockHook.mockReturnValue({
+        ...defaultMockStates[hook as keyof typeof defaultMockStates],
+        ...newState,
+      });
+    }
   }
 }
 

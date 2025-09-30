@@ -65,13 +65,18 @@ class RealtimeSessionManager:
         return await self.create_realtime_session(user)
 
 
-    async def create_realtime_session(self, user: ChatUser, session_id: Optional[str] = None) -> RealtimeSession:
+    async def create_realtime_session(self, user: ChatUser, session_id: Optional[str] = None,
+                                      chat_session_id: Optional[str] = None,
+                                      agent_key: Optional[str] = None) -> RealtimeSession:
         """
         Create a new session or update an existing session with a new agent.
 
         Args:
             user: The chat user for the session
             session_id: Optional session ID to use; if None, a new ID is generated
+            chat_session_id: Optional chat session ID to resume
+            agent_key: Optional agent key to initialize the session with a specific agent
+
         Returns:
             RealtimeSession: The bridge handling the session
         """
@@ -86,8 +91,8 @@ class RealtimeSessionManager:
         self._locks[ui_session_id] = asyncio.Lock()
 
         async with self._locks[ui_session_id]:
-            agent_bridge = RealtimeBridge(user, ui_session_id, self.chat_session_manager)
-            await agent_bridge.initialize()
+            agent_bridge = RealtimeBridge(self, user, ui_session_id, self.chat_session_manager)
+            await agent_bridge.initialize(chat_session_id, agent_key)
             self.ui_sessions[ui_session_id] = RealtimeSession(session_id=ui_session_id, user_id=user.user_id, bridge=agent_bridge)
 
             self.logger.info(f"Session {ui_session_id} created")

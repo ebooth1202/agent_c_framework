@@ -83,8 +83,8 @@ class AgentCloneTools(AgentAssistToolBase):
                                              sub_agent_type="clone",  prime_agent_key=calling_agent_config.key,
                                              agent_session_id=agent_session_id
                                              )
+        await tool_context['bridge'].send_system_message(f"Clone oneshot interaction complete for {calling_agent_config.key}.", "info")
 
-        await self._render_media_markdown(f"Interaction complete for Agent Clone oneshot. Control returned to prime agent.", "oneshot", tool_context=tool_context)
 
         if messages is not None and len(messages) > 0:
             last_message = messages[-1]
@@ -151,10 +151,7 @@ class AgentCloneTools(AgentAssistToolBase):
 
             self.agent_loader.catalog[agent_key] = clone_config
 
-        await self._render_media_markdown(markdown.markdown(f"**Prime** agent requesting assistance from clone:\n\n{orig_message}\n\n## Clone context:\n{process_context}"),
-                                                            "chat",
-                                                            tool_context=tool_context,
-                                                            streaming_callback=tool_context['streaming_callback'])
+
         content = f"**Prime agent** requesting assistance:\n\n{message}"
         user_session_id = tool_context.get('user_session_id', tool_context['session_id'])
         parent_session_id = tool_context.get('session_id')
@@ -165,6 +162,8 @@ class AgentCloneTools(AgentAssistToolBase):
                                                            parent_session_id=parent_session_id,
                                                            sub_agent_type="clone", prime_agent_key=calling_agent_config.key
                                                            )
+
+        await tool_context['bridge'].send_system_message(f"Clone chat interaction complete for {calling_agent_config.key}.", "info")
 
         if messages is not None and len(messages) > 0:
             last_message = messages[-1]

@@ -534,8 +534,7 @@ export const serverEventFixtures = {
     sent_by_function: 'render_chart',
     foreign_content: false,  // SECURITY: Content is internally generated
     url: undefined,
-    name: 'Chart Visualization',
-    content_bytes: 28
+    name: 'Chart Visualization'
   } as RenderMediaEvent,
 
   renderMediaForeign: {
@@ -548,8 +547,7 @@ export const serverEventFixtures = {
     sent_by_function: 'fetch_external_content',
     foreign_content: true,  // SECURITY: Content from external source - MUST SANITIZE
     url: 'https://external.com/content',
-    name: 'External Content',
-    content_bytes: 45
+    name: 'External Content'
   } as RenderMediaEvent,
 };
 

@@ -10,12 +10,10 @@ pip install -e agent_c_tools
 playwright install
 pip install -e agent_c_api_ui/agent_c_api[dev]
 
-echo "Installing NPM dependencies..."
-cd agent_c_api_ui/agent_c_react_client  # Use forward slashes for Linux/macOS
-npm install
+
 echo "Performing a clean build of the realtime client..."
-cd ../../realtime_client
-ppm install
+cd  realtime_client
+scripts/rebuild.sh
 
 echo "Initial setup completed successfully."
 echo "Remember to activate the virtual environment with 'source .venv/bin/activate' before you start working."

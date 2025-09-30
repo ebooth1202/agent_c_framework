@@ -9,4 +9,4 @@ if "%CD:~-7%"=="scripts" (
     cd ..
 )
 cd src\realtime_client\packages\demo
-pnpm dev
+pnpm run dev:docker

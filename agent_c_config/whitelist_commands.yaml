@@ -2,7 +2,7 @@ git:
   description: "Read-only/metadata git operations (no mutations)."
   subcommands:
     status:  { flags: ["--porcelain", "-s", "-b", "--no-color"], timeout: 20 }
-    log:     { flags: ["--oneline","--graph","--decorate","-n","-p", "--no-color"] }
+    log:     { flags: ["--oneline","--graph","--decorate","-n","-p", "--no-color", "-20"] }
     show:    { flags: ["--name-only","--stat","-p", "--no-color"] }
     diff:    { flags: ["--name-only","--stat","--cached","-p", "--no-color"] }
     add: { "flags": [ ] }

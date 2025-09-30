@@ -57,7 +57,22 @@ export interface SessionManagerEventMap {
   };
   'media-added': {
     sessionId: string;
-    media: EnhancedMessage;
+    media: {
+      id: string;
+      role: string;
+      type: 'media';
+      content?: string;        
+      contentType: string;     
+      timestamp: string;
+      status: 'streaming' | 'complete' | 'error';
+      metadata: {
+        sent_by_class?: string;
+        sent_by_function?: string;
+        foreign_content: boolean;
+        url?: string;
+        name?: string;
+      };
+    };
   };
   // DEPRECATED: Use 'system_message' instead for API naming consistency
   'system-notification': {

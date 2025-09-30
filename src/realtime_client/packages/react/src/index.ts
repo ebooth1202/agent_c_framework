@@ -14,5 +14,8 @@ export * from './providers';
 // Export types
 export * from './types';
 
+// Export utilities
+export { AgentStorage } from './utils/agentStorage';
+
 // Note: Components will be added later
 // export * from './components';

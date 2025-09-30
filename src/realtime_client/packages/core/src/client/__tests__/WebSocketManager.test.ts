@@ -4,31 +4,21 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { WebSocketManager } from '../WebSocketManager';
-import { mockWebSocket, MockWebSocketConstructor } from '../../test/mocks/websocket.mock';
+import { WebSocketTracker, MockWebSocket } from '../../test/mocks/websocket.mock';
 import { clientEventFixtures, serverEventFixtures, audioFixtures } from '../../test/fixtures/protocol-events';
 
-// Replace global WebSocket with mock
-vi.stubGlobal('WebSocket', MockWebSocketConstructor);
-
 describe('WebSocketManager', () => {
+  let wsTracker: WebSocketTracker;
+  let mockWs: MockWebSocket;
+
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset mock manually to avoid issues with onopen/onclose/etc
-    mockWebSocket.send.mockReset();
-    mockWebSocket.close.mockReset();
-    mockWebSocket.addEventListener.mockReset();
-    mockWebSocket.removeEventListener.mockReset();
-    mockWebSocket.readyState = WebSocket.OPEN;
-    mockWebSocket.binaryType = 'arraybuffer';
-    // Reset event handlers to null
-    mockWebSocket.onopen = null;
-    mockWebSocket.onclose = null;
-    mockWebSocket.onerror = null;
-    mockWebSocket.onmessage = null;
-    MockWebSocketConstructor.mockClear();
+    wsTracker = new WebSocketTracker();
+    wsTracker.install();
   });
 
   afterEach(() => {
+    wsTracker.uninstall();
     vi.restoreAllMocks();
   });
 
@@ -95,28 +85,28 @@ describe('WebSocketManager', () => {
 
     it('should return false when CONNECTING', () => {
       const manager = new WebSocketManager({ url: 'ws://test' });
-      manager['ws'] = { readyState: WebSocket.CONNECTING } as any;
+      manager['ws'] = { readyState: MockWebSocket.CONNECTING } as any;
       
       expect(manager.isConnected()).toBe(false);
     });
 
     it('should return false when CLOSING', () => {
       const manager = new WebSocketManager({ url: 'ws://test' });
-      manager['ws'] = { readyState: WebSocket.CLOSING } as any;
+      manager['ws'] = { readyState: MockWebSocket.CLOSING } as any;
       
       expect(manager.isConnected()).toBe(false);
     });
 
     it('should return false when CLOSED', () => {
       const manager = new WebSocketManager({ url: 'ws://test' });
-      manager['ws'] = { readyState: WebSocket.CLOSED } as any;
+      manager['ws'] = { readyState: MockWebSocket.CLOSED } as any;
       
       expect(manager.isConnected()).toBe(false);
     });
 
     it('should return true when OPEN', () => {
       const manager = new WebSocketManager({ url: 'ws://test' });
-      manager['ws'] = { readyState: WebSocket.OPEN } as any;
+      manager['ws'] = { readyState: MockWebSocket.OPEN } as any;
       
       expect(manager.isConnected()).toBe(true);
     });
@@ -131,7 +121,7 @@ describe('WebSocketManager', () => {
 
     it('should throw when WebSocket not OPEN', () => {
       const manager = new WebSocketManager({ url: 'ws://test' });
-      manager['ws'] = { readyState: WebSocket.CONNECTING } as any;
+      manager['ws'] = { readyState: MockWebSocket.CONNECTING, send: vi.fn() } as any;
       
       expect(() => manager.send('test')).toThrow('WebSocket is not open');
     });
@@ -300,7 +290,9 @@ describe('WebSocketManager', () => {
       
       manager.connect();
       
-      expect(MockWebSocketConstructor).toHaveBeenCalledWith('ws://test', undefined);
+      const instances = wsTracker.getAll();
+      expect(instances).toHaveLength(1);
+      expect(instances[0].url).toBe('ws://test');
     });
 
     it('should create WebSocket with protocols', () => {
@@ -311,7 +303,10 @@ describe('WebSocketManager', () => {
       
       manager.connect();
       
-      expect(MockWebSocketConstructor).toHaveBeenCalledWith('ws://test', ['p1', 'p2']);
+      const instances = wsTracker.getAll();
+      expect(instances).toHaveLength(1);
+      expect(instances[0].url).toBe('ws://test');
+      expect(instances[0].protocol).toBe('p1'); // First protocol is selected
     });
 
     it('should set binaryType to arraybuffer', () => {
@@ -319,7 +314,8 @@ describe('WebSocketManager', () => {
       
       manager.connect();
       
-      expect(mockWebSocket.binaryType).toBe('arraybuffer');
+      mockWs = wsTracker.getLatest()!;
+      expect(mockWs.binaryType).toBe('arraybuffer');
     });
 
     it('should call disconnect if already connected', () => {
@@ -337,7 +333,8 @@ describe('WebSocketManager', () => {
       
       manager.connect();
       
-      expect(manager['ws']).toBe(mockWebSocket);
+      mockWs = wsTracker.getLatest()!;
+      expect(manager['ws']).toBe(mockWs);
     });
 
     it('should set custom binaryType from options', () => {
@@ -348,7 +345,8 @@ describe('WebSocketManager', () => {
       
       manager.connect();
       
-      expect(mockWebSocket.binaryType).toBe('blob');
+      mockWs = wsTracker.getLatest()!;
+      expect(mockWs.binaryType).toBe('blob');
     });
   });
 
@@ -451,12 +449,12 @@ describe('WebSocketManager', () => {
       expect(ws.onmessage).toBeNull();
     });
 
-    it('should still call close even when already CLOSED', () => {
+    it('should not call close when already CLOSED', () => {
       const mockClose = vi.fn();
       const manager = new WebSocketManager({ url: 'ws://test' });
       manager['ws'] = { 
         close: mockClose, 
-        readyState: WebSocket.CLOSED,
+        readyState: MockWebSocket.CLOSED,
         onopen: null,
         onclose: null,
         onerror: null,
@@ -465,7 +463,7 @@ describe('WebSocketManager', () => {
       
       manager.disconnect();
       
-      // WebSocketManager checks for OPEN state, so close won't be called when CLOSED
+      // WebSocketManager checks readyState and doesn't call close if not OPEN
       expect(mockClose).not.toHaveBeenCalled();
     });
   });
@@ -479,10 +477,11 @@ describe('WebSocketManager', () => {
       );
       
       manager.connect();
+      mockWs = wsTracker.getLatest()!;
       
       // Simulate open event
       const event = new Event('open');
-      mockWebSocket.onopen!(event);
+      mockWs.onopen!(event);
       
       expect(onOpen).toHaveBeenCalledWith(event);
     });
@@ -495,10 +494,11 @@ describe('WebSocketManager', () => {
       );
       
       manager.connect();
+      mockWs = wsTracker.getLatest()!;
       
       // Simulate close event - CloseEvent not available in test env, use Event
       const event = { type: 'close', code: 1000, reason: 'Normal' } as any;
-      mockWebSocket.onclose!(event);
+      mockWs.onclose!(event);
       
       expect(onClose).toHaveBeenCalledWith(event);
     });
@@ -511,10 +511,11 @@ describe('WebSocketManager', () => {
       );
       
       manager.connect();
+      mockWs = wsTracker.getLatest()!;
       
       // Simulate error event
       const event = new Event('error');
-      mockWebSocket.onerror!(event);
+      mockWs.onerror!(event);
       
       expect(onError).toHaveBeenCalledWith(event);
     });
@@ -527,11 +528,12 @@ describe('WebSocketManager', () => {
       );
       
       manager.connect();
+      mockWs = wsTracker.getLatest()!;
       
       // Simulate text message
       const data = JSON.stringify(serverEventFixtures.textDelta);
       const event = new MessageEvent('message', { data });
-      mockWebSocket.onmessage!(event);
+      mockWs.onmessage!(event);
       
       expect(onMessage).toHaveBeenCalledWith(data);
     });
@@ -544,11 +546,12 @@ describe('WebSocketManager', () => {
       );
       
       manager.connect();
+      mockWs = wsTracker.getLatest()!;
       
       // Simulate binary message
       const data = audioFixtures.audioOutputFrame;
       const event = new MessageEvent('message', { data });
-      mockWebSocket.onmessage!(event);
+      mockWs.onmessage!(event);
       
       expect(onMessage).toHaveBeenCalledWith(data);
     });
@@ -568,7 +571,8 @@ describe('WebSocketManager', () => {
       const manager = new WebSocketManager({ url: 'ws://test' });
       
       manager.connect();
-      mockWebSocket.onopen!(new Event('open'));
+      mockWs = wsTracker.getLatest()!;
+      mockWs.onopen!(new Event('open'));
       
       expect(setIntervalSpy).not.toHaveBeenCalled();
     });
@@ -581,7 +585,8 @@ describe('WebSocketManager', () => {
       });
       
       manager.connect();
-      mockWebSocket.onopen!(new Event('open'));
+      mockWs = wsTracker.getLatest()!;
+      mockWs.onopen!(new Event('open'));
       
       expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), 30000);
     });
@@ -593,12 +598,16 @@ describe('WebSocketManager', () => {
       });
       
       manager.connect();
-      mockWebSocket.onopen!(new Event('open'));
+      mockWs = wsTracker.getLatest()!;
+      
+      // Make sure WebSocket is open
+      mockWs.readyState = MockWebSocket.OPEN;
+      mockWs.onopen!(new Event('open'));
       
       // Advance timer to trigger ping
       vi.advanceTimersByTime(30000);
       
-      expect(mockWebSocket.send).toHaveBeenCalledWith(JSON.stringify({ type: 'ping' }));
+      expect(mockWs.send).toHaveBeenCalledWith(JSON.stringify({ type: 'ping' }));
     });
 
     it('should reset isAlive on any message', () => {
@@ -608,7 +617,8 @@ describe('WebSocketManager', () => {
       });
       
       manager.connect();
-      mockWebSocket.onopen!(new Event('open'));
+      mockWs = wsTracker.getLatest()!;
+      mockWs.onopen!(new Event('open'));
       
       // Set isAlive to false
       manager['isAlive'] = false;
@@ -617,7 +627,7 @@ describe('WebSocketManager', () => {
       const event = new MessageEvent('message', { 
         data: JSON.stringify(serverEventFixtures.pong)
       });
-      mockWebSocket.onmessage!(event);
+      mockWs.onmessage!(event);
       
       expect(manager['isAlive']).toBe(true);
     });
@@ -630,7 +640,8 @@ describe('WebSocketManager', () => {
       manager.disconnect = vi.fn();
       
       manager.connect();
-      mockWebSocket.onopen!(new Event('open'));
+      mockWs = wsTracker.getLatest()!;
+      mockWs.onopen!(new Event('open'));
       
       // First ping sets isAlive to false
       vi.advanceTimersByTime(30000);
@@ -642,7 +653,6 @@ describe('WebSocketManager', () => {
     });
 
     it('should set pong timeout when configured', () => {
-      const setTimeoutSpy = vi.spyOn(global, 'setTimeout');
       const manager = new WebSocketManager({ 
         url: 'ws://test',
         pingInterval: 30000,
@@ -650,7 +660,15 @@ describe('WebSocketManager', () => {
       });
       
       manager.connect();
-      mockWebSocket.onopen!(new Event('open'));
+      mockWs = wsTracker.getLatest()!;
+      
+      // Clear existing setTimeout calls from mock auto-open
+      vi.clearAllTimers();
+      const setTimeoutSpy = vi.spyOn(global, 'setTimeout');
+      
+      // Make sure WebSocket is open
+      mockWs.readyState = MockWebSocket.OPEN;
+      mockWs.onopen!(new Event('open'));
       
       // Trigger ping
       vi.advanceTimersByTime(30000);
