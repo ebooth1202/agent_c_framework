@@ -8,15 +8,12 @@ from datetime import datetime
 from functools import singledispatchmethod
 from typing import List, Optional, Any, Dict, AsyncIterator, Union, TYPE_CHECKING
 
+from agent_c_api.models.user_runtime_cache_entry import UserRuntimeCacheEntry
 from fastapi import WebSocket, WebSocketDisconnect
 from starlette.websockets import WebSocketState
 
-from agent_c.agents import ClaudeChatAgent, BaseAgent
-from agent_c.agents.claude import ClaudeBedrockChatAgent
-from agent_c.agents.gpt import AzureGPTChatAgent, GPTChatAgent
 from agent_c.chat import ChatSessionManager
-from agent_c.config import ModelConfigurationLoader
-from agent_c.config.agent_config_loader import AgentConfigLoader
+
 from agent_c.models import ChatSession, ChatUser
 from agent_c.models.events import BaseEvent, TextDeltaEvent, HistoryEvent, RenderMediaEvent
 from agent_c.models.heygen import HeygenAvatarSessionData, NewSessionRequest
@@ -25,7 +22,7 @@ from agent_c.models.input.file_input import FileInput
 from agent_c.models.input.image_input import ImageInput
 from agent_c.prompting import PromptBuilder, EnvironmentInfoSection
 from agent_c.prompting.basic_sections.persona import DynamicPersonaSection
-from agent_c.toolsets import Toolset, ToolChest, ToolCache
+from agent_c.toolsets import Toolset, ToolChest
 from agent_c.util import MnemonicSlugs
 from agent_c.util.heygen_streaming_avatar_client import HeyGenStreamingClient
 from agent_c.util.logging_utils import LoggingManager
@@ -39,14 +36,11 @@ from agent_c_api.core.event_handlers.client_event_handlers import ClientEventHan
 from agent_c_api.core.file_handler import RTFileHandler
 from agent_c_api.core.voice.models import open_ai_voice_models, AvailableVoiceModel, heygen_avatar_voice_model, no_voice_model
 from agent_c_api.core.voice.voice_io_manager import VoiceIOManager
-from agent_c_tools.tools.workspace.local_storage  import LocalStorageWorkspace
+
 from agent_c_tools.tools.think.prompt import ThinkSection
-from agent_c_tools.tools.workspace.base import BaseWorkspace
-from agent_c_tools.tools.workspace.local_project import LocalProjectWorkspace
 from agent_c.models.events import  SystemMessageEvent
 
 if TYPE_CHECKING:
-    from agent_c.models.agent_config import CurrentAgentConfiguration
     from agent_c.chat import ChatSessionManager
     from agent_c_api.core.realtime_session_manager import RealtimeSessionManager
 
@@ -63,18 +57,15 @@ OPENAI_REASONING_MODELS = ['o1', 'o1-mini', 'o3', 'o3-mini']
 
 
 class RealtimeBridge(ClientEventHandler):
-    __vendor_agent_map = {
-        "azure_openai": AzureGPTChatAgent,
-        "openai": GPTChatAgent,
-        "claude": ClaudeChatAgent,
-        "bedrock": ClaudeBedrockChatAgent
-    }
 
     def __init__(self,
                  ui_session_manager: 'RealtimeSessionManager',
                  chat_user: ChatUser,
                  ui_session_id: str,
-                 session_manager: ChatSessionManager):
+                 session_manager: ChatSessionManager,
+                 runtime_cache_entry: UserRuntimeCacheEntry):
+
+        self.runtime_cache: UserRuntimeCacheEntry = runtime_cache_entry
         self.ui_session_manager = ui_session_manager
         self.chat_session: Optional[ChatSession] = None
         self.websocket: Optional[WebSocket] = None
@@ -83,9 +74,10 @@ class RealtimeBridge(ClientEventHandler):
         self.chat_session_manager: ChatSessionManager = session_manager
         self.chat_user: ChatUser = chat_user
         self.ui_session_id: str = ui_session_id
-
         self.logger = LoggingManager(__name__).get_logger()
-        self.agent_config_loader: AgentConfigLoader = AgentConfigLoader()
+
+        self.tool_chest: ToolChest  = self.runtime_cache.tool_chest
+
         if os.environ.get("HEYGEN_API_KEY") is not None:
             self.heygen_client = HeyGenStreamingClient()
         else:
@@ -103,66 +95,10 @@ class RealtimeBridge(ClientEventHandler):
         self.voice_io_manager = VoiceIOManager(self)
         self._voices = open_ai_voice_models
         self._voice: AvailableVoiceModel = no_voice_model
-
-        self.model_config_loader = ModelConfigurationLoader()
-        self.model_configs: Dict[str, Any] = self.model_config_loader.flattened_config()
-        self.runtime_cache: Dict[str, BaseAgent] = {}
-
-        self.tool_chest: Optional[ToolChest] = None
-        self.tool_cache_dir = DEFAULT_TOOL_CACHE_DIR
-        self.tool_cache = ToolCache(cache_dir=self.tool_cache_dir)
-
         self.file_handler: RTFileHandler = RTFileHandler(self, chat_user.user_id)
         self.image_inputs: List[ImageInput] = []
         self.audio_inputs: List[AudioInput] = []
 
-        self.workspaces: Optional[List[BaseWorkspace]] = None
-        self.__init_workspaces()
-
-
-    def runtime_for_agent(self, agent_config: 'CurrentAgentConfiguration'):
-        if agent_config.key in self.runtime_cache:
-            return self.runtime_cache[agent_config.key]
-        else:
-            self.runtime_cache[agent_config.key] = self._runtime_for_agent(agent_config)
-            return self.runtime_cache[agent_config.key]
-
-
-    def _runtime_for_agent(self, agent_config: 'CurrentAgentConfiguration') -> BaseAgent:
-        model_config = self.model_configs[agent_config.model_id]
-        runtime_cls = self.__vendor_agent_map[model_config["vendor"]]
-
-        auth_info = agent_config.agent_params.auth.model_dump() if agent_config.agent_params.auth is not None else {}
-        client = runtime_cls.client(**auth_info)
-        return runtime_cls(model_name=model_config["id"], client=client)
-
-
-    def __init_workspaces(self) -> None:
-        """
-        Initialize the agent's workspaces by loading local workspace configurations.
-
-        Sets up the default local project workspace and loads additional workspaces
-        from the local configuration file if it exists. This provides the agent
-        with access to file system locations for tool operations.
-
-        Raises:
-            Exception: If there are errors loading workspace configurations
-                (FileNotFoundError is handled gracefully).
-        """
-        local_project = LocalProjectWorkspace()
-        user_uploads = LocalStorageWorkspace(workspace_path=str(self.file_handler.base_dir), name="Uploads", description="Files the user had uploaded")
-        self.workspaces: List[BaseWorkspace] = [local_project, user_uploads]
-
-        # TODO: ALLOWED / DISALLOWED WORKSPACES from agent config
-        try:
-            with open(LOCAL_WORKSPACES_FILE, 'r', encoding='utf-8') as json_file:
-                local_workspaces = json.load(json_file)
-
-            for ws in local_workspaces['local_workspaces']:
-                self.workspaces.append(LocalStorageWorkspace(**ws))
-        except FileNotFoundError:
-            # Local workspaces file is optional
-            pass
 
     async def flush_session(self, touch: bool = True, chat_session: Optional[ChatSession] = None) -> None:
         """Flush the current chat session to persistent storage"""
@@ -229,15 +165,15 @@ class RealtimeBridge(ClientEventHandler):
         await self.send_event(AgentVoiceChangedEvent(voice=voice))
 
     async def reload_agents(self) -> None:
-        self.agent_config_loader.load_agents()
-        self.chat_session.agent_config = self.agent_config_loader.duplicate(self.chat_session.agent_config.key)
+        self.ui_session_manager.agent_config_loader.load_agents()
+        self.chat_session.agent_config = self.ui_session_manager.agent_config_loader.duplicate(self.chat_session.agent_config.key)
         await self.send_agent_list()
         await self.tool_chest.activate_toolset(self.chat_session.agent_config.tools)
         await self.send_event(AgentConfigurationChangedEvent(agent_config=self.chat_session.agent_config))
 
 
     async def send_agent_list(self) -> None:
-        catalog = self.agent_config_loader.client_catalog
+        catalog = self.ui_session_manager.agent_config_loader.client_catalog
         await self.send_event(AgentListEvent(agents=catalog))
 
     async def send_avatar_list(self) -> None:
@@ -292,7 +228,7 @@ class RealtimeBridge(ClientEventHandler):
             return
 
         self.chat_session = session_info
-        self.chat_session.agent_config = self.agent_config_loader.duplicate(self.chat_session.agent_config.key)
+        self.chat_session.agent_config = self.ui_session_manager.agent_config_loader.duplicate(self.chat_session.agent_config.key)
 
         if 'BridgeTools' not in self.chat_session.agent_config.tools:
             self.chat_session.agent_config.tools.append('BridgeTools')
@@ -337,6 +273,7 @@ class RealtimeBridge(ClientEventHandler):
     async def release_current_session(self) -> None:
         if self.chat_session is not None:
             return
+
         await self.chat_session_manager.release_session(self.chat_session.session_id, self.chat_session.user_id)
 
     async def new_chat_session(self, agent_key: Optional[str] = None) -> None:
@@ -371,7 +308,7 @@ class RealtimeBridge(ClientEventHandler):
     async def set_agent(self, agent_key: str) -> None:
         """Set the agent for the current session"""
         if not self.chat_session.agent_config or self.chat_session.agent_config.key != agent_key:
-            agent_config = self.agent_config_loader.duplicate(agent_key)
+            agent_config = self.ui_session_manager.agent_config_loader.duplicate(agent_key)
             if not agent_config:
                 await self.send_error(f"Agent '{agent_key}' not found")
                 return
@@ -699,7 +636,7 @@ class RealtimeBridge(ClientEventHandler):
             self.chat_session.touch()
             await self.send_to_all_user_sessions(ChatSessionAddedEvent(chat_session=self.chat_session.as_index_entry()))
 
-            agent_runtime = self.runtime_for_agent(self.chat_session.agent_config)
+            agent_runtime = self.runtime_cache.runtime_for_agent(self.chat_session.agent_config)
             file_inputs = []
             if file_ids and self.file_handler:
                 file_inputs = await self.process_files_for_message(file_ids, self.chat_session.session_id)
@@ -800,17 +737,16 @@ class RealtimeBridge(ClientEventHandler):
         chat_session = await self.chat_session_manager.get_session(session_id, user_id)
 
         if chat_session is None:
-            agent_config = self.agent_config_loader.duplicate(agent_key)
+            agent_config = self.ui_session_manager.agent_config_loader.duplicate(agent_key)
             user_id = user_id or self.chat_user.user_id
             chat_session = ChatSession(session_id=session_id, agent_config=agent_config, user_id=user_id)
         else:
-            chat_session.agent_config = self.agent_config_loader.duplicate(agent_key)
+            chat_session.agent_config = self.ui_session_manager.agent_config_loader.duplicate(agent_key)
 
         return chat_session
 
     async def initialize(self, chat_session_id: Optional[str] = None, agent_key: Optional[str] = None) -> None:
         self.chat_session = await self._get_or_create_chat_session(session_id=chat_session_id, agent_key=agent_key)
-        await self._init_tool_chest()
         await self.initialize_agent_parameters()
 
     async def process_files_for_message(
@@ -860,72 +796,6 @@ class RealtimeBridge(ClientEventHandler):
 
         return input_objects
 
-    async def _init_tool_chest(self) -> None:
-        """
-        Initialize the agent's tool chest with selected tools and configurations.
-
-        This method sets up the ToolChest with tools from the global Toolset registry
-        based on the tools specified in the agent configuration. It configures additional
-        tool options, initializes the selected tools, and logs the result. The method handles
-        errors and logs any tools that failed to initialize.
-
-        Process:
-            1. Set up tool options including cache, session manager, and workspaces
-            2. Initialize the ToolChest with configuration options
-            3. Initialize and activate the specified toolset
-            4. Log successful initialization and any failures
-
-        Raises:
-            Exception: If there are errors during tool initialization, logged with full traceback.
-
-        Note:
-            Logs warnings if selected tools do not get initialized, typically due to
-            misspelled tool class names in the agent configuration.
-        """
-        self.logger.info(
-            f"Requesting initialization of these tools: "
-            f"{self.chat_session.agent_config.tools} for agent "
-            f"{self.chat_session.agent_config.key}"
-        )
-
-        try:
-            tool_opts = {
-                'tool_cache': self.tool_cache,
-                'session_manager': self.chat_session_manager,
-                'workspaces': self.workspaces,
-                'streaming_callback': self.runtime_callback,
-                'model_configs': self.model_config_loader.get_cached_config()
-            }
-
-            # Initialize the tool chest with essential tools first
-            self.tool_chest = ToolChest(**tool_opts)
-
-            # Initialize the tool chest essential tools
-            await self.tool_chest.init_tools(tool_opts)
-            await self.tool_chest.activate_toolset(self.chat_session.agent_config.tools)
-
-            self.logger.info(
-                f"Agent {self.chat_session.agent_config.key} successfully initialized "
-                f"essential tools: {list(self.tool_chest.active_tools.keys())}"
-            )
-
-            # Check for tools that were selected but not initialized
-            # Usually indicates misspelling of the tool class name
-            initialized_tools = set(self.tool_chest.active_tools.keys())
-            uninitialized_tools = [
-                tool_name for tool_name in self.chat_session.agent_config.tools
-                if tool_name not in initialized_tools
-            ]
-
-            if uninitialized_tools:
-                self.logger.warning(
-                    f"The following selected tools were not initialized: "
-                    f"{uninitialized_tools} for Agent {self.chat_session.agent_config.name}"
-                )
-
-        except Exception as e:
-            self.logger.exception("Error initializing tools: %s", e, exc_info=True)
-            raise
 
     async def initialize_agent_parameters(self) -> None:
         """

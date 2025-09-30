@@ -143,7 +143,7 @@ class ToolChest:
                 # Simply mark as active
                 if not init_only:
                     self.__active_toolset_instances[name] = self.__toolset_instances[name]
-                    self.logger.info(f"Marked existing toolset {name} as active")
+                    self.logger.debug(f"Marked existing toolset {name} as active")
             else:
                 # Find the class for this toolset
                 toolset_class = next((cls for cls in self.__available_toolset_classes 
@@ -159,7 +159,7 @@ class ToolChest:
                 
                 # Log dependencies for debugging
                 if required_tools:
-                    self.logger.info(f"Toolset {name} requires: {', '.join(required_tools)}")
+                    self.logger.debug(f"Toolset {name} requires: {', '.join(required_tools)}")
                     
                     # Recursively activate required tools
                     required_success = await self.activate_toolset(required_tools, tool_opts, init_only)
@@ -224,7 +224,7 @@ class ToolChest:
                 toolset_obj = self.__active_toolset_instances.get(name)
                 if toolset_obj:
                     await toolset_obj.post_init()
-                    self.logger.info(f"Completed post_init for toolset {name}")
+                    self.logger.debug(f"Completed post_init for toolset {name}")
             except Exception as e:
                 self.logger.warning(f"Error in post_init for toolset {name}: {str(e)}")
                 success = False
@@ -259,7 +259,7 @@ class ToolChest:
                 
             # Remove from active toolsets
             del self.__active_toolset_instances[name]
-            self.logger.info(f"Deactivated toolset {name}")
+            self.logger.debug(f"Deactivated toolset {name}")
         
         # Update metadata for active toolsets
         self._update_toolset_metadata()
