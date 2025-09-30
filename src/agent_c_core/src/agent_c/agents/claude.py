@@ -180,7 +180,7 @@ class ClaudeChatAgent(BaseAgent):
         messages = opts["completion_opts"]["messages"]
         interaction_id = await self._raise_interaction_start(**callback_opts)
         await self._raise_system_prompt(opts["completion_opts"]["system"], **callback_opts)
-        delay = 1  # Initial delay between retries
+        delay = 3  # Initial delay between retries
         async with (self.semaphore):
             while delay <= self.max_delay:
                 # Check for cancellation before starting new completion
@@ -221,7 +221,7 @@ class ClaudeChatAgent(BaseAgent):
                         opts["completion_opts"]["system"] = new_system_prompt
                         await self._raise_system_prompt(new_system_prompt, **callback_opts)
 
-                    delay = 1
+                    delay = 3
                     messages = result
                 except RateLimitError:
                     self.logger.warning(f"Ratelimit. Retrying...Delay is {delay} seconds")
