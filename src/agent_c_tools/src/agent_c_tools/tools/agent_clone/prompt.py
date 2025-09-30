@@ -32,7 +32,7 @@ class AgentCloneSection(PromptSection):
                     "- The context information you provide will be used as part of the cloned agent's instructions.\n"
                     "  - You can include explicit process instructions for the cloned agent to follow when responding to your chat.\n"
                     "- In order to maximize the output quality and effectiveness of the cloned agents, use a new session for each discrete task or step.\n\n"
-                    "\n$clone_sessions")
+                    "\n$clone_sessions\n\n**IMPORTANT**: You may only have one active clone session at a time.")
         super().__init__(template=TEMPLATE, required=True, name="Agent Clone Toolset", render_section_header=True, **data)
 
     @property_bag_item
