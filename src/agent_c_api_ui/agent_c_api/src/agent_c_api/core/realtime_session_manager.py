@@ -117,7 +117,7 @@ class RealtimeSessionManager:
                                       chat_session_id: Optional[str] = None,
                                       agent_key: Optional[str] = None) -> RealtimeSession:
         """
-        Create a new session or update an existing session with a new agent.
+        Create a new session or return existing session for reconnection.
 
         Args:
             user: The chat user for the session
@@ -126,12 +126,17 @@ class RealtimeSessionManager:
             agent_key: Optional agent key to initialize the session with a specific agent
 
         Returns:
-            RealtimeSession: The bridge handling the session
+            RealtimeSession: The session (new or existing)
+            
+        Note:
+            If session already exists for this user, returns it for reconnection.
+            The caller should then call bridge.reconnect(websocket) before bridge.run().
         """
         ui_session_id = session_id if session_id else RealtimeSession.generate_session_id(user.user_id)
 
         if ui_session_id in self.ui_sessions:
             if self.ui_sessions[ui_session_id].user_id == user.user_id:
+                self.logger.info(f"Found existing session {ui_session_id} for reconnection")
                 return self.ui_sessions[ui_session_id]
             else:
                 raise ValueError(f"Session ID {ui_session_id} already exists for a different user.")

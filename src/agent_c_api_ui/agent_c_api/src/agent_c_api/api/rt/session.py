@@ -1,4 +1,6 @@
 from typing import Optional, Dict, Any, TYPE_CHECKING
+
+from agent_c_api.models.realtime_session import RealtimeSession
 from fastapi import APIRouter, HTTPException, Depends, WebSocket, Request, Form
 from fastapi.responses import JSONResponse
 
@@ -64,7 +66,10 @@ async def initialize_realtime_session(websocket: WebSocket,
                                       chat_session_id: Optional[str] = None,
                                       agent_key: Optional[str] = None):
     """
-    Creates an agent session with the provided parameters.
+    Creates an agent session or reconnects to an existing one.
+    
+    If ui_session_id is provided and exists, reconnects to that session.
+    Otherwise creates a new session.
     """
     try:
         user_info: Dict[str, Any] = verify_jwt_token(token)
@@ -74,7 +79,14 @@ async def initialize_realtime_session(websocket: WebSocket,
         if agent_key is None:
             agent_key = "default"
 
-        ui_session = await manager.create_realtime_session(user, ui_session_id, chat_session_id, agent_key)
+        # Check if this is a reconnection to an existing session
+        is_reconnection = ui_session_id is not None and ui_session_id in manager.ui_sessions
+        
+        ui_session: RealtimeSession = await manager.create_realtime_session(user, ui_session_id, chat_session_id, agent_key)
+
+        # If reconnecting, use reconnect() method to properly update websocket
+        if is_reconnection:
+            await ui_session.bridge.reconnect(websocket)
 
         await ui_session.bridge.run(websocket)
 
