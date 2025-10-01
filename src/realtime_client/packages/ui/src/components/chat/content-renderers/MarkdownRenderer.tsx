@@ -5,8 +5,8 @@ import { cn } from '../../../lib/utils'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
-import rehypeHighlight from 'rehype-highlight'
-import '../../../styles/syntax-highlighting.css'
+import rehypeSanitize from 'rehype-sanitize'
+import { defaultSchema } from 'rehype-sanitize'
 import { Button } from '../../ui/button'
 import { Check, Copy, ChevronRight, ChevronDown } from 'lucide-react'
 
@@ -69,9 +69,19 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
     })
   }, [])
   
+  // Configure rehype-sanitize to allow only specific HTML tags
+  // This filters out phantom tags like <prototype>, <anonymous>, <empty> that rehype-raw creates
+  const sanitizeSchema = React.useMemo(() => ({
+    ...defaultSchema,
+    tagNames: [
+      ...(defaultSchema.tagNames || []),
+      'details',
+      'summary'
+    ].filter(tag => !['prototype', 'anonymous', 'empty'].includes(tag))
+  }), [])
+  
   // Markdown components configuration
-  // Use Object.create(null) to avoid prototype chain issues with react-markdown
-  const markdownComponents = React.useMemo(() => Object.assign(Object.create(null), {
+  const markdownComponents = React.useMemo(() => ({
     // Pre component for code blocks - handles wrapper and copy button
     pre({ children, ...props }: any) {
       // Check if this is a code block by examining children
@@ -472,7 +482,10 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
     >
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeRaw, rehypeHighlight]}
+        rehypePlugins={[
+          rehypeRaw,
+          [rehypeSanitize, sanitizeSchema]
+        ]}
         components={markdownComponents}
       >
         {content}
