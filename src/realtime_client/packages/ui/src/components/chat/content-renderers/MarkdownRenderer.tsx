@@ -69,68 +69,106 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   
   // Markdown components configuration
   const markdownComponents = React.useMemo(() => ({
-    // Code blocks with copy functionality
-    code({ inline, className: codeClassName, children, ...props }: any) {
-      const match = /language-(\w+)/.exec(codeClassName || '')
-      const language = match ? match[1] : ''
-      const codeString = String(children).replace(/\n$/, '')
+    // Pre component for code blocks - handles wrapper and copy button
+    pre({ children, ...props }: any) {
+      // Check if this is a code block by examining children
+      const codeChild = React.Children.toArray(children).find(
+        (child: any) => child?.props?.node?.tagName === 'code'
+      ) as any
       
-      if (!inline && language) {
-        return (
-          <div className={cn(
-            "relative group w-full overflow-hidden",
-            compact ? "my-2" : "my-4"
-          )}>
-            {enableCodeCopy && (
-              <div className="absolute right-2 top-2 z-10">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    "px-2 opacity-0 group-hover:opacity-100 transition-opacity",
-                    compact ? "h-6 text-xs" : "h-8"
-                  )}
-                  onClick={() => handleCopyCode(codeString)}
-                  aria-label={`Copy ${language} code`}
-                >
-                  {copiedCode === codeString ? (
-                    <>
-                      <Check className={cn(compact ? "h-2.5 w-2.5 mr-0.5" : "h-3 w-3 mr-1")} aria-hidden="true" />
-                      <span className="text-xs">Copied</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className={cn(compact ? "h-2.5 w-2.5 mr-0.5" : "h-3 w-3 mr-1")} aria-hidden="true" />
-                      <span className="text-xs">Copy</span>
-                    </>
-                  )}
-                </Button>
-              </div>
+      if (!codeChild) {
+        // Not a code block, render as plain pre
+        return <pre className={cn(
+          "bg-muted rounded-md overflow-x-auto",
+          compact ? "p-2 text-xs" : "p-4 text-sm"
+        )} {...props}>{children}</pre>
+      }
+      
+      // Extract code block information from the code child
+      const codeProps = codeChild.props
+      const match = /language-(\w+)/.exec(codeProps.className || '')
+      const language = match ? match[1] : ''
+      
+      // Get the actual code text content
+      let codeString = ''
+      const extractText = (node: any): string => {
+        if (typeof node === 'string') return node
+        if (typeof node === 'number') return String(node)
+        if (Array.isArray(node)) return node.map(extractText).join('')
+        if (node?.props?.children) return extractText(node.props.children)
+        return ''
+      }
+      codeString = extractText(codeProps.children).replace(/\n$/, '')
+      
+      // Render code block with wrapper and copy button
+      return (
+        <div className={cn(
+          "relative group w-full overflow-hidden",
+          compact ? "my-2" : "my-4"
+        )}>
+          {enableCodeCopy && language && (
+            <div className="absolute right-2 top-2 z-10">
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  "px-2 opacity-0 group-hover:opacity-100 transition-opacity",
+                  compact ? "h-6 text-xs" : "h-8"
+                )}
+                onClick={() => handleCopyCode(codeString)}
+                aria-label={`Copy ${language} code`}
+              >
+                {copiedCode === codeString ? (
+                  <>
+                    <Check className={cn(compact ? "h-2.5 w-2.5 mr-0.5" : "h-3 w-3 mr-1")} aria-hidden="true" />
+                    <span className="text-xs">Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className={cn(compact ? "h-2.5 w-2.5 mr-0.5" : "h-3 w-3 mr-1")} aria-hidden="true" />
+                    <span className="text-xs">Copy</span>
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+          <pre 
+            className={cn(
+              "bg-muted rounded-md overflow-x-auto w-full",
+              compact ? "p-2" : "p-4"
             )}
-            <pre 
-              className={cn(
-                "bg-muted rounded-md overflow-x-auto w-full",
-                compact ? "p-2" : "p-4"
-              )}
-              aria-label={`Code block in ${language}`}
-            >
-              <code className={cn(
-                "font-mono block min-w-0",
-                compact ? "text-xs" : "text-sm"
-              )} {...props}>
-                {codeString}
-              </code>
-            </pre>
-          </div>
+            aria-label={language ? `Code block in ${language}` : 'Code block'}
+          >
+            {children}
+          </pre>
+        </div>
+      )
+    },
+    
+    // Code component - styling for both inline and block code
+    code({ inline, className: codeClassName, children, ...props }: any) {
+      // For inline code
+      if (inline) {
+        return (
+          <code 
+            className={cn(
+              "bg-muted rounded font-mono",
+              compact ? "px-1 py-0.5 text-xs" : "px-1.5 py-0.5 text-sm"
+            )}
+            {...props}
+          >
+            {children}
+          </code>
         )
       }
       
-      // Inline code
+      // For block code (inside pre), just apply styling
       return (
         <code 
           className={cn(
-            "bg-muted rounded font-mono",
-            compact ? "px-1 py-0.5 text-xs" : "px-1.5 py-0.5 text-sm"
+            "font-mono block min-w-0",
+            compact ? "text-xs" : "text-sm",
+            codeClassName
           )}
           {...props}
         >
