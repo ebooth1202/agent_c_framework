@@ -70,7 +70,8 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   }, [])
   
   // Markdown components configuration
-  const markdownComponents = React.useMemo(() => ({
+  // Use Object.create(null) to avoid prototype chain issues with react-markdown
+  const markdownComponents = React.useMemo(() => Object.assign(Object.create(null), {
     // Pre component for code blocks - handles wrapper and copy button
     pre({ children, ...props }: any) {
       // Check if this is a code block by examining children

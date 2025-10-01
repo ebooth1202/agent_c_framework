@@ -192,6 +192,9 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
   // Track listener registration for diagnostics
   const listenerCountRef = useRef(0);
   
+  // Counter for generating unique message IDs when messages lack IDs
+  const messageIdCounterRef = useRef(0);
+  
   // Define stable handler functions using useCallback
   // These need to be stable references so cleanup can properly remove them
   
@@ -210,7 +213,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         // Ensure the message has a type and id for compatibility
         const messageToAdd: MessageChatItem = messageEvent.message.type 
           ? messageEvent.message 
-          : { ...messageEvent.message, type: 'message', id: messageEvent.sessionId };
+          : { ...messageEvent.message, type: 'message', id: `msg-added-${Date.now()}-${++messageIdCounterRef.current}` };
         
         const newMessages = [...prev, messageToAdd];
         // Limit messages if needed
@@ -276,7 +279,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         // Ensure the message has a type and id for compatibility
         const messageToAdd: MessageChatItem = completeEvent.message.type 
           ? completeEvent.message 
-          : { ...completeEvent.message, type: 'message', id: completeEvent.sessionId };
+          : { ...completeEvent.message, type: 'message', id: `msg-complete-${Date.now()}-${++messageIdCounterRef.current}` };
         
         const newMessages = [...prev, messageToAdd];
         // Limit messages if needed
