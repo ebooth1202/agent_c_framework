@@ -132,8 +132,9 @@ class RealtimeBridge(ClientEventHandler):
         if session_id is None:
             session_id = self.chat_session.session_id
 
-        success = await self.chat_session_manager.delete_session(session_id, self.chat_user.user_id)
-        if not success:
+        try:
+            await self.chat_session_manager.delete_session(session_id, self.chat_user.user_id)
+        except Exception as e:
             self.logger.warning(f"RealtimeBridge {self.ui_session_id}: Failed to delete chat session {session_id}")
             await self.send_error(f"Session '{session_id}' not found", source="delete_chat_session")
             return
