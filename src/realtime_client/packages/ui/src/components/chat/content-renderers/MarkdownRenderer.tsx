@@ -4,8 +4,9 @@ import * as React from 'react'
 import { cn } from '../../../lib/utils'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import rehypeRaw from 'rehype-raw'
 import { Button } from '../../ui/button'
-import { Check, Copy } from 'lucide-react'
+import { Check, Copy, ChevronRight, ChevronDown } from 'lucide-react'
 
 export interface MarkdownRendererProps {
   /**
@@ -334,6 +335,77 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
           )}
         />
       )
+    },
+    
+    // Collapsible sections (HTML details/summary)
+    details({ children, open, ...props }: any) {
+      return (
+        <details 
+          className={cn(
+            "border border-border rounded-md group",
+            compact ? "my-2 p-2" : "my-3 p-3"
+          )}
+          open={open}
+          {...props}
+        >
+          {children}
+        </details>
+      )
+    },
+    summary({ children }: any) {
+      const summaryRef = React.useRef<HTMLElement>(null)
+      const [isOpen, setIsOpen] = React.useState(false)
+      
+      // Sync with details element state
+      React.useEffect(() => {
+        const summaryEl = summaryRef.current
+        if (!summaryEl) return
+        
+        const detailsEl = summaryEl.closest('details')
+        if (!detailsEl) return
+        
+        // Set initial state
+        setIsOpen(detailsEl.open)
+        
+        // Listen for toggle events
+        const handleToggle = () => {
+          setIsOpen(detailsEl.open)
+        }
+        
+        detailsEl.addEventListener('toggle', handleToggle)
+        
+        return () => {
+          detailsEl.removeEventListener('toggle', handleToggle)
+        }
+      }, [])
+      
+      return (
+        <summary 
+          ref={summaryRef}
+          className={cn(
+            "cursor-pointer list-none flex items-center gap-2",
+            "hover:text-primary transition-colors select-none",
+            "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded",
+            compact ? "text-sm font-medium" : "text-base font-semibold"
+          )}
+          role="button"
+          aria-expanded={isOpen}
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              ;(e.target as HTMLElement).click()
+            }
+          }}
+        >
+          {isOpen ? (
+            <ChevronDown className={cn(compact ? "h-3 w-3" : "h-4 w-4")} aria-hidden="true" />
+          ) : (
+            <ChevronRight className={cn(compact ? "h-3 w-3" : "h-4 w-4")} aria-hidden="true" />
+          )}
+          <span>{children}</span>
+        </summary>
+      )
     }
   }), [compact, enableCodeCopy, copiedCode, handleCopyCode])
   
@@ -359,6 +431,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
     >
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeRaw]}
         components={markdownComponents}
       >
         {content}
