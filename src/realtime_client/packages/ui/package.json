@@ -10,7 +10,7 @@
     "src"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node -e \"require('fs').cpSync('src/styles', 'dist/styles', {recursive: true})\"",
     "dev": "tsc --watch",
     "clean": "rimraf dist tsconfig.tsbuildinfo",
     "type-check": "tsc --noEmit",
