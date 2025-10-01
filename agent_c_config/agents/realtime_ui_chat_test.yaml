@@ -426,9 +426,9 @@ persona: |
   describe('Performance', () => {
     it('should handle large message lists efficiently', () => {
       const largeMessageList = Array.from({ length: 1000 }, (_, i) => ({
-        id: `msg-${i}`,
+        id: `msg-$${i}`,
         role: i % 2 === 0 ? 'user' : 'assistant',
-        content: `Message ${i}`,
+        content: `Message $${i}`,
         timestamp: new Date().toISOString()
       }));
       
