@@ -16,7 +16,7 @@
 
 import React from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, within, waitFor } from '@testing-library/react';
+import { render, screen, within, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MarkdownRenderer } from '../content-renderers/MarkdownRenderer';
 
@@ -36,19 +36,21 @@ vi.mock('lucide-react', () => ({
   )
 }));
 
-// Mock clipboard API
-const mockClipboard = {
-  writeText: vi.fn().mockResolvedValue(undefined)
-};
+// Mock clipboard API - must return a resolved Promise
+const mockWriteText = vi.fn().mockImplementation(() => Promise.resolve());
 
-Object.assign(navigator, {
-  clipboard: mockClipboard
+Object.defineProperty(navigator, 'clipboard', {
+  writable: true,
+  value: {
+    writeText: mockWriteText
+  }
 });
 
 describe('MarkdownRenderer - Syntax Highlighting', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockClipboard.writeText.mockClear();
+    mockWriteText.mockClear();
+    mockWriteText.mockImplementation(() => Promise.resolve());
   });
 
   afterEach(() => {
@@ -212,16 +214,20 @@ function test() {
       const copyButton = container.querySelector('button');
       expect(copyButton).toBeInTheDocument();
 
-      await user.click(copyButton!);
+      // Click and wait for async operations
+      await act(async () => {
+        await user.click(copyButton!);
+        // Wait for promise to resolve
+        await new Promise(resolve => setTimeout(resolve, 50));
+      });
 
       // Should copy plain text (no HTML/classes)
-      // Note: May need additional time for promise to resolve
       await waitFor(() => {
-        expect(mockClipboard.writeText).toHaveBeenCalled();
-      }, { timeout: 2000 });
+        expect(mockWriteText).toHaveBeenCalled();
+      }, { timeout: 1000 });
       
       // Check the actual call
-      const calls = mockClipboard.writeText.mock.calls;
+      const calls = mockWriteText.mock.calls;
       expect(calls.length).toBeGreaterThan(0);
       expect(calls[0][0]).toContain('function test()');
       expect(calls[0][0]).toContain('return 42;');
@@ -241,17 +247,20 @@ def hello():
       const copyButton = container.querySelector('button');
       expect(copyButton).toHaveTextContent('Copy');
       
-      await user.click(copyButton!);
+      // Click and wait for async state updates
+      await act(async () => {
+        await user.click(copyButton!);
+        // Wait for clipboard promise and state update
+        await new Promise(resolve => setTimeout(resolve, 100));
+      });
 
       // Should show "Copied" with checkmark after click
       await waitFor(() => {
         expect(copyButton).toHaveTextContent('Copied');
-      }, { timeout: 2000 });
+      }, { timeout: 1000 });
       
       // Check for checkmark icon
-      await waitFor(() => {
-        expect(screen.getByTestId('check-icon')).toBeInTheDocument();
-      }, { timeout: 1000 });
+      expect(screen.getByTestId('check-icon')).toBeInTheDocument();
     });
 
     it('should revert to "Copy" after 2 seconds', async () => {
@@ -267,16 +276,21 @@ const greeting: string = "hello";
       const copyButton = container.querySelector('button');
       expect(copyButton).toHaveTextContent('Copy');
       
-      // Click the button
-      await userEvent.click(copyButton!);
+      // Click the button with act() wrapper
+      await act(async () => {
+        await userEvent.click(copyButton!);
+        await new Promise(resolve => setTimeout(resolve, 100));
+      });
 
       // Should change to "Copied"
       await waitFor(() => {
         expect(copyButton).toHaveTextContent('Copied');
-      }, { timeout: 2000 });
+      }, { timeout: 1000 });
 
       // Wait for 2 seconds + a bit for the timeout to fire
-      await new Promise(resolve => setTimeout(resolve, 2100));
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 2100));
+      });
 
       // Should revert to "Copy"
       expect(copyButton).toHaveTextContent('Copy');
@@ -528,25 +542,31 @@ y = 2
       expect(copyButtons.length).toBe(2);
 
       // Copy from first block (JavaScript)
-      await userEvent.click(copyButtons[0]);
+      await act(async () => {
+        await userEvent.click(copyButtons[0]);
+        await new Promise(resolve => setTimeout(resolve, 100));
+      });
 
       await waitFor(() => {
-        expect(mockClipboard.writeText).toHaveBeenCalled();
-      }, { timeout: 2000 });
+        expect(mockWriteText).toHaveBeenCalled();
+      }, { timeout: 1000 });
       
-      const firstCall = mockClipboard.writeText.mock.calls[0][0];
+      const firstCall = mockWriteText.mock.calls[0][0];
       expect(firstCall).toContain('const x = 1');
 
-      mockClipboard.writeText.mockClear();
+      mockWriteText.mockClear();
 
       // Copy from second block (Python)
-      await userEvent.click(copyButtons[1]);
+      await act(async () => {
+        await userEvent.click(copyButtons[1]);
+        await new Promise(resolve => setTimeout(resolve, 100));
+      });
 
       await waitFor(() => {
-        expect(mockClipboard.writeText).toHaveBeenCalled();
-      }, { timeout: 2000 });
+        expect(mockWriteText).toHaveBeenCalled();
+      }, { timeout: 1000 });
       
-      const secondCall = mockClipboard.writeText.mock.calls[0][0];
+      const secondCall = mockWriteText.mock.calls[0][0];
       expect(secondCall).toContain('y = 2');
     });
   });
@@ -795,13 +815,16 @@ b = 2
       expect(btn1).toHaveTextContent('Copy');
       expect(btn2).toHaveTextContent('Copy');
 
-      // Copy from first
-      await userEvent.click(btn1);
+      // Copy from first with act() wrapper
+      await act(async () => {
+        await userEvent.click(btn1);
+        await new Promise(resolve => setTimeout(resolve, 100));
+      });
       
       // First should change to "Copied"
       await waitFor(() => {
         expect(btn1).toHaveTextContent('Copied');
-      }, { timeout: 2000 });
+      }, { timeout: 1000 });
 
       // Second should still show "Copy" (not affected)
       expect(btn2).toHaveTextContent('Copy');

@@ -143,7 +143,11 @@ export function AgentCProvider({
   // Initialize the client
   useEffect(() => {
     // Prevent double initialization in React StrictMode
-    if (initializationRef.current) {
+    // Check both the flag AND if we have a valid client instance
+    if (initializationRef.current && clientRef.current) {
+      if (debug) {
+        console.warn('AgentCProvider: Skipping initialization - client already exists');
+      }
       return;
     }
     
