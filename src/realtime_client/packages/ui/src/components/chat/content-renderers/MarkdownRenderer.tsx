@@ -5,8 +5,10 @@ import { cn } from '../../../lib/utils'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
+import rehypeHighlight from 'rehype-highlight'
 import rehypeSanitize from 'rehype-sanitize'
 import { defaultSchema } from 'rehype-sanitize'
+import '../../../styles/syntax-highlighting.css'
 import { Button } from '../../ui/button'
 import { Check, Copy, ChevronRight, ChevronDown } from 'lucide-react'
 
@@ -71,13 +73,30 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   
   // Configure rehype-sanitize to allow only specific HTML tags
   // This filters out phantom tags like <prototype>, <anonymous>, <empty> that rehype-raw creates
+  // Also allows highlight.js classes for syntax highlighting
   const sanitizeSchema = React.useMemo(() => ({
     ...defaultSchema,
     tagNames: [
       ...(defaultSchema.tagNames || []),
       'details',
       'summary'
-    ].filter(tag => !['prototype', 'anonymous', 'empty'].includes(tag))
+    ].filter(tag => !['prototype', 'anonymous', 'empty'].includes(tag)),
+    attributes: {
+      ...defaultSchema.attributes,
+      // Allow all hljs-* classes for syntax highlighting
+      '*': [
+        ...(defaultSchema.attributes?.['*'] || []),
+        'className'
+      ],
+      span: [
+        ...(defaultSchema.attributes?.span || []),
+        ['className', /^hljs-/]
+      ],
+      code: [
+        ...(defaultSchema.attributes?.code || []),
+        ['className', /^language-/, /^hljs/]
+      ]
+    }
   }), [])
   
   // Markdown components configuration
@@ -484,6 +503,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[
           rehypeRaw,
+          rehypeHighlight,
           [rehypeSanitize, sanitizeSchema]
         ]}
         components={markdownComponents}
