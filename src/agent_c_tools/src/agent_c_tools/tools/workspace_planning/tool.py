@@ -288,7 +288,7 @@ class WorkspacePlanningTools(Toolset):
         plan.tasks[new_task.id] = new_task
         await self._save_plan(plan_path, plan)
 
-        message = f"Task *{new_task.id}* created\n\n##{title}\n\n{description}\n\nContext: `{context}`\n"
+        message = f"Task *{new_task.id}* created\n\n## {title}\n\n{description}\n\nContext: `{context}`\n"
 
         await bridge.send_system_message(message)
 
