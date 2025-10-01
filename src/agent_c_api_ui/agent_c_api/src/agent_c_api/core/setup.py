@@ -1,4 +1,5 @@
 import os
+import random
 import re
 
 from typing import Dict, Any
@@ -20,6 +21,8 @@ from agent_c.config.agent_config_loader import AgentConfigLoader
 
 logging_manager = LoggingManager(__name__)
 logger = logging_manager.get_logger()
+
+random.seed()
 
 def get_origins_regex():
     allowed_hosts_str = os.getenv("API_ALLOWED_HOSTS", "localhost,.local")
