@@ -7,13 +7,13 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { EventStreamProcessor } from '../EventStreamProcessor';
-import { SessionManager } from '../../session/SessionManager';
+import { ChatSessionManager } from '../../session/SessionManager';
 import { ChatSession } from '../types/CommonTypes';
 import { MessageParam } from '../../types/message-params';
 
 describe('EventStreamProcessor - Session Messages Loaded Event', () => {
   let processor: EventStreamProcessor;
-  let sessionManager: SessionManager;
+  let sessionManager: ChatSessionManager;
   let sessionManagerEmitSpy: ReturnType<typeof vi.spyOn>;
   const testSessionId = 'test-session-loaded';
 
@@ -30,7 +30,7 @@ describe('EventStreamProcessor - Session Messages Loaded Event', () => {
       metadata: {}
     };
 
-    sessionManager = new SessionManager();
+    sessionManager = new ChatSessionManager();
     processor = new EventStreamProcessor(sessionManager);
     sessionManagerEmitSpy = vi.spyOn(sessionManager, 'emit');
     sessionManager.setCurrentSession(mockSession);

@@ -48,7 +48,7 @@ class AgentAssistSection(PromptSection):
                     "make an`aa_` tool call.\n"
                     "  - If more than one name matches, inform the user of the ambiguity and list the roles available.\n"
                     "    - For example: I'm sorry, do you mean 'Cora the Agent C core dev' or 'Cora the Fast API dev'?\n"
-                    "$aa_sessions")
+                    "$aa_sessions\n\n**IMPORTANT**: You may only use one delegation tool at a time.")
         super().__init__(template=TEMPLATE, required=True, name="Agent Assist", render_section_header=True, **data)
 
     @property_bag_item

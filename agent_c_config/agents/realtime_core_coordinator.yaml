@@ -3,7 +3,7 @@ name: "Core Package Coordinator"
 key: "realtime_core_coordinator"
 agent_description: |
   Strategic coordinator for @agentc/realtime-core package. Manages 4 specialist domains (Event Stream, Audio Pipeline, Communication Flow, System Integration) with 8 specialists total. Routes work across dev/test teams while ensuring package-level integration and API stability for dependent packages.
-model_id: "claude-opus-4-1-20250805"
+model_id: "claude-sonnet-4-5"
 tools:
   - ThinkTools
   - WorkspaceTools

@@ -12,7 +12,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { EventStreamProcessor } from '../EventStreamProcessor';
-import { SessionManager } from '../../session/SessionManager';
+import { ChatSessionManager } from '../../session/SessionManager';
 import { ChatSession } from '../types/CommonTypes';
 import { MessageParam } from '../../types/message-params';
 import { WebSocketTracker, MockWebSocket } from '../../test/mocks/websocket.mock';
@@ -27,7 +27,7 @@ import testSession from './fixtures/session_with_delegation.json';
 
 describe('EventStreamProcessor - Resumed Messages Mapping', () => {
   let processor: EventStreamProcessor;
-  let sessionManager: SessionManager;
+  let sessionManager: ChatSessionManager;
   let sessionManagerEmitSpy: ReturnType<typeof vi.spyOn>;
   let wsTracker: WebSocketTracker;
   let mockSession: ChatSession;
@@ -61,7 +61,7 @@ describe('EventStreamProcessor - Resumed Messages Mapping', () => {
     };
 
     // Create real instances
-    sessionManager = new SessionManager();
+    sessionManager = new ChatSessionManager();
     processor = new EventStreamProcessor(sessionManager);
     
     // Setup spies

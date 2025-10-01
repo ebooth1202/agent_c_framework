@@ -89,22 +89,17 @@ class AgentAssistToolBase(Toolset):
 
         return runtime_cls(model_name=model_config["id"], client=client,prompt_builder=PromptBuilder(sections=agent_sections))
 
-    async def __chat_params(self, agent: AgentConfiguration, agent_runtime: BaseAgent,
-                            user_session_id: Optional[str] = None, parent_tool_context: Optional[Dict[str, any]] = None, **opts) -> Dict[str, Any]:
+    async def __chat_params(self,
+                            agent: AgentConfiguration,
+                            agent_runtime: BaseAgent,
+                            agent_session_id: str,
+                            parent_session_id: str,
+                            user_session_id: str,
+                            parent_tool_context: Dict[str, any],
+                            client_wants_cancel: threading.Event,  **opts) -> Dict[str, Any]:
         tool_params = {}
-        client_wants_cancel = opts.get('client_wants_cancel')
-        parent_streaming_callback = self.streaming_callback
-        agent_session_id = opts.get('agent_session_id', MnemonicSlugs.generate_id_slug(2))
-
-
-        if parent_tool_context is not None:
-            parent_session_id = opts.get('parent_session_id', parent_tool_context.get('session_id', None))
-            client_wants_cancel = parent_tool_context.get('client_wants_cancel', None)
-            parent_streaming_callback = parent_tool_context.get('streaming_callback', self.streaming_callback)
-            tool_context = parent_tool_context.copy()
-        else:
-            parent_session_id = opts.get('parent_session_id')
-            tool_context = opts.get("tool_context", {})
+        parent_streaming_callback = parent_tool_context['streaming_callback']
+        tool_context = parent_tool_context.copy()
 
         tool_context['active_agent'] = agent
         tool_context['client_wants_cancel'] = client_wants_cancel
@@ -112,9 +107,6 @@ class AgentAssistToolBase(Toolset):
         tool_context["session_id"] = agent_session_id
         tool_context["parent_session_id"] =  parent_session_id
         tool_context["user_session_id"] =  user_session_id
-
-        if client_wants_cancel is None:
-            client_wants_cancel = tool_context.get('client_wants_cancel', None)
 
         prompt_metadata = await self.__build_prompt_metadata(agent, user_session_id, **opts)
 
@@ -147,25 +139,32 @@ class AgentAssistToolBase(Toolset):
                 "agent_config": agent_config, "user_session_id": user_session_id, "parent_session_id": parent_session_id,
                 "timestamp": datetime.now().isoformat()} | agent_props | opts
 
-    async def agent_oneshot(self, user_message: str, agent: AgentConfiguration, user_session_id: Optional[str] = None,
-                            parent_tool_context: Optional[Dict[str, Any]] = None,
+    async def agent_oneshot(self,
+                            user_message: str,
+                            agent: AgentConfiguration,
+                            parent_session_id: str,
+                            user_session_id: str,
+                            parent_tool_context: Dict[str, Any],
+                            agent_session_id: Optional[str] = None,
                             prime_agent_key: Optional[str] = None,
-                            parent_session_id: Optional[str] = None,
                             sub_agent_type: Literal["clone", "team", "assist", "tool"] = "assist",
                             **additional_metadata) -> Optional[List[Dict[str, Any]]]:
 
         self.logger.info(f"Running one-shot with persona: {agent.key}, user session: {user_session_id}")
         agent_runtime = await self.runtime_for_agent(agent)
 
-        agent_session_id = additional_metadata.pop('agent_session_id', f"oneshot-{MnemonicSlugs.generate_slug(2)}")
+        if agent_session_id is None:
+            agent_session_id =  f"oneshot-{MnemonicSlugs.generate_slug(2)}"
 
-        chat_params = await self.__chat_params(agent, agent_runtime, user_session_id,
-                                               parent_tool_context=parent_tool_context,
-                                               agent_session_id=agent_session_id,
+        chat_params = await self.__chat_params(agent,
+                                               agent_runtime,
+                                               agent_session_id,
+                                               parent_session_id,
+                                               user_session_id,
+                                               parent_tool_context,
                                                sub_session_type="chat",
                                                sub_agent_type=sub_agent_type,
                                                prime_agent_key=prime_agent_key,
-                                               parent_session_id=parent_session_id,
                                                **additional_metadata)
         try:
             await self._raise_subsession_start(SubsessionStartedEvent(session_id=agent_session_id,
@@ -191,15 +190,6 @@ class AgentAssistToolBase(Toolset):
                                              chat_params['streaming_callback'])
             return None
 
-    async def parallel_agent_oneshots(self, user_messages: List[str], persona: AgentConfiguration, user_session_id: Optional[str] = None,
-                                      tool_context: Optional[Dict[str, Any]] = None, **additional_metadata) -> List[str]:
-        self.logger.info(f"Running parallel one-shots with persona: {persona.name}, user session: {user_session_id}")
-        agent = await self.runtime_for_agent(persona)
-        chat_params = await self.__chat_params(persona, agent, user_session_id, parent_tool_context=tool_context, **additional_metadata)
-        #chat_params['allow_server_tools'] = True
-        result: List[str] = await agent.parallel_one_shots(inputs=user_messages, **chat_params)
-        return result
-
     async def _new_agent_session(self, agent: AgentConfiguration, user_session_id: str, agent_session_id: str) -> Dict[str, Any]:
         metadata = {'persona_name': agent.name}
         session = {'user_session_id': user_session_id, 'messages': [], 'metadata': metadata,
@@ -211,11 +201,11 @@ class AgentAssistToolBase(Toolset):
     async def agent_chat(self,
                          user_message: str,
                          agent: AgentConfiguration,
-                         user_session_id: Optional[str] = None,
+                         parent_session_id: str,
+                         user_session_id: str,
+                         tool_context: Dict[str, Any],
                          agent_session_id: Optional[str] = None,
-                         tool_context: Optional[Dict[str, Any]] = None,
                          prime_agent_key: Optional[str] = None,
-                         parent_session_id: Optional[str] = None,
                          sub_agent_type: Literal["clone", "team", "assist", "tool"] = "assist",
                          **additional_metadata) -> Tuple[str, List[Dict[str, Any]]]:
         """
@@ -233,10 +223,12 @@ class AgentAssistToolBase(Toolset):
             session = await self._new_agent_session(agent, user_session_id, agent_session_id=agent_session_id)
 
 
-        chat_params = await self.__chat_params(agent, agent_runtime, user_session_id,
-                                               parent_tool_context=tool_context,
-                                               agent_session_id=agent_session_id,
-                                               parent_session_id=parent_session_id,
+        chat_params = await self.__chat_params(agent,
+                                               agent_runtime,
+                                               agent_session_id,
+                                               parent_session_id,
+                                               user_session_id,
+                                               tool_context,
                                                sub_session_type="chat",
                                                sub_agent_type=sub_agent_type,
                                                prime_agent_key=prime_agent_key,

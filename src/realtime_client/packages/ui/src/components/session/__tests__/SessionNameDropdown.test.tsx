@@ -160,11 +160,11 @@ describe('SessionNameDropdown', () => {
     render(<SessionNameDropdown />)
     
     // Verify event listeners were registered on SessionManager and client
-    expect(mockSessionManager.on).toHaveBeenCalledWith('session-changed', expect.any(Function))
+    expect(mockSessionManager.on).toHaveBeenCalledWith('chat-session-changed', expect.any(Function))
     expect(mockClient.on).toHaveBeenCalledWith('chat_session_name_changed', expect.any(Function))
   })
   
-  it('should update session name from SessionManager session-changed event', async () => {
+  it('should update session name from SessionManager chat-session-changed event', async () => {
     const mockSessionManager = {
       getCurrentSession: vi.fn().mockReturnValue(null),
       on: vi.fn(),
@@ -175,15 +175,15 @@ describe('SessionNameDropdown', () => {
     
     const { rerender } = render(<SessionNameDropdown />)
     
-    // Get the event handler for session-changed
+    // Get the event handler for chat-session-changed
     const [[, handler]] = vi.mocked(mockSessionManager.on).mock.calls.filter(
-      ([event]) => event === 'session-changed'
+      ([event]) => event === 'chat-session-changed'
     )
     
-    // Simulate SessionManager session-changed event
+    // Simulate SessionManager chat-session-changed event
     await act(async () => {
       handler({
-        currentSession: {
+        currentChatSession: {
           session_id: 'test-123',
           session_name: 'Updated Session',
           messages: [],
@@ -193,7 +193,7 @@ describe('SessionNameDropdown', () => {
           vendor: 'openai',
           display_name: 'Display Name'
         },
-        previousSession: null
+        previousChatSession: null
       })
     })
     
@@ -335,7 +335,7 @@ describe('SessionNameDropdown', () => {
     unmount()
     
     // Verify cleanup
-    expect(mockSessionManager.off).toHaveBeenCalledWith('session-changed', expect.any(Function))
+    expect(mockSessionManager.off).toHaveBeenCalledWith('chat-session-changed', expect.any(Function))
     expect(mockClient.off).toHaveBeenCalledWith('chat_session_name_changed', expect.any(Function))
   })
 })

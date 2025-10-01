@@ -216,7 +216,6 @@ export function useChatSessionList(options: UseChatSessionListOptions = {}): Use
   
   // State
   const [sessions, setSessions] = useState<ChatSessionIndexEntry[]>([]);
-  const [filteredSessions, setFilteredSessions] = useState<ChatSessionIndexEntry[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isPaginationLoading, setIsPaginationLoading] = useState(false);
@@ -246,6 +245,14 @@ export function useChatSessionList(options: UseChatSessionListOptions = {}): Use
       return name.includes(lowerQuery) || agentName.includes(lowerQuery);
     });
   }, []);
+  
+  /**
+   * Filtered sessions - automatically recalculated when sessions or searchQuery changes
+   */
+  const filteredSessions = useMemo(
+    () => filterSessions(searchQuery, sessions),
+    [searchQuery, sessions, filterSessions]
+  );
   
   /**
    * Group filtered sessions by date with memoization
@@ -388,7 +395,7 @@ export function useChatSessionList(options: UseChatSessionListOptions = {}): Use
     // Optimistic update - remove from UI immediately
     rollbackDataRef.current = sessionToDelete;
     setSessions(prev => prev.filter(s => s.session_id !== sessionId));
-    setFilteredSessions(prev => prev.filter(s => s.session_id !== sessionId));
+    // filteredSessions will update automatically via useMemo
     setTotalCount(prev => Math.max(0, prev - 1));
     
     // Mark as deleted to prevent re-adding from events
@@ -417,12 +424,7 @@ export function useChatSessionList(options: UseChatSessionListOptions = {}): Use
             return dateB - dateA;
           });
         });
-        
-        // Re-apply filter
-        setFilteredSessions(prev => {
-          const newSessions = [...prev, rollbackDataRef.current!];
-          return filterSessions(searchQuery, newSessions);
-        });
+        // filteredSessions will update automatically via useMemo
         
         setTotalCount(prev => prev + 1);
         deletedSessionsRef.current.delete(sessionId);
@@ -449,23 +451,8 @@ export function useChatSessionList(options: UseChatSessionListOptions = {}): Use
       clearTimeout(debouncedSearchTimeoutRef.current);
     }
     
-    // If clearing search, update immediately
-    if (!query.trim()) {
-      setSessions(prev => {
-        setFilteredSessions(prev); // Use current sessions
-        return prev;
-      });
-      return;
-    }
-    
-    // Debounce the search
-    debouncedSearchTimeoutRef.current = setTimeout(() => {
-      setSessions(prev => {
-        const filtered = filterSessions(query, prev);
-        setFilteredSessions(filtered);
-        return prev;
-      });
-    }, searchDebounceMs);
+    // filteredSessions will update automatically via useMemo when searchQuery changes
+    // No need for manual updates or debouncing logic here
   }, [filterSessions, searchDebounceMs]);
   
   /**
@@ -473,7 +460,7 @@ export function useChatSessionList(options: UseChatSessionListOptions = {}): Use
    */
   const refresh = useCallback(() => {
     setSessions([]);
-    setFilteredSessions([]);
+    // filteredSessions will update automatically via useMemo
     offsetRef.current = 0;
     deletedSessionsRef.current.clear();
     setHasMore(true);
@@ -514,7 +501,7 @@ export function useChatSessionList(options: UseChatSessionListOptions = {}): Use
       if (offsetRef.current === 0) {
         // Initial load - replace all sessions
         setSessions(newSessions);
-        setFilteredSessions(filterSessions(searchQuery, newSessions));
+        // filteredSessions will update automatically via useMemo
       } else {
         // Pagination - append new sessions
         setSessions(prev => {
@@ -523,10 +510,7 @@ export function useChatSessionList(options: UseChatSessionListOptions = {}): Use
             ? combined.slice(0, maxCachedSessions)
             : combined;
           
-          // Update filtered sessions with the combined list
-          const filtered = filterSessions(searchQuery, limited);
-          setFilteredSessions(filtered);
-          
+          // filteredSessions will update automatically via useMemo
           return limited;
         });
       }
@@ -560,24 +544,22 @@ export function useChatSessionList(options: UseChatSessionListOptions = {}): Use
       const updatedSession = event.chat_session;
       const sessionId: string = updatedSession.session_id;
       
-      // Update current session ID
+      // ALWAYS update current session ID first
+      // This removes highlighting from the old session
+      // If the new session isn't in the list, no session will be highlighted (correct behavior)
       setCurrentSessionId(sessionId);
       
-      // Update the session in our list with the new data (especially updated_at)
+      // Update the session in our list with the new data
+      // Use functional update to avoid stale closure
       setSessions(prev => {
+        // Check if session exists using current state
         const sessionIndex = prev.findIndex(s => s.session_id === sessionId);
+        
         if (sessionIndex === -1) {
-          // Session not in list yet, add it at the beginning
-          const newEntry = {
-            session_id: sessionId,
-            session_name: updatedSession.session_name,
-            created_at: updatedSession.created_at,
-            updated_at: updatedSession.updated_at,
-            user_id: updatedSession.user_id,
-            agent_key: updatedSession.agent_config?.key,
-            agent_name: updatedSession.agent_config?.name
-          } as ChatSessionIndexEntry;
-          return [newEntry, ...prev];
+          // Session not in list yet (probably a new session without messages)
+          // currentSessionId is updated, so old session loses highlight
+          // No session will be highlighted until this session appears in the list
+          return prev;
         }
         
         // Update existing session and re-sort by updated_at
@@ -585,7 +567,9 @@ export function useChatSessionList(options: UseChatSessionListOptions = {}): Use
         updated[sessionIndex] = {
           ...updated[sessionIndex],
           session_name: updatedSession.session_name,
-          updated_at: updatedSession.updated_at
+          updated_at: updatedSession.updated_at,
+          agent_key: updatedSession.agent_config?.key,
+          agent_name: updatedSession.agent_config?.name
         } as ChatSessionIndexEntry;
         
         // Re-sort by updated_at descending (newest first)
@@ -595,42 +579,7 @@ export function useChatSessionList(options: UseChatSessionListOptions = {}): Use
           return dateB - dateA;
         });
       });
-      
-      // Update filtered list too
-      setFilteredSessions(prev => {
-        const sessionIndex = prev.findIndex(s => s.session_id === sessionId);
-        if (sessionIndex === -1) {
-          // Check if new session matches search
-          const newEntry = {
-            session_id: sessionId,
-            session_name: updatedSession.session_name,
-            created_at: updatedSession.created_at,
-            updated_at: updatedSession.updated_at,
-            user_id: updatedSession.user_id,
-            agent_key: updatedSession.agent_config?.key,
-            agent_name: updatedSession.agent_config?.name
-          } as ChatSessionIndexEntry;
-          
-          if (filterSessions(searchQuery, [newEntry]).length > 0) {
-            return [newEntry, ...prev];
-          }
-          return prev;
-        }
-        
-        // Update existing session and re-sort
-        const updated = [...prev];
-        updated[sessionIndex] = {
-          ...updated[sessionIndex],
-          session_name: updatedSession.session_name,
-          updated_at: updatedSession.updated_at
-        } as ChatSessionIndexEntry;
-        
-        return updated.sort((a, b) => {
-          const dateA = parseDate(a.updated_at || a.created_at).getTime();
-          const dateB = parseDate(b.updated_at || b.created_at).getTime();
-          return dateB - dateA;
-        });
-      });
+      // filteredSessions will update automatically via useMemo
     };
     
     // Handle chat_session_name_changed
@@ -654,60 +603,68 @@ export function useChatSessionList(options: UseChatSessionListOptions = {}): Use
         }
         return session;
       }));
-      
-      // Update filtered list too
-      setFilteredSessions(prev => prev.map(session => {
-        if (session.session_id === sessionId) {
-          const updated: ChatSessionIndexEntry = { 
-            ...session, 
-            session_name: event.session_name,
-            updated_at: new Date().toISOString()
-          };
-          return updated;
-        }
-        return session;
-      }));
+      // filteredSessions will update automatically via useMemo
     };
     
-    // Handle chat_session_added
+    // Handle chat_session_added - handles both new sessions AND updates to existing sessions
     const handleSessionAdded = (event: ChatSessionAddedEvent) => {
       if (!event.chat_session) return;
       
-      const newSession = event.chat_session;
+      const sessionData = event.chat_session;
       
-      // Don't add if it was recently deleted
-      if (deletedSessionsRef.current.has(newSession.session_id)) {
+      // Don't process if it was recently deleted
+      if (deletedSessionsRef.current.has(sessionData.session_id)) {
         return;
       }
       
-      // Add to beginning of list (newest first)
       setSessions(prev => {
-        const exists = prev.some(s => s.session_id === newSession.session_id);
-        if (exists) return prev;
+        const existingIndex = prev.findIndex(s => s.session_id === sessionData.session_id);
         
-        const updated = [newSession, ...prev];
-        // Limit cache size
-        if (updated.length > maxCachedSessions) {
-          return updated.slice(0, maxCachedSessions);
-        }
-        return updated;
-      });
-      
-      // Update filtered list if it matches search
-      if (filterSessions(searchQuery, [newSession]).length > 0) {
-        setFilteredSessions(prev => {
-          const exists = prev.some(s => s.session_id === newSession.session_id);
-          if (exists) return prev;
+        if (existingIndex !== -1) {
+          // UPDATE existing session
+          const updated = [...prev];
+          const existingSession = updated[existingIndex];
+          if (existingSession) {
+            updated[existingIndex] = {
+              ...existingSession,
+              ...sessionData,  // Merge all fields from the event
+              updated_at: sessionData.updated_at || existingSession.updated_at
+            };
+          }
           
-          const updated = [newSession, ...prev];
+          // Re-sort by updated_at descending (newest first)
+          return updated.sort((a, b) => {
+            const dateA = parseDate(a.updated_at || a.created_at).getTime();
+            const dateB = parseDate(b.updated_at || b.created_at).getTime();
+            return dateB - dateA;
+          });
+        } else {
+          // ADD new session at the beginning
+          const updated = [sessionData, ...prev];
+          
+          // Limit cache size
           if (updated.length > maxCachedSessions) {
             return updated.slice(0, maxCachedSessions);
           }
           return updated;
-        });
-      }
+        }
+      });
+      // filteredSessions will update automatically via useMemo
       
-      setTotalCount(prev => prev + 1);
+      // Only increment total count for new sessions
+      setSessions(prev => {
+        const exists = prev.some(s => s.session_id === sessionData.session_id);
+        if (!exists) {
+          setTotalCount(count => count + 1);
+        }
+        return prev;
+      });
+      
+      // Check if this session should be highlighted
+      if (sessionData.session_id === currentSessionId) {
+        // Force a re-render to update highlighting
+        setCurrentSessionId(sessionData.session_id);
+      }
     };
     
     // Handle chat_session_deleted
@@ -717,7 +674,7 @@ export function useChatSessionList(options: UseChatSessionListOptions = {}): Use
       
       // Remove from our lists
       setSessions(prev => prev.filter(s => s.session_id !== sessionId));
-      setFilteredSessions(prev => prev.filter(s => s.session_id !== sessionId));
+      // filteredSessions will update automatically via useMemo
       setTotalCount(prev => Math.max(0, prev - 1));
       
       // Mark as deleted
@@ -810,6 +767,10 @@ export function useChatSessionList(options: UseChatSessionListOptions = {}): Use
       const currentSession = sessionManager.getCurrentSession();
       if (currentSession) {
         setCurrentSessionId(currentSession.session_id);
+      }
+      else
+      {
+        setCurrentSessionId(null);
       }
     }
   }, [client]);

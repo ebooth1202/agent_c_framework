@@ -5,17 +5,17 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { EventStreamProcessor } from '../EventStreamProcessor';
-import { SessionManager } from '../../session/SessionManager';
+import { ChatSessionManager } from '../../session/SessionManager';
 import type { RenderMediaEvent } from '../types/ServerEvents';
 
 describe('EventStreamProcessor - RenderMedia Event Handling', () => {
   let processor: EventStreamProcessor;
-  let sessionManager: SessionManager;
+  let sessionManager: ChatSessionManager;
   let emittedEvents: Array<{ event: string; data: any }>;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    sessionManager = new SessionManager();
+    sessionManager = new ChatSessionManager();
     processor = new EventStreamProcessor(sessionManager);
     emittedEvents = [];
 
@@ -500,7 +500,7 @@ describe('EventStreamProcessor - RenderMedia Event Handling', () => {
     });
   });
 
-  describe('SessionManager Integration', () => {
+  describe('ChatSessionManager Integration', () => {
     it('should emit media-added event with correct session ID', () => {
       // Arrange
       const sessionId = 'specific-session-id';

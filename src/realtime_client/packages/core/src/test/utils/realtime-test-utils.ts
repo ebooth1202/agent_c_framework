@@ -320,9 +320,9 @@ export class TestResponseBuilder {
 }
 
 /**
- * Mock session manager for testing
+ * Mock chat session manager for testing
  */
-export function createMockSessionManager() {
+export function createMockChatSessionManager() {
   return {
     sessionId: 'test-session-id',
     isActive: vi.fn(() => true),

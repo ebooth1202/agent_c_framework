@@ -7,11 +7,10 @@ import {
   ChevronRight, Loader2, Check, Copy
 } from 'lucide-react'
 import { Button } from '../ui/button'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Message as SDKMessage, MessageContent, ContentPart } from '@agentc/realtime-core'
 import { MessageContentRenderer } from './MessageContentRenderer'
+import { MarkdownRenderer } from './content-renderers/MarkdownRenderer'
 import { Logger } from '../../utils/logger'
 
 export interface MessageData extends SDKMessage {
@@ -124,23 +123,6 @@ const ThoughtMessage: React.FC<ThoughtMessageProps> = ({
     setTimeout(() => setCopied(false), 2000)
   }, [message.content])
   
-  // Simple markdown components for thought messages
-  const thoughtMarkdownComponents = {
-    p({ children }: any) {
-      return <p className="mb-2 last:mb-0">{children}</p>
-    },
-    code({ inline, children }: any) {
-      if (inline) {
-        return <code className="bg-muted px-1 py-0.5 rounded text-xs">{children}</code>
-      }
-      return (
-        <pre className="bg-muted rounded p-2 overflow-x-auto my-2">
-          <code className="text-xs">{children}</code>
-        </pre>
-      )
-    }
-  }
-  
   return (
     <div className={cn(
       "rounded-lg border border-border/50 my-2",
@@ -195,14 +177,12 @@ const ThoughtMessage: React.FC<ThoughtMessageProps> = ({
                 maskImage: "linear-gradient(transparent 0%, black 1rem, black calc(100% - 1rem), transparent 100%)"
               }}
             >
-              <div className="prose prose-sm prose-muted max-w-none">
-                <ReactMarkdown 
-                  remarkPlugins={[remarkGfm]}
-                  components={thoughtMarkdownComponents}
-                >
-                  {extractTextContent(message.content)}
-                </ReactMarkdown>
-              </div>
+              <MarkdownRenderer
+                content={extractTextContent(message.content)}
+                compact={true}
+                className="prose-muted"
+                ariaLabel="Thought process content"
+              />
               
               {/* Thought Footer */}
               {message.metadata?.outputTokens && (

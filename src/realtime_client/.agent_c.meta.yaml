@@ -1,1 +1,1381 @@
-_plans: {}
+_plans:
+  connection_reconnection_implementation:
+    created_at: '2025-09-27T18:54:15.843647'
+    description: 'Implement connection parameter enhancements to support agent_key
+      persistence across browser sessions and chat_session_id for reconnection recovery.
+      This addresses the failed previous attempt by using correct architecture (runtime
+      state vs config), proper testing approach (MockWebSocket vs MSW), and including
+      all packages (especially Demo).
+
+
+      Key Requirements:
+
+      - Add optional agent_key parameter for first-time connections (from localStorage)
+
+      - Add optional chat_session_id parameter for reconnections (from current session)
+
+      - Persist user''s agent selection across browser sessions
+
+      - All packages properly coordinated with clear boundaries
+
+
+      Success Criteria:
+
+      - Users return to same agent they previously selected
+
+      - Chat sessions survive reconnections after server restarts
+
+      - No duplicate testing across packages
+
+      - Clean integration without breaking changes'
+    id: music-pegasus
+    lessons_learned:
+    - created_at: '2025-09-27T18:57:20.875117'
+      id: domain
+      learned_task_id: button-melon
+      lesson: 'Previous attempt failed because: 1) Demo package was not included in
+        planning despite being the entry point for connections, 2) Wrong testing approach
+        - tried to use MSW for WebSocket instead of MockWebSocket, 3) Architecture
+        misunderstanding - attempted config-based approach instead of runtime state
+        methods, 4) Demo was planning to test imported components instead of focusing
+        on integration only. Success requires clear package boundaries and each team
+        testing only what they own.'
+    tasks:
+      button-melon:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: "Owner: All Teams (Demo leads coordination)\n\nIntegration test scenarios:\n\
+          1. New user flow: No stored agent → default agent assigned\n2. Returning\
+          \ user: Stored agent → same agent on reconnection  \n3. Server reset: Chat\
+          \ session recovery via chat_session_id\n4. Agent unavailable: Graceful fallback\
+          \ when stored agent not available\n5. Privacy mode: System works without\
+          \ localStorage\n\nValidates all packages work together correctly."
+        created_at: '2025-09-27T18:57:01.558636'
+        description: Full system integration testing across all packages to validate
+          the complete connection/reconnection flow with agent persistence.
+        id: button-melon
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 150
+        title: 'Cross-Package: Integration Testing'
+        updated_at: '2025-09-27T18:57:01.558638'
+      candid-gemini:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: 'Owner: React Package Team
+
+          Files to modify:
+
+          - packages/react/src/hooks/useChat.ts
+
+
+          Implementation:
+
+          - Add sessionContinuity: ''preserved'' | ''new'' | ''pending'' | null
+
+          - Add isLoadingSession: boolean
+
+          - Track reconnection state transitions
+
+          - Maintain EventStreamProcessor as single source of truth for messages
+
+          - NEVER load messages from inline ChatSession.messages array
+
+
+          This prevents message duplication issues.'
+        created_at: '2025-09-27T18:55:28.376722'
+        description: Enhance useChat hook to provide session continuity indicators
+          for UI feedback during reconnection scenarios.
+        id: candid-gemini
+        parent_id: null
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 70
+        title: 'React Package: Add Session Continuity Indicators'
+        updated_at: '2025-09-27T18:55:28.376724'
+      carrot-product:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: "Owner: Demo Package Team\nTest focus: INTEGRATION ONLY\n\nTest scenarios:\n\
+          1. Stored agent_key is applied after connection\n2. Connection resilience\
+          \ during network interruption  \n3. UI shows appropriate feedback during\
+          \ reconnection\n4. Audio settings persist across reconnection\n\nWhat Demo\
+          \ does NOT test:\n- AgentSelector component (UI package tests this)\n- React\
+          \ hooks (React package tests these)\n- WebSocket reconnection logic (Core\
+          \ package tests this)\n- Any imported component internals\n\nDemo validates\
+          \ that all packages work together correctly in a Next.js app.\nUse MSW for\
+          \ HTTP mocking where needed."
+        created_at: '2025-09-27T18:56:40.868932'
+        description: Create integration tests that validate the complete connection/reconnection
+          flow works end-to-end. Do NOT test imported components - only test Demo's
+          integration layer.
+        id: carrot-product
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 140
+        title: 'Demo Package: Write Integration Tests Only'
+        updated_at: '2025-09-27T18:56:40.868935'
+      giraffe-result:
+        child_tasks: []
+        completed: true
+        completion_report: AgentStorage utility created and exported from React package
+        completion_signoff_by: null
+        context: "Owner: React Package Team\nFiles to create:\n- packages/react/src/utils/agentStorage.ts\n\
+          - packages/react/src/utils/__tests__/agentStorage.test.ts\n\nImplementation:\n\
+          - saveAgentKey(agentKey: string): void - Save to localStorage\n- getAgentKey():\
+          \ string | null - Retrieve from localStorage  \n- clearAgentKey(): void\
+          \ - Remove from localStorage\n- Storage key: 'agentc_selected_agent_key'\n\
+          - Include SSR safety checks (typeof window !== 'undefined')\n- Handle quota\
+          \ exceeded errors specifically\n- Export from package index\n\nThis centralizes\
+          \ localStorage operations as requested."
+        created_at: '2025-09-27T18:55:07.827530'
+        description: Implement the AgentStorage utility for centralized localStorage
+          management of agent_key persistence. This utility will be used by both React
+          and UI packages.
+        id: giraffe-result
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 50
+        title: 'React Package: Create AgentStorage Utility'
+        updated_at: '2025-09-27T20:40:06.651682'
+      initial-gabriel:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: 'Owner: All Teams
+
+
+          Documentation updates needed:
+
+          - Core: Document setPreferredAgentKey() method
+
+          - React: Document AgentStorage utility and Provider changes
+
+          - UI: Document AgentSelector persistence behavior
+
+          - Demo: Document integration approach
+
+
+          Update files in docs/api-reference/ for each package.'
+        created_at: '2025-09-27T18:57:10.674581'
+        description: Update all package documentation to reflect the new connection
+          parameters and agent persistence functionality.
+        id: initial-gabriel
+        parent_id: null
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 160
+        title: 'Documentation: Update API References'
+        updated_at: '2025-09-27T18:57:10.674583'
+      input-animal:
+        child_tasks: []
+        completed: true
+        completion_report: Demo team added the 5-line integration to apply stored
+          agent preferences after connection. Fixed hook import issue (useRealtimeClientSafe
+          instead of useRealtimeClient). Build passing.
+        completion_signoff_by: null
+        context: "Owner: Demo Package Team\nFiles to modify:\n- packages/demo/src/components/chat/ChatPageClient.tsx\
+          \ (or similar component with client access)\n\nImplementation (approximately\
+          \ 5 lines):\n```typescript\nuseEffect(() => {\n  if (client && isConnected)\
+          \ {\n    const storedAgentKey = localStorage.getItem('agentc_selected_agent_key');\n\
+          \    if (storedAgentKey) {\n      client.setAgent(storedAgentKey);\n   \
+          \ }\n  }\n}, [client, isConnected]);\n```\n\nThis reads the stored preference\
+          \ and applies it after connection.\nDemo is a CONSUMER of the feature, not\
+          \ an implementer."
+        created_at: '2025-09-27T18:56:19.845210'
+        description: Add simple integration code to read stored agent_key from localStorage
+          and apply it after connection is established. This is the critical missing
+          piece from the previous attempt.
+        id: input-animal
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 120
+        title: 'Demo Package: Apply Stored Agent Key After Connection'
+        updated_at: '2025-09-27T21:07:21.315556'
+      liberal-amigo:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: 'Owner: React Package Team
+
+          Test files to create/modify:
+
+          - packages/react/src/utils/__tests__/agentStorage.test.ts
+
+          - packages/react/src/providers/__tests__/AgentCProvider.test.ts
+
+
+          Test scenarios:
+
+          1. AgentStorage utility functions with localStorage mocking
+
+          2. Provider calls setPreferredAgentKey before connection
+
+          3. Session continuity indicators update correctly
+
+          4. Graceful fallback when localStorage unavailable
+
+
+          Use MSW for any HTTP API calls, MockWebSocket for WebSocket tests.'
+        created_at: '2025-09-27T18:55:38.916262'
+        description: Create tests for React layer changes using MSW for HTTP requests
+          (not WebSocket which uses MockWebSocket).
+        id: liberal-amigo
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 80
+        title: 'React Package: Write Tests with MSW'
+        updated_at: '2025-09-27T18:55:38.916265'
+      mercy-mother:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: 'Owner: UI Components Team
+
+          Test files to modify:
+
+          - packages/ui/src/components/controls/__tests__/AgentSelector.test.tsx
+
+
+          Test scenarios:
+
+          1. Agent selection triggers localStorage save
+
+          2. Storage failure doesn''t break selection
+
+          3. Clear selection removes from localStorage (if applicable)
+
+
+          Mock AgentStorage from React package, don''t mock localStorage directly.
+
+          Test ONLY the UI component''s behavior, not the storage utility itself.'
+        created_at: '2025-09-27T18:56:08.346981'
+        description: Test AgentSelector's localStorage persistence functionality with
+          proper mocking.
+        id: mercy-mother
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 110
+        title: 'UI Package: Write Component Tests'
+        updated_at: '2025-09-27T18:56:08.346983'
+      pandora-pocket:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: 'Owner: Demo Package Team
+
+          Files to potentially modify:
+
+          - packages/demo/src/components/layout/Header.tsx (or similar)
+
+
+          Implementation:
+
+          - Use useConnection hook from @agentc/realtime-react
+
+          - Display connection status indicator
+
+          - Show toast/alert on connection state changes
+
+
+          Optional enhancement for better user experience.
+
+          Demo showcases the SDK''s capabilities.'
+        created_at: '2025-09-27T18:56:29.257021'
+        description: Optional enhancement to show visual feedback for connection status
+          (connected/reconnecting/disconnected) using hooks from React package.
+        id: pandora-pocket
+        parent_id: null
+        priority: low
+        requires_completion_signoff: 'true'
+        sequence: 130
+        title: 'Demo Package: Add Connection Status UI'
+        updated_at: '2025-09-27T18:56:29.257024'
+      reform-house:
+        child_tasks: []
+        completed: true
+        completion_report: Core team updated WebSocket URL building to include agent_key
+          and chat_session_id parameters
+        completion_signoff_by: null
+        context: 'Owner: Core Package Team
+
+          Files to modify:
+
+          - packages/core/src/client/RealtimeClient.ts
+
+
+          Implementation in buildWebSocketUrl():
+
+          - If isReconnecting && lastKnownSessionId: add chat_session_id parameter
+
+          - Else if preferredAgentKey: add agent_key parameter
+
+          - Never send both parameters simultaneously
+
+
+          Priority: reconnection (chat_session_id) > first connection (agent_key)'
+        created_at: '2025-09-27T18:54:36.984423'
+        description: Modify buildWebSocketUrl() method to include agent_key and chat_session_id
+          parameters based on connection context (first connection vs reconnection).
+        id: reform-house
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 20
+        title: 'Core Package: Update WebSocket URL Building'
+        updated_at: '2025-09-27T20:39:59.094989'
+      relax-holiday:
+        child_tasks: []
+        completed: true
+        completion_report: UI team updated AgentSelector to persist selections to
+          localStorage using AgentStorage utility
+        completion_signoff_by: null
+        context: 'Owner: UI Components Team
+
+          Files to modify:
+
+          - packages/ui/src/components/controls/AgentSelector.tsx
+
+
+          Implementation in handleAgentSelect():
+
+          1. Import AgentStorage from @agentc/realtime-react
+
+          2. Call AgentStorage.saveAgentKey(agentKey) BEFORE client.setAgent()
+
+          3. Wrap in try-catch to handle localStorage errors gracefully
+
+          4. Log warnings but don''t block agent selection on storage failure
+
+
+          Simple change - just adding localStorage persistence to existing flow.'
+        created_at: '2025-09-27T18:55:49.891937'
+        description: Modify AgentSelector component to save selected agent_key to
+          localStorage using the AgentStorage utility from React package.
+        id: relax-holiday
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 90
+        title: 'UI Package: Update AgentSelector for Persistence'
+        updated_at: '2025-09-27T20:40:14.905842'
+      rudolf-family:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: 'Owner: Core Package Team
+
+          Files to create/modify:
+
+          - packages/core/src/client/__tests__/RealtimeClient.test.ts
+
+
+          Test scenarios using MockWebSocket:
+
+          1. URL includes agent_key on first connection
+
+          2. URL includes chat_session_id on reconnection
+
+          3. Session ID stored from ChatSessionChangedEvent
+
+          4. Session ID cleared on newChatSession()
+
+          5. Priority: reconnection params over first connection params
+
+
+          CRITICAL: Use MockWebSocket from test/mocks/websocket.mock.ts, NOT MSW for
+          WebSocket testing!'
+        created_at: '2025-09-27T18:54:56.405560'
+        description: Create comprehensive tests using MockWebSocket (NOT MSW) for
+          WebSocket connection parameter testing.
+        id: rudolf-family
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 40
+        title: 'Core Package: Write Tests with MockWebSocket'
+        updated_at: '2025-09-27T18:54:56.405562'
+      single-flipper:
+        child_tasks: []
+        completed: true
+        completion_report: Core fixed critical auth token validation bug that was
+          causing application crashes. Added proper auth checks before connection
+          attempts to prevent error loops.
+        completion_signoff_by: null
+        context: "Owner: Core Package Team\nFiles to modify:\n- packages/core/src/client/RealtimeClient.ts\n\
+          \nImplementation:\n1. In event handler for 'chat_session_changed':\n   -\
+          \ Store event.chat_session?.session_id to lastKnownSessionId\n2. Update\
+          \ reconnection flow to set isReconnecting flag\n3. Clear flags after successful\
+          \ connection\n\nThis enables automatic session recovery on reconnection."
+        created_at: '2025-09-27T18:54:46.369026'
+        description: Update event handling to store chat_session_id when ChatSessionChangedEvent
+          is received, enabling proper reconnection with session restoration.
+        id: single-flipper
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 30
+        title: 'Core Package: Add Event Handler for Session Storage'
+        updated_at: '2025-09-27T21:31:58.010380'
+      spray-maze:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: 'Owner: UI Components Team
+
+          Files to modify:
+
+          - packages/ui/src/components/controls/AgentSelector.tsx (if clear functionality
+          exists)
+
+
+          Implementation:
+
+          - In any clear/reset handler, call AgentStorage.clearAgentKey()
+
+          - Maintain consistency between UI state and localStorage
+
+
+          Optional enhancement - only if clear functionality exists.'
+        created_at: '2025-09-27T18:55:58.992823'
+        description: If AgentSelector supports clearing selection, ensure it also
+          clears the stored agent_key from localStorage.
+        id: spray-maze
+        parent_id: null
+        priority: low
+        requires_completion_signoff: 'true'
+        sequence: 100
+        title: 'UI Package: Add Clear Selection Support'
+        updated_at: '2025-09-27T18:55:58.992824'
+      tiger-sofia:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: "Owner: React Package Team\nFiles to modify:\n- packages/react/src/providers/AgentCProvider.tsx\n\
+          \nImplementation:\n1. Create client WITHOUT agent_key in config\n2. After\
+          \ client creation, if agent_key exists (from props or localStorage):\n \
+          \  - Call client.setPreferredAgentKey(agentKey)\n3. Then proceed with connection\n\
+          4. Sequence is critical: Create → SetAgent → Connect\n\nThis aligns with\
+          \ Core's runtime state approach."
+        created_at: '2025-09-27T18:55:17.766180'
+        description: Modify AgentCProvider to use Core's new runtime state methods
+          instead of passing agent_key in config.
+        id: tiger-sofia
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 60
+        title: 'React Package: Update AgentCProvider for Runtime Methods'
+        updated_at: '2025-09-27T18:55:17.766183'
+      total-list:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: 'Coordination Point
+
+
+          Prerequisites Complete:
+
+          - Core: Runtime state methods implemented
+
+          - React: AgentStorage utility created and exported
+
+
+          Enables:
+
+          - UI: Can import and use AgentStorage
+
+          - Demo: Can use the new APIs
+
+
+          This prevents teams from being blocked.'
+        created_at: '2025-09-27T18:56:51.164656'
+        description: First coordination checkpoint to ensure foundational pieces are
+          in place before dependent work begins.
+        id: total-list
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 45
+        title: 'Cross-Package: Coordination Checkpoint 1'
+        updated_at: '2025-09-27T18:56:51.164659'
+      vega-reptile:
+        child_tasks: []
+        completed: true
+        completion_report: Core team implemented runtime state management with setPreferredAgentKey()
+          method
+        completion_signoff_by: null
+        context: 'Owner: Core Package Team
+
+          Files to modify:
+
+          - packages/core/src/client/RealtimeClient.ts
+
+
+          Implementation:
+
+          1. Add private fields: preferredAgentKey, isReconnecting, lastKnownSessionId
+
+          2. Add public method: setPreferredAgentKey(agentKey: string | undefined)
+
+          3. Store chat_session_id from ChatSessionChangedEvent
+
+          4. Clear session ID on newChatSession() calls
+
+
+          This uses runtime state management instead of config fields, which is the
+          correct approach.'
+        created_at: '2025-09-27T18:54:27.356004'
+        description: Add runtime state fields and methods to RealtimeClient for managing
+          agent_key and chat_session_id parameters. This replaces the incorrect config-based
+          approach from the previous attempt.
+        id: vega-reptile
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 10
+        title: 'Core Package: Implement Runtime State Management'
+        updated_at: '2025-09-27T20:39:51.843276'
+    title: Connection/Reconnection Implementation with Agent Persistence
+    updated_at: '2025-09-27T21:31:58.010389'
+  core_test_fixes:
+    created_at: '2025-09-26T14:11:01.786635'
+    description: Structured implementation plan to fix the core test suite based on
+      comprehensive analysis. This plan breaks down the work into small, manageable
+      tasks that can be completed incrementally to establish proper MSW infrastructure,
+      fix mocks, and update failing tests.
+    id: cubic-clever
+    lessons_learned:
+    - created_at: '2025-09-26T18:57:02.899488'
+      id: mimosa
+      learned_task_id: dragon-castro
+      lesson: WebSocket mock installation requires vi.stubGlobal instead of direct
+        global assignment to avoid \"Cannot assign to read only property\" errors.
+        This is a Vitest-specific requirement for mocking global objects.
+    - created_at: '2025-09-26T18:57:10.803327'
+      id: passage
+      learned_task_id: dragon-castro
+      lesson: EventStreamProcessor emits different events for resumed sessions vs
+        streaming. Resumed sessions emit 'session-messages-loaded' with all messages
+        at once, while streaming emits individual 'message-complete' events. Tests
+        must check for the correct event type based on the scenario.
+    tasks:
+      amber-rover:
+        child_tasks: []
+        completed: true
+        completion_report: Initialization sequence fixtures created with session.created,
+          configuration, models, voice, turn_detection, ready, and turn_start events.
+        completion_signoff_by: Core Package Coordinator
+        context: 'Reference: //realtime_client/.scratch/testing_fixes/core_mocks.md
+          - Section 3.1 (initializationSequence)
+
+          Create in packages/core/src/test/fixtures/event-sequences.ts
+
+          Includes:
+
+          - session.created event
+
+          - session.configuration.set
+
+          - session.models.set
+
+          - session.voice.set
+
+          - session.turn_detection.set
+
+          - session.ready
+
+          - user.turn_start'
+        created_at: '2025-09-26T14:12:43.011042'
+        description: Create event fixtures for standard server initialization sequence
+        id: amber-rover
+        parent_id: vanilla-ricardo
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 31
+        title: Create initialization sequence fixtures
+        updated_at: '2025-09-26T18:36:46.338488'
+      balloon-panther:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: 'Final cleanup tasks:
+
+          - Document test patterns and best practices
+
+          - Remove obsolete mocks and utilities
+
+          - Update test README files
+
+          - Create migration guide for other packages
+
+          - Ensure all new patterns are well-documented'
+        created_at: '2025-09-26T14:15:01.762108'
+        description: Document new testing patterns and remove obsolete code
+        id: balloon-panther
+        parent_id: job-frog
+        priority: low
+        requires_completion_signoff: 'true'
+        sequence: 63
+        title: Document test patterns and cleanup
+        updated_at: '2025-09-26T14:15:01.762110'
+      bishop-collect:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: 'Reference: //realtime_client/.scratch/testing_fixes/core_mocks.md
+          - Section 5.2
+
+          Updates:
+
+          - Coverage reporter configuration
+
+          - Test timeout settings
+
+          - Path aliases for test imports
+
+          - Coverage exclusion patterns'
+        created_at: '2025-09-26T14:14:21.999621'
+        description: Update packages/core/vitest.config.ts with improved settings
+        id: bishop-collect
+        parent_id: monica-sting
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 52
+        title: Update Vitest configuration
+        updated_at: '2025-09-26T14:14:21.999623'
+      boris-quiet:
+        child_tasks: []
+        completed: true
+        completion_report: Created base HTTP handler definitions file at packages/core/src/test/mocks/handlers/index.ts
+          with handler aggregation pattern, health check endpoint, and 404 handler.
+          Imports from handler modules that will be created next.
+        completion_signoff_by: null
+        context: 'Reference: //realtime_client/.scratch/testing_fixes/core_mocks.md
+          - Section 1.2
+
+          Implementation includes:
+
+          - Import structure for handler modules
+
+          - Health check endpoint
+
+          - Default 404 handler for undefined routes
+
+          - Handler aggregation pattern'
+        created_at: '2025-09-26T14:11:30.510136'
+        description: Create packages/core/src/test/mocks/handlers/index.ts with base
+          handler structure and health check endpoint
+        id: boris-quiet
+        parent_id: libra-cabaret
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 12
+        title: Create base HTTP handler definitions
+        updated_at: '2025-09-26T15:06:36.376956'
+      chess-planet:
+        child_tasks: []
+        completed: true
+        completion_report: Created session-specific handlers at packages/core/src/test/mocks/handlers/session-handlers.ts
+          with create, get, and update endpoints. Includes in-memory storage, special
+          test cases, and ChatSessionChanged simulation support.
+        completion_signoff_by: null
+        context: 'Reference: //realtime_client/.scratch/testing_fixes/core_mocks.md
+          - Section 1.3
+
+          Implementation includes:
+
+          - Create session endpoint (POST)
+
+          - Get session endpoint with special test cases
+
+          - Update session messages endpoint (PATCH)
+
+          - In-memory session storage for tests
+
+          - ChatSessionChanged simulation support'
+        created_at: '2025-09-26T14:11:41.894105'
+        description: Create packages/core/src/test/mocks/handlers/session-handlers.ts
+          with session API endpoints
+        id: chess-planet
+        parent_id: libra-cabaret
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 13
+        title: Implement session-specific handlers
+        updated_at: '2025-09-26T15:08:12.692901'
+      city-atomic:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: 'Reference: //realtime_client/.scratch/testing_fixes/core_mocks.md
+          - Section 5.1
+
+          Create packages/core/src/test/utils/event-stream-test-utils.ts
+
+          Includes:
+
+          - EventStreamTestHarness class
+
+          - Event capture and tracking
+
+          - Helper methods for retrieving messages, thoughts, media
+
+          - Cleanup utilities'
+        created_at: '2025-09-26T14:14:11.510235'
+        description: Create test harness class for simplified event stream testing
+        id: city-atomic
+        parent_id: monica-sting
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 51
+        title: Create EventStreamTestHarness utility
+        updated_at: '2025-09-26T14:14:11.510238'
+      dragon-castro:
+        child_tasks:
+        - pogo-harris
+        - madonna-rondo
+        completed: true
+        completion_report: 'Phase 4 complete: EventStreamProcessor tests successfully
+          updated to use new infrastructure. 88.4% pass rate (76/86 tests). Both test
+          files now properly leverage MockWebSocket, event fixtures, and check for
+          correct event types. 10 remaining failures are EventStreamProcessor implementation
+          bugs, not test issues. Tests are correctly identifying real issues that
+          need dev fixes.'
+        completion_signoff_by: Core Package Coordinator
+        context: 'Reference: //realtime_client/.scratch/testing_fixes/core_mocks.md
+          - Phase 4'
+        created_at: '2025-09-26T14:13:31.861472'
+        description: Update and fix failing EventStreamProcessor test files
+        id: dragon-castro
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 40
+        title: 'Phase 4: Fix EventStreamProcessor Tests'
+        updated_at: '2025-09-26T18:57:20.418529'
+      flame-antonio:
+        child_tasks: []
+        completed: true
+        completion_report: Created MSW server configuration file at packages/core/src/test/mocks/server.ts
+          with server setup, lifecycle hooks, and helper functions. File imports from
+          ./handlers which will be created next.
+        completion_signoff_by: null
+        context: 'Reference: //realtime_client/.scratch/testing_fixes/core_mocks.md
+          - Section 1.1
+
+          Implementation includes:
+
+          - setupServer from MSW
+
+          - Server lifecycle hooks (start, reset, stop)
+
+          - Helper to add runtime handlers
+
+          - Proper error handling for unhandled requests'
+        created_at: '2025-09-26T14:11:22.174878'
+        description: Create packages/core/src/test/mocks/server.ts with MSW server
+          setup, lifecycle hooks, and helper functions
+        id: flame-antonio
+        parent_id: libra-cabaret
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 11
+        title: Create MSW server configuration file
+        updated_at: '2025-09-26T15:04:56.182805'
+      good-toast:
+        child_tasks:
+        - ohio-novel
+        - pocket-postage
+        completed: true
+        completion_report: 'Phase 2 complete: Enhanced WebSocket mock infrastructure
+          successfully implemented. MockWebSocket class provides realistic behavior
+          with proper state management, event simulation helpers, and WebSocketTracker
+          utility for test management. Build passes and infrastructure ready for EventStreamProcessor
+          testing.'
+        completion_signoff_by: Core Package Coordinator
+        context: 'Reference: //realtime_client/.scratch/testing_fixes/core_mocks.md
+          - Phase 2'
+        created_at: '2025-09-26T14:12:00.552296'
+        description: Improve WebSocket mock implementation for realistic event stream
+          testing
+        id: good-toast
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 20
+        title: 'Phase 2: Enhanced WebSocket Mock'
+        updated_at: '2025-09-26T18:24:38.434736'
+      heaven-lady:
+        child_tasks: []
+        completed: true
+        completion_report: ChatSessionChanged fixtures created with resumed message
+          handling and various message types including text, tool_use, and tool_result.
+        completion_signoff_by: Core Package Coordinator
+        context: 'Reference: //realtime_client/.scratch/testing_fixes/core_mocks.md
+          - Section 3.1 (chatSessionChangedSequence, renderMediaSequence)
+
+          Includes:
+
+          - ChatSessionChanged with message history
+
+          - Tool use in message history
+
+          - RenderMedia with markdown content
+
+          - RenderMedia with foreign content
+
+          - Proper metadata fields'
+        created_at: '2025-09-26T14:13:14.631227'
+        description: Create event fixtures for ChatSessionChanged events with resumed
+          messages and RenderMedia events
+        id: heaven-lady
+        parent_id: vanilla-ricardo
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 34
+        title: Create ChatSessionChanged and RenderMedia fixtures
+        updated_at: '2025-09-26T18:37:09.313840'
+      igloo-portal:
+        child_tasks: []
+        completed: true
+        completion_report: Text and thought streaming fixtures created with proper
+          role handling, delta events, completion events, and turn management.
+        completion_signoff_by: Core Package Coordinator
+        context: 'Reference: //realtime_client/.scratch/testing_fixes/core_mocks.md
+          - Section 3.1 (textStreamingSequence, thoughtStreamingSequence)
+
+          Includes:
+
+          - Text delta events with proper role
+
+          - Thought delta events with role: thought
+
+          - Completion events
+
+          - Turn start/end events
+
+          - Proper interaction IDs'
+        created_at: '2025-09-26T14:12:53.163457'
+        description: Create event fixtures for text streaming and thought streaming
+          sequences
+        id: igloo-portal
+        parent_id: vanilla-ricardo
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 32
+        title: Create text and thought streaming fixtures
+        updated_at: '2025-09-26T18:36:54.088433'
+      job-frog:
+        child_tasks:
+        - kayak-agent
+        - karma-hexagon
+        - balloon-panther
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: Final validation phase to ensure all components work together
+        created_at: '2025-09-26T14:14:31.223145'
+        description: Validate all fixes work together and create integration tests
+        id: job-frog
+        parent_id: null
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 60
+        title: 'Phase 6: Validation and Integration'
+        updated_at: '2025-09-26T14:14:31.223147'
+      karma-hexagon:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: 'Create comprehensive integration tests:
+
+          - Test complete turn sequences
+
+          - Test error recovery scenarios
+
+          - Test cancellation handling
+
+          - Validate event ordering and timing
+
+          - Use the new test harness and fixtures'
+        created_at: '2025-09-26T14:14:52.107807'
+        description: Create integration tests that validate complete event processing
+          flows
+        id: karma-hexagon
+        parent_id: job-frog
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 62
+        title: Create end-to-end event flow tests
+        updated_at: '2025-09-26T14:14:52.107810'
+      kayak-agent:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: 'After all infrastructure is in place:
+
+          - Run pnpm test in core package
+
+          - Identify any remaining failures
+
+          - Apply targeted fixes
+
+          - Ensure all tests pass with zero warnings'
+        created_at: '2025-09-26T14:14:41.750590'
+        description: Execute complete test suite to identify and fix any remaining
+          failures
+        id: kayak-agent
+        parent_id: job-frog
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 61
+        title: Run full test suite and fix remaining issues
+        updated_at: '2025-09-26T14:14:41.750593'
+      lagoon-monica:
+        child_tasks: []
+        completed: true
+        completion_report: Updated test setup file at packages/core/src/test/setup.ts
+          with MSW server lifecycle integration. Added server start/stop/reset hooks
+          while preserving all existing polyfills and configuration.
+        completion_signoff_by: null
+        context: 'Reference: //realtime_client/.scratch/testing_fixes/core_mocks.md
+          - Section 1.4
+
+          Implementation includes:
+
+          - Import MSW server functions
+
+          - Start server in beforeAll hook
+
+          - Reset handlers in afterEach hook
+
+          - Stop server in afterAll hook
+
+          - Maintain existing polyfills'
+        created_at: '2025-09-26T14:11:51.957226'
+        description: Update packages/core/src/test/setup.ts to integrate MSW server
+          lifecycle
+        id: lagoon-monica
+        parent_id: libra-cabaret
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 14
+        title: Update test setup file with MSW integration
+        updated_at: '2025-09-26T15:09:47.614126'
+      libra-cabaret:
+        child_tasks:
+        - flame-antonio
+        - boris-quiet
+        - chess-planet
+        - lagoon-monica
+        completed: true
+        completion_report: 'Phase 1 complete: MSW infrastructure successfully set
+          up. Created server configuration, handler definitions (including placeholders),
+          session handlers, and integrated MSW lifecycle into test setup. All imports
+          resolved and infrastructure ready for testing.'
+        completion_signoff_by: Core Package Coordinator
+        context: 'Reference: //realtime_client/.scratch/testing_fixes/core_mocks.md
+          - Phase 1'
+        created_at: '2025-09-26T14:11:11.769797'
+        description: Set up Mock Service Worker (MSW) infrastructure for HTTP endpoint
+          mocking in tests
+        id: libra-cabaret
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 10
+        title: 'Phase 1: MSW Infrastructure Setup'
+        updated_at: '2025-09-26T15:11:14.428440'
+      lobby-appear:
+        child_tasks: []
+        completed: true
+        completion_report: Tool call fixtures created with tool selection deltas,
+          tool call events, completion handling, and mixed text/tool responses.
+        completion_signoff_by: Core Package Coordinator
+        context: 'Reference: //realtime_client/.scratch/testing_fixes/core_mocks.md
+          - Section 3.1 (toolCallSequence)
+
+          Includes:
+
+          - tool_select_delta events
+
+          - tool_call events
+
+          - tool_call_complete events
+
+          - Associated text deltas
+
+          - Proper sequencing with turn events'
+        created_at: '2025-09-26T14:13:02.807240'
+        description: Create event fixtures for tool call sequences including selection
+          and completion
+        id: lobby-appear
+        parent_id: vanilla-ricardo
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 33
+        title: Create tool call sequence fixtures
+        updated_at: '2025-09-26T18:37:01.518322'
+      madonna-rondo:
+        child_tasks: []
+        completed: true
+        completion_report: Resumed messages tests successfully updated to use new
+          infrastructure. Tests now properly validate mapResumedMessagesToEvents functionality
+          using session-messages-loaded events. 4 tests still failing due to EventStreamProcessor
+          not emitting tool-call-complete events for resumed sessions - implementation
+          issue, not test problem.
+        completion_signoff_by: null
+        context: 'Reference: //realtime_client/.scratch/testing_fixes/core_mocks.md
+          - Section 4.2
+
+          Key fixes:
+
+          - Implement proper mapResumedMessagesToEvents functionality
+
+          - Handle think tool as thought role conversion
+
+          - Process delegation tools correctly
+
+          - Parse YAML content from tool results'
+        created_at: '2025-09-26T14:13:51.537556'
+        description: Update EventStreamProcessor.resumed-messages.test.ts to properly
+          handle message mapping
+        id: madonna-rondo
+        parent_id: dragon-castro
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 42
+        title: Fix resumed messages tests
+        updated_at: '2025-09-26T18:56:55.295235'
+      monica-sting:
+        child_tasks:
+        - city-atomic
+        - bishop-collect
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: 'Reference: //realtime_client/.scratch/testing_fixes/core_mocks.md
+          - Phase 5'
+        created_at: '2025-09-26T14:14:00.956161'
+        description: Create test utilities and update configuration for improved testing
+        id: monica-sting
+        parent_id: null
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 50
+        title: 'Phase 5: Test Infrastructure Updates'
+        updated_at: '2025-09-26T14:14:00.956164'
+      ohio-novel:
+        child_tasks: []
+        completed: true
+        completion_report: Enhanced MockWebSocket class successfully implemented with
+          proper state management, event handling, and testing helpers. Ready for
+          use in EventStreamProcessor tests.
+        completion_signoff_by: Core Package Coordinator
+        context: 'Reference: //realtime_client/.scratch/testing_fixes/core_mocks.md
+          - Section 2.1
+
+          Implementation includes:
+
+          - Proper WebSocket state management
+
+          - Binary type support
+
+          - Buffered amount simulation
+
+          - Event handler implementation
+
+          - Helper methods for testing (simulateMessage, simulateBinaryMessage, etc.)
+
+          - EventTarget interface implementation'
+        created_at: '2025-09-26T14:12:10.386436'
+        description: Update packages/core/src/test/mocks/websocket.mock.ts with enhanced
+          WebSocket mock
+        id: ohio-novel
+        parent_id: good-toast
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 21
+        title: Enhance MockWebSocket class implementation
+        updated_at: '2025-09-26T18:24:23.955071'
+      pocket-postage:
+        child_tasks: []
+        completed: true
+        completion_report: WebSocketTracker utility successfully implemented with
+          instance tracking, install/uninstall methods, and proper cleanup capabilities.
+        completion_signoff_by: Core Package Coordinator
+        context: 'Reference: //realtime_client/.scratch/testing_fixes/core_mocks.md
+          - Section 2.1 (WebSocketTracker)
+
+          Implementation includes:
+
+          - Install/uninstall methods for global WebSocket replacement
+
+          - Instance tracking (getLatest, getAll)
+
+          - Clear method for cleanup
+
+          - Proper restoration of original WebSocket'
+        created_at: '2025-09-26T14:12:21.562989'
+        description: Add WebSocketTracker class to track and manage WebSocket instances
+          in tests
+        id: pocket-postage
+        parent_id: good-toast
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 22
+        title: Implement WebSocketTracker utility
+        updated_at: '2025-09-26T18:24:30.898270'
+      pogo-harris:
+        child_tasks: []
+        completed: true
+        completion_report: Role preservation tests successfully updated to use new
+          infrastructure. Tests now check for correct event types (session-messages-loaded
+          instead of message-added). WebSocket mock fixed using vi.stubGlobal. 3 tests
+          still failing due to EventStreamProcessor implementation issues, not test
+          problems.
+        completion_signoff_by: null
+        context: 'Reference: //realtime_client/.scratch/testing_fixes/core_mocks.md
+          - Section 4.1
+
+          Key fixes:
+
+          - Ensure SessionManager is properly initialized with a session
+
+          - Use proper event sequences from fixtures
+
+          - Verify event emission is actually happening
+
+          - Check that message builder is correctly accumulating content'
+        created_at: '2025-09-26T14:13:41.008273'
+        description: Update EventStreamProcessor.role-preservation.test.ts to properly
+          test role handling
+        id: pogo-harris
+        parent_id: dragon-castro
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 41
+        title: Fix role preservation tests
+        updated_at: '2025-09-26T18:56:46.968013'
+      sofia-salmon:
+        child_tasks: []
+        completed: true
+        completion_report: Media and special event fixtures created including RenderMedia
+          events, audio streaming sequences, error events, and cancellation sequences.
+        completion_signoff_by: Core Package Coordinator
+        context: 'Reference: //realtime_client/.scratch/testing_fixes/core_mocks.md
+          - Section 3.1 (audioStreamingSequence, errorSequence, cancellationSequence)
+
+          Includes:
+
+          - Audio delta events
+
+          - Error events with codes and details
+
+          - Cancellation events mid-stream
+
+          - Proper cleanup sequences'
+        created_at: '2025-09-26T14:13:24.557873'
+        description: Create event fixtures for audio streaming, error events, and
+          cancellation sequences
+        id: sofia-salmon
+        parent_id: vanilla-ricardo
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 35
+        title: Create audio, error, and cancellation fixtures
+        updated_at: '2025-09-26T18:37:17.092436'
+      vanilla-ricardo:
+        child_tasks:
+        - amber-rover
+        - igloo-portal
+        - lobby-appear
+        - heaven-lady
+        - sofia-salmon
+        completed: true
+        completion_report: 'Phase 3 complete: Comprehensive event sequence fixtures
+          created. 16+ event sequences covering initialization, text/thought streaming,
+          tool calls, session management, media rendering, audio streaming, errors,
+          and cancellation. All fixtures type-safe and ready for EventStreamProcessor
+          testing.'
+        completion_signoff_by: Core Package Coordinator
+        context: 'Reference: //realtime_client/.scratch/testing_fixes/core_mocks.md
+          - Phase 3'
+        created_at: '2025-09-26T14:12:31.075736'
+        description: Create comprehensive event sequence fixtures for testing
+        id: vanilla-ricardo
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 30
+        title: 'Phase 3: Event Stream Test Fixtures'
+        updated_at: '2025-09-26T18:37:25.609418'
+    title: Core Package Test Suite Fix Implementation
+    updated_at: '2025-09-26T18:57:20.418550'
+  demo_connection_reconnection:
+    created_at: '2025-09-27T18:18:46.251523'
+    description: Implementation plan for Demo package involvement in connection/reconnection
+      improvements. This includes handling agent_key from localStorage during app
+      initialization, ensuring proper connection flow from login page, and coordinating
+      with MSW for testing.
+    id: teacher-postage
+    lessons_learned: []
+    tasks:
+      drum-mimosa:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-27T18:18:53.982211'
+        description: Review how the Demo app currently handles connection initialization,
+          especially from the login page. Understand the flow from authentication
+          to WebSocket connection and identify where agent_key needs to be integrated.
+        id: drum-mimosa
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 1
+        title: Analyze Demo's Current Connection Flow
+        updated_at: '2025-09-27T18:18:53.982214'
+      fortune-bamboo:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-27T18:19:25.444411'
+        description: Develop MSW handlers that properly simulate the connection flow
+          with agent_key and chat_session_id parameters. Ensure the handlers can test
+          both successful connections and error scenarios.
+        id: fortune-bamboo
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 5
+        title: Create MSW Handlers for Connection Testing
+        updated_at: '2025-09-27T18:19:25.444413'
+      lorenzo-grid:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-27T18:19:32.383582'
+        description: Create comprehensive tests that verify the Demo app correctly
+          handles agent_key from localStorage, passes it during connection, and properly
+          manages reconnection scenarios with chat_session_id.
+        id: lorenzo-grid
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 6
+        title: Write Integration Tests for Connection Flow
+        updated_at: '2025-09-27T18:19:32.383585'
+      temple-lunch:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-27T18:19:01.957336'
+        description: Update the Demo app to read the stored agent_key from localStorage
+          when initializing the connection. This should happen after successful authentication
+          but before establishing the WebSocket connection.
+        id: temple-lunch
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 2
+        title: Implement Agent Key Retrieval on App Startup
+        updated_at: '2025-09-27T18:19:01.957338'
+      vertigo-fruit:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-27T18:19:10.210393'
+        description: Ensure the AgentCProvider in the Demo app is configured to use
+          the stored agent_key. This may involve passing the useStoredAgentKey prop
+          or explicitly retrieving and passing the agent_key.
+        id: vertigo-fruit
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: 3
+        title: Update AgentCProvider Configuration
+        updated_at: '2025-09-27T18:19:10.210396'
+      viva-east:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-27T18:19:17.739547'
+        description: Implement proper error handling for cases where localStorage
+          is unavailable (privacy mode), agent_key is invalid, or the requested agent
+          is not available on the server.
+        id: viva-east
+        parent_id: null
+        priority: medium
+        requires_completion_signoff: 'true'
+        sequence: 4
+        title: Handle Edge Cases and Error Scenarios
+        updated_at: '2025-09-27T18:19:17.739550'
+    title: Demo Package Connection/Reconnection Implementation
+    updated_at: '2025-09-27T18:19:32.383595'
+  react_core_breaking_changes:
+    created_at: '2025-09-30T16:04:41.804294'
+    description: Fix React package tests and code after extensive core package changes
+      including breaking changes to event handling, session management, and auth validation
+      timing. Core package completed 7 phases of changes resulting in 27 failing tests
+      in React package.
+    id: sulfur-guide
+    lessons_learned: []
+    tasks:
+      comedy-crack:
+        child_tasks: []
+        completed: false
+        completion_report: null
+        completion_signoff_by: null
+        context: ''
+        created_at: '2025-09-30T16:04:47.449728'
+        description: The chat-session-changed event listener was using an inline arrow
+          function that couldn't be properly cleaned up, causing a memory leak. Refactor
+          to use a named handler function that can be properly unsubscribed.
+        id: comedy-crack
+        parent_id: null
+        priority: high
+        requires_completion_signoff: 'true'
+        sequence: null
+        title: Fix inline arrow function memory leak in useChat.ts
+        updated_at: '2025-09-30T16:04:47.449730'
+    title: 'React Package: Core Breaking Changes Recovery'
+    updated_at: '2025-09-30T16:04:47.449751'

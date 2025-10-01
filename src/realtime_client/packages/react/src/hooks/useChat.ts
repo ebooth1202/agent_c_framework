@@ -189,17 +189,14 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     return isMessageItem(message) && message.isSubSession === true;
   }, []);
   
-  // Subscribe to chat events
-  useEffect(() => {
-    if (!client) return;
-    
-    const sessionManager = client.getSessionManager();
-    
-    // Initial update
-    updateChatInfo();
-    
-    // Handle message-added events (complete messages from EventStreamProcessor)
-    const handleMessageAdded = (event: unknown) => {
+  // Track listener registration for diagnostics
+  const listenerCountRef = useRef(0);
+  
+  // Define stable handler functions using useCallback
+  // These need to be stable references so cleanup can properly remove them
+  
+  // Handle message-added events (complete messages from EventStreamProcessor)
+  const handleMessageAdded = useCallback((event: unknown) => {
       const messageEvent = event as { sessionId: string; message: ExtendedMessage };
       Logger.debug('[useChat] Message added event:', messageEvent);
       
@@ -229,10 +226,10 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         streamingMessageIdRef.current = null;
         setIsAgentTyping(false);
       }
-    };
+    }, [maxMessages]);
     
     // Handle message-streaming events (partial messages being built)
-    const handleMessageStreaming = (event: unknown) => {
+    const handleMessageStreaming = useCallback((event: unknown) => {
       const streamEvent = event as { sessionId: string; message?: ExtendedMessage };
       Logger.debug('[useChat] Message streaming event received');
       Logger.debug('[useChat] Stream event structure:', {
@@ -261,10 +258,10 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
       } else {
         Logger.warn('[useChat] Message streaming event received without message property');
       }
-    };
+    }, []);
     
     // Handle message-complete events (finalized messages)
-    const handleMessageComplete = (event: unknown) => {
+    const handleMessageComplete = useCallback((event: unknown) => {
       const completeEvent = event as { sessionId: string; message: ExtendedMessage };
       Logger.debug('[useChat] Message complete event:', completeEvent);
       
@@ -294,23 +291,23 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
       streamingMessageIdRef.current = null;
       setIsAgentTyping(false);
       Logger.debug('[useChat] Message complete - cleared streaming and typing state');
-    };
+    }, [maxMessages]);
     
     // Handle turn events from server for typing indicators
-    const handleUserTurnStart = () => {
+    const handleUserTurnStart = useCallback(() => {
       // User is speaking/typing, agent is not
       setIsAgentTyping(false);
-    };
+    }, []);
     
-    const handleUserTurnEnd = () => {
+    const handleUserTurnEnd = useCallback(() => {
       // User's turn has ended, agent is about to respond
       // Show typing indicator until actual content arrives
       setIsAgentTyping(true);
       Logger.debug('[useChat] User turn ended, showing typing indicator');
-    };
+    }, []);
     
     // Handle session change events
-    const handleSessionChanged = (event: unknown) => {
+    const handleSessionChanged = useCallback((event: unknown) => {
       const sessionEvent = event as { chat_session?: ChatSession };
       
       // CRITICAL: Always clear messages when session changes, NO EXCEPTIONS
@@ -368,10 +365,18 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         expectedSessionIdRef.current = null;
         messagesLoadedForSessionRef.current = null;
       }
-    };
+    }, []); // No dependencies - uses refs and setters
+    
+    // Named handler for chat-session-changed event from SessionManager
+    // This wraps handleSessionChanged and can be properly cleaned up
+    const handleChatSessionChanged = useCallback((data: { currentChatSession: ChatSession | null; previousChatSession: ChatSession | null }) => {
+      if (data.currentChatSession) {
+        handleSessionChanged({ chat_session: data.currentChatSession });
+      }
+    }, [handleSessionChanged]);
     
     // Handle session messages loaded event (from EventStreamProcessor)
-    const handleSessionMessagesLoaded = (event: unknown) => {
+    const handleSessionMessagesLoaded = useCallback((event: unknown) => {
       const messagesEvent = event as { sessionId?: string; messages?: ExtendedMessage[] };
       const eventSessionId = messagesEvent.sessionId;
       
@@ -379,7 +384,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
       Logger.debug('[useChat] Event session ID:', eventSessionId);
       Logger.debug('[useChat] Expected session ID:', expectedSessionIdRef.current);
       Logger.debug('[useChat] Is loading session:', isLoadingSessionRef.current);
-      Logger.debug('[useChat] Current session ID:', currentSessionId);
+      Logger.debug('[useChat] Current session ID:', currentSessionIdRef.current);
       
       // Validation logic for race condition prevention:
       // 1. During session loading (isLoadingSessionRef.current === true):
@@ -463,10 +468,10 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
           Logger.debug('[useChat] Session loading complete');
         }
       }
-    };
+    }, [maxMessages]); // currentSessionId accessed via ref
     
     // Handle subsession started events
-    const handleSubsessionStarted = (event: unknown) => {
+    const handleSubsessionStarted = useCallback((event: unknown) => {
       const subsessionEvent = event as {
         subSessionType?: 'chat' | 'oneshot';
         subAgentType?: 'clone' | 'team' | 'assist' | 'tool';
@@ -501,10 +506,10 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         }
         return newMessages;
       });
-    };
+    }, [maxMessages]);
     
     // Handle subsession ended events
-    const handleSubsessionEnded = (_event: unknown) => {
+    const handleSubsessionEnded = useCallback((_event: unknown) => {
       Logger.debug('[useChat] Subsession ended event');
       
       // Don't add dividers while loading a new session
@@ -527,10 +532,10 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         }
         return newMessages;
       });
-    };
+    }, [maxMessages]);
     
     // Handle media added events (RenderMedia)
-    const handleMediaAdded = (event: unknown) => {
+    const handleMediaAdded = useCallback((event: unknown) => {
       const mediaEvent = event as {
         sessionId: string;
         media: {
@@ -577,10 +582,10 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         }
         return newMessages;
       });
-    };
+    }, [maxMessages]);
     
     // Handle system message events (system alerts in chat)
-    const handleSystemMessage = (event: unknown) => {
+    const handleSystemMessage = useCallback((event: unknown) => {
       const systemEvent = event as {
         content: string;
         severity?: 'info' | 'warning' | 'error';
@@ -611,16 +616,31 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         }
         return newMessages;
       });
-    };
+    }, [maxMessages]);
+  
+  // Subscribe to chat events
+  useEffect(() => {
+    if (!client) return;
+    
+    const sessionManager = client.getSessionManager();
+    
+    // Initial update
+    updateChatInfo();
+    
+    // Increment listener count for diagnostics
+    listenerCountRef.current += 1;
+    const registrationId = listenerCountRef.current;
+    console.log(`[useChat:DIAGNOSTIC] 🔵 Registering listeners #${registrationId}`);
     
     // Subscribe to turn events on client for typing indicators
     // These are always subscribed if client exists
     client.on('user_turn_start', handleUserTurnStart);
     client.on('user_turn_end', handleUserTurnEnd);
-    client.on('chat_session_changed', handleSessionChanged);
     
-    // Subscribe to SessionManager events for message handling (only if sessionManager exists)
+    // Subscribe to ChatSessionManager events for message handling (only if sessionManager exists)
     if (sessionManager) {
+      // Chat session change events come from ChatSessionManager, not client
+      sessionManager.on('chat-session-changed', handleChatSessionChanged);
       sessionManager.on('message-added', handleMessageAdded);
       sessionManager.on('message-streaming', handleMessageStreaming);
       sessionManager.on('message-complete', handleMessageComplete);
@@ -635,16 +655,20 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     }
     
     return () => {
+      // Log cleanup for diagnostics
+      console.log(`[useChat:DIAGNOSTIC] 🔴 Cleaning up listeners #${registrationId}`);
+      
       // client and sessionManager must be accessible in closure
       if (client) {
         client.off('user_turn_start', handleUserTurnStart);
         client.off('user_turn_end', handleUserTurnEnd);
-        client.off('chat_session_changed', handleSessionChanged);
       }
       
       // Get sessionManager again in cleanup to ensure it's available
       const cleanupSessionManager = client?.getSessionManager();
       if (cleanupSessionManager) {
+        // Clean up chat-session-changed listener using named handler reference
+        cleanupSessionManager.off('chat-session-changed', handleChatSessionChanged);
         cleanupSessionManager.off('message-added', handleMessageAdded);
         cleanupSessionManager.off('message-streaming', handleMessageStreaming);
         cleanupSessionManager.off('message-complete', handleMessageComplete);
@@ -656,8 +680,24 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         cleanupSessionManager.off('media-added', handleMediaAdded);
         cleanupSessionManager.off('system_message', handleSystemMessage);
       }
+      
+      console.log(`[useChat:DIAGNOSTIC] ✅ Cleanup complete for #${registrationId}`);
     };
-  }, [client, maxMessages]); // Removed updateChatInfo to prevent re-registration
+  }, [
+    client,
+    // updateChatInfo removed - only called once on mount, not used by handlers
+    handleMessageAdded,
+    handleMessageStreaming,
+    handleMessageComplete,
+    handleUserTurnStart,
+    handleUserTurnEnd,
+    handleSessionChanged,
+    handleSessionMessagesLoaded,
+    handleSubsessionStarted,
+    handleSubsessionEnded,
+    handleMediaAdded,
+    handleSystemMessage
+  ]);
   
   // Computed properties
   const lastMessage: MessageChatItem | null = (() => {

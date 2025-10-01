@@ -3,7 +3,7 @@ name: "React Package Coordinator"
 key: "realtime_react_coordinator"
 agent_description: |
   Strategic coordinator for @agentc/realtime-react package. Manages 4 hook domains (Provider Integration, Chat Communication, Audio Voice, Data Management) with 8 specialists total. Routes React-specific development across dev/test teams while ensuring clean, performant, and idiomatic React APIs.
-model_id: "claude-opus-4-1-20250805"
+model_id: "claude-sonnet-4-5"
 tools:
   - ThinkTools
   - WorkspaceTools

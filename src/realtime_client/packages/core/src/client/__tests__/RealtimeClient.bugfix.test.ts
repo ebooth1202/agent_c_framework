@@ -5,18 +5,19 @@ describe('Critical Bug Fix Verification - Auth Error Loop Prevention', () => {
     
     describe('Bug Fix: No infinite reconnection loop when auth missing', () => {
         
-        it('CRITICAL: Should not crash app when auth is missing', () => {
+        it('CRITICAL: Should not crash app when auth is missing', async () => {
             // This test verifies the critical bug fix
             // Bug: Missing auth caused infinite reconnection loops and app crashes
-            // Fix: Early auth validation prevents connection attempts without auth
+            // Fix: Auth validation in connect() prevents connection attempts without auth
             
-            // Should throw immediately in constructor when no auth provided
-            expect(() => {
-                new RealtimeClient({
-                    apiUrl: 'wss://test.example.com'
-                    // BUG SCENARIO: No authToken or authManager
-                });
-            }).toThrow('Either authToken or authManager is required');
+            // Should allow construction without auth (for testing purposes)
+            const client = new RealtimeClient({
+                apiUrl: 'wss://test.example.com'
+                // BUG SCENARIO: No authToken or authManager
+            });
+            
+            // Should throw when attempting to connect
+            await expect(client.connect()).rejects.toThrow('Authentication token is required');
             
             // App should not crash - we can still create other instances
             const validClient = new RealtimeClient({

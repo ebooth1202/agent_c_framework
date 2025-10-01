@@ -14,7 +14,7 @@ class AgentTeamSection(PromptSection):
                     "on behalf of the user or to execute your plans. These are highly capable agents with very specialized knowledge, they will allow "
                     "you to ensure both high quality and token efficiency by offloading the 'heavy lifting' to subject matter experts.\n\n"
                     "## Available Team Member IDs:\n${at_agent_ids}\n\n"
-                    "$at_sessions")
+                    "$at_sessions\n\n**IMPORTANT**: You may only use one delegation tool at a time.")
         super().__init__(template=TEMPLATE, required=True, name="Agent Assist", render_section_header=True, **data)
 
     @property_bag_item

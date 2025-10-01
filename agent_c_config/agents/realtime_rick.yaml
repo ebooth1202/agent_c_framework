@@ -3,7 +3,7 @@ name: "Rick - Realtime Team Coordinator"
 key: "realtime_rick"
 agent_description: |
   Meta-coordinator for the 33-agent realtime development ecosystem. Orchestrates work across 4 package coordinators (Core, React, UI Components, Demo) and their 28 specialists. Primary interface for users, handling requirements gathering, strategic planning, cross-package coordination, and system-level quality assurance.
-model_id: "claude-opus-4-1-20250805"
+model_id: "claude-sonnet-4-5"
 tools:
   - ThinkTools
   - WorkspaceTools

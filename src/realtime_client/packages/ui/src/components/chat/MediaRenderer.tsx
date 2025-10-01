@@ -2,9 +2,8 @@
 
 import * as React from 'react'
 import { cn } from '../../lib/utils'
-import { FileImage, FileText, Globe, AlertCircle } from 'lucide-react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
+import { AlertCircle } from 'lucide-react'
+import { MarkdownRenderer } from './content-renderers/MarkdownRenderer'
 
 export interface MediaRendererProps extends React.HTMLAttributes<HTMLDivElement> {
   /**
@@ -66,24 +65,15 @@ export const MediaRenderer = React.forwardRef<HTMLDivElement, MediaRendererProps
       }
     }, [timestamp])
     
-    // Icon based on content type
-    const getIcon = () => {
-      if (mediaType === 'image') return FileImage
-      if (mediaSubtype === 'html') return Globe
-      return FileText
-    }
-    const Icon = getIcon()
-    
     // Render content based on type
     const renderContent = () => {
       // Markdown content
       if (contentType === 'text/markdown' || mediaSubtype === 'markdown') {
         return (
-          <div className="prose prose-sm max-w-none dark:prose-invert">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {content}
-            </ReactMarkdown>
-          </div>
+          <MarkdownRenderer
+            content={content}
+            ariaLabel="Media content markdown"
+          />
         )
       }
       
@@ -143,7 +133,7 @@ export const MediaRenderer = React.forwardRef<HTMLDivElement, MediaRendererProps
       <div
         ref={ref}
         className={cn(
-          "flex justify-center w-full py-2",
+          "flex flex-col w-full py-2",
           "animate-in fade-in-50 slide-in-from-bottom-2 duration-200",
           className
         )}
@@ -152,33 +142,23 @@ export const MediaRenderer = React.forwardRef<HTMLDivElement, MediaRendererProps
         {...props}
       >
         <div className={cn(
-          "max-w-2xl w-full mx-4",
+          "max-w-[85%] w-full mx-4",
           "rounded-xl overflow-hidden",
           "bg-muted/50 border border-border/50",
           "transition-all duration-200 hover:border-border/70"
         )}>
-          {/* Header with icon and type */}
-          <div className="flex items-center gap-2 px-4 py-2 border-b border-border/30 bg-background/50">
-            <Icon className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium text-muted-foreground">
-              {metadata.name || 'Media Content'}
-            </span>
-            {formattedTime && (
-              <span className="ml-auto text-xs text-muted-foreground">
-                {formattedTime}
-              </span>
-            )}
-          </div>
-          
           {/* Content area */}
           <div className="p-4">
             {renderContent()}
           </div>
           
-          {/* Footer with metadata - only show if we have source info */}
-          {(metadata.sentByClass || metadata.sentByFunction || metadata.url) && (
+          {/* Footer with timestamp and metadata */}
+          {(timestamp || metadata.sentByClass || metadata.sentByFunction || metadata.url) && (
             <div className="px-4 py-2 border-t border-border/30 bg-background/30">
               <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                {formattedTime && (
+                  <span className="opacity-70">{formattedTime}</span>
+                )}
                 {metadata.sentByClass && (
                   <span>
                     <span className="opacity-70">Class:</span> {metadata.sentByClass}

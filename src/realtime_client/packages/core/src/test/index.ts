@@ -46,7 +46,7 @@ export {
   waitForSocketConnection,
   simulateTurnSequence,
   TestResponseBuilder,
-  createMockSessionManager,
+  createMockChatSessionManager,
   createMockTurnManager,
   createMockAuthManager,
   RealtimeTestHarness

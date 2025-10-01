@@ -3,7 +3,7 @@ name: "Audio Pipeline Development Specialist"
 key: "realtime_core_audio_dev"
 agent_description: |
   Audio pipeline development specialist for @agentc/realtime-core package. Expert in WebAudio API, PCM16 processing, real-time audio capture/playback, AudioWorklet implementation, and voice model coordination. Handles the complete audio processing pipeline from microphone input to speaker output.
-model_id: "claude-opus-4-1-20250805"
+model_id: "claude-sonnet-4-5"
 tools:
   - ThinkTools
   - WorkspaceTools

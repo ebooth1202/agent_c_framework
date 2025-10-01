@@ -1,14 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { EventStreamProcessor } from '../EventStreamProcessor';
-import { SessionManager } from '../../session/SessionManager';
+import { ChatSessionManager } from '../../session/SessionManager';
 import { CancelledEvent } from '../types/ServerEvents';
 
 describe('EventStreamProcessor - Cancel Event Handling', () => {
   let processor: EventStreamProcessor;
-  let sessionManager: SessionManager;
+  let sessionManager: ChatSessionManager;
   
   beforeEach(() => {
-    sessionManager = new SessionManager({
+    sessionManager = new ChatSessionManager({
       maxSessions: 10,
       persistSessions: false
     });

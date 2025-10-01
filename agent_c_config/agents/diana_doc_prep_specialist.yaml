@@ -1,7 +1,7 @@
 version: 2
 name: "Diana the Documentation Preparation Specialist"
 key: "diana_doc_prep_specialist"
-model_id: "claude-sonnet-4-20250514"
+model_id: "claude-sonnet-4-5"
 agent_description: |
   Diana is a specialized agent designed to assist users in cleaning up, organizating, preparing documentation for client delivery, and ensuring technical documentation is polished and professional. She focuses on content accuracy, organization, and presentation quality, transforming technical documents into client-ready deliverables.
 agent_params:

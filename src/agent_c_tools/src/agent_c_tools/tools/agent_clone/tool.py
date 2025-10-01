@@ -77,12 +77,20 @@ class AgentCloneTools(AgentAssistToolBase):
         user_session_id = tool_context.get('user_session_id', tool_context ['session_id'])
         parent_session_id = tool_context.get('session_id')
 
-        messages =  await self.agent_oneshot(content, clone_config, user_session_id,
-                                             tool_context, client_wants_cancel=tool_context.get('client_wants_cancel', None),
-                                             process_context=process_context, parent_session_id=parent_session_id,
-                                             sub_agent_type="clone",  prime_agent_key=calling_agent_config.key,
+        await tool_context['bridge'].send_system_message(f"Clone oneshot interaction starting for {calling_agent_config.key}.", "info")
+
+        messages =  await self.agent_oneshot(content,
+                                             clone_config,
+                                             parent_session_id,
+                                             user_session_id,
+                                             tool_context,
+                                             client_wants_cancel=tool_context.get('client_wants_cancel', None),
+                                             process_context=process_context,
+                                             sub_agent_type="clone",
+                                             prime_agent_key=calling_agent_config.key,
                                              agent_session_id=agent_session_id
                                              )
+
         await tool_context['bridge'].send_system_message(f"Clone oneshot interaction complete for {calling_agent_config.key}.", "info")
 
 
@@ -156,11 +164,18 @@ class AgentCloneTools(AgentAssistToolBase):
         user_session_id = tool_context.get('user_session_id', tool_context['session_id'])
         parent_session_id = tool_context.get('session_id')
 
-        agent_session_id, messages = await self.agent_chat(content, clone_config, user_session_id, agent_session_id, tool_context,
+        await tool_context['bridge'].send_system_message(f"Clone chat interaction started for {calling_agent_config.key}.", "info")
+
+        agent_session_id, messages = await self.agent_chat(content,
+                                                           clone_config,
+                                                           parent_session_id,
+                                                           user_session_id,
+                                                           tool_context,
+                                                           agent_session_id=agent_session_id,
                                                            process_context=process_context,
                                                            client_wants_cancel=tool_context.get('client_wants_cancel', None),
-                                                           parent_session_id=parent_session_id,
-                                                           sub_agent_type="clone", prime_agent_key=calling_agent_config.key
+                                                           sub_agent_type="clone",
+                                                           prime_agent_key=calling_agent_config.key
                                                            )
 
         await tool_context['bridge'].send_system_message(f"Clone chat interaction complete for {calling_agent_config.key}.", "info")

@@ -114,7 +114,7 @@ class ClaudeChatAgent(BaseAgent):
             functions: List[Dict[str, Any]] = tool_chest.active_claude_schemas
         else:
             inference_data = tool_chest.get_inference_data(toolsets, "claude")
-            functions: List[Dict[str, Any]] = inference_data['schemas']
+            functions: List[Dict[str, Any]] = kwargs['schemas']
             kwargs['tool_sections'] = inference_data['sections']
 
         kwargs['prompt_metadata']['model_id'] = model_name
@@ -180,7 +180,7 @@ class ClaudeChatAgent(BaseAgent):
         messages = opts["completion_opts"]["messages"]
         interaction_id = await self._raise_interaction_start(**callback_opts)
         await self._raise_system_prompt(opts["completion_opts"]["system"], **callback_opts)
-        delay = 1  # Initial delay between retries
+        delay = 3  # Initial delay between retries
         async with (self.semaphore):
             while delay <= self.max_delay:
                 # Check for cancellation before starting new completion
@@ -221,7 +221,7 @@ class ClaudeChatAgent(BaseAgent):
                         opts["completion_opts"]["system"] = new_system_prompt
                         await self._raise_system_prompt(new_system_prompt, **callback_opts)
 
-                    delay = 1
+                    delay = 3
                     messages = result
                 except RateLimitError:
                     self.logger.warning(f"Ratelimit. Retrying...Delay is {delay} seconds")
@@ -301,6 +301,8 @@ class ClaudeChatAgent(BaseAgent):
                 if state['complete'] and state['stop_reason'] != 'tool_use':
                     messages.extend(state['server_tool_calls'])
                     messages.extend(state['server_tool_responses'])
+                    if state['stop_reason'] == 'refusal':
+                        self.logger.warning("Call resulted in refusal, ending interaction.")
                     await self._raise_history_event(messages, **callback_opts)
                     await self._raise_interaction_end(id=state['interaction_id'], **callback_opts)
                     return messages, state

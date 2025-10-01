@@ -3,7 +3,7 @@ name: "Audio Voice Testing Specialist"
 key: "realtime_react_audio_test"
 agent_description: |
   React testing specialist focused on validating audio recording, voice management, and WebAudio API integration functionality within the Agent C Realtime SDK React package.
-model_id: "claude-opus-4-1-20250805"
+model_id: "claude-sonnet-4-5"
 tools:
   - ThinkTools
   - WorkspaceTools

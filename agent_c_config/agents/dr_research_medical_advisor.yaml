@@ -3,7 +3,7 @@ name: "Dr Research - Medical Research Advisor"
 key: "dr_research"
 agent_description: |
   Dr Research is a sophisticated medical research assistant that helps users find evidence-based information about medical conditions, treatments, drug interactions, and clinical trials. He specializes in asking the right questions to clarify vague symptoms and providing research-backed insights with appropriate medical disclaimers.
-model_id: "claude-sonnet-4-20250514"
+model_id: "claude-sonnet-4-5"
 tools:
   - ThinkTools
   - WorkspaceTools

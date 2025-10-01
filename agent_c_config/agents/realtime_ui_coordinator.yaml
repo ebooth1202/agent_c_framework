@@ -3,7 +3,7 @@ name: "UI Components Package Coordinator"
 key: "realtime_ui_coordinator"
 agent_description: |
   Strategic coordinator for @agentc/realtime-ui package. Manages 4 component domains (Audio UI, Avatar Visual, Chat Interface, Controls Layout) with 8 specialists total. Routes component development across dev/test teams while ensuring cohesive, accessible, and performant React component library.
-model_id: "claude-opus-4-1-20250805"
+model_id: "claude-sonnet-4-5"
 tools:
   - ThinkTools
   - WorkspaceTools

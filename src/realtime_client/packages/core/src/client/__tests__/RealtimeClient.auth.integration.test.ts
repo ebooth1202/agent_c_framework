@@ -4,14 +4,16 @@ import { RealtimeClient } from '../RealtimeClient';
 describe('RealtimeClient - Auth Integration Test', () => {
     
     describe('Real-world auth error scenarios', () => {
-        it('should fail fast when creating client without auth', () => {
+        it('should fail fast when creating client without auth', async () => {
             // This simulates the bug scenario - no auth provided
-            expect(() => {
-                new RealtimeClient({
-                    apiUrl: 'wss://test.example.com'
-                    // Missing authToken or authManager
-                });
-            }).toThrow('Either authToken or authManager is required in RealtimeClientConfig');
+            // Auth validation now happens at connect() time, not construction time
+            const client = new RealtimeClient({
+                apiUrl: 'wss://test.example.com'
+                // Missing authToken or authManager
+            });
+            
+            // Should throw when attempting to connect
+            await expect(client.connect()).rejects.toThrow('Authentication token is required');
         });
         
         it('should create client successfully with authToken', () => {
@@ -49,7 +51,7 @@ describe('RealtimeClient - Auth Integration Test', () => {
             );
             
             // Verify connection state didn't change
-            expect((client as any).connectionState).toBe(0); // DISCONNECTED
+            expect((client as any).connectionState).toBe('DISCONNECTED');
             
             errorSpy.mockRestore();
         });
@@ -143,7 +145,7 @@ describe('RealtimeClient - Auth Integration Test', () => {
             }
             
             // Should still be in disconnected state
-            expect((client as any).connectionState).toBe(0);
+            expect((client as any).connectionState).toBe('DISCONNECTED');
         });
         
         it('should not accumulate event listeners on repeated auth failures', async () => {

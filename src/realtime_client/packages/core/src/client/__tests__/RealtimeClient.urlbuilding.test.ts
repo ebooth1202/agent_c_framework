@@ -203,7 +203,7 @@ describe('RealtimeClient - buildWebSocketUrl', () => {
       
       // Simulate reconnection state
       client['isReconnecting'] = true;
-      client['sessionIdToRecover'] = 'session-to-recover-789';
+      client['currentChatSessionId'] = 'session-to-recover-789';
       
       await client.connect();
       
@@ -215,13 +215,12 @@ describe('RealtimeClient - buildWebSocketUrl', () => {
       expect(params.has('agent_key')).toBe(false);
     });
 
-    it('should use lastKnownSessionId as fallback when sessionIdToRecover is not set', async () => {
+    it('should use currentChatSessionId as fallback when sessionIdToRecover is not set', async () => {
       client = new RealtimeClient(config);
       
-      // Simulate reconnection with only lastKnownSessionId
+      // Simulate reconnection with only currentChatSessionId
       client['isReconnecting'] = true;
-      client['sessionIdToRecover'] = undefined;
-      client['lastKnownSessionId'] = 'last-known-session-999';
+      client['currentChatSessionId'] = 'last-known-session-999';
       
       await client.connect();
       
@@ -238,7 +237,7 @@ describe('RealtimeClient - buildWebSocketUrl', () => {
       // Simulate reconnection without session IDs
       client['isReconnecting'] = true;
       client['sessionIdToRecover'] = undefined;
-      client['lastKnownSessionId'] = undefined;
+      client['currentChatSessionId'] = undefined;
       
       await client.connect();
       
@@ -253,8 +252,7 @@ describe('RealtimeClient - buildWebSocketUrl', () => {
       
       // Has session IDs but not reconnecting
       client['isReconnecting'] = false;
-      client['sessionIdToRecover'] = 'some-session';
-      client['lastKnownSessionId'] = 'another-session';
+      client['currentChatSessionId'] = 'another-session';
       
       await client.connect();
       
@@ -284,7 +282,7 @@ describe('RealtimeClient - buildWebSocketUrl', () => {
       client = new RealtimeClient(config);
       
       client['isReconnecting'] = true;
-      client['sessionIdToRecover'] = 'session#123&test=value';
+      client['currentChatSessionId'] = 'session#123&test=value';
       
       await client.connect();
       
@@ -300,7 +298,7 @@ describe('RealtimeClient - buildWebSocketUrl', () => {
       client = new RealtimeClient(config);
       
       client['isReconnecting'] = true;
-      client['sessionIdToRecover'] = 'debug-session';
+      client['currentChatSessionId'] = 'debug-session';
       
       await client.connect();
       
@@ -316,7 +314,7 @@ describe('RealtimeClient - buildWebSocketUrl', () => {
       
       // Set both conditions
       client['isReconnecting'] = true;
-      client['sessionIdToRecover'] = 'priority-session';
+      client['currentChatSessionId'] = 'priority-session';
       client.setPreferredAgentKey('should-be-ignored');
       
       await client.connect();
@@ -336,19 +334,19 @@ describe('RealtimeClient - buildWebSocketUrl', () => {
       const scenarios = [
         {
           isReconnecting: true,
-          sessionIdToRecover: 'session1',
+          currentChatSessionId: 'session1',
           preferredAgentKey: 'agent1',
           expected: 'chat_session_id'
         },
         {
           isReconnecting: true,
-          lastKnownSessionId: 'session2',
+          currentChatSessionId: 'session2',
           preferredAgentKey: 'agent2',
           expected: 'chat_session_id'
         },
         {
           isReconnecting: false,
-          sessionIdToRecover: 'session3',
+          currentChatSessionId: 'session3',
           preferredAgentKey: 'agent3',
           expected: 'agent_key'
         }
@@ -359,11 +357,9 @@ describe('RealtimeClient - buildWebSocketUrl', () => {
         client = new RealtimeClient(config);
         
         client['isReconnecting'] = scenario.isReconnecting;
-        if (scenario.sessionIdToRecover) {
-          client['sessionIdToRecover'] = scenario.sessionIdToRecover;
-        }
-        if (scenario.lastKnownSessionId) {
-          client['lastKnownSessionId'] = scenario.lastKnownSessionId;
+        // sessionIdToRecover is now part of currentChatSessionId
+        if (scenario.currentChatSessionId) {
+          client['currentChatSessionId'] = scenario.currentChatSessionId;
         }
         if (scenario.preferredAgentKey) {
           client.setPreferredAgentKey(scenario.preferredAgentKey);
@@ -399,7 +395,7 @@ describe('RealtimeClient - buildWebSocketUrl', () => {
       
       // Set both conditions
       client['isReconnecting'] = true;
-      client['sessionIdToRecover'] = 'priority-debug-session';
+      client['currentChatSessionId'] = 'priority-debug-session';
       client.setPreferredAgentKey('ignored-debug-agent');
       
       await client.connect();
@@ -421,7 +417,7 @@ describe('RealtimeClient - buildWebSocketUrl', () => {
       // Explicitly set to null
       client['isReconnecting'] = true;
       client['sessionIdToRecover'] = null as any;
-      client['lastKnownSessionId'] = null as any;
+      client['currentChatSessionId'] = null as any;
       client['preferredAgentKey'] = null;
       
       // Should not throw
@@ -441,7 +437,7 @@ describe('RealtimeClient - buildWebSocketUrl', () => {
       // Check default state (isReconnecting is initialized to false)
       expect(client['isReconnecting']).toBe(false);
       expect(client['sessionIdToRecover']).toBeUndefined();
-      expect(client['lastKnownSessionId']).toBeUndefined();
+      expect(client['currentChatSessionId']).toBeUndefined();
       expect(client['preferredAgentKey']).toBeUndefined();
       
       await client.connect();
@@ -531,7 +527,7 @@ describe('RealtimeClient - buildWebSocketUrl', () => {
       expect(params.has('chat_session_id')).toBe(false);
       
       // Simulate session established
-      client['lastKnownSessionId'] = 'established-session-123';
+      client['currentChatSessionId'] = 'established-session-123';
       
       // Properly disconnect first
       await client.disconnect();
@@ -554,17 +550,16 @@ describe('RealtimeClient - buildWebSocketUrl', () => {
     it('should handle sessionIdToRecover being set by recovery mechanism', async () => {
       client = new RealtimeClient(config);
       
-      // Simulate recovery mechanism setting sessionIdToRecover
+      // Simulate recovery mechanism setting currentChatSessionId
       client['isReconnecting'] = true;
-      client['sessionIdToRecover'] = 'recovery-session-456';
-      client['lastKnownSessionId'] = 'old-session-123'; // Should be ignored
+      client['currentChatSessionId'] = 'recovery-session-456';
       
       await client.connect();
       
       const url = getConnectionUrl();
       const params = parseUrlParams(url!);
       
-      // Should use sessionIdToRecover, not lastKnownSessionId
+      // Should use currentChatSessionId during reconnection
       expect(params.get('chat_session_id')).toBe('recovery-session-456');
     });
   });
@@ -575,7 +570,7 @@ describe('RealtimeClient - buildWebSocketUrl', () => {
       client = new RealtimeClient(config);
       
       // Set multiple conditions
-      client['sessionId'] = 'base-session';
+      client['uiSessionId'] = 'base-session';
       client.setPreferredAgentKey('test-agent');
       
       await client.connect();
@@ -599,7 +594,7 @@ describe('RealtimeClient - buildWebSocketUrl', () => {
     it('should maintain parameter order for consistency', async () => {
       client = new RealtimeClient(config);
       
-      client['sessionId'] = 'test-session';
+      client['uiSessionId'] = 'test-session';
       client.setPreferredAgentKey('test-agent');
       
       await client.connect();

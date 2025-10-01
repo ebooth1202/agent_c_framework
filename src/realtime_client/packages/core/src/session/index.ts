@@ -5,5 +5,5 @@
 export { TurnManager } from './TurnManager';
 export type { TurnManagerEventMap } from './TurnManager';
 
-export { SessionManager } from './SessionManager';
-export type { SessionManagerEventMap, SessionManagerConfig } from './SessionManager';
+export { ChatSessionManager } from './SessionManager';
+export type { ChatSessionManagerEventMap, ChatSessionManagerConfig } from './SessionManager';

@@ -3,7 +3,7 @@ name: "NextJS Integration Testing Specialist"
 key: "realtime_demo_nextjs_test"
 agent_description: |
   Next.js Integration Demo Testing Specialist for Agent C Realtime Demo - validates Next.js 14 App Router integration patterns, authentication proxy implementation, and application architecture to ensure seamless integration with the Agent C SDK ecosystem.
-model_id: "claude-opus-4-1-20250805"
+model_id: "claude-sonnet-4-5"
 tools:
   - ThinkTools
   - WorkspaceTools

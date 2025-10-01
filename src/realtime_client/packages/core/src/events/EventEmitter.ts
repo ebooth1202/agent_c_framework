@@ -3,6 +3,8 @@
  * Provides strongly-typed event handling with TypeScript generics
  */
 
+import { Logger } from '../utils/logger';
+
 /**
  * Event listener function type
  */
@@ -23,6 +25,7 @@ interface ListenerEntry<T = any> {
 export class EventEmitter<TEventMap extends Record<string, any> = Record<string, any>> {
   private listeners: Map<keyof TEventMap, ListenerEntry<any>[]>;
   private maxListeners: number;
+  private readonly HIGH_LISTENER_THRESHOLD = 10; // Warn when listener count exceeds this
 
   constructor() {
     this.listeners = new Map();
@@ -191,16 +194,29 @@ export class EventEmitter<TEventMap extends Record<string, any> = Record<string,
       this.listeners.set(event, eventListeners);
     }
 
-    // Warn if exceeding max listeners
-    if (this.maxListeners > 0 && eventListeners.length >= this.maxListeners) {
-      console.warn(
-        `Warning: Possible EventEmitter memory leak detected. ` +
-        `${eventListeners.length + 1} "${String(event)}" listeners added. ` +
-        `Use emitter.setMaxListeners() to increase limit.`
-      );
+    // Check for duplicate listener registration (reference equality)
+    const isDuplicate = eventListeners.some(entry => entry.listener === listener);
+    if (isDuplicate) {
+      Logger.warn('[EventEmitter] Duplicate listener registration detected', {
+        event: String(event),
+        currentCount: eventListeners.length,
+        message: 'Attempted to register the same listener function twice - ignoring duplicate'
+      });
+      return this;
     }
 
     eventListeners.push({ listener, once });
+    
+    // Monitor listener count
+    if (eventListeners.length > this.HIGH_LISTENER_THRESHOLD) {
+      Logger.warn('[EventEmitter] High listener count detected', {
+        event: String(event),
+        count: eventListeners.length,
+        threshold: this.HIGH_LISTENER_THRESHOLD,
+        message: 'Possible listener leak - check for missing cleanup in useEffect'
+      });
+    }
+    
     return this;
   }
 
@@ -230,6 +246,17 @@ export class EventEmitter<TEventMap extends Record<string, any> = Record<string,
       this.listeners.set(event, eventListeners);
     }
 
+    // Check for duplicate listener registration (reference equality)
+    const isDuplicate = eventListeners.some(entry => entry.listener === listener);
+    if (isDuplicate) {
+      Logger.warn('[EventEmitter] Duplicate listener registration detected', {
+        event: String(event),
+        currentCount: eventListeners.length,
+        message: 'Attempted to register the same listener function twice - ignoring duplicate'
+      });
+      return this;
+    }
+
     eventListeners.unshift({ listener, once: false });
     return this;
   }
@@ -250,7 +277,44 @@ export class EventEmitter<TEventMap extends Record<string, any> = Record<string,
       this.listeners.set(event, eventListeners);
     }
 
+    // Check for duplicate listener registration (reference equality)
+    const isDuplicate = eventListeners.some(entry => entry.listener === listener);
+    if (isDuplicate) {
+      Logger.warn('[EventEmitter] Duplicate listener registration detected', {
+        event: String(event),
+        currentCount: eventListeners.length,
+        message: 'Attempted to register the same listener function twice - ignoring duplicate'
+      });
+      return this;
+    }
+
     eventListeners.unshift({ listener, once: true });
     return this;
+  }
+
+  /**
+   * Get listener counts for all events (for debugging).
+   * 
+   * @returns Map of event names to listener counts
+   */
+  getListenerCounts(): Map<string, number> {
+    const counts = new Map<string, number>();
+    
+    for (const [event, listeners] of this.listeners.entries()) {
+      counts.set(String(event), listeners.length);
+    }
+    
+    return counts;
+  }
+
+  /**
+   * Log all listener counts (for debugging).
+   */
+  logListenerCounts(): void {
+    Logger.debug('[EventEmitter] Current listener counts:');
+    
+    for (const [event, listeners] of this.listeners.entries()) {
+      Logger.debug(`  ${String(event)}: ${listeners.length} listeners`);
+    }
   }
 }

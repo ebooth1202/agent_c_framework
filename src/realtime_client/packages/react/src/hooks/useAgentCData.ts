@@ -230,12 +230,12 @@ export function useAgentCData(): UseAgentCDataReturn {
     // Get SessionManager to listen to session events
     const sessionManager = client.getSessionManager();
     
-    // Handle session changes from SessionManager (properly processed)
-    const handleSessionChangedFromManager = ({ currentSession }: any) => {
-      if (currentSession?.agent_config) {
-        setData(prev => ({ ...prev, currentAgentConfig: currentSession.agent_config }));
+    // Handle session changes from ChatSessionManager (properly processed)
+    const handleSessionChangedFromManager = ({ currentChatSession }: any) => {
+      if (currentChatSession?.agent_config) {
+        setData(prev => ({ ...prev, currentAgentConfig: currentChatSession.agent_config }));
       } else {
-        // Session changed but no agent_config (could be clearing)
+        // Chat session changed but no agent_config (could be clearing)
         setData(prev => ({ ...prev, currentAgentConfig: null }));
       }
       
@@ -256,9 +256,9 @@ export function useAgentCData(): UseAgentCDataReturn {
     client.on('disconnected', handleDisconnect);
     client.on('error', handleError);
     
-    // Subscribe to SessionManager events for proper session updates
+    // Subscribe to ChatSessionManager events for proper session updates
     if (sessionManager) {
-      sessionManager.on('session-changed', handleSessionChangedFromManager);
+      sessionManager.on('chat-session-changed', handleSessionChangedFromManager);
     }
     
     return () => {
@@ -274,9 +274,9 @@ export function useAgentCData(): UseAgentCDataReturn {
       client.off('disconnected', handleDisconnect);
       client.off('error', handleError);
       
-      // Unsubscribe from SessionManager events
+      // Unsubscribe from ChatSessionManager events
       if (sessionManager) {
-        sessionManager.off('session-changed', handleSessionChangedFromManager);
+        sessionManager.off('chat-session-changed', handleSessionChangedFromManager);
       }
     };
   }, [client, updateData]);
