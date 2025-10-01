@@ -165,7 +165,9 @@ describe('Auto-Scroll Fix Validation Tests', () => {
       });
       rerender(<MessageList />);
       
-      expect(getByTestId('tool-notifications')).toHaveTextContent('1 tool(s) active');
+      await waitFor(() => {
+        expect(getByTestId('tool-notifications')).toHaveTextContent('1 tool(s) active');
+      });
       
       // Tool updates status
       updateMockState('toolNotifications', {
@@ -178,7 +180,9 @@ describe('Auto-Scroll Fix Validation Tests', () => {
       });
       rerender(<MessageList />);
       
-      expect(getByTestId('tool-notifications')).toHaveTextContent('2 tool(s) active');
+      await waitFor(() => {
+        expect(getByTestId('tool-notifications')).toHaveTextContent('2 tool(s) active');
+      });
       
       // Tool completes
       updateMockState('toolNotifications', {
@@ -190,7 +194,9 @@ describe('Auto-Scroll Fix Validation Tests', () => {
       });
       rerender(<MessageList />);
       
-      expect(getByTestId('tool-notifications')).toHaveTextContent('1 tool(s) active');
+      await waitFor(() => {
+        expect(getByTestId('tool-notifications')).toHaveTextContent('1 tool(s) active');
+      });
       
       // All tools complete
       updateMockState('toolNotifications', {
@@ -200,7 +206,9 @@ describe('Auto-Scroll Fix Validation Tests', () => {
       });
       rerender(<MessageList />);
       
-      expect(getByTestId('tool-notifications')).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(() => getByTestId('tool-notifications')).toThrow();
+      });
       
       // Messages remain stable throughout
       expect(getByTestId('message-msg-1')).toBeInTheDocument();

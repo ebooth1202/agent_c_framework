@@ -5,7 +5,8 @@
 
 import React from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { AgentSelector } from '../AgentSelector';
 import { 
   updateMockState, 
@@ -77,7 +78,8 @@ const createMockUseConnection = () => ({
 const createMockClient = () => ({
   setAgent: vi.fn(),
   getAgent: vi.fn(() => mockAgents[0]),
-  isConnected: () => true
+  isConnected: () => true,
+  setPreferredAgentKey: vi.fn()  // Component calls this before setAgent
 });
 
 describe('AgentSelector - Persistence Feature', () => {
@@ -115,18 +117,19 @@ describe('AgentSelector - Persistence Feature', () => {
       const { container, getByText } = render(<AgentSelector />);
       
       // Open the selector dropdown
+      const user = userEvent.setup();
       const trigger = container.querySelector('button[role="combobox"]');
       expect(trigger).toBeInTheDocument();
-      fireEvent.click(trigger!);
+      await user.click(trigger!);
       
-      // Wait for dropdown to open
+      // Wait for dropdown to open (dropdown renders via portal to document.body)
       await waitFor(() => {
-        expect(container.querySelector('[role="listbox"]')).toBeInTheDocument();
+        expect(screen.getByRole('listbox')).toBeInTheDocument();
       });
       
       // Click on Agent Two
-      const agentOption = getByText('Agent Two');
-      fireEvent.click(agentOption);
+      const agentOption = screen.getByRole('option', { name: /Agent Two/ });
+      await user.click(agentOption);
       
       // Verify saveAgentKey was called with correct agent key
       await waitFor(() => {
@@ -143,20 +146,21 @@ describe('AgentSelector - Persistence Feature', () => {
         throw new Error('localStorage is disabled');
       });
       
-      const { container, getByText } = render(<AgentSelector />);
+      const user = userEvent.setup();
+      const { container } = render(<AgentSelector />);
       
       // Open the selector dropdown
       const trigger = container.querySelector('button[role="combobox"]');
-      fireEvent.click(trigger!);
+      await user.click(trigger!);
       
-      // Wait for dropdown to open
+      // Wait for dropdown to open (dropdown renders via portal to document.body)
       await waitFor(() => {
-        expect(container.querySelector('[role="listbox"]')).toBeInTheDocument();
+        expect(screen.getByRole('listbox')).toBeInTheDocument();
       });
       
       // Click on Agent Three
-      const agentOption = getByText('Agent Three');
-      fireEvent.click(agentOption);
+      const agentOption = screen.getByRole('option', { name: /Agent Three/ });
+      await user.click(agentOption);
       
       // Wait for the selection to process
       await waitFor(() => {
@@ -175,32 +179,40 @@ describe('AgentSelector - Persistence Feature', () => {
     });
 
     it('should handle selection with all agents including persistence', async () => {
-      const { container, getByText } = render(<AgentSelector />);
+      const user = userEvent.setup();
+      const { container } = render(<AgentSelector />);
       
-      // Test selecting each agent
-      for (const agent of mockAgents) {
+      // Get initially selected agent
+      const initiallySelected = mockAgents[0];
+      
+      // Test selecting each agent (skip the already-selected one)
+      // Component has early return if clicking already-selected agent
+      for (const agent of mockAgents.filter(a => a.key !== initiallySelected.key)) {
         // Clear previous calls
         vi.mocked(AgentStorage.saveAgentKey).mockClear();
         vi.mocked(mockClient.setAgent).mockClear();
         
         // Open dropdown
         const trigger = container.querySelector('button[role="combobox"]');
-        fireEvent.click(trigger!);
+        await user.click(trigger!);
         
         // Wait for dropdown
         await waitFor(() => {
-          expect(container.querySelector('[role="listbox"]')).toBeInTheDocument();
+          expect(screen.getByRole('listbox')).toBeInTheDocument();
         });
         
         // Select agent
-        const agentOption = getByText(agent.name);
-        fireEvent.click(agentOption);
+        const agentOption = screen.getByRole('option', { name: new RegExp(agent.name) });
+        await user.click(agentOption);
         
         // Verify persistence and selection
         await waitFor(() => {
           expect(AgentStorage.saveAgentKey).toHaveBeenCalledWith(agent.key);
           expect(mockClient.setAgent).toHaveBeenCalledWith(agent.key);
         });
+        
+        // Wait for isChanging state to complete (300ms + buffer)
+        await new Promise(resolve => setTimeout(resolve, 400));
       }
     });
   });
@@ -214,18 +226,19 @@ describe('AgentSelector - Persistence Feature', () => {
         throw error;
       });
       
-      const { container, getByText } = render(<AgentSelector />);
+      const user = userEvent.setup();
+      const { container } = render(<AgentSelector />);
       
       // Open dropdown and select
       const trigger = container.querySelector('button[role="combobox"]');
-      fireEvent.click(trigger!);
+      await user.click(trigger!);
       
       await waitFor(() => {
-        expect(container.querySelector('[role="listbox"]')).toBeInTheDocument();
+        expect(screen.getByRole('listbox')).toBeInTheDocument();
       });
       
-      const agentOption = getByText('Agent Two');
-      fireEvent.click(agentOption);
+      const agentOption = screen.getByRole('option', { name: /Agent Two/ });
+      await user.click(agentOption);
       
       // Verify error handling
       await waitFor(() => {
@@ -250,17 +263,18 @@ describe('AgentSelector - Persistence Feature', () => {
         throw error;
       });
       
-      const { container, getByText } = render(<AgentSelector />);
+      const user = userEvent.setup();
+      const { container } = render(<AgentSelector />);
       
       // Open and select
       const trigger = container.querySelector('button[role="combobox"]');
-      fireEvent.click(trigger!);
+      await user.click(trigger!);
       
       await waitFor(() => {
-        expect(container.querySelector('[role="listbox"]')).toBeInTheDocument();
+        expect(screen.getByRole('listbox')).toBeInTheDocument();
       });
       
-      fireEvent.click(getByText('Agent One'));
+      await user.click(screen.getByRole('option', { name: /Agent Two/ }));
       
       // Verify graceful handling
       await waitFor(() => {
@@ -271,7 +285,7 @@ describe('AgentSelector - Persistence Feature', () => {
           })
         );
         
-        expect(mockClient.setAgent).toHaveBeenCalledWith('agent1');
+        expect(mockClient.setAgent).toHaveBeenCalledWith('agent2');
       });
     });
 
@@ -283,16 +297,17 @@ describe('AgentSelector - Persistence Feature', () => {
         throw error;
       });
       
-      const { container, getByText } = render(<AgentSelector />);
+      const user = userEvent.setup();
+      const { container } = render(<AgentSelector />);
       
       const trigger = container.querySelector('button[role="combobox"]');
-      fireEvent.click(trigger!);
+      await user.click(trigger!);
       
       await waitFor(() => {
-        expect(container.querySelector('[role="listbox"]')).toBeInTheDocument();
+        expect(screen.getByRole('listbox')).toBeInTheDocument();
       });
       
-      fireEvent.click(getByText('Agent Three'));
+      await user.click(screen.getByRole('option', { name: /Agent Three/ }));
       
       await waitFor(() => {
         expect(consoleErrorSpy).toHaveBeenCalledWith(
@@ -321,26 +336,28 @@ describe('AgentSelector - Persistence Feature', () => {
     });
 
     it('should handle rapid selections with persistence', async () => {
-      const { container, getByText } = render(<AgentSelector />);
+      const user = userEvent.setup();
+      const { container } = render(<AgentSelector />);
       
-      // Perform rapid selections
-      const agents = ['Agent Two', 'Agent Three', 'Agent One'];
+      // Perform rapid selections (skip initially selected Agent One)
+      const agents = ['Agent Two', 'Agent Three', 'Agent Two'];
       
       for (const agentName of agents) {
         const trigger = container.querySelector('button[role="combobox"]');
-        fireEvent.click(trigger!);
+        await user.click(trigger!);
         
         await waitFor(() => {
-          expect(container.querySelector('[role="listbox"]')).toBeInTheDocument();
+          expect(screen.getByRole('listbox')).toBeInTheDocument();
         });
         
-        fireEvent.click(getByText(agentName));
+        await user.click(screen.getByRole('option', { name: new RegExp(agentName) }));
         
-        // Small delay to let selection complete
-        await new Promise(resolve => setTimeout(resolve, 50));
+        // Wait for isChanging state to complete (300ms + buffer)
+        await new Promise(resolve => setTimeout(resolve, 400));
       }
       
       // All saves should have been attempted
+      // Note: Agent Two is selected twice, so we expect 3 calls total
       expect(AgentStorage.saveAgentKey).toHaveBeenCalledTimes(3);
       expect(mockClient.setAgent).toHaveBeenCalledTimes(3);
     });
@@ -356,33 +373,37 @@ describe('AgentSelector - Persistence Feature', () => {
         throw new Error('Storage error');
       });
       
-      const { container, getByText } = render(<AgentSelector />);
+      const user = userEvent.setup();
+      const { container } = render(<AgentSelector />);
       
       // First selection (success)
       let trigger = container.querySelector('button[role="combobox"]');
-      fireEvent.click(trigger!);
+      await user.click(trigger!);
       
       await waitFor(() => {
-        expect(container.querySelector('[role="listbox"]')).toBeInTheDocument();
+        expect(screen.getByRole('listbox')).toBeInTheDocument();
       });
       
-      fireEvent.click(getByText('Agent Two'));
+      await user.click(screen.getByRole('option', { name: /Agent Two/ }));
       
       await waitFor(() => {
         expect(mockClient.setAgent).toHaveBeenCalledWith('agent2');
       });
       
+      // Wait for isChanging state to complete (300ms + buffer)
+      await new Promise(resolve => setTimeout(resolve, 400));
+      
       // Second selection (failure)
       vi.mocked(mockClient.setAgent).mockClear();
       
       trigger = container.querySelector('button[role="combobox"]');
-      fireEvent.click(trigger!);
+      await user.click(trigger!);
       
       await waitFor(() => {
-        expect(container.querySelector('[role="listbox"]')).toBeInTheDocument();
+        expect(screen.getByRole('listbox')).toBeInTheDocument();
       });
       
-      fireEvent.click(getByText('Agent Three'));
+      await user.click(screen.getByRole('option', { name: /Agent Three/ }));
       
       await waitFor(() => {
         expect(consoleErrorSpy).toHaveBeenCalled();
@@ -400,7 +421,7 @@ describe('AgentSelector - Persistence Feature', () => {
       fireEvent.click(selector!);
       
       // Dropdown should not appear
-      expect(container.querySelector('[role="listbox"]')).not.toBeInTheDocument();
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
       
       // No persistence calls should have been made
       expect(AgentStorage.saveAgentKey).not.toHaveBeenCalled();
@@ -421,7 +442,7 @@ describe('AgentSelector - Persistence Feature', () => {
       fireEvent.click(selector!);
       
       // Should not open
-      expect(container.querySelector('[role="listbox"]')).not.toBeInTheDocument();
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
       
       // No calls should be made
       expect(AgentStorage.saveAgentKey).not.toHaveBeenCalled();
@@ -430,22 +451,23 @@ describe('AgentSelector - Persistence Feature', () => {
 
   describe('Component Behavior with Persistence', () => {
     it('should close dropdown after selection with persistence', async () => {
-      const { container, getByText } = render(<AgentSelector />);
+      const user = userEvent.setup();
+      const { container } = render(<AgentSelector />);
       
       // Open dropdown
       const trigger = container.querySelector('button[role="combobox"]');
-      fireEvent.click(trigger!);
+      await user.click(trigger!);
       
       await waitFor(() => {
-        expect(container.querySelector('[role="listbox"]')).toBeInTheDocument();
+        expect(screen.getByRole('listbox')).toBeInTheDocument();
       });
       
       // Select agent
-      fireEvent.click(getByText('Agent Two'));
+      await user.click(screen.getByRole('option', { name: /Agent Two/ }));
       
       // Dropdown should close
       await waitFor(() => {
-        expect(container.querySelector('[role="listbox"]')).not.toBeInTheDocument();
+        expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
       });
       
       // Persistence should have been called
@@ -453,18 +475,19 @@ describe('AgentSelector - Persistence Feature', () => {
     });
 
     it('should show loading state briefly during selection', async () => {
-      const { container, getByText } = render(<AgentSelector />);
+      const user = userEvent.setup();
+      const { container } = render(<AgentSelector />);
       
       // Open dropdown
       const trigger = container.querySelector('button[role="combobox"]');
-      fireEvent.click(trigger!);
+      await user.click(trigger!);
       
       await waitFor(() => {
-        expect(container.querySelector('[role="listbox"]')).toBeInTheDocument();
+        expect(screen.getByRole('listbox')).toBeInTheDocument();
       });
       
       // Select agent
-      fireEvent.click(getByText('Agent Three'));
+      await user.click(screen.getByRole('option', { name: /Agent Three/ }));
       
       // The component sets isChanging state which might show loading indication
       // Verify the selection completes
@@ -475,24 +498,25 @@ describe('AgentSelector - Persistence Feature', () => {
     });
 
     it('should handle search with persistence', async () => {
-      const { container, getByText, getByPlaceholderText } = render(<AgentSelector />);
+      const user = userEvent.setup();
+      const { container } = render(<AgentSelector />);
       
       // Open dropdown
       const trigger = container.querySelector('button[role="combobox"]');
-      fireEvent.click(trigger!);
+      await user.click(trigger!);
       
       await waitFor(() => {
-        expect(container.querySelector('[role="listbox"]')).toBeInTheDocument();
+        expect(screen.getByRole('listbox')).toBeInTheDocument();
       });
       
       // Search for agent
-      const searchInput = getByPlaceholderText(/search agents/i);
-      fireEvent.change(searchInput, { target: { value: 'Two' } });
+      const searchInput = screen.getByPlaceholderText(/search agents/i);
+      await user.type(searchInput, 'Two');
       
       // Select filtered result
-      await waitFor(() => {
-        const agentOption = getByText('Agent Two');
-        fireEvent.click(agentOption);
+      await waitFor(async () => {
+        const agentOption = screen.getByRole('option', { name: /Agent Two/ });
+        await user.click(agentOption);
       });
       
       // Verify persistence
