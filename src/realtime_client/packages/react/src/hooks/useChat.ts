@@ -470,6 +470,9 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
       }
     }, [maxMessages]); // currentSessionId accessed via ref
     
+    // Counter for generating unique divider IDs
+    const dividerCounterRef = useRef(0);
+    
     // Handle subsession started events
     const handleSubsessionStarted = useCallback((event: unknown) => {
       const subsessionEvent = event as {
@@ -487,7 +490,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
       }
       
       const divider: DividerChatItem = {
-        id: `divider-start-${Date.now()}`,
+        id: `divider-start-${Date.now()}-${++dividerCounterRef.current}`,
         type: 'divider',
         dividerType: 'start',
         timestamp: new Date().toISOString(),
@@ -519,7 +522,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
       }
       
       const divider: DividerChatItem = {
-        id: `divider-end-${Date.now()}`,
+        id: `divider-end-${Date.now()}-${++dividerCounterRef.current}`,
         type: 'divider',
         dividerType: 'end',
         timestamp: new Date().toISOString()
@@ -533,6 +536,9 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         return newMessages;
       });
     }, [maxMessages]);
+    
+    // Counter for generating unique media IDs
+    const mediaCounterRef = useRef(0);
     
     // Handle media added events (RenderMedia)
     const handleMediaAdded = useCallback((event: unknown) => {
@@ -561,7 +567,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
       }
       
       const mediaItem: MediaChatItem = {
-        id: mediaEvent.media.id || `media-${Date.now()}`,
+        id: mediaEvent.media.id || `media-${Date.now()}-${++mediaCounterRef.current}`,
         type: 'media',
         timestamp: mediaEvent.media.timestamp || new Date().toISOString(),
         content: mediaEvent.media.content,
@@ -584,6 +590,9 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
       });
     }, [maxMessages]);
     
+    // Counter for generating unique system message IDs
+    const systemMessageCounterRef = useRef(0);
+    
     // Handle system message events (system alerts in chat)
     const handleSystemMessage = useCallback((event: unknown) => {
       const systemEvent = event as {
@@ -591,6 +600,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         severity?: 'info' | 'warning' | 'error';
         format?: 'markdown' | 'text';
         timestamp?: string;
+        session_id?: string;
       };
       Logger.debug('[useChat] System message event:', systemEvent);
       
@@ -600,8 +610,12 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         return;
       }
       
+      // Generate a unique ID using timestamp, counter, and random component
+      // This prevents collisions even when multiple events arrive in the same millisecond
+      const uniqueId = `system-${Date.now()}-${++systemMessageCounterRef.current}-${Math.random().toString(36).substr(2, 9)}`;
+      
       const systemAlert: SystemAlertChatItem = {
-        id: `system-${Date.now()}`,
+        id: uniqueId,
         type: 'system_alert',
         timestamp: systemEvent.timestamp || new Date().toISOString(),
         content: systemEvent.content,
