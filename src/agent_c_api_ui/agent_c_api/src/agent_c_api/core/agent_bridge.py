@@ -12,6 +12,7 @@ from agent_c.models.context.interaction_context import InteractionContext
 from agent_c.models.input import AudioInput
 from agent_c.agents.gpt import GPTChatAgent, AzureGPTChatAgent
 from agent_c.toolsets import ToolChest, ToolCache
+from agent_c_api.api.rt.models.control_events import ErrorEvent, SessionMetadataChangedEvent, ChatSessionChangedEvent
 from agent_c_api.config.env_config import settings
 from agent_c.models.input.file_input import FileInput
 from agent_c.agents.base import BaseAgent, ChatSession
@@ -408,8 +409,60 @@ class AgentBridge:
             "env_name": os.getenv('ENV_NAME', DEFAULT_ENV_NAME),
             "user_session_id": self.chat_session.session_id,
             "chat_session": self.chat_session,
-            "chat_user": self.chat_session.chat_user
+            "chat_user": self.chat_session.user_id
         } | agent_meta
+
+    async def send_system_message(self, content: str, severity: str = "info") -> None:
+        """Send a system message to the client"""
+        # event = SystemMessageEvent(
+        #     content=content,
+        #     session_id=self.chat_session.session_id,
+        #     severity=severity,
+        #     role="system"
+        # )
+        # await self.streaming_callback_with_logging(event)
+        pass
+
+    async def send_chat_session_name(self, session: Optional[ChatSession] = None):
+        pass
+        # """Send the current chat session name to the client"""
+        # chat_session = session or self.chat_session
+        # if chat_session:
+        #     await self.send_event(ChatSessionNameChangedEvent(session_name=chat_session.name, session_id=chat_session.session_id))
+
+    async def send_tool_error(self, tool_name: str, error: str) -> None:
+        """Report a tool error to the client"""
+        # event = (SystemMessageEvent(content=f"# Error using tool '{tool_name}':\n\n```{error}```", session_id=self.chat_session.session_id,
+        #                                          severity="error", role="system"))
+        # await self.streaming_callback_with_logging(event)
+        pass
+
+    async def send_tool_warning(self, tool_name: str, error: str) -> None:
+        """Report a tool error to the client"""
+        # event = (SystemMessageEvent(content=f"# Error using tool '{tool_name}':\n\n```{error}```", session_id=self.chat_session.session_id,
+        #                                          severity="error", role="warning"))
+        # await self.streaming_callback_with_logging(event)
+        pass
+
+    async def send_error(self, message: str, source: Optional[str] = None):
+        """Send error message to client"""
+        # event = (ErrorEvent(message=message, source=source))
+        # await self.streaming_callback_with_logging(event)
+        pass
+
+    async def send_chat_session(self):
+        """Send the current chat session state to the client"""
+        # if self.chat_session:
+        #     event=(ChatSessionChangedEvent(chat_session=self.chat_session))
+        #     await self.streaming_callback_with_logging(event)
+        pass
+
+    async def send_chat_session_meta(self):
+        """Send the current chat session state to the client"""
+        # if self.chat_session:
+        #     event = (SessionMetadataChangedEvent(meta=self.chat_session.metadata))
+        #     await self.streaming_callback_with_logging(event)
+        pass
 
     @staticmethod
     def _current_timestamp() -> str:
@@ -1023,7 +1076,7 @@ class AgentBridge:
                                  'user_session_id': self.chat_session.session_id,
                                  'user_id': self.chat_session.user_id,
                                  'session_id': self.chat_session.session_id,
-                                 "client_wants_cancel": self.client_wants_cancel,
+                                 "client_wants_cancel": client_wants_cancel,
                                  "env_name": os.getenv('ENV_NAME', 'development'),
                                  "streaming_callback": self.streaming_callback_with_logging,
                                  "prompt_metadata": prompt_metadata
