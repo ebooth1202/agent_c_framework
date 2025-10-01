@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ScrollArea } from '../ui/scroll-area';
 import MessageItem from './MessageItem';
@@ -34,7 +34,8 @@ const VirtualizedMessagesList = ({
   const parentRef = useRef(null);
   const viewportRef = useRef(null);
   const [showScrollTopButton, setShowScrollTopButton] = useState(false);
-  const [isAutoScrolling, setIsAutoScrolling] = useState(false);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const scrollThreshold = 100; // pixels from bottom to consider "at bottom"
   
   // Create virtualizer for messages
   const virtualizer = useVirtualizer({
@@ -44,52 +45,74 @@ const VirtualizedMessagesList = ({
     overscan: 5, // Render 5 items above and below visible area
   });
   
+  // Check if viewport is scrolled near the bottom
+  const isNearBottom = useCallback(() => {
+    if (!viewportRef.current) return true;
+    
+    const { scrollTop, scrollHeight, clientHeight } = viewportRef.current;
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+    
+    return distanceFromBottom <= scrollThreshold;
+  }, [scrollThreshold]);
+  
   // Scroll to bottom when messages change
-  const scrollToBottom = (smooth = true) => {
+  const scrollToBottom = useCallback((smooth = true) => {
     if (messages.length > 0) {
       virtualizer.scrollToIndex(messages.length - 1, {
         align: 'end',
         behavior: smooth ? 'smooth' : 'auto'
       });
     }
-  };
+  }, [messages.length, virtualizer]);
   
   // Scroll to top function
-  const scrollToTop = () => {
+  const scrollToTop = useCallback(() => {
     virtualizer.scrollToOffset(0, { behavior: 'smooth' });
-  };
+  }, [virtualizer]);
   
-  // Track scroll position to show/hide scroll to top button
-  const handleScroll = () => {
+  // Track scroll position to show/hide scroll to top button and manage auto-scroll
+  const handleScroll = useCallback(() => {
     if (viewportRef.current) {
       const scrollTop = viewportRef.current.scrollTop;
       setShowScrollTopButton(scrollTop > 200); // Show after scrolling 200px
+      
+      // Update auto-scroll state based on position
+      const atBottom = isNearBottom();
+      if (atBottom && !shouldAutoScroll) {
+        // User scrolled back to bottom, re-enable auto-scroll
+        setShouldAutoScroll(true);
+      } else if (!atBottom && shouldAutoScroll) {
+        // User scrolled up, disable auto-scroll
+        setShouldAutoScroll(false);
+      }
     }
-  };
+  }, [isNearBottom, shouldAutoScroll]);
   
   // Add event listener for scroll events
   useEffect(() => {
     const viewport = viewportRef.current;
     if (viewport) {
-      viewport.addEventListener('scroll', handleScroll);
+      viewport.addEventListener('scroll', handleScroll, { passive: true });
       return () => viewport.removeEventListener('scroll', handleScroll);
     }
-  }, []);
+  }, [handleScroll]);
   
-  // Auto-scroll to bottom when messages change
+  // Auto-scroll to bottom when messages change, but only if user is already at bottom
   useEffect(() => {
-    setIsAutoScrolling(true);
-    scrollToBottom();
-    const timer = setTimeout(() => setIsAutoScrolling(false), 500);
-    return () => clearTimeout(timer);
-  }, [messages]);
+    if (shouldAutoScroll) {
+      // Use requestAnimationFrame to ensure DOM is updated
+      requestAnimationFrame(() => {
+        scrollToBottom(true);
+      });
+    }
+  }, [messages, shouldAutoScroll, scrollToBottom]);
   
   // Auto-scroll when tool selection indicator appears
   useEffect(() => {
-    if (toolSelectionInProgress) {
+    if (toolSelectionInProgress && shouldAutoScroll) {
       scrollToBottom();
     }
-  }, [toolSelectionInProgress]);
+  }, [toolSelectionInProgress, shouldAutoScroll, scrollToBottom]);
   
   // Get virtual items to render
   const virtualItems = virtualizer.getVirtualItems();
