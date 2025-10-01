@@ -92,7 +92,7 @@ node:
 #    - scripts/maintenance.js
 #    - tools/migrate.cjs
   deny_global_flags: ["-e","--eval","-p","--print"]
-  default_timeout: 5
+  default_timeout: 50
   env_overrides:
     NODE_DISABLE_COLORS: "1"
     FORCE_COLOR: "0"
@@ -100,7 +100,7 @@ nodejs:
   validator: node
   flags: [ "-v","--version","--help" ]
   deny_global_flags: [ "-e","--eval","-p","--print" ]
-  default_timeout: 5
+  default_timeout: 50
   env_overrides:
     NODE_DISABLE_COLORS: "1"
     FORCE_COLOR: "0"
@@ -150,7 +150,7 @@ npm:
   # keep ‘i’ denied unless you want it—the validator aliases it to 'install'
   deny_subcommands: ["exec","publish","update","audit","ci-info","token","login","adduser","whoami","pack","link","unlink"]
 
-  default_timeout: 120
+  default_timeout: 300
   env_overrides:
     NPM_CONFIG_COLOR: "false"       # npm itself: no color
     NPM_CONFIG_PROGRESS: "false"    # no progress bars
@@ -234,7 +234,7 @@ pnpm:
   # keep 'i' and 'add' denied unless you want them—the validator aliases them to 'install'
   deny_subcommands: ["exec","publish","update","audit","login","adduser","whoami","pack","link","unlink","patch","patch-commit"]
 
-  default_timeout: 120
+  default_timeout: 300
   env_overrides:
     PNPM_CONFIG_COLOR: "false"      # pnpm itself: no color
     PNPM_CONFIG_PROGRESS: "false"   # no progress bars
@@ -281,7 +281,7 @@ npx:
     - "-q"
     - "--npm"
     - "--node-options"
-  default_timeout: 120
+  default_timeout: 300
   env_overrides:
     NPM_CONFIG_COLOR: "false"
     NPM_CONFIG_PROGRESS: "false"
@@ -329,7 +329,7 @@ lerna:
       flags: ["--conventional-commits", "--changelog-preset", "--exact", "--force-publish", "--git-remote", "--create-release", "--dry-run", "--json", "--loglevel", "--no-changelog", "--no-commit-hooks", "--no-git-tag-version", "--no-push", "--preid", "--sign-git-commit", "--sign-git-tag", "--tag-version-prefix", "--yes", "-y"]
       timeout: 120
   deny_subcommands: ["publish", "exec", "import", "create", "add", "link"]
-  default_timeout: 180
+  default_timeout: 300
   env_overrides:
     LERNA_DISABLE_PROGRESS: "1"
     NPM_CONFIG_COLOR: "false"
