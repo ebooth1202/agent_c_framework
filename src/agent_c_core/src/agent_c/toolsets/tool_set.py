@@ -12,7 +12,8 @@ from agent_c.toolsets.tool_cache import ToolCache
 from agent_c.models.context.base import BaseContext
 from agent_c.util.logging_utils import LoggingManager
 from agent_c.prompting.prompt_section import PromptSection
-from agent_c.models.events import RenderMediaEvent, MessageEvent, TextDeltaEvent
+from agent_c.models.events import RenderMediaEvent, MessageEvent, TextDeltaEvent, BaseEvent
+
 
 class Toolset:
     tool_registry: List[Any] = []
@@ -288,6 +289,74 @@ class Toolset:
 
         await self.streaming_callback(TextDeltaEvent(**kwargs))
 
+    @staticmethod
+    async def send_event(event: BaseEvent, tool_context: dict) -> None:
+        """
+        Sends a generic event through the streaming callback.
+
+        Args:
+            event (BaseEvent): The event to be sent.
+            tool_context (dict): The tool context containing session information.
+        """
+        callback = tool_context['streaming_callback']
+        await callback(event)
+
+    async def send_markdown_render_media_event(self, markdown_text: str, tool_context: Dict[str, Any], file_name: Optional[str] = None,  sent_by: Optional[str] = None) -> None:
+        """
+        Sends a RenderMediaEvent with the provided markdown content.
+
+        Args:
+            markdown_text (str): The markdown content to be rendered.
+            tool_context (dict): The tool context containing session information.
+            file_name (Optional[str]): An optional name for the markdown content.
+            sent_by (Optional[str]): The name of the function sending the event.
+        """
+        await self.send_render_media_event(markdown_text, "text/markdown", tool_context, file_name, sent_by)
+
+    async def send_render_media_event(self, content: Union[str, bytes],  content_type: str, tool_context: Dict[str, Any], file_name: str, sent_by: Optional[str] = None) -> None:
+        """
+        Sends a RenderMediaEvent with the provided content and metadata.
+
+        Args:
+            content (Union[str, bytes]): The content of the media, either as a base64 string or raw bytes.
+            file_name (str): The name of the file.
+            content_type (str): The MIME type of the content.
+            tool_context (dict): The tool context containing session information.
+            sent_by (Optional[str]): The name of the function sending the event.
+        """
+        if isinstance(content, bytes):
+            import base64
+            content = base64.b64encode(content).decode('utf-8')
+
+        event_opts = self._session_event_parms(tool_context)
+
+        event = RenderMediaEvent(
+            content=content,
+            name=file_name,
+            content_type=content_type,
+            sent_by_class=self.__class__.__name__,
+            sent_by_function=sent_by,
+            **event_opts
+        )
+
+        await self.send_event(event, tool_context)
+
+
+    def _session_event_parms(self, tool_context: Dict[str, Any]) -> Dict[str, str]:
+        """
+        Returns a dictionary of common parameters for session events.
+
+        Args:
+            tool_context (dict): The tool context containing session information.
+        Returns:
+            dict: A dictionary of common parameters for session events.
+        """
+        return {
+            'session_id': tool_context['session_id'],
+            'user_session_id': tool_context['user_session_id'],
+            'parent_session_id': tool_context['parent_session_id'],
+            'role': self.tool_role
+        }
 
     async def post_init(self) -> None:
         """

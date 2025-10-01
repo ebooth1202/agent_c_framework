@@ -123,6 +123,9 @@ class WorkspacePlanningTools(Toolset):
         plan_path = kwargs.get('plan_path')
         title = kwargs.get('title')
         description = kwargs.get('description', "")
+        tool_context = kwargs.get('tool_context')
+        bridge = tool_context.get('bridge')
+
 
         if not plan_path:
             return "Error: plan_path is required"
@@ -142,6 +145,10 @@ class WorkspacePlanningTools(Toolset):
 
         new_plan = PlanModel(title=title, description=description)
         await self._save_plan(plan_path, new_plan)
+
+        message = f"New plan created: {title}\n\nDescription: {description}\n\nPlan ID: `//{path.source}/{plan_id}`\n"
+
+        await bridge.send_system_message(message)
 
         return f"Plan '{title}' created successfully with ID '{plan_id}'"
 
@@ -245,6 +252,8 @@ class WorkspacePlanningTools(Toolset):
         parent_id = kwargs.get('parent_id')
         context = kwargs.get('context', "")
         sequence = kwargs.get('sequence')
+        tool_context = kwargs.get('tool_context')
+        bridge = tool_context.get('bridge')
 
         if not plan_path:
             return "Error: plan_path is required"
@@ -278,6 +287,10 @@ class WorkspacePlanningTools(Toolset):
         # Add to plan's tasks
         plan.tasks[new_task.id] = new_task
         await self._save_plan(plan_path, plan)
+
+        message = f"Task *{new_task.id}* created\n\n##{title}\n\n{description}\n\nContext: `{context}`\n"
+
+        await bridge.send_system_message(message)
 
         return f"Task '{title}' created successfully with ID '{new_task.id}'"
 
@@ -346,6 +359,11 @@ class WorkspacePlanningTools(Toolset):
         completion_report = kwargs.get('completion_report')
         completion_signoff_by = kwargs.get('completion_signoff_by')
         requires_completion_signoff = kwargs.get('requires_completion_signoff', "true")
+        tool_context = kwargs.get('tool_context')
+        bridge = tool_context.get('bridge')
+
+        change_list = []
+
 
         if not plan_path:
             return "Error: plan_path is required"
@@ -365,27 +383,42 @@ class WorkspacePlanningTools(Toolset):
         # Update task properties if provided
         if title is not None:
             task.title = title
+            change_list.append(f"- Title updated to: {title}")
         if description is not None:
             task.description = description
+            change_list.append(f"- Description updated.\n\n{description}")
         if priority is not None:
             task.priority = priority
+            change_list.append(f"- Priority updated to: {priority}")
         if completed is not None:
             task.completed = completed
+            change_list.append(f"- Marked as {'completed' if completed else 'not completed'}")
         if context is not None:
             task.context = context
+            change_list.append(f"- Context updated to: {context}")
         if sequence is not None:
             task.sequence = sequence
+            change_list.append(f"- Sequence updated to: {sequence}")
         if completion_report is not None:
             task.completion_report = completion_report
+            change_list.append(f"- Completion report updated.")
         if completion_signoff_by is not None:
             task.completion_signoff_by = completion_signoff_by
+            change_list.append(f"- Completion signed off by: {completion_signoff_by}")
         if requires_completion_signoff is not None:
             task.requires_completion_signoff = requires_completion_signoff
+            change_list.append(f"- Requires completion signoff set to: {requires_completion_signoff}")
 
         # Update the task's updated_at timestamp
         task.updated_at = datetime.now()
-
         await self._save_plan(plan_path, plan)
+
+        message = f"Task *{task.id}* updated:\n" + "\n".join(change_list) + f"\n\n"
+        await bridge.send_system_message(message)
+
+        if task.completed and task.completion_report:
+            message = f"### Task *{task.id}* Completed\n\n{task.completion_report}\n"
+            await bridge.raise_render_media_markdown(message, "WorkspacePlanningTools")
 
         return f"Task '{task_id}' updated successfully"
 
