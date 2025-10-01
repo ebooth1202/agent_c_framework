@@ -475,7 +475,7 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
                   console.log(`[STREAMING MESSAGE] Skipping duplicate streaming message with id: ${streamingMessage.id}`)
                   return null
                 }
-                console.log(`[STREAMING MESSAGE] Rendering streaming message with id: ${streamingMessage.id}`)
+                //console.log(`[STREAMING MESSAGE] Rendering streaming message with id: ${streamingMessage.id}`)
                 return (
                   <Message
                     key={`streaming-${streamingMessage.id}`}
