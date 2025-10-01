@@ -20,7 +20,6 @@ from agent_c_tools.tools.web_search.web_search_tools import WebSearchTools
 from agent_c_tools.tools.web_search.engines.google_serp_engine import create_google_serp_engine
 
 from agent_c_tools.tools.web_search.engines.news_api_engine import create_news_api_engine
-from agent_c_tools.tools.web_search.engines.duckduckgo_engine import create_duckduckgo_engine
 from agent_c_tools.tools.web_search.base.models import SearchParameters, SearchType
 
 
@@ -31,51 +30,7 @@ class TestRateLimiting:
         """Set up test fixtures."""
         self.tools = WebSearchTools()
     
-    @pytest.mark.integration
-    @pytest.mark.network
-    @pytest.mark.slow
-    def test_sequential_requests_duckduckgo(self):
-        """Test sequential requests to DuckDuckGo (no API key required)."""
-        engine = create_duckduckgo_engine()
-        
-        results = []
-        response_times = []
-        
-        # Make 5 sequential requests
-        for i in range(5):
-            start_time = time.time()
-            
-            params = SearchParameters(
-                query=f"test sequential request {i}",
-                engine="duckduckgo",
-                search_type=SearchType.WEB,
-                max_results=3
-            )
-            
-            try:
-                response = engine.execute_search(params)
-                end_time = time.time()
-                
-                results.append(response)
-                response_times.append(end_time - start_time)
-                
-                # Small delay between requests to be respectful
-                time.sleep(1)
-                
-            except Exception as e:
-                print(f"Request {i} failed: {e}")
-                response_times.append(None)
-        
-        # At least some requests should succeed
-        successful_results = [r for r in results if r is not None]
-        assert len(successful_results) > 0
-        
-        # Check response times are reasonable
-        valid_times = [t for t in response_times if t is not None]
-        if valid_times:
-            avg_time = sum(valid_times) / len(valid_times)
-            assert avg_time < 10.0  # Should be under 10 seconds on average
-    
+
     @pytest.mark.integration
     @pytest.mark.network
     @pytest.mark.slow

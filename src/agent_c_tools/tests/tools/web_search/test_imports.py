@@ -20,12 +20,7 @@ try:
     print("✅ base.models import successful")
 except ImportError as e:
     print(f"❌ base.models import failed: {e}")
-try:
-    print("Testing engines import...")
-    from agent_c_tools.tools.web_search.engines.duckduckgo_engine import DuckDuckGoEngine
-    print("✅ engines import successful")
-except ImportError as e:
-    print(f"❌ engines import failed: {e}")
+
 
 try:
     print("Testing web_search_tools import...")

@@ -22,6 +22,38 @@ class YouTubeCommentsError(YouTubeError):
 
 
 class YoutubeCommentsTools(YouTubeBase):
+    """
+    YouTube video comment retrieval and analysis tool.
+    
+    This toolset provides comprehensive access to YouTube video comments, enabling retrieval,
+    analysis, and insights generation from comment data. It supports comment sorting,
+    reply inclusion, and sentiment analysis.
+    
+    Available Methods:
+        - fetch_comments: Retrieve comments from a YouTube video with sorting and filtering options
+        - analyze_comments: Analyze comments for insights including engagement metrics and trends
+    
+    Key Features:
+        - Multiple comment ordering options (relevance, time)
+        - Reply comment inclusion
+        - Comment engagement metrics (likes, reply counts)
+        - Temporal analysis of comment activity
+        - Top commenter identification
+        - Most liked and most discussed comment tracking
+        - Automatic caching for performance
+        - Workspace file integration for large datasets
+    
+    Requirements:
+        - YouTube Data API v3 credentials (via YouTubeBase)
+        - WorkspaceTools (for file operations)
+        - requests Python package
+    
+    Usage Notes:
+        - Uses pagination to retrieve all requested comments
+        - Returns only first 10 comments in preview; full results saved to workspace
+        - Caching reduces API quota usage on repeated queries
+        - Analysis includes engagement over time and top contributors
+    """
     def __init__(self, **kwargs):
         super().__init__(**kwargs, name='youtube_comments')
 
