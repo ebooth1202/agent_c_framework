@@ -101,7 +101,8 @@
     "remark-math": "^6.0.0",
     "remark-toc": "^9.0.0",
     "sonner": "^2.0.7",
-    "tailwind-merge": "^2.6.0"
+    "tailwind-merge": "^2.6.0",
+    "unist-util-visit": "^5.0.0"
   },
   "devDependencies": {
     "@jackfranklin/test-data-bot": "^2.1.0",

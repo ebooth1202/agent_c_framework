@@ -33,6 +33,21 @@ vi.mock('lucide-react', () => ({
   ),
   Check: ({ className }: any) => (
     <div data-testid="check-icon" className={className} />
+  ),
+  Info: ({ className }: any) => (
+    <div data-testid="info-icon" className={className} />
+  ),
+  Lightbulb: ({ className }: any) => (
+    <div data-testid="lightbulb-icon" className={className} />
+  ),
+  Megaphone: ({ className }: any) => (
+    <div data-testid="megaphone-icon" className={className} />
+  ),
+  AlertTriangle: ({ className }: any) => (
+    <div data-testid="alert-triangle-icon" className={className} />
+  ),
+  ShieldAlert: ({ className }: any) => (
+    <div data-testid="shield-alert-icon" className={className} />
   )
 }));
 
@@ -383,7 +398,7 @@ console.log(x);
       expect(className).not.toContain('language-python');
     });
 
-    it('should still show copy button without language', () => {
+    it('should show copy button even without language', () => {
       const markdown = `
 \`\`\`
 This has no highlighting
@@ -393,10 +408,14 @@ But copy button still works
 
       const { container } = render(<MarkdownRenderer content={markdown} enableCodeCopy={true} />);
 
-      // Note: Copy button only shows when there's a language specified
-      // This is by design in MarkdownRenderer.tsx: {enableCodeCopy && language && ...}
+      // Fixed: Copy button now shows regardless of language presence
+      // Only enableCodeCopy controls visibility
       const copyButton = container.querySelector('button');
-      expect(copyButton).not.toBeInTheDocument(); // Expected: no copy button without language
+      expect(copyButton).toBeInTheDocument();
+      expect(copyButton).toHaveTextContent('Copy');
+      
+      // Should have generic aria-label without language
+      expect(copyButton).toHaveAttribute('aria-label', 'Copy code');
     });
 
     it('should render properly without errors', () => {

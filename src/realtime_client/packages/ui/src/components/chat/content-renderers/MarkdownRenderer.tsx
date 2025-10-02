@@ -4,13 +4,177 @@ import * as React from 'react'
 import { cn } from '../../../lib/utils'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import remarkDirective from 'remark-directive'
+import remarkMath from 'remark-math'
+import remarkToc from 'remark-toc'
 import rehypeRaw from 'rehype-raw'
 import rehypeHighlight from 'rehype-highlight'
+import rehypeKatex from 'rehype-katex'
 import rehypeSanitize from 'rehype-sanitize'
+import mermaid from 'mermaid'
 import { defaultSchema } from 'rehype-sanitize'
+import { visit } from 'unist-util-visit'
 import '../../../styles/syntax-highlighting.css'
+import 'katex/dist/katex.min.css'
 import { Button } from '../../ui/button'
-import { Check, Copy, ChevronRight, ChevronDown } from 'lucide-react'
+import { Check, Copy, ChevronRight, ChevronDown, Info, Lightbulb, Megaphone, AlertTriangle, ShieldAlert } from 'lucide-react'
+
+// Initialize mermaid once
+let mermaidInitialized = false
+const initializeMermaid = () => {
+  if (!mermaidInitialized) {
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'default',
+      securityLevel: 'strict',
+      fontFamily: 'inherit',
+      logLevel: 'error'
+    })
+    mermaidInitialized = true
+  }
+}
+
+/**
+ * Slugify text for use as heading IDs
+ * Matches GitHub's heading ID generation behavior
+ */
+const slugify = (text: string): string => {
+  return text
+    .toLowerCase()
+    .trim()
+    // Remove special characters except spaces and hyphens
+    .replace(/[^a-z0-9\s-]/g, '')
+    // Replace spaces with hyphens
+    .replace(/\s+/g, '-')
+    // Remove consecutive hyphens
+    .replace(/-+/g, '-')
+    // Remove leading/trailing hyphens
+    .replace(/^-+|-+$/g, '')
+}
+
+/**
+ * Extract text content from React children for heading IDs
+ */
+const extractTextFromChildren = (children: any): string => {
+  if (typeof children === 'string') return children
+  if (typeof children === 'number') return String(children)
+  if (Array.isArray(children)) {
+    return children.map(extractTextFromChildren).join('')
+  }
+  if (children?.props?.children) {
+    return extractTextFromChildren(children.props.children)
+  }
+  return ''
+}
+
+/**
+ * MermaidDiagram component for rendering Mermaid diagrams
+ * Handles client-side rendering with error handling and theme support
+ */
+interface MermaidDiagramProps {
+  code: string
+  compact?: boolean
+}
+
+const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ code, compact = false }) => {
+  const [svg, setSvg] = React.useState<string>('')
+  const [error, setError] = React.useState<string | null>(null)
+  const containerRef = React.useRef<HTMLDivElement>(null)
+  
+  React.useEffect(() => {
+    const renderDiagram = async () => {
+      try {
+        // Initialize mermaid if not already done
+        initializeMermaid()
+        
+        // Generate unique ID for this diagram
+        const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`
+        
+        // Render the diagram
+        const { svg } = await mermaid.render(id, code)
+        setSvg(svg)
+        setError(null)
+      } catch (err) {
+        console.error('Mermaid rendering error:', err)
+        setError(err instanceof Error ? err.message : 'Failed to render diagram')
+      }
+    }
+    
+    renderDiagram()
+  }, [code])
+  
+  if (error) {
+    return (
+      <div
+        className={cn(
+          'border border-destructive bg-destructive/10 rounded-md',
+          compact ? 'p-3 my-2' : 'p-4 my-4'
+        )}
+        role="alert"
+      >
+        <p className={cn(
+          'text-destructive font-medium',
+          compact ? 'text-xs mb-1' : 'text-sm mb-2'
+        )}>
+          Error rendering Mermaid diagram
+        </p>
+        <pre className={cn(
+          'text-muted-foreground font-mono overflow-x-auto',
+          compact ? 'text-xs' : 'text-xs'
+        )}>
+          {error}
+        </pre>
+        <details className="mt-2">
+          <summary className={cn(
+            'cursor-pointer text-muted-foreground hover:text-foreground',
+            compact ? 'text-xs' : 'text-sm'
+          )}>
+            Show diagram code
+          </summary>
+          <pre className={cn(
+            'mt-2 text-muted-foreground font-mono overflow-x-auto bg-muted p-2 rounded',
+            compact ? 'text-xs' : 'text-xs'
+          )}>
+            {code}
+          </pre>
+        </details>
+      </div>
+    )
+  }
+  
+  if (!svg) {
+    return (
+      <div
+        className={cn(
+          'bg-muted rounded-md flex items-center justify-center',
+          compact ? 'p-4 my-2' : 'p-8 my-4'
+        )}
+        role="status"
+        aria-live="polite"
+      >
+        <p className={cn(
+          'text-muted-foreground',
+          compact ? 'text-xs' : 'text-sm'
+        )}>
+          Rendering diagram...
+        </p>
+      </div>
+    )
+  }
+  
+  return (
+    <div
+      ref={containerRef}
+      className={cn(
+        'mermaid-diagram overflow-x-auto',
+        compact ? 'my-2' : 'my-4'
+      )}
+      dangerouslySetInnerHTML={{ __html: svg }}
+      role="img"
+      aria-label="Mermaid diagram"
+    />
+  )
+}
 
 export interface MarkdownRendererProps {
   /**
@@ -71,36 +235,473 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
     })
   }, [])
   
+  // Custom remark plugin to convert directives to HTML
+  const remarkDirectiveToHtml = React.useCallback(() => {
+    return (tree: any) => {
+      visit(tree, (node) => {
+        if (
+          node.type === 'containerDirective' ||
+          node.type === 'leafDirective' ||
+          node.type === 'textDirective'
+        ) {
+          const data = node.data || (node.data = {})
+          const hName = 'div'
+          const hProperties = {
+            'data-directive': node.name,
+            className: `directive directive-${node.name}`
+          }
+          
+          data.hName = hName
+          data.hProperties = hProperties
+        }
+      })
+    }
+  }, [])
+  
+  // Alert type configurations
+  const alertConfig = React.useMemo(() => ({
+    note: {
+      icon: Info,
+      label: 'Note',
+      borderColor: 'border-l-blue-500',
+      bgColor: 'bg-blue-50 dark:bg-blue-900/20',
+      iconColor: 'text-blue-500',
+      textColor: 'text-blue-900 dark:text-blue-100'
+    },
+    tip: {
+      icon: Lightbulb,
+      label: 'Tip',
+      borderColor: 'border-l-green-500',
+      bgColor: 'bg-green-50 dark:bg-green-900/20',
+      iconColor: 'text-green-500',
+      textColor: 'text-green-900 dark:text-green-100'
+    },
+    important: {
+      icon: Megaphone,
+      label: 'Important',
+      borderColor: 'border-l-purple-500',
+      bgColor: 'bg-purple-50 dark:bg-purple-900/20',
+      iconColor: 'text-purple-500',
+      textColor: 'text-purple-900 dark:text-purple-100'
+    },
+    warning: {
+      icon: AlertTriangle,
+      label: 'Warning',
+      borderColor: 'border-l-yellow-500',
+      bgColor: 'bg-yellow-50 dark:bg-yellow-900/20',
+      iconColor: 'text-yellow-600 dark:text-yellow-500',
+      textColor: 'text-yellow-900 dark:text-yellow-100'
+    },
+    caution: {
+      icon: ShieldAlert,
+      label: 'Caution',
+      borderColor: 'border-l-red-500',
+      bgColor: 'bg-red-50 dark:bg-red-900/20',
+      iconColor: 'text-red-500',
+      textColor: 'text-red-900 dark:text-red-100'
+    }
+  }), [])
+  
   // Configure rehype-sanitize to allow only specific HTML tags
   // This filters out phantom tags like <prototype>, <anonymous>, <empty> that rehype-raw creates
-  // Also allows highlight.js classes for syntax highlighting
+  // Also allows highlight.js classes for syntax highlighting and directive classes for alerts
+  // Also allows KaTeX classes for math rendering
   const sanitizeSchema = React.useMemo(() => ({
     ...defaultSchema,
     tagNames: [
       ...(defaultSchema.tagNames || []),
       'details',
-      'summary'
+      'summary',
+      // KaTeX math elements
+      'math',
+      'semantics',
+      'mrow',
+      'mi',
+      'mn',
+      'mo',
+      'mtext',
+      'annotation',
+      // Mermaid SVG elements
+      'svg',
+      'g',
+      'path',
+      'rect',
+      'circle',
+      'ellipse',
+      'line',
+      'polyline',
+      'polygon',
+      'text',
+      'tspan',
+      'textPath',
+      'defs',
+      'linearGradient',
+      'radialGradient',
+      'stop',
+      'marker',
+      'clipPath',
+      'mask',
+      'pattern',
+      'image',
+      'use',
+      'foreignObject',
+      'desc',
+      'title',
+      'style'
     ].filter(tag => !['prototype', 'anonymous', 'empty'].includes(tag)),
     attributes: {
       ...defaultSchema.attributes,
       // Allow all hljs-* classes for syntax highlighting
       '*': [
         ...(defaultSchema.attributes?.['*'] || []),
-        'className'
+        'className',
+        'dataDirective',
+        'dataDirectiveLabel'
+      ],
+      div: [
+        ...(defaultSchema.attributes?.div || []),
+        ['className', /^directive/, /^alert-/, /^katex/],
+        'dataDirective',
+        'dataDirectiveLabel'
       ],
       span: [
         ...(defaultSchema.attributes?.span || []),
-        ['className', /^hljs-/]
+        ['className', /^hljs-/, /^katex/]
       ],
       code: [
         ...(defaultSchema.attributes?.code || []),
         ['className', /^language-/, /^hljs/]
+      ],
+      // KaTeX-specific attributes
+      math: [
+        'xmlns'
+      ],
+      annotation: [
+        'encoding'
+      ],
+      // Mermaid SVG attributes
+      svg: [
+        'xmlns',
+        'width',
+        'height',
+        'viewBox',
+        'preserveAspectRatio',
+        'style',
+        'role',
+        'aria-label',
+        'aria-roledescription',
+        ['className', /^mermaid/]
+      ],
+      g: [
+        'transform',
+        'className',
+        'id',
+        'style'
+      ],
+      path: [
+        'd',
+        'fill',
+        'stroke',
+        'strokeWidth',
+        'strokeDasharray',
+        'strokeLinecap',
+        'strokeLinejoin',
+        'transform',
+        'className',
+        'id',
+        'style',
+        'markerStart',
+        'markerEnd'
+      ],
+      rect: [
+        'x',
+        'y',
+        'width',
+        'height',
+        'rx',
+        'ry',
+        'fill',
+        'stroke',
+        'strokeWidth',
+        'transform',
+        'className',
+        'id',
+        'style'
+      ],
+      circle: [
+        'cx',
+        'cy',
+        'r',
+        'fill',
+        'stroke',
+        'strokeWidth',
+        'transform',
+        'className',
+        'id',
+        'style'
+      ],
+      ellipse: [
+        'cx',
+        'cy',
+        'rx',
+        'ry',
+        'fill',
+        'stroke',
+        'strokeWidth',
+        'transform',
+        'className',
+        'id',
+        'style'
+      ],
+      line: [
+        'x1',
+        'y1',
+        'x2',
+        'y2',
+        'stroke',
+        'strokeWidth',
+        'strokeDasharray',
+        'strokeLinecap',
+        'transform',
+        'className',
+        'id',
+        'style',
+        'markerStart',
+        'markerEnd'
+      ],
+      polyline: [
+        'points',
+        'fill',
+        'stroke',
+        'strokeWidth',
+        'strokeDasharray',
+        'strokeLinecap',
+        'strokeLinejoin',
+        'transform',
+        'className',
+        'id',
+        'style',
+        'markerStart',
+        'markerEnd'
+      ],
+      polygon: [
+        'points',
+        'fill',
+        'stroke',
+        'strokeWidth',
+        'transform',
+        'className',
+        'id',
+        'style'
+      ],
+      text: [
+        'x',
+        'y',
+        'dx',
+        'dy',
+        'textAnchor',
+        'dominantBaseline',
+        'fill',
+        'fontSize',
+        'fontFamily',
+        'fontWeight',
+        'fontStyle',
+        'transform',
+        'className',
+        'id',
+        'style'
+      ],
+      tspan: [
+        'x',
+        'y',
+        'dx',
+        'dy',
+        'textAnchor',
+        'fill',
+        'fontSize',
+        'fontFamily',
+        'fontWeight',
+        'fontStyle',
+        'className',
+        'id',
+        'style'
+      ],
+      textPath: [
+        'href',
+        'xlinkHref',
+        'startOffset',
+        'method',
+        'spacing',
+        'className',
+        'id',
+        'style'
+      ],
+      defs: [
+        'id'
+      ],
+      linearGradient: [
+        'id',
+        'x1',
+        'y1',
+        'x2',
+        'y2',
+        'gradientUnits',
+        'gradientTransform'
+      ],
+      radialGradient: [
+        'id',
+        'cx',
+        'cy',
+        'r',
+        'fx',
+        'fy',
+        'gradientUnits',
+        'gradientTransform'
+      ],
+      stop: [
+        'offset',
+        'stopColor',
+        'stopOpacity',
+        'style'
+      ],
+      marker: [
+        'id',
+        'viewBox',
+        'refX',
+        'refY',
+        'markerWidth',
+        'markerHeight',
+        'orient',
+        'markerUnits',
+        'className',
+        'style'
+      ],
+      clipPath: [
+        'id',
+        'clipPathUnits'
+      ],
+      mask: [
+        'id',
+        'maskUnits',
+        'maskContentUnits',
+        'x',
+        'y',
+        'width',
+        'height'
+      ],
+      pattern: [
+        'id',
+        'x',
+        'y',
+        'width',
+        'height',
+        'patternUnits',
+        'patternContentUnits',
+        'patternTransform',
+        'viewBox'
+      ],
+      image: [
+        'x',
+        'y',
+        'width',
+        'height',
+        'href',
+        'xlinkHref',
+        'preserveAspectRatio',
+        'transform',
+        'className',
+        'id',
+        'style'
+      ],
+      use: [
+        'href',
+        'xlinkHref',
+        'x',
+        'y',
+        'width',
+        'height',
+        'transform',
+        'className',
+        'id',
+        'style'
+      ],
+      foreignObject: [
+        'x',
+        'y',
+        'width',
+        'height',
+        'transform',
+        'className',
+        'id',
+        'style'
+      ],
+      desc: [],
+      title: [],
+      style: [
+        'type'
       ]
     }
   }), [])
   
   // Markdown components configuration
   const markdownComponents = React.useMemo(() => ({
+    // Div component - intercept directive alerts
+    div({ className, children, node, ...props }: any) {
+      // Check if this is a directive container for alerts
+      // remark-directive-rehype creates divs with data-directive attribute
+      const directiveType = node?.properties?.dataDirective || props['data-directive']
+      
+      if (directiveType) {
+        const alertType = directiveType.toLowerCase() as keyof typeof alertConfig
+        const config = alertConfig[alertType]
+        
+        if (config) {
+          const Icon = config.icon
+          
+          return (
+            <div
+              className={cn(
+                'border-l-4 rounded-md flex gap-3',
+                config.borderColor,
+                config.bgColor,
+                compact ? 'p-3 my-2' : 'p-4 my-3'
+              )}
+              role="note"
+              aria-label={`${config.label} alert`}
+            >
+              <div className="flex-shrink-0 pt-0.5">
+                <Icon 
+                  className={cn(
+                    config.iconColor,
+                    compact ? 'h-4 w-4' : 'h-5 w-5'
+                  )}
+                  aria-hidden="true"
+                />
+              </div>
+              <div className={cn(
+                'flex-1 space-y-2',
+                config.textColor
+              )}>
+                <div className={cn(
+                  'font-semibold uppercase tracking-wide',
+                  compact ? 'text-xs' : 'text-sm'
+                )}>
+                  {config.label}
+                </div>
+                <div className={cn(
+                  compact ? 'text-xs' : 'text-sm'
+                )}>
+                  {children}
+                </div>
+              </div>
+            </div>
+          )
+        }
+      }
+      
+      // Regular div, render normally
+      return <div className={className} {...props}>{children}</div>
+    },
     // Pre component for code blocks - handles wrapper and copy button
     pre({ children, ...props }: any) {
       // Check if this is a code block by examining children
@@ -132,13 +733,18 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
       }
       codeString = extractText(codeProps.children).replace(/\n$/, '')
       
+      // Handle Mermaid diagrams
+      if (language === 'mermaid') {
+        return <MermaidDiagram code={codeString} compact={compact} />
+      }
+      
       // Render code block with wrapper and copy button
       return (
         <div className={cn(
           "relative group w-full overflow-hidden",
           compact ? "my-2" : "my-4"
         )}>
-          {enableCodeCopy && language && (
+          {enableCodeCopy && (
             <div className="absolute right-2 top-2 z-10">
               <Button
                 variant="ghost"
@@ -148,7 +754,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
                   compact ? "h-6 text-xs" : "h-8"
                 )}
                 onClick={() => handleCopyCode(codeString)}
-                aria-label={`Copy ${language} code`}
+                aria-label={language ? `Copy ${language} code` : 'Copy code'}
               >
                 {copiedCode === codeString ? (
                   <>
@@ -243,63 +849,93 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
       )
     },
     
-    // Headings
+    // Headings with auto-generated IDs for anchor links
     h1({ children }: any) {
+      const text = extractTextFromChildren(children)
+      const id = slugify(text)
       return (
-        <h1 className={cn(
-          "font-bold",
-          compact ? "text-lg mb-2" : "text-2xl mb-3"
-        )}>
+        <h1 
+          id={id}
+          className={cn(
+            "font-bold",
+            compact ? "text-lg mb-2" : "text-2xl mb-3"
+          )}
+        >
           {children}
         </h1>
       )
     },
     h2({ children }: any) {
+      const text = extractTextFromChildren(children)
+      const id = slugify(text)
       return (
-        <h2 className={cn(
-          "font-semibold",
-          compact ? "text-base mb-1.5" : "text-xl mb-2"
-        )}>
+        <h2 
+          id={id}
+          className={cn(
+            "font-semibold",
+            compact ? "text-base mb-1.5" : "text-xl mb-2"
+          )}
+        >
           {children}
         </h2>
       )
     },
     h3({ children }: any) {
+      const text = extractTextFromChildren(children)
+      const id = slugify(text)
       return (
-        <h3 className={cn(
-          "font-semibold",
-          compact ? "text-sm mb-1.5" : "text-lg mb-2"
-        )}>
+        <h3 
+          id={id}
+          className={cn(
+            "font-semibold",
+            compact ? "text-sm mb-1.5" : "text-lg mb-2"
+          )}
+        >
           {children}
         </h3>
       )
     },
     h4({ children }: any) {
+      const text = extractTextFromChildren(children)
+      const id = slugify(text)
       return (
-        <h4 className={cn(
-          "font-semibold",
-          compact ? "text-sm mb-1" : "text-base mb-2"
-        )}>
+        <h4 
+          id={id}
+          className={cn(
+            "font-semibold",
+            compact ? "text-sm mb-1" : "text-base mb-2"
+          )}
+        >
           {children}
         </h4>
       )
     },
     h5({ children }: any) {
+      const text = extractTextFromChildren(children)
+      const id = slugify(text)
       return (
-        <h5 className={cn(
-          "font-semibold",
-          compact ? "text-xs mb-1" : "text-sm mb-1"
-        )}>
+        <h5 
+          id={id}
+          className={cn(
+            "font-semibold",
+            compact ? "text-xs mb-1" : "text-sm mb-1"
+          )}
+        >
           {children}
         </h5>
       )
     },
     h6({ children }: any) {
+      const text = extractTextFromChildren(children)
+      const id = slugify(text)
       return (
-        <h6 className={cn(
-          "font-medium",
-          compact ? "text-xs mb-1" : "text-sm mb-1"
-        )}>
+        <h6 
+          id={id}
+          className={cn(
+            "font-medium",
+            compact ? "text-xs mb-1" : "text-sm mb-1"
+          )}
+        >
           {children}
         </h6>
       )
@@ -307,6 +943,37 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
     
     // Links
     a({ href, children }: any) {
+      // Check if this is an anchor link (starts with #)
+      const isAnchor = href?.startsWith('#')
+      
+      if (isAnchor) {
+        // Anchor link - smooth scroll within container, no new tab
+        return (
+          <a
+            href={href}
+            onClick={(e) => {
+              e.preventDefault()
+              // Find the target element by ID
+              const targetId = href.substring(1)
+              const targetElement = document.getElementById(targetId)
+              
+              if (targetElement) {
+                // Smooth scroll to the target element
+                targetElement.scrollIntoView({
+                  behavior: 'smooth',
+                  block: 'start'
+                })
+              }
+            }}
+            className="text-primary hover:underline cursor-pointer"
+            aria-label={`Jump to ${children}`}
+          >
+            {children}
+          </a>
+        )
+      }
+      
+      // External link - open in new tab
       return (
         <a 
           href={href}
@@ -477,7 +1144,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
         </summary>
       )
     }
-  }), [compact, enableCodeCopy, copiedCode, handleCopyCode])
+  }), [compact, enableCodeCopy, copiedCode, handleCopyCode, alertConfig])
   
   return (
     <div 
@@ -500,10 +1167,28 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
       aria-label={ariaLabel}
     >
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[
+          remarkGfm,
+          remarkDirective,
+          remarkDirectiveToHtml,
+          remarkMath,
+          [remarkToc, {
+            heading: '(table[ -]of[ -])?contents?|toc',  // Matches "Table of Contents", "TOC", "Contents"
+            tight: true,         // Compact list style
+            ordered: false,      // Use bullet list (not numbered)
+            maxDepth: 4,         // Include headings up to h4
+            skip: undefined      // Don't skip any headings
+          }]
+        ]}
         rehypePlugins={[
           rehypeRaw,
           rehypeHighlight,
+          [rehypeKatex, {
+            strict: false,
+            throwOnError: false,
+            errorColor: '#cc0000',
+            output: 'html'
+          }],
           [rehypeSanitize, sanitizeSchema]
         ]}
         components={markdownComponents}
