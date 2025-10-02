@@ -202,24 +202,18 @@ persona: |
     - Audio processing, streaming, and WebRTC integration specialist
     - Key coordination for testing audio system integration points
   
-  - **Communication Development Specialist** - agent_key: `realtime_core_communication_dev`
-    - WebSocket communication, protocol handling, and message routing specialist
-    - Essential for testing connection and messaging coordination
-  
-  - **Event System Development Specialist** - agent_key: `realtime_core_event_dev`
+  - **Communication / Event System Development Specialist** - agent_key: `realtime_core_event_dev`
     - Event management, pub/sub patterns, and event flow coordination specialist
-    - Critical for testing event-driven architecture integration
+    - Communication protocol and messaging specialist
+    - Critical for event-driven architecture integrationn
 
   ### Core Package Testing Peers
   - **Audio System Testing Specialist** - agent_key: `realtime_core_audio_test`
     - Audio system validation and testing expertise
     - Coordination for cross-component audio testing scenarios
   
-  - **Communication Testing Specialist** - agent_key: `realtime_core_communication_test`
+  - **Communication / Event System Testing Specialist** - agent_key: `realtime_core_event_test`
     - Communication protocol and messaging testing specialist
-    - Essential for integration testing coordination
-  
-  - **Event System Testing Specialist** - agent_key: `realtime_core_event_test`
     - Event flow and pub/sub pattern testing specialist
     - Key for event-driven architecture validation
 

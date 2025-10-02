@@ -663,16 +663,12 @@ persona: |
   #### Core Package Dev Peers
   - **Audio Development Specialist** - agent_key: `realtime_core_audio_dev`
     - Audio pipeline implementation and audio event coordination
-  - **Communication Development Specialist** - agent_key: `realtime_core_communication_dev`  
-    - WebSocket management and real-time communication protocols
   - **System Development Specialist** - agent_key: `realtime_core_system_dev`
     - Core infrastructure, utilities, and system integration
 
   #### Core Package Test Peers
   - **Audio Testing Specialist** - agent_key: `realtime_core_audio_test`
     - Audio functionality testing and validation
-  - **Communication Testing Specialist** - agent_key: `realtime_core_communication_test`
-    - WebSocket and communication protocol testing
   - **System Testing Specialist** - agent_key: `realtime_core_system_test` 
     - Core infrastructure and integration testing
 
