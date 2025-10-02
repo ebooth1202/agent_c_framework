@@ -295,6 +295,53 @@ class WorkspacePlanningTools(Toolset):
         return f"Task '{title}' created successfully with ID '{new_task.id}'"
 
     @json_schema(
+        description="Set the active plan for the agent in the specified workspace",
+        params={
+            "workspace": {
+                "type": "string",
+                "description": "Name of the workspace",
+                "required": True
+            },
+            "plan_id": {
+                "type": "string",
+                "description": "ID of the plan to set as active",
+                "required": True
+            }
+        }
+    )
+    async def set_active_plan(self, **kwargs) -> str:
+        """Set the active plan for the agent in the specified workspace."""
+        workspace = kwargs.get('workspace')
+        plan_id = kwargs.get('plan_id')
+        bridge = kwargs.get('tool_context')['bridge']
+
+        if not workspace:
+            return "Error: workspace is required"
+        if not plan_id:
+            return "Error: plan_id is required"
+
+        plans_meta = await self._get_plans_meta(workspace)
+
+        if plan_id not in plans_meta:
+            return f"Plan with ID '{plan_id}' not found in workspace '{workspace}'"
+
+        # Save the current_plan metadata
+        if not self.workspace_tool:
+            raise RuntimeError("WorkspaceTools not available")
+
+        error, ws, key = self.workspace_tool.validate_and_get_workspace_path(f"//{workspace}/_kg")
+        if error is not None:
+            return f"Error: Invalid workspace path: {workspace}. Error: {error}"
+
+        await ws.safe_metadata_write("current_plan", plan_id)
+        await ws.save_metadata()
+
+        await bridge.send_system_message(f"Active plan set to *{plan_id}* in workspace *{workspace}*", "info")
+
+        return f"Active plan set to '{plan_id}' in workspace '{workspace}'"
+
+
+    @json_schema(
         description="Update an existing task",
         params={
             "plan_path": {
@@ -417,7 +464,7 @@ class WorkspacePlanningTools(Toolset):
         await bridge.send_system_message(message)
 
         if task.completed and task.completion_report:
-            message = f"### Task *{task.id}* Completed\n\n{task.completion_report}\n"
+            message = f"### *{task.id}* Completion report\n\n{task.completion_report}\n"
             await bridge.raise_render_media_markdown(message, "WorkspacePlanningTools")
 
         return f"Task '{task_id}' updated successfully"
@@ -521,6 +568,7 @@ class WorkspacePlanningTools(Toolset):
         plan_path = kwargs.get('plan_path')
         lesson = kwargs.get('lesson')
         learned_task_id = kwargs.get('learned_task_id')
+        bridge = kwargs.get('tool_context').get('bridge')
 
         if not plan_path:
             return "Error: plan_path is required"
@@ -541,6 +589,8 @@ class WorkspacePlanningTools(Toolset):
 
         plan.lessons_learned.append(new_lesson)
         await self._save_plan(plan_path, plan)
+        message = f"New lesson learned added for task *{learned_task_id}*:\n\n{lesson}\n"
+        await bridge.send_system_message(message)
         return yaml.dump({"lesson": new_lesson.model_dump()}, default_flow_style=False, sort_keys=False,
                          allow_unicode=True)
 
@@ -599,6 +649,7 @@ class WorkspacePlanningTools(Toolset):
         """Delete a task and all its subtasks from a plan."""
         plan_path = kwargs.get('plan_path')
         task_id = kwargs.get('task_id')
+        bridge = kwargs.get('tool_context').get('bridge')
 
         if not plan_path:
             return "Error: plan_path is required"
@@ -627,6 +678,13 @@ class WorkspacePlanningTools(Toolset):
                 parent_task.child_tasks.remove(task_id)
 
         await self._save_plan(plan_path, plan)
+
+        if len(deleted_tasks) == 1:
+            message = f"Task *{task_id}* removed from {plan_path}.\n"
+        else:
+            message = f"Task *{task_id}* and its {len(deleted_tasks)-1} subtask(s) removed from {plan_path}.\n"
+
+        await bridge.send_system_message(message, "warning")
 
         return f"{len(deleted_tasks)} task(s) deleted successfully"
 
