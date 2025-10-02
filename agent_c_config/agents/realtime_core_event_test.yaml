@@ -10,6 +10,7 @@ tools:
   - AgentCloneTools
   - AgentTeamTools
   - DynamicCommandTools
+  - WorkspacePlanningTools
 blocked_tool_patterns:
   - "run_*"
   - "workspace_inspect_code"
