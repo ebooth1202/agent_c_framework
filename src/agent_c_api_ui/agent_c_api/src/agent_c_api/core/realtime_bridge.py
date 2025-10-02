@@ -8,6 +8,7 @@ from datetime import datetime
 from functools import singledispatchmethod
 from typing import List, Optional, Any, Dict, AsyncIterator, Union, TYPE_CHECKING
 
+from agent_c.prompting.basic_sections.markdown import MarkdownFormatting
 from agent_c_api.models.user_runtime_cache_entry import UserRuntimeCacheEntry
 from fastapi import WebSocket, WebSocketDisconnect
 from starlette.websockets import WebSocketState
@@ -770,9 +771,9 @@ class RealtimeBridge(ClientEventHandler):
                 tool_params["toolsets"] = self.chat_session.agent_config.tools
 
             if "ThinkTools" in self.chat_session.agent_config.tools:
-                agent_sections = [ThinkSection(), EnvironmentInfoSection(),  DynamicPersonaSection()]
+                agent_sections = [ThinkSection(), EnvironmentInfoSection(),  DynamicPersonaSection(), MarkdownFormatting()]
             else:
-                agent_sections = [EnvironmentInfoSection(), DynamicPersonaSection()]
+                agent_sections = [EnvironmentInfoSection(), DynamicPersonaSection(), MarkdownFormatting()]
 
             chat_params: Dict[str, Any] = {
                 "user_id": self.chat_session.user_id,

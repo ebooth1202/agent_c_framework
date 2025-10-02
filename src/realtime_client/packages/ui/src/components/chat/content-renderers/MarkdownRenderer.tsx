@@ -6,6 +6,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkDirective from 'remark-directive'
 import remarkMath from 'remark-math'
+import remarkToc from 'remark-toc'
 import rehypeRaw from 'rehype-raw'
 import rehypeHighlight from 'rehype-highlight'
 import rehypeKatex from 'rehype-katex'
@@ -31,6 +32,39 @@ const initializeMermaid = () => {
     })
     mermaidInitialized = true
   }
+}
+
+/**
+ * Slugify text for use as heading IDs
+ * Matches GitHub's heading ID generation behavior
+ */
+const slugify = (text: string): string => {
+  return text
+    .toLowerCase()
+    .trim()
+    // Remove special characters except spaces and hyphens
+    .replace(/[^a-z0-9\s-]/g, '')
+    // Replace spaces with hyphens
+    .replace(/\s+/g, '-')
+    // Remove consecutive hyphens
+    .replace(/-+/g, '-')
+    // Remove leading/trailing hyphens
+    .replace(/^-+|-+$/g, '')
+}
+
+/**
+ * Extract text content from React children for heading IDs
+ */
+const extractTextFromChildren = (children: any): string => {
+  if (typeof children === 'string') return children
+  if (typeof children === 'number') return String(children)
+  if (Array.isArray(children)) {
+    return children.map(extractTextFromChildren).join('')
+  }
+  if (children?.props?.children) {
+    return extractTextFromChildren(children.props.children)
+  }
+  return ''
 }
 
 /**
@@ -815,63 +849,93 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
       )
     },
     
-    // Headings
+    // Headings with auto-generated IDs for anchor links
     h1({ children }: any) {
+      const text = extractTextFromChildren(children)
+      const id = slugify(text)
       return (
-        <h1 className={cn(
-          "font-bold",
-          compact ? "text-lg mb-2" : "text-2xl mb-3"
-        )}>
+        <h1 
+          id={id}
+          className={cn(
+            "font-bold",
+            compact ? "text-lg mb-2" : "text-2xl mb-3"
+          )}
+        >
           {children}
         </h1>
       )
     },
     h2({ children }: any) {
+      const text = extractTextFromChildren(children)
+      const id = slugify(text)
       return (
-        <h2 className={cn(
-          "font-semibold",
-          compact ? "text-base mb-1.5" : "text-xl mb-2"
-        )}>
+        <h2 
+          id={id}
+          className={cn(
+            "font-semibold",
+            compact ? "text-base mb-1.5" : "text-xl mb-2"
+          )}
+        >
           {children}
         </h2>
       )
     },
     h3({ children }: any) {
+      const text = extractTextFromChildren(children)
+      const id = slugify(text)
       return (
-        <h3 className={cn(
-          "font-semibold",
-          compact ? "text-sm mb-1.5" : "text-lg mb-2"
-        )}>
+        <h3 
+          id={id}
+          className={cn(
+            "font-semibold",
+            compact ? "text-sm mb-1.5" : "text-lg mb-2"
+          )}
+        >
           {children}
         </h3>
       )
     },
     h4({ children }: any) {
+      const text = extractTextFromChildren(children)
+      const id = slugify(text)
       return (
-        <h4 className={cn(
-          "font-semibold",
-          compact ? "text-sm mb-1" : "text-base mb-2"
-        )}>
+        <h4 
+          id={id}
+          className={cn(
+            "font-semibold",
+            compact ? "text-sm mb-1" : "text-base mb-2"
+          )}
+        >
           {children}
         </h4>
       )
     },
     h5({ children }: any) {
+      const text = extractTextFromChildren(children)
+      const id = slugify(text)
       return (
-        <h5 className={cn(
-          "font-semibold",
-          compact ? "text-xs mb-1" : "text-sm mb-1"
-        )}>
+        <h5 
+          id={id}
+          className={cn(
+            "font-semibold",
+            compact ? "text-xs mb-1" : "text-sm mb-1"
+          )}
+        >
           {children}
         </h5>
       )
     },
     h6({ children }: any) {
+      const text = extractTextFromChildren(children)
+      const id = slugify(text)
       return (
-        <h6 className={cn(
-          "font-medium",
-          compact ? "text-xs mb-1" : "text-sm mb-1"
-        )}>
+        <h6 
+          id={id}
+          className={cn(
+            "font-medium",
+            compact ? "text-xs mb-1" : "text-sm mb-1"
+          )}
+        >
           {children}
         </h6>
       )
@@ -879,6 +943,37 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
     
     // Links
     a({ href, children }: any) {
+      // Check if this is an anchor link (starts with #)
+      const isAnchor = href?.startsWith('#')
+      
+      if (isAnchor) {
+        // Anchor link - smooth scroll within container, no new tab
+        return (
+          <a
+            href={href}
+            onClick={(e) => {
+              e.preventDefault()
+              // Find the target element by ID
+              const targetId = href.substring(1)
+              const targetElement = document.getElementById(targetId)
+              
+              if (targetElement) {
+                // Smooth scroll to the target element
+                targetElement.scrollIntoView({
+                  behavior: 'smooth',
+                  block: 'start'
+                })
+              }
+            }}
+            className="text-primary hover:underline cursor-pointer"
+            aria-label={`Jump to ${children}`}
+          >
+            {children}
+          </a>
+        )
+      }
+      
+      // External link - open in new tab
       return (
         <a 
           href={href}
@@ -1076,7 +1171,14 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
           remarkGfm,
           remarkDirective,
           remarkDirectiveToHtml,
-          remarkMath
+          remarkMath,
+          [remarkToc, {
+            heading: '(table[ -]of[ -])?contents?|toc',  // Matches "Table of Contents", "TOC", "Contents"
+            tight: true,         // Compact list style
+            ordered: false,      // Use bullet list (not numbered)
+            maxDepth: 4,         // Include headings up to h4
+            skip: undefined      // Don't skip any headings
+          }]
         ]}
         rehypePlugins={[
           rehypeRaw,
