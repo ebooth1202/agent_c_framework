@@ -642,6 +642,9 @@ importers:
       tailwind-merge:
         specifier: ^2.6.0
         version: 2.6.0
+      unist-util-visit:
+        specifier: ^5.0.0
+        version: 5.0.0
     devDependencies:
       '@jackfranklin/test-data-bot':
         specifier: ^2.1.0
