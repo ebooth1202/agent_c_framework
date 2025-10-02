@@ -1,4 +1,5 @@
 from typing import Dict, List, Literal, Optional
+from typing import Dict, List, Literal, Optional
 from datetime import datetime
 from pydantic import BaseModel, Field, field_serializer
 
@@ -6,6 +7,14 @@ from agent_c.util import MnemonicSlugs
 
 # Task Priority type
 PriorityType = Literal["low", "medium", "high"]
+
+
+class TaskListing(BaseModel):
+    """Lightweight model for listing tasks in a hierarchical structure."""
+    task_id: str = Field(..., description="The id field from the TaskModel")
+    title: str = Field(..., description="The title field from the TaskModel")
+    completed: bool = Field(..., description="The completed field from the TaskModel")
+    child_tasks: List['TaskListing'] = Field(default_factory=list, description="Child tasks in hierarchical structure")
 
 
 class TaskModel(BaseModel):
@@ -18,7 +27,7 @@ class TaskModel(BaseModel):
     parent_id: Optional[str] = None
     context: str = ""
     child_tasks: List[str] = Field(default_factory=list)
-    sequence: Optional[int] = None  # For controlling display order
+    sequence: Optional[int] = None  # For controlling order
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
     completion_report: Optional[str] = None  # Report on task completion

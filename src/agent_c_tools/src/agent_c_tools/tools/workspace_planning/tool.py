@@ -11,7 +11,7 @@ from agent_c_tools.helpers.validate_kwargs import validate_required_fields
 from agent_c_tools.tools.workspace_planning.prompt import WorkspacePlanSection
 from agent_c_tools.tools.workspace_planning.html_converter import PlanHTMLConverter
 from agent_c_tools.helpers.path_helper import ensure_file_extension, os_file_system_path
-from agent_c_tools.tools.workspace_planning.models import PlanModel, TaskModel, LessonLearnedModel, PriorityType
+from agent_c_tools.tools.workspace_planning.models import PlanModel, TaskModel, LessonLearnedModel, PriorityType, TaskListing
 
 
 class WorkspacePlanningTools(Toolset):
@@ -506,6 +506,38 @@ class WorkspacePlanningTools(Toolset):
 
         return yaml.dump({"task": task.model_dump()}, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
+    def _build_task_listing(self, plan: PlanModel, parent_id: Optional[str] = None) -> List[TaskListing]:
+        """Build hierarchical task listing structure with proper sequence ordering.
+        
+        Args:
+            plan: The plan containing tasks
+            parent_id: Parent task ID to build subtree for, or None for root tasks
+            
+        Returns:
+            List of TaskListing objects, sorted by sequence if present
+        """
+        # Find all tasks with the specified parent_id
+        tasks = [
+            task for task in plan.tasks.values()
+            if task.parent_id == parent_id
+        ]
+        
+        # Sort by sequence (None values go to the end)
+        tasks.sort(key=lambda t: (t.sequence is None, t.sequence if t.sequence is not None else 0))
+        
+        # Build TaskListing objects with recursive child tasks
+        result = []
+        for task in tasks:
+            listing = TaskListing(
+                task_id=task.id,
+                title=task.title,
+                completed=task.completed,
+                child_tasks=self._build_task_listing(plan, task.id)
+            )
+            result.append(listing)
+        
+        return result
+
     @json_schema(
         description="List tasks in a plan",
         params={
@@ -521,7 +553,11 @@ class WorkspacePlanningTools(Toolset):
         }
     )
     async def list_tasks(self, **kwargs) -> str:
-        """List tasks in a plan, optionally filtered by parent task."""
+        """List tasks in a plan in a hierarchical structure, optionally filtered by parent task.
+        
+        Returns a lightweight task outline showing only task_id, title, completed status,
+        and nested child tasks. This avoids token bloat from large description and context fields.
+        """
         plan_path = kwargs.get('plan_path')
         parent_id = kwargs.get('parent_id')
 
@@ -533,15 +569,13 @@ class WorkspacePlanningTools(Toolset):
         if not plan:
             return f"Plan not found at path: {plan_path}"
 
-        tasks_list = []
+        # Build hierarchical task listing
+        tasks_list = self._build_task_listing(plan, parent_id)
+        
+        # Convert to dicts for YAML serialization
+        tasks_dict = [task.model_dump() for task in tasks_list]
 
-        for task_id, task in plan.tasks.items():
-            # If parent_id is provided, filter by parent_id
-            # If parent_id is None, get root tasks (tasks with no parent)
-            if (parent_id and task.parent_id == parent_id) or (parent_id is None and not task.parent_id):
-                tasks_list.append(task.model_dump())
-
-        return yaml.dump({"tasks": tasks_list}, default_flow_style=False, sort_keys=False, allow_unicode=True)
+        return yaml.dump({"tasks": tasks_dict}, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
     @json_schema(
         description="Add a lesson learned to a plan",
