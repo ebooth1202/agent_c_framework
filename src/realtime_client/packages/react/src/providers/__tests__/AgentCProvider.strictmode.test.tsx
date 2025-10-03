@@ -45,7 +45,7 @@ vi.mock('@agentc/realtime-core', () => {
 });
 
 describe('AgentCProvider - StrictMode Behavior', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     // Clear any previous instances
     const { __clearMockClientInstances } = vi.mocked(
       await import('@agentc/realtime-core')
@@ -58,9 +58,8 @@ describe('AgentCProvider - StrictMode Behavior', () => {
   });
 
   it('should create only one client instance in StrictMode', async () => {
-    const { __getMockClientInstances } = vi.mocked(
-      await import('@agentc/realtime-core')
-    );
+    const coreModule = await import('@agentc/realtime-core');
+    const { __getMockClientInstances } = vi.mocked(coreModule);
 
     render(
       <StrictMode>
@@ -78,9 +77,8 @@ describe('AgentCProvider - StrictMode Behavior', () => {
   });
 
   it('should properly cleanup the client when unmounted', async () => {
-    const { __getMockClientInstances } = vi.mocked(
-      await import('@agentc/realtime-core')
-    );
+    const coreModule = await import('@agentc/realtime-core');
+    const { __getMockClientInstances } = vi.mocked(coreModule);
 
     const { unmount } = render(
       <StrictMode>
@@ -109,9 +107,8 @@ describe('AgentCProvider - StrictMode Behavior', () => {
   });
 
   it('should remove all event listeners during cleanup', async () => {
-    const { __getMockClientInstances } = vi.mocked(
-      await import('@agentc/realtime-core')
-    );
+    const coreModule = await import('@agentc/realtime-core');
+    const { __getMockClientInstances } = vi.mocked(coreModule);
 
     const { unmount } = render(
       <StrictMode>
@@ -153,9 +150,8 @@ describe('AgentCProvider - StrictMode Behavior', () => {
   });
 
   it('should disconnect before destroying if connected', async () => {
-    const { __getMockClientInstances } = vi.mocked(
-      await import('@agentc/realtime-core')
-    );
+    const coreModule = await import('@agentc/realtime-core');
+    const { __getMockClientInstances } = vi.mocked(coreModule);
 
     const { unmount } = render(
       <StrictMode>

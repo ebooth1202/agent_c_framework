@@ -124,9 +124,9 @@ export class EventStreamProcessor {
   
   /**
    * Normalize MessageParam content to MessageContent format for UI compatibility
-   * Handles the conversion from Anthropic ContentBlockParam[] to simplified ContentPart[]
+   * Handles conversion from both Anthropic ContentBlockParam[] and OpenAI ChatCompletionContentPart[]
    */
-  private normalizeMessageContent(content: string | ContentBlockParam[]): MessageContent {
+  private normalizeMessageContent(content: string | ContentBlockParam[] | any[]): MessageContent {
     // Handle simple string content
     if (typeof content === 'string') {
       return content;
@@ -158,9 +158,22 @@ export class EventStreamProcessor {
             text: block.text
           });
         } else if (isImageBlockParam(block)) {
+          // Anthropic image format
           normalizedParts.push({
             type: 'image',
             source: block.source
+          });
+        } else if ('type' in block && block.type === 'image_url') {
+          // OpenAI image format - convert to our normalized format
+          const openAiImage = block as any;
+          normalizedParts.push({
+            type: 'image',
+            source: {
+              type: 'url',
+              url: openAiImage.image_url?.url || '',
+              // Preserve detail if present
+              ...(openAiImage.image_url?.detail && { detail: openAiImage.image_url.detail })
+            }
           });
         } else if (isToolUseBlockParam(block)) {
           normalizedParts.push({
@@ -332,6 +345,9 @@ export class EventStreamProcessor {
         break;
       case 'anthropic_user_message':
         this.handleAnthropicUserMessage(event as AnthropicUserMessageEvent);
+        break;
+      case 'openai_user_message':
+        this.handleOpenAIUserMessage(event as OpenAIUserMessageEvent);
         break;
       case 'subsession_started':
         this.handleSubsessionStarted(event as SubsessionStartedEvent);
@@ -706,9 +722,79 @@ export class EventStreamProcessor {
       message = this.convertMessageParam(messageParam);
     } else {
       // Fallback for malformed messages
+      let fallbackContent = '[User message]';
+      if (messageParam !== null && messageParam !== undefined) {
+        try {
+          fallbackContent = JSON.stringify(messageParam);
+        } catch (e) {
+          // Keep default fallback if stringify fails
+        }
+      }
       message = {
         role: 'user',
-        content: JSON.stringify(messageParam) || '[User message]',
+        content: fallbackContent,
+        timestamp: new Date().toISOString(),
+        format: 'text'
+      };
+    }
+    
+    // Check for sub-session using SessionEvent fields
+    if (this.isSubSession(event)) {
+      // Add sub-session metadata to the message
+      (message as any).isSubSession = true;
+      (message as any).metadata = {
+        sessionId: event.session_id,
+        parentSessionId: event.parent_session_id,
+        userSessionId: event.user_session_id
+      };
+      
+      Logger.debug(`[EventStreamProcessor] Sub-session detected: ${event.session_id} (parent: ${event.parent_session_id})`);
+    }
+    
+    // Add to current session
+    const session = this.sessionManager.getCurrentSession();
+    if (session) {
+      session.messages.push(message);
+      session.updated_at = new Date().toISOString();
+      
+      // Emit for UI consumption
+      this.sessionManager.emit('message-added', {
+        sessionId: session.session_id,
+        message
+      });
+    }
+    
+    // Also emit the original user-message event for backward compatibility
+    this.sessionManager.emit('user-message', {
+      vendor: event.vendor,
+      message: event.message
+    });
+  }
+  
+  /**
+   * Handle OpenAI-specific user message events with sub-session detection
+   */
+  private handleOpenAIUserMessage(event: OpenAIUserMessageEvent): void {
+    // Convert the OpenAI message to our normalized format
+    const messageParam = event.message as any;
+    let message: Message;
+    
+    // Check if it has the expected MessageParam structure
+    if (messageParam && messageParam.content !== undefined && messageParam.role !== undefined) {
+      message = this.convertMessageParam(messageParam);
+    } else {
+      // Fallback for malformed messages
+      let fallbackContent = '[User message]';
+      if (messageParam !== null && messageParam !== undefined) {
+        try {
+          fallbackContent = JSON.stringify(messageParam);
+        } catch (e) {
+          // Keep default fallback if stringify fails
+        }
+      }
+      message = {
+        role: 'user',
+        content: fallbackContent,
         timestamp: new Date().toISOString(),
         format: 'text'
       };

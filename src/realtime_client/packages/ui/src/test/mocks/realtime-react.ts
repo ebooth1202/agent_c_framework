@@ -119,6 +119,20 @@ export const defaultMockStates = {
     isToolActive: vi.fn(() => false),
     activeToolCount: 0,
   },
+  fileUpload: {
+    attachments: [],
+    addFiles: vi.fn(),
+    removeFile: vi.fn(),
+    uploadFile: vi.fn().mockResolvedValue(undefined),
+    uploadAll: vi.fn().mockResolvedValue(undefined),
+    clearAll: vi.fn(),
+    isUploading: false,
+    allComplete: false,
+    hasErrors: false,
+    overallProgress: 0,
+    validationError: null,
+    getUploadedFileIds: vi.fn(() => []),
+  },
 };
 
 // Hook mocks
@@ -135,6 +149,7 @@ export const useAgentCData = vi.fn(() => defaultMockStates.agentCData);
 export const useInitializationStatus = vi.fn(() => defaultMockStates.initializationStatus);
 export const useChatSessionList = vi.fn(() => defaultMockStates.chatSessionList);
 export const useToolNotifications = vi.fn(() => defaultMockStates.toolNotifications);
+export const useFileUpload = vi.fn(() => defaultMockStates.fileUpload);
 
 // Mock for useRealtimeClient and useRealtimeClientSafe
 export const useRealtimeClient = vi.fn(() => null);
@@ -214,6 +229,95 @@ export const isDividerItem = vi.fn((item: ChatItem): item is DividerChatItem => 
 export const isMediaItem = vi.fn((item: ChatItem): item is MediaChatItem => item.type === 'media');
 export const isSystemAlertItem = vi.fn((item: ChatItem): item is SystemAlertChatItem => item.type === 'system_alert');
 
+// File upload types
+export type FileAttachmentStatus = 'pending' | 'uploading' | 'complete' | 'error';
+
+export interface FileAttachment {
+  file: File;
+  id: string | null;
+  status: FileAttachmentStatus;
+  progress: number;
+  error: string | null;
+  previewUrl: string | null;
+}
+
+export interface UseFileUploadOptions {
+  maxFileSize?: number;
+  allowedMimeTypes?: string[];
+  maxFiles?: number;
+  autoUpload?: boolean;
+}
+
+export interface UseFileUploadReturn {
+  attachments: FileAttachment[];
+  addFiles: (files: File[]) => void;
+  removeFile: (index: number) => void;
+  uploadFile: (index: number) => Promise<void>;
+  uploadAll: () => Promise<void>;
+  clearAll: () => void;
+  isUploading: boolean;
+  allComplete: boolean;
+  hasErrors: boolean;
+  overallProgress: number;
+  validationError: string | null;
+  getUploadedFileIds: () => string[];
+}
+
+// Multimodal message content types
+export interface TextContentBlock {
+  type: 'text';
+  text: string;
+}
+
+export interface ImageContentBlock {
+  type: 'image';
+  source: {
+    type: 'base64' | 'url';
+    media_type: string;
+    data: string;
+  };
+}
+
+export type MessageContentBlock = TextContentBlock | ImageContentBlock;
+
+// Type guards for content blocks
+export const isTextContent = vi.fn((block: MessageContentBlock): block is TextContentBlock => {
+  return typeof block === 'object' && 'type' in block && block.type === 'text';
+});
+
+export const isImageContent = vi.fn((block: MessageContentBlock): block is ImageContentBlock => {
+  return typeof block === 'object' && 'type' in block && block.type === 'image';
+});
+
+// Message helper utilities
+export const hasFileAttachments = vi.fn((message: any): boolean => {
+  if (!message?.content) return false;
+  if (typeof message.content === 'string') return false;
+  if (!Array.isArray(message.content)) return false;
+  return message.content.some((block: any) => 
+    typeof block === 'object' && 'type' in block && block.type === 'image'
+  );
+});
+
+export const countImages = vi.fn((message: any): number => {
+  if (!message?.content) return 0;
+  if (typeof message.content === 'string') return 0;
+  if (!Array.isArray(message.content)) return 0;
+  return message.content.filter((block: any) => 
+    typeof block === 'object' && 'type' in block && block.type === 'image'
+  ).length;
+});
+
+export const getMessageDisplayText = vi.fn((message: any): string => {
+  if (!message?.content) return '';
+  if (typeof message.content === 'string') return message.content;
+  if (!Array.isArray(message.content)) return '';
+  return message.content
+    .filter((block: any) => typeof block === 'object' && 'type' in block && block.type === 'text')
+    .map((block: any) => block.text)
+    .join('\n');
+});
+
 // Helper function to update mock states
 export function updateMockState(hook: string, newState: any) {
   const hookMap = {
@@ -231,6 +335,7 @@ export function updateMockState(hook: string, newState: any) {
     toolNotifications: useToolNotifications,
     errors: useErrors,
     client: useRealtimeClientSafe,
+    fileUpload: useFileUpload,
   };
   
   const mockHook = hookMap[hook as keyof typeof hookMap];
@@ -262,4 +367,5 @@ export function resetAllMocks() {
   useChatSessionList.mockReturnValue(defaultMockStates.chatSessionList);
   useToolNotifications.mockReturnValue(defaultMockStates.toolNotifications);
   useErrors.mockReturnValue(defaultMockStates.errors);
+  useFileUpload.mockReturnValue(defaultMockStates.fileUpload);
 }

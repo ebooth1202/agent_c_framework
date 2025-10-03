@@ -205,7 +205,14 @@ export {
   TypingIndicator,
   ScrollAnchor,
   ChatMessagesView,
-  typingIndicatorStyles
+  typingIndicatorStyles,
+  // File upload components
+  ChatInputArea,
+  FileAttachmentItem,
+  FileAttachmentList,
+  UploadProgressIndicator,
+  DropOverlay,
+  ImageLightbox
 } from './components/chat';
 
 export type {
@@ -219,7 +226,14 @@ export type {
   NotificationSeverity,
   TypingIndicatorProps,
   ScrollAnchorProps,
-  ChatMessagesViewProps
+  ChatMessagesViewProps,
+  // File upload component types
+  ChatInputAreaProps,
+  FileAttachmentItemProps,
+  FileAttachmentListProps,
+  UploadProgressIndicatorProps,
+  FileDropZoneProps,
+  ImageLightboxProps
 } from './components/chat';
 
 // Audio component exports

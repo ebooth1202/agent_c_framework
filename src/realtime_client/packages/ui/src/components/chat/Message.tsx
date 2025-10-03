@@ -236,6 +236,17 @@ const MessageComponent = React.forwardRef<HTMLDivElement, MessageProps>(
     const [isEditing, setIsEditing] = React.useState(false)
     const [editContent, setEditContent] = React.useState(extractTextContent(message.content) || '')
     
+    // Check if message has attachments (images)
+    const hasAttachments = React.useMemo(() => {
+      return Array.isArray(message.content) && 
+        message.content.some(block => 
+          typeof block === 'object' && 
+          block !== null && 
+          'type' in block && 
+          block.type === 'image'
+        )
+    }, [message.content])
+    
     // Debug logging
     React.useEffect(() => {
       Logger.debug('[Message] Rendering message:', {
@@ -244,9 +255,10 @@ const MessageComponent = React.forwardRef<HTMLDivElement, MessageProps>(
         contentLength: Array.isArray(message.content) ? message.content.length : undefined,
         content: message.content,
         timestamp: message.timestamp,
-        isThought: message.isThought
+        isThought: message.isThought,
+        hasAttachments
       })
-    }, [message])
+    }, [message, hasAttachments])
     
     // Check for thought messages
     if (message.isThought || message.role === 'assistant (thought)') {
@@ -354,7 +366,8 @@ const MessageComponent = React.forwardRef<HTMLDivElement, MessageProps>(
                 : "bg-card border border-border/50",
               isError && "bg-destructive/10 border border-destructive",
               isStreaming && "after:content-[''] after:inline-block after:w-1.5 after:h-4 after:ml-1 after:bg-current after:animate-pulse after:rounded-full",
-              isSubSession && "border-l-2 border-primary/30"
+              isSubSession && "border-l-2 border-primary/30",
+              hasAttachments && "ring-1 ring-primary/20 ring-inset"
             )}
           >
             {/* Error message */}

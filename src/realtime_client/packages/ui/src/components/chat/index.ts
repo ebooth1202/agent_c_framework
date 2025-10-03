@@ -39,3 +39,21 @@ export type { MediaRendererProps } from './MediaRenderer'
 
 export { SystemMessage } from './SystemMessage'
 export type { SystemMessageProps } from './SystemMessage'
+
+export { DropOverlay } from './DropOverlay'
+export type { FileDropZoneProps } from './DropOverlay'
+
+export { UploadProgressIndicator } from './UploadProgressIndicator'
+export type { UploadProgressIndicatorProps } from './UploadProgressIndicator'
+
+export { ImageLightbox } from './ImageLightbox'
+export type { ImageLightboxProps } from './ImageLightbox'
+
+export { FileAttachmentItem } from './FileAttachmentItem'
+export type { FileAttachmentItemProps } from './FileAttachmentItem'
+
+export { FileAttachmentList } from './FileAttachmentList'
+export type { FileAttachmentListProps } from './FileAttachmentList'
+
+export { ChatInputArea } from './ChatInputArea'
+export type { ChatInputAreaProps } from './ChatInputArea'

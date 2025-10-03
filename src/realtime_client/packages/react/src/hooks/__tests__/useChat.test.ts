@@ -239,8 +239,8 @@ describe('useChat - Part 1: Message Management', () => {
         await result.current.sendMessage('Hello world');
       });
 
-      // Verify client.sendText was called
-      expect(mockClient.sendText).toHaveBeenCalledWith('Hello world');
+      // Verify client.sendText was called (with optional fileIds parameter)
+      expect(mockClient.sendText).toHaveBeenCalledWith('Hello world', undefined);
 
       // User message is not added locally anymore - EventStreamProcessor will emit message-added
       // So messages should still be empty after sendMessage
@@ -305,8 +305,8 @@ describe('useChat - Part 1: Message Management', () => {
         await result.current.sendMessage('Test');
       });
 
-      // Verify sendText was called
-      expect(mockClient.sendText).toHaveBeenCalledWith('Test');
+      // Verify sendText was called (with optional fileIds parameter)
+      expect(mockClient.sendText).toHaveBeenCalledWith('Test', undefined);
       // Verify isSending is false after completion  
       expect(result.current.isSending).toBe(false);
       // Note: message is not added locally anymore, EventStreamProcessor will emit message-added
@@ -1561,8 +1561,8 @@ describe('useChat - Part 2: Typing Indicators & Events', () => {
       });
       expect(result.current.error).toBeNull();
       
-      // NEW: Verify message was sent even though we don't add it locally
-      expect(mockClient.sendText).toHaveBeenCalledWith('Success');
+      // NEW: Verify message was sent even though we don't add it locally (with optional fileIds parameter)
+      expect(mockClient.sendText).toHaveBeenCalledWith('Success', undefined);
     });
 
     it('maintains state consistency after errors', async () => {

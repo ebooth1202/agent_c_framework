@@ -8,6 +8,7 @@ import { ImageContentRenderer } from './content-renderers/ImageContentRenderer'
 import { ToolUseContentRenderer } from './content-renderers/ToolUseContentRenderer'
 import { ToolResultContentRenderer } from './content-renderers/ToolResultContentRenderer'
 import { UnknownContentRenderer } from './content-renderers/UnknownContentRenderer'
+import { MultimodalContentRenderer } from './content-renderers/MultimodalContentRenderer'
 
 export interface MessageContentRendererProps {
   /**
@@ -60,6 +61,23 @@ export const MessageContentRenderer: React.FC<MessageContentRendererProps> = ({
   
   // Handle ContentPart array
   if (Array.isArray(content)) {
+    // Check if content has images (multimodal)
+    const hasImages = content.some(block => 
+      typeof block === 'object' && block !== null && 'type' in block && block.type === 'image'
+    )
+    
+    // Route to MultimodalContentRenderer for messages with images
+    if (hasImages) {
+      return (
+        <MultimodalContentRenderer
+          content={content as any}
+          role={role}
+          className={className}
+        />
+      )
+    }
+    
+    // For text-only arrays, use existing part-by-part rendering
     return (
       <div 
         className={cn("space-y-3", className)}
@@ -133,15 +151,13 @@ const ContentPartRenderer: React.FC<ContentPartRendererProps> = ({
         type: 'image'; 
         source: { 
           type: 'base64' | 'url';
-          media_type?: string;
-          data?: string;
-          url?: string;
+          media_type: string;
+          data: string;
         } 
       }
       return (
         <ImageContentRenderer
-          source={imagePart.source}
-          index={index}
+          content={imagePart}
         />
       )
     
