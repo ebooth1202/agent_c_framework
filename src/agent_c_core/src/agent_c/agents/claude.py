@@ -95,6 +95,29 @@ class ClaudeChatAgent(BaseAgent):
     def tool_format(self) -> str:
         return "claude"
 
+    def _context_opts(self) -> dict[str, Any]:
+        opts = {
+                "edits": [
+                    {
+                        "type": "clear_tool_uses_20250919",
+                        "trigger": {
+                            "type": "input_tokens",
+                            "value": 30000
+                        },
+                        "keep": {
+                            "type": "tool_uses",
+                            "value": 3
+                        },
+                        "clear_at_least": {
+                            "type": "input_tokens",
+                            "value": 5000
+                        },
+                        "exclude_tools": ["think", "wsp_get_task", "wsp_update_task", "wsp_add_lesson_learned"]
+                    }
+                ]
+            }
+        return opts
+
     async def __interaction_setup(self, **kwargs) -> dict[str, Any]:
         model_name: str = kwargs.get("model_name", self.model_name)
         if model_name is None:
@@ -105,7 +128,7 @@ class ClaudeChatAgent(BaseAgent):
         await self._raise_user_message(messages[-1], **callback_opts)
 
         temperature: float = kwargs.get("temperature", self.temperature)
-        max_tokens: int = kwargs.get("max_tokens", self.max_tokens)
+        max_tokens: int = self.CLAUDE_MAX_TOKENS
         allow_server_tools: bool = kwargs.get("allow_server_tools", False)
 
         tool_chest = kwargs.get("tool_chest", self.tool_chest)
@@ -121,33 +144,32 @@ class ClaudeChatAgent(BaseAgent):
         (tool_context, prompt_context) = await self._render_contexts(**kwargs)
         sys_prompt: str = prompt_context["system_prompt"]
         allow_betas: bool = kwargs.get("allow_betas", self.allow_betas)
-        completion_opts = {"model": model_name.removeprefix("bedrock_"), "messages": messages,
-                           "system": sys_prompt,  "max_tokens": max_tokens,
-                           'temperature': temperature}
+        completion_opts: Dict[str, Any] = {"model": model_name.removeprefix("bedrock_"), "messages": messages,
+                                           "system": sys_prompt,  "max_tokens": max_tokens,
+                                           'temperature': temperature}
 
-        if '3-7-sonnet' in model_name or '-4-' in model_name:
+        if allow_server_tools:
+            max_searches: int = kwargs.get("max_searches", 0)
+            if max_searches > 0:
+                functions.append({"type": "web_search_20250305", "name": "web_search", "max_uses": max_searches})
+
+
+
+        if allow_betas:
             if allow_server_tools:
-                max_searches: int = kwargs.get("max_searches", 0)
-                if max_searches > 0:
-                    functions.append({"type": "web_search_20250305", "name": "web_search", "max_uses": max_searches})
+                functions.append({"type": "code_execution_20250522","name": "code_execution"})
 
-            if allow_betas:
-                if allow_server_tools:
-                    functions.append({"type": "code_execution_20250522","name": "code_execution"})
-
-                if '-4-' in model_name:
-                    if max_tokens == self.CLAUDE_MAX_TOKENS:
-                        if 'sonnet' in model_name:
-                            completion_opts['max_tokens'] = 64000
-                        else:
-                            completion_opts['max_tokens'] = 32000
-
-                    completion_opts['betas'] = ['interleaved-thinking-2025-05-14', "files-api-2025-04-14"] #, "code-execution-2025-05-22"]
+            if "sonnet" in model_name:
+                if '-4' in model_name:
+                    completion_opts['betas'] = ["context-1m-2025-08-07", "context-management-2025-06-27",  "files-api-2025-04-14", 'interleaved-thinking-2025-05-14']
                 else:
-                    completion_opts['betas'] = ["token-efficient-tools-2025-02-19", "output-128k-2025-02-19", "files-api-2025-04-14"] # , "code-execution-2025-05-22"]
-                    if max_tokens == self.CLAUDE_MAX_TOKENS:
-                        completion_opts['max_tokens'] = 128000
+                    completion_opts['betas'] = ["token-efficient-tools-2025-02-19", "output-128k-2025-02-19", "files-api-2025-04-14"]
+                    max_tokens = 128000
+            elif '-4' in model_name:
+                completion_opts['betas'] =["token-efficient-tools-2025-02-19", "files-api-2025-04-14", "context-management-2025-06-27"]
 
+            if "context-management-2025-06-27" in completion_opts.get('betas', []):
+                completion_opts['context_management'] = self._context_opts()
 
         budget_tokens: int = kwargs.get("budget_tokens", self.budget_tokens)
         if budget_tokens > 0:
@@ -158,6 +180,7 @@ class ClaudeChatAgent(BaseAgent):
         if len(functions):
             completion_opts['tools'] = functions
 
+        completion_opts['max_tokens'] = max_tokens
         completion_opts["metadata"] = {'user_id': kwargs.get('user_id', 'admin')}
 
         opts = {"callback_opts": callback_opts, "completion_opts": completion_opts, 'tool_chest': tool_chest, 'tool_context': tool_context}
