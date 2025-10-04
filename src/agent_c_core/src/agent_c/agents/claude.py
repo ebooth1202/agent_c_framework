@@ -104,7 +104,7 @@ class ClaudeChatAgent(BaseAgent):
                         "type": "clear_tool_uses_20250919",
                         "trigger": {
                             "type": "input_tokens",
-                            "value": 30000
+                            "value": 50000
                         },
                         "keep": {
                             "type": "tool_uses",
