@@ -172,20 +172,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Check auth status periodically to handle token expiration
     const interval = setInterval(() => {
       const authenticated = checkIsAuthenticated();
-      if (authenticated !== isAuthenticated) {
-        authLog.info(`Auth state changed: ${authenticated ? 'authenticated' : 'not authenticated'}`);
-        setIsAuthenticated(authenticated);
-        if (!authenticated) {
-          setUiSessionId(undefined);
-          clearUiSessionId();
+      setIsAuthenticated(prevAuthenticated => {
+        if (authenticated !== prevAuthenticated) {
+          authLog.info(`Auth state changed: ${authenticated ? 'authenticated' : 'not authenticated'}`);
+          if (!authenticated) {
+            setUiSessionId(undefined);
+            clearUiSessionId();
+          }
         }
-      }
+        return authenticated;
+      });
     }, 30000); // Check every 30 seconds
     
     return () => {
       clearInterval(interval);
     };
-  }, [isAuthenticated]);  // Added dependency for the periodic check
+  }, []); // Run only once on mount
 
   /**
    * Login function
