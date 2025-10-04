@@ -96,7 +96,8 @@ class ToolChest:
             # Add schemas and update function name mapping
             for schema in toolset.tool_schemas:
                 self._active_tool_schemas.append(schema)
-                self._tool_name_to_instance_map[schema['function']['name']] = toolset
+                if 'function' in schema and 'name' in schema['function']:
+                    self._tool_name_to_instance_map[schema['function']['name']] = toolset
 
     async def initialize_toolsets(self, toolset_name_or_names: Union[str, List[str]], tool_opts: Optional[Dict[str, any]] = None) -> bool:
         return await self.activate_toolset(toolset_name_or_names, tool_opts, True)
