@@ -559,9 +559,12 @@ class ToolChest:
         if tool_format.lower() == "claude":
             schemas = []
             for schema in openai_schemas:
-                new_schema = copy.deepcopy(schema['function'])
-                new_schema['input_schema'] = new_schema.pop('parameters')
-                schemas.append(new_schema)
+                if "function" in schema:
+                    new_schema = copy.deepcopy(schema['function'])
+                    new_schema['input_schema'] = new_schema.pop('parameters')
+                    schemas.append(new_schema)
+                else:
+                    schemas.append(schema)
         else:  # Default to OpenAI format
             schemas = openai_schemas
         
