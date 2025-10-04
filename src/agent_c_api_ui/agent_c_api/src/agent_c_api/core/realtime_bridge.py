@@ -350,7 +350,7 @@ class RealtimeBridge(ClientEventHandler):
         await self.send_chat_session_meta()
 
     async def release_current_session(self) -> None:
-        if self.chat_session is not None:
+        if self.chat_session is None:
             return
 
         await self.chat_session_manager.release_session(self.chat_session.session_id, self.chat_session.user_id)
