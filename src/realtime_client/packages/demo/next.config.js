@@ -16,11 +16,6 @@ const nextConfig = {
       '@agentc/realtime-react': path.resolve(__dirname, '../react/dist'),
     };
     
-    // Ensure source maps are properly configured in development
-    if (dev && !isServer) {
-      config.devtool = 'eval-source-map'; // Fast rebuild, good debugging
-    }
-    
     // Ignore source map warnings for browser extension files (React DevTools)
     config.ignoreWarnings = [
       ...(config.ignoreWarnings || []),
