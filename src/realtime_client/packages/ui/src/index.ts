@@ -207,12 +207,12 @@ export {
   ChatMessagesView,
   typingIndicatorStyles,
   // File upload components
-  ChatInputArea,
   FileAttachmentItem,
   FileAttachmentList,
   UploadProgressIndicator,
-  DropOverlay,
   ImageLightbox
+  // ChatInputArea removed - use InputArea from input/ which now has file upload
+  // DropOverlay removed - InputArea uses react-dropzone directly
 } from './components/chat';
 
 export type {
@@ -228,12 +228,12 @@ export type {
   ScrollAnchorProps,
   ChatMessagesViewProps,
   // File upload component types
-  ChatInputAreaProps,
   FileAttachmentItemProps,
   FileAttachmentListProps,
   UploadProgressIndicatorProps,
-  FileDropZoneProps,
   ImageLightboxProps
+  // ChatInputAreaProps removed - use InputAreaProps from input/
+  // FileDropZoneProps removed - not needed with react-dropzone
 } from './components/chat';
 
 // Audio component exports

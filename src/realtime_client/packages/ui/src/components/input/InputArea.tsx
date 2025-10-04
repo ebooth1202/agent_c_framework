@@ -8,15 +8,19 @@ import {
   useAudio, 
   useTurnState, 
   useVoiceModel, 
-  useAvatar 
+  useAvatar,
+  useFileUpload
 } from "@agentc/realtime-react"
 import type { Voice } from "@agentc/realtime-core"
 import { InputContainer } from "./InputContainer"
 import { RichTextEditor } from "./RichTextEditor"
 import { InputToolbar } from "./InputToolbar"
 import type { Agent, OutputMode, OutputOption } from "./types"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, Paperclip } from "lucide-react"
 import { Alert, AlertDescription } from "../ui/alert"
+import { FileAttachmentList } from "../chat/FileAttachmentList"
+import { Button } from "../ui/button"
+import { useDropzone } from 'react-dropzone'
 
 export interface InputAreaProps {
   // Optional overrides for advanced usage
@@ -32,6 +36,11 @@ export interface InputAreaProps {
   compact?: boolean
   disabled?: boolean
   orientation?: 'horizontal' | 'vertical'
+  // File upload props
+  enableFileUpload?: boolean
+  maxFiles?: number
+  maxFileSize?: number
+  allowedMimeTypes?: string[]
 }
 
 const InputArea: React.FC<InputAreaProps> = ({
@@ -45,7 +54,11 @@ const InputArea: React.FC<InputAreaProps> = ({
   onOutputModeChange,
   compact = false,
   disabled = false,
-  orientation = 'horizontal'
+  orientation = 'horizontal',
+  enableFileUpload = true,
+  maxFiles = 10,
+  maxFileSize = 10 * 1024 * 1024,
+  allowedMimeTypes = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml']
 }) => {
   // SDK hooks
   const { messages, sendMessage, isAgentTyping } = useChat()
@@ -70,6 +83,27 @@ const InputArea: React.FC<InputAreaProps> = ({
   const [content, setContent] = useState('')
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null)
   const [error, setError] = useState<string | null>(null)
+  
+  // File upload hook
+  const fileUpload = useFileUpload({
+    autoUpload: enableFileUpload,
+    maxFiles,
+    maxFileSize,
+    allowedMimeTypes,
+  })
+  
+  // Drag-drop support
+  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
+    onDrop: (acceptedFiles) => fileUpload.addFiles(acceptedFiles),
+    accept: allowedMimeTypes ? 
+      Object.fromEntries(allowedMimeTypes.map(type => [type, []])) : 
+      undefined,
+    disabled: disabled || !enableFileUpload,
+    noClick: true,
+    noKeyboard: true,
+    maxFiles,
+    maxSize: maxFileSize,
+  })
 
   // Default agents if not provided
   const defaultAgents: Agent[] = useMemo(() => [
@@ -181,7 +215,8 @@ const InputArea: React.FC<InputAreaProps> = ({
 
   // Handle text submission
   const handleSendText = useCallback(async () => {
-    if (!canSendInput || !content.trim() || disabled) return
+    if (!canSendInput || (!content.trim() && fileUpload.attachments.length === 0) || disabled) return
+    if (fileUpload.isUploading) return
     
     try {
       // Stop recording if active
@@ -189,18 +224,22 @@ const InputArea: React.FC<InputAreaProps> = ({
         await stopStreaming()
       }
       
-      // Send message
-      await sendMessage(content)
+      // Get uploaded file IDs
+      const fileIds = fileUpload.getUploadedFileIds()
       
-      // Clear editor
+      // Send message with files if any
+      await sendMessage(content, fileIds.length > 0 ? fileIds : undefined)
+      
+      // Clear editor and files
       setContent('')
+      fileUpload.clearAll()
       setError(null)
     } catch (err) {
       console.error('Failed to send message:', err)
       setError('Failed to send message. Please try again.')
       // Keep content for retry
     }
-  }, [canSendInput, content, isStreaming, stopStreaming, sendMessage, disabled])
+  }, [canSendInput, content, isStreaming, stopStreaming, sendMessage, disabled, fileUpload])
 
   // Handle recording start
   const handleStartRecording = useCallback(async () => {
@@ -260,11 +299,81 @@ const InputArea: React.FC<InputAreaProps> = ({
     }
   }, [isStreaming, stopStreaming])
 
+  // Handle file paste
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    if (!enableFileUpload) return
+    
+    const items = e.clipboardData?.items
+    if (!items) return
+    
+    const files: File[] = []
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]
+      if (item.kind === 'file') {
+        const file = item.getAsFile()
+        if (file && allowedMimeTypes.some(type => file.type.match(type.replace('*', '.*')))) {
+          files.push(file)
+        }
+      }
+    }
+    
+    if (files.length > 0) {
+      e.preventDefault()
+      fileUpload.addFiles(files)
+    }
+  }, [enableFileUpload, fileUpload, allowedMimeTypes])
+
   // Determine if input should be disabled
   const isInputDisabled = disabled || !canSendInput || isAgentTyping
 
   return (
-    <div className={cn("w-full", className)}>
+    <div 
+      {...(enableFileUpload ? getRootProps() : {})}
+      className={cn(
+        "w-full relative",
+        isDragActive && enableFileUpload && "ring-2 ring-primary",
+        className
+      )}
+    >
+      {enableFileUpload && <input {...getInputProps({ 'aria-label': 'Upload files' })} />}
+      
+      {/* Drag overlay */}
+      {isDragActive && enableFileUpload && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary rounded-lg">
+          <div className="text-center">
+            <p className="text-lg font-semibold text-primary">Drop files here</p>
+            <p className="text-sm text-muted-foreground">Release to upload</p>
+          </div>
+        </div>
+      )}
+      
+      {/* File attachments */}
+      {enableFileUpload && fileUpload.attachments.length > 0 && (
+        <div className="mb-2">
+          <FileAttachmentList
+            attachments={fileUpload.attachments}
+            onRemove={fileUpload.removeFile}
+          />
+        </div>
+      )}
+      
+      {/* File validation error */}
+      {enableFileUpload && fileUpload.validationError && (
+        <Alert variant="destructive" className="mb-2">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {fileUpload.validationError}
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {/* Upload progress */}
+      {enableFileUpload && fileUpload.isUploading && (
+        <div className="mb-2 text-sm text-muted-foreground">
+          Uploading files... {fileUpload.overallProgress}%
+        </div>
+      )}
+      
       {/* Error display */}
       {(error || audioError) && (
         <Alert variant="destructive" className="mb-2">
@@ -284,6 +393,7 @@ const InputArea: React.FC<InputAreaProps> = ({
           value={content}
           onChange={setContent}
           onSubmit={handleSendText}
+          onPaste={handlePaste}
           disabled={isInputDisabled}
           placeholder={
             isInputDisabled 
@@ -298,7 +408,9 @@ const InputArea: React.FC<InputAreaProps> = ({
         
         <InputToolbar
           onSend={handleSendText}
-          canSend={content.trim().length > 0 && canSendInput && !disabled}
+          canSend={(content.trim().length > 0 || fileUpload.attachments.length > 0) && canSendInput && !disabled && !fileUpload.isUploading}
+          onAttachment={enableFileUpload ? open : undefined}
+          disableAttachment={!enableFileUpload || disabled || fileUpload.attachments.length >= maxFiles}
           isRecording={isStreaming}
           onStartRecording={handleStartRecording}
           onStopRecording={handleStopRecording}

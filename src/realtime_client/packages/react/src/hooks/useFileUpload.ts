@@ -146,26 +146,36 @@ export function useFileUpload(options: UseFileUploadOptions = {}): UseFileUpload
    */
   const uploadFile = useCallback(
     async (index: number): Promise<void> => {
-      if (!isMountedRef.current) return;
+      console.log('[useFileUpload] uploadFile called for index:', index);
+      if (!isMountedRef.current) {
+        console.log('[useFileUpload] Not mounted, returning');
+        return;
+      }
       
+      // Check current attachment - need to depend on attachments for this
       const attachment = attachments[index];
+      console.log('[useFileUpload] Current attachment:', attachment ? { status: attachment.status, name: attachment.file.name } : 'NOT FOUND');
+      
       if (!attachment) {
-        console.warn(`No attachment at index ${index}`);
+        console.warn(`[useFileUpload] No attachment at index ${index}`);
         return;
       }
       
       // Skip if already uploading or complete
       if (attachment.status === 'uploading' || attachment.status === 'complete') {
+        console.log('[useFileUpload] Skipping - already', attachment.status);
         return;
       }
+      
+      console.log('[useFileUpload] Will upload:', attachment.file.name);
+      const file = attachment.file;
       
       // Update status to uploading
       setAttachments((prev) => {
         const updated = [...prev];
-        const current = updated[index];
-        if (current) {
+        if (updated[index]) {
           updated[index] = { 
-            ...current, 
+            ...updated[index], 
             status: 'uploading' as const, 
             progress: 0 
           };
@@ -173,11 +183,15 @@ export function useFileUpload(options: UseFileUploadOptions = {}): UseFileUpload
         return updated;
       });
       
+      console.log('[useFileUpload] Status updated to uploading, starting performUpload...');
+      
       try {
+        console.log('[useFileUpload] Calling performUpload...');
         const uploadedId = await performUpload(
-          attachment.file,
+          file,
           index,
           (progress) => {
+            console.log('[useFileUpload] Progress update:', progress, '%');
             if (!isMountedRef.current) return;
             
             setAttachments((prev) => {
@@ -190,6 +204,7 @@ export function useFileUpload(options: UseFileUploadOptions = {}): UseFileUpload
           }
         );
         
+        console.log('[useFileUpload] Upload complete! File ID:', uploadedId);
         if (!isMountedRef.current) return;
         
         // Update status to complete with uploaded ID
@@ -207,9 +222,11 @@ export function useFileUpload(options: UseFileUploadOptions = {}): UseFileUpload
           return updated;
         });
       } catch (error) {
+        console.error('[useFileUpload] Upload error:', error);
         if (!isMountedRef.current) return;
         
         const errorMessage = error instanceof Error ? error.message : 'Upload failed';
+        console.log('[useFileUpload] Setting error status:', errorMessage);
         
         // Update status to error
         setAttachments((prev) => {
@@ -233,17 +250,33 @@ export function useFileUpload(options: UseFileUploadOptions = {}): UseFileUpload
    * This runs after state updates to avoid closure issues
    */
   useEffect(() => {
-    if (!config.autoUpload) return;
-    if (!isMountedRef.current) return;
+    console.log('[useFileUpload] Auto-upload effect triggered');
+    console.log('[useFileUpload]   config.autoUpload:', config.autoUpload);
+    console.log('[useFileUpload]   attachments:', attachments.map(a => ({ status: a.status, name: a.file.name })));
+    
+    if (!config.autoUpload) {
+      console.log('[useFileUpload] Auto-upload disabled, returning');
+      return;
+    }
+    if (!isMountedRef.current) {
+      console.log('[useFileUpload] Not mounted, returning');
+      return;
+    }
     
     const pendingIndices = attachments
       .map((att, index) => ({ att, index }))
       .filter(({ att }) => att.status === 'pending')
       .map(({ index }) => index);
     
-    if (pendingIndices.length === 0) return;
+    console.log('[useFileUpload] Pending file indices:', pendingIndices);
     
-    // Upload each pending file
+    if (pendingIndices.length === 0) {
+      console.log('[useFileUpload] No pending files, returning');
+      return;
+    }
+    
+    // Upload each pending file - call uploadFile directly, not through function dependency
+    console.log('[useFileUpload] Starting uploads for', pendingIndices.length, 'files');
     pendingIndices.forEach(index => {
       uploadFile(index);
     });
@@ -269,6 +302,7 @@ export function useFileUpload(options: UseFileUploadOptions = {}): UseFileUpload
    */
   const addFiles = useCallback(
     async (files: File[]): Promise<void> => {
+      console.log('[useFileUpload] addFiles called with', files.length, 'files:', files.map(f => f.name));
       setValidationError(null);
       
       // Check if adding these files would exceed max files
@@ -308,7 +342,7 @@ export function useFileUpload(options: UseFileUploadOptions = {}): UseFileUpload
       // Auto-upload is handled by the useEffect above
       // This avoids closure issues with stale uploadFile references
     },
-    [attachments.length, config.maxFiles, config.autoUpload, validateFile, generatePreviewUrl, uploadFile]
+    [attachments.length, config.maxFiles, validateFile, generatePreviewUrl]
   );
   
   /**

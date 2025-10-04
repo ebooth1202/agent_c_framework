@@ -232,12 +232,22 @@ export class FileUploadManager {
 
   /**
    * Build the upload URL from the base API URL
+   * Converts WebSocket URL (ws://, wss://) to HTTP URL (http://, https://)
    * @returns Full URL for the upload endpoint
    * @private
    */
   private buildUploadUrl(): string {
     try {
       const url = new URL(this.apiUrl);
+      
+      // Convert WebSocket protocol to HTTP protocol
+      if (url.protocol === 'ws:') {
+        url.protocol = 'http:';
+      } else if (url.protocol === 'wss:') {
+        url.protocol = 'https:';
+      }
+      // If already http/https, leave as-is
+      
       url.pathname = '/api/rt/upload_file';
       return url.toString();
     } catch (error) {
