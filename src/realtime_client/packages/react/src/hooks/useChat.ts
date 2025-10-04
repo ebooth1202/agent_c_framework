@@ -44,8 +44,8 @@ export interface UseChatReturn {
   /** Current session ID */
   currentSessionId: string | null;
   
-  /** Send a text message */
-  sendMessage: (text: string) => Promise<void>;
+  /** Send a text message with optional file attachments */
+  sendMessage: (text: string, fileIds?: string[]) => Promise<void>;
   
   /** Clear chat history (client-side only) */
   clearMessages: () => void;
@@ -139,7 +139,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
   }, [client]);
   
   // Send message
-  const sendMessage = useCallback(async (text: string): Promise<void> => {
+  const sendMessage = useCallback(async (text: string, fileIds?: string[]): Promise<void> => {
     if (!client) {
       throw new Error('Client not available');
     }
@@ -157,7 +157,8 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     
     try {
       // Use sendText method - EventStreamProcessor will handle the message events
-      client.sendText(text);
+      // Pass fileIds if provided for multimodal messages
+      client.sendText(text, fileIds);
       
       // Don't add user message locally - EventStreamProcessor will emit message-added event
       // This ensures we get the proper sub-session metadata if applicable
@@ -708,7 +709,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     handleMessageComplete,
     handleUserTurnStart,
     handleUserTurnEnd,
-    handleSessionChanged,
+    handleChatSessionChanged, // CRITICAL FIX: Was handleSessionChanged, but we subscribe with handleChatSessionChanged
     handleSessionMessagesLoaded,
     handleSubsessionStarted,
     handleSubsessionEnded,

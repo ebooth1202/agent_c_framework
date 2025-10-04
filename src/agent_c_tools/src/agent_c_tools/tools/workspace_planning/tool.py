@@ -11,7 +11,7 @@ from agent_c_tools.helpers.validate_kwargs import validate_required_fields
 from agent_c_tools.tools.workspace_planning.prompt import WorkspacePlanSection
 from agent_c_tools.tools.workspace_planning.html_converter import PlanHTMLConverter
 from agent_c_tools.helpers.path_helper import ensure_file_extension, os_file_system_path
-from agent_c_tools.tools.workspace_planning.models import PlanModel, TaskModel, LessonLearnedModel, PriorityType
+from agent_c_tools.tools.workspace_planning.models import PlanModel, TaskModel, LessonLearnedModel, PriorityType, TaskListing
 
 
 class WorkspacePlanningTools(Toolset):
@@ -295,6 +295,53 @@ class WorkspacePlanningTools(Toolset):
         return f"Task '{title}' created successfully with ID '{new_task.id}'"
 
     @json_schema(
+        description="Set the active plan for the agent in the specified workspace",
+        params={
+            "workspace": {
+                "type": "string",
+                "description": "Name of the workspace",
+                "required": True
+            },
+            "plan_id": {
+                "type": "string",
+                "description": "ID of the plan to set as active",
+                "required": True
+            }
+        }
+    )
+    async def set_active_plan(self, **kwargs) -> str:
+        """Set the active plan for the agent in the specified workspace."""
+        workspace = kwargs.get('workspace')
+        plan_id = kwargs.get('plan_id')
+        bridge = kwargs.get('tool_context')['bridge']
+
+        if not workspace:
+            return "Error: workspace is required"
+        if not plan_id:
+            return "Error: plan_id is required"
+
+        plans_meta = await self._get_plans_meta(workspace)
+
+        if plan_id not in plans_meta:
+            return f"Plan with ID '{plan_id}' not found in workspace '{workspace}'"
+
+        # Save the current_plan metadata
+        if not self.workspace_tool:
+            raise RuntimeError("WorkspaceTools not available")
+
+        error, ws, key = self.workspace_tool.validate_and_get_workspace_path(f"//{workspace}/_kg")
+        if error is not None:
+            return f"Error: Invalid workspace path: {workspace}. Error: {error}"
+
+        await ws.safe_metadata_write("current_plan", plan_id)
+        await ws.save_metadata()
+
+        await bridge.send_system_message(f"Active plan set to *{plan_id}* in workspace *{workspace}*", "info")
+
+        return f"Active plan set to '{plan_id}' in workspace '{workspace}'"
+
+
+    @json_schema(
         description="Update an existing task",
         params={
             "plan_path": {
@@ -417,7 +464,7 @@ class WorkspacePlanningTools(Toolset):
         await bridge.send_system_message(message)
 
         if task.completed and task.completion_report:
-            message = f"### Task *{task.id}* Completed\n\n{task.completion_report}\n"
+            message = f"### *{task.id}* Completion report\n\n{task.completion_report}\n"
             await bridge.raise_render_media_markdown(message, "WorkspacePlanningTools")
 
         return f"Task '{task_id}' updated successfully"
@@ -459,6 +506,38 @@ class WorkspacePlanningTools(Toolset):
 
         return yaml.dump({"task": task.model_dump()}, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
+    def _build_task_listing(self, plan: PlanModel, parent_id: Optional[str] = None) -> List[TaskListing]:
+        """Build hierarchical task listing structure with proper sequence ordering.
+        
+        Args:
+            plan: The plan containing tasks
+            parent_id: Parent task ID to build subtree for, or None for root tasks
+            
+        Returns:
+            List of TaskListing objects, sorted by sequence if present
+        """
+        # Find all tasks with the specified parent_id
+        tasks = [
+            task for task in plan.tasks.values()
+            if task.parent_id == parent_id
+        ]
+        
+        # Sort by sequence (None values go to the end)
+        tasks.sort(key=lambda t: (t.sequence is None, t.sequence if t.sequence is not None else 0))
+        
+        # Build TaskListing objects with recursive child tasks
+        result = []
+        for task in tasks:
+            listing = TaskListing(
+                task_id=task.id,
+                title=task.title,
+                completed=task.completed,
+                child_tasks=self._build_task_listing(plan, task.id)
+            )
+            result.append(listing)
+        
+        return result
+
     @json_schema(
         description="List tasks in a plan",
         params={
@@ -474,7 +553,11 @@ class WorkspacePlanningTools(Toolset):
         }
     )
     async def list_tasks(self, **kwargs) -> str:
-        """List tasks in a plan, optionally filtered by parent task."""
+        """List tasks in a plan in a hierarchical structure, optionally filtered by parent task.
+        
+        Returns a lightweight task outline showing only task_id, title, completed status,
+        and nested child tasks. This avoids token bloat from large description and context fields.
+        """
         plan_path = kwargs.get('plan_path')
         parent_id = kwargs.get('parent_id')
 
@@ -486,15 +569,13 @@ class WorkspacePlanningTools(Toolset):
         if not plan:
             return f"Plan not found at path: {plan_path}"
 
-        tasks_list = []
+        # Build hierarchical task listing
+        tasks_list = self._build_task_listing(plan, parent_id)
+        
+        # Convert to dicts for YAML serialization
+        tasks_dict = [task.model_dump() for task in tasks_list]
 
-        for task_id, task in plan.tasks.items():
-            # If parent_id is provided, filter by parent_id
-            # If parent_id is None, get root tasks (tasks with no parent)
-            if (parent_id and task.parent_id == parent_id) or (parent_id is None and not task.parent_id):
-                tasks_list.append(task.model_dump())
-
-        return yaml.dump({"tasks": tasks_list}, default_flow_style=False, sort_keys=False, allow_unicode=True)
+        return yaml.dump({"tasks": tasks_dict}, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
     @json_schema(
         description="Add a lesson learned to a plan",
@@ -521,6 +602,7 @@ class WorkspacePlanningTools(Toolset):
         plan_path = kwargs.get('plan_path')
         lesson = kwargs.get('lesson')
         learned_task_id = kwargs.get('learned_task_id')
+        bridge = kwargs.get('tool_context').get('bridge')
 
         if not plan_path:
             return "Error: plan_path is required"
@@ -541,6 +623,8 @@ class WorkspacePlanningTools(Toolset):
 
         plan.lessons_learned.append(new_lesson)
         await self._save_plan(plan_path, plan)
+        message = f"New lesson learned added for task *{learned_task_id}*:\n\n{lesson}\n"
+        await bridge.send_system_message(message)
         return yaml.dump({"lesson": new_lesson.model_dump()}, default_flow_style=False, sort_keys=False,
                          allow_unicode=True)
 
@@ -599,6 +683,7 @@ class WorkspacePlanningTools(Toolset):
         """Delete a task and all its subtasks from a plan."""
         plan_path = kwargs.get('plan_path')
         task_id = kwargs.get('task_id')
+        bridge = kwargs.get('tool_context').get('bridge')
 
         if not plan_path:
             return "Error: plan_path is required"
@@ -627,6 +712,13 @@ class WorkspacePlanningTools(Toolset):
                 parent_task.child_tasks.remove(task_id)
 
         await self._save_plan(plan_path, plan)
+
+        if len(deleted_tasks) == 1:
+            message = f"Task *{task_id}* removed from {plan_path}.\n"
+        else:
+            message = f"Task *{task_id}* and its {len(deleted_tasks)-1} subtask(s) removed from {plan_path}.\n"
+
+        await bridge.send_system_message(message, "warning")
 
         return f"{len(deleted_tasks)} task(s) deleted successfully"
 

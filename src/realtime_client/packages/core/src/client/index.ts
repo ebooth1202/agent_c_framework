@@ -5,6 +5,7 @@
 export { RealtimeClient } from './RealtimeClient';
 export { WebSocketManager } from './WebSocketManager';
 export { ReconnectionManager } from './ReconnectionManager';
+export { FileUploadManager } from './FileUploadManager';
 export {
     RealtimeClientConfig,
     ConnectionState,

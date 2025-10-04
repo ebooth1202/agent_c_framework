@@ -39,3 +39,19 @@ export type { MediaRendererProps } from './MediaRenderer'
 
 export { SystemMessage } from './SystemMessage'
 export type { SystemMessageProps } from './SystemMessage'
+
+// DropOverlay removed - InputArea uses react-dropzone directly
+
+export { UploadProgressIndicator } from './UploadProgressIndicator'
+export type { UploadProgressIndicatorProps } from './UploadProgressIndicator'
+
+export { ImageLightbox } from './ImageLightbox'
+export type { ImageLightboxProps } from './ImageLightbox'
+
+export { FileAttachmentItem } from './FileAttachmentItem'
+export type { FileAttachmentItemProps } from './FileAttachmentItem'
+
+export { FileAttachmentList } from './FileAttachmentList'
+export type { FileAttachmentListProps } from './FileAttachmentList'
+
+// ChatInputArea removed - InputArea in input/ folder now has file upload features

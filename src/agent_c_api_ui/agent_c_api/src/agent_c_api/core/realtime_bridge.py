@@ -34,7 +34,7 @@ from agent_c_api.api.rt.models.control_events import ErrorEvent, AgentListEvent,
     VoiceListEvent, ChatSessionAddedEvent, DeleteChatSessionEvent, CancelledEvent
 
 from agent_c_api.core.event_handlers.client_event_handlers import ClientEventHandler
-from agent_c_api.core.file_handler import RTFileHandler
+from agent_c_api.core.file_handler import RTFileHandler, FileMetadata
 from agent_c_api.core.voice.models import open_ai_voice_models, AvailableVoiceModel, heygen_avatar_voice_model, no_voice_model
 from agent_c_api.core.voice.voice_io_manager import VoiceIOManager
 
@@ -899,6 +899,9 @@ class RealtimeBridge(ClientEventHandler):
             if not metadata:
                 self.logger.warning(f"Could not get metadata for file {file_id}")
                 continue
+
+            if isinstance(metadata, dict):
+                metadata = FileMetadata.model_validate(metadata)
 
             # Create the appropriate input object based on file type
             input_obj = self.file_handler.get_file_as_input(file_id, session_id)

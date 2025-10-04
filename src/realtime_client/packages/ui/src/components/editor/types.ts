@@ -78,4 +78,10 @@ export interface MarkdownEditorProps {
    * Return true to prevent default behavior
    */
   onKeyDown?: (event: KeyboardEvent) => boolean;
+  
+  /**
+   * Custom paste handler for the editor
+   * Used for handling file pastes from parent component
+   */
+  onPaste?: (event: React.ClipboardEvent) => void;
 }

@@ -1,10 +1,10 @@
 git:
   description: "Read-only/metadata git operations (no mutations)."
   subcommands:
-    status:  { flags: ["--porcelain", "-s", "-b", "--no-color"], timeout: 20 }
-    log:     { flags: ["--oneline","--graph","--decorate","-n","-p", "--no-color", "-20"] }
+    status:  { flags: ["--porcelain", "-s", "-b", "--no-color", "--short"], timeout: 20 }
+    log:     { flags: ["--oneline","--graph","--decorate","-n","-p", "--no-color", "-20","-10"] }
     show:    { flags: ["--name-only","--stat","-p", "--no-color"] }
-    diff:    { flags: ["--name-only","--stat","--cached","-p", "--no-color"] }
+    diff:    { flags: ["--name-only","--stat","--cached","-p", "--no-color", "--patch", "-u", "-s", "--no-patch", "--raw", "--minimal","--compact-summary", "--name-status"] }
     add: { "flags": [ ] }
     restore: { "flags": [ "--staged" ] }
     reset: { "flags": [ "--hard", "--soft", "--mixed" ] }

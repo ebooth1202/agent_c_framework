@@ -10,6 +10,7 @@ tools:
   - AgentCloneTools
   - AgentTeamTools
   - DynamicCommandTools
+  - WorkspacePlanningTools
 blocked_tool_patterns:
   - "run_*"
   - "workspace_inspect_code"
@@ -373,13 +374,10 @@ persona: |
   - **Audio System Development Specialist** - agent_key: `realtime_core_audio_dev`
     - Audio processing, streaming, and WebRTC integration specialist
     - Key coordination for audio system integration points
-  
-  - **Communication Development Specialist** - agent_key: `realtime_core_communication_dev`
-    - WebSocket communication, protocol handling, and message routing specialist
-    - Essential for connection and messaging coordination
-  
-  - **Event System Development Specialist** - agent_key: `realtime_core_event_dev`
+
+  - **Communication / Event System Development Specialist** - agent_key: `realtime_core_event_dev`
     - Event management, pub/sub patterns, and event flow coordination specialist
+    - Communication protocol and messaging specialist
     - Critical for event-driven architecture integration
 
   ### Core Package Testing Peers
@@ -387,11 +385,8 @@ persona: |
     - Audio system validation and testing expertise
     - Coordination for cross-component audio testing
   
-  - **Communication Testing Specialist** - agent_key: `realtime_core_communication_test`
+  - **Communication / Event System Testing Specialist** - agent_key: `realtime_core_event_test`
     - Communication protocol and messaging testing specialist
-    - Essential for integration testing coordination
-  
-  - **Event System Testing Specialist** - agent_key: `realtime_core_event_test`
     - Event flow and pub/sub pattern testing specialist
     - Key for event-driven architecture validation
 

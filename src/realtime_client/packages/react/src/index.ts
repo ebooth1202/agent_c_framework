@@ -16,6 +16,7 @@ export * from './types';
 
 // Export utilities
 export { AgentStorage } from './utils/agentStorage';
+export { hasFileAttachments, countImages, getMessageDisplayText } from './utils/messageHelpers';
 
 // Note: Components will be added later
 // export * from './components';

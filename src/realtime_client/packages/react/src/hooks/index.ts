@@ -65,3 +65,7 @@ export type {
 // Error handling
 export { useErrors } from './useErrors';
 export type { UseErrorsReturn } from './useErrors';
+
+// File upload
+export { useFileUpload } from './useFileUpload';
+export type { FileAttachment, UseFileUploadOptions, UseFileUploadReturn } from '../types/chat';

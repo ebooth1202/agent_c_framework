@@ -26,11 +26,12 @@ import {
 import { WebSocketManager } from './WebSocketManager';
 import { ReconnectionManager } from './ReconnectionManager';
 import { AuthManager, TokenPair } from '../auth';
+import { FileUploadManager } from './FileUploadManager';
 import { TurnManager, ChatSessionManager } from '../session';
 import { AudioService, AudioAgentCBridge, AudioOutputService } from '../audio';
 import type { AudioStatus, VoiceModel } from '../audio/types';
 import { VoiceManager } from '../voice';
-import type { Voice, Message, User, Agent, AgentConfiguration, Avatar, Tool } from '../events/types/CommonTypes';
+import type { Voice, Message, User, Agent, AgentConfiguration, Avatar, Tool, UserFileResponse, FileUploadOptions } from '../events/types/CommonTypes';
 import { AvatarManager } from '../avatar';
 
 /**
@@ -49,6 +50,7 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
     private sessionManager: ChatSessionManager | null = null;
     private avatarManager: AvatarManager | null = null;
     private eventStreamProcessor: EventStreamProcessor | null = null;
+    private fileUploadManager: FileUploadManager | null = null;
     
     // Runtime state management for agent persistence and session recovery
     private preferredAgentKey?: string;          // Agent key to use on first connection
@@ -137,6 +139,18 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
         
         // Initialize event stream processor with session manager
         this.eventStreamProcessor = new EventStreamProcessor(this.sessionManager);
+        
+        // Initialize FileUploadManager
+        this.fileUploadManager = new FileUploadManager(
+            this.config.apiUrl,
+            this.authToken || undefined,
+            this.uiSessionId || undefined,
+            {
+                maxUploadSize: this.config.maxUploadSize,
+                allowedMimeTypes: this.config.allowedMimeTypes,
+                maxFilesPerMessage: this.config.maxFilesPerMessage
+            }
+        );
         
         // Setup session manager handlers for fetching sessions
         this.setupSessionFetchingHandlers();
@@ -288,6 +302,11 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
             if (event.ui_session_id) {
                 // Update stored UI session ID for reconnection
                 this.uiSessionId = event.ui_session_id;
+                
+                // Sync with file upload manager
+                if (this.fileUploadManager) {
+                    this.fileUploadManager.setUiSessionId(event.ui_session_id);
+                }
                 
                 // Update auth manager's UI session ID if available
                 if (this.authManager) {
@@ -999,6 +1018,34 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
         }
     }
 
+    /**
+     * Upload a file for use in chat messages
+     * @param file - File object to upload
+     * @param options - Upload options (progress callback, abort signal)
+     * @returns Promise resolving to file metadata (id, filename, mime_type, size)
+     * @throws Error if FileUploadManager not initialized, authentication missing, or upload fails
+     */
+    async uploadFile(file: File, options?: FileUploadOptions): Promise<UserFileResponse> {
+        if (!this.fileUploadManager) {
+            throw new Error('FileUploadManager not initialized');
+        }
+        return this.fileUploadManager.uploadFile(file, options);
+    }
+
+    /**
+     * Upload multiple files for use in chat messages
+     * @param files - Array of File objects to upload
+     * @param options - Upload options (progress callback, abort signal)
+     * @returns Promise resolving to array of file metadata
+     * @throws Error if FileUploadManager not initialized, authentication missing, or upload fails
+     */
+    async uploadFiles(files: File[], options?: FileUploadOptions): Promise<UserFileResponse[]> {
+        if (!this.fileUploadManager) {
+            throw new Error('FileUploadManager not initialized');
+        }
+        return this.fileUploadManager.uploadFiles(files, options);
+    }
+
     // Getters
 
     /**
@@ -1258,6 +1305,12 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
      */
     setAuthToken(token: string): void {
         this.authToken = token;
+        
+        // Sync with file upload manager
+        if (this.fileUploadManager) {
+            this.fileUploadManager.setAuthToken(token);
+        }
+        
         // If connected, we need to reconnect with new token
         if (this.isConnected()) {
             this.disconnect();
@@ -1270,6 +1323,12 @@ export class RealtimeClient extends EventEmitter<RealtimeEventMap> {
      */
     setUiSessionId(uiSessionId: string | null): void {
         this.uiSessionId = uiSessionId;
+        
+        // Sync with file upload manager
+        if (this.fileUploadManager && uiSessionId) {
+            this.fileUploadManager.setUiSessionId(uiSessionId);
+        }
+        
         // If connected, we need to reconnect with new UI session ID
         if (this.isConnected()) {
             this.disconnect();

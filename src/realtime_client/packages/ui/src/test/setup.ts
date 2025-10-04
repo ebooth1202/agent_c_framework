@@ -109,3 +109,40 @@ if (!navigator.mediaDevices) {
     },
   });
 }
+
+// Mock ClipboardEvent for paste testing
+if (typeof ClipboardEvent === 'undefined') {
+  class ClipboardEventPolyfill extends Event {
+    clipboardData: any;
+    
+    constructor(type: string, eventInitDict?: any) {
+      super(type, eventInitDict);
+      this.clipboardData = eventInitDict?.clipboardData || null;
+    }
+  }
+  
+  (global as any).ClipboardEvent = ClipboardEventPolyfill;
+}
+
+// Mock DataTransfer for clipboard and drag-drop testing
+if (typeof DataTransfer === 'undefined') {
+  class DataTransferPolyfill {
+    items: any[] = [];
+    files: File[] = [];
+    types: string[] = [];
+    
+    getData(format: string) {
+      return '';
+    }
+    
+    setData(format: string, data: string) {
+      // no-op
+    }
+    
+    clearData(format?: string) {
+      // no-op
+    }
+  }
+  
+  (global as any).DataTransfer = DataTransferPolyfill;
+}

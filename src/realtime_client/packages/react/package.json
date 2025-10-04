@@ -19,7 +19,8 @@
     "react-dom": "^18.0.0"
   },
   "dependencies": {
-    "@agentc/realtime-core": "workspace:*"
+    "@agentc/realtime-core": "workspace:*",
+    "react-dropzone": "^14.3.8"
   },
   "devDependencies": {
     "@jackfranklin/test-data-bot": "^2.1.0",
