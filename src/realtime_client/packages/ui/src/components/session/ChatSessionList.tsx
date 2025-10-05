@@ -566,6 +566,11 @@ const VirtualSessionList = React.memo<{
     }
   })
   
+  // Force virtualizer to measure after mount or when items change
+  React.useEffect(() => {
+    virtualizer.measure()
+  }, [items.length, virtualizer])
+  
   const virtualItems = virtualizer.getVirtualItems()
   
   // Scroll to focused item when it changes
@@ -817,21 +822,9 @@ export const ChatSessionList = React.forwardRef<HTMLDivElement, ChatSessionListP
       }
     }, [filteredSessions, focusedIndex, handleSessionSelect, handleDeleteRequest])
     
-    // Collapsed view
+    // When collapsed, hide the session list completely
     if (isCollapsed) {
-      return (
-        <div
-          ref={ref}
-          className={cn("flex-1 overflow-hidden", className)}
-          {...props}
-        >
-          <CollapsedView
-            sessions={sessions}
-            currentSessionId={currentSessionId}
-            onSessionSelect={handleSessionSelect}
-          />
-        </div>
-      )
+      return null
     }
     
     // Main expanded view

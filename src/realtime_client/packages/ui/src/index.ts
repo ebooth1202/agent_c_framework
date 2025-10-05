@@ -14,6 +14,10 @@ export { Avatar, AvatarImage, AvatarFallback } from './components/ui/avatar';
 export { Badge } from './components/ui/badge';
 export type { BadgeProps } from './components/ui/badge';
 
+// Agent C Logo
+export { AgentCLogo } from './components/ui/agent-c-logo';
+export type { AgentCLogoProps } from './components/ui/agent-c-logo';
+
 // Button
 export { Button, buttonVariants } from './components/ui/button';
 export type { ButtonProps } from './components/ui/button';
