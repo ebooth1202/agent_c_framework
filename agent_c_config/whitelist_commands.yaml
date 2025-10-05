@@ -186,7 +186,7 @@ pnpm:
     run:
       scripts:
         build: { suppress_success_output: true,  allow_test_mode: true, deny_args: false }
-        test: { allowed_flags: [], deny_args: false, allow_test_paths: true, suppress_success_output: true }
+        test: { allowed_flags: ["--filter", "--silent"], deny_args: false, allow_test_paths: true, suppress_success_output: true }
         "test:run": { allowed_flags: [], deny_args: false, allow_test_paths: true, suppress_success_output: true }
         "test:debug": { allowed_flags: [], deny_args: false, allow_test_paths: true, suppress_success_output: false }
         "type-check": { allowed_flags: [], suppress_success_output: false, allow_test_mode: true, deny_args: false }
