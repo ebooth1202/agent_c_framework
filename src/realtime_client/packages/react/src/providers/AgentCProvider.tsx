@@ -205,11 +205,10 @@ export function AgentCProvider({
       // Clear handler references
       handlersRef.current = {};
       
-      // CRITICAL FIX: Reset initializationRef for React StrictMode
-      // React StrictMode double-invokes effects (mount → cleanup → remount)
-      // Refs DO persist across this cycle, so we MUST reset the flag
-      // to allow the remount to initialize properly.
-      initializationRef.current = false;
+      // NOTE: We do NOT reset initializationRef.current here.
+      // The initialization guard must persist across React StrictMode's
+      // mount → cleanup → remount cycle to prevent duplicate client creation.
+      // Only cleanedUpRef needs to be set to track actual cleanup.
     };
     
     // Prevent double initialization in React StrictMode
