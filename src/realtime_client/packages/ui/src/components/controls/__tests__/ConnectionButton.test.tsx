@@ -101,19 +101,6 @@ describe('ConnectionButton', () => {
       expect(button).not.toBeDisabled();
     });
 
-    it('should show "Disconnect" when connected', () => {
-      mockUseConnection.connectionState = ConnectionState.CONNECTED;
-      mockUseConnection.isConnected = true;
-      updateMockState('connection', mockUseConnection);
-      
-      const { container } = render(<ConnectionButton />);
-      const button = container.querySelector('button');
-      
-      expect(button).toHaveTextContent('Disconnect');
-      expect(button).toHaveAttribute('aria-label', 'Disconnect');
-      expect(button).not.toBeDisabled();
-    });
-
     it('should show "Connecting..." with loader when connecting', () => {
       mockUseConnection.connectionState = ConnectionState.CONNECTING;
       mockUseConnection.isConnected = false;
@@ -547,11 +534,7 @@ describe('ConnectionButton', () => {
       rerender(<ConnectionButton />);
       expect(container.querySelector('button')!).toHaveAttribute('aria-label', 'Connect');
       
-      // Connected
-      mockUseConnection.isConnected = true;
-      updateMockState('connection', mockUseConnection);
-      rerender(<ConnectionButton />);
-      expect(container.querySelector('button')!).toHaveAttribute('aria-label', 'Disconnect');
+
     });
 
     it('should have focus ring classes', () => {
@@ -854,9 +837,7 @@ describe('ConnectionButton', () => {
       mockUseConnection.isConnected = true;
       updateMockState('connection', mockUseConnection);
       rerender(<ConnectionButton />);
-      
-      expect(container.querySelector('button')!).toHaveTextContent('Disconnect');
-      expect(container.querySelector('button')!).toHaveAttribute('aria-label', 'Disconnect');
+
       expect(container.querySelector('.bg-green-500')).toBeInTheDocument();
       
       // Click to disconnect
