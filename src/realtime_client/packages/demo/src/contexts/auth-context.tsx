@@ -99,9 +99,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [uiSessionId, setUiSessionId] = useState<string | undefined>();
 
   // Helper to get stored UI session ID
+  // IMPORTANT: Uses sessionStorage (not localStorage) so each tab has its own UI session
+  // This allows multiple tabs to have independent chat sessions
   const getStoredUiSessionId = (): string | undefined => {
     try {
-      const stored = localStorage.getItem('agentc-ui-session-id');
+      const stored = sessionStorage.getItem('agentc-ui-session-id');
       if (stored) {
         authLog.debug('Retrieved stored UI session ID:', stored);
         return stored;
@@ -113,9 +115,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   // Helper to store UI session ID
+  // IMPORTANT: Uses sessionStorage (not localStorage) so each tab has its own UI session
   const storeUiSessionId = (sessionId: string) => {
     try {
-      localStorage.setItem('agentc-ui-session-id', sessionId);
+      sessionStorage.setItem('agentc-ui-session-id', sessionId);
       authLog.debug('Stored UI session ID:', sessionId);
     } catch (error) {
       authLog.error('Failed to store UI session ID', error);
@@ -125,7 +128,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Helper to clear UI session ID
   const clearUiSessionId = () => {
     try {
-      localStorage.removeItem('agentc-ui-session-id');
+      sessionStorage.removeItem('agentc-ui-session-id');
       authLog.debug('Cleared UI session ID');
     } catch (error) {
       authLog.error('Failed to clear UI session ID', error);
