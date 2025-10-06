@@ -159,6 +159,9 @@ class FileHandler:
         if not metadata:
             return None
 
+        if isinstance(metadata, dict):
+            metadata = FileMetadata.model_validate(metadata)
+
         if metadata.processed:
             return metadata
 
@@ -420,7 +423,11 @@ class RTFileHandler(FileHandler):
         return file_data
 
     def get_file_metadata(self, file_id: str, _: str) -> Optional[FileMetadata]:
-        return self.bridge.chat_session.metadata.get("uploaded_files", {}).get(file_id)
+        metadata = self.bridge.chat_session.metadata.get("uploaded_files", {}).get(file_id)
+        if isinstance(metadata, dict):
+            metadata = FileMetadata.model_validate(metadata)
+
+        return metadata
 
     def get_session_files(self, _: str) -> List[FileMetadata]:
         files = self.bridge.chat_session.metadata.get("uploaded_files", {})
