@@ -102,7 +102,13 @@ export const SystemMessage = React.forwardRef<HTMLDivElement, SystemMessageProps
               components={{
                 // Override paragraph to avoid extra spacing
                 p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                // Override code blocks for better styling
+                // Override pre wrapper for code blocks
+                pre: ({ children }) => (
+                  <pre className="p-2 rounded bg-black/10 dark:bg-white/10 overflow-x-auto mb-2 last:mb-0">
+                    {children}
+                  </pre>
+                ),
+                // Override code element styling
                 code: ({ inline, children, ...props }: any) => {
                   if (inline) {
                     return (
@@ -114,12 +120,11 @@ export const SystemMessage = React.forwardRef<HTMLDivElement, SystemMessageProps
                       </code>
                     )
                   }
+                  // For block code, just return the code element (pre wrapper is handled above)
                   return (
-                    <pre className="p-2 rounded bg-black/10 dark:bg-white/10 overflow-x-auto">
-                      <code className="text-sm" {...props}>
-                        {children}
-                      </code>
-                    </pre>
+                    <code className="text-sm" {...props}>
+                      {children}
+                    </code>
                   )
                 }
               }}
