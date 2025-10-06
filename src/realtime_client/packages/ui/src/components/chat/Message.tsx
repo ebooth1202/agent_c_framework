@@ -184,32 +184,43 @@ const ThoughtMessage: React.FC<ThoughtMessageProps> = ({
                 ariaLabel="Thought process content"
               />
               
-              {/* Thought Footer */}
-              {message.metadata?.outputTokens && (
-                <div className="mt-3 pt-2 border-t border-border/30 flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground/70">
-                    {message.metadata.outputTokens} tokens
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-2 text-xs"
-                    onClick={handleCopy}
-                  >
-                    {copied ? (
-                      <>
-                        <Check className="h-3 w-3 mr-1" />
-                        Copied
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="h-3 w-3 mr-1" />
-                        Copy
-                      </>
-                    )}
-                  </Button>
-                </div>
-              )}
+              {/* Thought Footer with Tool Calls */}
+              <div className="mt-3 pt-2 border-t border-border/30 space-y-2">
+                {/* Tool Calls Display */}
+                {(message.toolCalls && message.toolCalls.length > 0) && (
+                  <MessageFooter 
+                    message={message}
+                    showTimestamp={false}
+                  />
+                )}
+                
+                {/* Token Count and Copy Button */}
+                {message.metadata?.outputTokens && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground/70">
+                      {message.metadata.outputTokens} tokens
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs"
+                      onClick={handleCopy}
+                    >
+                      {copied ? (
+                        <>
+                          <Check className="h-3 w-3 mr-1" />
+                          Copied
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3 w-3 mr-1" />
+                          Copy
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           </motion.div>
         )}

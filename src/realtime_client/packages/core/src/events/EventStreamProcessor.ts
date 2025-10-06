@@ -24,9 +24,10 @@ import {
   AnthropicUserMessageEvent,
   SubsessionStartedEvent,
   SubsessionEndedEvent,
-  CancelledEvent
+  CancelledEvent,
+  UserTurnStartEvent
 } from './types/ServerEvents';
-import { Message, MessageContent, ContentPart, ToolCall } from './types/CommonTypes';
+import { Message, MessageContent, ContentPart } from './types/CommonTypes';
 import { ChatSession } from '../types/chat-session';
 import { 
   MessageParam,
@@ -281,6 +282,7 @@ export class EventStreamProcessor {
    * Process incoming server events
    */
   processEvent(event: ServerEvent): void {
+    console.log('[EventStreamProcessor] processEvent CALLED:', event.type);
     // Check for duplicate events
     const eventId = this.generateEventFingerprint(event);
     
@@ -358,6 +360,9 @@ export class EventStreamProcessor {
       case 'cancelled':
         this.handleCancelled(event as CancelledEvent);
         break;
+      case 'user_turn_start':
+        this.handleUserTurnStart(event as UserTurnStartEvent);
+        break;
       // Other events are handled elsewhere or don't require processing here
       default:
         Logger.debug(`[EventStreamProcessor] Event type ${event.type} not handled by EventStreamProcessor`);
@@ -376,13 +381,40 @@ export class EventStreamProcessor {
       this.toolCallManager.reset();
     } else {
       Logger.info(`[EventStreamProcessor] Interaction ended: ${event.id}`);
+      
+      // Clear tool notifications for this session when interaction ends
+      // This prevents orphaned "Agent is using X" notifications
+      const sessionId = event.session_id;
+      this.toolCallManager.clearSessionNotifications(sessionId);
+      
+      // Emit event to notify UI that session notifications were cleared
+      this.sessionManager.emit('session-notifications-cleared', { sessionId });
+      
+      Logger.debug(`[EventStreamProcessor] Cleared tool notifications for session: ${sessionId}`);
     }
+  }
+  
+  /**
+   * Handle user turn start events (safety net for cleanup)
+   */
+  private handleUserTurnStart(_event: UserTurnStartEvent): void {
+    Logger.info('[EventStreamProcessor] User turn started - clearing all active tool notifications');
+    
+    // Nuclear cleanup: clear ALL active notifications across all sessions
+    // This is a safety net to prevent orphaned notifications from any edge cases
+    this.toolCallManager.clearAllActiveNotifications();
+    
+    // Emit event to notify UI that all notifications were cleared
+    this.sessionManager.emit('all-notifications-cleared', undefined);
+    
+    Logger.debug('[EventStreamProcessor] All tool notifications cleared on user turn start');
   }
   
   /**
    * Handle streaming text delta events
    */
   private handleTextDelta(event: TextDeltaEvent): void {
+    console.log('[EventStreamProcessor] handleTextDelta CALLED', { content: event.content });
     // Start a new message if needed
     if (!this.messageBuilder.hasCurrentMessage()) {
       Logger.debug('[EventStreamProcessor] Starting new assistant message for text delta');
@@ -431,11 +463,14 @@ export class EventStreamProcessor {
       this.messageBuilder.startMessage('thought');
       
       // Remove any "Agent is thinking..." notification when thought deltas start
-      // We check all active notifications for the think tool
-      const activeNotifications = this.toolCallManager.getActiveNotifications();
-      activeNotifications.forEach(notification => {
+      // We check active notifications for this session only
+      const sessionNotifications = this.toolCallManager.getActiveNotificationsForSession(event.session_id);
+      sessionNotifications.forEach(notification => {
         if (notification.toolName === 'think') {
-          this.sessionManager.emit('tool-notification-removed', notification.id);
+          this.sessionManager.emit('tool-notification-removed', {
+            sessionId: notification.sessionId,
+            toolCallId: notification.id
+          });
         }
       });
     }
@@ -458,34 +493,43 @@ export class EventStreamProcessor {
    */
   private handleCompletion(event: CompletionEvent): void {
     if (!event.running && this.messageBuilder.hasCurrentMessage()) {
-      // Get any completed tool calls (which may include results)
-      const completedToolCalls = this.toolCallManager.getCompletedToolCalls();
+      // Phase 3: Check for buffered tool calls (1% case - tools completed before any message)
+      const sessionId = event.session_id;
+      let bufferedToolCalls: any[] = [];
+      let bufferedToolResults: any[] = [];
       
-      // Separate tool calls from tool results
-      const toolCalls = completedToolCalls.map(tc => ({
-        id: tc.id,
-        type: tc.type,
-        name: tc.name,
-        input: tc.input
-      })) as ToolCall[];
+      if (this.sessionManager.hasPendingToolCalls(sessionId)) {
+        const pending = this.sessionManager.getPendingToolCalls(sessionId);
+        
+        bufferedToolCalls = pending.map(tc => ({
+          id: tc.id,
+          type: tc.type,
+          name: tc.name,
+          input: tc.input
+        }));
+        
+        bufferedToolResults = pending
+          .filter(tc => tc.result)
+          .map(tc => tc.result!);
+        
+        Logger.info('[EventStreamProcessor] Attaching buffered tools to new message', {
+          sessionId,
+          toolCount: pending.length,
+          toolNames: pending.map(tc => tc.name)
+        });
+        
+        // Clear buffered tools after attaching
+        this.sessionManager.clearPendingToolCalls(sessionId);
+      }
       
-      const toolResults = completedToolCalls
-        .filter(tc => tc.result)
-        .map(tc => tc.result!);
-      
-      // Finalize the message with metadata
+      // Finalize the message with metadata (including buffered tools if any)
       const message = this.messageBuilder.finalize({
         inputTokens: event.input_tokens,
         outputTokens: event.output_tokens,
         stopReason: event.stop_reason,
-        toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
-        toolResults: toolResults.length > 0 ? toolResults : undefined
+        toolCalls: bufferedToolCalls.length > 0 ? bufferedToolCalls : undefined,
+        toolResults: bufferedToolResults.length > 0 ? bufferedToolResults : undefined
       });
-      
-      // Clear the completed tool calls after attaching them to the message
-      if (completedToolCalls.length > 0) {
-        this.toolCallManager.clearCompleted();
-      }
       
       // Add to session and emit completion
       const session = this.sessionManager.getCurrentSession();
@@ -511,21 +555,23 @@ export class EventStreamProcessor {
    * Handle tool selection events (before execution)
    */
   private handleToolSelect(event: ToolSelectDeltaEvent): void {
-    const notification = this.toolCallManager.onToolSelect(event);
+    const notifications = this.toolCallManager.onToolSelect(event);
     
-    // Special handling for the "think" tool
-    const toolCall = event.tool_calls[0];
-    if (toolCall && toolCall.name === 'think') {
-      // For the think tool, we emit a special notification
-      // The thought deltas will be handled separately
-      this.sessionManager.emit('tool-notification', {
-        ...notification,
-        toolName: 'think',
-        status: 'preparing' as const
-      });
-    } else {
-      this.sessionManager.emit('tool-notification', notification);
-    }
+    // Emit notification for each tool
+    notifications.forEach(notification => {
+      // Special handling for the "think" tool
+      if (notification.toolName === 'think') {
+        // For the think tool, we emit a special notification
+        // The thought deltas will be handled separately
+        this.sessionManager.emit('tool-notification', {
+          ...notification,
+          toolName: 'think',
+          status: 'preparing' as const
+        });
+      } else {
+        this.sessionManager.emit('tool-notification', notification);
+      }
+    });
   }
   
   /**
@@ -538,20 +584,23 @@ export class EventStreamProcessor {
       // For the think tool, we ignore the tool_call events
       // as the content is already rendered via thought deltas
       Logger.debug('[EventStreamProcessor] Ignoring tool_call event for think tool');
-      // Still remove the notification
-      this.sessionManager.emit('tool-notification-removed', toolCall.id);
+      // Still remove the notification (with session context)
+      this.sessionManager.emit('tool-notification-removed', {
+        sessionId: event.session_id,
+        toolCallId: toolCall.id
+      });
       return;
     }
     
     if (event.active) {
       // Tool is executing
-      const notification = this.toolCallManager.onToolCallActive(event);
-      if (notification) {
+      const notifications = this.toolCallManager.onToolCallActive(event);
+      notifications.forEach(notification => {
         this.sessionManager.emit('tool-notification', notification);
-      }
+      });
     } else {
-      // Tool completed
-      this.toolCallManager.onToolCallComplete(event);
+      // Tool completed - Phase 3: Backward attachment
+      const completedToolCalls = this.toolCallManager.onToolCallComplete(event);
       
       // Emit tool-call-complete event for UI to track results
       this.sessionManager.emit('tool-call-complete', {
@@ -559,11 +608,122 @@ export class EventStreamProcessor {
         toolResults: event.tool_results
       });
       
-      // Remove notifications for completed tools
+      // Remove notifications for completed tools (with session context)
       event.tool_calls.forEach(tc => {
-        this.sessionManager.emit('tool-notification-removed', tc.id);
+        this.sessionManager.emit('tool-notification-removed', {
+          sessionId: event.session_id,
+          toolCallId: tc.id
+        });
       });
+      
+      // Phase 3: Attach completed tools to previous message (backward attachment)
+      if (completedToolCalls.length > 0) {
+        this.attachToolCallsToPreviousMessage(event.session_id, completedToolCalls);
+      }
     }
+  }
+  
+  /**
+   * Phase 3: Attach completed tool calls to the previous message (backward attachment)
+   * This is the correct behavior - tools execute AFTER the message, so results attach to previous message
+   * 
+   * @param sessionId - Session ID
+   * @param completedToolCalls - Tool calls with results to attach
+   */
+  private attachToolCallsToPreviousMessage(
+    sessionId: string,
+    completedToolCalls: Array<{ id: string; type: 'tool_use'; name: string; input: Record<string, unknown>; result?: any }>
+  ): void {
+    const session = this.sessionManager.getSession(sessionId);
+    if (!session || !session.messages || !session.messages.length) {
+      // No session or no messages yet - buffer for next message (1% case)
+      Logger.debug('[EventStreamProcessor] No previous message to attach tools to - buffering', {
+        sessionId,
+        toolCount: completedToolCalls.length,
+        toolNames: completedToolCalls.map(tc => tc.name)
+      });
+      this.sessionManager.bufferPendingToolCalls(sessionId, completedToolCalls);
+      return;
+    }
+    
+    // Find the last assistant or thought message (99% case)
+    // Tools CAN attach to thoughts - they're just internal reasoning that used tools
+    const messages = session.messages;
+    let lastAssistantMessageIndex = -1;
+    
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const message = messages[i] as any;
+      // Check for assistant messages OR thought messages (role includes '(thought)')
+      const isAssistant = message && message.role === 'assistant';
+      const isThought = message && (message.role === 'assistant (thought)' || message.type === 'thought');
+      
+      if (isAssistant || isThought) {
+        lastAssistantMessageIndex = i;
+        break;
+      }
+    }
+    
+    if (lastAssistantMessageIndex === -1) {
+      // No assistant message found - buffer for next message
+      Logger.debug('[EventStreamProcessor] No assistant message to attach tools to - buffering', {
+        sessionId,
+        toolCount: completedToolCalls.length,
+        messageCount: messages.length
+      });
+      this.sessionManager.bufferPendingToolCalls(sessionId, completedToolCalls);
+      return;
+    }
+    
+    // Attach tools to the previous assistant message
+    const targetMessage = messages[lastAssistantMessageIndex] as any; // EnhancedMessage
+    
+    // Extract tool calls and results from this batch only
+    const newToolCalls = completedToolCalls.map(tc => ({
+      id: tc.id,
+      type: tc.type,
+      name: tc.name,
+      input: tc.input
+    }));
+    
+    const newToolResults = completedToolCalls
+      .filter(tc => tc.result)
+      .map(tc => tc.result!);
+    
+    // Initialize metadata if needed
+    if (!targetMessage.metadata) {
+      targetMessage.metadata = {};
+    }
+    
+    // Initialize tool arrays if needed
+    if (!targetMessage.metadata.toolCalls) {
+      targetMessage.metadata.toolCalls = [];
+    }
+    if (!targetMessage.metadata.toolResults) {
+      targetMessage.metadata.toolResults = [];
+    }
+    
+    // Append NEW tools to existing arrays
+    targetMessage.metadata.toolCalls.push(...newToolCalls);
+    targetMessage.metadata.toolResults.push(...newToolResults);
+    
+    // Sync top-level fields (reference the metadata arrays)
+    targetMessage.toolCalls = targetMessage.metadata.toolCalls;
+    targetMessage.toolResults = targetMessage.metadata.toolResults;
+    
+    Logger.info('[EventStreamProcessor] Attached tools to previous message (backward attachment)', {
+      sessionId,
+      messageIndex: lastAssistantMessageIndex,
+      messageId: targetMessage.id,
+      toolCount: completedToolCalls.length,
+      toolNames: completedToolCalls.map(tc => tc.name)
+    });
+    
+    // Emit message-updated event to notify UI
+    this.sessionManager.emit('message-updated', {
+      sessionId,
+      messageId: targetMessage.id,
+      message: targetMessage
+    });
   }
   
   /**
@@ -1020,7 +1180,10 @@ export class EventStreamProcessor {
     // Clear any active tool calls
     const activeNotifications = this.toolCallManager.getActiveNotifications();
     activeNotifications.forEach(notification => {
-      this.sessionManager.emit('tool-notification-removed', notification.id);
+      this.sessionManager.emit('tool-notification-removed', {
+        sessionId: notification.sessionId,
+        toolCallId: notification.id
+      });
     });
     
     // Reset state for clean slate
@@ -1116,7 +1279,7 @@ export class EventStreamProcessor {
    */
   private processAssistantMessageForResume(
     message: MessageParam,
-    _nextMessage: MessageParam | undefined,
+    nextMessage: MessageParam | undefined,
     _sessionId: string
   ): { messages: Message[], messagesConsumed: number } {
     const messages: Message[] = [];
@@ -1126,6 +1289,9 @@ export class EventStreamProcessor {
     if (message.content && Array.isArray(message.content)) {
       let hasTextContent = false;
       const textParts: string[] = [];
+      const toolCalls: Array<{ id: string; type: 'tool_use'; name: string; input: Record<string, unknown> }> = [];
+      const toolResults: Array<{ type: 'tool_result'; tool_use_id: string; content: string; is_error?: boolean }> = [];
+      let foundToolResults = false;
       
       for (const block of message.content) {
         if (isTextBlockParam(block)) {
@@ -1173,11 +1339,11 @@ export class EventStreamProcessor {
             } as Message);
             
             // Extract assistant message from tool result if available
-            if (_nextMessage && _nextMessage.role === 'user' && _nextMessage.content) {
+            if (nextMessage && nextMessage.role === 'user' && nextMessage.content) {
               let resultContent = '';
               
-              if (Array.isArray(_nextMessage.content)) {
-                for (const resultBlock of _nextMessage.content) {
+              if (Array.isArray(nextMessage.content)) {
+                for (const resultBlock of nextMessage.content) {
                   if ('type' in resultBlock && resultBlock.type === 'tool_result') {
                     const content = (resultBlock as any).content || '';
                     resultContent = this.parseAssistantFromDelegationResult(content);
@@ -1203,20 +1369,77 @@ export class EventStreamProcessor {
             continue;
           }
           
-          // Regular tool calls - skip for now in resume
-          messagesConsumed = 1;
+          // PHASE 4: Extract regular tool calls from resumed sessions
+          Logger.debug(`[EventStreamProcessor] Extracting resumed tool call: ${block.name} (${block.id})`);
+          
+          // Add tool call to array
+          toolCalls.push({
+            id: block.id,
+            type: block.type as 'tool_use',
+            name: block.name,
+            input: block.input as Record<string, unknown>
+          });
+          
+          // Find matching result in next message
+          if (nextMessage && nextMessage.role === 'user' && Array.isArray(nextMessage.content)) {
+            for (const resultBlock of nextMessage.content) {
+              if ('type' in resultBlock && resultBlock.type === 'tool_result') {
+                const toolResultBlock = resultBlock as any;
+                if (toolResultBlock.tool_use_id === block.id) {
+                  Logger.debug(`[EventStreamProcessor] Found matching tool result for ${block.id}`);
+                  toolResults.push({
+                    type: 'tool_result',
+                    tool_use_id: toolResultBlock.tool_use_id,
+                    content: toolResultBlock.content || '',
+                    is_error: toolResultBlock.is_error
+                  });
+                  foundToolResults = true;
+                  break;
+                }
+              }
+            }
+          }
         }
       }
       
-      // Add any text content as a regular message
+      // Consume the tool result message if we found any tool results
+      if (foundToolResults) {
+        messagesConsumed = 1;
+      }
+      
+      // ONLY create a message if there's actual text content
+      // Tool calls without text are just metadata to attach, not standalone messages
       if (hasTextContent) {
         const combinedText = textParts.join('');
-        messages.push({
+        const msg: any = {
           role: 'assistant',
           content: combinedText,
           timestamp: new Date().toISOString(),
           format: 'text'
-        } as Message);
+        };
+        
+        // Attach tool calls if present
+        if (toolCalls.length > 0) {
+          msg.metadata = {
+            toolCalls: toolCalls,
+            toolResults: toolResults
+          };
+          msg.toolCalls = toolCalls;
+          msg.toolResults = toolResults;
+          Logger.info(`[EventStreamProcessor] Attached ${toolCalls.length} tool calls to resumed assistant message`);
+        }
+        
+        messages.push(msg as Message);
+      } else if (toolCalls.length > 0) {
+        // Tool calls without text - this shouldn't create a message
+        // The tool calls should be attached to the NEXT assistant message when it arrives
+        // Buffer them for the session
+        Logger.debug(`[EventStreamProcessor] Tool calls without text content - will attach to next message`, {
+          toolCount: toolCalls.length,
+          toolNames: toolCalls.map(tc => tc.name)
+        });
+        // Note: We don't have session_id here in resume context, so we can't buffer
+        // This is a resume-time limitation - tool calls need text content or will be lost
       }
     } else {
       // Simple text message

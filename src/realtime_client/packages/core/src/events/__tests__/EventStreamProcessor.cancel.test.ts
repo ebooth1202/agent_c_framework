@@ -96,7 +96,11 @@ describe('EventStreamProcessor - Cancel Event Handling', () => {
       );
       
       expect(removeCall).toBeDefined();
-      expect(removeCall?.[1]).toBe('tool-1');
+      // Updated: tool-notification-removed now passes an object, not just the ID
+      expect(removeCall?.[1]).toMatchObject({
+        sessionId: 'test-session',
+        toolCallId: 'tool-1'
+      });
     });
     
     it('should reset processor state after cancellation', () => {
