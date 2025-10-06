@@ -474,7 +474,9 @@ const Message = React.memo(MessageComponent, (prevProps, nextProps) => {
   if (prevProps.isSubSession !== nextProps.isSubSession) return false;
   if (prevProps.showTimestamp !== nextProps.showTimestamp) return false;
   if (prevProps.showFooter !== nextProps.showFooter) return false;
-  
+  if (prevProps.message.toolCalls?.length !== nextProps.message.toolCalls?.length) return false;
+  if (prevProps.message.toolResults?.length !== nextProps.message.toolResults?.length) return false;
+
   // Props are equal, skip re-render
   return true;
 });
