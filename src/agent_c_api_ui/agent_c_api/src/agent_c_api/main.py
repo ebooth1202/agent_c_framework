@@ -76,14 +76,23 @@ def run():
         )
     else:
         # Otherwise, we can use the app object directly for better debugging
-        uvicorn.run(
-            app,
-            host=settings.HOST,
-            port=settings.PORT,
-            ssl_keyfile="agent_c_config/localhost_self_signed-key.pem",
-            ssl_certfile="agent_c_config/localhost_self_signed.pem",
-            log_level=LoggingManager.LOG_LEVEL.lower() if hasattr(LoggingManager, 'LOG_LEVEL') else "info"
-        )
+        if os.environ.get("RUNNING_IN_DOCKER", "false").lower() == "true":
+            logger.info("Detected running in Docker, disabling SSL for Uvicorn")
+            uvicorn.run(
+                app,
+                host=settings.HOST,
+                port=settings.PORT,
+                log_level=LoggingManager.LOG_LEVEL.lower() if hasattr(LoggingManager, 'LOG_LEVEL') else "info"
+            )
+        else:
+            uvicorn.run(
+                app,
+                host=settings.HOST,
+                port=settings.PORT,
+                ssl_keyfile="agent_c_config/localhost_self_signed-key.pem",
+                ssl_certfile="agent_c_config/localhost_self_signed.pem",
+                log_level=LoggingManager.LOG_LEVEL.lower() if hasattr(LoggingManager, 'LOG_LEVEL') else "info"
+            )
     logger.info(f"Exiting Run Loop: {time.time()}")
 
 if __name__ == "__main__":

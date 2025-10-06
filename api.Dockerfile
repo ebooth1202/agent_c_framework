@@ -8,10 +8,7 @@ RUN mkdir -p /app/workspaces/desktop
 RUN mkdir -p /app/workspaces/downloads
 RUN mkdir -p /app/workspaces/documents
 
-
-
 # Copy source code first
-COPY src/ace_proto ./src/ace_proto
 COPY src/agent_c_core ./src/agent_c_core
 COPY src/agent_c_tools ./src/agent_c_tools
 COPY src/agent_c_api_ui/agent_c_api ./src/agent_c_api_ui/agent_c_api
