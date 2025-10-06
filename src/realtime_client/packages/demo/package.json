@@ -7,7 +7,7 @@
     "dev:http": "next dev",
     "dev:docker": "next dev -p 5173 --experimental-https --experimental-https-key localhost_self_signed-key.pem --experimental-https-cert localhost_self_signed.pem",
     "build": "next build",
-    "start": "next dev -p 5173 --experimental-https --experimental-https-key localhost_self_signed-key.pem --experimental-https-cert localhost_self_signed.pem",
+    "start": "next start",
     "lint": "next lint",
     "format": "pnpm prettier ./src --write",
     "format:check": "pnpm prettier ./src --check",
