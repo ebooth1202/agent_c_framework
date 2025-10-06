@@ -138,6 +138,10 @@ export function useToolNotifications(
           toRemove.forEach(([id]) => next.delete(id));
         }
         
+        // ADD EVE'S LOGGING:
+        console.log('[useToolNotifications] Updated notifications Map size:', next.size);
+        console.log('[useToolNotifications] Updated notifications array:', Array.from(next.values()));
+        
         return next;
       });
       
