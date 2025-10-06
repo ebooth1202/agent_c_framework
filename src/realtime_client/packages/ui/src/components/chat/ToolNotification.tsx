@@ -171,6 +171,11 @@ export interface ToolNotificationListProps extends React.HTMLAttributes<HTMLDivE
 
 const ToolNotificationList = React.forwardRef<HTMLDivElement, ToolNotificationListProps>(
   ({ className, notifications, maxNotifications = 3, ...props }, ref) => {
+    
+    // ADD EVE'S LOGGING:
+    console.log('[ToolNotificationList] RENDERING with notifications:', notifications);
+    console.log('[ToolNotificationList] notifications.length:', notifications.length);
+    
     // Only show the most recent notifications
     const visibleNotifications = React.useMemo(() => {
       if (maxNotifications && notifications.length > maxNotifications) {

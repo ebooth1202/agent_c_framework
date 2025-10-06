@@ -12,6 +12,7 @@ import { Logger } from '../utils/logger';
  */
 export interface ToolNotification {
   id: string;
+  sessionId: string;
   toolName: string;
   status: 'preparing' | 'executing' | 'complete';
   timestamp: Date;
@@ -36,90 +37,130 @@ export class ToolCallManager {
   }
   
   /**
-   * Handle tool selection event (before execution)
+   * Create composite key for session-aware tool tracking
+   * Format: ${sessionId}|${toolCallId}
+   * Uses "|" separator as it's safer than ":" for UUID-based session IDs
    */
-  onToolSelect(event: ToolSelectDeltaEvent): ToolNotification {
-    const toolCall = event.tool_calls[0];
-    if (!toolCall) {
+  private makeKey(sessionId: string, toolCallId: string): string {
+    return `${sessionId}|${toolCallId}`;
+  }
+  
+  /**
+   * Handle tool selection event (before execution)
+   * Processes ALL tools in the event, not just the first one
+   */
+  onToolSelect(event: ToolSelectDeltaEvent): ToolNotification[] {
+    const sessionId = event.session_id;
+    const notifications: ToolNotification[] = [];
+    
+    if (!event.tool_calls || event.tool_calls.length === 0) {
       throw new Error('ToolSelectDeltaEvent has no tool calls');
     }
     
-    const notification: ToolNotification = {
-      id: toolCall.id,
-      toolName: toolCall.name,
-      status: 'preparing',
-      timestamp: new Date(),
-      arguments: JSON.stringify(toolCall.input)
-    };
-    
-    this.activeTools.set(toolCall.id, notification);
-    
-    Logger.info(`[ToolCallManager] Tool selected: ${toolCall.name}`, {
-      id: toolCall.id,
-      arguments: JSON.stringify(toolCall.input)
+    // Process ALL tool calls in the event
+    event.tool_calls.forEach(toolCall => {
+      const notification: ToolNotification = {
+        id: toolCall.id,
+        sessionId: sessionId,
+        toolName: toolCall.name,
+        status: 'preparing',
+        timestamp: new Date(),
+        arguments: JSON.stringify(toolCall.input)
+      };
+      
+      // Use composite key for session-aware tracking
+      const key = this.makeKey(sessionId, toolCall.id);
+      this.activeTools.set(key, notification);
+      notifications.push(notification);
+      
+      Logger.info(`[ToolCallManager] Tool selected: ${toolCall.name}`, {
+        sessionId,
+        toolCallId: toolCall.id,
+        compositeKey: key,
+        arguments: JSON.stringify(toolCall.input)
+      });
     });
     
-    return notification;
+    return notifications;
   }
   
   /**
    * Handle tool call active event (during execution)
+   * Processes ALL tools in the event, not just the first one
    */
-  onToolCallActive(event: ToolCallEvent): ToolNotification | null {
+  onToolCallActive(event: ToolCallEvent): ToolNotification[] {
     if (!event.active) {
-      return null;
+      return [];
     }
     
-    const toolCall = event.tool_calls[0];
-    if (!toolCall) {
-      return null;
+    const sessionId = event.session_id;
+    const notifications: ToolNotification[] = [];
+    
+    if (!event.tool_calls || event.tool_calls.length === 0) {
+      return [];
     }
     
-    const notification = this.activeTools.get(toolCall.id);
-    
-    if (notification) {
-      notification.status = 'executing';
-      Logger.info(`[ToolCallManager] Tool executing: ${notification.toolName}`, {
-        id: toolCall.id
-      });
-      return notification;
-    }
-    
-    // If we don't have a notification yet, create one
-    const newNotification: ToolNotification = {
-      id: toolCall.id,
-      toolName: toolCall.name,
-      status: 'executing',
-      timestamp: new Date(),
-      arguments: JSON.stringify(toolCall.input)
-    };
-    
-    this.activeTools.set(toolCall.id, newNotification);
-    
-    Logger.info(`[ToolCallManager] Tool executing (no prior selection): ${toolCall.name}`, {
-      id: toolCall.id
+    // Process ALL tool calls in the event
+    event.tool_calls.forEach(toolCall => {
+      const key = this.makeKey(sessionId, toolCall.id);
+      const notification = this.activeTools.get(key);
+      
+      if (notification) {
+        // Update existing notification
+        notification.status = 'executing';
+        notifications.push(notification);
+        
+        Logger.info(`[ToolCallManager] Tool executing: ${notification.toolName}`, {
+          sessionId,
+          toolCallId: toolCall.id,
+          compositeKey: key
+        });
+      } else {
+        // Create new notification if we don't have one yet
+        const newNotification: ToolNotification = {
+          id: toolCall.id,
+          sessionId: sessionId,
+          toolName: toolCall.name,
+          status: 'executing',
+          timestamp: new Date(),
+          arguments: JSON.stringify(toolCall.input)
+        };
+        
+        this.activeTools.set(key, newNotification);
+        notifications.push(newNotification);
+        
+        Logger.info(`[ToolCallManager] Tool executing (no prior selection): ${toolCall.name}`, {
+          sessionId,
+          toolCallId: toolCall.id,
+          compositeKey: key
+        });
+      }
     });
     
-    return newNotification;
+    return notifications;
   }
   
   /**
    * Handle tool call completion event
+   * Processes ALL tools in the event with session-aware tracking
    */
   onToolCallComplete(event: ToolCallEvent): ToolCallWithResult[] {
     if (event.active) {
       return [];
     }
     
+    const sessionId = event.session_id;
     const newlyCompleted: ToolCallWithResult[] = [];
     
     event.tool_calls.forEach(toolCall => {
+      const key = this.makeKey(sessionId, toolCall.id);
+      
       // Mark as complete and remove from active
-      const notification = this.activeTools.get(toolCall.id);
+      const notification = this.activeTools.get(key);
       if (notification) {
         notification.status = 'complete';
       }
-      this.activeTools.delete(toolCall.id);
+      this.activeTools.delete(key);
       
       // Find the result for this tool call
       const result = event.tool_results?.find(r => r.tool_use_id === toolCall.id);
@@ -134,7 +175,9 @@ export class ToolCallManager {
       newlyCompleted.push(completedCall);
       
       Logger.info(`[ToolCallManager] Tool completed: ${toolCall.name}`, {
-        id: toolCall.id,
+        sessionId,
+        toolCallId: toolCall.id,
+        compositeKey: key,
         hasResult: !!result,
         resultLength: result?.content?.length
       });
@@ -159,17 +202,19 @@ export class ToolCallManager {
   }
   
   /**
-   * Get a specific tool notification by ID
+   * Get a specific tool notification by session ID and tool call ID
    */
-  getNotification(id: string): ToolNotification | undefined {
-    return this.activeTools.get(id);
+  getNotification(sessionId: string, toolCallId: string): ToolNotification | undefined {
+    const key = this.makeKey(sessionId, toolCallId);
+    return this.activeTools.get(key);
   }
   
   /**
    * Check if a tool is currently active
    */
-  isToolActive(id: string): boolean {
-    const notification = this.activeTools.get(id);
+  isToolActive(sessionId: string, toolCallId: string): boolean {
+    const key = this.makeKey(sessionId, toolCallId);
+    const notification = this.activeTools.get(key);
     return notification !== undefined && notification.status !== 'complete';
   }
   
@@ -178,6 +223,82 @@ export class ToolCallManager {
    */
   getActiveToolCount(): number {
     return this.getActiveNotifications().length;
+  }
+  
+  /**
+   * Get active notifications for a specific session (optional filter)
+   */
+  getActiveNotificationsForSession(sessionId: string): ToolNotification[] {
+    return Array.from(this.activeTools.values())
+      .filter(n => n.sessionId === sessionId && n.status !== 'complete');
+  }
+  
+  /**
+   * Clear all active notifications for a specific session
+   * Used when an interaction ends for a session
+   */
+  clearSessionNotifications(sessionId: string): void {
+    const keysToDelete: string[] = [];
+    const notificationsCleared: Array<{ toolName: string; notificationId: string }> = [];
+    
+    // Find all keys for this session
+    this.activeTools.forEach((notification, key) => {
+      if (notification.sessionId === sessionId) {
+        keysToDelete.push(key);
+        notificationsCleared.push({
+          toolName: notification.toolName,
+          notificationId: notification.id
+        });
+        
+        // Debug logging for each notification removed
+        Logger.debug('[ToolCallManager] Clearing notification', {
+          sessionId,
+          toolName: notification.toolName,
+          notificationId: notification.id,
+          trigger: 'interaction_end'
+        });
+      }
+    });
+    
+    // Delete all keys for this session
+    keysToDelete.forEach(key => {
+      this.activeTools.delete(key);
+    });
+    
+    Logger.info(`[ToolCallManager] Cleared ${keysToDelete.length} notifications for session: ${sessionId}`, {
+      notifications: notificationsCleared
+    });
+  }
+  
+  /**
+   * Clear ALL active notifications (nuclear cleanup)
+   * Used when user turn starts as a safety net
+   */
+  clearAllActiveNotifications(): void {
+    const notificationsCleared: Array<{ sessionId: string; toolName: string; notificationId: string }> = [];
+    
+    // Debug logging for each notification removed
+    this.activeTools.forEach((notification) => {
+      notificationsCleared.push({
+        sessionId: notification.sessionId,
+        toolName: notification.toolName,
+        notificationId: notification.id
+      });
+      
+      Logger.debug('[ToolCallManager] Clearing notification', {
+        sessionId: notification.sessionId,
+        toolName: notification.toolName,
+        notificationId: notification.id,
+        trigger: 'user_turn_start'
+      });
+    });
+    
+    const count = this.activeTools.size;
+    this.activeTools.clear();
+    
+    Logger.info(`[ToolCallManager] Cleared all ${count} active notifications`, {
+      notifications: notificationsCleared
+    });
   }
   
   /**

@@ -64,7 +64,7 @@ export function ClientProvider({
       return null;
     }
 
-    const baseUrl = apiUrl || process.env.NEXT_PUBLIC_AGENTC_API_URL || 'wss://agent-c-prod.censius.ai';
+    const baseUrl = apiUrl || process.env.NEXT_PUBLIC_AGENTC_API_URL || 'wss://localhost:8000';
     
     return {
       apiUrl: baseUrl,

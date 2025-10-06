@@ -99,121 +99,117 @@ export interface MessageProps extends React.HTMLAttributes<HTMLDivElement> {
 interface ThoughtMessageProps {
   message: MessageData
   isStreaming?: boolean
+  showTimestamp?: boolean
+  showFooter?: boolean
 }
 
 const ThoughtMessage: React.FC<ThoughtMessageProps> = ({
   message,
-  isStreaming = false
+  isStreaming = false,
+  showTimestamp = true,
+  showFooter = true
 }) => {
-  const [isExpanded, setIsExpanded] = React.useState(false)
-  const [copied, setCopied] = React.useState(false)
+  const [isExpanded, setIsExpanded] = React.useState(true) // Default to expanded
   
-  // Extract first line for preview
+  // Extract first line for preview - handle markdown better
   const firstLine = React.useMemo(() => {
     const textContent = extractTextContent(message.content)
-    const lines = textContent.split('\n')
-    const first = lines[0] || ''
+    // Find first non-empty line that's not a code fence
+    const lines = textContent.split('\n').filter(line => line.trim() !== '')
+    let first = ''
+    for (const line of lines) {
+      // Skip code fence markers
+      if (!line.trim().startsWith('```')) {
+        first = line.trim()
+        break
+      }
+    }
+    if (!first && lines.length > 0) {
+      first = lines[0].trim()
+    }
     return first.length > 80 ? `${first.slice(0, 77)}...` : first
   }, [message.content])
   
-  const handleCopy = React.useCallback(() => {
-    const textContent = extractTextContent(message.content)
-    navigator.clipboard.writeText(textContent)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }, [message.content])
-  
   return (
-    <div className={cn(
-      "rounded-lg border border-border/50 my-2",
-      "bg-muted/30",
-      "transition-all duration-200 ease-out",
-      "hover:bg-muted/40 hover:border-border/70"
-    )}>
-      <button
-        className={cn(
-          "group/thought flex w-full items-center justify-between",
-          "gap-4 rounded-lg px-3 py-2 h-[2.625rem]",
-          "text-muted-foreground hover:text-foreground",
-          "transition-colors duration-200 cursor-pointer",
-          "focus-visible:outline-none focus-visible:ring-2",
-          "focus-visible:ring-ring focus-visible:ring-offset-2"
-        )}
-        onClick={() => setIsExpanded(!isExpanded)}
-        aria-expanded={isExpanded}
-        aria-label={isExpanded ? "Collapse thought" : "Expand thought"}
-      >
-        <div className="flex items-center gap-2 min-w-0">
-          <Brain className="h-4 w-4 shrink-0 text-muted-foreground/70" />
-          <span className="text-sm leading-tight truncate">
-            {isExpanded ? "Thought process" : firstLine}
-          </span>
+    <div className="group relative flex gap-3 py-2" role="article" aria-label="Thought process">
+      {/* Thought glyph - matches avatar positioning */}
+      <div className="flex-shrink-0">
+        <div className="h-8 w-8 rounded-full bg-muted/50 flex items-center justify-center">
+          <Brain className="h-4 w-4 text-muted-foreground" />
+        </div>
+      </div>
+      
+      {/* Message content */}
+      <div className="flex-1 max-w-full space-y-2 overflow-hidden">
+        {/* Thought bubble */}
+        <div
+          className={cn(
+            "relative rounded-xl px-4 py-2.5 transition-all duration-200 overflow-hidden",
+            "bg-card/50 border border-border/50",
+            "max-w-[85%]", // Match assistant message width
+            isStreaming && "after:content-[''] after:inline-block after:w-1.5 after:h-4 after:ml-1 after:bg-current after:animate-pulse after:rounded-full"
+          )}
+        >
+          {/* Collapse/Expand button */}
+          <button
+            className={cn(
+              "flex w-full items-center justify-between gap-2 mb-2",
+              "text-muted-foreground hover:text-foreground",
+              "transition-colors duration-200 cursor-pointer",
+              "focus-visible:outline-none focus-visible:ring-1",
+              "focus-visible:ring-ring rounded",
+              "-mx-1 px-1 py-1" // Expand clickable area slightly
+            )}
+            onClick={() => setIsExpanded(!isExpanded)}
+            aria-expanded={isExpanded}
+            aria-label={isExpanded ? "Collapse thought" : "Expand thought"}
+          >
+            <span className="text-xs font-medium truncate">
+              {isExpanded ? "" : firstLine}
+            </span>
+            
+            <div className="flex items-center gap-1.5 shrink-0">
+              {isStreaming && (
+                <Loader2 className="h-3 w-3 animate-spin text-muted-foreground/70" />
+              )}
+              <ChevronRight className={cn(
+                "h-3.5 w-3.5 transition-transform duration-200",
+                isExpanded && "rotate-90"
+              )} />
+            </div>
+          </button>
+          
+          {/* Expandable Content */}
+          <AnimatePresence>
+            {isExpanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="overflow-hidden"
+              >
+                <div className="text-[0.9375rem] leading-6 tracking-tight text-muted-foreground">
+                  <MarkdownRenderer
+                    content={extractTextContent(message.content)}
+                    compact={true}
+                    className="prose-muted"
+                    ariaLabel="Thought process content"
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
         
-        <div className="flex items-center gap-1.5 shrink-0">
-          {isStreaming && (
-            <Loader2 className="h-3 w-3 animate-spin text-muted-foreground/70" />
-          )}
-          <ChevronRight className={cn(
-            "h-4 w-4 transition-transform duration-200",
-            isExpanded && "rotate-90"
-          )} />
-        </div>
-      </button>
-      
-      {/* Expandable Content */}
-      <AnimatePresence>
-        {isExpanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="overflow-hidden"
-          >
-            <div 
-              className="px-3 pb-3 text-sm text-muted-foreground"
-              style={{
-                maskImage: "linear-gradient(transparent 0%, black 1rem, black calc(100% - 1rem), transparent 100%)"
-              }}
-            >
-              <MarkdownRenderer
-                content={extractTextContent(message.content)}
-                compact={true}
-                className="prose-muted"
-                ariaLabel="Thought process content"
-              />
-              
-              {/* Thought Footer */}
-              {message.metadata?.outputTokens && (
-                <div className="mt-3 pt-2 border-t border-border/30 flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground/70">
-                    {message.metadata.outputTokens} tokens
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-2 text-xs"
-                    onClick={handleCopy}
-                  >
-                    {copied ? (
-                      <>
-                        <Check className="h-3 w-3 mr-1" />
-                        Copied
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="h-3 w-3 mr-1" />
-                        Copy
-                      </>
-                    )}
-                  </Button>
-                </div>
-              )}
-            </div>
-          </motion.div>
+        {/* Message Footer - always shown, placed below bubble like assistant messages */}
+        {showFooter && !isStreaming && (
+          <MessageFooter 
+            message={message}
+            showTimestamp={showTimestamp}
+          />
         )}
-      </AnimatePresence>
+      </div>
     </div>
   )
 }
@@ -266,6 +262,8 @@ const MessageComponent = React.forwardRef<HTMLDivElement, MessageProps>(
         <ThoughtMessage 
           message={message}
           isStreaming={isStreaming}
+          showTimestamp={showTimestamp}
+          showFooter={showFooter}
         />
       )
     }
@@ -362,7 +360,7 @@ const MessageComponent = React.forwardRef<HTMLDivElement, MessageProps>(
             className={cn(
               "relative rounded-xl px-4 py-2.5 transition-all duration-200 overflow-hidden",
               isUser 
-                ? "bg-muted" 
+                ? "bg-muted max-w-[85%]" 
                 : "bg-card border border-border/50",
               isError && "bg-destructive/10 border border-destructive",
               isStreaming && "after:content-[''] after:inline-block after:w-1.5 after:h-4 after:ml-1 after:bg-current after:animate-pulse after:rounded-full",
@@ -463,7 +461,9 @@ const Message = React.memo(MessageComponent, (prevProps, nextProps) => {
   if (prevProps.isSubSession !== nextProps.isSubSession) return false;
   if (prevProps.showTimestamp !== nextProps.showTimestamp) return false;
   if (prevProps.showFooter !== nextProps.showFooter) return false;
-  
+  if (prevProps.message.toolCalls?.length !== nextProps.message.toolCalls?.length) return false;
+  if (prevProps.message.toolResults?.length !== nextProps.message.toolResults?.length) return false;
+
   // Props are equal, skip re-render
   return true;
 });

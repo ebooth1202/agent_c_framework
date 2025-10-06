@@ -86,7 +86,7 @@ const ConnectionButton = React.forwardRef<HTMLButtonElement, ConnectionButtonPro
         )}
         onClick={handleClick}
         disabled={connectionState === ConnectionState.CONNECTING}
-        aria-label={isConnected ? 'Disconnect' : 'Connect'}
+        aria-label={isConnected ? '' : 'Connect'}
         {...props}
       >
         {showStatus && statusPosition === 'left' && (
@@ -98,7 +98,7 @@ const ConnectionButton = React.forwardRef<HTMLButtonElement, ConnectionButtonPro
             <span>Connecting...</span>
           </>
         ) : (
-          <span>{isConnected ? 'Disconnect' : 'Connect'}</span>
+          <span>{isConnected ? '' : 'Connect'}</span>
         )}
         {showStatus && statusPosition === 'right' && (
           <StatusIndicator state={connectionState} className="ml-2" />

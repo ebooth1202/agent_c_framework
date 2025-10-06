@@ -297,6 +297,53 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
       Logger.debug('[useChat] Message complete - cleared streaming and typing state');
     }, [maxMessages]);
     
+    // Handle message-updated events (tool calls attached to existing messages)
+    const handleMessageUpdated = useCallback((event: unknown) => {
+      const updateEvent = event as { sessionId: string; messageId: string; message: ExtendedMessage };
+      Logger.debug('[useChat] Message updated event:', updateEvent);
+      
+      // Don't update messages while loading a new session
+      if (isLoadingSessionRef.current) {
+        Logger.debug('[useChat] Ignoring message-updated during session loading');
+        return;
+      }
+      
+      // Find and update the message in the array
+      setMessages(prev => {
+        const messageIndex = prev.findIndex(m => 
+          isMessageItem(m) && m.id === updateEvent.messageId
+        );
+        
+        if (messageIndex === -1) {
+          Logger.warn('[useChat] Message to update not found:', updateEvent.messageId);
+          return prev;
+        }
+        
+        // Create new array with updated message
+        const newMessages = [...prev];
+        newMessages[messageIndex] = {
+          ...updateEvent.message,
+          type: updateEvent.message.type || 'message'
+        } as MessageChatItem;
+        
+        Logger.info('[useChat] Updated message in array:', {
+          messageId: updateEvent.messageId,
+          index: messageIndex,
+          toolCallsCount: (updateEvent.message as any).toolCalls?.length || 0,
+          hasMetadataToolCalls: !!(updateEvent.message as any).metadata?.toolCalls,
+          hasTopLevelToolCalls: !!(updateEvent.message as any).toolCalls,
+          messageStructure: {
+            role: updateEvent.message.role,
+            hasMetadata: !!(updateEvent.message as any).metadata,
+            metadataKeys: Object.keys((updateEvent.message as any).metadata || {}),
+            topLevelKeys: Object.keys(updateEvent.message)
+          }
+        });
+        
+        return newMessages;
+      });
+    }, []);
+    
     // Handle turn events from server for typing indicators
     const handleUserTurnStart = useCallback(() => {
       // User is speaking/typing, agent is not
@@ -662,6 +709,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
       sessionManager.on('message-added', handleMessageAdded);
       sessionManager.on('message-streaming', handleMessageStreaming);
       sessionManager.on('message-complete', handleMessageComplete);
+      sessionManager.on('message-updated', handleMessageUpdated);
       sessionManager.on('session-messages-loaded', handleSessionMessagesLoaded);
       
       // New event subscriptions for Phase 1
@@ -690,6 +738,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         cleanupSessionManager.off('message-added', handleMessageAdded);
         cleanupSessionManager.off('message-streaming', handleMessageStreaming);
         cleanupSessionManager.off('message-complete', handleMessageComplete);
+        cleanupSessionManager.off('message-updated', handleMessageUpdated);
         cleanupSessionManager.off('session-messages-loaded', handleSessionMessagesLoaded);
         
         // Cleanup new event subscriptions
@@ -707,6 +756,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     handleMessageAdded,
     handleMessageStreaming,
     handleMessageComplete,
+    handleMessageUpdated,
     handleUserTurnStart,
     handleUserTurnEnd,
     handleChatSessionChanged, // CRITICAL FIX: Was handleSessionChanged, but we subscribe with handleChatSessionChanged

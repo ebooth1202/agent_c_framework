@@ -104,17 +104,17 @@ class ClaudeChatAgent(BaseAgent):
                         "type": "clear_tool_uses_20250919",
                         "trigger": {
                             "type": "input_tokens",
-                            "value": 50000
+                            "value": 80000
                         },
                         "keep": {
                             "type": "tool_uses",
-                            "value": 3
+                            "value": 4
                         },
                         "clear_at_least": {
                             "type": "input_tokens",
                             "value": 5000
                         },
-                        "exclude_tools": ["think", "wsp_get_task", "wsp_update_task", "wsp_add_lesson_learned"]
+                        "exclude_tools": ["think", "wsp_get_task", "wsp_update_task", "wsp_add_lesson_learned", 'act_chat', 'ateam_chat']
                     }
                 ]
             }

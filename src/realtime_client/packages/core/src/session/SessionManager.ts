@@ -4,10 +4,21 @@
  */
 
 import { EventEmitter } from '../events/EventEmitter';
-import { ChatSession, Message, ChatSessionIndexEntry, ChatSessionQueryResponse } from '../events/types/CommonTypes';
+import { ChatSession, Message, ChatSessionIndexEntry, ChatSessionQueryResponse, ToolResult } from '../events/types/CommonTypes';
 import { Logger } from '../utils/logger';
 import type { EnhancedMessage } from '../events/MessageBuilder';
 import type { ToolNotification } from '../events/ToolCallManager';
+
+/**
+ * Tool call with optional result (for buffering)
+ */
+export interface ToolCallWithResult {
+  id: string;
+  type: 'tool_use';
+  name: string;
+  input: Record<string, unknown>;
+  result?: ToolResult;
+}
 
 /**
  * Event map for ChatSessionManager events
@@ -50,7 +61,19 @@ export interface ChatSessionManagerEventMap {
     messages: Message[];
   };
   'tool-notification': ToolNotification;
-  'tool-notification-removed': string; // Tool ID
+  'tool-notification-removed': {
+    sessionId: string;
+    toolCallId: string;
+  };
+  'session-notifications-cleared': {
+    sessionId: string;
+  };
+  'all-notifications-cleared': undefined;
+  'message-updated': {
+    sessionId: string;
+    messageId: string;
+    message: EnhancedMessage;
+  }
   'tool-call-complete': {
     toolCalls: Array<{ id: string; name: string; input: any }>;
     toolResults?: Array<{ tool_use_id: string; content: string; is_error?: boolean }>;
@@ -135,6 +158,7 @@ export class ChatSessionManager extends EventEmitter<ChatSessionManagerEventMap>
   private sessionIndex: ChatSessionIndexEntry[];
   private totalSessionCount: number;
   private lastFetchOffset: number;
+  private pendingToolCalls: Map<string, ToolCallWithResult[]> = new Map();
 
   /**
    * Create a new ChatSessionManager instance
@@ -639,5 +663,60 @@ export class ChatSessionManager extends EventEmitter<ChatSessionManagerEventMap>
    */
   destroy(): void {
     this.cleanup();
+  }
+
+  // ============================================================================
+  // Tool Call Buffering Methods (Phase 3)
+  // ============================================================================
+
+  /**
+   * Buffer tool calls for a session (when no previous message to attach to)
+   * @param sessionId - Session ID
+   * @param toolCalls - Tool calls to buffer
+   */
+  bufferPendingToolCalls(sessionId: string, toolCalls: ToolCallWithResult[]): void {
+    const existing = this.pendingToolCalls.get(sessionId) || [];
+    this.pendingToolCalls.set(sessionId, [...existing, ...toolCalls]);
+    
+    Logger.debug(`[ChatSessionManager] Buffered ${toolCalls.length} tool calls for session`, {
+      sessionId,
+      totalPending: this.pendingToolCalls.get(sessionId)?.length,
+      toolNames: toolCalls.map(tc => tc.name)
+    });
+  }
+
+  /**
+   * Get pending tool calls for a session
+   * @param sessionId - Session ID
+   * @returns Array of buffered tool calls (defensive copy)
+   */
+  getPendingToolCalls(sessionId: string): ToolCallWithResult[] {
+    const pending = this.pendingToolCalls.get(sessionId);
+    return pending ? [...pending] : [];
+  }
+
+  /**
+   * Clear pending tool calls for a session
+   * @param sessionId - Session ID
+   */
+  clearPendingToolCalls(sessionId: string): void {
+    const count = this.pendingToolCalls.get(sessionId)?.length || 0;
+    this.pendingToolCalls.delete(sessionId);
+    
+    if (count > 0) {
+      Logger.debug(`[ChatSessionManager] Cleared ${count} pending tool calls for session`, {
+        sessionId
+      });
+    }
+  }
+
+  /**
+   * Check if session has pending tool calls
+   * @param sessionId - Session ID
+   * @returns True if session has buffered tool calls
+   */
+  hasPendingToolCalls(sessionId: string): boolean {
+    const pending = this.pendingToolCalls.get(sessionId);
+    return pending !== undefined && pending.length > 0;
   }
 }
