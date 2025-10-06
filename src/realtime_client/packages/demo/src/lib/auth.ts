@@ -3,7 +3,7 @@
 import { Logger } from '@/utils/logger';
 
 // DEBUG MODE - Set to true for verbose logging
-const DEBUG_AUTH = true;
+const DEBUG_AUTH = false;
 
 // Debug logger for auth library
 const authLibLog = {
