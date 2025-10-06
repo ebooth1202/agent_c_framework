@@ -648,11 +648,22 @@ export class EventStreamProcessor {
     
     // Find the last assistant or thought message (99% case)
     // Tools CAN attach to thoughts - they're just internal reasoning that used tools
+    // BUT: Stop if we hit a user message - tool calls can't attach to messages before the user spoke!
     const messages = session.messages;
     let lastAssistantMessageIndex = -1;
     
     for (let i = messages.length - 1; i >= 0; i--) {
       const message = messages[i] as any;
+      
+      // Stop if we hit a user message - tool calls belong to THIS turn, not a previous turn
+      if (message && message.role === 'user') {
+        Logger.debug('[EventStreamProcessor] Hit user message while looking backward - stopping search', {
+          sessionId,
+          messageIndex: i
+        });
+        break;
+      }
+      
       // Check for assistant messages OR thought messages (role includes '(thought)')
       const isAssistant = message && message.role === 'assistant';
       const isThought = message && (message.role === 'assistant (thought)' || message.type === 'thought');
@@ -718,12 +729,17 @@ export class EventStreamProcessor {
       toolNames: completedToolCalls.map(tc => tc.name)
     });
     
-    // Emit message-updated event to notify UI
-    this.sessionManager.emit('message-updated', {
-      sessionId,
-      messageId: targetMessage.id,
-      message: targetMessage
-    });
+    // Only emit message-updated if the message has an ID
+    // If no ID yet (streaming message), the tool calls are already attached and will be included in completion
+    if (targetMessage.id) {
+      this.sessionManager.emit('message-updated', {
+        sessionId,
+        messageId: targetMessage.id,
+        message: targetMessage
+      });
+    } else {
+      Logger.debug('[EventStreamProcessor] Message has no ID yet (streaming) - tool calls attached, will be included in completion');
+    }
   }
   
   /**
@@ -1212,7 +1228,8 @@ export class EventStreamProcessor {
       // Handle based on role
       if (message.role === 'assistant') {
         // Process assistant message and collect the results
-        const result = this.processAssistantMessageForResume(message, messages[i + 1], sessionId);
+        // Pass processedMessages so function can look backward for tool attachment
+        const result = this.processAssistantMessageForResume(message, messages[i + 1], sessionId, processedMessages);
         processedMessages.push(...result.messages);
         // Skip the next message if it was consumed as a tool result
         if (result.messagesConsumed > 0) {
@@ -1276,11 +1293,15 @@ export class EventStreamProcessor {
   
   /**
    * Process an assistant message for resume and return messages instead of emitting events
+   * 
+   * NOTE: processedMessages parameter is the array of messages built up so far during resume.
+   * This allows us to look backward and attach tool calls to previous messages.
    */
   private processAssistantMessageForResume(
     message: MessageParam,
     nextMessage: MessageParam | undefined,
-    _sessionId: string
+    sessionId: string,
+    processedMessages: Message[]
   ): { messages: Message[], messagesConsumed: number } {
     const messages: Message[] = [];
     let messagesConsumed = 0;
@@ -1291,7 +1312,6 @@ export class EventStreamProcessor {
       const textParts: string[] = [];
       const toolCalls: Array<{ id: string; type: 'tool_use'; name: string; input: Record<string, unknown> }> = [];
       const toolResults: Array<{ type: 'tool_result'; tool_use_id: string; content: string; is_error?: boolean }> = [];
-      let foundToolResults = false;
       
       for (const block of message.content) {
         if (isTextBlockParam(block)) {
@@ -1302,7 +1322,7 @@ export class EventStreamProcessor {
           if (block.name === 'think') {
             const thoughtContent = (block.input as any).thought || '';
             messages.push({
-              role: 'assistant (thought)' as any, // Special role for thoughts
+              role: 'assistant (thought)' as any,
               content: thoughtContent,
               timestamp: new Date().toISOString(),
               format: 'markdown'
@@ -1313,7 +1333,6 @@ export class EventStreamProcessor {
           
           // DELEGATION TOOLS - Special handling
           if (this.isDelegationTool(block.name)) {
-            // Emit subsession events for UI
             const subSessionType = block.name.includes('oneshot') ? 'oneshot' : 'chat';
             const subAgentKey = (block.input as any).agent_key || 'clone';
             
@@ -1324,7 +1343,6 @@ export class EventStreamProcessor {
               subAgentKey
             });
             
-            // Extract user message from tool input
             const request = (block.input as any).request || (block.input as any).message || '';
             const processContext = (block.input as any).process_context || '';
             const userContent = processContext ? 
@@ -1338,7 +1356,6 @@ export class EventStreamProcessor {
               format: 'text'
             } as Message);
             
-            // Extract assistant message from tool result if available
             if (nextMessage && nextMessage.role === 'user' && nextMessage.content) {
               let resultContent = '';
               
@@ -1362,17 +1379,14 @@ export class EventStreamProcessor {
               }
             }
             
-            // Emit subsession ended
             this.sessionManager.emit('subsession-ended', {});
-            
-            messagesConsumed = 1; // Consumed the tool result message
+            messagesConsumed = 1;
             continue;
           }
           
-          // PHASE 4: Extract regular tool calls from resumed sessions
+          // REGULAR TOOL CALLS - Extract for attachment
           Logger.debug(`[EventStreamProcessor] Extracting resumed tool call: ${block.name} (${block.id})`);
           
-          // Add tool call to array
           toolCalls.push({
             id: block.id,
             type: block.type as 'tool_use',
@@ -1393,7 +1407,6 @@ export class EventStreamProcessor {
                     content: toolResultBlock.content || '',
                     is_error: toolResultBlock.is_error
                   });
-                  foundToolResults = true;
                   break;
                 }
               }
@@ -1402,13 +1415,72 @@ export class EventStreamProcessor {
         }
       }
       
-      // Consume the tool result message if we found any tool results
-      if (foundToolResults) {
+      // Consume the tool result message if we extracted tool calls
+      if (toolCalls.length > 0) {
         messagesConsumed = 1;
       }
       
-      // ONLY create a message if there's actual text content
-      // Tool calls without text are just metadata to attach, not standalone messages
+      // Handle tool calls - attach backward or buffer forward
+      if (toolCalls.length > 0) {
+        Logger.info(`[EventStreamProcessor] Processing ${toolCalls.length} tool calls from resumed message`);
+        
+        // Look BACKWARD in processedMessages for previous assistant/thought message
+        // BUT: Stop if we hit a user message - tool calls belong to THIS turn, not a previous turn
+        let attachedBackward = false;
+        for (let i = processedMessages.length - 1; i >= 0; i--) {
+          const prevMsg = processedMessages[i] as any;
+          
+          // Stop if we hit a user message - tool calls can't attach to messages before the user spoke
+          if (prevMsg.role === 'user') {
+            Logger.debug(`[EventStreamProcessor] Hit user message while looking backward during resume - stopping search`);
+            break;
+          }
+          
+          if (prevMsg.role === 'assistant' || prevMsg.role === 'assistant (thought)') {
+            Logger.info(`[EventStreamProcessor] Attaching ${toolCalls.length} tool calls backward to previous message`);
+            
+            // Initialize metadata and arrays if needed
+            prevMsg.metadata = prevMsg.metadata || {};
+            prevMsg.toolCalls = prevMsg.toolCalls || [];
+            prevMsg.toolResults = prevMsg.toolResults || [];
+            prevMsg.metadata.toolCalls = prevMsg.metadata.toolCalls || [];
+            prevMsg.metadata.toolResults = prevMsg.metadata.toolResults || [];
+            
+            // APPEND tool calls (don't replace!)
+            prevMsg.toolCalls.push(...toolCalls);
+            prevMsg.toolResults.push(...toolResults);
+            prevMsg.metadata.toolCalls.push(...toolCalls);
+            prevMsg.metadata.toolResults.push(...toolResults);
+            
+            attachedBackward = true;
+            break;
+          }
+        }
+        
+        // If no previous message found, buffer for NEXT message
+        if (!attachedBackward) {
+          Logger.info(`[EventStreamProcessor] No previous message found - buffering ${toolCalls.length} tool calls for next message`);
+          
+          // Convert to ToolCallWithResult format
+          const toolCallsWithResults = toolCalls.map(tc => {
+            const result = toolResults.find(tr => tr.tool_use_id === tc.id);
+            return {
+              id: tc.id,
+              type: tc.type,
+              name: tc.name,
+              input: tc.input,
+              result: result
+            };
+          });
+          
+          this.sessionManager.bufferPendingToolCalls(sessionId, toolCallsWithResults);
+        }
+        
+        // Don't create a message for tool-only assistant messages
+        // Tool calls attach to other messages, never standalone
+      }
+      
+      // Create message if there's text content
       if (hasTextContent) {
         const combinedText = textParts.join('');
         const msg: any = {
@@ -1418,28 +1490,48 @@ export class EventStreamProcessor {
           format: 'text'
         };
         
-        // Attach tool calls if present
-        if (toolCalls.length > 0) {
+        // Check for buffered tool calls to attach forward
+        const buffered = this.sessionManager.getPendingToolCalls(sessionId);
+        if (buffered.length > 0) {
+          Logger.info(`[EventStreamProcessor] Attaching ${buffered.length} buffered tool calls forward to text message`);
+          
+          // Convert buffered ToolCallWithResult back to separate arrays
+          const bufferedToolCalls = buffered.map(tc => ({
+            id: tc.id,
+            type: tc.type,
+            name: tc.name,
+            input: tc.input
+          }));
+          const bufferedToolResults = buffered
+            .filter(tc => tc.result)
+            .map(tc => tc.result!);
+          
+          // Combine current tool calls with buffered ones
+          const allToolCalls = [...bufferedToolCalls, ...toolCalls];
+          const allToolResults = [...bufferedToolResults, ...toolResults];
+          
+          if (allToolCalls.length > 0) {
+            msg.metadata = {
+              toolCalls: allToolCalls,
+              toolResults: allToolResults
+            };
+            msg.toolCalls = allToolCalls;
+            msg.toolResults = allToolResults;
+          }
+          
+          // Clear the buffer
+          this.sessionManager.clearPendingToolCalls(sessionId);
+        } else if (toolCalls.length > 0) {
+          // Just current tool calls, no buffered ones
           msg.metadata = {
             toolCalls: toolCalls,
             toolResults: toolResults
           };
           msg.toolCalls = toolCalls;
           msg.toolResults = toolResults;
-          Logger.info(`[EventStreamProcessor] Attached ${toolCalls.length} tool calls to resumed assistant message`);
         }
         
         messages.push(msg as Message);
-      } else if (toolCalls.length > 0) {
-        // Tool calls without text - this shouldn't create a message
-        // The tool calls should be attached to the NEXT assistant message when it arrives
-        // Buffer them for the session
-        Logger.debug(`[EventStreamProcessor] Tool calls without text content - will attach to next message`, {
-          toolCount: toolCalls.length,
-          toolNames: toolCalls.map(tc => tc.name)
-        });
-        // Note: We don't have session_id here in resume context, so we can't buffer
-        // This is a resume-time limitation - tool calls need text content or will be lost
       }
     } else {
       // Simple text message
