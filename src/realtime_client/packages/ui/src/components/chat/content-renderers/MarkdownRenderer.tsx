@@ -90,17 +90,51 @@ const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ code, compact = false }
         // Generate unique ID for this diagram
         const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`
         
+        // Clean up any existing mermaid error elements before rendering
+        // Mermaid can create orphaned error divs during failed renders
+        const existingErrorDivs = document.querySelectorAll('[id^="d"][id*="mermaid"]')
+        existingErrorDivs.forEach(div => {
+          // Only remove if it's an orphaned error element (not in our container)
+          if (!containerRef.current?.contains(div)) {
+            div.remove()
+          }
+        })
+        
         // Render the diagram
         const { svg } = await mermaid.render(id, code)
         setSvg(svg)
         setError(null)
+        
+        // Clean up the temporary div that mermaid.render creates
+        const tempDiv = document.getElementById(id)
+        if (tempDiv && !containerRef.current?.contains(tempDiv)) {
+          tempDiv.remove()
+        }
       } catch (err) {
         console.error('Mermaid rendering error:', err)
         setError(err instanceof Error ? err.message : 'Failed to render diagram')
+        
+        // Clean up any error divs that mermaid might have created
+        const errorDivs = document.querySelectorAll('[id^="d"][id*="mermaid"]')
+        errorDivs.forEach(div => {
+          if (!containerRef.current?.contains(div)) {
+            div.remove()
+          }
+        })
       }
     }
     
     renderDiagram()
+    
+    // Cleanup on unmount
+    return () => {
+      const orphanedDivs = document.querySelectorAll('[id^="d"][id*="mermaid"]')
+      orphanedDivs.forEach(div => {
+        if (!containerRef.current?.contains(div)) {
+          div.remove()
+        }
+      })
+    }
   }, [code])
   
   if (error) {
