@@ -25,10 +25,11 @@ if not exist "%AGENT_C_SAVED_CHAT_FOLDER%" mkdir "%AGENT_C_SAVED_CHAT_FOLDER%"
 :: Check if config file exists
 if not exist "%AGENT_C_CONFIG_PATH%\agent_c.config" (
     copy agent_c.config.example "%AGENT_C_CONFIG_PATH%\agent_c.config"
+    copy data\*.db  "%AGENT_C_CONFIG_PATH%"
     echo ** Warning**: Configuration file not found at %AGENT_C_CONFIG_PATH%\agent_c.config
     echo An example file has been added to %AGENT_C_CONFIG_PATH%
     echo.
-    echo Please edit the configuration fil and rerun this script.
+    echo Please edit the configuration file and rerun this script.
     echo.
     pause
     start notepad "%AGENT_C_CONFIG_PATH%\agent_c.config"
@@ -37,7 +38,7 @@ if not exist "%AGENT_C_CONFIG_PATH%\agent_c.config" (
 
 :: Run in detached mode (background):
 :: Pass the PROJECT_WORKSPACE_PATH environment variable to docker-compose
-docker-compose -f docker-compose.yml -p agent_c up -d
+docker-compose -f docker-compose.yml -p agent_c up -d --force-recreate
 
 :: Wait a few seconds for the containers to start
 timeout /t 5 /nobreak > nul

@@ -31,6 +31,7 @@ mkdir -p "$AGENT_C_SAVED_CHAT_FOLDER"
 if [ ! -f "$AGENT_C_CONFIG_PATH/agent_c.config" ]; then
     echo "Creating new configuration file..."
     cp agent_c.config.example "$AGENT_C_CONFIG_PATH/agent_c.config"
+    cp data/*.db  "$AGENT_C_CONFIG_PATH/"
     
     # Prompt for OpenAI API key
     read -p "Please enter your OpenAI API key: " OPENAI_API_KEY
