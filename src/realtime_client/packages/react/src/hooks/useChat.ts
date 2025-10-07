@@ -44,8 +44,8 @@ export interface UseChatReturn {
   /** Current session ID */
   currentSessionId: string | null;
   
-  /** Send a text message */
-  sendMessage: (text: string) => Promise<void>;
+  /** Send a text message with optional file attachments */
+  sendMessage: (text: string, fileIds?: string[]) => Promise<void>;
   
   /** Clear chat history (client-side only) */
   clearMessages: () => void;
@@ -139,7 +139,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
   }, [client]);
   
   // Send message
-  const sendMessage = useCallback(async (text: string): Promise<void> => {
+  const sendMessage = useCallback(async (text: string, fileIds?: string[]): Promise<void> => {
     if (!client) {
       throw new Error('Client not available');
     }
@@ -157,7 +157,8 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     
     try {
       // Use sendText method - EventStreamProcessor will handle the message events
-      client.sendText(text);
+      // Pass fileIds if provided for multimodal messages
+      client.sendText(text, fileIds);
       
       // Don't add user message locally - EventStreamProcessor will emit message-added event
       // This ensures we get the proper sub-session metadata if applicable
@@ -189,17 +190,17 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     return isMessageItem(message) && message.isSubSession === true;
   }, []);
   
-  // Subscribe to chat events
-  useEffect(() => {
-    if (!client) return;
-    
-    const sessionManager = client.getSessionManager();
-    
-    // Initial update
-    updateChatInfo();
-    
-    // Handle message-added events (complete messages from EventStreamProcessor)
-    const handleMessageAdded = (event: unknown) => {
+  // Track listener registration for diagnostics
+  const listenerCountRef = useRef(0);
+  
+  // Counter for generating unique message IDs when messages lack IDs
+  const messageIdCounterRef = useRef(0);
+  
+  // Define stable handler functions using useCallback
+  // These need to be stable references so cleanup can properly remove them
+  
+  // Handle message-added events (complete messages from EventStreamProcessor)
+  const handleMessageAdded = useCallback((event: unknown) => {
       const messageEvent = event as { sessionId: string; message: ExtendedMessage };
       Logger.debug('[useChat] Message added event:', messageEvent);
       
@@ -213,7 +214,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         // Ensure the message has a type and id for compatibility
         const messageToAdd: MessageChatItem = messageEvent.message.type 
           ? messageEvent.message 
-          : { ...messageEvent.message, type: 'message', id: messageEvent.sessionId };
+          : { ...messageEvent.message, type: 'message', id: `msg-added-${Date.now()}-${++messageIdCounterRef.current}` };
         
         const newMessages = [...prev, messageToAdd];
         // Limit messages if needed
@@ -229,10 +230,10 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         streamingMessageIdRef.current = null;
         setIsAgentTyping(false);
       }
-    };
+    }, [maxMessages]);
     
     // Handle message-streaming events (partial messages being built)
-    const handleMessageStreaming = (event: unknown) => {
+    const handleMessageStreaming = useCallback((event: unknown) => {
       const streamEvent = event as { sessionId: string; message?: ExtendedMessage };
       Logger.debug('[useChat] Message streaming event received');
       Logger.debug('[useChat] Stream event structure:', {
@@ -261,10 +262,10 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
       } else {
         Logger.warn('[useChat] Message streaming event received without message property');
       }
-    };
+    }, []);
     
     // Handle message-complete events (finalized messages)
-    const handleMessageComplete = (event: unknown) => {
+    const handleMessageComplete = useCallback((event: unknown) => {
       const completeEvent = event as { sessionId: string; message: ExtendedMessage };
       Logger.debug('[useChat] Message complete event:', completeEvent);
       
@@ -279,7 +280,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         // Ensure the message has a type and id for compatibility
         const messageToAdd: MessageChatItem = completeEvent.message.type 
           ? completeEvent.message 
-          : { ...completeEvent.message, type: 'message', id: completeEvent.sessionId };
+          : { ...completeEvent.message, type: 'message', id: `msg-complete-${Date.now()}-${++messageIdCounterRef.current}` };
         
         const newMessages = [...prev, messageToAdd];
         // Limit messages if needed
@@ -294,23 +295,70 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
       streamingMessageIdRef.current = null;
       setIsAgentTyping(false);
       Logger.debug('[useChat] Message complete - cleared streaming and typing state');
-    };
+    }, [maxMessages]);
+    
+    // Handle message-updated events (tool calls attached to existing messages)
+    const handleMessageUpdated = useCallback((event: unknown) => {
+      const updateEvent = event as { sessionId: string; messageId: string; message: ExtendedMessage };
+      Logger.debug('[useChat] Message updated event:', updateEvent);
+      
+      // Don't update messages while loading a new session
+      if (isLoadingSessionRef.current) {
+        Logger.debug('[useChat] Ignoring message-updated during session loading');
+        return;
+      }
+      
+      // Find and update the message in the array
+      setMessages(prev => {
+        const messageIndex = prev.findIndex(m => 
+          isMessageItem(m) && m.id === updateEvent.messageId
+        );
+        
+        if (messageIndex === -1) {
+          Logger.warn('[useChat] Message to update not found:', updateEvent.messageId);
+          return prev;
+        }
+        
+        // Create new array with updated message
+        const newMessages = [...prev];
+        newMessages[messageIndex] = {
+          ...updateEvent.message,
+          type: updateEvent.message.type || 'message'
+        } as MessageChatItem;
+        
+        Logger.info('[useChat] Updated message in array:', {
+          messageId: updateEvent.messageId,
+          index: messageIndex,
+          toolCallsCount: (updateEvent.message as any).toolCalls?.length || 0,
+          hasMetadataToolCalls: !!(updateEvent.message as any).metadata?.toolCalls,
+          hasTopLevelToolCalls: !!(updateEvent.message as any).toolCalls,
+          messageStructure: {
+            role: updateEvent.message.role,
+            hasMetadata: !!(updateEvent.message as any).metadata,
+            metadataKeys: Object.keys((updateEvent.message as any).metadata || {}),
+            topLevelKeys: Object.keys(updateEvent.message)
+          }
+        });
+        
+        return newMessages;
+      });
+    }, []);
     
     // Handle turn events from server for typing indicators
-    const handleUserTurnStart = () => {
+    const handleUserTurnStart = useCallback(() => {
       // User is speaking/typing, agent is not
       setIsAgentTyping(false);
-    };
+    }, []);
     
-    const handleUserTurnEnd = () => {
+    const handleUserTurnEnd = useCallback(() => {
       // User's turn has ended, agent is about to respond
       // Show typing indicator until actual content arrives
       setIsAgentTyping(true);
       Logger.debug('[useChat] User turn ended, showing typing indicator');
-    };
+    }, []);
     
     // Handle session change events
-    const handleSessionChanged = (event: unknown) => {
+    const handleSessionChanged = useCallback((event: unknown) => {
       const sessionEvent = event as { chat_session?: ChatSession };
       
       // CRITICAL: Always clear messages when session changes, NO EXCEPTIONS
@@ -368,10 +416,18 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         expectedSessionIdRef.current = null;
         messagesLoadedForSessionRef.current = null;
       }
-    };
+    }, []); // No dependencies - uses refs and setters
+    
+    // Named handler for chat-session-changed event from SessionManager
+    // This wraps handleSessionChanged and can be properly cleaned up
+    const handleChatSessionChanged = useCallback((data: { currentChatSession: ChatSession | null; previousChatSession: ChatSession | null }) => {
+      if (data.currentChatSession) {
+        handleSessionChanged({ chat_session: data.currentChatSession });
+      }
+    }, [handleSessionChanged]);
     
     // Handle session messages loaded event (from EventStreamProcessor)
-    const handleSessionMessagesLoaded = (event: unknown) => {
+    const handleSessionMessagesLoaded = useCallback((event: unknown) => {
       const messagesEvent = event as { sessionId?: string; messages?: ExtendedMessage[] };
       const eventSessionId = messagesEvent.sessionId;
       
@@ -379,7 +435,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
       Logger.debug('[useChat] Event session ID:', eventSessionId);
       Logger.debug('[useChat] Expected session ID:', expectedSessionIdRef.current);
       Logger.debug('[useChat] Is loading session:', isLoadingSessionRef.current);
-      Logger.debug('[useChat] Current session ID:', currentSessionId);
+      Logger.debug('[useChat] Current session ID:', currentSessionIdRef.current);
       
       // Validation logic for race condition prevention:
       // 1. During session loading (isLoadingSessionRef.current === true):
@@ -463,10 +519,13 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
           Logger.debug('[useChat] Session loading complete');
         }
       }
-    };
+    }, [maxMessages]); // currentSessionId accessed via ref
+    
+    // Counter for generating unique divider IDs
+    const dividerCounterRef = useRef(0);
     
     // Handle subsession started events
-    const handleSubsessionStarted = (event: unknown) => {
+    const handleSubsessionStarted = useCallback((event: unknown) => {
       const subsessionEvent = event as {
         subSessionType?: 'chat' | 'oneshot';
         subAgentType?: 'clone' | 'team' | 'assist' | 'tool';
@@ -482,7 +541,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
       }
       
       const divider: DividerChatItem = {
-        id: `divider-start-${Date.now()}`,
+        id: `divider-start-${Date.now()}-${++dividerCounterRef.current}`,
         type: 'divider',
         dividerType: 'start',
         timestamp: new Date().toISOString(),
@@ -501,10 +560,10 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         }
         return newMessages;
       });
-    };
+    }, [maxMessages]);
     
     // Handle subsession ended events
-    const handleSubsessionEnded = (_event: unknown) => {
+    const handleSubsessionEnded = useCallback((_event: unknown) => {
       Logger.debug('[useChat] Subsession ended event');
       
       // Don't add dividers while loading a new session
@@ -514,7 +573,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
       }
       
       const divider: DividerChatItem = {
-        id: `divider-end-${Date.now()}`,
+        id: `divider-end-${Date.now()}-${++dividerCounterRef.current}`,
         type: 'divider',
         dividerType: 'end',
         timestamp: new Date().toISOString()
@@ -527,10 +586,13 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         }
         return newMessages;
       });
-    };
+    }, [maxMessages]);
+    
+    // Counter for generating unique media IDs
+    const mediaCounterRef = useRef(0);
     
     // Handle media added events (RenderMedia)
-    const handleMediaAdded = (event: unknown) => {
+    const handleMediaAdded = useCallback((event: unknown) => {
       const mediaEvent = event as {
         sessionId: string;
         media: {
@@ -556,7 +618,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
       }
       
       const mediaItem: MediaChatItem = {
-        id: mediaEvent.media.id || `media-${Date.now()}`,
+        id: mediaEvent.media.id || `media-${Date.now()}-${++mediaCounterRef.current}`,
         type: 'media',
         timestamp: mediaEvent.media.timestamp || new Date().toISOString(),
         content: mediaEvent.media.content,
@@ -577,15 +639,19 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         }
         return newMessages;
       });
-    };
+    }, [maxMessages]);
+    
+    // Counter for generating unique system message IDs
+    const systemMessageCounterRef = useRef(0);
     
     // Handle system message events (system alerts in chat)
-    const handleSystemMessage = (event: unknown) => {
+    const handleSystemMessage = useCallback((event: unknown) => {
       const systemEvent = event as {
         content: string;
         severity?: 'info' | 'warning' | 'error';
         format?: 'markdown' | 'text';
         timestamp?: string;
+        session_id?: string;
       };
       Logger.debug('[useChat] System message event:', systemEvent);
       
@@ -595,8 +661,12 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         return;
       }
       
+      // Generate a unique ID using timestamp, counter, and random component
+      // This prevents collisions even when multiple events arrive in the same millisecond
+      const uniqueId = `system-${Date.now()}-${++systemMessageCounterRef.current}-${Math.random().toString(36).substr(2, 9)}`;
+      
       const systemAlert: SystemAlertChatItem = {
-        id: `system-${Date.now()}`,
+        id: uniqueId,
         type: 'system_alert',
         timestamp: systemEvent.timestamp || new Date().toISOString(),
         content: systemEvent.content,
@@ -611,19 +681,35 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         }
         return newMessages;
       });
-    };
+    }, [maxMessages]);
+  
+  // Subscribe to chat events
+  useEffect(() => {
+    if (!client) return;
+    
+    const sessionManager = client.getSessionManager();
+    
+    // Initial update
+    updateChatInfo();
+    
+    // Increment listener count for diagnostics
+    listenerCountRef.current += 1;
+    const registrationId = listenerCountRef.current;
+    console.log(`[useChat:DIAGNOSTIC] 🔵 Registering listeners #${registrationId}`);
     
     // Subscribe to turn events on client for typing indicators
     // These are always subscribed if client exists
     client.on('user_turn_start', handleUserTurnStart);
     client.on('user_turn_end', handleUserTurnEnd);
-    client.on('chat_session_changed', handleSessionChanged);
     
-    // Subscribe to SessionManager events for message handling (only if sessionManager exists)
+    // Subscribe to ChatSessionManager events for message handling (only if sessionManager exists)
     if (sessionManager) {
+      // Chat session change events come from ChatSessionManager, not client
+      sessionManager.on('chat-session-changed', handleChatSessionChanged);
       sessionManager.on('message-added', handleMessageAdded);
       sessionManager.on('message-streaming', handleMessageStreaming);
       sessionManager.on('message-complete', handleMessageComplete);
+      sessionManager.on('message-updated', handleMessageUpdated);
       sessionManager.on('session-messages-loaded', handleSessionMessagesLoaded);
       
       // New event subscriptions for Phase 1
@@ -635,19 +721,24 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     }
     
     return () => {
+      // Log cleanup for diagnostics
+      console.log(`[useChat:DIAGNOSTIC] 🔴 Cleaning up listeners #${registrationId}`);
+      
       // client and sessionManager must be accessible in closure
       if (client) {
         client.off('user_turn_start', handleUserTurnStart);
         client.off('user_turn_end', handleUserTurnEnd);
-        client.off('chat_session_changed', handleSessionChanged);
       }
       
       // Get sessionManager again in cleanup to ensure it's available
       const cleanupSessionManager = client?.getSessionManager();
       if (cleanupSessionManager) {
+        // Clean up chat-session-changed listener using named handler reference
+        cleanupSessionManager.off('chat-session-changed', handleChatSessionChanged);
         cleanupSessionManager.off('message-added', handleMessageAdded);
         cleanupSessionManager.off('message-streaming', handleMessageStreaming);
         cleanupSessionManager.off('message-complete', handleMessageComplete);
+        cleanupSessionManager.off('message-updated', handleMessageUpdated);
         cleanupSessionManager.off('session-messages-loaded', handleSessionMessagesLoaded);
         
         // Cleanup new event subscriptions
@@ -656,8 +747,25 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         cleanupSessionManager.off('media-added', handleMediaAdded);
         cleanupSessionManager.off('system_message', handleSystemMessage);
       }
+      
+      console.log(`[useChat:DIAGNOSTIC] ✅ Cleanup complete for #${registrationId}`);
     };
-  }, [client, maxMessages]); // Removed updateChatInfo to prevent re-registration
+  }, [
+    client,
+    // updateChatInfo removed - only called once on mount, not used by handlers
+    handleMessageAdded,
+    handleMessageStreaming,
+    handleMessageComplete,
+    handleMessageUpdated,
+    handleUserTurnStart,
+    handleUserTurnEnd,
+    handleChatSessionChanged, // CRITICAL FIX: Was handleSessionChanged, but we subscribe with handleChatSessionChanged
+    handleSessionMessagesLoaded,
+    handleSubsessionStarted,
+    handleSubsessionEnded,
+    handleMediaAdded,
+    handleSystemMessage
+  ]);
   
   // Computed properties
   const lastMessage: MessageChatItem | null = (() => {

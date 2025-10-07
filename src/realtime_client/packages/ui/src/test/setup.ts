@@ -9,9 +9,13 @@ import { cleanup } from '@testing-library/react';
 import { afterEach, beforeAll, afterAll, beforeEach } from 'vitest';
 import { server } from './mocks/server';
 import * as realtimeReactMocks from './mocks/realtime-react';
+import * as reactVirtualMocks from './mocks/react-virtual';
 
 // Mock @agentc/realtime-react globally
 vi.mock('@agentc/realtime-react', () => realtimeReactMocks);
+
+// Mock @tanstack/react-virtual globally
+vi.mock('@tanstack/react-virtual', () => reactVirtualMocks);
 
 // Start MSW server before all tests
 beforeAll(() => {
@@ -104,4 +108,41 @@ if (!navigator.mediaDevices) {
       getSupportedConstraints: vi.fn().mockReturnValue({}),
     },
   });
+}
+
+// Mock ClipboardEvent for paste testing
+if (typeof ClipboardEvent === 'undefined') {
+  class ClipboardEventPolyfill extends Event {
+    clipboardData: any;
+    
+    constructor(type: string, eventInitDict?: any) {
+      super(type, eventInitDict);
+      this.clipboardData = eventInitDict?.clipboardData || null;
+    }
+  }
+  
+  (global as any).ClipboardEvent = ClipboardEventPolyfill;
+}
+
+// Mock DataTransfer for clipboard and drag-drop testing
+if (typeof DataTransfer === 'undefined') {
+  class DataTransferPolyfill {
+    items: any[] = [];
+    files: File[] = [];
+    types: string[] = [];
+    
+    getData(format: string) {
+      return '';
+    }
+    
+    setData(format: string, data: string) {
+      // no-op
+    }
+    
+    clearData(format?: string) {
+      // no-op
+    }
+  }
+  
+  (global as any).DataTransfer = DataTransferPolyfill;
 }

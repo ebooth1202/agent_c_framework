@@ -7,7 +7,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { EventStreamProcessor } from '../EventStreamProcessor';
-import { SessionManager } from '../../session/SessionManager';
+import { ChatSessionManager } from '../../session/SessionManager';
 import { ChatSession } from '../types/CommonTypes';
 import { MessageParam } from '../../types/message-params';
 import { WebSocketTracker } from '../../test/mocks/websocket.mock';
@@ -21,7 +21,7 @@ import { server, startMockServer, resetMockServer, stopMockServer } from '../../
 
 describe('EventStreamProcessor - Role Preservation', () => {
   let processor: EventStreamProcessor;
-  let sessionManager: SessionManager;
+  let sessionManager: ChatSessionManager;
   let sessionManagerEmitSpy: ReturnType<typeof vi.spyOn>;
   let wsTracker: WebSocketTracker;
   const testSessionId = 'test-role-preservation';
@@ -53,7 +53,7 @@ describe('EventStreamProcessor - Role Preservation', () => {
     };
 
     // Create instances and setup spies
-    sessionManager = new SessionManager();
+    sessionManager = new ChatSessionManager();
     processor = new EventStreamProcessor(sessionManager);
     sessionManagerEmitSpy = vi.spyOn(sessionManager, 'emit');
     

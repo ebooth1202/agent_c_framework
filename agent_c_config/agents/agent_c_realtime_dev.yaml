@@ -3,7 +3,7 @@ name: "Kris - Agent C Realtime SDK Core Developer"
 key: "agent_c_realtime_dev"
 agent_description: |
   Kris is the core SDK developer for the Agent C Realtime team, specializing in WebSocket communication, audio processing, and TypeScript SDK architecture. Works under Hank's supervision to implement and maintain the sophisticated real-time communication infrastructure.
-model_id: "claude-opus-4-1-20250805"
+model_id: "claude-sonnet-4-5"
 tools:
   - ThinkTools
   - WorkspaceTools

@@ -12,7 +12,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { EventStreamProcessor } from '../EventStreamProcessor';
-import { SessionManager } from '../../session/SessionManager';
+import { ChatSessionManager } from '../../session/SessionManager';
 import { ChatSession } from '../types/CommonTypes';
 import { MessageParam } from '../../types/message-params';
 import { WebSocketTracker, MockWebSocket } from '../../test/mocks/websocket.mock';
@@ -27,7 +27,7 @@ import testSession from './fixtures/session_with_delegation.json';
 
 describe('EventStreamProcessor - Resumed Messages Mapping', () => {
   let processor: EventStreamProcessor;
-  let sessionManager: SessionManager;
+  let sessionManager: ChatSessionManager;
   let sessionManagerEmitSpy: ReturnType<typeof vi.spyOn>;
   let wsTracker: WebSocketTracker;
   let mockSession: ChatSession;
@@ -61,7 +61,7 @@ describe('EventStreamProcessor - Resumed Messages Mapping', () => {
     };
 
     // Create real instances
-    sessionManager = new SessionManager();
+    sessionManager = new ChatSessionManager();
     processor = new EventStreamProcessor(sessionManager);
     
     // Setup spies
@@ -484,8 +484,8 @@ text: 'Response without preamble'`
     });
   });
 
-  describe('Regular Tool Calls', () => {
-    it('should handle regular tool calls without tool-call-complete events for resumed messages', () => {
+  describe('Regular Tool Calls - Phase 4 Implementation', () => {
+    it('should extract tool calls and attach them to message metadata', () => {
       const messages: MessageParam[] = [
         {
           role: 'assistant',
@@ -519,12 +519,10 @@ text: 'Response without preamble'`
         }
       } as any);
 
-      // Verify tool-call-complete event
+      // Resumed messages should NOT emit tool-call-complete events
       const toolCallCompleteCalls = sessionManagerEmitSpy.mock.calls.filter(
         call => call[0] === 'tool-call-complete'
       );
-
-      // Resumed messages should NOT emit tool-call-complete events
       expect(toolCallCompleteCalls).toHaveLength(0);
 
       // Verify NO subsession events for regular tools
@@ -532,9 +530,243 @@ text: 'Response without preamble'`
         call => call[0] === 'subsession-started'
       );
       expect(subsessionStartCalls).toHaveLength(0);
+
+      // PHASE 4: Verify tool calls are attached to message
+      const sessionLoadedCalls = sessionManagerEmitSpy.mock.calls.filter(
+        call => call[0] === 'session-messages-loaded'
+      );
+      expect(sessionLoadedCalls).toHaveLength(1);
+      const loadedMessages = sessionLoadedCalls[0][1].messages;
+
+      // Should have one assistant message with tool call metadata
+      expect(loadedMessages).toHaveLength(1);
+      const assistantMsg = loadedMessages[0];
+      
+      // Verify message structure
+      expect(assistantMsg.role).toBe('assistant');
+      expect(assistantMsg.content).toBe('[Tool execution]'); // No text content
+
+      // Verify metadata contains tool calls
+      expect(assistantMsg.metadata).toBeDefined();
+      expect(assistantMsg.metadata.toolCalls).toHaveLength(1);
+      expect(assistantMsg.metadata.toolCalls[0]).toEqual({
+        id: 'toolu_6',
+        type: 'tool_use',
+        name: 'calculator',
+        input: { operation: 'add', a: 5, b: 3 }
+      });
+
+      // Verify metadata contains tool results
+      expect(assistantMsg.metadata.toolResults).toHaveLength(1);
+      expect(assistantMsg.metadata.toolResults[0]).toEqual({
+        type: 'tool_result',
+        tool_use_id: 'toolu_6',
+        content: '{"result": 8}',
+        is_error: undefined
+      });
+
+      // Verify top-level fields (for compatibility)
+      expect(assistantMsg.toolCalls).toEqual(assistantMsg.metadata.toolCalls);
+      expect(assistantMsg.toolResults).toEqual(assistantMsg.metadata.toolResults);
     });
 
-    it('should handle tools without results', () => {
+    it('should handle multiple tool calls in a single message (3+ tools)', () => {
+      // CRITICAL TEST CASE: 3+ regular tool calls in one message
+      const messages: MessageParam[] = [
+        {
+          role: 'assistant',
+          content: [
+            {
+              type: 'tool_use',
+              id: 'tool_1',
+              name: 'web_search',
+              input: { query: 'current weather' }
+            },
+            {
+              type: 'tool_use',
+              id: 'tool_2',
+              name: 'calculator',
+              input: { operation: 'convert', value: 72, from: 'F', to: 'C' }
+            },
+            {
+              type: 'tool_use',
+              id: 'tool_3',
+              name: 'data_formatter',
+              input: { format: 'json', data: 'weather data' }
+            }
+          ]
+        },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: 'tool_1',
+              content: '{"temp": 72, "condition": "sunny"}'
+            },
+            {
+              type: 'tool_result',
+              tool_use_id: 'tool_2',
+              content: '{"result": 22.2}'
+            },
+            {
+              type: 'tool_result',
+              tool_use_id: 'tool_3',
+              content: '{"formatted": "Temperature: 72°F (22.2°C), Condition: Sunny"}'
+            }
+          ]
+        }
+      ];
+
+      processor.processEvent({
+        type: 'chat_session_changed',
+        chat_session: {
+          version: 2,
+          session_id: testSessionId,
+          messages
+        }
+      } as any);
+
+      const sessionLoadedCalls = sessionManagerEmitSpy.mock.calls.filter(
+        call => call[0] === 'session-messages-loaded'
+      );
+      const loadedMessages = sessionLoadedCalls[0][1].messages;
+
+      expect(loadedMessages).toHaveLength(1);
+      const assistantMsg = loadedMessages[0];
+
+      // Verify all 3 tool calls are extracted
+      expect(assistantMsg.metadata.toolCalls).toHaveLength(3);
+      expect(assistantMsg.metadata.toolCalls[0].name).toBe('web_search');
+      expect(assistantMsg.metadata.toolCalls[1].name).toBe('calculator');
+      expect(assistantMsg.metadata.toolCalls[2].name).toBe('data_formatter');
+
+      // Verify all 3 tool results are matched
+      expect(assistantMsg.metadata.toolResults).toHaveLength(3);
+      expect(assistantMsg.metadata.toolResults[0].tool_use_id).toBe('tool_1');
+      expect(assistantMsg.metadata.toolResults[1].tool_use_id).toBe('tool_2');
+      expect(assistantMsg.metadata.toolResults[2].tool_use_id).toBe('tool_3');
+
+      // Verify content is placeholder
+      expect(assistantMsg.content).toBe('[Tool execution]');
+    });
+
+    it('should handle tool calls with text content', () => {
+      const messages: MessageParam[] = [
+        {
+          role: 'assistant',
+          content: [
+            {
+              type: 'text',
+              text: 'Let me search for that information and calculate the result.'
+            },
+            {
+              type: 'tool_use',
+              id: 'search_1',
+              name: 'web_search',
+              input: { query: 'AI advances 2024' }
+            },
+            {
+              type: 'tool_use',
+              id: 'calc_1',
+              name: 'calculator',
+              input: { operation: 'multiply', a: 100, b: 1.5 }
+            }
+          ]
+        },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: 'search_1',
+              content: '{"results": ["AI improvements"]}'
+            },
+            {
+              type: 'tool_result',
+              tool_use_id: 'calc_1',
+              content: '{"result": 150}'
+            }
+          ]
+        }
+      ];
+
+      processor.processEvent({
+        type: 'chat_session_changed',
+        chat_session: {
+          version: 2,
+          session_id: testSessionId,
+          messages
+        }
+      } as any);
+
+      const sessionLoadedCalls = sessionManagerEmitSpy.mock.calls.filter(
+        call => call[0] === 'session-messages-loaded'
+      );
+      const loadedMessages = sessionLoadedCalls[0][1].messages;
+
+      expect(loadedMessages).toHaveLength(1);
+      const assistantMsg = loadedMessages[0];
+
+      // Verify text content is preserved
+      expect(assistantMsg.content).toBe('Let me search for that information and calculate the result.');
+
+      // Verify tool calls are still attached
+      expect(assistantMsg.metadata.toolCalls).toHaveLength(2);
+      expect(assistantMsg.metadata.toolResults).toHaveLength(2);
+    });
+
+    it('should handle tool calls without text content', () => {
+      const messages: MessageParam[] = [
+        {
+          role: 'assistant',
+          content: [
+            {
+              type: 'tool_use',
+              id: 'notify_1',
+              name: 'send_notification',
+              input: { message: 'Task complete' }
+            }
+          ]
+        },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: 'notify_1',
+              content: '{"status": "sent"}'
+            }
+          ]
+        }
+      ];
+
+      processor.processEvent({
+        type: 'chat_session_changed',
+        chat_session: {
+          version: 2,
+          session_id: testSessionId,
+          messages
+        }
+      } as any);
+
+      const sessionLoadedCalls = sessionManagerEmitSpy.mock.calls.filter(
+        call => call[0] === 'session-messages-loaded'
+      );
+      const loadedMessages = sessionLoadedCalls[0][1].messages;
+
+      expect(loadedMessages).toHaveLength(1);
+      const assistantMsg = loadedMessages[0];
+
+      // Should use placeholder content
+      expect(assistantMsg.content).toBe('[Tool execution]');
+
+      // Should have tool call metadata
+      expect(assistantMsg.metadata.toolCalls).toHaveLength(1);
+      expect(assistantMsg.metadata.toolResults).toHaveLength(1);
+    });
+
+    it('should handle tools without results (mismatched/missing results)', () => {
       const messages: MessageParam[] = [
         {
           role: 'assistant',
@@ -561,9 +793,72 @@ text: 'Response without preamble'`
       const toolCallCompleteCalls = sessionManagerEmitSpy.mock.calls.filter(
         call => call[0] === 'tool-call-complete'
       );
-
-      // Resumed messages should NOT emit tool-call-complete events
       expect(toolCallCompleteCalls).toHaveLength(0);
+
+      // Verify message still created with tool call
+      const sessionLoadedCalls = sessionManagerEmitSpy.mock.calls.filter(
+        call => call[0] === 'session-messages-loaded'
+      );
+      const loadedMessages = sessionLoadedCalls[0][1].messages;
+
+      expect(loadedMessages).toHaveLength(1);
+      const assistantMsg = loadedMessages[0];
+
+      // Tool call should be present
+      expect(assistantMsg.metadata.toolCalls).toHaveLength(1);
+      expect(assistantMsg.metadata.toolCalls[0].id).toBe('toolu_7');
+
+      // Tool results should be empty (no match found)
+      expect(assistantMsg.metadata.toolResults).toHaveLength(0);
+    });
+
+    it('should handle tool call error results', () => {
+      const messages: MessageParam[] = [
+        {
+          role: 'assistant',
+          content: [
+            {
+              type: 'tool_use',
+              id: 'error_tool',
+              name: 'failing_tool',
+              input: { param: 'invalid' }
+            }
+          ]
+        },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: 'error_tool',
+              content: 'Tool execution failed: Invalid parameter',
+              is_error: true
+            }
+          ]
+        }
+      ];
+
+      processor.processEvent({
+        type: 'chat_session_changed',
+        chat_session: {
+          version: 2,
+          session_id: testSessionId,
+          messages
+        }
+      } as any);
+
+      const sessionLoadedCalls = sessionManagerEmitSpy.mock.calls.filter(
+        call => call[0] === 'session-messages-loaded'
+      );
+      const loadedMessages = sessionLoadedCalls[0][1].messages;
+
+      expect(loadedMessages).toHaveLength(1);
+      const assistantMsg = loadedMessages[0];
+
+      // Verify error result is captured
+      expect(assistantMsg.metadata.toolResults).toHaveLength(1);
+      expect(assistantMsg.metadata.toolResults[0].is_error).toBe(true);
+      expect(assistantMsg.metadata.toolResults[0].content).toContain('Tool execution failed');
     });
   });
 

@@ -159,6 +159,9 @@ class FileHandler:
         if not metadata:
             return None
 
+        if isinstance(metadata, dict):
+            metadata = FileMetadata.model_validate(metadata)
+
         if metadata.processed:
             return metadata
 
@@ -267,6 +270,9 @@ class FileHandler:
         if not metadata:
             self.logger.warning(f"No metadata found for file {file_id}")
             return None
+
+        if isinstance(metadata, dict):
+            metadata = FileMetadata.model_validate(metadata)
 
         file_path = metadata.filename
 
@@ -402,7 +408,7 @@ class RTFileHandler(FileHandler):
         chat_session = self.bridge.chat_session
         file_data =  await super().save_file(file, chat_session.session_id)
         session_files = chat_session.metadata.get("uploaded_files", {})
-        session_files[file_data.id] = file_data.model_dump()
+        session_files[file_data.id] = file_data.model_dump(mode='json')
         chat_session.metadata["uploaded_files"] = session_files
         await self.bridge.send_chat_session_meta()
         return file_data
@@ -411,13 +417,17 @@ class RTFileHandler(FileHandler):
         chat_session = self.bridge.chat_session
         file_data = await super().process_file(file_id, chat_session.session_id)
         session_files = chat_session.metadata.get("uploaded_files", {})
-        session_files[file_data.id] = file_data.model_dump()
+        session_files[file_data.id] = file_data.model_dump(mode='json')
         chat_session.metadata["uploaded_files"] = session_files
         await self.bridge.send_chat_session_meta()
         return file_data
 
     def get_file_metadata(self, file_id: str, _: str) -> Optional[FileMetadata]:
-        return self.bridge.chat_session.metadata.get("uploaded_files", {}).get(file_id)
+        metadata = self.bridge.chat_session.metadata.get("uploaded_files", {}).get(file_id)
+        if isinstance(metadata, dict):
+            metadata = FileMetadata.model_validate(metadata)
+
+        return metadata
 
     def get_session_files(self, _: str) -> List[FileMetadata]:
         files = self.bridge.chat_session.metadata.get("uploaded_files", {})

@@ -12,6 +12,36 @@ from ...helpers.path_helper import create_unc_path, ensure_file_extension, os_fi
 
 
 class InsuranceDemoTools(Toolset):
+    """
+    Demo toolset for insurance underwriting and new business workflows.
+    
+    This toolset provides specialized tools for insurance underwriting processes, including
+    policy quoting, underwriting guidelines, risk assessment, and ACORD data extraction.
+    It's designed to demonstrate AI-assisted insurance workflows.
+    
+    Available Methods:
+        - get_policy_quote: Retrieve new business insurance quote templates
+        - get_underwriting_guidelines: Access underwriting guidelines by type (general liability, workers comp, commercial auto)
+        - get_risk_rubric: Get General Liability risk scoring rubric for assessment
+        - company_loss_history: Retrieve applicant company loss information
+        - extract_acord_data: Extract data from ACORD 125 forms
+    
+    Key Features:
+        - Policy quote template generation
+        - Multi-line underwriting guidelines support
+        - Risk scoring rubric access
+        - Loss history retrieval
+        - ACORD form data extraction
+    
+    Requirements:
+        - WorkspaceTools (for file access)
+        - Workspace must contain relevant insurance documents (quote_template.md, underwriting_guidelines.md, etc.)
+    
+    Usage Notes:
+        - This is a demonstration toolset for insurance domain workflows
+        - Requires workspace files to be properly configured
+        - All methods read from workspace files rather than live systems
+    """
     def __init__(self, **kwargs):
         super().__init__(**kwargs, name='new_business_insurance', use_prefix=False)
         self.logger: logging.Logger = logging.getLogger(__name__)

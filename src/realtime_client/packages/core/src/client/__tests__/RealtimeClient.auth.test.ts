@@ -16,7 +16,7 @@ describe('RealtimeClient - Auth Error Handling', () => {
     let mockReconnectionManager: any;
     
     beforeEach(() => {
-        // Setup mock WebSocketManager
+        // Setup mock WebSocketManager that simulates successful connection
         mockWsManager = {
             connect: vi.fn(),
             disconnect: vi.fn(),
@@ -26,22 +26,36 @@ describe('RealtimeClient - Auth Error Handling', () => {
             sendBinary: vi.fn()
         };
         
-        (WebSocketManager as any).mockImplementation(() => mockWsManager);
+        (WebSocketManager as any).mockImplementation((options: any, callbacks: any) => {
+            // Simulate successful connection after a tick
+            setTimeout(() => {
+                if (callbacks?.onOpen) {
+                    callbacks.onOpen(new Event('open'));
+                }
+            }, 0);
+            return mockWsManager;
+        });
         
         // Setup mock AuthManager
         mockAuthManager = {
             getTokens: vi.fn(),
             getUiSessionId: vi.fn(),
-            setTokens: vi.fn()
+            setTokens: vi.fn(),
+            on: vi.fn(),
+            off: vi.fn(),
+            removeAllListeners: vi.fn()
         };
         
         (AuthManager as any).mockImplementation(() => mockAuthManager);
         
         // Setup mock ReconnectionManager
         mockReconnectionManager = {
-            startReconnection: vi.fn(),
+            startReconnection: vi.fn().mockResolvedValue(undefined),
             stopReconnection: vi.fn(),
-            reset: vi.fn()
+            reset: vi.fn(),
+            on: vi.fn(),
+            off: vi.fn(),
+            removeAllListeners: vi.fn()
         };
         
         (ReconnectionManager as any).mockImplementation(() => mockReconnectionManager);
@@ -95,7 +109,7 @@ describe('RealtimeClient - Auth Error Handling', () => {
             });
             
             // Initial state should be DISCONNECTED
-            expect((client as any).connectionState).toBe(0); // ConnectionState.DISCONNECTED
+            expect((client as any).connectionState).toBe('DISCONNECTED');
             
             // Try to connect
             try {
@@ -105,7 +119,7 @@ describe('RealtimeClient - Auth Error Handling', () => {
             }
             
             // State should still be DISCONNECTED (not CONNECTING)
-            expect((client as any).connectionState).toBe(0); // ConnectionState.DISCONNECTED
+            expect((client as any).connectionState).toBe('DISCONNECTED');
         });
         
         it('should get auth token from AuthManager if available', async () => {

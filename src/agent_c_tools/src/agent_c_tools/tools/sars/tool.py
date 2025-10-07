@@ -11,6 +11,36 @@ from ...helpers.path_helper import create_unc_path, ensure_file_extension, os_fi
 
 
 class SarsTools(Toolset):
+    """
+    Suspicious Activity Report (SAR) analysis toolset for financial compliance.
+    
+    This toolset provides specialized tools for analyzing suspicious financial transactions
+    and generating Suspicious Activity Reports (SARs) as required by anti-money laundering (AML)
+    regulations. It assists compliance teams in evaluating transaction patterns and customer behavior.
+    
+    Available Methods:
+        - get_branch_referral: Retrieve branch referral reports for suspicious activity
+        - get_external_intelligence_referral: Access external intelligence reports
+        - get_scoring_rubric: Get SAR scoring rubric for assessment
+        - get_transactions: Retrieve transaction data for evaluation
+        - get_cdd_report: Access Customer Due Diligence (CDD) reports
+    
+    Key Features:
+        - Branch referral report access with markdown rendering
+        - External intelligence integration
+        - SAR scoring rubric for consistent evaluation
+        - Transaction alert data retrieval
+        - CDD report access for customer background
+    
+    Requirements:
+        - WorkspaceTools (for file access)
+        - Workspace must contain relevant SAR documents (branch_referral.md, external_intelligence.md, etc.)
+    
+    Usage Notes:
+        - This is a demonstration toolset for financial compliance workflows
+        - Renders reports in markdown format for easy reading
+        - All methods read from workspace files rather than live compliance systems
+    """
     def __init__(self, **kwargs):
         super().__init__(**kwargs, name='sars', use_prefix=False)
         self.logger: logging.Logger = logging.getLogger(__name__)

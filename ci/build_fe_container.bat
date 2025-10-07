@@ -1,1 +1,2 @@
-docker build -t ghcr.io/centricconsulting/agent_c_frontend_dev:latest -f dockerfiles\frontend.Dockerfile .
+cd src\realtime_client
+docker build -t ghcr.io/centricconsulting/agentc-frontend:latest .

@@ -3,7 +3,7 @@
  * Routes events to appropriate handlers and coordinates message building
  */
 
-import { SessionManager } from '../session/SessionManager';
+import { ChatSessionManager } from '../session/SessionManager';
 import { MessageBuilder } from './MessageBuilder';
 import { ToolCallManager } from './ToolCallManager';
 import { 
@@ -24,9 +24,10 @@ import {
   AnthropicUserMessageEvent,
   SubsessionStartedEvent,
   SubsessionEndedEvent,
-  CancelledEvent
+  CancelledEvent,
+  UserTurnStartEvent
 } from './types/ServerEvents';
-import { Message, MessageContent, ContentPart, ToolCall } from './types/CommonTypes';
+import { Message, MessageContent, ContentPart } from './types/CommonTypes';
 import { ChatSession } from '../types/chat-session';
 import { 
   MessageParam,
@@ -45,45 +46,88 @@ import { Logger } from '../utils/logger';
 export class EventStreamProcessor {
   private messageBuilder: MessageBuilder;
   private toolCallManager: ToolCallManager;
-  private sessionManager: SessionManager;
-  private userSessionId: string | null = null;
+  private sessionManager: ChatSessionManager;
+  private currentChatSessionId: string | null = null;
+  private recentEventIds: Set<string> = new Set();
+  private readonly EVENT_ID_TTL = 5000; // 5 seconds - events older than this are forgotten
+  private eventCounter = 0; // Sequential counter for events without IDs
   
-  constructor(sessionManager: SessionManager) {
+  constructor(sessionManager: ChatSessionManager) {
     this.sessionManager = sessionManager;
     this.messageBuilder = new MessageBuilder();
     this.toolCallManager = new ToolCallManager();
   }
   
   /**
-   * Set the user session ID for sub-session detection
+   * Set the current chat session ID for sub-session detection
    */
-  setUserSessionId(id: string): void {
-    this.userSessionId = id;
-    Logger.debug(`[EventStreamProcessor] User session ID set: ${id}`);
+  setCurrentChatSessionId(id: string): void {
+    this.currentChatSessionId = id;
+    Logger.debug(`[EventStreamProcessor] Current chat session ID set: ${id}`);
   }
   
   /**
    * Check if an event represents a sub-session
+   * 
+   * Sub-sessions occur when an agent uses delegation tools to communicate with
+   * other agents/clones. These events have a different session_id than the
+   * current user's chat session.
+   * 
+   * @param event - Event to check
+   * @returns true if event is from a sub-session, false otherwise
    */
   private isSubSession(event: any): boolean {
-    // Primary check: use event fields if available
-    if (event.user_session_id && event.session_id) {
-      return event.session_id !== event.user_session_id;
+    // Sub-session = event's session_id doesn't match current user chat session
+    if (this.currentChatSessionId && event.session_id) {
+      return event.session_id !== this.currentChatSessionId;
     }
-    
-    // Fallback: use stored user session ID
-    if (this.userSessionId && event.session_id) {
-      return event.session_id !== this.userSessionId;
-    }
-    
     return false;
   }
   
   /**
-   * Normalize MessageParam content to MessageContent format for UI compatibility
-   * Handles the conversion from Anthropic ContentBlockParam[] to simplified ContentPart[]
+   * Generate a unique fingerprint for an event to detect duplicates.
+   * Uses event ID if available, otherwise creates fingerprint from event properties.
+   * 
+   * For streaming events without IDs (text_delta, thought_delta, etc.), uses a
+   * sequential counter to ensure uniqueness even when events arrive in the same
+   * millisecond (which is common for rapid streaming).
    */
-  private normalizeMessageContent(content: string | ContentBlockParam[]): MessageContent {
+  private generateEventFingerprint(event: ServerEvent): string {
+    // If event has an ID field, use it
+    if ('id' in event && event.id) {
+      return String(event.id);
+    }
+    
+    // For events without IDs, use sequential counter to ensure uniqueness
+    // This prevents false duplicates when events arrive rapidly (same millisecond)
+    const sessionId = 'session_id' in event ? event.session_id : 'no-session';
+    return `${event.type}_${sessionId || 'no-session'}_${++this.eventCounter}`;
+  }
+
+  /**
+   * Check if an event was recently processed.
+   */
+  private hasProcessedRecently(eventId: string): boolean {
+    return this.recentEventIds.has(eventId);
+  }
+
+  /**
+   * Mark an event as processed and schedule cleanup after TTL.
+   */
+  private markAsProcessed(eventId: string): void {
+    this.recentEventIds.add(eventId);
+    
+    // Clean up after TTL to prevent memory growth
+    setTimeout(() => {
+      this.recentEventIds.delete(eventId);
+    }, this.EVENT_ID_TTL);
+  }
+  
+  /**
+   * Normalize MessageParam content to MessageContent format for UI compatibility
+   * Handles conversion from both Anthropic ContentBlockParam[] and OpenAI ChatCompletionContentPart[]
+   */
+  private normalizeMessageContent(content: string | ContentBlockParam[] | any[]): MessageContent {
     // Handle simple string content
     if (typeof content === 'string') {
       return content;
@@ -115,9 +159,22 @@ export class EventStreamProcessor {
             text: block.text
           });
         } else if (isImageBlockParam(block)) {
+          // Anthropic image format
           normalizedParts.push({
             type: 'image',
             source: block.source
+          });
+        } else if ('type' in block && block.type === 'image_url') {
+          // OpenAI image format - convert to our normalized format
+          const openAiImage = block as any;
+          normalizedParts.push({
+            type: 'image',
+            source: {
+              type: 'url',
+              url: openAiImage.image_url?.url || '',
+              // Preserve detail if present
+              ...(openAiImage.image_url?.detail && { detail: openAiImage.image_url.detail })
+            }
           });
         } else if (isToolUseBlockParam(block)) {
           normalizedParts.push({
@@ -225,6 +282,22 @@ export class EventStreamProcessor {
    * Process incoming server events
    */
   processEvent(event: ServerEvent): void {
+    console.log('[EventStreamProcessor] processEvent CALLED:', event.type);
+    // Check for duplicate events
+    const eventId = this.generateEventFingerprint(event);
+    
+    if (this.hasProcessedRecently(eventId)) {
+      Logger.debug('[EventStreamProcessor] Skipping duplicate event', {
+        type: event.type,
+        eventId,
+        sessionId: 'session_id' in event ? (event.session_id || 'none') : 'none'
+      });
+      return; // Skip processing
+    }
+    
+    // Mark as processed before handling
+    this.markAsProcessed(eventId);
+    
     // Filter out ignored events early
     const IGNORED_EVENTS = ['history', 'history_delta', 'complete_thought', 'system_prompt'];
     
@@ -275,6 +348,9 @@ export class EventStreamProcessor {
       case 'anthropic_user_message':
         this.handleAnthropicUserMessage(event as AnthropicUserMessageEvent);
         break;
+      case 'openai_user_message':
+        this.handleOpenAIUserMessage(event as OpenAIUserMessageEvent);
+        break;
       case 'subsession_started':
         this.handleSubsessionStarted(event as SubsessionStartedEvent);
         break;
@@ -283,6 +359,9 @@ export class EventStreamProcessor {
         break;
       case 'cancelled':
         this.handleCancelled(event as CancelledEvent);
+        break;
+      case 'user_turn_start':
+        this.handleUserTurnStart(event as UserTurnStartEvent);
         break;
       // Other events are handled elsewhere or don't require processing here
       default:
@@ -302,13 +381,40 @@ export class EventStreamProcessor {
       this.toolCallManager.reset();
     } else {
       Logger.info(`[EventStreamProcessor] Interaction ended: ${event.id}`);
+      
+      // Clear tool notifications for this session when interaction ends
+      // This prevents orphaned "Agent is using X" notifications
+      const sessionId = event.session_id;
+      this.toolCallManager.clearSessionNotifications(sessionId);
+      
+      // Emit event to notify UI that session notifications were cleared
+      this.sessionManager.emit('session-notifications-cleared', { sessionId });
+      
+      Logger.debug(`[EventStreamProcessor] Cleared tool notifications for session: ${sessionId}`);
     }
+  }
+  
+  /**
+   * Handle user turn start events (safety net for cleanup)
+   */
+  private handleUserTurnStart(_event: UserTurnStartEvent): void {
+    Logger.info('[EventStreamProcessor] User turn started - clearing all active tool notifications');
+    
+    // Nuclear cleanup: clear ALL active notifications across all sessions
+    // This is a safety net to prevent orphaned notifications from any edge cases
+    this.toolCallManager.clearAllActiveNotifications();
+    
+    // Emit event to notify UI that all notifications were cleared
+    this.sessionManager.emit('all-notifications-cleared', undefined);
+    
+    Logger.debug('[EventStreamProcessor] All tool notifications cleared on user turn start');
   }
   
   /**
    * Handle streaming text delta events
    */
   private handleTextDelta(event: TextDeltaEvent): void {
+    console.log('[EventStreamProcessor] handleTextDelta CALLED', { content: event.content });
     // Start a new message if needed
     if (!this.messageBuilder.hasCurrentMessage()) {
       Logger.debug('[EventStreamProcessor] Starting new assistant message for text delta');
@@ -357,11 +463,14 @@ export class EventStreamProcessor {
       this.messageBuilder.startMessage('thought');
       
       // Remove any "Agent is thinking..." notification when thought deltas start
-      // We check all active notifications for the think tool
-      const activeNotifications = this.toolCallManager.getActiveNotifications();
-      activeNotifications.forEach(notification => {
+      // We check active notifications for this session only
+      const sessionNotifications = this.toolCallManager.getActiveNotificationsForSession(event.session_id);
+      sessionNotifications.forEach(notification => {
         if (notification.toolName === 'think') {
-          this.sessionManager.emit('tool-notification-removed', notification.id);
+          this.sessionManager.emit('tool-notification-removed', {
+            sessionId: notification.sessionId,
+            toolCallId: notification.id
+          });
         }
       });
     }
@@ -384,34 +493,43 @@ export class EventStreamProcessor {
    */
   private handleCompletion(event: CompletionEvent): void {
     if (!event.running && this.messageBuilder.hasCurrentMessage()) {
-      // Get any completed tool calls (which may include results)
-      const completedToolCalls = this.toolCallManager.getCompletedToolCalls();
+      // Phase 3: Check for buffered tool calls (1% case - tools completed before any message)
+      const sessionId = event.session_id;
+      let bufferedToolCalls: any[] = [];
+      let bufferedToolResults: any[] = [];
       
-      // Separate tool calls from tool results
-      const toolCalls = completedToolCalls.map(tc => ({
-        id: tc.id,
-        type: tc.type,
-        name: tc.name,
-        input: tc.input
-      })) as ToolCall[];
+      if (this.sessionManager.hasPendingToolCalls(sessionId)) {
+        const pending = this.sessionManager.getPendingToolCalls(sessionId);
+        
+        bufferedToolCalls = pending.map(tc => ({
+          id: tc.id,
+          type: tc.type,
+          name: tc.name,
+          input: tc.input
+        }));
+        
+        bufferedToolResults = pending
+          .filter(tc => tc.result)
+          .map(tc => tc.result!);
+        
+        Logger.info('[EventStreamProcessor] Attaching buffered tools to new message', {
+          sessionId,
+          toolCount: pending.length,
+          toolNames: pending.map(tc => tc.name)
+        });
+        
+        // Clear buffered tools after attaching
+        this.sessionManager.clearPendingToolCalls(sessionId);
+      }
       
-      const toolResults = completedToolCalls
-        .filter(tc => tc.result)
-        .map(tc => tc.result!);
-      
-      // Finalize the message with metadata
+      // Finalize the message with metadata (including buffered tools if any)
       const message = this.messageBuilder.finalize({
         inputTokens: event.input_tokens,
         outputTokens: event.output_tokens,
         stopReason: event.stop_reason,
-        toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
-        toolResults: toolResults.length > 0 ? toolResults : undefined
+        toolCalls: bufferedToolCalls.length > 0 ? bufferedToolCalls : undefined,
+        toolResults: bufferedToolResults.length > 0 ? bufferedToolResults : undefined
       });
-      
-      // Clear the completed tool calls after attaching them to the message
-      if (completedToolCalls.length > 0) {
-        this.toolCallManager.clearCompleted();
-      }
       
       // Add to session and emit completion
       const session = this.sessionManager.getCurrentSession();
@@ -437,21 +555,23 @@ export class EventStreamProcessor {
    * Handle tool selection events (before execution)
    */
   private handleToolSelect(event: ToolSelectDeltaEvent): void {
-    const notification = this.toolCallManager.onToolSelect(event);
+    const notifications = this.toolCallManager.onToolSelect(event);
     
-    // Special handling for the "think" tool
-    const toolCall = event.tool_calls[0];
-    if (toolCall && toolCall.name === 'think') {
-      // For the think tool, we emit a special notification
-      // The thought deltas will be handled separately
-      this.sessionManager.emit('tool-notification', {
-        ...notification,
-        toolName: 'think',
-        status: 'preparing' as const
-      });
-    } else {
-      this.sessionManager.emit('tool-notification', notification);
-    }
+    // Emit notification for each tool
+    notifications.forEach(notification => {
+      // Special handling for the "think" tool
+      if (notification.toolName === 'think') {
+        // For the think tool, we emit a special notification
+        // The thought deltas will be handled separately
+        this.sessionManager.emit('tool-notification', {
+          ...notification,
+          toolName: 'think',
+          status: 'preparing' as const
+        });
+      } else {
+        this.sessionManager.emit('tool-notification', notification);
+      }
+    });
   }
   
   /**
@@ -464,20 +584,23 @@ export class EventStreamProcessor {
       // For the think tool, we ignore the tool_call events
       // as the content is already rendered via thought deltas
       Logger.debug('[EventStreamProcessor] Ignoring tool_call event for think tool');
-      // Still remove the notification
-      this.sessionManager.emit('tool-notification-removed', toolCall.id);
+      // Still remove the notification (with session context)
+      this.sessionManager.emit('tool-notification-removed', {
+        sessionId: event.session_id,
+        toolCallId: toolCall.id
+      });
       return;
     }
     
     if (event.active) {
       // Tool is executing
-      const notification = this.toolCallManager.onToolCallActive(event);
-      if (notification) {
+      const notifications = this.toolCallManager.onToolCallActive(event);
+      notifications.forEach(notification => {
         this.sessionManager.emit('tool-notification', notification);
-      }
+      });
     } else {
-      // Tool completed
-      this.toolCallManager.onToolCallComplete(event);
+      // Tool completed - Phase 3: Backward attachment
+      const completedToolCalls = this.toolCallManager.onToolCallComplete(event);
       
       // Emit tool-call-complete event for UI to track results
       this.sessionManager.emit('tool-call-complete', {
@@ -485,10 +608,137 @@ export class EventStreamProcessor {
         toolResults: event.tool_results
       });
       
-      // Remove notifications for completed tools
+      // Remove notifications for completed tools (with session context)
       event.tool_calls.forEach(tc => {
-        this.sessionManager.emit('tool-notification-removed', tc.id);
+        this.sessionManager.emit('tool-notification-removed', {
+          sessionId: event.session_id,
+          toolCallId: tc.id
+        });
       });
+      
+      // Phase 3: Attach completed tools to previous message (backward attachment)
+      if (completedToolCalls.length > 0) {
+        this.attachToolCallsToPreviousMessage(event.session_id, completedToolCalls);
+      }
+    }
+  }
+  
+  /**
+   * Phase 3: Attach completed tool calls to the previous message (backward attachment)
+   * This is the correct behavior - tools execute AFTER the message, so results attach to previous message
+   * 
+   * @param sessionId - Session ID
+   * @param completedToolCalls - Tool calls with results to attach
+   */
+  private attachToolCallsToPreviousMessage(
+    sessionId: string,
+    completedToolCalls: Array<{ id: string; type: 'tool_use'; name: string; input: Record<string, unknown>; result?: any }>
+  ): void {
+    const session = this.sessionManager.getSession(sessionId);
+    if (!session || !session.messages || !session.messages.length) {
+      // No session or no messages yet - buffer for next message (1% case)
+      Logger.debug('[EventStreamProcessor] No previous message to attach tools to - buffering', {
+        sessionId,
+        toolCount: completedToolCalls.length,
+        toolNames: completedToolCalls.map(tc => tc.name)
+      });
+      this.sessionManager.bufferPendingToolCalls(sessionId, completedToolCalls);
+      return;
+    }
+    
+    // Find the last assistant or thought message (99% case)
+    // Tools CAN attach to thoughts - they're just internal reasoning that used tools
+    // BUT: Stop if we hit a user message - tool calls can't attach to messages before the user spoke!
+    const messages = session.messages;
+    let lastAssistantMessageIndex = -1;
+    
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const message = messages[i] as any;
+      
+      // Stop if we hit a user message - tool calls belong to THIS turn, not a previous turn
+      if (message && message.role === 'user') {
+        Logger.debug('[EventStreamProcessor] Hit user message while looking backward - stopping search', {
+          sessionId,
+          messageIndex: i
+        });
+        break;
+      }
+      
+      // Check for assistant messages OR thought messages (role includes '(thought)')
+      const isAssistant = message && message.role === 'assistant';
+      const isThought = message && (message.role === 'assistant (thought)' || message.type === 'thought');
+      
+      if (isAssistant || isThought) {
+        lastAssistantMessageIndex = i;
+        break;
+      }
+    }
+    
+    if (lastAssistantMessageIndex === -1) {
+      // No assistant message found - buffer for next message
+      Logger.debug('[EventStreamProcessor] No assistant message to attach tools to - buffering', {
+        sessionId,
+        toolCount: completedToolCalls.length,
+        messageCount: messages.length
+      });
+      this.sessionManager.bufferPendingToolCalls(sessionId, completedToolCalls);
+      return;
+    }
+    
+    // Attach tools to the previous assistant message
+    const targetMessage = messages[lastAssistantMessageIndex] as any; // EnhancedMessage
+    
+    // Extract tool calls and results from this batch only
+    const newToolCalls = completedToolCalls.map(tc => ({
+      id: tc.id,
+      type: tc.type,
+      name: tc.name,
+      input: tc.input
+    }));
+    
+    const newToolResults = completedToolCalls
+      .filter(tc => tc.result)
+      .map(tc => tc.result!);
+    
+    // Initialize metadata if needed
+    if (!targetMessage.metadata) {
+      targetMessage.metadata = {};
+    }
+    
+    // Initialize tool arrays if needed
+    if (!targetMessage.metadata.toolCalls) {
+      targetMessage.metadata.toolCalls = [];
+    }
+    if (!targetMessage.metadata.toolResults) {
+      targetMessage.metadata.toolResults = [];
+    }
+    
+    // Append NEW tools to existing arrays
+    targetMessage.metadata.toolCalls.push(...newToolCalls);
+    targetMessage.metadata.toolResults.push(...newToolResults);
+    
+    // Sync top-level fields (reference the metadata arrays)
+    targetMessage.toolCalls = targetMessage.metadata.toolCalls;
+    targetMessage.toolResults = targetMessage.metadata.toolResults;
+    
+    Logger.info('[EventStreamProcessor] Attached tools to previous message (backward attachment)', {
+      sessionId,
+      messageIndex: lastAssistantMessageIndex,
+      messageId: targetMessage.id,
+      toolCount: completedToolCalls.length,
+      toolNames: completedToolCalls.map(tc => tc.name)
+    });
+    
+    // Only emit message-updated if the message has an ID
+    // If no ID yet (streaming message), the tool calls are already attached and will be included in completion
+    if (targetMessage.id) {
+      this.sessionManager.emit('message-updated', {
+        sessionId,
+        messageId: targetMessage.id,
+        message: targetMessage
+      });
+    } else {
+      Logger.debug('[EventStreamProcessor] Message has no ID yet (streaming) - tool calls attached, will be included in completion');
     }
   }
   
@@ -596,22 +846,15 @@ export class EventStreamProcessor {
       return;
     }
     
-    // Extract user_session_id if available for sub-session detection
-    // ChatSessionChangedEvent doesn't extend SessionEvent, so check if it exists
-    const eventWithSessionInfo = event as any;
-    if (eventWithSessionInfo.user_session_id) {
-      this.setUserSessionId(eventWithSessionInfo.user_session_id);
-    } else if (event.chat_session.session_id) {
-      // If no explicit user_session_id, assume the current session is the user session
-      this.setUserSessionId(event.chat_session.session_id);
-    }
+    // Track the current user's chat session ID for sub-session detection
+    this.setCurrentChatSessionId(event.chat_session.session_id);
     
     // Convert the server session to runtime ChatSession with normalized messages
     const session = this.convertServerSession(event.chat_session);
     
     Logger.info(`[EventStreamProcessor] Processing session change: ${session.session_id} with ${session.messages?.length || 0} messages and agent_config: ${session.agent_config?.key || 'none'}`);
     
-    // Update the session in SessionManager with the converted version
+    // Update the session in ChatSessionManager with the converted version
     this.sessionManager.setCurrentSession(session);
     
     // Reset the message builder for new session context
@@ -655,9 +898,79 @@ export class EventStreamProcessor {
       message = this.convertMessageParam(messageParam);
     } else {
       // Fallback for malformed messages
+      let fallbackContent = '[User message]';
+      if (messageParam !== null && messageParam !== undefined) {
+        try {
+          fallbackContent = JSON.stringify(messageParam);
+        } catch (e) {
+          // Keep default fallback if stringify fails
+        }
+      }
       message = {
         role: 'user',
-        content: JSON.stringify(messageParam) || '[User message]',
+        content: fallbackContent,
+        timestamp: new Date().toISOString(),
+        format: 'text'
+      };
+    }
+    
+    // Check for sub-session using SessionEvent fields
+    if (this.isSubSession(event)) {
+      // Add sub-session metadata to the message
+      (message as any).isSubSession = true;
+      (message as any).metadata = {
+        sessionId: event.session_id,
+        parentSessionId: event.parent_session_id,
+        userSessionId: event.user_session_id
+      };
+      
+      Logger.debug(`[EventStreamProcessor] Sub-session detected: ${event.session_id} (parent: ${event.parent_session_id})`);
+    }
+    
+    // Add to current session
+    const session = this.sessionManager.getCurrentSession();
+    if (session) {
+      session.messages.push(message);
+      session.updated_at = new Date().toISOString();
+      
+      // Emit for UI consumption
+      this.sessionManager.emit('message-added', {
+        sessionId: session.session_id,
+        message
+      });
+    }
+    
+    // Also emit the original user-message event for backward compatibility
+    this.sessionManager.emit('user-message', {
+      vendor: event.vendor,
+      message: event.message
+    });
+  }
+  
+  /**
+   * Handle OpenAI-specific user message events with sub-session detection
+   */
+  private handleOpenAIUserMessage(event: OpenAIUserMessageEvent): void {
+    // Convert the OpenAI message to our normalized format
+    const messageParam = event.message as any;
+    let message: Message;
+    
+    // Check if it has the expected MessageParam structure
+    if (messageParam && messageParam.content !== undefined && messageParam.role !== undefined) {
+      message = this.convertMessageParam(messageParam);
+    } else {
+      // Fallback for malformed messages
+      let fallbackContent = '[User message]';
+      if (messageParam !== null && messageParam !== undefined) {
+        try {
+          fallbackContent = JSON.stringify(messageParam);
+        } catch (e) {
+          // Keep default fallback if stringify fails
+        }
+      }
+      message = {
+        role: 'user',
+        content: fallbackContent,
         timestamp: new Date().toISOString(),
         format: 'text'
       };
@@ -883,7 +1196,10 @@ export class EventStreamProcessor {
     // Clear any active tool calls
     const activeNotifications = this.toolCallManager.getActiveNotifications();
     activeNotifications.forEach(notification => {
-      this.sessionManager.emit('tool-notification-removed', notification.id);
+      this.sessionManager.emit('tool-notification-removed', {
+        sessionId: notification.sessionId,
+        toolCallId: notification.id
+      });
     });
     
     // Reset state for clean slate
@@ -912,7 +1228,8 @@ export class EventStreamProcessor {
       // Handle based on role
       if (message.role === 'assistant') {
         // Process assistant message and collect the results
-        const result = this.processAssistantMessageForResume(message, messages[i + 1], sessionId);
+        // Pass processedMessages so function can look backward for tool attachment
+        const result = this.processAssistantMessageForResume(message, messages[i + 1], sessionId, processedMessages);
         processedMessages.push(...result.messages);
         // Skip the next message if it was consumed as a tool result
         if (result.messagesConsumed > 0) {
@@ -963,6 +1280,7 @@ export class EventStreamProcessor {
   reset(): void {
     this.messageBuilder.reset();
     this.toolCallManager.reset();
+    this.recentEventIds.clear(); // Clear deduplication cache
     Logger.info('[EventStreamProcessor] EventStreamProcessor reset');
   }
   
@@ -970,17 +1288,20 @@ export class EventStreamProcessor {
    * Clean up resources
    */
   destroy(): void {
-    this.reset();
     Logger.info('[EventStreamProcessor] EventStreamProcessor destroyed');
   }
   
   /**
    * Process an assistant message for resume and return messages instead of emitting events
+   * 
+   * NOTE: processedMessages parameter is the array of messages built up so far during resume.
+   * This allows us to look backward and attach tool calls to previous messages.
    */
   private processAssistantMessageForResume(
     message: MessageParam,
-    _nextMessage: MessageParam | undefined,
-    _sessionId: string
+    nextMessage: MessageParam | undefined,
+    sessionId: string,
+    processedMessages: Message[]
   ): { messages: Message[], messagesConsumed: number } {
     const messages: Message[] = [];
     let messagesConsumed = 0;
@@ -989,6 +1310,8 @@ export class EventStreamProcessor {
     if (message.content && Array.isArray(message.content)) {
       let hasTextContent = false;
       const textParts: string[] = [];
+      const toolCalls: Array<{ id: string; type: 'tool_use'; name: string; input: Record<string, unknown> }> = [];
+      const toolResults: Array<{ type: 'tool_result'; tool_use_id: string; content: string; is_error?: boolean }> = [];
       
       for (const block of message.content) {
         if (isTextBlockParam(block)) {
@@ -999,7 +1322,7 @@ export class EventStreamProcessor {
           if (block.name === 'think') {
             const thoughtContent = (block.input as any).thought || '';
             messages.push({
-              role: 'assistant (thought)' as any, // Special role for thoughts
+              role: 'assistant (thought)' as any,
               content: thoughtContent,
               timestamp: new Date().toISOString(),
               format: 'markdown'
@@ -1010,7 +1333,6 @@ export class EventStreamProcessor {
           
           // DELEGATION TOOLS - Special handling
           if (this.isDelegationTool(block.name)) {
-            // Emit subsession events for UI
             const subSessionType = block.name.includes('oneshot') ? 'oneshot' : 'chat';
             const subAgentKey = (block.input as any).agent_key || 'clone';
             
@@ -1021,7 +1343,6 @@ export class EventStreamProcessor {
               subAgentKey
             });
             
-            // Extract user message from tool input
             const request = (block.input as any).request || (block.input as any).message || '';
             const processContext = (block.input as any).process_context || '';
             const userContent = processContext ? 
@@ -1035,12 +1356,11 @@ export class EventStreamProcessor {
               format: 'text'
             } as Message);
             
-            // Extract assistant message from tool result if available
-            if (_nextMessage && _nextMessage.role === 'user' && _nextMessage.content) {
+            if (nextMessage && nextMessage.role === 'user' && nextMessage.content) {
               let resultContent = '';
               
-              if (Array.isArray(_nextMessage.content)) {
-                for (const resultBlock of _nextMessage.content) {
+              if (Array.isArray(nextMessage.content)) {
+                for (const resultBlock of nextMessage.content) {
                   if ('type' in resultBlock && resultBlock.type === 'tool_result') {
                     const content = (resultBlock as any).content || '';
                     resultContent = this.parseAssistantFromDelegationResult(content);
@@ -1059,27 +1379,159 @@ export class EventStreamProcessor {
               }
             }
             
-            // Emit subsession ended
             this.sessionManager.emit('subsession-ended', {});
-            
-            messagesConsumed = 1; // Consumed the tool result message
+            messagesConsumed = 1;
             continue;
           }
           
-          // Regular tool calls - skip for now in resume
-          messagesConsumed = 1;
+          // REGULAR TOOL CALLS - Extract for attachment
+          Logger.debug(`[EventStreamProcessor] Extracting resumed tool call: ${block.name} (${block.id})`);
+          
+          toolCalls.push({
+            id: block.id,
+            type: block.type as 'tool_use',
+            name: block.name,
+            input: block.input as Record<string, unknown>
+          });
+          
+          // Find matching result in next message
+          if (nextMessage && nextMessage.role === 'user' && Array.isArray(nextMessage.content)) {
+            for (const resultBlock of nextMessage.content) {
+              if ('type' in resultBlock && resultBlock.type === 'tool_result') {
+                const toolResultBlock = resultBlock as any;
+                if (toolResultBlock.tool_use_id === block.id) {
+                  Logger.debug(`[EventStreamProcessor] Found matching tool result for ${block.id}`);
+                  toolResults.push({
+                    type: 'tool_result',
+                    tool_use_id: toolResultBlock.tool_use_id,
+                    content: toolResultBlock.content || '',
+                    is_error: toolResultBlock.is_error
+                  });
+                  break;
+                }
+              }
+            }
+          }
         }
       }
       
-      // Add any text content as a regular message
+      // Consume the tool result message if we extracted tool calls
+      if (toolCalls.length > 0) {
+        messagesConsumed = 1;
+      }
+      
+      // Handle tool calls - attach backward or buffer forward
+      if (toolCalls.length > 0) {
+        Logger.info(`[EventStreamProcessor] Processing ${toolCalls.length} tool calls from resumed message`);
+        
+        // Look BACKWARD in processedMessages for previous assistant/thought message
+        // BUT: Stop if we hit a user message - tool calls belong to THIS turn, not a previous turn
+        let attachedBackward = false;
+        for (let i = processedMessages.length - 1; i >= 0; i--) {
+          const prevMsg = processedMessages[i] as any;
+          
+          // Stop if we hit a user message - tool calls can't attach to messages before the user spoke
+          if (prevMsg.role === 'user') {
+            Logger.debug(`[EventStreamProcessor] Hit user message while looking backward during resume - stopping search`);
+            break;
+          }
+          
+          if (prevMsg.role === 'assistant' || prevMsg.role === 'assistant (thought)') {
+            Logger.info(`[EventStreamProcessor] Attaching ${toolCalls.length} tool calls backward to previous message`);
+            
+            // Initialize metadata and arrays if needed
+            prevMsg.metadata = prevMsg.metadata || {};
+            prevMsg.toolCalls = prevMsg.toolCalls || [];
+            prevMsg.toolResults = prevMsg.toolResults || [];
+            prevMsg.metadata.toolCalls = prevMsg.metadata.toolCalls || [];
+            prevMsg.metadata.toolResults = prevMsg.metadata.toolResults || [];
+            
+            // APPEND tool calls (don't replace!)
+            prevMsg.toolCalls.push(...toolCalls);
+            prevMsg.toolResults.push(...toolResults);
+            prevMsg.metadata.toolCalls.push(...toolCalls);
+            prevMsg.metadata.toolResults.push(...toolResults);
+            
+            attachedBackward = true;
+            break;
+          }
+        }
+        
+        // If no previous message found, buffer for NEXT message
+        if (!attachedBackward) {
+          Logger.info(`[EventStreamProcessor] No previous message found - buffering ${toolCalls.length} tool calls for next message`);
+          
+          // Convert to ToolCallWithResult format
+          const toolCallsWithResults = toolCalls.map(tc => {
+            const result = toolResults.find(tr => tr.tool_use_id === tc.id);
+            return {
+              id: tc.id,
+              type: tc.type,
+              name: tc.name,
+              input: tc.input,
+              result: result
+            };
+          });
+          
+          this.sessionManager.bufferPendingToolCalls(sessionId, toolCallsWithResults);
+        }
+        
+        // Don't create a message for tool-only assistant messages
+        // Tool calls attach to other messages, never standalone
+      }
+      
+      // Create message if there's text content
       if (hasTextContent) {
         const combinedText = textParts.join('');
-        messages.push({
+        const msg: any = {
           role: 'assistant',
           content: combinedText,
           timestamp: new Date().toISOString(),
           format: 'text'
-        } as Message);
+        };
+        
+        // Check for buffered tool calls to attach forward
+        const buffered = this.sessionManager.getPendingToolCalls(sessionId);
+        if (buffered.length > 0) {
+          Logger.info(`[EventStreamProcessor] Attaching ${buffered.length} buffered tool calls forward to text message`);
+          
+          // Convert buffered ToolCallWithResult back to separate arrays
+          const bufferedToolCalls = buffered.map(tc => ({
+            id: tc.id,
+            type: tc.type,
+            name: tc.name,
+            input: tc.input
+          }));
+          const bufferedToolResults = buffered
+            .filter(tc => tc.result)
+            .map(tc => tc.result!);
+          
+          // Combine current tool calls with buffered ones
+          const allToolCalls = [...bufferedToolCalls, ...toolCalls];
+          const allToolResults = [...bufferedToolResults, ...toolResults];
+          
+          if (allToolCalls.length > 0) {
+            msg.metadata = {
+              toolCalls: allToolCalls,
+              toolResults: allToolResults
+            };
+            msg.toolCalls = allToolCalls;
+            msg.toolResults = allToolResults;
+          }
+          
+          // Clear the buffer
+          this.sessionManager.clearPendingToolCalls(sessionId);
+        } else if (toolCalls.length > 0) {
+          // Just current tool calls, no buffered ones
+          msg.metadata = {
+            toolCalls: toolCalls,
+            toolResults: toolResults
+          };
+          msg.toolCalls = toolCalls;
+          msg.toolResults = toolResults;
+        }
+        
+        messages.push(msg as Message);
       }
     } else {
       // Simple text message

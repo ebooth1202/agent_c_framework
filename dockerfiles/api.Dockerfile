@@ -29,7 +29,7 @@ RUN chown -R agent_c:agent_c /app
 USER agent_c
 # Install Python dependencies
 WORKDIR /app/src
-RUN pip install ace_proto/ts_tool-0.1.0-py3-none-any.whl
+#RUN pip install ace_proto/ts_tool-0.1.0-py3-none-any.whl
 RUN pip install  -e agent_c_core \
     && pip install -e agent_c_tools \
     && pip install -e agent_c_api_ui/agent_c_api
@@ -42,7 +42,7 @@ ENV ENHANCED_DEBUG_INFO="True"
 ENV ENVIRONMENT="LOCAL_DEV"
 ENV CLI_CHAT_USER_ID="Taytay"
 ENV DALLE_IMAGE_SAVE_FOLDER="/app/images"
-
+ENV RUNNING_IN_DOCKER="True"
 
 
 # Expose the FastAPI server port

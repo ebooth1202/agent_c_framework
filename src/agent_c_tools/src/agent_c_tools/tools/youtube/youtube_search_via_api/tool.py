@@ -34,6 +34,39 @@ class YouTubeSearchError(YouTubeError):
 
 
 class YoutubeSearchViaApiTools(YouTubeBase):
+    """
+    YouTube video search tool using the official YouTube Data API.
+    
+    This toolset provides comprehensive video search capabilities using YouTube's official Data API v3.
+    It retrieves detailed video metadata including statistics, thumbnails, and content details.
+    
+    Available Methods:
+        - search_for_videos: Search for videos using hashtags, tags, or search terms with advanced filtering
+    
+    Key Features:
+        - Multi-criteria search (hashtags, tags, regular terms)
+        - Multiple ordering options (date, rating, relevance, title, viewCount)
+        - Time frame filtering (last hour, today, this week, this month, this year, all time)
+        - Comprehensive video metadata (views, likes, comments, duration, definition, captions)
+        - Batch video detail retrieval for efficiency
+        - Thumbnail selection (highest quality available)
+        - Channel information included
+        - Tag and content details extraction
+        - Automatic result caching
+        - Workspace file integration
+    
+    Requirements:
+        - YouTube Data API v3 credentials (via YouTubeBase)
+        - WorkspaceTools (for file operations)
+        - requests Python package
+    
+    Usage Notes:
+        - Maximum 50 results per search (API limitation)
+        - Uses API quotas - caching helps reduce usage
+        - Results include HD/SD designation and caption availability
+        - Duration formatted as human-readable (M:SS or H:MM:SS)
+        - Search supports embeddable videos only
+    """
     def __init__(self, **kwargs):
         super().__init__(**kwargs, name='youtube_search_api')
         self.logger: logging.Logger = logging.getLogger(__name__)

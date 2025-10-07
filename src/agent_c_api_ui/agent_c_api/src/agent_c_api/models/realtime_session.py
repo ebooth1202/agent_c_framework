@@ -23,4 +23,4 @@ class RealtimeSession(BaseModel):
         Returns:
             A unique session ID string.
         """
-        return f"{user_id}-{MnemonicSlugs.generate_slug(2)}"
+        return f"UI-{user_id}-{MnemonicSlugs.generate_slug(2)}"

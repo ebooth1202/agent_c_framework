@@ -20,26 +20,5 @@ from . import workspace_sequential_thinking  # Workspace Sequential Thinking too
 from . import browser_playwright  # Browser Playwright toolset
 from . import insurance_demo  # Insurance Demo toolset
 from . import sars  # SARS toolset
+from agent_c.toolsets.claude_server_tools import ClaudeWebSearchTools, ClaudeWebFetchTools, ClaudeComputerUseTools, ClaudeCodeExecutionTools
 
-__all__ = [
-    'workspace',
-    'web', 
-    'web_search', 
-    'memory',
-    'think',
-    'mermaid_chart',
-    'user_bio',
-    'weather',
-    'random_number',
-    'xml_explorer',
-    'css_explorer',
-    'mariadb',
-    'reverse_engineering',
-    'math',
-    'workspace_planning',
-    'workspace_knowledge',
-    'workspace_sequential_thinking',
-    'browser_playwright',
-    'sars',
-    'insurance_demo',
-]

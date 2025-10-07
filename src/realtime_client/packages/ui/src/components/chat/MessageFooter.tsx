@@ -306,7 +306,7 @@ export const MessageFooter = React.forwardRef<HTMLDivElement, MessageFooterProps
     const hasToolCalls = message.toolCalls && message.toolCalls.length > 0
     const hasTokenCounts = message.metadata?.inputTokens || message.metadata?.outputTokens
     const isUserMessage = message.role === 'user'
-    const isAssistantMessage = message.role === 'assistant'
+    const isAssistantMessage = message.role === 'assistant' || message.role === 'assistant (thought)'
     
     // Format timestamp
     const formattedTime = React.useMemo(() => {

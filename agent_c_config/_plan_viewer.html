@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Centric Plan Viewer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+    /* Centric Brand Palette */
+    --brand-indigo: #2c1a5d;   /* Primary - Indigo */
+    --brand-gold: #fdb825;     /* Primary Accent - Gold */
+    --brand-peacock: #1f5d82;  /* Secondary - Peacock */
+    --brand-gulfstream: #6ca7d0; /* Secondary - Gulfstream */
+    --brand-slate: #232d3d;    /* Neutral - Slate */
+    --brand-shamrock: #2fb677; /* Accent - Shamrock (Success) */
+    --brand-glacier: #67686a;  /* Neutral - Glacier (Body text) */
+    --brand-cerulean: #2d84bb; /* Accent - Cerulean */
+    --brand-midnight: #404041; /* Neutral - Midnight (Headings) */
+    --brand-gray-50: #ebebeb;  /* Cool Gray 1 (50%) for light backgrounds */
+
+    /* App Theme Tokens mapped to brand */
+    --centric-blue: var(--brand-indigo);
+    --centric-blue-dark: var(--brand-peacock);
+    --centric-blue-light: var(--brand-gulfstream);
+
+    /* Neutral scale tuned around Centric neutrals */
+    --centric-gray-50: var(--brand-gray-50);
+    --centric-gray-100: #f3f3f3;
+    --centric-gray-200: #e6e6e6;
+    --centric-gray-300: #d4d4d4;
+    --centric-gray-600: var(--brand-glacier);
+    --centric-gray-700: var(--brand-midnight);
+    --centric-gray-800: var(--brand-slate);
+    --centric-gray-900: #13161c;
+
+    /* Status colors aligned to brand */
+    --success-green: var(--brand-shamrock);
+    --warning-orange: var(--brand-gold);
+    --error-red: #ef4444; /* keep a distinct error red */
+}* {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--centric-gray-50) 0%, var(--centric-gray-100) 100%);
+            color: var(--centric-gray-800);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--brand-indigo) 0%, var(--brand-peacock) 100%);
+            color: white;
+            padding: 2rem 0;
+            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.15);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .upload-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            margin-bottom: 2rem;
+            border: 2px dashed var(--centric-gray-200);
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .upload-section:hover {
+            border-color: var(--brand-indigo);
+            background: var(--centric-gray-50);
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-label {
+            background: var(--brand-gold);
+            color: white;
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            transition: background-color 0.3s ease;
+        }
+
+        .file-label:hover {
+            background: #d39e1f;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+        }
+
+        .stat-icon.total { background: var(--brand-gold); }
+        .stat-icon.completed { background: var(--success-green); }
+        .stat-icon.in-progress { background: var(--warning-orange); }
+        .stat-icon.high-priority { background: var(--error-red); }
+
+        .stat-content h3 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--centric-gray-800);
+        }
+
+        .stat-content p {
+            color: var(--centric-gray-600);
+            font-weight: 500;
+        }
+
+        .filters {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .filter-select {
+            padding: 0.5rem 1rem;
+            border: 2px solid var(--centric-gray-200);
+            border-radius: 8px;
+            background: white;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--brand-indigo);
+        }
+
+        .plans-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+
+        .plan-header {
+            background: var(--centric-gray-50);
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--centric-gray-200);
+        }
+
+        .plan-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--centric-gray-800);
+            margin-bottom: 0.5rem;
+        }
+
+        .plan-meta {
+            display: flex;
+            gap: 2rem;
+            color: var(--centric-gray-600);
+            font-size: 0.9rem;
+        }
+
+        .tasks-list {
+            padding: 1rem;
+        }
+
+        .task-item {
+            background: var(--centric-gray-50);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            border-left: 4px solid var(--centric-gray-300);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .task-item:hover {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        .task-item.completed {
+            border-left-color: var(--success-green);
+            opacity: 0.8;
+        }
+
+        .task-item.high {
+            border-left-color: var(--error-red);
+        }
+
+        .task-item.medium {
+            border-left-color: var(--warning-orange);
+        }
+
+        .task-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .task-item.task-child {
+            border-left: 2px solid var(--centric-gray-200);
+        }
+
+        .task-item.task-expandable {
+            border-radius: 8px 8px 0 0;
+        }
+
+        .task-children {
+            border-left: 2px solid var(--centric-gray-200);
+            transition: max-height 0.3s ease, opacity 0.3s ease;
+            overflow: hidden;
+        }
+
+        .task-children.collapsed {
+            max-height: 0;
+            opacity: 0;
+        }
+
+        .task-title-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+        }
+
+        .task-expand-icon {
+            color: var(--brand-indigo);
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            font-size: 0.8rem;
+        }
+
+        .task-expand-icon:hover {
+            color: var(--centric-blue-dark);
+        }
+
+        .task-expand-icon.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .task-bullet {
+            color: var(--centric-gray-400);
+            font-size: 0.4rem;
+        }
+
+        .children-count {
+            color: var(--centric-gray-500);
+            font-size: 0.8rem;
+            font-weight: normal;
+        }
+
+        .task-title {
+            font-weight: 600;
+            color: var(--centric-gray-800);
+        }
+
+        .task-badges {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 16px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge.completed {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success-green);
+        }
+
+        .badge.pending {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning-orange);
+        }
+
+        .badge.high {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--error-red);
+        }
+
+        .badge.medium {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning-orange);
+        }
+
+        .badge.low {
+            background: rgba(34, 197, 94, 0.1);
+            color: var(--success-green);
+        }
+
+        .task-description {
+            color: var(--centric-gray-600);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .task-meta {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.8rem;
+            color: var(--centric-gray-500);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: var(--centric-gray-200);
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--brand-indigo) 0%, var(--brand-gulfstream) 100%);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--centric-gray-500);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .header-content {
+                padding: 0 1rem;
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .filters {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .task-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+
+            .plan-meta {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <i class="fas fa-project-diagram"></i>
+                Centric Plan Viewer
+            </div>
+            <div class="header-meta" id="headerMeta"></div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="upload-section" id="uploadSection">
+            <i class="fas fa-cloud-upload-alt" style="font-size: 3rem; color: var(--brand-indigo); margin-bottom: 1rem;"></i>
+            <h3>Load Your Plan File</h3>
+            <p style="margin: 1rem 0; color: var(--centric-gray-600);">Select a YAML file to view your project plans and tasks</p>
+            <label for="fileInput" class="file-label">
+                <i class="fas fa-folder-open"></i>
+                Choose YAML File
+            </label>
+            <input type="file" id="fileInput" class="file-input" accept=".yaml,.yml">
+        </div>
+
+        <div id="content" style="display: none;">
+            <div class="dashboard" id="dashboard"></div>
+
+            <div class="filters">
+                <div class="filter-group">
+                    <label><strong>Status:</strong></label>
+                    <select id="statusFilter" class="filter-select">
+                        <option value="all">All Tasks</option>
+                        <option value="completed">Completed</option>
+                        <option value="pending">Pending</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label><strong>Priority:</strong></label>
+                    <select id="priorityFilter" class="filter-select">
+                        <option value="all">All Priorities</option>
+                        <option value="high">High</option>
+                        <option value="medium">Medium</option>
+                        <option value="low">Low</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="plansContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentData = null;
+
+        // Make toggleTaskChildren globally available
+        window.toggleTaskChildren = function(iconElement) {
+            const taskItem = iconElement.closest('.task-item');
+
+            // Find the children container that comes after this task
+            const nextElement = taskItem.nextElementSibling;
+            if (nextElement && nextElement.classList.contains('task-children')) {
+                const isCollapsed = nextElement.classList.contains('collapsed');
+
+                if (isCollapsed) {
+                    nextElement.classList.remove('collapsed');
+                    iconElement.classList.remove('collapsed');
+                    nextElement.style.maxHeight = nextElement.scrollHeight + 'px';
+                } else {
+                    nextElement.classList.add('collapsed');
+                    iconElement.classList.add('collapsed');
+                    nextElement.style.maxHeight = '0px';
+                }
+            }
+        };
+
+        document.getElementById('fileInput').addEventListener('change', handleFileLoad);
+        document.getElementById('statusFilter').addEventListener('change', applyFilters);
+        document.getElementById('priorityFilter').addEventListener('change', applyFilters);
+
+        function handleFileLoad(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    currentData = jsyaml.load(e.target.result);
+                    displayPlans(currentData);
+                    document.getElementById('uploadSection').style.display = 'none';
+                    document.getElementById('content').style.display = 'block';
+                } catch (error) {
+                    alert('Error parsing YAML file: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function displayPlans(data) {
+            if (!data._plans) {
+                document.getElementById('plansContainer').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><h3>No plans found in this file</h3></div>';
+                return;
+            }
+
+            updateDashboard(data._plans);
+            updateHeaderMeta(data._plans);
+            renderPlans(data._plans);
+        }
+
+        function updateDashboard(plans) {
+            const dashboard = document.getElementById('dashboard');
+            const stats = calculateStats(plans);
+
+            dashboard.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-icon total">
+                        <i class="fas fa-tasks"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>${stats.totalTasks}</h3>
+                        <p>Total Tasks</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon completed">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>${stats.completedTasks}</h3>
+                        <p>Completed</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon in-progress">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>${stats.pendingTasks}</h3>
+                        <p>Pending</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon high-priority">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>${stats.highPriorityTasks}</h3>
+                        <p>High Priority</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateHeaderMeta(plans) {
+            const headerMeta = document.getElementById('headerMeta');
+            const stats = calculateStats(plans);
+            const completionRate = stats.totalTasks > 0 ? Math.round((stats.completedTasks / stats.totalTasks) * 100) : 0;
+
+            headerMeta.innerHTML = `
+                <div style="text-align: right;">
+                    <div style="font-size: 1.2rem; font-weight: 600;">${completionRate}% Complete</div>
+                    <div style="opacity: 0.9;">${stats.completedTasks}/${stats.totalTasks} tasks</div>
+                </div>
+            `;
+        }
+
+        function calculateStats(plans) {
+            let totalTasks = 0;
+            let completedTasks = 0;
+            let highPriorityTasks = 0;
+
+            Object.values(plans).forEach(plan => {
+                if (plan.tasks) {
+                    Object.values(plan.tasks).forEach(task => {
+                        totalTasks++;
+                        if (task.completed) completedTasks++;
+                        if (task.priority === 'high') highPriorityTasks++;
+                    });
+                }
+            });
+
+            return {
+                totalTasks,
+                completedTasks,
+                pendingTasks: totalTasks - completedTasks,
+                highPriorityTasks
+            };
+        }
+
+        function renderPlans(plans) {
+            const container = document.getElementById('plansContainer');
+            container.innerHTML = '';
+
+            Object.values(plans).forEach(plan => {
+                const planElement = createPlanElement(plan);
+                container.appendChild(planElement);
+            });
+        }
+
+        function createPlanElement(plan) {
+            const planDiv = document.createElement('div');
+            planDiv.className = 'plans-container';
+
+            const tasks = plan.tasks ? Object.values(plan.tasks) : [];
+            const completedCount = tasks.filter(t => t.completed).length;
+            const progressPercent = tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0;
+
+            // Build hierarchical task structure
+            const taskHierarchy = buildTaskHierarchy(tasks);
+
+            planDiv.innerHTML = `
+                <div class="plan-header">
+                    <h2 class="plan-title">${plan.title || 'Untitled Plan'}</h2>
+                    <div class="plan-meta">
+                        <span><i class="fas fa-calendar"></i> Created: ${formatDate(plan.created_at)}</span>
+                        <span><i class="fas fa-edit"></i> Updated: ${formatDate(plan.updated_at)}</span>
+                        <span><i class="fas fa-tasks"></i> Tasks: ${tasks.length}</span>
+                    </div>
+                    ${plan.description ? `<p style="margin-top: 1rem; color: var(--centric-gray-600);">${plan.description}</p>` : ''}
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${progressPercent}%"></div>
+                    </div>
+                </div>
+                <div class="tasks-list" id="tasks-${plan.id}">
+                    ${tasks.length > 0 ? renderTaskHierarchy(taskHierarchy) : '<div class="empty-state"><i class="fas fa-clipboard-list"></i><p>No tasks found</p></div>'}
+                </div>
+            `;
+
+            return planDiv;
+        }
+
+        function buildTaskHierarchy(tasks) {
+            // Create a map of all tasks by ID
+            const taskMap = new Map();
+            tasks.forEach(task => taskMap.set(task.id, { ...task, children: [] }));
+
+            // Build the hierarchy
+            const rootTasks = [];
+            tasks.forEach(task => {
+                const taskNode = taskMap.get(task.id);
+                if (task.parent_id && taskMap.has(task.parent_id)) {
+                    // This is a child task
+                    const parent = taskMap.get(task.parent_id);
+                    parent.children.push(taskNode);
+                } else {
+                    // This is a root task
+                    rootTasks.push(taskNode);
+                }
+            });
+
+            // Sort root tasks by sequence
+            rootTasks.sort((a, b) => (a.sequence || 0) - (b.sequence || 0));
+
+            // Recursively sort children
+            function sortChildren(task) {
+                task.children.sort((a, b) => (a.sequence || 0) - (b.sequence || 0));
+                task.children.forEach(sortChildren);
+            }
+            rootTasks.forEach(sortChildren);
+
+            return rootTasks;
+        }
+
+        function renderTaskHierarchy(tasks, depth = 0) {
+            return tasks.map(task => createTaskElement(task, depth)).join('');
+        }
+
+        function createTaskElement(task, depth = 0) {
+            const priorityClass = task.priority || 'low';
+            const statusClass = task.completed ? 'completed' : 'pending';
+            const hasChildren = task.children && task.children.length > 0;
+            const indentClass = depth > 0 ? 'task-child' : '';
+            const expandableClass = hasChildren ? 'task-expandable' : '';
+
+            const childrenHtml = hasChildren ? renderTaskHierarchy(task.children, depth + 1) : '';
+
+            return `
+                <div class="task-item ${statusClass} ${priorityClass} ${indentClass} ${expandableClass}"
+                     data-status="${statusClass}"
+                     data-priority="${priorityClass}"
+                     data-depth="${depth}"
+                     style="margin-left: ${depth * 20}px;">
+                    <div class="task-header">
+                        <div class="task-title-wrapper">
+                            ${hasChildren ? `<i class="task-expand-icon fas fa-chevron-down" onclick="toggleTaskChildren(this)"></i>` : '<i class="task-bullet fas fa-circle"></i>'}
+                            <span class="task-title">${task.title || 'Untitled Task'}</span>
+                            ${hasChildren ? `<span class="children-count">(${task.children.length} subtasks)</span>` : ''}
+                        </div>
+                        <div class="task-badges">
+                            <span class="badge ${statusClass}">${task.completed ? 'Completed' : 'Pending'}</span>
+                            <span class="badge ${priorityClass}">${task.priority || 'Low'}</span>
+                        </div>
+                    </div>
+                    ${task.description ? `<div class="task-description">${task.description}</div>` : ''}
+                    <div class="task-meta">
+                        <span><i class="fas fa-hashtag"></i> Seq: ${task.sequence || 'N/A'}</span>
+                        <span><i class="fas fa-calendar-plus"></i> Created: ${formatDate(task.created_at)}</span>
+                        ${task.updated_at ? `<span><i class="fas fa-calendar-edit"></i> Updated: ${formatDate(task.updated_at)}</span>` : ''}
+                    </div>
+                    ${task.completion_report ? `<div style="margin-top: 0.5rem; padding: 0.75rem; background: var(--centric-gray-100); border-radius: 6px; font-size: 0.9rem;"><strong>Report:</strong> ${task.completion_report}</div>` : ''}
+                </div>
+                ${hasChildren ? `<div class="task-children" data-parent="${task.id}">${childrenHtml}</div>` : ''}
+            `;
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            try {
+                return new Date(dateString).toLocaleDateString();
+            } catch {
+                return dateString;
+            }
+        }
+
+        function applyFilters() {
+            const statusFilter = document.getElementById('statusFilter').value;
+            const priorityFilter = document.getElementById('priorityFilter').value;
+
+            const tasks = document.querySelectorAll('.task-item');
+            const childrenContainers = document.querySelectorAll('.task-children');
+
+            tasks.forEach(task => {
+                const taskStatus = task.dataset.status;
+                const taskPriority = task.dataset.priority;
+
+                const statusMatch = statusFilter === 'all' || taskStatus === statusFilter;
+                const priorityMatch = priorityFilter === 'all' || taskPriority === priorityFilter;
+
+                if (statusMatch && priorityMatch) {
+                    task.style.display = 'block';
+                } else {
+                    task.style.display = 'none';
+                }
+            });
+
+            // Also handle children containers
+            childrenContainers.forEach(container => {
+                const visibleChildren = container.querySelectorAll('.task-item:not([style*="display: none"])');
+                if (visibleChildren.length > 0) {
+                    container.style.display = 'block';
+                } else {
+                    container.style.display = 'none';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

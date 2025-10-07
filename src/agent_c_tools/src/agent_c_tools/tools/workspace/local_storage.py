@@ -40,8 +40,8 @@ class LocalStorageWorkspace(BaseWorkspace):
         self.allow_symlinks: bool = kwargs.get('allow_symlinks', 'local' in env or 'dev' in env)
         self.logger: logging.Logger = logging.getLogger(__name__)
 
-        if self.allow_symlinks:
-            self.logger.info("Symlink paths are allowed in workspace")
+        #if self.allow_symlinks:
+        #    self.logger.info("Symlink paths are allowed in workspace")
 
         self.max_filename_length = 200
 

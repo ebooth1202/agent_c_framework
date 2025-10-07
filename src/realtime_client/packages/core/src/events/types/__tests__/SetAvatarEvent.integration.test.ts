@@ -10,6 +10,7 @@ import { EventEmitter } from '../../EventEmitter';
 import type { SetAvatarEvent, ClientEvent } from '../ClientEvents';
 import type { AvatarConnectionChangedEvent } from '../ServerEvents';
 import { clientEventFixtures, serverEventFixtures } from '../../../test/fixtures/protocol-events';
+import { Logger } from '../../../utils/logger';
 
 // WebSocket constants for test environment
 const WS_OPEN = 1;
@@ -431,19 +432,28 @@ describe('SetAvatarEvent Integration', () => {
       });
     });
 
-    it('should handle max listeners warning', () => {
+    it('should handle high listener count warning', () => {
       // Arrange
-      emitter.setMaxListeners(2);
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const warnSpy = vi.spyOn(Logger, 'warn').mockImplementation(() => {});
 
-      // Act - Add more than max listeners
-      emitter.on('set_avatar', vi.fn());
-      emitter.on('set_avatar', vi.fn());
-      emitter.on('set_avatar', vi.fn()); // Should trigger warning
+      // Act - Add more than HIGH_LISTENER_THRESHOLD (10) listeners
+      // EventEmitter warns when listener count exceeds 10
+      for (let i = 0; i < 12; i++) {
+        emitter.on('set_avatar', vi.fn());
+      }
 
-      // Assert
+      // Assert - Logger.warn should be called with high listener count message
       expect(warnSpy).toHaveBeenCalled();
-      expect(warnSpy.mock.calls[0][0]).toContain('Possible EventEmitter memory leak');
+      const warnCall = warnSpy.mock.calls.find(call => 
+        call[0] === '[EventEmitter] High listener count detected'
+      );
+      expect(warnCall).toBeDefined();
+      expect(warnCall![1]).toMatchObject({
+        event: 'set_avatar',
+        count: expect.any(Number),
+        threshold: 10,
+        message: expect.stringContaining('Possible listener leak')
+      });
       
       warnSpy.mockRestore();
     });

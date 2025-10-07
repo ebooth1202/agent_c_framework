@@ -5,12 +5,12 @@
  * 1. Deltas emit `message-streaming` events as they arrive (real-time streaming)
  * 2. Messages accumulate correctly without duplication during streaming
  * 3. Messages are added to the session only once after completion
- * 4. EventStreamProcessor handles the full flow without SessionManager interference
+ * 4. EventStreamProcessor handles the full flow without ChatSessionManager interference
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { EventStreamProcessor } from '../EventStreamProcessor';
-import { SessionManager } from '../../session/SessionManager';
+import { ChatSessionManager } from '../../session/SessionManager';
 import { 
   TextDeltaEvent,
   CompletionEvent,
@@ -24,7 +24,7 @@ import { ChatSession, Message } from '../types/CommonTypes';
 
 describe('EventStreamProcessor - Streaming Delta Assembly', () => {
   let processor: EventStreamProcessor;
-  let sessionManager: SessionManager;
+  let sessionManager: ChatSessionManager;
   let sessionManagerEmitSpy: ReturnType<typeof vi.spyOn>;
   let getCurrentSessionSpy: ReturnType<typeof vi.spyOn>;
   let mockSession: ChatSession;
@@ -44,7 +44,7 @@ describe('EventStreamProcessor - Streaming Delta Assembly', () => {
     };
 
     // Create real instances
-    sessionManager = new SessionManager();
+    sessionManager = new ChatSessionManager();
     processor = new EventStreamProcessor(sessionManager);
     
     // Setup spies
@@ -250,8 +250,8 @@ describe('EventStreamProcessor - Streaming Delta Assembly', () => {
   });
 
   describe('EventStreamProcessor Isolation', () => {
-    it('should handle the full flow without SessionManager text accumulation interference', () => {
-      // Spy on deprecated SessionManager methods that should NOT be called
+    it('should handle the full flow without ChatSessionManager text accumulation interference', () => {
+      // Spy on deprecated ChatSessionManager methods that should NOT be called
       const handleTextDeltaSpy = vi.spyOn(sessionManager, 'handleTextDelta');
       const handleTextDoneSpy = vi.spyOn(sessionManager, 'handleTextDone');
       const resetAccumulatorSpy = vi.spyOn(sessionManager, 'resetAccumulator');
@@ -275,7 +275,7 @@ describe('EventStreamProcessor - Streaming Delta Assembly', () => {
         session_id: 'test-session-123'
       } as CompletionEvent);
 
-      // Verify SessionManager's deprecated methods were NOT called
+      // Verify ChatSessionManager's deprecated methods were NOT called
       expect(handleTextDeltaSpy).not.toHaveBeenCalled();
       expect(handleTextDoneSpy).not.toHaveBeenCalled();
       
@@ -515,8 +515,8 @@ describe('EventStreamProcessor - Streaming Delta Assembly', () => {
       // not by direct event handlers in RealtimeClient
     });
 
-    it('should not allow SessionManager accumulator to interfere with message building', () => {
-      // Get the SessionManager's accumulator state
+    it('should not allow ChatSessionManager accumulator to interfere with message building', () => {
+      // Get the ChatSessionManager's accumulator state
       const initialAccumulator = sessionManager.getAccumulatedText();
       expect(initialAccumulator).toBe('');
 
@@ -527,7 +527,7 @@ describe('EventStreamProcessor - Streaming Delta Assembly', () => {
         session_id: 'test-session-123'
       } as TextDeltaEvent);
 
-      // SessionManager's accumulator should remain empty
+      // ChatSessionManager's accumulator should remain empty
       // (EventStreamProcessor handles its own accumulation)
       expect(sessionManager.getAccumulatedText()).toBe('');
       expect(sessionManager.isAccumulatingText()).toBe(false);
@@ -539,11 +539,11 @@ describe('EventStreamProcessor - Streaming Delta Assembly', () => {
         session_id: 'test-session-123'
       } as CompletionEvent);
 
-      // Message should be in session from EventStreamProcessor, not SessionManager
+      // Message should be in session from EventStreamProcessor, not ChatSessionManager
       expect(mockSession.messages).toHaveLength(1);
       expect(mockSession.messages[0].content).toBe('Message from EventStreamProcessor');
       
-      // SessionManager accumulator should still be empty
+      // ChatSessionManager accumulator should still be empty
       expect(sessionManager.getAccumulatedText()).toBe('');
     });
   });
@@ -675,10 +675,17 @@ describe('EventStreamProcessor - Streaming Delta Assembly', () => {
 
         processor.processEvent(toolSelectEvent);
 
-        expect(sessionManagerEmitSpy).toHaveBeenCalledWith('tool-notification', {
+        // Filter for tool-notification events instead of assuming position
+        const toolNotificationCalls = sessionManagerEmitSpy.mock.calls.filter(
+          call => call[0] === 'tool-notification'
+        );
+        
+        expect(toolNotificationCalls.length).toBeGreaterThan(0);
+        expect(toolNotificationCalls[0][1]).toMatchObject({
           id: 'tool-1',
           toolName: 'calculator',
           status: 'preparing',
+          sessionId: 'test-session-123',
           timestamp: expect.any(Date),
           arguments: JSON.stringify({ operation: 'add', a: 5, b: 3 })
         });
@@ -703,10 +710,17 @@ describe('EventStreamProcessor - Streaming Delta Assembly', () => {
 
         processor.processEvent(thinkSelectEvent);
 
-        expect(sessionManagerEmitSpy).toHaveBeenCalledWith('tool-notification', {
+        // Filter for tool-notification events instead of assuming position
+        const toolNotificationCalls = sessionManagerEmitSpy.mock.calls.filter(
+          call => call[0] === 'tool-notification'
+        );
+        
+        expect(toolNotificationCalls.length).toBeGreaterThan(0);
+        expect(toolNotificationCalls[0][1]).toMatchObject({
           id: 'think-1',
           toolName: 'think',
           status: 'preparing',
+          sessionId: 'test-session-123',
           timestamp: expect.any(Date),
           arguments: '{}'
         });
@@ -755,10 +769,12 @@ describe('EventStreamProcessor - Streaming Delta Assembly', () => {
 
         processor.processEvent(activeEvent);
 
+        // Updated to include sessionId field in expected payload
         expect(sessionManagerEmitSpy).toHaveBeenCalledWith('tool-notification', {
           id: 'tool-1',
           toolName: 'web_search',
           status: 'executing',
+          sessionId: 'test-session-123',
           timestamp: expect.any(Date),
           arguments: JSON.stringify({ query: 'test' })
         });
@@ -792,7 +808,16 @@ describe('EventStreamProcessor - Streaming Delta Assembly', () => {
 
         processor.processEvent(completeEvent);
 
-        expect(sessionManagerEmitSpy).toHaveBeenCalledWith('tool-notification-removed', 'tool-1');
+        // Filter for the removal event instead of assuming position
+        const removalCalls = sessionManagerEmitSpy.mock.calls.filter(
+          call => call[0] === 'tool-notification-removed'
+        );
+        
+        expect(removalCalls.length).toBeGreaterThan(0);
+        expect(removalCalls[0][1]).toMatchObject({
+          sessionId: 'test-session-123',
+          toolCallId: 'tool-1'
+        });
       });
 
       it('should ignore tool_call events for think tool', () => {
@@ -823,9 +848,22 @@ describe('EventStreamProcessor - Streaming Delta Assembly', () => {
 
         processor.processEvent(thinkCallEvent);
 
-        // Should only remove notification, not process the tool call
-        expect(sessionManagerEmitSpy).toHaveBeenCalledWith('tool-notification-removed', 'think-1');
-        expect(sessionManagerEmitSpy).not.toHaveBeenCalledWith('tool-notification', expect.anything());
+        // Filter for the removal event instead of assuming position
+        const removalCalls = sessionManagerEmitSpy.mock.calls.filter(
+          call => call[0] === 'tool-notification-removed'
+        );
+        
+        expect(removalCalls.length).toBeGreaterThan(0);
+        expect(removalCalls[0][1]).toMatchObject({
+          sessionId: 'test-session-123',
+          toolCallId: 'think-1'
+        });
+        
+        // Should not emit new tool notifications (only remove)
+        const notificationCalls = sessionManagerEmitSpy.mock.calls.filter(
+          call => call[0] === 'tool-notification'
+        );
+        expect(notificationCalls.length).toBe(0);
       });
     });
 
@@ -859,8 +897,16 @@ describe('EventStreamProcessor - Streaming Delta Assembly', () => {
 
         processor.processEvent(thoughtDeltaEvent);
 
-        // Should remove the think tool notification
-        expect(sessionManagerEmitSpy).toHaveBeenCalledWith('tool-notification-removed', 'think-1');
+        // Filter for removal event instead of assuming position
+        const removalCalls = sessionManagerEmitSpy.mock.calls.filter(
+          call => call[0] === 'tool-notification-removed'
+        );
+        
+        expect(removalCalls.length).toBeGreaterThan(0);
+        expect(removalCalls[0][1]).toMatchObject({
+          sessionId: 'test-session-123',
+          toolCallId: 'think-1'
+        });
         
         // And emit the thought streaming
         expect(sessionManagerEmitSpy).toHaveBeenCalledWith('message-streaming', {
@@ -910,7 +956,15 @@ describe('EventStreamProcessor - Streaming Delta Assembly', () => {
 
           // First delta should remove notification
           if (index === 0) {
-            expect(sessionManagerEmitSpy).toHaveBeenCalledWith('tool-notification-removed', 'think-2');
+            const removalCalls = sessionManagerEmitSpy.mock.calls.filter(
+              call => call[0] === 'tool-notification-removed'
+            );
+            
+            expect(removalCalls.length).toBeGreaterThan(0);
+            expect(removalCalls[0][1]).toMatchObject({
+              sessionId: 'test-session-123',
+              toolCallId: 'think-2'
+            });
           }
 
           // All deltas should emit streaming

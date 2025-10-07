@@ -3,7 +3,7 @@ name: "SARS Compliance Orchestrator"
 key: "sars_compliance_orchestrator"
 agent_description: |
   A specialized agent designed to orchestrate the complete SARS (Suspicious Activity Report) compliance workflow. This agent coordinates transaction monitoring, external intelligence gathering, pattern analysis, SAR decision application, and report generation to ensure comprehensive financial crime detection and regulatory compliance.
-model_id: "claude-sonnet-4-20250514"
+model_id: "claude-sonnet-4-5"
 tools:
   - ThinkTools
   - WorkspaceTools

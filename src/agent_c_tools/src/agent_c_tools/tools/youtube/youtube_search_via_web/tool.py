@@ -33,6 +33,37 @@ class YouTubeSearchScraperError(YouTubeError):
 
 
 class YoutubeSearchViaWebTools(YouTubeBase):
+    """
+    YouTube video search tool using web scraping (no API quota required).
+    
+    This toolset provides video search capabilities by scraping YouTube's web interface,
+    offering an alternative to the API-based search that doesn't consume API quotas.
+    It's useful for basic searches when API quota conservation is important.
+    
+    Available Methods:
+        - search_for_videos: Search for videos using hashtags, tags, or search terms
+    
+    Key Features:
+        - No API quota consumption (uses web scraping)
+        - Multi-criteria search (hashtags, tags, regular terms)
+        - Ordering by relevance or view count
+        - Basic video metadata (title, description, views, duration, channel, thumbnail)
+        - Automatic result caching
+        - Workspace file integration
+    
+    Requirements:
+        - youtube-search-python package
+        - WorkspaceTools (for file operations)
+        - No YouTube API credentials required
+    
+    Usage Notes:
+        - Limited metadata compared to API version (no likes, comments, tags, or caption info)
+        - Maximum 50 results per search
+        - View counts are parsed from human-readable format (e.g., "1,234 views")
+        - Published times are relative (e.g., "3 hours ago") rather than absolute dates
+        - Best for basic search needs where detailed metadata isn't required
+        - Date-based ordering not reliably supported due to relative time formats
+    """
     def __init__(self, **kwargs):
         super().__init__(**kwargs, name='youtube_search_web')
         self.logger: logging.Logger = logging.getLogger(__name__)

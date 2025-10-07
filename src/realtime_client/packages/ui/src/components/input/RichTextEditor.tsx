@@ -37,6 +37,12 @@ export interface RichTextEditorProps {
   onSubmit: () => void
   
   /**
+   * Callback fired when user pastes content
+   * Used for handling file pastes
+   */
+  onPaste?: (e: React.ClipboardEvent) => void
+  
+  /**
    * Placeholder text shown when the editor is empty
    * @default "Type a message..."
    */
@@ -65,6 +71,7 @@ const RichTextEditor = React.forwardRef<HTMLDivElement, RichTextEditorProps>(
     value, 
     onChange, 
     onSubmit,
+    onPaste,
     placeholder = "Type a message...",
     disabled,
     maxHeight = "max-h-96",
@@ -167,6 +174,7 @@ const RichTextEditor = React.forwardRef<HTMLDivElement, RichTextEditorProps>(
           ref={ref}
           {...editorProps}
           onKeyDown={handleKeyDown}
+          onPaste={onPaste}
           {...props}
         />
         

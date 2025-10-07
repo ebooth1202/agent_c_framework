@@ -143,3 +143,122 @@ export interface ErrorInfo {
   /** Whether the error has been dismissed */
   dismissed: boolean;
 }
+
+// File Upload Types
+
+/**
+ * File attachment with upload metadata
+ * Represents a file being prepared for upload or currently uploading
+ */
+export interface FileAttachment {
+  /** The File object to be uploaded */
+  file: File;
+  /** Unique identifier assigned after successful upload (null if pending/uploading) */
+  id: string | null;
+  /** Current upload status */
+  status: 'pending' | 'uploading' | 'complete' | 'error';
+  /** Upload progress percentage (0-100) */
+  progress: number;
+  /** Error message if status is 'error' */
+  error?: string;
+  /** Optional preview URL for image files (generated from File object) */
+  previewUrl?: string;
+}
+
+/**
+ * Configuration options for the useFileUpload hook
+ */
+export interface UseFileUploadOptions {
+  /** Maximum file size in bytes (default: 10MB) */
+  maxFileSize?: number;
+  /** Allowed MIME types (default: all image types) */
+  allowedMimeTypes?: string[];
+  /** Maximum number of files that can be attached (default: 5) */
+  maxFiles?: number;
+  /** Whether to automatically upload files when added (default: false) */
+  autoUpload?: boolean;
+  /** Whether to generate preview URLs for image files (default: true) */
+  generatePreviews?: boolean;
+}
+
+/**
+ * Return type for the useFileUpload hook
+ * Provides file upload state management and operations
+ */
+export interface UseFileUploadReturn {
+  /** Array of current file attachments */
+  attachments: FileAttachment[];
+  /** Add new files to the attachment list */
+  addFiles: (files: File[]) => Promise<void>;
+  /** Remove a file from the attachment list by index */
+  removeFile: (index: number) => void;
+  /** Upload all pending/error files */
+  uploadAll: () => Promise<void>;
+  /** Upload a specific file by index */
+  uploadFile: (index: number) => Promise<void>;
+  /** Clear all attachments */
+  clearAll: () => void;
+  /** Get array of successfully uploaded file IDs */
+  getUploadedFileIds: () => string[];
+  /** Whether any files are currently uploading */
+  isUploading: boolean;
+  /** Whether all files have completed upload successfully */
+  allComplete: boolean;
+  /** Whether any files have upload errors */
+  hasErrors: boolean;
+  /** Overall upload progress percentage (0-100) */
+  overallProgress: number;
+  /** Current validation error message, if any */
+  validationError: string | null;
+}
+
+// Multimodal Message Content Types
+
+/**
+ * Text content block for multimodal messages
+ */
+export interface TextContentBlock {
+  /** Content block type identifier */
+  type: 'text';
+  /** The text content */
+  text: string;
+}
+
+/**
+ * Image content block for multimodal messages
+ */
+export interface ImageContentBlock {
+  /** Content block type identifier */
+  type: 'image';
+  /** Image source data */
+  source: {
+    /** Source type: base64-encoded data or external URL */
+    type: 'base64' | 'url';
+    /** MIME type of the image (e.g., 'image/png', 'image/jpeg') */
+    media_type: string;
+    /** Base64-encoded image data (present when type is 'base64') */
+    data?: string;
+    /** External image URL (present when type is 'url') */
+    url?: string;
+  };
+}
+
+/**
+ * Union type for message content blocks
+ * Messages can contain either text or image content blocks
+ */
+export type MessageContentBlock = TextContentBlock | ImageContentBlock;
+
+/**
+ * Type guard to check if a content block is text
+ */
+export function isTextContent(block: MessageContentBlock): block is TextContentBlock {
+  return block.type === 'text';
+}
+
+/**
+ * Type guard to check if a content block is an image
+ */
+export function isImageContent(block: MessageContentBlock): block is ImageContentBlock {
+  return block.type === 'image';
+}

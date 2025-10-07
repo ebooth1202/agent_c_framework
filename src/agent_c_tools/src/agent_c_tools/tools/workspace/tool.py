@@ -1,5 +1,8 @@
 import re
 import json
+import base64
+import mimetypes
+from pathlib import Path
 
 from typing import Any, List, Tuple, Optional, Callable, Awaitable, Union
 
@@ -976,6 +979,274 @@ class WorkspaceTools(Toolset):
             return f"Saved metadata to '{key}' in {workspace.name} workspace."
         except Exception as e:
             return f"Failed to write metadata to '{key}' in {workspace.name} workspace: {str(e)}"
+
+    @json_schema(
+        description="Send a render media event to the UI to display file content from the workspace. "
+                    "Supports images, text, code, markdown, and HTML files. Use this when a user asks you to show them a file in the workspace.",
+        params={
+            "path": {
+                "type": "string",
+                "description": "UNC-style workspace path (//WORKSPACE/path/to/file.ext)",
+                "required": True
+            },
+            "mime_type": {
+                "type": "string",
+                "description": "Optional MIME type override (e.g., 'image/png', 'text/markdown'). "
+                               "If not provided, will be detected from file extension.",
+                "required": False
+            },
+            "start_line": {
+                "type": "integer",
+                "description": "Optional 0-based starting line for text files (inclusive)",
+                "required": False
+            },
+            "end_line": {
+                "type": "integer",
+                "description": "Optional 0-based ending line for text files (inclusive)",
+                "required": False
+            }
+        }
+    )
+    async def render_media(self, **kwargs: Any) -> str:
+        """Render file content from workspace to the UI.
+        
+        Args:
+            path (str): UNC-style workspace path
+            mime_type (str, optional): MIME type override
+            start_line (int, optional): Starting line for partial rendering
+            end_line (int, optional): Ending line for partial rendering
+            
+        Returns:
+            str: Success message or error description
+        """
+        unc_path = kwargs.get('path', '')
+        mime_type_override = kwargs.get('mime_type')
+        start_line = kwargs.get('start_line')
+        end_line = kwargs.get('end_line')
+        tool_context = kwargs.get('tool_context')
+        
+        # Validate path
+        error, workspace, relative_path = self.validate_and_get_workspace_path(unc_path)
+        if error:
+            return f"ERROR: {error}"
+        
+        # Get file extension for mime type detection
+        file_path = Path(relative_path)
+        file_extension = file_path.suffix.lower()
+        file_name = file_path.name
+        
+        # Determine mime type
+        if mime_type_override:
+            mime_type = mime_type_override
+        else:
+            mime_type = self._detect_mime_type(file_extension)
+            if not mime_type:
+                return (f"ERROR: Could not determine MIME type for file extension '{file_extension}'. "
+                        f"Please specify a mime_type parameter.")
+        
+        try:
+            # Determine if this is a binary or text file
+            is_binary = self._is_binary_mime_type(mime_type)
+            
+            if is_binary:
+                # Handle binary files (mainly images)
+                if start_line is not None or end_line is not None:
+                    return "ERROR: start_line and end_line are not supported for binary files"
+                
+                content_bytes = await workspace.read_bytes_internal(relative_path)
+                
+                await self.send_render_media_event(
+                    content=content_bytes,
+                    content_type=mime_type,
+                    tool_context=tool_context,
+                    file_name=unc_path,
+                    sent_by="render_media"
+                )
+                
+                return f"Successfully rendered {mime_type} file: {unc_path}"
+            
+            else:
+                # Handle text files
+                file_content = await workspace.read_internal(relative_path, encoding='utf-8')
+                
+                # Handle line ranges if specified
+                if start_line is not None or end_line is not None:
+                    lines = file_content.splitlines()
+                    start = start_line if start_line is not None else 0
+                    end = end_line + 1 if end_line is not None else len(lines)
+                    
+                    # Validate line indices
+                    if start < 0 or start >= len(lines):
+                        return f"ERROR: start_line {start} is out of range (file has {len(lines)} lines)"
+
+                    if end < start:
+                        return f"ERROR: end_line {end_line} must be greater than or equal to start_line {start_line}"
+
+                    
+                    file_content = '\n'.join(lines[start:end])
+                
+                # Format content based on mime type
+                formatted_content = self._format_text_content(file_content, mime_type, file_extension, unc_path)
+                
+                # Determine final content type
+                final_mime_type = "text/markdown" if mime_type != "text/html" else "text/html"
+                
+                await self.send_render_media_event(
+                    content=formatted_content,
+                    content_type=final_mime_type,
+                    tool_context=tool_context,
+                    file_name=unc_path,
+                    sent_by="render_media"
+                )
+                
+                line_info = ""
+                if start_line is not None or end_line is not None:
+                    line_info = f" (lines {start_line or 0}-{end_line or 'end'})"
+                
+                return f"Successfully rendered {mime_type} file: {unc_path}{line_info}"
+                
+        except Exception as e:
+            self.logger.exception(f"Error rendering media for {unc_path}: {str(e)}")
+            return f"ERROR: Failed to render file {unc_path}: {str(e)}"
+    
+    def _detect_mime_type(self, file_extension: str) -> Optional[str]:
+        """Detect MIME type from file extension.
+        
+        Args:
+            file_extension: File extension including the dot (e.g., '.py', '.png')
+            
+        Returns:
+            MIME type string or None if not detected
+        """
+        # Common mappings for better detection
+        extension_map = {
+            # Images
+            '.png': 'image/png',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.gif': 'image/gif',
+            '.bmp': 'image/bmp',
+            '.webp': 'image/webp',
+            '.svg': 'image/svg+xml',
+            '.ico': 'image/x-icon',
+            
+            # Text/Code
+            '.py': 'text/x-python',
+            '.js': 'text/javascript',
+            '.ts': 'text/typescript',
+            '.jsx': 'text/jsx',
+            '.tsx': 'text/tsx',
+            '.html': 'text/html',
+            '.htm': 'text/html',
+            '.css': 'text/css',
+            '.json': 'application/json',
+            '.xml': 'application/xml',
+            '.yaml': 'text/yaml',
+            '.yml': 'text/yaml',
+            '.md': 'text/markdown',
+            '.txt': 'text/plain',
+            '.sh': 'text/x-shellscript',
+            '.bash': 'text/x-shellscript',
+            '.c': 'text/x-c',
+            '.cpp': 'text/x-c++',
+            '.h': 'text/x-c',
+            '.java': 'text/x-java',
+            '.cs': 'text/x-csharp',
+            '.go': 'text/x-go',
+            '.rs': 'text/x-rust',
+            '.php': 'text/x-php',
+            '.rb': 'text/x-ruby',
+            '.sql': 'text/x-sql',
+        }
+        
+        # Try our custom map first
+        if file_extension in extension_map:
+            return extension_map[file_extension]
+        
+        # Fall back to mimetypes library
+        mime_type, _ = mimetypes.guess_type(f"file{file_extension}")
+        return mime_type
+    
+    def _is_binary_mime_type(self, mime_type: str) -> bool:
+        """Check if a MIME type represents binary content.
+        
+        Args:
+            mime_type: MIME type string
+            
+        Returns:
+            True if binary, False if text
+        """
+        binary_prefixes = ['image/', 'video/', 'audio/', 'application/octet-stream']
+        return any(mime_type.startswith(prefix) for prefix in binary_prefixes)
+    
+    def _format_text_content(self, content: str, mime_type: str, file_extension: str, unc_path: str) -> str:
+        """Format text content for display.
+        
+        Args:
+            content: The file content
+            mime_type: The MIME type of the file
+            file_extension: The file extension
+            unc_path: The UNC path of the file (for reference)
+        Returns:
+            Formatted content string
+        """
+        # Markdown files pass through as-is
+        if mime_type == 'text/markdown':
+            return content
+        
+        # HTML files pass through as-is
+        if mime_type == 'text/html':
+            return content
+        
+        # Get language identifier for code blocks
+        language = self._get_language_identifier(file_extension, mime_type)
+        
+        # Wrap in code block with language specifier
+        if language:
+            return f"**{unc_path}:**\n```{language}\n{content}\n```"
+        else:
+            # Plain text in code block
+            return f"**{unc_path}:**```\n{content}\n```"
+    
+    def _get_language_identifier(self, file_extension: str, mime_type: str) -> str:
+        """Get the language identifier for markdown code blocks.
+        
+        Args:
+            file_extension: File extension including dot
+            mime_type: MIME type of the file
+            
+        Returns:
+            Language identifier string (e.g., 'python', 'javascript')
+        """
+        # Map extensions to markdown language identifiers
+        language_map = {
+            '.py': 'python',
+            '.js': 'javascript',
+            '.ts': 'typescript',
+            '.jsx': 'jsx',
+            '.tsx': 'tsx',
+            '.html': 'html',
+            '.htm': 'html',
+            '.css': 'css',
+            '.json': 'json',
+            '.xml': 'xml',
+            '.yaml': 'yaml',
+            '.yml': 'yaml',
+            '.sh': 'bash',
+            '.bash': 'bash',
+            '.c': 'c',
+            '.cpp': 'cpp',
+            '.h': 'c',
+            '.java': 'java',
+            '.cs': 'csharp',
+            '.go': 'go',
+            '.rs': 'rust',
+            '.php': 'php',
+            '.rb': 'ruby',
+            '.sql': 'sql',
+        }
+        
+        return language_map.get(file_extension, '')
 
     # @json_schema(
     #     'Execute allowlisted, non-interactive commands (git, npm, pytest, etc.) in workspace. '

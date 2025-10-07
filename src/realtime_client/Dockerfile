@@ -2,7 +2,7 @@
 
 # Stage 1: Base dependencies
 FROM node:20-alpine AS base
-RUN apk add --no-cache libc6-compat git
+RUN apk add --no-cache libc6-compat git openssh
 WORKDIR /app
 
 # Install pnpm globally
@@ -57,7 +57,9 @@ RUN cd packages/react && pnpm build
 # 3. Build ui package (depends on core and react)
 RUN cd packages/ui && pnpm build
 
-# Note: We don't build the demo app in dev container - it will build on startup
+# Remove .next directory if it was accidentally included from builder
+RUN rm -rf ./packages/demo/.next
+RUN cd packages/demo && pnpm build
 
 # Stage 4: Development runner
 FROM node:20-alpine AS runner
@@ -98,10 +100,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/packages/ui ./packages/ui
 # Copy ALL demo app files from builder (excluding .next if it exists)
 # This includes all source, config files, certificates, etc.
 COPY --from=builder --chown=nextjs:nodejs /app/packages/demo ./packages/demo
-
-# Remove .next directory if it was accidentally included from builder
-RUN rm -rf ./packages/demo/.next
-
+COPY ./packages/demo/.env.example ./packages/demo/.env
 # Install ALL dependencies including devDependencies for development mode
 # Remove --ignore-scripts to allow postinstall scripts to run (needed for some packages)
 # This will install all dependencies and set up workspace links
@@ -117,4 +116,4 @@ EXPOSE 5173
 WORKDIR /app/packages/demo
 
 # Run in development mode using the docker-specific script
-CMD ["pnpm", "dev:docker"]
+CMD ["pnpm", "start"]

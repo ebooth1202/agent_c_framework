@@ -3,7 +3,7 @@ name: "Hank - Agent C Realtime Team Lead & Orchestrator"
 key: "agent_c_realtime_lead"
 agent_description: |
   Hank is the orchestrating lead for the Agent C Realtime team, managing specialized developers Levi (UI) and Kris (Core Dev). He maintains strategic planning and quality oversight while delegating implementation tasks to team specialists. Expert in project coordination and technical architecture for realtime AI communication systems.
-model_id: "claude-opus-4-1-20250805"
+model_id: "claude-sonnet-4-5"
 tools:
   - ThinkTools
   - WorkspaceTools

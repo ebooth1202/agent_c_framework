@@ -85,9 +85,10 @@ export function AgentCProvider({
     currentSession: null
   });
   
-  // Use ref to track if we've already initialized to prevent double initialization in StrictMode
+  // Use refs to track initialization and cleanup state for StrictMode compatibility
   const initializationRef = useRef(false);
   const clientRef = useRef<RealtimeClient | null>(null);
+  const cleanedUpRef = useRef(false); // Track if we've cleaned up (for StrictMode)
   
   // Store event handler references for proper cleanup
   const handlersRef = useRef<{
@@ -142,9 +143,85 @@ export function AgentCProvider({
   
   // Initialize the client
   useEffect(() => {
+    // Define cleanup function that will always be returned
+    const cleanup = () => {
+      // Skip if already cleaned up (prevents double-cleanup in StrictMode)
+      if (cleanedUpRef.current) {
+        if (debug) {
+          console.warn('AgentCProvider: Skipping cleanup - already cleaned up');
+        }
+        return;
+      }
+      
+      if (clientRef.current) {
+        if (debug) {
+          // console.log('AgentCProvider: Cleaning up RealtimeClient');
+        }
+        
+        // Mark as cleaned up FIRST to prevent re-entry
+        cleanedUpRef.current = true;
+        
+        // Remove all event listeners BEFORE destroying client
+        if (handlersRef.current.chatUserData) {
+          clientRef.current.off('chat_user_data', handlersRef.current.chatUserData);
+        }
+        if (handlersRef.current.agentList) {
+          clientRef.current.off('agent_list', handlersRef.current.agentList);
+        }
+        if (handlersRef.current.avatarList) {
+          clientRef.current.off('avatar_list', handlersRef.current.avatarList);
+        }
+        if (handlersRef.current.voiceList) {
+          clientRef.current.off('voice_list', handlersRef.current.voiceList);
+        }
+        if (handlersRef.current.toolCatalog) {
+          clientRef.current.off('tool_catalog', handlersRef.current.toolCatalog);
+        }
+        if (handlersRef.current.chatSessionChanged) {
+          clientRef.current.off('chat_session_changed', handlersRef.current.chatSessionChanged);
+        }
+        if (handlersRef.current.connected) {
+          clientRef.current.off('connected', handlersRef.current.connected);
+        }
+        if (handlersRef.current.disconnected) {
+          clientRef.current.off('disconnected', handlersRef.current.disconnected);
+        }
+        if (handlersRef.current.error) {
+          clientRef.current.off('error', handlersRef.current.error);
+        }
+        
+        // Disconnect if connected
+        if (clientRef.current.isConnected()) {
+          clientRef.current.disconnect();
+        }
+        
+        // Destroy the client to clean up all resources
+        clientRef.current.destroy();
+        
+        // DON'T null the ref - keep it so we can track state across StrictMode cycles
+        // clientRef.current = null;
+      }
+      
+      // Clear handler references
+      handlersRef.current = {};
+      
+      // CRITICAL FIX: Reset initializationRef for React StrictMode
+      // React StrictMode double-invokes effects (mount → cleanup → remount)
+      // Refs DO persist across this cycle, so we MUST reset the flag
+      // to allow the remount to initialize properly.
+      initializationRef.current = false;
+    };
+    
     // Prevent double initialization in React StrictMode
+    // Once we've initialized once (initializationRef.current = true), skip subsequent runs
+    // This flag persists across StrictMode's cleanup/re-run cycle
     if (initializationRef.current) {
-      return;
+      if (debug) {
+        console.warn('AgentCProvider: Skipping initialization - already initialized (StrictMode protection)');
+      }
+      // Reset cleanup flag so final unmount can clean up
+      cleanedUpRef.current = false;
+      return cleanup; // Still return cleanup function!
     }
     
     if (!clientConfig) {
@@ -152,7 +229,7 @@ export function AgentCProvider({
       setError(error);
       setIsInitializing(false);
       onError?.(error);
-      return;
+      return cleanup; // Return cleanup even on error
     }
     
     initializationRef.current = true;
@@ -325,58 +402,8 @@ export function AgentCProvider({
       initializationRef.current = false;
     }
     
-    // Cleanup function
-    return () => {
-      if (clientRef.current) {
-        if (debug) {
-          // console.log('AgentCProvider: Cleaning up RealtimeClient');
-        }
-        
-        // Remove all event listeners BEFORE destroying client
-        if (handlersRef.current.chatUserData) {
-          clientRef.current.off('chat_user_data', handlersRef.current.chatUserData);
-        }
-        if (handlersRef.current.agentList) {
-          clientRef.current.off('agent_list', handlersRef.current.agentList);
-        }
-        if (handlersRef.current.avatarList) {
-          clientRef.current.off('avatar_list', handlersRef.current.avatarList);
-        }
-        if (handlersRef.current.voiceList) {
-          clientRef.current.off('voice_list', handlersRef.current.voiceList);
-        }
-        if (handlersRef.current.toolCatalog) {
-          clientRef.current.off('tool_catalog', handlersRef.current.toolCatalog);
-        }
-        if (handlersRef.current.chatSessionChanged) {
-          clientRef.current.off('chat_session_changed', handlersRef.current.chatSessionChanged);
-        }
-        if (handlersRef.current.connected) {
-          clientRef.current.off('connected', handlersRef.current.connected);
-        }
-        if (handlersRef.current.disconnected) {
-          clientRef.current.off('disconnected', handlersRef.current.disconnected);
-        }
-        if (handlersRef.current.error) {
-          clientRef.current.off('error', handlersRef.current.error);
-        }
-        
-        // Disconnect if connected
-        if (clientRef.current.isConnected()) {
-          clientRef.current.disconnect();
-        }
-        
-        // Destroy the client to clean up all resources
-        clientRef.current.destroy();
-        clientRef.current = null;
-      }
-      
-      // Clear handler references
-      handlersRef.current = {};
-      
-      // Reset initialization flag for potential re-mount
-      initializationRef.current = false;
-    };
+    // Return cleanup function (defined at the top of the effect)
+    return cleanup;
   }, [clientConfig, autoConnect, onInitialized, onInitializationComplete, onError, debug]);
   
   // Update auth token if it changes

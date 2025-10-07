@@ -17,6 +17,10 @@ Complete type reference for the Agent C Realtime Client SDK. All types are expor
   - [Client Events](#client-events)
   - [Server Events](#server-events)
   - [Common Event Types](#common-event-types)
+- [File Upload Types](#file-upload-types)
+  - [Upload Response](#upload-response)
+  - [Upload Options](#upload-options)
+  - [Upload Progress](#upload-progress)
 - [Audio Types](#audio-types)
   - [Audio Processing](#audio-processing)
   - [Audio Service](#audio-service)
@@ -839,10 +843,414 @@ export interface ToolResult {
   content: string;
 }
 
+/**
+ * File upload response from server
+ */
+export interface UserFile {
+  id: string;           // Unique identifier for the uploaded file
+  filename: string;     // Original filename
+  mime_type: string;    // File MIME type (e.g., 'image/png')
+  size: number;         // File size in bytes
+}
+
+/**
+ * Type alias for API response compatibility
+ */
+export type UserFileResponse = UserFile;
+
+/**
+ * Options for file upload operations
+ */
+export interface FileUploadOptions {
+  onProgress?: (progress: UploadProgress) => void;  // Progress callback for upload tracking
+  signal?: AbortSignal;                              // Abort signal for cancellation support
+}
+
+/**
+ * Upload progress information
+ */
+export interface UploadProgress {
+  loaded: number;       // Bytes uploaded so far
+  total: number;        // Total bytes to upload
+  percentage: number;   // Progress percentage (0-100)
+}
+
 // Type definitions
 export type StopReason = 'stop' | 'length' | 'tool_calls' | 'cancelled';
 export type Severity = 'info' | 'warning' | 'error';
 export type MessageFormat = 'text' | 'markdown';
+```
+
+## File Upload Types
+
+Types for uploading files to include in chat messages, enabling multimodal interactions.
+
+### Upload Response
+
+File metadata returned after successful upload:
+
+```typescript
+/**
+ * File upload response from server
+ * Contains metadata about the uploaded file including a unique ID
+ * that can be used to attach the file to messages
+ */
+export interface UserFile {
+  /** Unique identifier for the uploaded file */
+  id: string;
+  /** Original filename */
+  filename: string;
+  /** MIME type of the file (e.g., 'image/png', 'application/pdf') */
+  mime_type: string;
+  /** File size in bytes */
+  size: number;
+}
+
+/**
+ * Type alias for API response compatibility
+ * UserFileResponse is identical to UserFile
+ */
+export type UserFileResponse = UserFile;
+```
+
+**Usage Example:**
+
+```typescript
+import { UserFileResponse } from '@agentc/realtime-core';
+
+const result: UserFileResponse = await client.uploadFile(file);
+console.log('File ID:', result.id);
+console.log('Filename:', result.filename);
+console.log('MIME type:', result.mime_type);
+console.log('Size:', result.size, 'bytes');
+
+// Use file ID in message
+client.sendText('Analyze this document', [result.id]);
+```
+
+### Upload Options
+
+Configuration options for file upload operations:
+
+```typescript
+/**
+ * Options for file upload operations
+ * Supports progress tracking and cancellation
+ */
+export interface FileUploadOptions {
+  /**
+   * Progress callback for upload tracking
+   * Called periodically during upload with progress information
+   */
+  onProgress?: (progress: UploadProgress) => void;
+  
+  /**
+   * Abort signal for cancellation support
+   * Can be used to cancel an ongoing upload
+   */
+  signal?: AbortSignal;
+}
+```
+
+**Usage Example:**
+
+```typescript
+import { FileUploadOptions, UserFileResponse } from '@agentc/realtime-core';
+
+// Upload with progress tracking
+const options: FileUploadOptions = {
+  onProgress: (progress) => {
+    console.log(`Upload: ${progress.percentage}%`);
+    progressBar.value = progress.percentage;
+  }
+};
+
+const result = await client.uploadFile(file, options);
+
+// Upload with cancellation support
+const controller = new AbortController();
+const cancelOptions: FileUploadOptions = {
+  signal: controller.signal,
+  onProgress: (progress) => {
+    console.log(`Progress: ${progress.percentage}%`);
+  }
+};
+
+cancelButton.onclick = () => controller.abort();
+
+try {
+  const result = await client.uploadFile(file, cancelOptions);
+  console.log('Upload complete:', result);
+} catch (error) {
+  if (error.message === 'Upload cancelled') {
+    console.log('User cancelled upload');
+  }
+}
+```
+
+### Upload Progress
+
+Progress information provided during file upload:
+
+```typescript
+/**
+ * Upload progress information
+ * Provides real-time feedback on upload status
+ */
+export interface UploadProgress {
+  /** Bytes uploaded so far */
+  loaded: number;
+  /** Total bytes to upload */
+  total: number;
+  /** Progress percentage (0-100) */
+  percentage: number;
+}
+```
+
+**Usage Example:**
+
+```typescript
+import { UploadProgress } from '@agentc/realtime-core';
+
+await client.uploadFile(file, {
+  onProgress: (progress: UploadProgress) => {
+    // Display progress
+    console.log(`Uploading: ${progress.loaded} / ${progress.total} bytes`);
+    console.log(`Progress: ${progress.percentage}%`);
+    
+    // Update UI
+    progressBar.value = progress.percentage;
+    progressText.textContent = `${progress.percentage}%`;
+    
+    // Estimate time remaining
+    const bytesRemaining = progress.total - progress.loaded;
+    const uploadSpeed = calculateSpeed(); // Your implementation
+    const timeRemaining = bytesRemaining / uploadSpeed;
+    console.log(`Estimated time: ${timeRemaining}s`);
+  }
+});
+```
+
+### Configuration Types
+
+File upload configuration in client config:
+
+```typescript
+/**
+ * File upload configuration in RealtimeClientConfig
+ */
+interface RealtimeClientConfig {
+  // ... other config options ...
+  
+  /**
+   * Maximum file upload size in bytes
+   * Default: 10MB (10 * 1024 * 1024)
+   */
+  maxUploadSize?: number;
+  
+  /**
+   * Allowed file MIME types for upload
+   * Default: undefined (allow all types)
+   * Example: ['image/png', 'image/jpeg', 'application/pdf']
+   */
+  allowedMimeTypes?: string[];
+  
+  /**
+   * Maximum number of files per message
+   * Default: 10
+   */
+  maxFilesPerMessage?: number;
+}
+```
+
+**Configuration Example:**
+
+```typescript
+import { RealtimeClient } from '@agentc/realtime-core';
+
+const client = new RealtimeClient({
+  apiUrl: 'wss://api.agentc.ai/realtime',
+  authManager: authManager,
+  
+  // File upload configuration
+  maxUploadSize: 10 * 1024 * 1024,    // 10MB
+  allowedMimeTypes: [
+    'image/png',
+    'image/jpeg',
+    'image/gif',
+    'application/pdf',
+    'text/plain'
+  ],
+  maxFilesPerMessage: 10
+});
+```
+
+### Complete Upload Workflow
+
+Full example demonstrating file upload types:
+
+```typescript
+import { 
+  RealtimeClient,
+  UserFileResponse, 
+  FileUploadOptions,
+  UploadProgress 
+} from '@agentc/realtime-core';
+
+async function uploadWithFullTracking(
+  client: RealtimeClient,
+  file: File
+): Promise<UserFileResponse> {
+  // Validate file size before upload
+  const maxSize = 10 * 1024 * 1024; // 10MB
+  if (file.size > maxSize) {
+    throw new Error(`File too large: ${file.size} bytes (max: ${maxSize})`);
+  }
+  
+  // Create abort controller for cancellation
+  const controller = new AbortController();
+  
+  // Configure upload options
+  const options: FileUploadOptions = {
+    onProgress: (progress: UploadProgress) => {
+      // Update UI with progress
+      updateProgressBar(progress.percentage);
+      updateProgressText(`${progress.loaded} / ${progress.total} bytes`);
+      
+      // Log progress
+      console.log(`Upload progress: ${progress.percentage}%`);
+    },
+    signal: controller.signal
+  };
+  
+  // Setup cancellation button
+  const cancelButton = document.getElementById('cancel');
+  cancelButton?.addEventListener('click', () => {
+    controller.abort();
+  });
+  
+  try {
+    // Upload file
+    const result: UserFileResponse = await client.uploadFile(file, options);
+    
+    // Log result
+    console.log('Upload successful:');
+    console.log('  ID:', result.id);
+    console.log('  Filename:', result.filename);
+    console.log('  Type:', result.mime_type);
+    console.log('  Size:', result.size, 'bytes');
+    
+    // Hide progress UI
+    hideProgressUI();
+    
+    return result;
+    
+  } catch (error) {
+    // Handle errors
+    if (error.message === 'Upload cancelled') {
+      console.log('User cancelled upload');
+      showNotification('Upload cancelled');
+    } else if (error.message.includes('exceeds maximum')) {
+      console.error('File too large');
+      showError('File size exceeds 10MB limit');
+    } else if (error.message.includes('not allowed')) {
+      console.error('File type not supported');
+      showError('File type not supported');
+    } else {
+      console.error('Upload failed:', error);
+      showError('Upload failed. Please try again.');
+    }
+    throw error;
+  }
+}
+
+// Upload multiple files
+async function uploadMultipleFiles(
+  client: RealtimeClient,
+  files: File[]
+): Promise<UserFileResponse[]> {
+  // Validate file count
+  const maxFiles = 10;
+  if (files.length > maxFiles) {
+    throw new Error(`Too many files: ${files.length} (max: ${maxFiles})`);
+  }
+  
+  // Upload all files with aggregated progress
+  const results: UserFileResponse[] = await client.uploadFiles(files, {
+    onProgress: (progress: UploadProgress) => {
+      // Overall progress across all files
+      console.log(`Overall progress: ${progress.percentage}%`);
+      updateOverallProgress(progress.percentage);
+    }
+  });
+  
+  // Log results
+  console.log(`Successfully uploaded ${results.length} files:`);
+  results.forEach((result, index) => {
+    console.log(`  ${index + 1}. ${result.filename} (${result.size} bytes)`);
+  });
+  
+  return results;
+}
+```
+
+### Error Handling
+
+Common error scenarios and handling:
+
+```typescript
+import { UserFileResponse } from '@agentc/realtime-core';
+
+try {
+  const result: UserFileResponse = await client.uploadFile(file);
+  // Success - use result.id in message
+  client.sendText('Analyze this', [result.id]);
+  
+} catch (error) {
+  // Handle specific error cases
+  const message = error.message;
+  
+  if (message.includes('Authentication required')) {
+    // Not logged in or token expired
+    await refreshAuthentication();
+    // Retry upload
+    
+  } else if (message.includes('UI session ID required')) {
+    // Session not initialized
+    await client.connect();
+    await client.waitForInitialization();
+    // Retry upload
+    
+  } else if (message.includes('exceeds maximum')) {
+    // File too large
+    showError(`File is too large. Maximum size: 10MB`);
+    
+  } else if (message.includes('not allowed')) {
+    // Invalid file type
+    showError('File type not supported. Allowed: PNG, JPEG, PDF');
+    
+  } else if (message.includes('Cannot upload')) {
+    // Too many files
+    showError('Maximum 10 files per message');
+    
+  } else if (message === 'Upload cancelled') {
+    // User cancelled
+    console.log('Upload cancelled by user');
+    
+  } else if (message.includes('Network error')) {
+    // Network issue
+    showError('Upload failed due to network error. Please check your connection.');
+    
+  } else if (message.includes('Upload timed out')) {
+    // Timeout
+    showError('Upload timed out. The file may be too large or your connection too slow.');
+    
+  } else {
+    // Other errors
+    console.error('Upload error:', error);
+    showError(`Upload failed: ${message}`);
+  }
+}
 ```
 
 ## Audio Types

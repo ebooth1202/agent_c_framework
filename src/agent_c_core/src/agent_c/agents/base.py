@@ -57,7 +57,7 @@ class BaseAgent:
         self.model_name: str = kwargs.get("model_name")
         self.vendor: str = kwargs.get("vendor", "unknown")
         self.temperature: float = kwargs.get("temperature", 1)
-        self.max_delay: int = kwargs.get("max_delay", 120)
+        self.max_delay: int = kwargs.get("max_delay", 500)
         self.concurrency_limit: int = kwargs.get("concurrency_limit", 3)
         self.semaphore: Semaphore = asyncio.Semaphore(self.concurrency_limit)
         self.tool_chest: Optional[ToolChest] = kwargs.get("tool_chest", None)

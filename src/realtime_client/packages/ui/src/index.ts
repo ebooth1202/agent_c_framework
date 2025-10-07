@@ -14,6 +14,10 @@ export { Avatar, AvatarImage, AvatarFallback } from './components/ui/avatar';
 export { Badge } from './components/ui/badge';
 export type { BadgeProps } from './components/ui/badge';
 
+// Agent C Logo
+export { AgentCLogo } from './components/ui/agent-c-logo';
+export type { AgentCLogoProps } from './components/ui/agent-c-logo';
+
 // Button
 export { Button, buttonVariants } from './components/ui/button';
 export type { ButtonProps } from './components/ui/button';
@@ -205,7 +209,14 @@ export {
   TypingIndicator,
   ScrollAnchor,
   ChatMessagesView,
-  typingIndicatorStyles
+  typingIndicatorStyles,
+  // File upload components
+  FileAttachmentItem,
+  FileAttachmentList,
+  UploadProgressIndicator,
+  ImageLightbox
+  // ChatInputArea removed - use InputArea from input/ which now has file upload
+  // DropOverlay removed - InputArea uses react-dropzone directly
 } from './components/chat';
 
 export type {
@@ -219,7 +230,14 @@ export type {
   NotificationSeverity,
   TypingIndicatorProps,
   ScrollAnchorProps,
-  ChatMessagesViewProps
+  ChatMessagesViewProps,
+  // File upload component types
+  FileAttachmentItemProps,
+  FileAttachmentListProps,
+  UploadProgressIndicatorProps,
+  ImageLightboxProps
+  // ChatInputAreaProps removed - use InputAreaProps from input/
+  // FileDropZoneProps removed - not needed with react-dropzone
 } from './components/chat';
 
 // Audio component exports

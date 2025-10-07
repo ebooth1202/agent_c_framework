@@ -283,7 +283,7 @@ DeleteSessionDialog.displayName = 'DeleteSessionDialog'
 /**
  * Memoized Individual session item component
  */
-const SessionItem = React.memo<{
+export const SessionItem = React.memo<{
   session: ChatSessionIndexEntry
   isActive: boolean
   isFocused?: boolean
@@ -322,7 +322,7 @@ const SessionItem = React.memo<{
         "transition-all duration-200 cursor-pointer",
         "min-h-[44px]",
         "hover:bg-muted/60",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+        "focus-visible:outline-none",
         isActive && "bg-accent",
         isFocused && "ring-2 ring-ring ring-offset-1",
         isDeleting && "opacity-50 pointer-events-none",
@@ -565,6 +565,11 @@ const VirtualSessionList = React.memo<{
       return SESSION_ITEM_HEIGHT
     }
   })
+  
+  // Force virtualizer to measure after mount or when items change
+  React.useEffect(() => {
+    virtualizer.measure()
+  }, [items.length, virtualizer])
   
   const virtualItems = virtualizer.getVirtualItems()
   
@@ -817,21 +822,9 @@ export const ChatSessionList = React.forwardRef<HTMLDivElement, ChatSessionListP
       }
     }, [filteredSessions, focusedIndex, handleSessionSelect, handleDeleteRequest])
     
-    // Collapsed view
+    // When collapsed, hide the session list completely
     if (isCollapsed) {
-      return (
-        <div
-          ref={ref}
-          className={cn("flex-1 overflow-hidden", className)}
-          {...props}
-        >
-          <CollapsedView
-            sessions={sessions}
-            currentSessionId={currentSessionId}
-            onSessionSelect={handleSessionSelect}
-          />
-        </div>
-      )
+      return null
     }
     
     // Main expanded view

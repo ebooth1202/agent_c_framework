@@ -20,6 +20,39 @@ from .util import validate_soql_query, SalesforceQueryError, clean_salesforce_re
 
 
 class SalesforceTools(Toolset):
+    """
+    Salesforce CRM integration toolset.
+    
+    This toolset provides full integration with Salesforce CRM, enabling agents to query data,
+    create records, update existing records, and delete records using SOQL (Salesforce Object Query Language).
+    
+    Available Methods:
+        - query_salesforce: Execute SOQL queries to retrieve Salesforce data
+        - create_record: Create new records in Salesforce objects
+        - update_record: Update existing Salesforce records
+        - delete_record: Delete records from Salesforce
+    
+    Key Features:
+        - Full SOQL query support for advanced data retrieval
+        - CRUD operations on all standard and custom Salesforce objects
+        - Automatic date format conversion to ISO-8601
+        - Large dataset handling with automatic Excel export
+        - Automatic field deduplication
+        - Workspace integration for result file storage
+    
+    Requirements:
+        - SALESFORCE_USERID, SALESFORCE_PASSWORD, SALESFORCE_SECURITY_TOKEN environment variables
+        - SALESFORCE_DOMAIN for custom domain configuration
+        - WorkspaceTools (for file operations)
+        - simple-salesforce Python package
+    
+    Usage Notes:
+        - Uses query_all() to retrieve records including deleted/archived items
+        - Large responses (>25,000 tokens) are automatically saved to Excel
+        - When creating records with relationships, use the related record's ID (e.g., AccountId)
+        - Field names must match Salesforce API names exactly
+        - Results include data type conversions for dates and datetime objects
+    """
     def __init__(self, **kwargs):
         super().__init__(**kwargs, name='salesforce',
                          needed_keys=['SALESFORCE_USERID', 'SALESFORCE_PASSWORD', 'SALESFORCE_SECURITY_TOKEN',

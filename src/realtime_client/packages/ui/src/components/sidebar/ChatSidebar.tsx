@@ -5,6 +5,7 @@ import { cn } from "../../lib/utils"
 import { SidebarTopMenu } from "./SidebarTopMenu"
 import { ChatSessionList } from "../session/ChatSessionList"
 import { UserDisplay } from "./UserDisplay"
+import { AgentCLogo } from "../ui/agent-c-logo"
 import { X, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "../ui/button"
 
@@ -102,12 +103,20 @@ export const ChatSidebar = React.forwardRef<HTMLDivElement, ChatSidebarProps>(
         >
           {/* Sidebar Header with Title and Collapse Button */}
           <div className="flex items-center justify-between p-4 border-b border-border">
-            <span className={cn(
-              "text-lg font-semibold transition-opacity duration-200 overflow-hidden whitespace-nowrap",
-              isCollapsed ? "opacity-0 w-0" : "opacity-100"
-            )}>
-              Agent C Realtime
-            </span>
+            <div className="flex items-center gap-2 overflow-hidden">
+              <span className={cn(
+                "text-lg font-semibold transition-opacity duration-200 whitespace-nowrap",
+                isCollapsed ? "opacity-0 w-0" : "opacity-100"
+              )}>
+                Agent
+              </span>
+              <AgentCLogo 
+                className={cn(
+                  "h-7 w-auto transition-all duration-200 flex-shrink-0",
+                  isCollapsed && "h-8"
+                )}
+              />
+            </div>
             <Button
               variant="ghost"
               size="icon"

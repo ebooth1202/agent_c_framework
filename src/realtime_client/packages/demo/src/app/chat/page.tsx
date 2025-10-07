@@ -1,9 +1,7 @@
+'use client';
+
 import dynamicImport from 'next/dynamic';
 import { Skeleton } from '@agentc/realtime-ui';
-
-// Force dynamic rendering to prevent static generation issues
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 // Dynamically import the chat client component with no SSR
 const ChatPageClient = dynamicImport(

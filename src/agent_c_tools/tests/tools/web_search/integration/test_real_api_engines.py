@@ -15,79 +15,12 @@ import sys
 sys.path.insert(0, "../../../src/agent_c_tools/tools/web_search")
 
 from agent_c_tools.tools.web_search.base.models import SearchParameters, SearchType, SafeSearchLevel, SearchDepth
-from agent_c_tools.tools.web_search.engines.duckduckgo_engine import create_duckduckgo_engine
 from agent_c_tools.tools.web_search.engines.google_serp_engine import create_google_serp_engine
 from agent_c_tools.tools.web_search.engines.tavily_engine import create_tavily_engine
 from agent_c_tools.tools.web_search.engines.wikipedia_engine import create_wikipedia_engine
 from agent_c_tools.tools.web_search.engines.news_api_engine import create_news_api_engine
 from agent_c_tools.tools.web_search.engines.hacker_news_engine import create_hacker_news_engine
 
-
-class TestDuckDuckGoIntegration:
-    """Integration tests for DuckDuckGo engine with real API."""
-    
-    def setup_method(self):
-        """Set up test fixtures."""
-        self.engine = create_duckduckgo_engine()
-    
-    @pytest.mark.integration
-    @pytest.mark.network
-    def test_real_web_search(self):
-        """Test real web search with DuckDuckGo."""
-        params = SearchParameters(
-            query="Python programming tutorial",
-            engine="duckduckgo",
-            search_type=SearchType.WEB,
-            max_results=5
-        )
-        
-        response = self.engine.execute_search(params)
-        
-        # Validate response structure
-        assert response is not None
-        assert response.engine_used == "duckduckgo"
-        assert response.query == "Python programming tutorial"
-        assert len(response.results) > 0
-        assert len(response.results) <= 5
-        
-        # Validate result structure
-        for result in response.results:
-            assert result.title is not None
-            assert result.url is not None
-            assert result.url.startswith("http")
-            assert result.snippet is not None
-    
-    @pytest.mark.integration
-    @pytest.mark.network
-    def test_safe_search_filtering(self):
-        """Test safe search filtering with real API."""
-        params = SearchParameters(
-            query="family friendly content",
-            engine="duckduckgo",
-            search_type=SearchType.WEB,
-            safe_search=SafeSearchLevel.STRICT,
-            max_results=3
-        )
-        
-        response = self.engine.execute_search(params)
-        
-        assert response is not None
-        assert len(response.results) > 0
-        # Safe search should return clean results
-        for result in response.results:
-            assert result.title is not None
-            assert result.url is not None
-    
-    @pytest.mark.integration
-    @pytest.mark.network
-    def test_availability_check(self):
-        """Test engine availability check."""
-        assert self.engine.is_available() == True
-        
-        health_status = self.engine.get_health_status()
-        assert health_status.is_available == True
-        assert health_status.response_time > 0
-        assert health_status.last_check is not None
 
 
 class TestGoogleSerpIntegration:

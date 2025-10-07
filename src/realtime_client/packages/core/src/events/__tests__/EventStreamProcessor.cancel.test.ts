@@ -1,14 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { EventStreamProcessor } from '../EventStreamProcessor';
-import { SessionManager } from '../../session/SessionManager';
+import { ChatSessionManager } from '../../session/SessionManager';
 import { CancelledEvent } from '../types/ServerEvents';
 
 describe('EventStreamProcessor - Cancel Event Handling', () => {
   let processor: EventStreamProcessor;
-  let sessionManager: SessionManager;
+  let sessionManager: ChatSessionManager;
   
   beforeEach(() => {
-    sessionManager = new SessionManager({
+    sessionManager = new ChatSessionManager({
       maxSessions: 10,
       persistSessions: false
     });
@@ -96,7 +96,11 @@ describe('EventStreamProcessor - Cancel Event Handling', () => {
       );
       
       expect(removeCall).toBeDefined();
-      expect(removeCall?.[1]).toBe('tool-1');
+      // Updated: tool-notification-removed now passes an object, not just the ID
+      expect(removeCall?.[1]).toMatchObject({
+        sessionId: 'test-session',
+        toolCallId: 'tool-1'
+      });
     });
     
     it('should reset processor state after cancellation', () => {

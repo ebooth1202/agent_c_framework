@@ -21,7 +21,8 @@ import Typography from '@tiptap/extension-typography';
 import Link from '@tiptap/extension-link';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 import { common, createLowlight } from 'lowlight';
-import { SmartPasteExtension, type SmartPasteOptions } from './SmartPasteExtension';
+// SmartPasteExtension removed - file upload is now handled by ChatInputArea with useFileUpload hook
+// import { SmartPasteExtension, type SmartPasteOptions } from './SmartPasteExtension';
 
 // Import language modules from highlight.js
 import javascript from 'highlight.js/lib/languages/javascript';
@@ -118,12 +119,13 @@ export function getMarkdownExtensions(options: {
   placeholder?: string;
   onSubmit?: (text: string) => void;
   disabled?: boolean;
-  enableSmartPaste?: boolean;
-  maxImageSize?: number;
-  onImageUpload?: (file: File) => Promise<string>;
-  onImageUploadStart?: (file: File) => void;
-  onImageUploadComplete?: (url: string) => void;
-  onImageUploadError?: (error: Error) => void;
+  // SmartPaste options removed - file upload is now handled by ChatInputArea
+  // enableSmartPaste?: boolean;
+  // maxImageSize?: number;
+  // onImageUpload?: (file: File) => Promise<string>;
+  // onImageUploadStart?: (file: File) => void;
+  // onImageUploadComplete?: (url: string) => void;
+  // onImageUploadError?: (error: Error) => void;
 } = {}) {
   return [
     // StarterKit bundles most of what we need
@@ -155,16 +157,8 @@ export function getMarkdownExtensions(options: {
     // Custom keyboard shortcuts (these are different from InputRules)
     KeyboardShortcuts,
     
-    // Smart paste handler for images (if enabled)
-    ...(options.enableSmartPaste !== false ? [
-      SmartPasteExtension.configure({
-        maxFileSize: options.maxImageSize || 10 * 1024 * 1024, // 10MB default
-        uploadImage: options.onImageUpload || undefined,
-        onUploadStart: options.onImageUploadStart,
-        onUploadComplete: options.onImageUploadComplete,
-        onUploadError: options.onImageUploadError,
-      } as SmartPasteOptions),
-    ] : []),
+    // SmartPasteExtension removed - file upload is now handled by ChatInputArea with useFileUpload hook
+    // Smart paste handler for images would have been here but is now disabled
   ];
 }
 

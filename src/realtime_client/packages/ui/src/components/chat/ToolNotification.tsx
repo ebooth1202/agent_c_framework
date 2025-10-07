@@ -102,9 +102,9 @@ const ToolNotification = React.forwardRef<HTMLDivElement, ToolNotificationProps>
       <AnimatePresence mode="wait">
         <motion.div
           ref={ref}
-          initial={{ opacity: 0, y: -10, height: 0 }}
-          animate={{ opacity: 1, y: 0, height: 'auto' }}
-          exit={{ opacity: 0, y: -10, height: 0 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
           transition={{ duration: 0.2, ease: 'easeOut' }}
           className={cn(
             'relative overflow-hidden',
@@ -171,6 +171,11 @@ export interface ToolNotificationListProps extends React.HTMLAttributes<HTMLDivE
 
 const ToolNotificationList = React.forwardRef<HTMLDivElement, ToolNotificationListProps>(
   ({ className, notifications, maxNotifications = 3, ...props }, ref) => {
+    
+    // ADD EVE'S LOGGING:
+    console.log('[ToolNotificationList] RENDERING with notifications:', notifications);
+    console.log('[ToolNotificationList] notifications.length:', notifications.length);
+    
     // Only show the most recent notifications
     const visibleNotifications = React.useMemo(() => {
       if (maxNotifications && notifications.length > maxNotifications) {

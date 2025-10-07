@@ -138,6 +138,10 @@ export function useToolNotifications(
           toRemove.forEach(([id]) => next.delete(id));
         }
         
+        // ADD EVE'S LOGGING:
+        console.log('[useToolNotifications] Updated notifications Map size:', next.size);
+        console.log('[useToolNotifications] Updated notifications array:', Array.from(next.values()));
+        
         return next;
       });
       
@@ -164,8 +168,10 @@ export function useToolNotifications(
     };
     
     // Handle tool notification removal events
-    const handleToolNotificationRemoved = (toolId: string) => {
-      Logger.debug('[useToolNotifications] Tool notification removed:', toolId);
+    const handleToolNotificationRemoved = (event: { sessionId: string; toolCallId: string }) => {
+      Logger.debug('[useToolNotifications] Tool notification removed:', event);
+      
+      const toolId = event.toolCallId;
       
       // Clear any pending removal timer
       const timer = removalTimersRef.current.get(toolId);
