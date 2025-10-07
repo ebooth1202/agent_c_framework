@@ -8,6 +8,8 @@ from datetime import datetime
 from functools import singledispatchmethod
 from typing import List, Optional, Any, Dict, AsyncIterator, Union, TYPE_CHECKING
 
+from sympy import false
+
 from agent_c.prompting.basic_sections.markdown import MarkdownFormatting
 from agent_c_api.models.user_runtime_cache_entry import UserRuntimeCacheEntry
 from fastapi import WebSocket, WebSocketDisconnect
@@ -341,6 +343,52 @@ class RealtimeBridge(ClientEventHandler):
     async def send_user_sessions(self, offset: int, limit: int = 50) -> None:
         sessions = await self.chat_session_manager.get_user_sessions(self.chat_user.user_id, offset, limit)
         await self.send_event(GetUserSessionsResponseEvent(sessions=sessions))
+
+    async def add_tool(self, new_tool: str) -> bool:
+        if new_tool not in self.chat_session.agent_config.tools:
+            tools = [new_tool]
+            tools.extend(self.chat_session.agent_config.tools)
+            return await self.update_tools(tools)
+
+        return True
+
+    async def remove_tool(self, tool_name: str) -> bool:
+        if tool_name in self.chat_session.agent_config.tools:
+            tools = [t for t in self.chat_session.agent_config.tools if t != tool_name]
+            return await self.update_tools(tools)
+
+        return True
+
+    async def update_tools(self, new_tools: List[str]) -> bool:
+        """
+        Update the agent's tools without reinitializing the entire agent.
+
+        This method allows dynamic updating of the tool set while maintaining
+        the current session and other configurations. It ensures essential
+        tools are preserved while adding or removing additional tools.
+
+        Args:
+            new_tools: List of tool names to be added to the essential tools.
+        """
+        self.logger.info(f"Requesting new tool list for agent {self.chat_session.agent_config.key} to: {new_tools}")
+        equipped: bool = False
+        try:
+            equipped = await self.tool_chest.activate_toolset(self.chat_session.agent_config.tools)
+        except Exception as e:
+            self.logger.error(f"Error updating tools: {e}\n{traceback.format_exc()}")
+            await self.send_system_message(f"Error updating tools: {e}", severity="error")
+            return false
+
+        if not equipped:
+            self.logger.warning(f"Tool update failed. Current Active tools: "
+                                f"{list(self.tool_chest.available_tools.keys())}")
+            new_tools = [t for t in self.chat_session.agent_config.tools if t in self.tool_chest.available_tools]
+            await self.send_system_message("Some tools failed to equip, see server logs for details", severity="error")
+
+        self.chat_session.agent_config.tools = new_tools
+        await self.send_event(AgentConfigurationChangedEvent(agent_config=self.chat_session.agent_config))
+
+        return equipped
 
     async def set_session_metadata(self, meta: Dict[str, Any]) -> None:
         """Set the metadata for the current chat session"""

@@ -35,6 +35,7 @@ from .youtube import YoutubeTranscriptTools, YoutubeCommentsTools, YoutubeSearch
 from .sars import SarsTools
 from .insurance_demo import InsuranceDemoTools
 from .workspace import DynamicCommandTools
+from .toolbelt.tool import ToolbeltTools
 
 __all__ = [
     # Essential Tools for good agents
@@ -60,10 +61,8 @@ __all__ = [
     'WebSearchTools',  # Unified web search interface
     'WikipediaTools',
     'HackerNewsTools',
-    'SeekingAlphaTools',
     'TavilyResearchTools',
     'GoogleSerpTools',
-    'GoogleTrendsTools',
     'NewsApiTools',
     'WebTools',
     'GmailSearch',
