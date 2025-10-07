@@ -10,7 +10,9 @@ from typing import List, Optional, Any, Dict, AsyncIterator, Union, TYPE_CHECKIN
 
 from sympy import false
 
+from agent_c.config import locate_config_path
 from agent_c.prompting.basic_sections.markdown import MarkdownFormatting
+from agent_c_api.core.commands.handler import ChatCommandHandler
 from agent_c_api.models.user_runtime_cache_entry import UserRuntimeCacheEntry
 from fastapi import WebSocket, WebSocketDisconnect
 from starlette.websockets import WebSocketState
@@ -103,6 +105,8 @@ class RealtimeBridge(ClientEventHandler):
         self.file_handler: RTFileHandler = RTFileHandler(self, chat_user.user_id)
         self.image_inputs: List[ImageInput] = []
         self.audio_inputs: List[AudioInput] = []
+
+        self.command_handler =  ChatCommandHandler()
 
     @property
     def websocket(self) -> Optional[WebSocket]:
@@ -387,8 +391,14 @@ class RealtimeBridge(ClientEventHandler):
 
         self.chat_session.agent_config.tools = new_tools
         await self.send_event(AgentConfigurationChangedEvent(agent_config=self.chat_session.agent_config))
-
+        await self.send_system_message("Agent tools updated", severity="info")
         return equipped
+
+    async def call_tool(self, tool_name: str, params: Dict[str, Any]) -> None:
+        context = await self._tool_context()
+        result = await self.tool_chest.call_tool_internal(tool_name, params, context)
+        if result is not None:
+            await self.send_system_message(f"Tool call result:\n\n```\n{result}\n```\n\n", severity="info")
 
     async def set_session_metadata(self, meta: Dict[str, Any]) -> None:
         """Set the metadata for the current chat session"""
@@ -420,7 +430,8 @@ class RealtimeBridge(ClientEventHandler):
         await self.send_event(VoiceListEvent(voices=voices))
 
     async def send_tool_catalog(self) -> None:
-        await self.send_event(ToolCatalogEvent(tools=Toolset.get_client_registry()))
+        event = ToolCatalogEvent(tools=Toolset.get_client_registry())
+        await self.send_event(event)
 
     async def send_user_info(self) -> None:
         await self.send_event(ChatUserDataEvent(user=self.chat_user))
@@ -583,9 +594,10 @@ class RealtimeBridge(ClientEventHandler):
             self._is_new_bridge = False
 
         await self.send_chat_session()
-        #message = "# Welcome to Agent C\n\nFirst time here? Send '*Hello Domo*' to get started!"
+        message = ("# Welcome to Agent C\n\n:::TIP\n- **First time here?** Send *Hello Domo* to get started!\n"
+                   "- Send `!help` for information on available chat commands.\n\n:::\n\n")
 
-        message = "# Agent C Framework\n\n## What is Agent C?\n\nAgent C is a framework for building interactive, AI agents that make use of advanced planning and delegation patterns to accomplish much larger workloads per chat session than most. (to say the least) "
+
 
         if len(self.chat_session.messages) > 0:
             message = "# Welcome back Agent C\n\nYour previous session has been restored."
@@ -669,6 +681,10 @@ class RealtimeBridge(ClientEventHandler):
         await self.send_event(event)
 
     async def process_text_input(self, text: str, file_ids: Optional[List[str]] = None):
+        handled_command = await self.command_handler.handle_command(text, self)
+        if handled_command:
+            return
+
         if self._active_interact_task and not self._active_interact_task.done():
             self.client_wants_cancel.set()
             self._active_interact_task.cancel()
@@ -772,6 +788,21 @@ class RealtimeBridge(ClientEventHandler):
         """Send an event to all sessions for the current user"""
         await self.ui_session_manager.send_to_all_user_sessions(self.chat_user.user_id, event)
 
+    async def _tool_context(self, on_event: Optional[callable] = None, prompt_metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        if prompt_metadata is None:
+            prompt_metadata = await self._build_prompt_metadata()
+
+        return {'active_agent': self.chat_session.agent_config,
+                'bridge': self,
+                'parent_session_id': None,
+                'user_session_id': self.chat_session.session_id,
+                'user_id': self.chat_session.user_id,
+                'session_id': self.chat_session.session_id,
+                "client_wants_cancel": self.client_wants_cancel,
+                "env_name": os.getenv('ENV_NAME', 'development'),
+                "streaming_callback": on_event if on_event is not None else self.runtime_callback,
+                "prompt_metadata": prompt_metadata}
+
     async def interact(self, user_message: str, file_ids: Optional[List[str]] = None, on_event: Optional[callable] = None) -> None:
         """
         Streams chat responses for a given user message.
@@ -831,16 +862,7 @@ class RealtimeBridge(ClientEventHandler):
                 "prompt_metadata": prompt_metadata,
                 "client_wants_cancel": self.client_wants_cancel,
                 "streaming_callback": on_event  if on_event else self.runtime_callback,
-                'tool_context': {'active_agent': self.chat_session.agent_config,
-                                 'bridge': self,
-                                 'parent_session_id': None,
-                                 'user_session_id': self.chat_session.session_id,
-                                 'user_id': self.chat_session.user_id,
-                                 'session_id': self.chat_session.session_id,
-                                 "client_wants_cancel": self.client_wants_cancel,
-                                 "env_name": os.getenv('ENV_NAME', 'development'),
-                                 "streaming_callback": on_event  if on_event is not None else self.runtime_callback,
-                                 "prompt_metadata": prompt_metadata},
+                'tool_context': self._tool_context(on_event, prompt_metadata),
                 'prompt_builder': PromptBuilder(sections=agent_sections),
             }
 
