@@ -387,6 +387,16 @@ export const SessionItem = React.memo<{
       </div>
     </div>
   )
+}, (prevProps, nextProps) => {
+  // Custom comparison function to ensure isActive changes always trigger re-render
+  // This is critical for highlighting the correct session
+  return (
+    prevProps.session.session_id === nextProps.session.session_id &&
+    prevProps.isActive === nextProps.isActive &&  // MUST re-render when isActive changes
+    prevProps.isFocused === nextProps.isFocused &&
+    prevProps.isDeleting === nextProps.isDeleting &&
+    prevProps.index === nextProps.index
+  )
 })
 SessionItem.displayName = 'SessionItem'
 

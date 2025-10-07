@@ -246,10 +246,17 @@ export function useToolNotifications(
       });
     };
     
+    // Handle nuclear cleanup (user turn start)
+    const handleAllNotificationsCleared = () => {
+      Logger.debug('[useToolNotifications] All notifications cleared (user turn start)');
+      clearNotifications();
+    };
+    
     // Subscribe to events
     sessionManager.on('tool-notification', handleToolNotification);
     sessionManager.on('tool-notification-removed', handleToolNotificationRemoved);
     sessionManager.on('tool-call-complete', handleToolCallComplete);
+    sessionManager.on('all-notifications-cleared', handleAllNotificationsCleared);
     
     return () => {
       // Clear all timers
@@ -262,6 +269,7 @@ export function useToolNotifications(
         cleanupSessionManager.off('tool-notification', handleToolNotification);
         cleanupSessionManager.off('tool-notification-removed', handleToolNotificationRemoved);
         cleanupSessionManager.off('tool-call-complete', handleToolCallComplete);
+        cleanupSessionManager.off('all-notifications-cleared', handleAllNotificationsCleared);
       }
     };
   }, [client, maxNotifications, autoRemoveCompleted, autoRemoveDelay]); // Removed notifications to prevent re-registration

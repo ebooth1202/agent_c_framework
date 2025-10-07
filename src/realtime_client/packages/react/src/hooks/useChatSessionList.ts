@@ -660,9 +660,12 @@ export function useChatSessionList(options: UseChatSessionListOptions = {}): Use
         return prev;
       });
       
-      // Check if this session should be highlighted
-      if (sessionData.session_id === currentSessionId) {
-        // Force a re-render to update highlighting
+      // Check SessionManager directly to see if this is the current session
+      // This avoids stale closure issues with currentSessionId state
+      const sessionManager = client?.getSessionManager();
+      const currentSession = sessionManager?.getCurrentSession();
+      if (currentSession && currentSession.session_id === sessionData.session_id) {
+        // Force state update to trigger re-render with highlighting
         setCurrentSessionId(sessionData.session_id);
       }
     };
@@ -758,21 +761,43 @@ export function useChatSessionList(options: UseChatSessionListOptions = {}): Use
     }
   }, [autoLoad, client, sessions.length, loadSessions]);
   
-  // Update current session from SessionManager
+  // Update current session from SessionManager using event-driven approach
+  // This matches the pattern used by SessionNameDropdown for real-time session tracking
   useEffect(() => {
     if (!client) return;
     
     const sessionManager = client.getSessionManager();
-    if (sessionManager) {
-      const currentSession = sessionManager.getCurrentSession();
-      if (currentSession) {
-        setCurrentSessionId(currentSession.session_id);
-      }
-      else
-      {
+    if (!sessionManager) return;
+    
+    // Set initial value from SessionManager
+    const currentSession = sessionManager.getCurrentSession();
+    if (currentSession) {
+      setCurrentSessionId(currentSession.session_id);
+    } else {
+      setCurrentSessionId(null);
+    }
+    
+    // Handler for session changes from ChatSessionManager
+    // The EventStreamProcessor consumes chat_session_changed and the ChatSessionManager emits chat-session-changed
+    const handleSessionManagerChange = (event: { previousChatSession?: any; currentChatSession?: any }) => {
+      if (event.currentChatSession) {
+        // Update currentSessionId when SessionManager's current session changes
+        const newSessionId = event.currentChatSession.session_id;
+        console.debug('Session changed via SessionManager event:', newSessionId);
+        setCurrentSessionId(newSessionId);
+      } else {
+        // No current session
         setCurrentSessionId(null);
       }
-    }
+    };
+    
+    // Subscribe to SessionManager's chat-session-changed event (hyphenated)
+    // This is the proper event that fires when the current session changes
+    sessionManager.on('chat-session-changed', handleSessionManagerChange);
+    
+    return () => {
+      sessionManager.off('chat-session-changed', handleSessionManagerChange);
+    };
   }, [client]);
   
   return {
