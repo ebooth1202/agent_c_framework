@@ -32,6 +32,8 @@ services:
       - ${DOWNLOADS_WORKSPACE}:/app/workspaces/downloads
       - ${DESKTOP_WORKSPACE}:/app/workspaces/desktop
       - ${AGENT_C_SAVED_CHAT_FOLDER}:/app/agent_c_config/saved_sessions
+      - ${AGENT_C_CONFIG_PATH}/chat_sessions.db:/app/agent_c_config/chat_sessions.db
+      - ${AGENT_C_CONFIG_PATH}/chat_chat_user_auth.db:/app/agent_c_config/chat_chat_user_auth.db
     environment:
       - ENVIRONMENT=TEST
       - PYTHONPATH=/app
