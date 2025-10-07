@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING, List
 
 from agent_c_api.core.commands.base_command import Command
 from agent_c_api.core.commands.help import HelpCommand
+from agent_c_api.core.commands.history import ForkCommand, RewindCommand
 from agent_c_api.core.commands.tools import EquipToolCommand, RemoveToolCommand, CallToolCommand, ToolInfoCommand
 
 if TYPE_CHECKING:
@@ -16,6 +17,8 @@ class ChatCommandHandler:
         # Register all your commands
         self._register_commands([
             HelpCommand(),
+            ForkCommand(),
+            RewindCommand(),
             ToolInfoCommand(),
             EquipToolCommand(),
             RemoveToolCommand(),

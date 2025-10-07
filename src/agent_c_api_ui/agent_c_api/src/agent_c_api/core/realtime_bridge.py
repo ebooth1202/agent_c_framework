@@ -6,6 +6,7 @@ import traceback
 from contextlib import suppress
 from datetime import datetime
 from functools import singledispatchmethod
+from operator import truediv
 from typing import List, Optional, Any, Dict, AsyncIterator, Union, TYPE_CHECKING
 
 from sympy import false
@@ -425,9 +426,80 @@ class RealtimeBridge(ClientEventHandler):
             self.chat_session.agent_config.tools.append('BridgeTools')
         await self.send_chat_session()
 
-    async def send_voices(self) -> None:
+    async def send_voices(self):
         voices = [no_voice_model, heygen_avatar_voice_model] + open_ai_voice_models
         await self.send_event(VoiceListEvent(voices=voices))
+
+    def is_user_input_message(self, message: Dict[str, Any]) -> bool:
+        if message.get('role') != 'user':
+            return False
+
+        content = message['content']
+        if isinstance(content, str):
+            return True
+
+        if isinstance(content, list):
+            for item in content:
+                if isinstance(item, dict) and item.get('type') == 'tool_result':
+                    return False
+
+        return True
+
+
+    async def rewind_session(self, count: int):
+        if count == 0:
+            count = 1
+
+        found = 0
+
+        # Loop backwards through messages to find user messages
+        for i in range(len(self.chat_session.messages) - 1, -1, -1):
+            message = self.chat_session.messages[i]
+            if self.is_user_input_message(message):
+                found += 1
+                if found >= count:
+                    # Found the Nth user message, truncate here
+                    self.chat_session.messages = self.chat_session.messages[:(i-1)]
+                    await self.flush_session()
+                    await self.send_chat_session()
+                    await self.send_system_message(f"Rewound session by {count} user message(s)", severity="info")
+                    return
+
+
+    async def fork_session(self, session_id: Optional[str] = None):
+        if session_id is None:
+            session_id = self.chat_session.session_id
+
+        new_session_id = f"{self.chat_session.user_id}-{MnemonicSlugs.generate_slug(2)}"
+
+        if session_id != self.chat_session.session_id:
+            old_session: ChatSession = await self.chat_session_manager.get_session(session_id, self.chat_user.user_id)
+            if not old_session or old_session.user_id != self.chat_user.user_id:
+                await self.send_error(f"Session '{session_id}' not found", source="fork_session")
+                return
+            name = old_session.display_name
+            session_data = old_session.model_dump(exclude={'display_name', 'vendor'})
+        else:
+            session_data = self.chat_session.model_dump(exclude={'display_name', 'vendor'})
+            name = self.chat_session.display_name
+
+        session_data['session_id'] = new_session_id
+        session_data['session_name'] = f"{name} (fork)"
+
+        try:
+            new_session = ChatSession.model_validate(session_data)
+            await self.chat_session_manager.flush_session(new_session, True)
+            await self.send_to_all_user_sessions(ChatSessionAddedEvent(chat_session=new_session.as_index_entry()))
+            await self.resume_chat_session(new_session.session_id)
+            await self.send_system_message(f"Forked from {session_id}.", severity="info")
+
+        except Exception as e:
+            self.logger.error(f"Failed to fork session {session_id}: {e}\n{traceback.format_exc()}")
+            await self.send_error(f"Failed to fork session '{session_id}': {e}", source="fork_session")
+            return
+
+
+
 
     async def send_tool_catalog(self) -> None:
         event = ToolCatalogEvent(tools=Toolset.get_client_registry())
