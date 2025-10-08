@@ -82,4 +82,4 @@ fi
 echo "Services are ready!"
 
 # Open the browser to view Agent C
-bash ./view_agent_c.sh
+bash ./scripts/view_agent_c.sh

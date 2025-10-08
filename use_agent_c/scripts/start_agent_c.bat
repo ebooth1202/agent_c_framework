@@ -44,6 +44,6 @@ docker-compose -f docker-compose.yml -p agent_c up -d --force-recreate
 timeout /t 5 /nobreak > nul
 
 :: Open the browser to view Agent C
-call view_agent_c.bat
+call scripts\view_agent_c.bat
 
 ENDLOCAL
