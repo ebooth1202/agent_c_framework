@@ -40,8 +40,10 @@ export interface InputToolbarProps {
   onStopRecording: () => void
   /** Current audio level (0-100) for visualization */
   audioLevel?: number
-  /** Callback for attachment button (optional) */
+  /** Callback for attachment button */
   onAttachment?: () => void
+  /** Whether attachment button should be disabled */
+  disableAttachment?: boolean
   /** Callback for tools button (optional, placeholder) */
   onTools?: () => void
   /** @deprecated List of available agents - AgentSelector now uses SDK data */
@@ -94,15 +96,15 @@ const AudioLevelIndicator: React.FC<{ level: number; className?: string }> = ({
 }
 
 /**
- * Attachment button (placeholder)
+ * Attachment button
  */
-const AttachmentButton: React.FC<{ onClick?: () => void }> = ({ onClick }) => (
+const AttachmentButton: React.FC<{ onClick?: () => void; disabled?: boolean }> = ({ onClick, disabled }) => (
   <Button
     variant="ghost"
     size="icon"
     onClick={onClick}
     aria-label="Add attachment"
-    disabled
+    disabled={disabled}
   >
     <Paperclip className="h-4 w-4" />
   </Button>
@@ -151,6 +153,7 @@ export const InputToolbar = React.forwardRef<HTMLDivElement, InputToolbarProps>(
     onStopRecording,
     audioLevel = 0,
     onAttachment,
+    disableAttachment,
     onTools,
     agents,  // @deprecated - AgentSelector now manages its own state via SDK
     selectedAgent,  // @deprecated - AgentSelector now manages its own state via SDK
@@ -260,7 +263,7 @@ export const InputToolbar = React.forwardRef<HTMLDivElement, InputToolbarProps>(
       >
         {/* Left Section - Attachment, Tools, OutputSelector */}
         <div className="flex items-center gap-1">
-          <AttachmentButton onClick={onAttachment} />
+          <AttachmentButton onClick={onAttachment} disabled={disableAttachment} />
           <ToolsButton onClick={onTools} />
           
           {/* OutputSelector - Controls how AGENT responds (text/voice/avatar) */}

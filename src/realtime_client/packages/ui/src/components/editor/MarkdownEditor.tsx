@@ -38,6 +38,7 @@ const MarkdownEditor = React.forwardRef<HTMLDivElement, MarkdownEditorProps>(
     onImageUploadComplete,
     onImageUploadError,
     onKeyDown,
+    onPaste,
     ...props 
   }, ref) => {
     
@@ -49,12 +50,7 @@ const MarkdownEditor = React.forwardRef<HTMLDivElement, MarkdownEditorProps>(
           placeholder, 
           onSubmit, 
           disabled,
-          enableSmartPaste,
-          maxImageSize,
-          onImageUpload,
-          onImageUploadStart,
-          onImageUploadComplete,
-          onImageUploadError,
+          // SmartPaste options removed - file upload now handled by ChatInputArea
         }),
         // Placeholder extension for empty state
         Placeholder.configure({
@@ -143,6 +139,7 @@ const MarkdownEditor = React.forwardRef<HTMLDivElement, MarkdownEditorProps>(
           disabled && 'opacity-50',
           className
         )}
+        onPaste={onPaste}
         {...props}
       >
         <EditorContent 

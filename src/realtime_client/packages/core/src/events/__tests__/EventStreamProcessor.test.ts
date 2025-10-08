@@ -675,10 +675,17 @@ describe('EventStreamProcessor - Streaming Delta Assembly', () => {
 
         processor.processEvent(toolSelectEvent);
 
-        expect(sessionManagerEmitSpy).toHaveBeenCalledWith('tool-notification', {
+        // Filter for tool-notification events instead of assuming position
+        const toolNotificationCalls = sessionManagerEmitSpy.mock.calls.filter(
+          call => call[0] === 'tool-notification'
+        );
+        
+        expect(toolNotificationCalls.length).toBeGreaterThan(0);
+        expect(toolNotificationCalls[0][1]).toMatchObject({
           id: 'tool-1',
           toolName: 'calculator',
           status: 'preparing',
+          sessionId: 'test-session-123',
           timestamp: expect.any(Date),
           arguments: JSON.stringify({ operation: 'add', a: 5, b: 3 })
         });
@@ -703,10 +710,17 @@ describe('EventStreamProcessor - Streaming Delta Assembly', () => {
 
         processor.processEvent(thinkSelectEvent);
 
-        expect(sessionManagerEmitSpy).toHaveBeenCalledWith('tool-notification', {
+        // Filter for tool-notification events instead of assuming position
+        const toolNotificationCalls = sessionManagerEmitSpy.mock.calls.filter(
+          call => call[0] === 'tool-notification'
+        );
+        
+        expect(toolNotificationCalls.length).toBeGreaterThan(0);
+        expect(toolNotificationCalls[0][1]).toMatchObject({
           id: 'think-1',
           toolName: 'think',
           status: 'preparing',
+          sessionId: 'test-session-123',
           timestamp: expect.any(Date),
           arguments: '{}'
         });
@@ -755,10 +769,12 @@ describe('EventStreamProcessor - Streaming Delta Assembly', () => {
 
         processor.processEvent(activeEvent);
 
+        // Updated to include sessionId field in expected payload
         expect(sessionManagerEmitSpy).toHaveBeenCalledWith('tool-notification', {
           id: 'tool-1',
           toolName: 'web_search',
           status: 'executing',
+          sessionId: 'test-session-123',
           timestamp: expect.any(Date),
           arguments: JSON.stringify({ query: 'test' })
         });
@@ -792,7 +808,16 @@ describe('EventStreamProcessor - Streaming Delta Assembly', () => {
 
         processor.processEvent(completeEvent);
 
-        expect(sessionManagerEmitSpy).toHaveBeenCalledWith('tool-notification-removed', 'tool-1');
+        // Filter for the removal event instead of assuming position
+        const removalCalls = sessionManagerEmitSpy.mock.calls.filter(
+          call => call[0] === 'tool-notification-removed'
+        );
+        
+        expect(removalCalls.length).toBeGreaterThan(0);
+        expect(removalCalls[0][1]).toMatchObject({
+          sessionId: 'test-session-123',
+          toolCallId: 'tool-1'
+        });
       });
 
       it('should ignore tool_call events for think tool', () => {
@@ -823,9 +848,22 @@ describe('EventStreamProcessor - Streaming Delta Assembly', () => {
 
         processor.processEvent(thinkCallEvent);
 
-        // Should only remove notification, not process the tool call
-        expect(sessionManagerEmitSpy).toHaveBeenCalledWith('tool-notification-removed', 'think-1');
-        expect(sessionManagerEmitSpy).not.toHaveBeenCalledWith('tool-notification', expect.anything());
+        // Filter for the removal event instead of assuming position
+        const removalCalls = sessionManagerEmitSpy.mock.calls.filter(
+          call => call[0] === 'tool-notification-removed'
+        );
+        
+        expect(removalCalls.length).toBeGreaterThan(0);
+        expect(removalCalls[0][1]).toMatchObject({
+          sessionId: 'test-session-123',
+          toolCallId: 'think-1'
+        });
+        
+        // Should not emit new tool notifications (only remove)
+        const notificationCalls = sessionManagerEmitSpy.mock.calls.filter(
+          call => call[0] === 'tool-notification'
+        );
+        expect(notificationCalls.length).toBe(0);
       });
     });
 
@@ -859,8 +897,16 @@ describe('EventStreamProcessor - Streaming Delta Assembly', () => {
 
         processor.processEvent(thoughtDeltaEvent);
 
-        // Should remove the think tool notification
-        expect(sessionManagerEmitSpy).toHaveBeenCalledWith('tool-notification-removed', 'think-1');
+        // Filter for removal event instead of assuming position
+        const removalCalls = sessionManagerEmitSpy.mock.calls.filter(
+          call => call[0] === 'tool-notification-removed'
+        );
+        
+        expect(removalCalls.length).toBeGreaterThan(0);
+        expect(removalCalls[0][1]).toMatchObject({
+          sessionId: 'test-session-123',
+          toolCallId: 'think-1'
+        });
         
         // And emit the thought streaming
         expect(sessionManagerEmitSpy).toHaveBeenCalledWith('message-streaming', {
@@ -910,7 +956,15 @@ describe('EventStreamProcessor - Streaming Delta Assembly', () => {
 
           // First delta should remove notification
           if (index === 0) {
-            expect(sessionManagerEmitSpy).toHaveBeenCalledWith('tool-notification-removed', 'think-2');
+            const removalCalls = sessionManagerEmitSpy.mock.calls.filter(
+              call => call[0] === 'tool-notification-removed'
+            );
+            
+            expect(removalCalls.length).toBeGreaterThan(0);
+            expect(removalCalls[0][1]).toMatchObject({
+              sessionId: 'test-session-123',
+              toolCallId: 'think-2'
+            });
           }
 
           // All deltas should emit streaming

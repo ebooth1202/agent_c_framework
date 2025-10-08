@@ -387,6 +387,16 @@ export const SessionItem = React.memo<{
       </div>
     </div>
   )
+}, (prevProps, nextProps) => {
+  // Custom comparison function to ensure isActive changes always trigger re-render
+  // This is critical for highlighting the correct session
+  return (
+    prevProps.session.session_id === nextProps.session.session_id &&
+    prevProps.isActive === nextProps.isActive &&  // MUST re-render when isActive changes
+    prevProps.isFocused === nextProps.isFocused &&
+    prevProps.isDeleting === nextProps.isDeleting &&
+    prevProps.index === nextProps.index
+  )
 })
 SessionItem.displayName = 'SessionItem'
 
@@ -565,6 +575,11 @@ const VirtualSessionList = React.memo<{
       return SESSION_ITEM_HEIGHT
     }
   })
+  
+  // Force virtualizer to measure after mount or when items change
+  React.useEffect(() => {
+    virtualizer.measure()
+  }, [items.length, virtualizer])
   
   const virtualItems = virtualizer.getVirtualItems()
   
@@ -817,21 +832,9 @@ export const ChatSessionList = React.forwardRef<HTMLDivElement, ChatSessionListP
       }
     }, [filteredSessions, focusedIndex, handleSessionSelect, handleDeleteRequest])
     
-    // Collapsed view
+    // When collapsed, hide the session list completely
     if (isCollapsed) {
-      return (
-        <div
-          ref={ref}
-          className={cn("flex-1 overflow-hidden", className)}
-          {...props}
-        >
-          <CollapsedView
-            sessions={sessions}
-            currentSessionId={currentSessionId}
-            onSessionSelect={handleSessionSelect}
-          />
-        </div>
-      )
+      return null
     }
     
     // Main expanded view

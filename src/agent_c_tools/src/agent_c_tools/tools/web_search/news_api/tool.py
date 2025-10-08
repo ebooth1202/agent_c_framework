@@ -8,6 +8,35 @@ from newsapi.newsapi_client import NewsApiClient
 from agent_c.toolsets import json_schema, Toolset
 
 class NewsApiTools(Toolset):
+    """
+    News search and retrieval tool using NewsAPI.org.
+    
+    This toolset provides comprehensive access to news articles from thousands of sources worldwide.
+    It enables searching current headlines, filtering by category, and performing historical news searches.
+    
+    Available Methods:
+        - get_top_headlines: Retrieve current top headlines by category
+        - get_sources: Get a list of available news sources
+        - get_all_articles: Search all articles with date range and sorting options
+    
+    Key Features:
+        - Access to headlines from major news sources
+        - Category-based filtering (business, entertainment, general, health, science, sports, technology)
+        - Date range searches with ISO-8601 format
+        - Sorting options (relevancy, popularity, publishedAt)
+        - Pagination support for large result sets
+        - Results include article URLs, titles, descriptions, and publication metadata
+    
+    Requirements:
+        - NEWSAPI_API_KEY environment variable
+        - newsapi-python package
+    
+    Usage Notes:
+        - Free tier has limitations on date range (typically 30 days back)
+        - Query parameters are limited to 500 characters
+        - Results are in English by default
+        - Rate limits apply based on your API plan
+    """
     def __init__(self, **kwargs):
         super().__init__(**kwargs, name='newsapiorg', needed_keys=['NEWSAPI_API_KEY'])
         api_key = kwargs.get('api_key', os.environ['NEWSAPI_API_KEY'])

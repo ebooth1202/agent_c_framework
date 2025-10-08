@@ -99,9 +99,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [uiSessionId, setUiSessionId] = useState<string | undefined>();
 
   // Helper to get stored UI session ID
+  // IMPORTANT: Uses sessionStorage (not localStorage) so each tab has its own UI session
+  // This allows multiple tabs to have independent chat sessions
   const getStoredUiSessionId = (): string | undefined => {
     try {
-      const stored = localStorage.getItem('agentc-ui-session-id');
+      const stored = sessionStorage.getItem('agentc-ui-session-id');
       if (stored) {
         authLog.debug('Retrieved stored UI session ID:', stored);
         return stored;
@@ -113,9 +115,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   // Helper to store UI session ID
+  // IMPORTANT: Uses sessionStorage (not localStorage) so each tab has its own UI session
   const storeUiSessionId = (sessionId: string) => {
     try {
-      localStorage.setItem('agentc-ui-session-id', sessionId);
+      sessionStorage.setItem('agentc-ui-session-id', sessionId);
       authLog.debug('Stored UI session ID:', sessionId);
     } catch (error) {
       authLog.error('Failed to store UI session ID', error);
@@ -125,7 +128,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Helper to clear UI session ID
   const clearUiSessionId = () => {
     try {
-      localStorage.removeItem('agentc-ui-session-id');
+      sessionStorage.removeItem('agentc-ui-session-id');
       authLog.debug('Cleared UI session ID');
     } catch (error) {
       authLog.error('Failed to clear UI session ID', error);
@@ -172,20 +175,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Check auth status periodically to handle token expiration
     const interval = setInterval(() => {
       const authenticated = checkIsAuthenticated();
-      if (authenticated !== isAuthenticated) {
-        authLog.info(`Auth state changed: ${authenticated ? 'authenticated' : 'not authenticated'}`);
-        setIsAuthenticated(authenticated);
-        if (!authenticated) {
-          setUiSessionId(undefined);
-          clearUiSessionId();
+      setIsAuthenticated(prevAuthenticated => {
+        if (authenticated !== prevAuthenticated) {
+          authLog.info(`Auth state changed: ${authenticated ? 'authenticated' : 'not authenticated'}`);
+          if (!authenticated) {
+            setUiSessionId(undefined);
+            clearUiSessionId();
+          }
         }
-      }
+        return authenticated;
+      });
     }, 30000); // Check every 30 seconds
     
     return () => {
       clearInterval(interval);
     };
-  }, [isAuthenticated]);  // Added dependency for the periodic check
+  }, []); // Run only once on mount
 
   /**
    * Login function

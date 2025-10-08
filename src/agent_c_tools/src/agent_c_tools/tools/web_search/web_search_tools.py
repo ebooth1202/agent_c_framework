@@ -23,7 +23,7 @@ from .base.validator import ParameterValidator
 from .base.error_handler import ErrorHandler
 from .base.config_manager import get_config_manager, validate_web_search_configuration
 from .engines import (
-    create_duckduckgo_engine, create_google_serp_engine, create_tavily_engine,
+    create_google_serp_engine, create_tavily_engine,
     create_wikipedia_engine, create_news_api_engine, create_hacker_news_engine
 )
 
@@ -61,7 +61,6 @@ class WebSearchTools(Toolset):
     def _register_engines(self) -> None:
         """Register all available search engines."""
         engines_to_register = [
-            ('duckduckgo', create_duckduckgo_engine),
             ('google_serp', create_google_serp_engine),
             ('tavily', create_tavily_engine),
             ('wikipedia', create_wikipedia_engine),

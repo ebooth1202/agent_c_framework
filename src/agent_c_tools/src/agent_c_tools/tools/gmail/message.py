@@ -17,6 +17,42 @@ from ...helpers.path_helper import create_unc_path, os_file_system_path
 
 
 class GmailMessage(GmailBase):
+    """
+    Gmail message management toolset for email operations.
+    
+    This toolset provides comprehensive Gmail integration for reading, sending, and drafting emails,
+    including support for attachments from workspace. It handles email threads, message parsing,
+    and content cleanup for optimal token usage.
+    
+    Available Methods:
+        - get_message: Fetch an email by message ID, including attachments
+        - send_message: Send emails with optional attachments from workspace
+        - draft_message: Create email drafts with optional attachments
+        - get_thread: Fetch an entire email thread by thread ID
+    
+    Key Features:
+        - Full email content retrieval with HTML-to-text conversion
+        - Attachment download and workspace integration
+        - Email composition with cc, bcc, and multiple recipients
+        - Thread-based email retrieval
+        - Automatic content cleanup (removes quoted text, signatures, forwarded markers)
+        - Token-optimized email body handling with automatic truncation
+        - MIME multipart message support
+        - Base64 encoding/decoding for attachments
+    
+    Requirements:
+        - Gmail API credentials via GmailBase (OAuth2)
+        - WorkspaceTools (for attachment operations)
+        - google-api-python-client package
+        - BeautifulSoup for HTML parsing
+    
+    Usage Notes:
+        - Email bodies are automatically cleaned to remove noise and reduce token usage
+        - Large email bodies (>configurable limit) are automatically truncated
+        - HTML emails are converted to plain text
+        - Attachments are saved with full workspace UNC paths
+        - Supports both plain text and HTML email composition
+    """
     def __init__(self, **kwargs):
         super().__init__(**kwargs, name='gmail')
         self.logger: logging.Logger = logging.getLogger(__name__)

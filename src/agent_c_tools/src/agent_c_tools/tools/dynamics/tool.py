@@ -15,6 +15,40 @@ from agent_c_tools.helpers.dataframe_in_memory import create_excel_in_memory
 
 
 class DynamicsTools(Toolset):
+    """
+    Microsoft Dynamics 365 CRM integration toolset.
+    
+    This toolset provides comprehensive integration with Microsoft Dynamics 365 CRM, enabling
+    agents to query, analyze, and create CRM data. It supports standard and custom entities,
+    with optimized field selection to reduce token usage.
+    
+    Available Methods:
+        - get_entities: Retrieve one or more entities (accounts, leads, opportunities, contacts, etc.)
+        - force_login: Force re-authentication with Dynamics 365
+        - dynamics_user_id: Get the Dynamics user ID for the authenticated user
+        - create_entity: Create new entities (notes, appointments, tasks, phone calls)
+    
+    Key Features:
+        - Support for standard entities (accounts, leads, opportunities, contacts, etc.)
+        - Support for custom entities (service offerings, industry verticals, business units)
+        - OData query support for advanced filtering
+        - Automatic HTML/XML content cleaning for notes and emails
+        - Large dataset handling with automatic Excel file export
+        - Token-optimized field selection with override options
+        - Batch entity detail retrieval
+    
+    Requirements:
+        - DYNAMICS_ENDPOINT, DYNAMICS_CLIENT_ID, DYNAMICS_SCOPE environment variables
+        - REDIRECT_URI, TOKEN_ENDPOINT for OAuth authentication
+        - CENTRIC_ID, CENTRIC_PW for user credentials
+        - WorkspaceTools (for large dataset file operations)
+    
+    Usage Notes:
+        - Only active entities (statecode eq 0) are returned by default for accounts
+        - Large responses (>25,000 tokens or >5 records) are automatically saved to Excel
+        - Results include relationship data through $expand queries
+        - Custom entities include service offerings, industry verticals, and business units
+    """
     def __init__(self, **kwargs):
         super().__init__(**kwargs, name='dynamics_crm',
                          needed_keys=['DYNAMICS_ENDPOINT', 'DYNAMICS_CLIENT_ID', 'DYNAMICS_SCOPE',

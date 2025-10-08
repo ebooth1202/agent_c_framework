@@ -8,6 +8,34 @@ from .prompt import TavilyResearchPrompt
 
 
 class TavilyResearchTools(Toolset):
+    """
+    Advanced research tool using Tavily's AI-powered search API.
+    
+    This toolset provides sophisticated research capabilities using Tavily's API, which is specifically
+    designed for AI agents and research tasks. It excels at finding accurate, relevant information
+    with built-in content extraction and quality scoring.
+    
+    Available Methods:
+        - search_tavily: Perform advanced research queries with depth control and content extraction
+    
+    Key Features:
+        - AI-optimized search results with relevance scoring
+        - Advanced search depth options (basic or advanced)
+        - Raw content extraction from web pages
+        - Domain filtering (include/exclude specific domains)
+        - Optional image inclusion
+        - Built-in answer generation
+    
+    Requirements:
+        - TAVILI_API_KEY environment variable
+        - tavily-python package
+    
+    Usage Notes:
+        - Best used for research tasks requiring high-quality, relevant information
+        - Advanced search depth provides more comprehensive results but uses more API credits
+        - Raw content is extracted from pages for deeper analysis
+        - Results include URLs, body content, and quality scores
+    """
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs, name='tavily', needed_keys=['TAVILI_API_KEY'])

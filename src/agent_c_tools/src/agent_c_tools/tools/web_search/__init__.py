@@ -11,10 +11,8 @@ from .hacker_news import HackerNewsTools  # Used by HackerNewsEngine
 from .news_api import NewsApiTools  # Used by NewsApiEngine
 from .tavily_research import TavilyResearchTools  # Used by TavilyEngine
 from .wikipedia.tool import WikipediaTools  # Used by WikipediaEngine
-# from .duck_duck_go import DuckDuckGoTools  # Used by DuckDuckGoEngine
 
-# Standalone tools (moved to deprecated directory)
-from .deprecated import GoogleTrendsTools, SeekingAlphaTools
+
 
 # Export main interface
 __all__ = ['WebSearchTools']

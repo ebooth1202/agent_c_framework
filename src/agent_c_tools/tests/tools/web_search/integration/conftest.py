@@ -23,7 +23,6 @@ def api_keys():
 @pytest.fixture(scope="session")
 def available_engines(api_keys):
     """Fixture to determine which engines are available for testing."""
-    from agent_c_tools.tools.web_search.engines.duckduckgo_engine import create_duckduckgo_engine
     from agent_c_tools.tools.web_search.engines.google_serp_engine import create_google_serp_engine
     from agent_c_tools.tools.web_search.engines.tavily_engine import create_tavily_engine
     from agent_c_tools.tools.web_search.engines.wikipedia_engine import create_wikipedia_engine
@@ -31,7 +30,6 @@ def available_engines(api_keys):
     from agent_c_tools.tools.web_search.engines.hacker_news_engine import create_hacker_news_engine
     
     engines = {
-        "duckduckgo": create_duckduckgo_engine(),
         "google_serp": create_google_serp_engine(),
         "tavily": create_tavily_engine(),
         "wikipedia": create_wikipedia_engine(),

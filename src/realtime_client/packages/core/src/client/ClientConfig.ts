@@ -116,6 +116,15 @@ export interface RealtimeClientConfig {
   
   /** Audio configuration */
   audioConfig?: AudioConfig;
+  
+  /** Maximum file upload size in bytes (default: 10MB) */
+  maxUploadSize?: number;
+  
+  /** Allowed file MIME types for upload (default: undefined = allow all) */
+  allowedMimeTypes?: string[];
+  
+  /** Maximum number of files per message (default: 10) */
+  maxFilesPerMessage?: number;
 }
 
 /**
@@ -160,7 +169,10 @@ export const defaultConfig: Partial<RealtimeClientConfig> = {
   binaryType: 'arraybuffer',
   enableTurnManager: true,    // Enable turn management by default
   enableAudio: false,         // Audio disabled by default (requires user opt-in)
-  audioConfig: defaultAudioConfig
+  audioConfig: defaultAudioConfig,
+  maxUploadSize: 10 * 1024 * 1024, // 10MB
+  allowedMimeTypes: undefined, // Allow all
+  maxFilesPerMessage: 10
 };
 
 /**

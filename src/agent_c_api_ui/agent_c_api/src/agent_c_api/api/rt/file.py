@@ -65,7 +65,7 @@ class UserFileResponse(BaseModel):
 
 
 # Background task to clean up expired files
-def cleanup_expired_files(file_handler: RTFileHandler):
+def cleanup_expired_files(file_handler: 'RTFileHandler'):
     """Background task to clean up expired files"""
     try:
         count = file_handler.cleanup_expired_files()
@@ -129,7 +129,7 @@ async def upload_file(
     manager = request.app.state.realtime_manager
 
     try:
-        session_data: RealtimeSession = await manager.get_session_data(ui_session_id)
+        session_data: 'RealtimeSession' = manager.get_session_data(ui_session_id)
         if not session_data:
             logger.error(f"No session found for session_id: {ui_session_id}")
             raise HTTPException(status_code=404, detail="Session not found")

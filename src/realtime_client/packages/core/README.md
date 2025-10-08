@@ -266,6 +266,328 @@ client.on('agent_turn_start', () => {
 });
 ```
 
+## File Upload
+
+The SDK supports uploading files to include in chat messages, enabling multimodal interactions with images, documents, and other file types.
+
+### Overview
+
+File upload is a two-step process:
+1. **Upload** the file via HTTP to receive a file ID
+2. **Send** a message with the file ID(s) attached
+
+The server processes uploaded files and includes them in the message context, enabling the agent to analyze images, read documents, and respond to multimodal content.
+
+### Quick Example
+
+```typescript
+import { RealtimeClient } from '@agentc/realtime-core';
+
+// Upload a file
+const file = document.getElementById('fileInput').files[0];
+const uploadedFile = await client.uploadFile(file);
+
+console.log('Uploaded:', uploadedFile);
+// { id: 'file-123', filename: 'image.png', mime_type: 'image/png', size: 54321 }
+
+// Send message with file attachment
+client.sendText('What do you see in this image?', [uploadedFile.id]);
+```
+
+### Configuration Options
+
+Configure file upload limits in the RealtimeClient config:
+
+```typescript
+const client = new RealtimeClient({
+  apiUrl: 'wss://api.agentc.ai/realtime',
+  authManager: authManager,
+  maxUploadSize: 10 * 1024 * 1024,    // 10MB (default)
+  allowedMimeTypes: [                  // undefined = allow all (default)
+    'image/png',
+    'image/jpeg',
+    'application/pdf'
+  ],
+  maxFilesPerMessage: 10               // Maximum files per message (default: 10)
+});
+```
+
+### Uploading Files
+
+#### Single File Upload
+
+```typescript
+// Basic upload
+const file = document.getElementById('fileInput').files[0];
+const result = await client.uploadFile(file);
+
+console.log('File ID:', result.id);
+console.log('Filename:', result.filename);
+console.log('MIME type:', result.mime_type);
+console.log('Size:', result.size, 'bytes');
+```
+
+#### Upload with Progress Tracking
+
+```typescript
+const result = await client.uploadFile(file, {
+  onProgress: (progress) => {
+    console.log(`Upload: ${progress.percentage}%`);
+    console.log(`${progress.loaded} / ${progress.total} bytes`);
+    
+    // Update UI progress bar
+    progressBar.value = progress.percentage;
+  }
+});
+```
+
+#### Upload with Cancellation
+
+```typescript
+const controller = new AbortController();
+
+// Start upload
+const uploadPromise = client.uploadFile(file, {
+  signal: controller.signal
+});
+
+// Cancel if needed
+cancelButton.onclick = () => controller.abort();
+
+try {
+  const result = await uploadPromise;
+  console.log('Upload complete:', result);
+} catch (error) {
+  if (error.message === 'Upload cancelled') {
+    console.log('User cancelled upload');
+  } else {
+    console.error('Upload failed:', error);
+  }
+}
+```
+
+#### Multiple File Upload
+
+```typescript
+const files = Array.from(document.getElementById('multiFileInput').files);
+
+// Upload all files (sequentially)
+const results = await client.uploadFiles(files, {
+  onProgress: (progress) => {
+    // Progress across all files
+    console.log(`Overall: ${progress.percentage}%`);
+  }
+});
+
+// Extract file IDs
+const fileIds = results.map(r => r.id);
+
+// Send message with all files
+client.sendText('Please analyze these documents', fileIds);
+```
+
+### Sending Messages with Files
+
+Once files are uploaded, include their IDs when sending text messages:
+
+```typescript
+// Single file
+client.sendText('Analyze this image', [fileId]);
+
+// Multiple files
+client.sendText('Compare these documents', [fileId1, fileId2, fileId3]);
+
+// No files (regular text message)
+client.sendText('Hello!');
+```
+
+### Error Handling
+
+Handle upload errors appropriately:
+
+```typescript
+try {
+  const result = await client.uploadFile(file);
+  client.sendText('Analyze this', [result.id]);
+} catch (error) {
+  if (error.message.includes('exceeds maximum')) {
+    // File too large
+    showError('File is too large. Maximum size is 10MB.');
+  } else if (error.message.includes('not allowed')) {
+    // Invalid file type
+    showError('File type not supported.');
+  } else if (error.message.includes('Authentication required')) {
+    // Not authenticated
+    await authManager.refreshToken();
+    // Retry upload
+  } else if (error.message.includes('Network error')) {
+    // Network issue
+    showError('Upload failed. Please check your connection.');
+  } else {
+    // Other error
+    showError(`Upload failed: ${error.message}`);
+  }
+}
+```
+
+### Multimodal Message Responses
+
+When you send a message with file attachments, the server may respond with multimodal content:
+
+```typescript
+// Listen for user message confirmation (includes your uploaded files)
+client.on('anthropic_user_message', (event) => {
+  const message = event.message;
+  
+  if (Array.isArray(message.content)) {
+    message.content.forEach(block => {
+      if (block.type === 'text') {
+        console.log('Text:', block.text);
+      } else if (block.type === 'image') {
+        console.log('Image:', block.source);
+        // Display image in UI
+      }
+    });
+  }
+});
+
+// Agent responses are streamed as usual
+client.on('text_delta', (event) => {
+  // Agent's response to your files
+  console.log(event.content);
+});
+```
+
+### File Upload Types
+
+```typescript
+import type {
+  UserFileResponse,
+  FileUploadOptions,
+  UploadProgress
+} from '@agentc/realtime-core';
+
+// File metadata returned from upload
+interface UserFileResponse {
+  id: string;           // Unique file identifier
+  filename: string;     // Original filename
+  mime_type: string;    // File MIME type
+  size: number;         // File size in bytes
+}
+
+// Upload options
+interface FileUploadOptions {
+  onProgress?: (progress: UploadProgress) => void;  // Progress callback
+  signal?: AbortSignal;                              // Cancellation signal
+}
+
+// Progress information
+interface UploadProgress {
+  loaded: number;       // Bytes uploaded so far
+  total: number;        // Total bytes to upload
+  percentage: number;   // Progress percentage (0-100)
+}
+```
+
+### Complete File Upload Example
+
+```typescript
+import { RealtimeClient, AuthManager } from '@agentc/realtime-core';
+
+async function uploadAndAnalyzeImage() {
+  // Setup client
+  const authManager = new AuthManager({ apiUrl: 'https://api.agentc.ai' });
+  await authManager.login({ username: 'user', password: 'pass' });
+  
+  const client = new RealtimeClient({
+    apiUrl: authManager.getWebSocketUrl(),
+    authManager,
+    maxUploadSize: 10 * 1024 * 1024,
+    allowedMimeTypes: ['image/png', 'image/jpeg']
+  });
+  
+  await client.connect();
+  await client.waitForInitialization();
+  
+  // Get file from input
+  const fileInput = document.getElementById('imageInput') as HTMLInputElement;
+  const file = fileInput.files?.[0];
+  
+  if (!file) {
+    console.error('No file selected');
+    return;
+  }
+  
+  // Upload with progress
+  console.log('Uploading...');
+  const uploadedFile = await client.uploadFile(file, {
+    onProgress: (progress) => {
+      console.log(`Progress: ${progress.percentage}%`);
+      progressBar.value = progress.percentage;
+    }
+  });
+  
+  console.log('Upload complete:', uploadedFile);
+  
+  // Send message with file
+  client.sendText(
+    'Please describe what you see in this image in detail.',
+    [uploadedFile.id]
+  );
+  
+  // Handle response
+  let response = '';
+  client.on('text_delta', (event) => {
+    response += event.content;
+    displayText.textContent = response;
+  });
+  
+  client.on('completion', (event) => {
+    if (!event.running) {
+      console.log('Analysis complete:', response);
+    }
+  });
+}
+```
+
+### Best Practices
+
+1. **Validate Before Upload**: Check file size and type on the client before uploading
+   ```typescript
+   if (file.size > 10 * 1024 * 1024) {
+     showError('File too large');
+     return;
+   }
+   ```
+
+2. **Provide Feedback**: Always show upload progress to users
+   ```typescript
+   onProgress: (progress) => {
+     updateProgressBar(progress.percentage);
+   }
+   ```
+
+3. **Handle Errors Gracefully**: Provide clear error messages
+   ```typescript
+   try {
+     await client.uploadFile(file);
+   } catch (error) {
+     showUserFriendlyError(error);
+   }
+   ```
+
+4. **Support Cancellation**: Allow users to cancel long uploads
+   ```typescript
+   const controller = new AbortController();
+   cancelButton.onclick = () => controller.abort();
+   ```
+
+5. **Clean Up File IDs**: File IDs are session-specific and temporary
+   ```typescript
+   // Don't persist file IDs across sessions
+   // Re-upload files if user returns later
+   ```
+
 ## Advanced Topics
 
 For advanced usage patterns and detailed guides:

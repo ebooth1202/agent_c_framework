@@ -1,20 +1,4 @@
 services:
-  redis:
-    image: redis:7-alpine
-    restart: always
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    command: redis-server --appendonly yes --appendfsync everysec
-    networks:
-      - agent-c-network
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-
   api:
     image: ghcr.io/centricconsulting/agent_c_api_dev:latest
     platform: ${DOCKER_PLATFORM:-linux/amd64}  # Default to amd64 but allow override
@@ -30,38 +14,42 @@ services:
       - ${DOWNLOADS_WORKSPACE}:/app/workspaces/downloads  # Mount downloads workspace directory
       - ${DESKTOP_WORKSPACE}:/app/workspaces/desktop  # Mount desktop workspace directory
       - ${PROJECT_WORKSPACE_PATH}:/app/workspaces/project  # Mount point for projects
-      - ${AGENT_C_LOGS_PATH}:/app/logs  # Mount logs directory
+      - ${AGENT_C_SAVED_CHAT_FOLDER}:/app/agent_c_config/saved_sessions  # Mount shat session save folder.
     environment:
       - ENVIRONMENT=LOCAL_DEV
-      - ENHANCED_DEBUG_INFO=True
       - PYTHONPATH=/app
       - HOST=0.0.0.0
       - PORT=8000
       - RELOAD=True
-    depends_on:
-      - redis
     networks:
       - agent-c-network
 
   frontend:
-    image: ghcr.io/centricconsulting/agent_c_frontend_dev:latest
-    platform: ${DOCKER_PLATFORM:-linux/amd64}  # Default to amd64 but allow override
-    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: agentc-realtime-demo:latest
+    container_name: agentc-realtime-demo
     ports:
       - "5173:5173"
     environment:
-      - VITE_API_URL=http://localhost:8000/api/v1  # Use localhost for browser access
-      - VITE_RAG_API_URL=http://localhost:8000/api/v1  # Use localhost for browser access
+      - PORT=5173
+      - NEXT_PUBLIC_APP_URL=https://localhost:5173
+      - AGENT_C_API_URL=https://localhost:8000
+      - NEXT_PUBLIC_AGENTC_API_URL=wss://localhost:8000
+    restart: unless-stopped
     depends_on:
       - api
-      - redis
     networks:
       - agent-c-network
+    # Healthcheck for the Next.js app
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "https://localhost:5173" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 networks:
   agent-c-network:
     driver: bridge
-
-volumes:
-  redis_data:
-    driver: local

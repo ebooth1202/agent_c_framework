@@ -6,6 +6,29 @@ from agent_c.toolsets import Toolset, json_schema
 from agent_c.util import filter_dict_by_keys
 
 class WikipediaTools(Toolset):
+    """
+    Wikipedia search and content retrieval tool.
+    
+    This toolset provides access to Wikipedia's vast knowledge base, enabling searches for
+    articles and information from the world's largest online encyclopedia.
+    
+    Available Methods:
+        - search_wiki: Search Wikipedia and retrieve article information
+    
+    Key Features:
+        - Search Wikipedia articles by query
+        - Returns structured results with article IDs, titles, and descriptions
+        - Free to use with no API key required
+    
+    Requirements:
+        - wikipedia Python package
+        - No authentication required
+    
+    Usage Notes:
+        - Generic search terms may return keyword lists rather than full articles
+        - Results are filtered to include relevant metadata (id, key, title, description)
+        - This tool may benefit from refactoring for enhanced search capabilities
+    """
 
     def __init__(self, **kwargs):
         super().__init__(name='wikipedia', **kwargs)

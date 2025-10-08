@@ -138,6 +138,10 @@ export function useToolNotifications(
           toRemove.forEach(([id]) => next.delete(id));
         }
         
+        // ADD EVE'S LOGGING:
+        console.log('[useToolNotifications] Updated notifications Map size:', next.size);
+        console.log('[useToolNotifications] Updated notifications array:', Array.from(next.values()));
+        
         return next;
       });
       
@@ -164,8 +168,10 @@ export function useToolNotifications(
     };
     
     // Handle tool notification removal events
-    const handleToolNotificationRemoved = (toolId: string) => {
-      Logger.debug('[useToolNotifications] Tool notification removed:', toolId);
+    const handleToolNotificationRemoved = (event: { sessionId: string; toolCallId: string }) => {
+      Logger.debug('[useToolNotifications] Tool notification removed:', event);
+      
+      const toolId = event.toolCallId;
       
       // Clear any pending removal timer
       const timer = removalTimersRef.current.get(toolId);
@@ -240,10 +246,17 @@ export function useToolNotifications(
       });
     };
     
+    // Handle nuclear cleanup (user turn start)
+    const handleAllNotificationsCleared = () => {
+      Logger.debug('[useToolNotifications] All notifications cleared (user turn start)');
+      clearNotifications();
+    };
+    
     // Subscribe to events
     sessionManager.on('tool-notification', handleToolNotification);
     sessionManager.on('tool-notification-removed', handleToolNotificationRemoved);
     sessionManager.on('tool-call-complete', handleToolCallComplete);
+    sessionManager.on('all-notifications-cleared', handleAllNotificationsCleared);
     
     return () => {
       // Clear all timers
@@ -256,6 +269,7 @@ export function useToolNotifications(
         cleanupSessionManager.off('tool-notification', handleToolNotification);
         cleanupSessionManager.off('tool-notification-removed', handleToolNotificationRemoved);
         cleanupSessionManager.off('tool-call-complete', handleToolCallComplete);
+        cleanupSessionManager.off('all-notifications-cleared', handleAllNotificationsCleared);
       }
     };
   }, [client, maxNotifications, autoRemoveCompleted, autoRemoveDelay]); // Removed notifications to prevent re-registration

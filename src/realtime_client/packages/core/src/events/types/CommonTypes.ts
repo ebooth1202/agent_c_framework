@@ -258,6 +258,47 @@ export type Severity = 'info' | 'warning' | 'error';
 export type MessageFormat = 'text' | 'markdown';
 
 /**
+ * File upload response from server
+ */
+export interface UserFile {
+  /** Unique identifier for the uploaded file */
+  id: string;
+  /** Original filename */
+  filename: string;
+  /** MIME type of the file */
+  mime_type: string;
+  /** File size in bytes */
+  size: number;
+}
+
+/**
+ * Type alias for API response compatibility
+ */
+export type UserFileResponse = UserFile;
+
+/**
+ * Options for file upload operations
+ */
+export interface FileUploadOptions {
+  /** Progress callback for upload tracking */
+  onProgress?: (progress: UploadProgress) => void;
+  /** Abort signal for cancellation */
+  signal?: AbortSignal;
+}
+
+/**
+ * Upload progress information
+ */
+export interface UploadProgress {
+  /** Bytes uploaded so far */
+  loaded: number;
+  /** Total bytes to upload */
+  total: number;
+  /** Progress percentage (0-100) */
+  percentage: number;
+}
+
+/**
  * Login response structure
  * NOTE: Breaking change - login now only returns tokens and session ID.
  * All configuration data (user, agents, avatars, voices, tools, sessions) 

@@ -542,21 +542,6 @@ describe('useChat - Resumed Session Integration Test', () => {
         });
       });
 
-      // NEW: Complete loading state
-      await act(async () => {
-        emitSessionEvent('session-messages-loaded', {
-          sessionId: testSessionData.session_id,
-          messages: [
-            {
-              role: 'user',
-              content: 'Test message',
-              timestamp: new Date().toISOString(),
-              format: 'text'
-            }
-          ]
-        });
-      });
-
       await waitFor(() => {
         expect(result.current.messages.length).toBeGreaterThan(0);
       });
@@ -634,18 +619,6 @@ describe('useChat - Resumed Session Integration Test', () => {
         });
       });
 
-      // Session should be set but messages cleared during loading
-      expect(result.current.currentSessionId).toBe('empty-session');
-      expect(result.current.messages).toHaveLength(0);
-
-      // NEW: Complete loading with empty messages
-      await act(async () => {
-        emitSessionEvent('session-messages-loaded', {
-          sessionId: 'empty-session',
-          messages: []
-        });
-      });
-
       // Should have no messages but session should be set
       expect(result.current.messages).toHaveLength(0);
       expect(result.current.currentSessionId).toBe('empty-session');
@@ -662,27 +635,6 @@ describe('useChat - Resumed Session Integration Test', () => {
         emitSessionEvent('chat-session-changed', {
           currentChatSession: testSessionData,
           previousChatSession: null
-        });
-      });
-
-      // NEW: Complete loading state with test messages
-      await act(async () => {
-        emitSessionEvent('session-messages-loaded', {
-          sessionId: testSessionData.session_id,
-          messages: [
-            {
-              role: 'user',
-              content: 'Test message',
-              timestamp: new Date().toISOString(),
-              format: 'text'
-            },
-            {
-              role: 'assistant',
-              content: 'Test response',
-              timestamp: new Date().toISOString(),
-              format: 'text'
-            }
-          ]
         });
       });
 
@@ -729,24 +681,6 @@ describe('useChat - Resumed Session Integration Test', () => {
         emitSessionEvent('chat-session-changed', {
           currentChatSession: testSessionData,
           previousChatSession: null
-        });
-      });
-
-      // NEW: Complete loading and add thought message
-      await act(async () => {
-        emitSessionEvent('session-messages-loaded', {
-          sessionId: testSessionData.session_id,
-          messages: []
-        });
-        
-        emitSessionEvent('message-added', {
-          sessionId: testSessionData.session_id,
-          message: {
-            role: 'assistant (thought)',
-            content: 'thought from agent',
-            timestamp: new Date().toISOString(),
-            format: 'markdown'
-          }
         });
       });
 

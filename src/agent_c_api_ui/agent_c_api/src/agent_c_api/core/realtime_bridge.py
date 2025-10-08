@@ -8,6 +8,9 @@ from datetime import datetime
 from functools import singledispatchmethod
 from typing import List, Optional, Any, Dict, AsyncIterator, Union, TYPE_CHECKING
 
+from sympy import false
+
+from agent_c.prompting.basic_sections.markdown import MarkdownFormatting
 from agent_c_api.models.user_runtime_cache_entry import UserRuntimeCacheEntry
 from fastapi import WebSocket, WebSocketDisconnect
 from starlette.websockets import WebSocketState
@@ -33,7 +36,7 @@ from agent_c_api.api.rt.models.control_events import ErrorEvent, AgentListEvent,
     VoiceListEvent, ChatSessionAddedEvent, DeleteChatSessionEvent, CancelledEvent
 
 from agent_c_api.core.event_handlers.client_event_handlers import ClientEventHandler
-from agent_c_api.core.file_handler import RTFileHandler
+from agent_c_api.core.file_handler import RTFileHandler, FileMetadata
 from agent_c_api.core.voice.models import open_ai_voice_models, AvailableVoiceModel, heygen_avatar_voice_model, no_voice_model
 from agent_c_api.core.voice.voice_io_manager import VoiceIOManager
 
@@ -68,8 +71,10 @@ class RealtimeBridge(ClientEventHandler):
         self.runtime_cache: UserRuntimeCacheEntry = runtime_cache_entry
         self.ui_session_manager = ui_session_manager
         self.chat_session: Optional[ChatSession] = None
-        self.websocket: Optional[WebSocket] = None
+        self._websocket: Optional[WebSocket] = None
+        self._websocket_lock = asyncio.Lock()
         self.is_running = False
+        self.is_connected = False
         self._is_new_bridge = True
         self.chat_session_manager: ChatSessionManager = session_manager
         self.chat_user: ChatUser = chat_user
@@ -99,6 +104,81 @@ class RealtimeBridge(ClientEventHandler):
         self.image_inputs: List[ImageInput] = []
         self.audio_inputs: List[AudioInput] = []
 
+    @property
+    def websocket(self) -> Optional[WebSocket]:
+        """Get current websocket connection."""
+        return self._websocket
+
+    async def _set_websocket(self, websocket: Optional[WebSocket]) -> None:
+        """
+        Internal method to set websocket with proper locking and cleanup.
+        
+        Args:
+            websocket: New websocket connection, or None to clear
+        """
+        async with self._websocket_lock:
+            # Close old websocket if it exists and is still open
+            if self._websocket is not None:
+                try:
+                    if self._websocket.client_state == WebSocketState.CONNECTED:
+                        await self._websocket.close()
+                        self.logger.debug(f"Closed old websocket for session {self.ui_session_id}")
+                except Exception as e:
+                    self.logger.debug(f"Error closing old websocket for session {self.ui_session_id}: {e}")
+            
+            # Set new websocket
+            self._websocket = websocket
+            self.is_connected = websocket is not None
+            
+            if websocket is not None:
+                self.logger.info(f"WebSocket connected for session {self.ui_session_id}")
+            else:
+                self.logger.info(f"WebSocket disconnected for session {self.ui_session_id}")
+
+    async def _clear_websocket(self) -> None:
+        """
+        Clear websocket reference without trying to close it.
+        Use this when the websocket is already closed by the client.
+        """
+        async with self._websocket_lock:
+            self._websocket = None
+            self.is_connected = False
+            self.logger.debug(f"Cleared websocket reference for session {self.ui_session_id}")
+
+    async def reconnect(self, websocket: WebSocket) -> None:
+        """
+        Reconnect the bridge with a new websocket connection.
+        
+        This allows a client to reconnect to an existing session without
+        losing bridge state (chat history, agent config, files, etc.).
+        
+        Args:
+            websocket: New websocket connection to use
+            
+        Note:
+            If an interaction is currently running, it will continue
+            and the new client will receive events once connected.
+        """
+        self.logger.info(f"Reconnecting UI session {self.ui_session_id}")
+        
+        # Accept the new websocket
+        await websocket.accept()
+        
+        # Replace the old websocket (this handles cleanup)
+        await self._set_websocket(websocket)
+        
+        # Reset new bridge flag to false since this is a reconnection
+        self._is_new_bridge = False
+
+        await self.send_chat_session()
+
+        # Let client know they can send input (unless interaction is running)
+        if not self._active_interact_task or self._active_interact_task.done():
+            await self.send_user_turn_start()
+        else:
+            self.logger.info(f"UI session {self.ui_session_id} reconnected during active interaction")
+        
+        self.logger.info(f"UI session {self.ui_session_id} successfully reconnected")
 
     async def flush_session(self, touch: bool = True, chat_session: Optional[ChatSession] = None) -> None:
         """Flush the current chat session to persistent storage"""
@@ -264,6 +344,52 @@ class RealtimeBridge(ClientEventHandler):
         sessions = await self.chat_session_manager.get_user_sessions(self.chat_user.user_id, offset, limit)
         await self.send_event(GetUserSessionsResponseEvent(sessions=sessions))
 
+    async def add_tool(self, new_tool: str) -> bool:
+        if new_tool not in self.chat_session.agent_config.tools:
+            tools = [new_tool]
+            tools.extend(self.chat_session.agent_config.tools)
+            return await self.update_tools(tools)
+
+        return True
+
+    async def remove_tool(self, tool_name: str) -> bool:
+        if tool_name in self.chat_session.agent_config.tools:
+            tools = [t for t in self.chat_session.agent_config.tools if t != tool_name]
+            return await self.update_tools(tools)
+
+        return True
+
+    async def update_tools(self, new_tools: List[str]) -> bool:
+        """
+        Update the agent's tools without reinitializing the entire agent.
+
+        This method allows dynamic updating of the tool set while maintaining
+        the current session and other configurations. It ensures essential
+        tools are preserved while adding or removing additional tools.
+
+        Args:
+            new_tools: List of tool names to be added to the essential tools.
+        """
+        self.logger.info(f"Requesting new tool list for agent {self.chat_session.agent_config.key} to: {new_tools}")
+        equipped: bool = False
+        try:
+            equipped = await self.tool_chest.activate_toolset(self.chat_session.agent_config.tools)
+        except Exception as e:
+            self.logger.error(f"Error updating tools: {e}\n{traceback.format_exc()}")
+            await self.send_system_message(f"Error updating tools: {e}", severity="error")
+            return false
+
+        if not equipped:
+            self.logger.warning(f"Tool update failed. Current Active tools: "
+                                f"{list(self.tool_chest.available_tools.keys())}")
+            new_tools = [t for t in self.chat_session.agent_config.tools if t in self.tool_chest.available_tools]
+            await self.send_system_message("Some tools failed to equip, see server logs for details", severity="error")
+
+        self.chat_session.agent_config.tools = new_tools
+        await self.send_event(AgentConfigurationChangedEvent(agent_config=self.chat_session.agent_config))
+
+        return equipped
+
     async def set_session_metadata(self, meta: Dict[str, Any]) -> None:
         """Set the metadata for the current chat session"""
         self.chat_session.metadata = meta
@@ -272,13 +398,13 @@ class RealtimeBridge(ClientEventHandler):
         await self.send_chat_session_meta()
 
     async def release_current_session(self) -> None:
-        if self.chat_session is not None:
+        if self.chat_session is None:
             return
 
         await self.chat_session_manager.release_session(self.chat_session.session_id, self.chat_session.user_id)
 
     async def new_chat_session(self, agent_key: Optional[str] = None) -> None:
-        self.logger.info(f"Creating new chat session with {agent_key} from {self.chat_session.session_id}")
+        self.logger.info(f"Creating new chat session with {agent_key} from {self.ui_session_id}")
         agent_key = agent_key or self.chat_session.agent_config.key
         await self.flush_session()
         await self.release_current_session()
@@ -346,6 +472,16 @@ class RealtimeBridge(ClientEventHandler):
         await self.send_event(UserTurnEndEvent())
 
     async def send_event(self, event: BaseEvent):
+        """
+        Send event to connected client.
+        
+        Silently returns if no client is connected, allowing long-running
+        interactions to continue even if client disconnects. This is critical
+        for operations that may run for hours.
+        
+        Args:
+            event: Event to send to client
+        """
         if self.websocket is None or self.websocket.client_state != WebSocketState.CONNECTED:
             return
 
@@ -362,9 +498,18 @@ class RealtimeBridge(ClientEventHandler):
             #if event.type not in ["ping", "pong"]:
             #    self.logger.info(f"Sent event {event.type} to {self.chat_session.session_id}")
                 # self.logger.info(event_str)
+        except RuntimeError as e:
+            # Race condition: websocket closed between check and send
+            # This is expected during disconnection, don't spam logs or stop interaction
+            if "websocket.send" in str(e) or "websocket.close" in str(e):
+                self.logger.debug(f"WebSocket closed during send for session {self.ui_session_id}: {e}")
+            else:
+                # Unexpected RuntimeError, log at warning level
+                self.logger.warning(f"RuntimeError sending event to session {self.ui_session_id}: {e}")
         except Exception as e:
-            self.logger.exception(f"Failed to send event to {self.chat_session.session_id}: {e}")
-            self.is_running = False
+            # Other exceptions (JSON errors, network issues, etc.)
+            # Log but don't stop the interaction
+            self.logger.warning(f"Failed to send event to session {self.ui_session_id}: {e}")
 
     async def send_error(self, message: str, source: Optional[str] = None):
         """Send error message to client"""
@@ -404,12 +549,12 @@ class RealtimeBridge(ClientEventHandler):
 
     async def avatar_say(self, text: str, role: str = "assistant"):
         if not self.avatar_session and not self.avatar_session_id:
-            self.logger.error(f"RealtimeBridge {self.chat_session.session_id}: No active avatar session to send message")
+            self.logger.error(f"RealtimeBridge {self.ui_session_id}: No active avatar session to send message")
             return
         try:
             await self.avatar_client.send_task(text)
         except Exception as e:
-            self.logger.error(f"RealtimeBridge {self.chat_session.session_id}: Failed to send message to avatar: {e}")
+            self.logger.error(f"RealtimeBridge {self.ui_session_id}: Failed to send message to avatar: {e}")
             await self.send_error(f"Failed to send message to avatar: {str(e)}")
 
         await self.send_event(TextDeltaEvent(
@@ -448,32 +593,45 @@ class RealtimeBridge(ClientEventHandler):
         await self.raise_render_media_markdown(message)
 
     async def run(self, websocket: WebSocket):
-        """Main run loop for the bridge"""
-        await websocket.accept()
-        self.websocket=websocket
+        """
+        Main run loop for the bridge.
+        
+        Can be called multiple times for reconnection. If the websocket
+        has already been set up via reconnect(), this will skip the
+        initialization and go straight to the event loop.
+        
+        Args:
+            websocket: WebSocket connection to service
+        """
+        # If we're not already servicing this websocket, set it up
+        if self._websocket is not websocket:
+            await websocket.accept()
+            await self._set_websocket(websocket)
+            await self.send_client_initial_data()
+            await self.send_user_turn_start()
+            self.logger.info(f"RealtimeBridge started servicing websocket for UI session {self.ui_session_id}")
+        else:
+            self.logger.info(f"RealtimeBridge resuming event loop for UI session {self.ui_session_id}")
+        
         self.is_running = True
-
-        self.logger.info (f"RealtimeBridge started for UI session {self.ui_session_id}")
-        await self.send_client_initial_data()
-        await self.send_user_turn_start()
 
         try:
             while self.is_running:
                 try:
-                    message = await self.websocket.receive()
+                    message = await websocket.receive()
                     if message["type"] == "websocket.receive":
                         if "text" in message:
                             event = self.parse_event(json.loads(message["text"]))
                             if event.type not in ["ping", "pong"]:
-                                self.logger.debug(f"Received event {event.type} from session {self.chat_session.session_id}")
+                                self.logger.debug(f"Received event {event.type} from session {self.ui_session_id}")
 
                             if event.type == "resume_chat_session" and event.session_id == self.chat_session.session_id:
                                 self.logger.info("Client requested to resume the current session, ignoring.")
                                 await self.send_chat_session()
-                                break
+                                continue
 
                             if self._active_interact_task and not self._active_interact_task.done() and event.type not in ["ping", "pong", "client_wants_cancel"]:
-                                self.logger.warning(f"Session {self.chat_session.session_id} has an active interaction, shutting down interaction due to  new event {event.type}")
+                                self.logger.warning(f"Chat Session {self.chat_session.session_id} has an active interaction, shutting down interaction due to  new event {event.type}")
                                 self.client_wants_cancel.set()
                                 self._active_interact_task.cancel()
                                 with suppress(asyncio.CancelledError):
@@ -483,13 +641,13 @@ class RealtimeBridge(ClientEventHandler):
                         elif "bytes" in message:
                             await self.voice_io_manager.add_audio(message["bytes"])
                     elif message["type"] == "websocket.disconnect":
-                        self.websocket = None
-                        self.logger.info(f"Session {self.chat_session.session_id} disconnected normally")
+                        await self._clear_websocket()
+                        self.logger.info(f"UI session {self.ui_session_id} disconnected normally")
                         break
 
                 except WebSocketDisconnect:
-                    self.websocket = None
-                    self.logger.info(f"Session {self.ui_session_id} disconnected normally")
+                    await self._clear_websocket()
+                    self.logger.info(f"UI session {self.ui_session_id} disconnected normally")
                     break
                 except json.JSONDecodeError:
                     await self.send_error("Invalid JSON received")
@@ -497,7 +655,10 @@ class RealtimeBridge(ClientEventHandler):
                     self.logger.exception(f"Error handling event for session {self.ui_session_id}: {e}")
                     await self.send_error(f"Error processing event: {str(e)}")
         finally:
-            self.logger.info(f"RealtimeBridge stopped for session {self.ui_session_id}")
+            self.logger.info(f"RealtimeBridge stopped servicing websocket for session {self.ui_session_id}")
+            # Ensure websocket is cleared if we exit the loop
+            if self.is_connected:
+                await self._clear_websocket()
 
     async def raise_render_media_markdown(self, text: str, sent_by_class: str = "RealtimeBridge"):
         event = RenderMediaEvent(content=text, session_id=self.chat_session.session_id,
@@ -658,9 +819,9 @@ class RealtimeBridge(ClientEventHandler):
                 tool_params["toolsets"] = self.chat_session.agent_config.tools
 
             if "ThinkTools" in self.chat_session.agent_config.tools:
-                agent_sections = [ThinkSection(), EnvironmentInfoSection(),  DynamicPersonaSection()]
+                agent_sections = [ThinkSection(), EnvironmentInfoSection(),  DynamicPersonaSection(), MarkdownFormatting()]
             else:
-                agent_sections = [EnvironmentInfoSection(), DynamicPersonaSection()]
+                agent_sections = [EnvironmentInfoSection(), DynamicPersonaSection(), MarkdownFormatting()]
 
             chat_params: Dict[str, Any] = {
                 "user_id": self.chat_session.user_id,
@@ -786,6 +947,9 @@ class RealtimeBridge(ClientEventHandler):
             if not metadata:
                 self.logger.warning(f"Could not get metadata for file {file_id}")
                 continue
+
+            if isinstance(metadata, dict):
+                metadata = FileMetadata.model_validate(metadata)
 
             # Create the appropriate input object based on file type
             input_obj = self.file_handler.get_file_as_input(file_id, session_id)

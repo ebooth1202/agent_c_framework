@@ -1,13 +1,12 @@
+import os
 import asyncio
 import json
-import os
 import threading
 
 from typing import Dict, Optional, List, Any, Union
 
 from agent_c.models import ChatUser
 from agent_c.toolsets import ToolCache, ToolChest
-from agent_c.util import MnemonicSlugs
 
 from agent_c.config.agent_config_loader import AgentConfigLoader
 from agent_c.config import ModelConfigurationLoader
@@ -21,7 +20,7 @@ from agent_c_api.models.user_runtime_cache_entry import UserRuntimeCacheEntry
 
 from agent_c_tools import *  # noqa
 from agent_c_tools.tools.in_process import * # noqa
-from agent_c_tools.tools.workspace.dynamic_command import DynamicCommandTools
+
 
 
 # Constants
@@ -117,7 +116,7 @@ class RealtimeSessionManager:
                                       chat_session_id: Optional[str] = None,
                                       agent_key: Optional[str] = None) -> RealtimeSession:
         """
-        Create a new session or update an existing session with a new agent.
+        Create a new session or return existing session for reconnection.
 
         Args:
             user: The chat user for the session
@@ -126,12 +125,17 @@ class RealtimeSessionManager:
             agent_key: Optional agent key to initialize the session with a specific agent
 
         Returns:
-            RealtimeSession: The bridge handling the session
+            RealtimeSession: The session (new or existing)
+            
+        Note:
+            If session already exists for this user, returns it for reconnection.
+            The caller should then call bridge.reconnect(websocket) before bridge.run().
         """
         ui_session_id = session_id if session_id else RealtimeSession.generate_session_id(user.user_id)
 
         if ui_session_id in self.ui_sessions:
             if self.ui_sessions[ui_session_id].user_id == user.user_id:
+                self.logger.info(f"Found existing session {ui_session_id} for reconnection")
                 return self.ui_sessions[ui_session_id]
             else:
                 raise ValueError(f"Session ID {ui_session_id} already exists for a different user.")

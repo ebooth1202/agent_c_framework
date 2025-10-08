@@ -308,6 +308,342 @@ client.on('cancelled', () => {
 });
 ```
 
+## File Upload
+
+### uploadFile()
+
+Uploads a file to the server for use in chat messages. Returns file metadata including a unique ID that can be used in `sendText()` to attach the file to a message.
+
+```typescript
+async uploadFile(
+  file: File, 
+  options?: FileUploadOptions
+): Promise<UserFileResponse>
+```
+
+**Parameters:**
+- `file` (File) - The file to upload (from file input or drag-drop)
+- `options` (FileUploadOptions, optional) - Upload options:
+  - `onProgress` - Callback function for upload progress tracking
+  - `signal` - AbortSignal for cancellation support
+
+**Returns:** Promise resolving to `UserFileResponse` with file metadata:
+- `id` (string) - Unique file identifier to use in messages
+- `filename` (string) - Original filename
+- `mime_type` (string) - File MIME type
+- `size` (number) - File size in bytes
+
+**Throws:** 
+- Error if not authenticated
+- Error if no UI session ID
+- Error if file size exceeds `maxUploadSize` configuration
+- Error if file MIME type not in `allowedMimeTypes` (if configured)
+- Error if network failure or server error
+
+**Upload Process:**
+1. Validates authentication and session ID
+2. Validates file size against `maxUploadSize` configuration
+3. Validates file MIME type against `allowedMimeTypes` (if configured)
+4. Uploads file via HTTP POST to `/api/rt/upload_file`
+5. Returns file metadata including server-assigned ID
+
+**Example: Basic Upload**
+```typescript
+const fileInput = document.getElementById('fileInput');
+const file = fileInput.files[0];
+
+try {
+  const uploadedFile = await client.uploadFile(file);
+  
+  console.log('Upload complete:', uploadedFile);
+  // { id: 'file-abc123', filename: 'report.pdf', mime_type: 'application/pdf', size: 245678 }
+  
+  // Send message with file attachment
+  client.sendText('Please summarize this report', [uploadedFile.id]);
+} catch (error) {
+  console.error('Upload failed:', error.message);
+}
+```
+
+**Example: Upload with Progress Tracking**
+```typescript
+const uploadedFile = await client.uploadFile(file, {
+  onProgress: (progress) => {
+    console.log(`Upload progress: ${progress.percentage}%`);
+    console.log(`${progress.loaded} / ${progress.total} bytes`);
+    
+    // Update UI progress bar
+    document.getElementById('progressBar').value = progress.percentage;
+  }
+});
+
+client.sendText('Analyze this image', [uploadedFile.id]);
+```
+
+**Example: Upload with Cancellation**
+```typescript
+const controller = new AbortController();
+
+// Start upload
+const uploadPromise = client.uploadFile(file, {
+  signal: controller.signal,
+  onProgress: (progress) => {
+    console.log(`Progress: ${progress.percentage}%`);
+  }
+});
+
+// Allow user to cancel
+document.getElementById('cancelButton').onclick = () => {
+  controller.abort();
+  console.log('Upload cancelled');
+};
+
+try {
+  const result = await uploadPromise;
+  console.log('Upload successful:', result);
+} catch (error) {
+  if (error.message === 'Upload cancelled') {
+    console.log('User cancelled the upload');
+  } else {
+    console.error('Upload error:', error);
+  }
+}
+```
+
+**Error Handling:**
+```typescript
+try {
+  const result = await client.uploadFile(file);
+} catch (error) {
+  if (error.message.includes('Authentication required')) {
+    // Not logged in or token expired
+    console.error('Please log in again');
+  } else if (error.message.includes('exceeds maximum')) {
+    // File too large
+    console.error('File is too large. Maximum size: 10MB');
+  } else if (error.message.includes('not allowed')) {
+    // Invalid file type
+    console.error('File type not supported');
+  } else if (error.message.includes('Network error')) {
+    // Network issue
+    console.error('Upload failed due to network error');
+  } else {
+    // Other errors
+    console.error('Upload failed:', error.message);
+  }
+}
+```
+
+### uploadFiles()
+
+Uploads multiple files sequentially. Provides aggregated progress tracking across all files.
+
+```typescript
+async uploadFiles(
+  files: File[], 
+  options?: FileUploadOptions
+): Promise<UserFileResponse[]>
+```
+
+**Parameters:**
+- `files` (File[]) - Array of files to upload
+- `options` (FileUploadOptions, optional) - Upload options:
+  - `onProgress` - Callback for aggregated progress across all files
+  - `signal` - AbortSignal to cancel all uploads
+
+**Returns:** Promise resolving to array of `UserFileResponse` objects
+
+**Throws:**
+- Error if file count exceeds `maxFilesPerMessage` configuration
+- Error if any individual file fails validation
+- Error if network failure or server error (includes partial success info)
+
+**Behavior:**
+- Files are uploaded **sequentially** (one at a time), not in parallel
+- Progress callback reports overall progress across all files
+- If one upload fails, the error includes information about successfully uploaded files
+- Cancellation via AbortSignal stops all remaining uploads
+
+**Example: Upload Multiple Files**
+```typescript
+const fileInput = document.getElementById('multiFileInput');
+const files = Array.from(fileInput.files);
+
+try {
+  const uploadedFiles = await client.uploadFiles(files, {
+    onProgress: (progress) => {
+      console.log(`Overall progress: ${progress.percentage}%`);
+      updateProgressBar(progress.percentage);
+    }
+  });
+  
+  console.log(`Successfully uploaded ${uploadedFiles.length} files`);
+  
+  // Extract file IDs
+  const fileIds = uploadedFiles.map(f => f.id);
+  
+  // Send message with all files
+  client.sendText('Compare these documents', fileIds);
+} catch (error) {
+  console.error('Upload failed:', error.message);
+  
+  // Error message includes info about partial success
+  // "Failed to upload file 3 of 5: Network error. 2 file(s) uploaded successfully before failure."
+}
+```
+
+**Example: Upload with Cancellation**
+```typescript
+const controller = new AbortController();
+let uploadedCount = 0;
+
+const uploadPromise = client.uploadFiles(files, {
+  signal: controller.signal,
+  onProgress: (progress) => {
+    console.log(`Uploading: ${progress.percentage}%`);
+    
+    // Estimate which file we're on
+    uploadedCount = Math.floor((progress.percentage / 100) * files.length);
+    console.log(`File ${uploadedCount + 1} of ${files.length}`);
+  }
+});
+
+// Allow cancellation
+cancelButton.onclick = () => controller.abort();
+
+try {
+  const results = await uploadPromise;
+  console.log(`All ${results.length} files uploaded`);
+} catch (error) {
+  console.log(`Upload stopped. ${uploadedCount} files uploaded before cancellation.`);
+}
+```
+
+**Configuration:**
+
+File upload behavior is configured in `RealtimeClientConfig`:
+
+```typescript
+const client = new RealtimeClient({
+  apiUrl: 'wss://api.agentc.ai/realtime',
+  authManager: authManager,
+  
+  // File upload configuration
+  maxUploadSize: 10 * 1024 * 1024,    // 10MB max file size (default)
+  allowedMimeTypes: [                  // Allowed file types (default: undefined = all)
+    'image/png',
+    'image/jpeg',
+    'image/gif',
+    'application/pdf',
+    'text/plain'
+  ],
+  maxFilesPerMessage: 10               // Max files per upload (default: 10)
+});
+```
+
+**Type Definitions:**
+
+```typescript
+// File metadata response
+interface UserFileResponse {
+  id: string;           // Unique file identifier
+  filename: string;     // Original filename
+  mime_type: string;    // File MIME type (e.g., 'image/png')
+  size: number;         // File size in bytes
+}
+
+// Upload options
+interface FileUploadOptions {
+  onProgress?: (progress: UploadProgress) => void;  // Progress callback
+  signal?: AbortSignal;                              // Cancellation signal
+}
+
+// Progress information
+interface UploadProgress {
+  loaded: number;       // Bytes uploaded so far
+  total: number;        // Total bytes to upload
+  percentage: number;   // Progress percentage (0-100)
+}
+```
+
+**Complete Example:**
+
+```typescript
+import { RealtimeClient, AuthManager } from '@agentc/realtime-core';
+
+async function uploadAndChat() {
+  // Setup client with upload configuration
+  const authManager = new AuthManager({ apiUrl: 'https://api.agentc.ai' });
+  await authManager.login({ username: 'user', password: 'pass' });
+  
+  const client = new RealtimeClient({
+    apiUrl: authManager.getWebSocketUrl(),
+    authManager,
+    maxUploadSize: 10 * 1024 * 1024,
+    allowedMimeTypes: ['image/png', 'image/jpeg', 'application/pdf']
+  });
+  
+  await client.connect();
+  await client.waitForInitialization();
+  
+  // Get files from input
+  const fileInput = document.getElementById('fileInput');
+  const files = Array.from(fileInput.files);
+  
+  // Validate files before upload
+  for (const file of files) {
+    if (file.size > 10 * 1024 * 1024) {
+      alert(`File ${file.name} is too large (max 10MB)`);
+      return;
+    }
+  }
+  
+  // Upload files with progress
+  const progressBar = document.getElementById('progressBar');
+  let uploadedFiles;
+  
+  try {
+    uploadedFiles = await client.uploadFiles(files, {
+      onProgress: (progress) => {
+        progressBar.value = progress.percentage;
+        console.log(`Upload: ${progress.percentage}%`);
+      }
+    });
+  } catch (error) {
+    alert(`Upload failed: ${error.message}`);
+    return;
+  }
+  
+  console.log('All files uploaded:', uploadedFiles);
+  
+  // Send message with uploaded files
+  const fileIds = uploadedFiles.map(f => f.id);
+  client.sendText('Please analyze these files', fileIds);
+  
+  // Handle response
+  let response = '';
+  client.on('text_delta', (event) => {
+    response += event.content;
+    document.getElementById('response').textContent = response;
+  });
+  
+  client.on('completion', (event) => {
+    if (!event.running) {
+      console.log('Analysis complete');
+    }
+  });
+}
+```
+
+**Notes:**
+
+- Files must be uploaded **before** sending the message that references them
+- File IDs are session-specific and temporary (don't persist across sessions)
+- Large files may take time to upload; always provide progress feedback
+- Upload uses HTTP (not WebSocket) for better progress tracking and reliability
+- Files are validated both client-side (before upload) and server-side (during upload)
+- Server performs additional security checks (virus scanning, content verification)
+
 ## Agent Management
 
 ### getAgents()

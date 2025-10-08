@@ -24,6 +24,8 @@ from agent_c.prompting import PromptBuilder
 from agent_c.util.logging_utils import LoggingManager
 from agent_c.util.token_counter import TokenCounter
 
+SERVER_TOOL_RESULT_TYPES = ['web_search_tool_result', 'code_execution_tool_result', 'mcp_tool_result', 'web_fetch_tool_result']
+
 
 class ThinkToolState(Enum):
     """Enum representing the state of the think tool processing."""
@@ -95,6 +97,29 @@ class ClaudeChatAgent(BaseAgent):
     def tool_format(self) -> str:
         return "claude"
 
+    def _context_opts(self) -> dict[str, Any]:
+        opts = {
+                "edits": [
+                    {
+                        "type": "clear_tool_uses_20250919",
+                        "trigger": {
+                            "type": "input_tokens",
+                            "value": 80000
+                        },
+                        "keep": {
+                            "type": "tool_uses",
+                            "value": 4
+                        },
+                        "clear_at_least": {
+                            "type": "input_tokens",
+                            "value": 5000
+                        },
+                        "exclude_tools": ["think", "wsp_get_task", "wsp_update_task", "wsp_add_lesson_learned", 'act_chat', 'ateam_chat']
+                    }
+                ]
+            }
+        return opts
+
     async def __interaction_setup(self, **kwargs) -> dict[str, Any]:
         model_name: str = kwargs.get("model_name", self.model_name)
         if model_name is None:
@@ -105,7 +130,7 @@ class ClaudeChatAgent(BaseAgent):
         await self._raise_user_message(messages[-1], **callback_opts)
 
         temperature: float = kwargs.get("temperature", self.temperature)
-        max_tokens: int = kwargs.get("max_tokens", self.max_tokens)
+        max_tokens: int = self.CLAUDE_MAX_TOKENS
         allow_server_tools: bool = kwargs.get("allow_server_tools", False)
 
         tool_chest = kwargs.get("tool_chest", self.tool_chest)
@@ -121,33 +146,35 @@ class ClaudeChatAgent(BaseAgent):
         (tool_context, prompt_context) = await self._render_contexts(**kwargs)
         sys_prompt: str = prompt_context["system_prompt"]
         allow_betas: bool = kwargs.get("allow_betas", self.allow_betas)
-        completion_opts = {"model": model_name.removeprefix("bedrock_"), "messages": messages,
-                           "system": sys_prompt,  "max_tokens": max_tokens,
-                           'temperature': temperature}
+        completion_opts: Dict[str, Any] = {"model": model_name.removeprefix("bedrock_"), "messages": messages,
+                                           "system": sys_prompt,  "max_tokens": max_tokens,
+                                           'temperature': temperature}
 
-        if '3-7-sonnet' in model_name or '-4-' in model_name:
-            if allow_server_tools:
-                max_searches: int = kwargs.get("max_searches", 0)
-                if max_searches > 0:
-                    functions.append({"type": "web_search_20250305", "name": "web_search", "max_uses": max_searches})
+        if allow_server_tools:
 
-            if allow_betas:
-                if allow_server_tools:
-                    functions.append({"type": "code_execution_20250522","name": "code_execution"})
+            max_searches: int = kwargs.get("max_searches", 0)
+            if max_searches > 0:
+                functions.append({"type": "web_search_20250305", "name": "web_search", "max_uses": max_searches})
 
-                if '-4-' in model_name:
-                    if max_tokens == self.CLAUDE_MAX_TOKENS:
-                        if 'sonnet' in model_name:
-                            completion_opts['max_tokens'] = 64000
-                        else:
-                            completion_opts['max_tokens'] = 32000
 
-                    completion_opts['betas'] = ['interleaved-thinking-2025-05-14', "files-api-2025-04-14"] #, "code-execution-2025-05-22"]
+
+        if allow_betas:
+            tool_betas = ["code-execution-2025-08-25", "computer-use-2025-01-24",
+                          "web-fetch-2025-09-10", "mcp-client-2025-04-04"]
+
+            if "sonnet" in model_name:
+                if '-4' in model_name:
+                    completion_opts['betas'] = ["context-1m-2025-08-07", "context-management-2025-06-27",  "files-api-2025-04-14", 'interleaved-thinking-2025-05-14']
                 else:
-                    completion_opts['betas'] = ["token-efficient-tools-2025-02-19", "output-128k-2025-02-19", "files-api-2025-04-14"] # , "code-execution-2025-05-22"]
-                    if max_tokens == self.CLAUDE_MAX_TOKENS:
-                        completion_opts['max_tokens'] = 128000
+                    completion_opts['betas'] = ["token-efficient-tools-2025-02-19", "output-128k-2025-02-19", "files-api-2025-04-14"]
+                    max_tokens = 128000
+            elif '-4' in model_name:
+                completion_opts['betas'] =["token-efficient-tools-2025-02-19", "files-api-2025-04-14", "context-management-2025-06-27"]
 
+            if "context-management-2025-06-27" in completion_opts.get('betas', []):
+                completion_opts['context_management'] = self._context_opts()
+
+            completion_opts['betas'].extend(tool_betas)
 
         budget_tokens: int = kwargs.get("budget_tokens", self.budget_tokens)
         if budget_tokens > 0:
@@ -158,6 +185,7 @@ class ClaudeChatAgent(BaseAgent):
         if len(functions):
             completion_opts['tools'] = functions
 
+        completion_opts['max_tokens'] = max_tokens
         completion_opts["metadata"] = {'user_id': kwargs.get('user_id', 'admin')}
 
         opts = {"callback_opts": callback_opts, "completion_opts": completion_opts, 'tool_chest': tool_chest, 'tool_context': tool_context}
@@ -299,8 +327,6 @@ class ClaudeChatAgent(BaseAgent):
 
                 # If we've reached the end of a non-tool response, return
                 if state['complete'] and state['stop_reason'] != 'tool_use':
-                    messages.extend(state['server_tool_calls'])
-                    messages.extend(state['server_tool_responses'])
                     if state['stop_reason'] == 'refusal':
                         self.logger.warning("Call resulted in refusal, ending interaction.")
                     await self._raise_history_event(messages, **callback_opts)
@@ -309,8 +335,9 @@ class ClaudeChatAgent(BaseAgent):
 
                 # If we've reached the end of a tool call response, continue after processing tool calls
                 elif state['complete'] and state['stop_reason'] == 'tool_use':
-                    await self._finalize_tool_calls(state, tool_chest, session_manager,
-                                                  messages, callback_opts, tool_context, client_wants_cancel)
+                    if state['collected_tool_calls']:
+                        await self._finalize_tool_calls(state, tool_chest, session_manager,
+                                                        messages, callback_opts, tool_context, client_wants_cancel)
                     
                     # Check if finalize_tool_calls set cancellation state
                     if state['stop_reason'] == 'client_cancel':
@@ -318,9 +345,6 @@ class ClaudeChatAgent(BaseAgent):
                         await self._raise_history_event(messages, **callback_opts)
                         await self._raise_interaction_end(id=state['interaction_id'], **callback_opts)
                         return messages, state
-
-                    messages.extend(state['server_tool_calls'])
-                    messages.extend(state['server_tool_responses'])
 
                     await self._raise_history_event(messages, **callback_opts)
                     return  messages, state
@@ -390,6 +414,15 @@ class ClaudeChatAgent(BaseAgent):
         """Handle the message_start event."""
         state["input_tokens"] = event.message.usage.input_tokens
 
+    async def _handle_server_tool_use_block(self, event, state, callback_opts):
+        """Handle server tool use block event."""
+        tool_call = event.content_block.model_dump()
+        state['server_tool_calls'].append(tool_call)
+        state['model_outputs'].append(tool_call)  # ADD THIS - part of assistant message
+        state['tool_calls_cache_dirty'] = True
+
+        await self._raise_tool_call_delta(state['server_tool_calls'], **callback_opts)
+        await self._raise_tool_call_start([tool_call], vendor="anthropic", **callback_opts)
 
     async def _handle_content_block_delta(self, event, state, callback_opts):
         """Handle content_block_delta events."""
@@ -544,12 +577,29 @@ class ClaudeChatAgent(BaseAgent):
             await self._handle_text_block_start(event, state, callback_opts)
         elif state['current_block_type'] == "tool_use":
             await self._handle_tool_use_block(event, state, callback_opts)
-        elif state['current_block_type'] == "server_tool_use":
+        elif state['current_block_type'] in ["server_tool_use", "mcp_server_use"]:
             await self._handle_server_tool_use_block(event, state, callback_opts)
-        elif state['current_block_type'] in ['web_search_tool_result', 'code_execution_tool_result']:
-            state['server_tool_responses'].append(event.content_block.model_dump())
         elif state['current_block_type'] in ["thinking", "redacted_thinking"]:
             await self._handle_thinking_block(event, state, callback_opts)
+        elif state['current_block_type'] in SERVER_TOOL_RESULT_TYPES:
+            result = event.content_block.model_dump()
+            tool_use_id = result.get('tool_use_id')
+            matching_request = None
+            if tool_use_id:
+                for server_tool_call in state['server_tool_calls']:
+                    if server_tool_call.get('id') == tool_use_id:
+                        matching_request = server_tool_call
+                        break
+
+            state['server_tool_responses'].append(result)
+            state['model_outputs'].append(result)
+
+            if matching_request:
+                await self._raise_tool_call_end([matching_request], [result], vendor="anthropic",  **callback_opts)
+            else:
+                self.logger.warning(f"Could not find matching server tool call for result with tool_use_id: {tool_use_id}")
+                await self._raise_tool_call_end([], [result], **callback_opts)
+
         else:
             self.logger.warning(f"content_block_start Unknown content type: {state['current_block_type']}")
 
@@ -577,15 +627,6 @@ class ClaudeChatAgent(BaseAgent):
         state['tool_calls_cache_dirty'] = True
         await self._raise_tool_call_delta(self._get_all_tool_calls(state), **callback_opts)
 
-
-
-    async def _handle_server_tool_use_block(self, event, state, callback_opts):
-        """Handle tool use block event."""
-        tool_call = event.content_block.model_dump()
-        state['server_tool_calls'].append(tool_call)
-        # Mark cache as dirty and update
-        state['tool_calls_cache_dirty'] = True
-        await self._raise_tool_call_delta(self._get_all_tool_calls(state), **callback_opts)
 
     async def _handle_thinking_block(self, event, state, callback_opts):
         """Handle thinking block event."""

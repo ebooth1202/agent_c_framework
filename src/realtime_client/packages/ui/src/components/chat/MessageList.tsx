@@ -66,6 +66,11 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
       autoRemoveDelay: 3000, // Remove after 3 seconds
       maxNotifications: 5
     })
+    
+    // ADD EVE'S LOGGING:
+    console.log('[MessageList] toolNotifications.length:', toolNotifications.length);
+    console.log('[MessageList] toolNotifications array:', toolNotifications);
+    
     const { errors, dismissError } = useErrors()
     
     const messageListRef = React.useRef<HTMLDivElement>(null)
@@ -475,7 +480,7 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
                   console.log(`[STREAMING MESSAGE] Skipping duplicate streaming message with id: ${streamingMessage.id}`)
                   return null
                 }
-                console.log(`[STREAMING MESSAGE] Rendering streaming message with id: ${streamingMessage.id}`)
+                //console.log(`[STREAMING MESSAGE] Rendering streaming message with id: ${streamingMessage.id}`)
                 return (
                   <Message
                     key={`streaming-${streamingMessage.id}`}
