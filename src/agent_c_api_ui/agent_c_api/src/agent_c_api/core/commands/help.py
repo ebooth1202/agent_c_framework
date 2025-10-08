@@ -29,7 +29,7 @@ class HelpCommand(Command):
             if target in handler.command_map:
                 cmd = handler.command_map[target]
                 aliases = ', '.join(cmd.command_strings)
-                message = f"## {target} Help\n\n{cmd.help_text}\n\n**Aliases:** {aliases}\n\n"
+                message = f"## {cmd.cmd_name} Help\n\n{cmd.help_text}\n\n**Aliases:** {aliases}\n\n"
                 await context.send_system_message(message)
             else:
                 await context.send_system_message(f"Unknown command: {target}", severity="error")
