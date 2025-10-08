@@ -3,6 +3,7 @@ set -e
 
 # Go to the directory containing this script
 cd "$(dirname "$0")"
+cd ..
 
 # Check if Docker is running
 if ! docker info > /dev/null 2>&1; then
@@ -30,7 +31,8 @@ mkdir -p "$AGENT_C_SAVED_CHAT_FOLDER"
 # Check if config file exists and set up AI keys
 if [ ! -f "$AGENT_C_CONFIG_PATH/agent_c.config" ]; then
     echo "Creating new configuration file..."
-    cp agent_c.config.example "$AGENT_C_CONFIG_PATH/agent_c.config"
+    cp config/agent_c.config.example "$AGENT_C_CONFIG_PATH/agent_c.config"
+    cp data/*.db  "$AGENT_C_CONFIG_PATH/"
     
     # Prompt for OpenAI API key
     read -p "Please enter your OpenAI API key: " OPENAI_API_KEY
@@ -80,4 +82,4 @@ fi
 echo "Services are ready!"
 
 # Open the browser to view Agent C
-bash ./view_agent_c.sh
+bash ./scripts/view_agent_c.sh

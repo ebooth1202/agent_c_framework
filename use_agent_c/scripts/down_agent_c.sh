@@ -3,7 +3,7 @@ set -e
 
 # Go to the directory containing this script
 cd "$(dirname "$0")"
-
+cd ..
 # Check if Docker is running
 if ! docker info > /dev/null 2>&1; then
     echo "Error: Docker is not running. Please start Docker and try again."
