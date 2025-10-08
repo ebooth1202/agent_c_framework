@@ -9,7 +9,7 @@ if ! docker info > /dev/null 2>&1; then
 
 cd "$(dirname "$0")"
 
-cd ..
+cd ..\..
 docker build -t agentc-api:latest -f dockerfiles\api.Dockerfile .
 
 cd src/realtime_client

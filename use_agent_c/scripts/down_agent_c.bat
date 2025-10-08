@@ -3,7 +3,7 @@ SETLOCAL
 
 :: Change to the directory containing this script
 cd /d "%~dp0"
-
+cd ..
 :: Set environment variables for agent_c config and directories
 :: %USERPROFILE% is equivalent to HOME on Windows
 set AGENT_C_CONFIG_PATH=%USERPROFILE%\.agent_c

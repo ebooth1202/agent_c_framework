@@ -3,7 +3,7 @@ SETLOCAL
 
 :: Change to the directory containing this script
 cd /d "%~dp0"
-cd ..
+cd ..\..
 docker build -t agentc-api:latest -f dockerfiles\api.Dockerfile .
 
 cd src\realtime_client
